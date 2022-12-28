@@ -1,12 +1,12 @@
 <?php
 
-namespace VendorName\Skeleton\Commands;
+namespace Wm\WmPackage\Commands;
 
 use Illuminate\Console\Command;
 
-class SkeletonCommand extends Command
+class WmPackageCommand extends Command
 {
-    public $signature = 'skeleton';
+    public $signature = 'wm-package';
 
     public $description = 'My command';
 
