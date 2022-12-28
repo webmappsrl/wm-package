@@ -3,8 +3,8 @@
 namespace Tests\Unit\Providers;
 
 use Exception;
-use Wm\WmPackage\Tests\TestCase;
 use Wm\WmPackage\Facades\OsmClient;
+use Wm\WmPackage\Tests\TestCase;
 
 class OsmClientGetUpdatedAtTest extends TestCase
 {
