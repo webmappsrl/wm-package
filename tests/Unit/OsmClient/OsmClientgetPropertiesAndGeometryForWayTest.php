@@ -4,14 +4,12 @@ namespace Tests\Unit\Providers;
 
 use Exception;
 use Illuminate\Support\Facades\Http;
+use Wm\WmPackage\Exceptions\OsmClientExceptionNodeHasNoLat;
+use Wm\WmPackage\Exceptions\OsmClientExceptionNodeHasNoLon;
+use Wm\WmPackage\Exceptions\OsmClientExceptionNoTags;
+use Wm\WmPackage\Exceptions\OsmClientExceptionWayHasNoNodes;
 use Wm\WmPackage\Facades\OsmClient;
 use Wm\WmPackage\Tests\TestCase;
-
-use Wm\WmPackage\Exceptions\OsmClientExceptionNoTags;
-use Wm\WmPackage\Exceptions\OsmClientExceptionNodeHasNoLon;
-use Wm\WmPackage\Exceptions\OsmClientExceptionNodeHasNoLat;
-use Wm\WmPackage\Exceptions\OsmClientExceptionWayHasNoNodes;
-
 
 class OsmClientgetPropertiesAndGeometryForWayTest extends TestCase
 {
@@ -73,7 +71,7 @@ class OsmClientgetPropertiesAndGeometryForWayTest extends TestCase
         // });
 
         Http::fake([
-            $url => Http::sequence()->push($return, 200)
+            $url => Http::sequence()->push($return, 200),
         ]);
 
         $this->expectException(Exception::class);
@@ -120,9 +118,8 @@ class OsmClientgetPropertiesAndGeometryForWayTest extends TestCase
         // });
 
         Http::fake([
-            $url => Http::sequence()->push($return, 200)
+            $url => Http::sequence()->push($return, 200),
         ]);
-
 
         $this->expectException(OsmClientExceptionNoTags::class);
         OsmClient::getPropertiesAndGeometry($osmid);
@@ -166,7 +163,7 @@ class OsmClientgetPropertiesAndGeometryForWayTest extends TestCase
         //         ->andReturn($return);
         // });
         Http::fake([
-            $url => Http::sequence()->push($return, 200)
+            $url => Http::sequence()->push($return, 200),
         ]);
         $this->expectException(OsmClientExceptionWayHasNoNodes::class);
         OsmClient::getPropertiesAndGeometry($osmid);
@@ -215,9 +212,8 @@ class OsmClientgetPropertiesAndGeometryForWayTest extends TestCase
         // $osmp = app(OsmServiceProvider::class);
 
         Http::fake([
-            $url => Http::sequence()->push($return, 200)
+            $url => Http::sequence()->push($return, 200),
         ]);
-
 
         $this->expectException(OsmClientExceptionNodeHasNoLon::class);
         OsmClient::getPropertiesAndGeometry($osmid);
@@ -268,7 +264,7 @@ class OsmClientgetPropertiesAndGeometryForWayTest extends TestCase
         // });
         // $osmp = app(OsmServiceProvider::class);
         Http::fake([
-            $url => Http::sequence()->push($return, 200)
+            $url => Http::sequence()->push($return, 200),
         ]);
 
         $this->expectException(OsmClientExceptionNodeHasNoLat::class);
@@ -292,7 +288,7 @@ class OsmClientgetPropertiesAndGeometryForWayTest extends TestCase
         // $osmp = app(OsmServiceProvider::class);
 
         Http::fake([
-            $url => Http::sequence()->push($return, 200)
+            $url => Http::sequence()->push($return, 200),
         ]);
 
         $result = OsmClient::getPropertiesAndGeometry($osmid);

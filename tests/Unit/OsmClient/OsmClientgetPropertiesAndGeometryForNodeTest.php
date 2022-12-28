@@ -30,16 +30,15 @@ class OsmClientgetPropertiesAndGeometryForNodeTest extends TestCase
         //     return Http::response($return, 200);
         // });
 
-
         Http::fake([
-            $url => Http::sequence()->push($return, 200)
+            $url => Http::sequence()->push($return, 200),
         ]);
-
 
         $this->expectException(OsmClientExceptionNoElements::class);
         OsmClient::getPropertiesAndGeometry($osmid);
         $this->assertTrue(false);
     }
+
     /** @test */
     public function no_tags_throw_exception()
     {
@@ -51,7 +50,7 @@ class OsmClientgetPropertiesAndGeometryForNodeTest extends TestCase
                 'type' => 'node',
                 'lat' => 44.3790892,
                 'lon' => 10.2960082,
-            ]
+            ],
         ]);
         $url = 'https://api.openstreetmap.org/api/0.6/node/1234.json';
         // $mock = $this->mock(CurlServiceProvider::class, function (MockInterface $mock) use ($url, $return) {
@@ -62,13 +61,14 @@ class OsmClientgetPropertiesAndGeometryForNodeTest extends TestCase
         // });
         // $osmp = app(OsmServiceProvider::class);
         Http::fake([
-            $url => Http::sequence()->push($return, 200)
+            $url => Http::sequence()->push($return, 200),
         ]);
 
         $this->expectException(Exception::class);
         OsmClient::getPropertiesAndGeometry($osmid);
         $this->assertTrue(false);
     }
+
     /** @test */
     public function no_lat_throw_exception()
     {
@@ -82,9 +82,9 @@ class OsmClientgetPropertiesAndGeometryForNodeTest extends TestCase
                     'lon' => 10.2960082,
                     'tags' => [
                         'name' => 'Some name',
-                    ]
-                ]
-            ]
+                    ],
+                ],
+            ],
         ]);
         $url = 'https://api.openstreetmap.org/api/0.6/node/1234.json';
         // $mock = $this->mock(CurlServiceProvider::class, function (MockInterface $mock) use ($url, $return) {
@@ -95,13 +95,14 @@ class OsmClientgetPropertiesAndGeometryForNodeTest extends TestCase
         // });
         // $osmp = app(OsmServiceProvider::class);
         Http::fake([
-            $url => Http::sequence()->push($return, 200)
+            $url => Http::sequence()->push($return, 200),
         ]);
 
         $this->expectException(Exception::class);
         OsmClient::getPropertiesAndGeometry($osmid);
         $this->assertTrue(false);
     }
+
     /** @test */
     public function no_lon_throw_exception()
     {
@@ -115,9 +116,9 @@ class OsmClientgetPropertiesAndGeometryForNodeTest extends TestCase
                     'lat' => 44.3790892,
                     'tags' => [
                         'name' => 'Some name',
-                    ]
-                ]
-            ]
+                    ],
+                ],
+            ],
         ]);
         $url = 'https://api.openstreetmap.org/api/0.6/node/1234.json';
         // $mock = $this->mock(CurlServiceProvider::class, function (MockInterface $mock) use ($url, $return) {
@@ -128,7 +129,7 @@ class OsmClientgetPropertiesAndGeometryForNodeTest extends TestCase
         // });
         // $osmp = app(OsmServiceProvider::class);
         Http::fake([
-            $url => Http::sequence()->push($return, 200)
+            $url => Http::sequence()->push($return, 200),
         ]);
 
         $this->expectException(Exception::class);
@@ -153,8 +154,8 @@ class OsmClientgetPropertiesAndGeometryForNodeTest extends TestCase
                     'tags' => [
                         'name' => 'Some name',
                     ],
-                ]
-            ]
+                ],
+            ],
         ]);
         $url = 'https://api.openstreetmap.org/api/0.6/node/1234.json';
         // $mock = $this->mock(CurlServiceProvider::class, function (MockInterface $mock) use ($url, $return) {
@@ -165,7 +166,7 @@ class OsmClientgetPropertiesAndGeometryForNodeTest extends TestCase
         // });
         // $osmp = app(OsmServiceProvider::class);
         Http::fake([
-            $url => Http::sequence()->push($return, 200)
+            $url => Http::sequence()->push($return, 200),
         ]);
 
         $val = OsmClient::getPropertiesAndGeometry($osmid);
