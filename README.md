@@ -1,4 +1,4 @@
-# This is my package wm-package
+# Webmapp Laravel wm-package
 
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/wm/wm-package.svg?style=flat-square)](https://packagist.org/packages/wm/wm-package)
 [![GitHub Tests Action Status](https://img.shields.io/github/actions/workflow/status/wm/wm-package/run-tests.yml?branch=main&label=tests&style=flat-square)](https://github.com/wm/wm-package/actions?query=workflow%3Arun-tests+branch%3Amain)
@@ -6,14 +6,6 @@
 [![Total Downloads](https://img.shields.io/packagist/dt/wm/wm-package.svg?style=flat-square)](https://packagist.org/packages/wm/wm-package)
 
 This is where your description should go. Limit it to a paragraph or two. Consider adding a small example.
-
-## Support us
-
-[<img src="https://github-ads.s3.eu-central-1.amazonaws.com/wm-package.jpg?t=1" width="419px" />](https://spatie.be/github-ad-click/wm-package)
-
-We invest a lot of resources into creating [best in class open source packages](https://spatie.be/open-source). You can support us by [buying one of our paid products](https://spatie.be/open-source/support-us).
-
-We highly appreciate you sending us a postcard from your hometown, mentioning which of our package(s) you are using. You'll find our address on [our contact page](https://spatie.be/about-us). We publish all received postcards on [our virtual postcard wall](https://spatie.be/open-source/postcards).
 
 ## Installation
 
@@ -43,17 +35,19 @@ return [
 ];
 ```
 
-Optionally, you can publish the views using
-
-```bash
-php artisan vendor:publish --tag="wm-package-views"
-```
-
 ## Usage
 
 ```php
 $wmPackage = new Wm\WmPackage();
 echo $wmPackage->echoPhrase('Hello, Wm!');
+```
+
+## Update
+
+You can update the package via composer:
+
+```bash
+composer update wm/wm-package
 ```
 
 ## Testing
@@ -62,22 +56,24 @@ echo $wmPackage->echoPhrase('Hello, Wm!');
 composer test
 ```
 
-## Changelog
+## Developing
 
-Please see [CHANGELOG](CHANGELOG.md) for more information on what has changed recently.
+If you need to test the package on full laravel instance clone this repository in the same folder of the laravel dir, then add a new composer path repository in the laravel `composer.json` file:
 
-## Contributing
+```json
+"repositories": [
+        {
+            "type": "path",
+            "url": "../wm-package"
+        }
+    ]
+```
 
-Please see [CONTRIBUTING](CONTRIBUTING.md) for details.
+then you can install the package with `compose require wm/wm-package`
 
-## Security Vulnerabilities
+## Pushing
 
-Please review [our security policy](../../security/policy) on how to report security vulnerabilities.
-
-## Credits
-
--   [marco](https://github.com/mbaro)
--   [All Contributors](../../contributors)
+We use git flow to add features to this repo. Please create a new feature then push it and ask a pull request via github interface from your feature branch to develop.
 
 ## License
 
