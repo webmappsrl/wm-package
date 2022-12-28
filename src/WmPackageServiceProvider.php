@@ -18,9 +18,9 @@ class WmPackageServiceProvider extends PackageServiceProvider
         $package
             ->name('wm-package')
             //->hasConfigFile()
-            ->hasRoutes(['api'])
+            ->hasRoute('api')
             //->hasViews()
-            //->hasMigration('create_wm-package_table')
+            //->hasMigration('create_personal_access_tokens_table')
             ->hasCommands([WmPackageCommand::class]);
     }
 }
