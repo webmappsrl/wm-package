@@ -6,8 +6,8 @@ use Illuminate\Support\Facades\Http;
 
 class WmClient
 {
-  private function run()
-  {
-    return Http::withToken();
-  }
+    private function run()
+    {
+        return Http::withToken();
+    }
 }

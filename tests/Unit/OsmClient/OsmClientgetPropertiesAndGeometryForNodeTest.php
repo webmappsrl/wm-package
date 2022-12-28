@@ -3,21 +3,20 @@
 namespace Tests\Unit\Providers;
 
 use Exception;
-use Mockery\MockInterface;
-use Wm\WmPackage\Tests\TestCase;
-use Wm\WmPackage\Facades\OsmClient;
 use Illuminate\Support\Facades\Http;
-use Wm\WmPackage\Exceptions\OsmClientExceptionNoElements;
-
+use Mockery\MockInterface;
+use Wm\WmPackage\Facades\OsmClient;
+use Wm\WmPackage\Tests\TestCase;
 
 class OsmClientgetPropertiesAndGeometryForNodeTest extends TestCase
 {
     // Exceptions
     /** @test */
-    public function no_elements_throw_exception() {
+    public function no_elements_throw_exception()
+    {
         $osmid = 'node/1234';
         $return = json_encode([
-            'version'=>'0.6',
+            'version' => '0.6',
         ]);
         $url = 'https://api.openstreetmap.org/api/0.6/node/1234.json';
         // $mock = $this->mock(CurlServiceProvider::class, function (MockInterface $mock) use ($url,$return) {
@@ -34,7 +33,6 @@ class OsmClientgetPropertiesAndGeometryForNodeTest extends TestCase
         Http::partialMock()
         ->shouldReceive('get')
         ->once()->with($url)->andReturn($this->response($return, 200));
-
 
         //$this->expectException(Exception::class);
         OsmClient::getPropertiesAndGeometry($osmid);
@@ -167,9 +165,6 @@ class OsmClientgetPropertiesAndGeometryForNodeTest extends TestCase
     //     $this->assertArrayHasKey('coordinates',$geometry);
     //     $coordinates=[10.2960082,44.3790892];
     //     $this->assertEquals($coordinates,$geometry['coordinates']);
-
-
-
 
     // }
 }
