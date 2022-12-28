@@ -2,12 +2,8 @@
 
 namespace Tests\Unit\Providers;
 
-
 use Wm\WmPackage\Http\OsmClient;
 use Wm\WmPackage\Tests\TestCase;
-use App\Providers\OsmServiceProvider;
-use Illuminate\Foundation\Testing\WithFaker;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 
 class OsmClientCheckOsmIdTest extends TestCase
 {

@@ -1,7 +1,7 @@
 <?php
 
 test('osm client exists', function () {
-  $this->assertTrue(true);
+    $this->assertTrue(true);
 
-  expect(true)->toBeTrue();
+    expect(true)->toBeTrue();
 });
