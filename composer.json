@@ -22,6 +22,7 @@
         "spatie/laravel-package-tools": "^1.13.0"
     },
     "require-dev": {
+        "guzzlehttp/guzzle": "^7.5",
         "laravel/pint": "^1.0",
         "nunomaduro/collision": "^6.0",
         "nunomaduro/larastan": "^2.0.1",
@@ -37,7 +38,10 @@
         "psr-4": {
             "Wm\\WmPackage\\": "src",
             "Wm\\WmPackage\\Database\\Factories\\": "database/factories"
-        }
+        },
+        "classmap": [
+            "src/Exceptions/"
+        ]
     },
     "autoload-dev": {
         "psr-4": {
