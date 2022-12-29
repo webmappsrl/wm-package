@@ -9,6 +9,11 @@ use Illuminate\Support\Facades\Facade;
  */
 class OsmClient extends Facade
 {
+    /**
+     * Undocumented function
+     *
+     * @return \Wm\WmPackage\Http\OsmClient
+     */
     protected static function getFacadeAccessor()
     {
         return \Wm\WmPackage\Http\OsmClient::class;

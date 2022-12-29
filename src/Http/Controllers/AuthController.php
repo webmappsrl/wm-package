@@ -2,13 +2,13 @@
 
 namespace Wm\WmPackage\Http\Controllers;
 
-use App\Models\User;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Bus\DispatchesJobs;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Hash;
+use Wm\WmPackage\Model\User;
 
 class AuthController extends Controller
 {
