@@ -8,7 +8,7 @@ class HoquClient
 {
     private function getHoquApiUrl()
     {
-        return config('HOQU_URL') . '/api/';
+        return config('HOQU_URL').'/api/';
     }
 
     // public function done($what)
@@ -18,6 +18,6 @@ class HoquClient
 
     public function store($what)
     {
-        return Http::acceptJson()->post($this->getHoquApiUrl() . 'store', $what)->json();
+        return Http::acceptJson()->post($this->getHoquApiUrl().'store', $what)->json();
     }
 }
