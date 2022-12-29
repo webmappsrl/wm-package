@@ -56,8 +56,8 @@ class OsmClient
      */
     public function getGeojson(string $osmid): string
     {
-        if (!$this->checkOsmId($osmid)) {
-            throw new OsmClientException('Invalid osmid ' . $osmid);
+        if (! $this->checkOsmId($osmid)) {
+            throw new OsmClientException('Invalid osmid '.$osmid);
         }
 
         $geojson = [];
@@ -83,12 +83,12 @@ class OsmClient
      */
     public function getFullOsmApiUrlByOsmId($osmid): string
     {
-        $url = 'https://api.openstreetmap.org/api/0.6/' . $osmid;
+        $url = 'https://api.openstreetmap.org/api/0.6/'.$osmid;
         if (preg_match('/node/', $osmid)) {
-            $url = $url . '.json';
+            $url = $url.'.json';
         } else {
             // way and relation directly call full.json
-            $url = $url . '/full.json';
+            $url = $url.'/full.json';
         }
 
         return $url;
@@ -119,7 +119,7 @@ class OsmClient
     {
         $url = $this->getFullOsmApiUrlByOsmId($osmid);
         $json = Http::get($url)->json();
-        if (!array_key_exists('elements', $json)) {
+        if (! array_key_exists('elements', $json)) {
             throw new OsmClientExceptionNoElements("Response from OSM has something wrong: check it out with $url.", 1);
         }
         if (preg_match('/node/', $osmid)) {
@@ -129,7 +129,7 @@ class OsmClient
         } elseif (preg_match('/relation/', $osmid)) {
             return $this->getPropertiesAndGeometryForRelation($json);
         } else {
-            throw new OsmClientException('OSMID has not vali type (node,way,relation) ' . $osmid);
+            throw new OsmClientException('OSMID has not vali type (node,way,relation) '.$osmid);
         }
 
         return [];
@@ -137,13 +137,13 @@ class OsmClient
 
     private function getPropertiesAndGeometryForNode(array $json): array
     {
-        if (!isset($json['elements'][0]['tags'])) {
+        if (! isset($json['elements'][0]['tags'])) {
             throw new OsmClientExceptionNoTags('JSON from OSM has no tags', 1);
         }
-        if (!isset($json['elements'][0]['lat'])) {
+        if (! isset($json['elements'][0]['lat'])) {
             throw new OsmClientExceptionNodeHasNoLat('JSON from OSM has no lat', 1);
         }
-        if (!isset($json['elements'][0]['lon'])) {
+        if (! isset($json['elements'][0]['lon'])) {
             throw new OsmClientExceptionNodeHasNoLon('JSON from OSM has no lon', 1);
         }
         $properties = $json['elements'][0]['tags'];
@@ -170,10 +170,10 @@ class OsmClient
         // Loop on elements
         foreach ($json['elements'] as $element) {
             if ($element['type'] == 'node') {
-                if (!array_key_exists('lon', $element)) {
+                if (! array_key_exists('lon', $element)) {
                     throw new OsmClientExceptionNodeHasNoLon('No lon (longitude) found', 1);
                 }
-                if (!array_key_exists('lat', $element)) {
+                if (! array_key_exists('lat', $element)) {
                     throw new OsmClientExceptionNodeHasNoLat('No lat (latitude) found', 1);
                 }
                 $nodes_full[$element['id']] = [
@@ -181,11 +181,11 @@ class OsmClient
                     $element['lat'],
                 ];
             } elseif ($element['type'] == 'way') {
-                if (!array_key_exists('tags', $element)) {
+                if (! array_key_exists('tags', $element)) {
                     throw new OsmClientExceptionNoTags('No tags found in way', 1);
                 }
                 $properties = $element['tags'];
-                if (!array_key_exists('nodes', $element)) {
+                if (! array_key_exists('nodes', $element)) {
                     throw new OsmClientExceptionWayHasNoNodes('No nodes found in way', 1);
                 }
                 $nodes = $element['nodes'];
@@ -222,12 +222,12 @@ class OsmClient
      */
     public function getUpdatedAt(array $json): string
     {
-        if (!array_key_exists('elements', $json)) {
+        if (! array_key_exists('elements', $json)) {
             throw new OsmClientException('Json ARRAY has not elements key, something is wrong.', 1);
         }
         $updated_at = [];
         foreach ($json['elements'] as $element) {
-            if (!array_key_exists('timestamp', $element)) {
+            if (! array_key_exists('timestamp', $element)) {
                 throw new OsmClientException('An element has no TIMESTAMP key', 1);
             }
             $updated_at[] = strtotime($element['timestamp']);
