@@ -37,7 +37,8 @@ class AddHoquToken extends Command
             $this->info("Yeah, hoku token stored correctly!");
             return Command::SUCCESS;
         } else {
-            $this->error("Ooops ... something goes wrong during token store");
+            $this->error('Ooops ... something goes wrong during token store');
+
             return Command::FAILURE;
         }
     }
