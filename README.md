@@ -32,7 +32,9 @@ This is the contents of the published config file:
 
 ```php
 return [
-    'hoqu_url' => env('HOQU_URL', 'https://hoqu2.webmapp.it')
+    'hoqu_url' => env('HOQU_URL', 'https://hoqu2.webmapp.it'),
+    'hoqu_register_username' => env('HOQU_REGISTER_USERNAME'),
+    'hoqu_register_password' => env('HOQU_REGISTER_PASSWORD ')
 ];
 ```
 
