@@ -32,7 +32,7 @@ class HoquClient
     private function getHoquApiUrl(): string
     {
         return config('wm-package.hoqu_url')
-            . '/api/hoqu/';
+            .'/api/hoqu/';
     }
 
     /**
@@ -45,7 +45,7 @@ class HoquClient
     private function httpWithToken($token = false)
     {
         $token = $token !== false ? $token : $this->tokenProvider->getToken();
-        if (!$token) {
+        if (! $token) {
             throw new HoquClientException('Impossible make an authenticated call to hoqu, the token is not available!');
         }
 
@@ -66,9 +66,8 @@ class HoquClient
      */
     public function store($what)
     {
-        return $this->httpWithToken()->acceptJson()->post($this->getHoquApiUrl() . 'store', $what)->json();
+        return $this->httpWithToken()->acceptJson()->post($this->getHoquApiUrl().'store', $what)->json();
     }
-
 
     /**
      * The REGISTER LOGIN call to hoqu
@@ -84,17 +83,16 @@ class HoquClient
      */
     public function registerLogin()
     {
-        return Http::post($this->getHoquApiUrl() . 'register-login', [
+        return Http::post($this->getHoquApiUrl().'register-login', [
             'email' => config('HOQU_REGISTER_USERNAME', 'register@webmapp.it'),
-            'password' => config('HOQU_REGISTER_PASSWORD', 'test')
+            'password' => config('HOQU_REGISTER_PASSWORD', 'test'),
         ])->json();
     }
 
     public function register($token, $json)
     {
         $response = $this->httpWithToken($token)->acceptJson()
-            ->post($this->getHoquApiUrl() . 'register', $json);
-
+            ->post($this->getHoquApiUrl().'register', $json);
 
         return $response->json();
     }
