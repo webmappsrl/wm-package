@@ -22,3 +22,6 @@ class OsmClientExceptionNoTags extends OsmClientException
 class OsmClientExceptionWayHasNoNodes extends OsmClientException
 {
 }
+class OsmClientExceptionRelationNotValid extends OsmClientException
+{
+}
