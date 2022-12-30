@@ -61,7 +61,7 @@ class HoquClient
     /**
      * The STORE call to hoqu
      *
-     * @param  array $what - the body to send as json that mush have these keys: name, input
+     * @param  array  $what - the body to send as json that mush have these keys: name, input
      * @return array?
      */
     public function store($what)
