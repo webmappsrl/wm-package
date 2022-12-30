@@ -15,8 +15,6 @@ use Wm\WmPackage\Exceptions\OsmClientExceptionRelationHasNoRelationElement;
 use Wm\WmPackage\Exceptions\OsmClientExceptionRelationHasNoWays;
 use Wm\WmPackage\Exceptions\OsmClientExceptionWayHasNoNodes;
 
-use function PHPUnit\Framework\throwException;
-
 /**
  * General purpose OpenStreetMap http client.
  *
@@ -271,12 +269,12 @@ class OsmClient
             throw new OsmClientExceptionRelationHasNoRelationElement('It seems that relation has no nodes in elements');
         }
 
-        if(!array_key_exists('members',$relation)) {
-            throw new OsmClientExceptionRelationHasNoMembers("It seems that relation has no members");
+        if (! array_key_exists('members', $relation)) {
+            throw new OsmClientExceptionRelationHasNoMembers('It seems that relation has no members');
         }
 
-        if(!array_key_exists('tags',$relation)) {
-            throw new OsmClientExceptionNoTags("It seems that relation has no tags");
+        if (! array_key_exists('tags', $relation)) {
+            throw new OsmClientExceptionNoTags('It seems that relation has no tags');
         }
 
         // Builds border nodes counter for geometry check
@@ -284,29 +282,27 @@ class OsmClient
         foreach ($ways as $way) {
             $first = $way['nodes'][0];
             $last = end($way['nodes']);
-            if(!array_key_exists($first,$border_nodes_counter)) {
-                $border_nodes_counter[$first]=1;
+            if (! array_key_exists($first, $border_nodes_counter)) {
+                $border_nodes_counter[$first] = 1;
+            } else {
+                $border_nodes_counter[$first] = $border_nodes_counter[$first] + 1;
             }
-            else {
-                $border_nodes_counter[$first]=$border_nodes_counter[$first]+1;
-            }
-            if(!array_key_exists($last,$border_nodes_counter)) {
-                $border_nodes_counter[$last]=1;
-            }
-            else {
-                $border_nodes_counter[$last]=$border_nodes_counter[$last]+1;
+            if (! array_key_exists($last, $border_nodes_counter)) {
+                $border_nodes_counter[$last] = 1;
+            } else {
+                $border_nodes_counter[$last] = $border_nodes_counter[$last] + 1;
             }
         }
         $values_count = array_count_values($border_nodes_counter);
 
         // Geometry check disconnected
-        if(array_key_exists(1,$values_count) && $values_count[1] > 2) {
-            throw new OsmClientExceptionRelationHasInvalidGeometry("It seems that relation has invalid geometry (not connected ways)");
+        if (array_key_exists(1, $values_count) && $values_count[1] > 2) {
+            throw new OsmClientExceptionRelationHasInvalidGeometry('It seems that relation has invalid geometry (not connected ways)');
         }
-        if(max($values_count)>3) {
-            throw new OsmClientExceptionRelationHasInvalidGeometry("It seems that relation has invalid geometry (maybe some mustache)");
+        if (max($values_count) > 3) {
+            throw new OsmClientExceptionRelationHasInvalidGeometry('It seems that relation has invalid geometry (maybe some mustache)');
         }
-        
+
         return [$properties, $geometry];
     }
 

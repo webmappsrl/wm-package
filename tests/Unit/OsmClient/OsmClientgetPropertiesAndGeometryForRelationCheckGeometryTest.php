@@ -41,11 +41,11 @@ class OsmClientgetPropertiesAndGeometryForRelationCheckGeometryTest extends Test
         OsmClient::getPropertiesAndGeometry($osmid);
         // No Exception
         $this->assertTrue(true);
-
     }
 
     /** @test */
-    public function with_not_connected_ways_it_throws_proper_exception(){
+    public function with_not_connected_ways_it_throws_proper_exception()
+    {
         $input = <<<'EOF'
         {
             "elements": [
@@ -66,12 +66,12 @@ class OsmClientgetPropertiesAndGeometryForRelationCheckGeometryTest extends Test
         }
         EOF;
 
-        $this->checkException($input,OsmClientExceptionRelationHasInvalidGeometry::class);
-
+        $this->checkException($input, OsmClientExceptionRelationHasInvalidGeometry::class);
     }
 
     /** @test */
-    public function with_mustache_it_throws_proper_exception(){
+    public function with_mustache_it_throws_proper_exception()
+    {
         $input = <<<'EOF'
         {
             "elements": [
@@ -93,8 +93,7 @@ class OsmClientgetPropertiesAndGeometryForRelationCheckGeometryTest extends Test
         }
         EOF;
 
-        $this->checkException($input,OsmClientExceptionRelationHasInvalidGeometry::class);
-
+        $this->checkException($input, OsmClientExceptionRelationHasInvalidGeometry::class);
     }
 
     /** @test */
@@ -164,7 +163,6 @@ class OsmClientgetPropertiesAndGeometryForRelationCheckGeometryTest extends Test
         OsmClient::getPropertiesAndGeometry($osmid);
         // No Exception
         $this->assertTrue(true);
-
     }
 
     /** @test */
@@ -199,7 +197,6 @@ class OsmClientgetPropertiesAndGeometryForRelationCheckGeometryTest extends Test
         OsmClient::getPropertiesAndGeometry($osmid);
         // No Exception
         $this->assertTrue(true);
-
     }
 
     /** @test */
@@ -234,7 +231,6 @@ class OsmClientgetPropertiesAndGeometryForRelationCheckGeometryTest extends Test
         OsmClient::getPropertiesAndGeometry($osmid);
         // No Exception
         $this->assertTrue(true);
-
     }
 
     private function checkException($input, $class)
