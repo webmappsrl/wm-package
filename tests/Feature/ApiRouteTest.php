@@ -3,8 +3,6 @@
 namespace Tests\Unit\Providers;
 
 use Illuminate\Testing\Fluent\AssertableJson;
-use Mockery\MockInterface;
-use Wm\WmPackage\Model\User;
 use Wm\WmPackage\Tests\TestCase;
 
 class ApiRouteTest extends TestCase
