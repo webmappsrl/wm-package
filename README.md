@@ -32,7 +32,9 @@ This is the contents of the published config file:
 
 ```php
 return [
-    'hoqu_url' => env('HOQU_URL', 'https://hoqu2.webmapp.it')
+    'hoqu_url' => env('HOQU_URL', 'https://hoqu2.webmapp.it'),
+    'hoqu_register_username' => env('HOQU_REGISTER_USERNAME'),
+    'hoqu_register_password' => env('HOQU_REGISTER_PASSWORD ')
 ];
 ```
 
@@ -98,8 +100,3 @@ https://pestphp.com/
         consente la logout tramite Bearer token
     -   `GET /user`
         restituisce i dettagli dell'utente loggato tramite Bearer token
-    -   `POST /register`
-        registra gli utenti fornendo `name`,`email` e `password`. L'accesso a questa api è consentito solo tramite Bearer token con ability `create-users`. Per registrare un nuovo token legato all'utente con `id = 1` utilizzare `php artisan tinker`:
-        ```php
-        \App\User\find(1)->createToken('artisan-token', ['create-users'])->plainTextToken
-        ```
