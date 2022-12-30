@@ -217,11 +217,12 @@ class OsmClient
     /**
      * Check $json consinstency and builds proper properies and geometry (MultiLineString)
      *
-     * 
+     *
      * The following example is the minimal working version (two nodes)
      * (json format)
+     *
      * @param  array  $json relation coming from Osm v0.6 full API (https://api.openstreetmap.org/api/0.6/relation/12312405/full.json)
-     * 
+     *
      * {
      *    "elements": [
      *         { "type": "node", "id": 11, "lon": 11.1, "lat": 11.2, "timestamp": "2020-01-01T01:01:01Z" },
