@@ -32,6 +32,10 @@ class OsmClientgetPropertiesAndGeometryForRelationSimpleCasesTest extends TestCa
         }
         EOF;
 
+        $this->checkInput($input);
+    }
+
+    private function checkInput($input) {
         $osmid = 'relation/31';
         $url = 'https://api.openstreetmap.org/api/0.6/relation/31/full.json';
 
@@ -52,9 +56,18 @@ class OsmClientgetPropertiesAndGeometryForRelationSimpleCasesTest extends TestCa
             '_roundtrip' => false,
             '_updated_at' => '2020-02-02 03:03:03'
         ];
+        $geometry_expected = [
+            'type' => 'MultiLineString',
+            'coordinates' => [[
+                [11.1,11.2],
+                [12.1,12.2],
+                [13.1,13.2]
+            ]]
+        ];
 
         // Asserts
         $this->assertEquals($properties_expected,$properties);
+        $this->assertEquals($geometry_expected,$geometry);
 
     }
 }

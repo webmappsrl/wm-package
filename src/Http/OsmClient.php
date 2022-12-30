@@ -303,9 +303,68 @@ class OsmClient
             throw new OsmClientExceptionRelationHasInvalidGeometry('It seems that relation has invalid geometry (maybe some mustache)');
         }
 
+        // Build Properties
         $properties = $relation['tags'];
         $properties['_roundtrip']=false;
         $properties['_updated_at'] = $this->getUpdatedAt($json);
+
+        // Build Geometry
+        // Find first node
+        $first_node_id=$first_way_id=0;
+        foreach($border_nodes_counter as $node_id => $count) {
+            if ($count==1) {
+                $first_node_id = $node_id;
+                break;
+            }
+        }
+        // Find first way
+        foreach ($relation['members'] as $member) {
+            if($member['type']=='way' && 
+            ($ways[$member['ref']]['nodes'][0]==$first_node_id || end($ways[$member['ref']]['nodes'])==$first_node_id)) {
+                $first_way_id = $member['ref'];
+                break;
+            }
+        }
+
+        // Prepare for ordered ways loop
+        $first_way=$ways[$first_way_id];
+        if($first_way['nodes'][0]!=$first_node_id) {
+            $first_way['nodes']=array_reverse($first_way['nodes']);
+        }
+        $next_node_id = end($first_way['nodes']);
+        $ordered_ways[]=$first_way;
+        unset($ways[$first_way['id']]);
+
+        // Build ordered ways array
+        while(count($ways)>0) {
+            foreach($ways as $way) {
+                if($way['nodes'][0]==$next_node_id || end($way['nodes'])==$next_node_id) {
+                    $next_way = $way;
+                    if($next_way['nodes'][0] != $next_node_id) {
+                        $next_way['nodes'] = array_reverse($next_way['nodes']);
+                    }
+                    $ordered_ways[]=$next_way;
+                    $next_node_id = end($next_way['nodes']);
+                    unset($ways[$next_way['id']]);
+                }
+            }
+        }
+        $last_node_id = $next_node_id;
+
+        // Now build coordinates
+        $coordinates = [];
+        foreach($ordered_ways as $way) {
+            $way_nodes = $way['nodes'];
+            array_pop($way_nodes);
+            foreach($way_nodes as $node_id) {
+                $coordinates[]=[ $nodes[$node_id]['lon'], $nodes[$node_id]['lat']];
+            }
+        }
+        $coordinates[]=[ $nodes[$last_node_id]['lon'], $nodes[$last_node_id]['lat']];
+
+        // build geometry (force to MultiLineString)
+        $geometry['type']='MultiLineString';
+        $geometry['coordinates']=[$coordinates];
 
         return [$properties, $geometry];
     }
