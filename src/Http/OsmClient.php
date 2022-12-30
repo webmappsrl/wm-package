@@ -303,27 +303,45 @@ class OsmClient
             throw new OsmClientExceptionRelationHasInvalidGeometry('It seems that relation has invalid geometry (maybe some mustache)');
         }
 
+        // Check roundtrip
+        $roundtrip = false;
+        if (!array_key_exists(1, $values_count)){
+            $roundtrip == true;
+        }
+
         // Build Properties
         $properties = $relation['tags'];
-        $properties['_roundtrip']=false;
+        $properties['_roundtrip']=$roundtrip;
         $properties['_updated_at'] = $this->getUpdatedAt($json);
 
         // Build Geometry
-        // Find first node
+        // Find first node & first way
         $first_node_id=$first_way_id=0;
-        foreach($border_nodes_counter as $node_id => $count) {
-            if ($count==1) {
-                $first_node_id = $node_id;
-                break;
+        if($roundtrip) {
+            foreach($relation['members'] as $member) {
+                if ($member['type']=='way'){
+                    $first_way_id=$member['ref'];
+                    $first_node_id=$ways[$first_way_id]['nodes'][0];
+                }
             }
         }
-        // Find first way
-        foreach ($relation['members'] as $member) {
-            if($member['type']=='way' && 
-            ($ways[$member['ref']]['nodes'][0]==$first_node_id || end($ways[$member['ref']]['nodes'])==$first_node_id)) {
-                $first_way_id = $member['ref'];
-                break;
-            }
+        else {
+            foreach ($relation['members'] as $member) {
+                if($member['type']=='way') {
+                    $way_id = $member['ref'];
+                    if($border_nodes_counter[$ways[$way_id]['nodes'][0]]==1 || 
+                       $border_nodes_counter[end($ways[$way_id]['nodes'])]==1) {
+                        $first_way_id = $way_id;
+                        if($border_nodes_counter[$ways[$way_id]['nodes'][0]]==1) {
+                            $first_node_id = $ways[$way_id]['nodes'][0];
+                        }
+                        else {
+                            $first_node_id = end($ways[$way_id]['nodes']);
+                        }
+                        break;
+                       }
+                }
+            }    
         }
 
         // Prepare for ordered ways loop
