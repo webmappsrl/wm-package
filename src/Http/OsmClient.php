@@ -8,6 +8,8 @@ use Wm\WmPackage\Exceptions\OsmClientExceptionNodeHasNoLat;
 use Wm\WmPackage\Exceptions\OsmClientExceptionNodeHasNoLon;
 use Wm\WmPackage\Exceptions\OsmClientExceptionNoElements;
 use Wm\WmPackage\Exceptions\OsmClientExceptionNoTags;
+use Wm\WmPackage\Exceptions\OsmClientExceptionRelationHasInvalidGeometry;
+use Wm\WmPackage\Exceptions\OsmClientExceptionRelationHasNoMembers;
 use Wm\WmPackage\Exceptions\OsmClientExceptionRelationHasNoNodes;
 use Wm\WmPackage\Exceptions\OsmClientExceptionRelationHasNoRelationElement;
 use Wm\WmPackage\Exceptions\OsmClientExceptionRelationHasNoWays;
@@ -41,18 +43,16 @@ use Wm\WmPackage\Exceptions\OsmClientExceptionWayHasNoNodes;
  * JSON: https://api.openstreetmap.org/api/0.6/relation/12312405.json
  * JSONFULL: https://api.openstreetmap.org/api/0.6/relation/12312405/full.json
  *
- * TODO: Exception remove all generic relation (throw new OsmClientException) with specific Exception and
- *       update test with specific Exception
  *
  * ROADMAP:
  *
  * BACKLOG:
- * osmclient_relation_224.2 Eccezioni per integrità della geometria (deve essere linestring)
  * osmclient_relation_224.3 Result from linear cases (impostazione test con caso semplice e casi reale)
  * osmclient_relation_224.4 Result from roundtrip cases (impostazione test con caso semplice e casi reale)
  *
  * DONE:
  * osmclient_relation_224.1 Impostazione funzionamento per la relation (eccezioni di base e costruzione struttura interna)
+ * osmclient_relation_224.2 Eccezioni per integrità della geometria (deve essere linestring)
  *
  *
  * TRY ON TINKER
@@ -267,6 +267,40 @@ class OsmClient
         }
         if (count($relation) == 0) {
             throw new OsmClientExceptionRelationHasNoRelationElement('It seems that relation has no nodes in elements');
+        }
+
+        if (! array_key_exists('members', $relation)) {
+            throw new OsmClientExceptionRelationHasNoMembers('It seems that relation has no members');
+        }
+
+        if (! array_key_exists('tags', $relation)) {
+            throw new OsmClientExceptionNoTags('It seems that relation has no tags');
+        }
+
+        // Builds border nodes counter for geometry check
+        $border_nodes_counter = [];
+        foreach ($ways as $way) {
+            $first = $way['nodes'][0];
+            $last = end($way['nodes']);
+            if (! array_key_exists($first, $border_nodes_counter)) {
+                $border_nodes_counter[$first] = 1;
+            } else {
+                $border_nodes_counter[$first] = $border_nodes_counter[$first] + 1;
+            }
+            if (! array_key_exists($last, $border_nodes_counter)) {
+                $border_nodes_counter[$last] = 1;
+            } else {
+                $border_nodes_counter[$last] = $border_nodes_counter[$last] + 1;
+            }
+        }
+        $values_count = array_count_values($border_nodes_counter);
+
+        // Geometry check disconnected
+        if (array_key_exists(1, $values_count) && $values_count[1] > 2) {
+            throw new OsmClientExceptionRelationHasInvalidGeometry('It seems that relation has invalid geometry (not connected ways)');
+        }
+        if (max($values_count) > 3) {
+            throw new OsmClientExceptionRelationHasInvalidGeometry('It seems that relation has invalid geometry (maybe some mustache)');
         }
 
         return [$properties, $geometry];
