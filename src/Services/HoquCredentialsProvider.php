@@ -7,11 +7,10 @@ use Illuminate\Support\Facades\Artisan;
 
 class HoquCredentialsProvider
 {
-
     /**
      * Set HOQU_USERNAME in .env file
      *
-     * @param string $value
+     * @param  string  $value
      * @return bool - return true on success false otherwise
      */
     public function setUsername($value)
@@ -22,7 +21,7 @@ class HoquCredentialsProvider
     /**
      * Set HOQU_PASSWORD in .env file
      *
-     * @param string $value
+     * @param  string  $value
      * @return bool - return true on success false otherwise
      */
     public function setPassword($value)
@@ -33,7 +32,7 @@ class HoquCredentialsProvider
     /**
      * Set HOQU_TOKEN in .env file
      *
-     * @param string $value
+     * @param  string  $value
      * @return bool - return true on success false otherwise
      */
     public function setToken($value)
@@ -71,7 +70,6 @@ class HoquCredentialsProvider
         return $this->getCredential('token');
     }
 
-
     /**
      * Store the credential in .env file
      *
@@ -84,6 +82,7 @@ class HoquCredentialsProvider
     {
         $check = $this->writeNewEnvironmentFileWith($name, $value);
         Artisan::call('config:cache');
+
         return $check;
     }
 
@@ -91,8 +90,6 @@ class HoquCredentialsProvider
      * Get the hoqu token stored
      *
      * @param  string  $name
-     *
-     *
      * @return string|false - return the token if stored, false otherwise
      */
     private function getCredential($name)
@@ -100,20 +97,18 @@ class HoquCredentialsProvider
         return env($this->getEnvKeyByName($name), false);
     }
 
-
     /**
      * The convention of keys in .env file dedicated to this class
      *
-     * @param string $name
+     * @param  string  $name
      * @return string
      */
     private function getEnvKeyByName($name)
     {
         $name = strtoupper($name);
+
         return "HOQU_{$name}";
     }
-
-
 
     /**
      * Write a new environment file with the given key and value.
@@ -123,7 +118,6 @@ class HoquCredentialsProvider
      */
     private function writeNewEnvironmentFileWith($key, $value)
     {
-
         $envKey = $this->getEnvKeyByName($key);
         $envPath = App::environmentFilePath();
         $replaced = preg_replace(
@@ -135,7 +129,6 @@ class HoquCredentialsProvider
         if ($replaced === $input || $replaced === null) {
             $replaced .= "\n{$envKey}={$value}";
         }
-
 
         file_put_contents($envPath, $replaced);
 
