@@ -3,9 +3,9 @@
 namespace Wm\WmPackage;
 
 use Spatie\LaravelPackageTools\Package;
+use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Wm\WmPackage\Commands\AddHoquToken;
 use Wm\WmPackage\Commands\WmPackageCommand;
-use Spatie\LaravelPackageTools\PackageServiceProvider;
 
 class WmPackageServiceProvider extends PackageServiceProvider
 {

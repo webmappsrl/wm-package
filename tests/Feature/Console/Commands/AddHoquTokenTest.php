@@ -2,8 +2,6 @@
 
 namespace Tests\Feature\Console\Commands;
 
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
 use Wm\WmPackage\Tests\TestCase;
 
 class AddHoquTokenTest extends TestCase
@@ -16,6 +14,6 @@ class AddHoquTokenTest extends TestCase
     public function test_hoqu_add_toke_command_existence()
     {
         $testToken = 'blablabla';
-        $this->artisan("hoqu:add-token", ['token' => $testToken])->assertSuccessful();
+        $this->artisan('hoqu:add-token', ['token' => $testToken])->assertSuccessful();
     }
 }
