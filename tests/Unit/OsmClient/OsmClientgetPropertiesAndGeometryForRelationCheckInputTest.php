@@ -3,7 +3,6 @@
 namespace Tests\Unit\Providers;
 
 use Illuminate\Support\Facades\Http;
-use Wm\WmPackage\Exceptions\OsmClientException;
 use Wm\WmPackage\Exceptions\OsmClientExceptionNoElements;
 use Wm\WmPackage\Exceptions\OsmClientExceptionRelationHasNoNodes;
 use Wm\WmPackage\Exceptions\OsmClientExceptionRelationHasNoRelationElement;
@@ -42,6 +41,7 @@ class OsmClientgetPropertiesAndGeometryForRelationCheckInputTest extends TestCas
 
         $this->checkException($input, OsmClientExceptionRelationHasNoNodes::class);
     }
+
     /** @test */
     public function with_no_ways_throws_proper_exception()
     {
@@ -62,6 +62,7 @@ class OsmClientgetPropertiesAndGeometryForRelationCheckInputTest extends TestCas
 
         $this->checkException($input, OsmClientExceptionRelationHasNoWays::class);
     }
+
     /** @test */
     public function with_no_relation_element_throws_proper_exception()
     {

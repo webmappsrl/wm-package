@@ -248,30 +248,26 @@ class OsmClient
         $ways = [];
         $relation = [];
 
-        foreach($json['elements'] as $element) {
-            if ($element['type']=='node') {
-                $nodes[$element['id']]=$element;
-            }
-            else if ($element['type']=='way') {
-                $ways[$element['id']]=$element;
-            }
-            else if ($element['type']=='relation') {
-                $relation=$element;
+        foreach ($json['elements'] as $element) {
+            if ($element['type'] == 'node') {
+                $nodes[$element['id']] = $element;
+            } elseif ($element['type'] == 'way') {
+                $ways[$element['id']] = $element;
+            } elseif ($element['type'] == 'relation') {
+                $relation = $element;
             }
         }
 
         // Check input
-        if(count($nodes)==0) {
-            throw new OsmClientExceptionRelationHasNoNodes("It seems that relation has no nodes in elements");
+        if (count($nodes) == 0) {
+            throw new OsmClientExceptionRelationHasNoNodes('It seems that relation has no nodes in elements');
         }
-        if(count($ways)==0) {
-            throw new OsmClientExceptionRelationHasNoWays("It seems that relation has no ways in elements");
+        if (count($ways) == 0) {
+            throw new OsmClientExceptionRelationHasNoWays('It seems that relation has no ways in elements');
         }
-        if(count($relation)==0) {
-            throw new OsmClientExceptionRelationHasNoRelationElement("It seems that relation has no nodes in elements");
+        if (count($relation) == 0) {
+            throw new OsmClientExceptionRelationHasNoRelationElement('It seems that relation has no nodes in elements');
         }
-        
-
 
         return [$properties, $geometry];
     }
