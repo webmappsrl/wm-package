@@ -11,12 +11,6 @@ Route::prefix('api')->middleware('api')->group(function () {
 
     // Protected routes
 
-    /**
-     * Only users with special token ability can register users
-     */
-    Route::post('register', [AuthController::class, 'register'])
-      ->middleware(['auth:sanctum', 'abilities:create-users']);
-
     Route::group(['middleware' => ['auth:sanctum']], function () {
         Route::get('user', function (Request $request) {
             return $request->user();
