@@ -12,13 +12,14 @@ class OsmClientgetPropertiesAndGeometryForRelationRealCasesTest extends TestCase
     /** @test */
     public function simple_case_it_works()
     {
-        // Prepare data
-        $input = file_get_contents(__DIR__.'/fixtures/simple.json');
-        $this->checkInput($input);
+        // Simple artificial case
+        $this->checkInput(31);
     }
 
-    private function checkInput($input) {
-        $osmid = 'relation/31';
+    private function checkInput($relation_id) {
+        $input = file_get_contents(__DIR__."/fixtures/$relation_id.json");
+
+        $osmid = "relation/$relation_id";
         $url = 'https://api.openstreetmap.org/api/0.6/relation/31/full.json';
 
         // Mock HTTP call
@@ -31,22 +32,10 @@ class OsmClientgetPropertiesAndGeometryForRelationRealCasesTest extends TestCase
         $properties = $r[0];
         $geometry = $r[1];
 
+        $expected = json_decode(file_get_contents(__DIR__."/fixtures/$relation_id.geojson"),true);
         // Prepare Expected value
-        $properties_expected = [
-            'key1' => 'val1',
-            'key2' => 'val2',
-            '_roundtrip' => false,
-            '_updated_at' => '2020-02-02 03:03:03'
-        ];
-        $geometry_expected = [
-            'type' => 'MultiLineString',
-            'coordinates' => [[
-                [11.1,11.2],
-                [12.1,12.2],
-                [13.1,13.2]
-            ]]
-        ];
-
+        $properties_expected = $expected['properties'];
+        $geometry_expected = $expected['geometry'];
         // Asserts
         $this->assertEquals($properties_expected,$properties);
         $this->assertEquals($geometry_expected,$geometry);
