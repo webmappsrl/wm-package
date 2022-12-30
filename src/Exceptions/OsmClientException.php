@@ -31,3 +31,6 @@ class OsmClientExceptionRelationHasNoWays extends OsmClientException
 class OsmClientExceptionRelationHasNoRelationElement extends OsmClientException
 {
 }
+class OsmClientExceptionRelationHasNoMembers extends OsmClientException
+{
+}

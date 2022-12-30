@@ -20,10 +20,13 @@ class OsmClientgetPropertiesAndGeometryForRelationCheckGeometryTest extends Test
             "elements": [
                 { "type": "node", "id": 11, "lon": 11.1, "lat": 11.2, "timestamp": "2020-01-01T01:01:01Z" },
                 { "type": "node", "id": 12, "lon": 12.1, "lat": 12.2, "timestamp": "2020-02-02T02:02:02Z" },
-                { "type": "way", "id": 31, "timestamp": "2020-01-01T01:01:01Z", "nodes": [11,12] },
+                { "type": "node", "id": 13, "lon": 13.1, "lat": 13.2, "timestamp": "2020-02-02T02:02:02Z" },
+                { "type": "way", "id": 21, "timestamp": "2020-01-01T01:01:01Z", "nodes": [11,12] },
+                { "type": "way", "id": 22, "timestamp": "2020-01-01T01:01:01Z", "nodes": [12,13] },
                 { "type": "relation", "id": 31, "timestamp": "2020-01-01T01:01:01Z",
                 "members": [
-                    { "type": "way", "ref": 11, "role": "" }
+                    { "type": "way", "ref": 21, "role": "" },
+                    { "type": "way", "ref": 22, "role": "" }
                 ],
                 "tags": { "key1": "val1", "key2": "val2" }
                 }

@@ -8,6 +8,7 @@ use Wm\WmPackage\Exceptions\OsmClientExceptionNodeHasNoLat;
 use Wm\WmPackage\Exceptions\OsmClientExceptionNodeHasNoLon;
 use Wm\WmPackage\Exceptions\OsmClientExceptionNoElements;
 use Wm\WmPackage\Exceptions\OsmClientExceptionNoTags;
+use Wm\WmPackage\Exceptions\OsmClientExceptionRelationHasNoMembers;
 use Wm\WmPackage\Exceptions\OsmClientExceptionRelationHasNoNodes;
 use Wm\WmPackage\Exceptions\OsmClientExceptionRelationHasNoRelationElement;
 use Wm\WmPackage\Exceptions\OsmClientExceptionRelationHasNoWays;
@@ -267,6 +268,14 @@ class OsmClient
         }
         if (count($relation) == 0) {
             throw new OsmClientExceptionRelationHasNoRelationElement('It seems that relation has no nodes in elements');
+        }
+
+        if(!array_key_exists('members',$relation)) {
+            throw new OsmClientExceptionRelationHasNoMembers("It seems that relation has no members");
+        }
+
+        if(!array_key_exists('tags',$relation)) {
+            throw new OsmClientExceptionNoTags("It seems that relation has no tags");
         }
 
         return [$properties, $geometry];
