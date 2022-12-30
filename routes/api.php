@@ -4,7 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Wm\WmPackage\Http\Controllers\AuthController;
 
-Route::prefix('api')->middleware('api')->group(function () {
+Route::prefix('api/wm')->middleware('api')->group(function () {
     // Public routes
 
     Route::post('login', [AuthController::class, 'login']);
