@@ -11,20 +11,11 @@ use Wm\WmPackage\Exceptions\OsmClientExceptionNoTags;
 use Wm\WmPackage\Exceptions\OsmClientExceptionWayHasNoNodes;
 
 /**
- * General purpose OpenStreetMap Service provider.
+ * General purpose OpenStreetMap http client.
  *
  * Based on OSM V0.6 API: https://wiki.openstreetmap.org/wiki/API_v0.6
- * This service provider can be used to obtain geojson format for node, way and relation from
+ * This service can be used to obtain geojson format for node, way and relation from
  * OpenStreetMap.
- *
- * IMPORTANT NOTE: on laravel 8.X if you use this provider remember to activate
- * on config/app.php:
- *
- *  'providers' => [
- *         ...
- *         App\Providers\OsmServiceProvider::class,
- *         ...,
- *         ]
  *
  *
  * Useful examples:
@@ -52,9 +43,8 @@ use Wm\WmPackage\Exceptions\OsmClientExceptionWayHasNoNodes;
  *       update test with specific Exception
  *
  * TRY ON TINKER
- * $osmp = app(\App\Providers\OsmServiceProvider::class);
- * $s = $osmp->getGeojson('node/770561143');
- * $s = $osmp->getGeojson('way/145096288 ');
+ * $s = OsmClient::getGeojson('node/770561143');
+ * $s = OsmClient::getGeojson('way/145096288 ');
  */
 class OsmClient
 {
@@ -72,7 +62,7 @@ class OsmClient
 
         $geojson = [];
         $geojson['version'] = 0.6;
-        $geojson['generator'] = 'Laravel OsmServiceProvider by WEBMAPP';
+        $geojson['generator'] = 'Laravel OsmClient by WEBMAPP';
         $geojson['_osmid'] = $osmid;
         $geojson['type'] = 'Feature';
 

@@ -6,18 +6,18 @@ use Illuminate\Support\Facades\Http;
 
 class HoquClient
 {
-    public function done($what)
+    private function getHoquApiUrl()
     {
-        return Http::get('http://google.com')->body();
+        return config('HOQU_URL').'/api/';
     }
+
+    // public function done($what)
+    // {
+    //     return Http::postJson($this->getHoquApiUrl() . 'done', $what)->body();
+    // }
 
     public function store($what)
     {
-        return Http::get('http://google.com')->body();
-    }
-
-    public function pull()
-    {
-        return Http::get('http://google.com')->body();
+        return Http::acceptJson()->post($this->getHoquApiUrl().'store', $what)->json();
     }
 }

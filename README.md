@@ -32,6 +32,7 @@ This is the contents of the published config file:
 
 ```php
 return [
+    'hoqu_url' => env('HOQU_URL', 'https://hoqu2.webmapp.it')
 ];
 ```
 

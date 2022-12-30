@@ -20,7 +20,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
             //->hasConfigFile()
             ->hasRoute('api')
             //->hasViews()
-            //->hasMigration('create_personal_access_tokens_table')
+            ->hasMigration('create_jobs_table')
             ->hasCommands([WmPackageCommand::class]);
     }
 }
