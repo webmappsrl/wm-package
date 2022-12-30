@@ -217,9 +217,24 @@ class OsmClient
     /**
      * Check $json consinstency and builds proper properies and geometry (MultiLineString)
      *
-     * @param  array  $json relation coming from Osm v0.6 full API (https://api.openstreetmap.org/api/0.6/relation/12312405/full.json
+     * 
      * The following example is the minimal working version (two nodes)
      * (json format)
+     * @param  array  $json relation coming from Osm v0.6 full API (https://api.openstreetmap.org/api/0.6/relation/12312405/full.json)
+     * 
+     * {
+     *    "elements": [
+     *         { "type": "node", "id": 11, "lon": 11.1, "lat": 11.2, "timestamp": "2020-01-01T01:01:01Z" },
+     *         { "type": "node", "id": 12, "lon": 12.1, "lat": 12.2, "timestamp": "2020-02-02T02:02:02Z" },
+     *         { "type": "way", "id": 31, "timestamp": "2020-01-01T01:01:01Z", "nodes": [11,12] },
+     *         { "type": "relation", "id": 31, "timestamp": "2020-01-01T01:01:01Z",
+     *           "members": [
+     *                         { "type": "way", "ref": 11, "role": "" }
+     *                      ],
+     *           "tags": { "key1": "val1", "key2": "val2" }
+     *         }
+     *       ]
+     * }
      * @return array
      */
     private function getPropertiesAndGeometryForRelation(array $json): array
