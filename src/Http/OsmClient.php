@@ -45,9 +45,9 @@ use Wm\WmPackage\Exceptions\OsmClientExceptionWayHasNoNodes;
  *       update test with specific Exception
  *
  * ROADMAP:
+ * osmclient_relation_224.2 Eccezioni per integrità della geometria (deve essere linestring)
  *
  * BACKLOG:
- * osmclient_relation_224.2 Eccezioni per integrità della geometria (deve essere linestring)
  * osmclient_relation_224.3 Result from linear cases (impostazione test con caso semplice e casi reale)
  * osmclient_relation_224.4 Result from roundtrip cases (impostazione test con caso semplice e casi reale)
  *
