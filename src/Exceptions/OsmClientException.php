@@ -34,3 +34,6 @@ class OsmClientExceptionRelationHasNoRelationElement extends OsmClientException
 class OsmClientExceptionRelationHasNoMembers extends OsmClientException
 {
 }
+class OsmClientExceptionRelationHasInvalidGeometry extends OsmClientException
+{
+}

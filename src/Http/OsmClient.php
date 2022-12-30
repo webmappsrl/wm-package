@@ -8,11 +8,14 @@ use Wm\WmPackage\Exceptions\OsmClientExceptionNodeHasNoLat;
 use Wm\WmPackage\Exceptions\OsmClientExceptionNodeHasNoLon;
 use Wm\WmPackage\Exceptions\OsmClientExceptionNoElements;
 use Wm\WmPackage\Exceptions\OsmClientExceptionNoTags;
+use Wm\WmPackage\Exceptions\OsmClientExceptionRelationHasInvalidGeometry;
 use Wm\WmPackage\Exceptions\OsmClientExceptionRelationHasNoMembers;
 use Wm\WmPackage\Exceptions\OsmClientExceptionRelationHasNoNodes;
 use Wm\WmPackage\Exceptions\OsmClientExceptionRelationHasNoRelationElement;
 use Wm\WmPackage\Exceptions\OsmClientExceptionRelationHasNoWays;
 use Wm\WmPackage\Exceptions\OsmClientExceptionWayHasNoNodes;
+
+use function PHPUnit\Framework\throwException;
 
 /**
  * General purpose OpenStreetMap http client.
@@ -278,6 +281,34 @@ class OsmClient
             throw new OsmClientExceptionNoTags("It seems that relation has no tags");
         }
 
+        // Builds border nodes counter for geometry check
+        $border_nodes_counter = [];
+        foreach ($ways as $way) {
+            $first = $way['nodes'][0];
+            $last = end($way['nodes']);
+            if(!array_key_exists($first,$border_nodes_counter)) {
+                $border_nodes_counter[$first]=1;
+            }
+            else {
+                $border_nodes_counter[$first]=$border_nodes_counter[$first]+1;
+            }
+            if(!array_key_exists($last,$border_nodes_counter)) {
+                $border_nodes_counter[$last]=1;
+            }
+            else {
+                $border_nodes_counter[$last]=$border_nodes_counter[$last]+1;
+            }
+        }
+        $values_count = array_count_values($border_nodes_counter);
+
+        // Geometry check disconnected
+        if(array_key_exists(1,$values_count) && $values_count[1] > 2) {
+            throw new OsmClientExceptionRelationHasInvalidGeometry("It seems that relation has invalid geometry (not connected ways)");
+        }
+        if(max($values_count)>3) {
+            throw new OsmClientExceptionRelationHasInvalidGeometry("It seems that relation has invalid geometry (maybe some mustache)");
+        }
+        
         return [$properties, $geometry];
     }
 
