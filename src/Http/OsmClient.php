@@ -45,11 +45,8 @@ use function PHPUnit\Framework\throwException;
  * JSON: https://api.openstreetmap.org/api/0.6/relation/12312405.json
  * JSONFULL: https://api.openstreetmap.org/api/0.6/relation/12312405/full.json
  *
- * TODO: Exception remove all generic relation (throw new OsmClientException) with specific Exception and
- *       update test with specific Exception
  *
  * ROADMAP:
- * osmclient_relation_224.2 Eccezioni per integrità della geometria (deve essere linestring)
  *
  * BACKLOG:
  * osmclient_relation_224.3 Result from linear cases (impostazione test con caso semplice e casi reale)
@@ -57,6 +54,7 @@ use function PHPUnit\Framework\throwException;
  *
  * DONE:
  * osmclient_relation_224.1 Impostazione funzionamento per la relation (eccezioni di base e costruzione struttura interna)
+ * osmclient_relation_224.2 Eccezioni per integrità della geometria (deve essere linestring)
  *
  *
  * TRY ON TINKER
