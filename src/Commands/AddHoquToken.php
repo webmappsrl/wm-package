@@ -2,11 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Models\User;
-use Illuminate\Support\Str;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Cache;
 use Wm\WmPackage\Services\HoquTokenProvider;
 
 class AddHoquToken extends Command
@@ -25,7 +21,6 @@ class AddHoquToken extends Command
      */
     protected $description = 'Creates a persistent cache entry with the token provided to that user';
 
-
     /**
      * The service that handle hoqu token
      *
@@ -33,11 +28,11 @@ class AddHoquToken extends Command
      */
     protected $tokenProvider;
 
-
     public function __construct(HoquTokenProvider $tokenProvider)
     {
         $this->tokenProvider = $tokenProvider;
     }
+
     /**
      * Execute the console command.
      *
@@ -45,13 +40,14 @@ class AddHoquToken extends Command
      */
     public function handle(string $token)
     {
-
         $check = $this->tokenProvider->setToken($token);
         if ($check) {
-            $this->info("Yeah, token stored correctly!");
+            $this->info('Yeah, token stored correctly!');
+
             return Command::SUCCESS;
         } else {
-            $this->error("Ooops ... something goes wrong during token store");
+            $this->error('Ooops ... something goes wrong during token store');
+
             return Command::FAILURE;
         }
     }

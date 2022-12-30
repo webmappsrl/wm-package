@@ -3,8 +3,8 @@
 namespace Wm\WmPackage\Http;
 
 use Illuminate\Support\Facades\Http;
-use Wm\WmPackage\Services\HoquTokenProvider;
 use Wm\WmPackage\Exceptions\HoquClientException;
+use Wm\WmPackage\Services\HoquTokenProvider;
 
 /**
  * The perfect http client to call hoqu
@@ -12,7 +12,6 @@ use Wm\WmPackage\Exceptions\HoquClientException;
  */
 class HoquClient
 {
-
     /**
      * The service that handle hoku token
      *
@@ -32,21 +31,22 @@ class HoquClient
      */
     private function getHoquApiUrl(): string
     {
-        return config('HOQU_URL') . '/api/';
+        return config('HOQU_URL').'/api/';
     }
-
 
     /**
      * Returns an autenticathed Http facade
      *
      * @return \Illuminate\Http\Client\PendingRequest
+     *
      * @throws \Wm\WmPackage\Exceptions\HoquClientException - when the hoqu token isn't stored
      */
     private function httpWithToken()
     {
         $token = $this->tokenProvider->getToken();
-        if (!$token)
-            throw new HoquClientException("Impossible make an authenticated call to hoqu, the token is not available!");
+        if (! $token) {
+            throw new HoquClientException('Impossible make an authenticated call to hoqu, the token is not available!');
+        }
 
         return Http::withToken($token);
     }
@@ -60,11 +60,11 @@ class HoquClient
     /**
      * The STORE call to hoqu
      *
-     * @param array $what - the body to send as json
+     * @param  array  $what - the body to send as json
      * @return array?
      */
     public function store($what)
     {
-        return $this->httpWithToken()->acceptJson()->postJson($this->getHoquApiUrl() . 'store', $what)->json();
+        return $this->httpWithToken()->acceptJson()->postJson($this->getHoquApiUrl().'store', $what)->json();
     }
 }
