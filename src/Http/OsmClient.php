@@ -8,6 +8,9 @@ use Wm\WmPackage\Exceptions\OsmClientExceptionNodeHasNoLat;
 use Wm\WmPackage\Exceptions\OsmClientExceptionNodeHasNoLon;
 use Wm\WmPackage\Exceptions\OsmClientExceptionNoElements;
 use Wm\WmPackage\Exceptions\OsmClientExceptionNoTags;
+use Wm\WmPackage\Exceptions\OsmClientExceptionRelationHasNoNodes;
+use Wm\WmPackage\Exceptions\OsmClientExceptionRelationHasNoRelationElement;
+use Wm\WmPackage\Exceptions\OsmClientExceptionRelationHasNoWays;
 use Wm\WmPackage\Exceptions\OsmClientExceptionWayHasNoNodes;
 
 /**
@@ -42,8 +45,6 @@ use Wm\WmPackage\Exceptions\OsmClientExceptionWayHasNoNodes;
  *       update test with specific Exception
  *
  * ROADMAP:
- * PROGRESS:
- * osmclient_relation_224.1 Impostazione funzionamento per la relation (eccezioni di base e costruzione struttura interna)
  *
  * BACKLOG:
  * osmclient_relation_224.2 Eccezioni per integrità della geometria (deve essere linestring)
@@ -51,6 +52,7 @@ use Wm\WmPackage\Exceptions\OsmClientExceptionWayHasNoNodes;
  * osmclient_relation_224.4 Result from roundtrip cases (impostazione test con caso semplice e casi reale)
  *
  * DONE:
+ * osmclient_relation_224.1 Impostazione funzionamento per la relation (eccezioni di base e costruzione struttura interna)
  *
  *
  * TRY ON TINKER
@@ -241,6 +243,34 @@ class OsmClient
     {
         $properties = [];
         $geometry = [];
+        $nodes = [];
+        $ways = [];
+        $relation = [];
+
+        foreach($json['elements'] as $element) {
+            if ($element['type']=='node') {
+                $nodes[$element['id']]=$element;
+            }
+            else if ($element['type']=='way') {
+                $ways[$element['id']]=$element;
+            }
+            else if ($element['type']=='relation') {
+                $relation=$element;
+            }
+        }
+
+        // Check input
+        if(count($nodes)==0) {
+            throw new OsmClientExceptionRelationHasNoNodes("It seems that relation has no nodes in elements");
+        }
+        if(count($ways)==0) {
+            throw new OsmClientExceptionRelationHasNoWays("It seems that relation has no ways in elements");
+        }
+        if(count($relation)==0) {
+            throw new OsmClientExceptionRelationHasNoRelationElement("It seems that relation has no nodes in elements");
+        }
+        
+
 
         return [$properties, $geometry];
     }
