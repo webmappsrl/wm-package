@@ -45,9 +45,9 @@ use Wm\WmPackage\Exceptions\OsmClientExceptionWayHasNoNodes;
  *
  *
  * ROADMAP:
+ * osmclient_relation_224.3 Result from linear cases (impostazione test con caso semplice e casi reale)
  *
  * BACKLOG:
- * osmclient_relation_224.3 Result from linear cases (impostazione test con caso semplice e casi reale)
  * osmclient_relation_224.4 Result from roundtrip cases (impostazione test con caso semplice e casi reale)
  *
  * DONE:
@@ -302,6 +302,10 @@ class OsmClient
         if (max($values_count) > 3) {
             throw new OsmClientExceptionRelationHasInvalidGeometry('It seems that relation has invalid geometry (maybe some mustache)');
         }
+
+        $properties = $relation['tags'];
+        $properties['_roundtrip']=false;
+        $properties['_updated_at'] = $this->getUpdatedAt($json);
 
         return [$properties, $geometry];
     }
