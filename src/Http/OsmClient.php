@@ -56,8 +56,10 @@ use Wm\WmPackage\Exceptions\OsmClientExceptionWayHasNoNodes;
  *
  *
  * TRY ON TINKER
- * $s = OsmClient::getGeojson('node/770561143');
- * $s = OsmClient::getGeojson('way/145096288 ');
+ * $s = Wm\WmPackage\Facades\OsmClient::getGeojson('node/770561143');
+ * $s = Wm\WmPackage\Facades\OsmClient::getGeojson('way/145096288');
+ * $s = Wm\WmPackage\Facades\OsmClient::getGeojson('relation/14336243');
+ * 
  */
 class OsmClient
 {
@@ -299,7 +301,7 @@ class OsmClient
         if (array_key_exists(1, $values_count) && $values_count[1] > 2) {
             throw new OsmClientExceptionRelationHasInvalidGeometry('It seems that relation has invalid geometry (not connected ways)');
         }
-        if (max($values_count) > 3) {
+        if (max(array_keys($values_count)) > 2) {
             throw new OsmClientExceptionRelationHasInvalidGeometry('It seems that relation has invalid geometry (maybe some mustache)');
         }
 
