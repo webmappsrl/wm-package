@@ -59,7 +59,6 @@ use Wm\WmPackage\Exceptions\OsmClientExceptionWayHasNoNodes;
  * $s = Wm\WmPackage\Facades\OsmClient::getGeojson('node/770561143');
  * $s = Wm\WmPackage\Facades\OsmClient::getGeojson('way/145096288');
  * $s = Wm\WmPackage\Facades\OsmClient::getGeojson('relation/14336243');
- * 
  */
 class OsmClient
 {
