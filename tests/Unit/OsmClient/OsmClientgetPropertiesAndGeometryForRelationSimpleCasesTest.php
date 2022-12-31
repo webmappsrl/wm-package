@@ -3,7 +3,6 @@
 namespace Tests\Unit\Providers;
 
 use Illuminate\Support\Facades\Http;
-use Wm\WmPackage\Exceptions\OsmClientExceptionRelationHasInvalidGeometry;
 use Wm\WmPackage\Facades\OsmClient;
 use Wm\WmPackage\Tests\TestCase;
 
@@ -113,7 +112,8 @@ class OsmClientgetPropertiesAndGeometryForRelationSimpleCasesTest extends TestCa
         $this->checkInput($input);
     }
 
-    private function checkInput($input) {
+    private function checkInput($input)
+    {
         $osmid = 'relation/31';
         $url = 'https://api.openstreetmap.org/api/0.6/relation/31/full.json';
 
@@ -132,21 +132,20 @@ class OsmClientgetPropertiesAndGeometryForRelationSimpleCasesTest extends TestCa
             'key1' => 'val1',
             'key2' => 'val2',
             '_roundtrip' => false,
-            '_updated_at' => '2020-02-02 03:03:03'
+            '_updated_at' => '2020-02-02 03:03:03',
         ];
         $geometry_expected = [
             'type' => 'MultiLineString',
             'coordinates' => [[
-                [11.1,11.2],
-                [12.1,12.2],
-                [13.1,13.2]
-            ]]
+                [11.1, 11.2],
+                [12.1, 12.2],
+                [13.1, 13.2],
+            ]],
         ];
 
         // Asserts
-        $this->assertEquals($properties_expected,$properties);
-        $this->assertEquals($geometry_expected,$geometry);
-
+        $this->assertEquals($properties_expected, $properties);
+        $this->assertEquals($geometry_expected, $geometry);
     }
 
         /** @test */
@@ -171,13 +170,12 @@ class OsmClientgetPropertiesAndGeometryForRelationSimpleCasesTest extends TestCa
                 ]
             }
             EOF;
-    
+
             $this->checkInputInverted($input);
         }
-    
-    
 
-    private function checkInputInverted($input) {
+    private function checkInputInverted($input)
+    {
         $osmid = 'relation/31';
         $url = 'https://api.openstreetmap.org/api/0.6/relation/31/full.json';
 
@@ -196,20 +194,19 @@ class OsmClientgetPropertiesAndGeometryForRelationSimpleCasesTest extends TestCa
             'key1' => 'val1',
             'key2' => 'val2',
             '_roundtrip' => false,
-            '_updated_at' => '2020-02-02 03:03:03'
+            '_updated_at' => '2020-02-02 03:03:03',
         ];
         $geometry_expected = [
             'type' => 'MultiLineString',
             'coordinates' => [[
-                [13.1,13.2],
-                [12.1,12.2],
-                [11.1,11.2]
-            ]]
+                [13.1, 13.2],
+                [12.1, 12.2],
+                [11.1, 11.2],
+            ]],
         ];
 
         // Asserts
-        $this->assertEquals($properties_expected,$properties);
-        $this->assertEquals($geometry_expected,$geometry);
-
+        $this->assertEquals($properties_expected, $properties);
+        $this->assertEquals($geometry_expected, $geometry);
     }
 }

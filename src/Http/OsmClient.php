@@ -305,63 +305,61 @@ class OsmClient
 
         // Check roundtrip
         $roundtrip = false;
-        if (!array_key_exists(1, $values_count)){
+        if (! array_key_exists(1, $values_count)) {
             $roundtrip == true;
         }
 
         // Build Properties
         $properties = $relation['tags'];
-        $properties['_roundtrip']=$roundtrip;
+        $properties['_roundtrip'] = $roundtrip;
         $properties['_updated_at'] = $this->getUpdatedAt($json);
 
         // Build Geometry
         // Find first node & first way
-        $first_node_id=$first_way_id=0;
-        if($roundtrip) {
-            foreach($relation['members'] as $member) {
-                if ($member['type']=='way'){
-                    $first_way_id=$member['ref'];
-                    $first_node_id=$ways[$first_way_id]['nodes'][0];
+        $first_node_id = $first_way_id = 0;
+        if ($roundtrip) {
+            foreach ($relation['members'] as $member) {
+                if ($member['type'] == 'way') {
+                    $first_way_id = $member['ref'];
+                    $first_node_id = $ways[$first_way_id]['nodes'][0];
                 }
             }
-        }
-        else {
+        } else {
             foreach ($relation['members'] as $member) {
-                if($member['type']=='way') {
+                if ($member['type'] == 'way') {
                     $way_id = $member['ref'];
-                    if($border_nodes_counter[$ways[$way_id]['nodes'][0]]==1 || 
-                       $border_nodes_counter[end($ways[$way_id]['nodes'])]==1) {
+                    if ($border_nodes_counter[$ways[$way_id]['nodes'][0]] == 1 ||
+                       $border_nodes_counter[end($ways[$way_id]['nodes'])] == 1) {
                         $first_way_id = $way_id;
-                        if($border_nodes_counter[$ways[$way_id]['nodes'][0]]==1) {
+                        if ($border_nodes_counter[$ways[$way_id]['nodes'][0]] == 1) {
                             $first_node_id = $ways[$way_id]['nodes'][0];
-                        }
-                        else {
+                        } else {
                             $first_node_id = end($ways[$way_id]['nodes']);
                         }
                         break;
-                       }
+                    }
                 }
-            }    
+            }
         }
 
         // Prepare for ordered ways loop
-        $first_way=$ways[$first_way_id];
-        if($first_way['nodes'][0]!=$first_node_id) {
-            $first_way['nodes']=array_reverse($first_way['nodes']);
+        $first_way = $ways[$first_way_id];
+        if ($first_way['nodes'][0] != $first_node_id) {
+            $first_way['nodes'] = array_reverse($first_way['nodes']);
         }
         $next_node_id = end($first_way['nodes']);
-        $ordered_ways[]=$first_way;
+        $ordered_ways[] = $first_way;
         unset($ways[$first_way['id']]);
 
         // Build ordered ways array
-        while(count($ways)>0) {
-            foreach($ways as $way) {
-                if($way['nodes'][0]==$next_node_id || end($way['nodes'])==$next_node_id) {
+        while (count($ways) > 0) {
+            foreach ($ways as $way) {
+                if ($way['nodes'][0] == $next_node_id || end($way['nodes']) == $next_node_id) {
                     $next_way = $way;
-                    if($next_way['nodes'][0] != $next_node_id) {
+                    if ($next_way['nodes'][0] != $next_node_id) {
                         $next_way['nodes'] = array_reverse($next_way['nodes']);
                     }
-                    $ordered_ways[]=$next_way;
+                    $ordered_ways[] = $next_way;
                     $next_node_id = end($next_way['nodes']);
                     unset($ways[$next_way['id']]);
                 }
@@ -371,18 +369,18 @@ class OsmClient
 
         // Now build coordinates
         $coordinates = [];
-        foreach($ordered_ways as $way) {
+        foreach ($ordered_ways as $way) {
             $way_nodes = $way['nodes'];
             array_pop($way_nodes);
-            foreach($way_nodes as $node_id) {
-                $coordinates[]=[ $nodes[$node_id]['lon'], $nodes[$node_id]['lat']];
+            foreach ($way_nodes as $node_id) {
+                $coordinates[] = [$nodes[$node_id]['lon'], $nodes[$node_id]['lat']];
             }
         }
-        $coordinates[]=[ $nodes[$last_node_id]['lon'], $nodes[$last_node_id]['lat']];
+        $coordinates[] = [$nodes[$last_node_id]['lon'], $nodes[$last_node_id]['lat']];
 
         // build geometry (force to MultiLineString)
-        $geometry['type']='MultiLineString';
-        $geometry['coordinates']=[$coordinates];
+        $geometry['type'] = 'MultiLineString';
+        $geometry['coordinates'] = [$coordinates];
 
         return [$properties, $geometry];
     }
