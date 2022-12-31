@@ -45,7 +45,6 @@ use Wm\WmPackage\Exceptions\OsmClientExceptionWayHasNoNodes;
  *
  *
  * ROADMAP:
- * osmclient_relation_224.3 Result from linear cases (impostazione test con caso semplice e casi reale)
  *
  * BACKLOG:
  * osmclient_relation_224.4 Result from roundtrip cases (impostazione test con caso semplice e casi reale)
@@ -53,6 +52,7 @@ use Wm\WmPackage\Exceptions\OsmClientExceptionWayHasNoNodes;
  * DONE:
  * osmclient_relation_224.1 Impostazione funzionamento per la relation (eccezioni di base e costruzione struttura interna)
  * osmclient_relation_224.2 Eccezioni per integrità della geometria (deve essere linestring)
+ * osmclient_relation_224.3 Result from linear cases (impostazione test con caso semplice e casi reale)
  *
  *
  * TRY ON TINKER
