@@ -6,7 +6,20 @@ use Illuminate\Support\Facades\Http;
 use Wm\WmPackage\Exceptions\OsmClientExceptionRelationHasInvalidGeometry;
 use Wm\WmPackage\Facades\OsmClient;
 use Wm\WmPackage\Tests\TestCase;
-
+/**
+ * Some real (short) cases taken from OSM2CAI project with SDA=4
+ * SQL: select relation_id,distance from hiking_routes where distance > 0 AND distance <1 AND osm2cai_status=4 order by distance asc limit 50;
+ *  relation_id | distance 
+ * -------------+----------
+ *     12254933 |     0.04
+ *     12254949 |     0.07
+ *     14448538 |    0.521
+ *     14336243 |    0.547 
+ * 
+ *  How to build fixtures file for relation 12254933
+ *  1) Download https://www.openstreetmap.org/api/0.6/relation/12254933/full.json and save it to .fixtures/12254933.json
+ *  2) Use Overpass API: https://overpass-turbo.eu/s/1pz2 to create output and save it to .fixtures/12254933.geojson
+ */
 class OsmClientgetPropertiesAndGeometryForRelationRealCasesTest extends TestCase
 {
     /** @test */
@@ -14,6 +27,12 @@ class OsmClientgetPropertiesAndGeometryForRelationRealCasesTest extends TestCase
     {
         // Simple artificial case
         $this->checkInput(31);
+    }
+    /** @test */
+    public function real_case_case_with_relation_12254933_it_works()
+    {
+        // Simple artificial case
+        $this->checkInput(12254933);
     }
 
     private function checkInput($relation_id) {
