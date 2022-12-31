@@ -1,0 +1,814 @@
+{
+    "version": "0.6",
+    "generator": "CGImap 0.8.8 (1632312 spike-07.openstreetmap.org)",
+    "copyright": "OpenStreetMap and contributors",
+    "attribution": "http://www.openstreetmap.org/copyright",
+    "license": "http://opendatacommons.org/licenses/odbl/1-0/",
+    "elements": [
+      {
+        "type": "node",
+        "id": 1847298131,
+        "lat": 46.0125345,
+        "lon": 8.7633951,
+        "timestamp": "2012-08-01T20:08:02Z",
+        "version": 1,
+        "changeset": 12578285,
+        "user": "coppy",
+        "uid": 215740
+      },
+      {
+        "type": "node",
+        "id": 1847298132,
+        "lat": 46.0125586,
+        "lon": 8.7632624,
+        "timestamp": "2012-08-01T20:08:02Z",
+        "version": 1,
+        "changeset": 12578285,
+        "user": "coppy",
+        "uid": 215740
+      },
+      {
+        "type": "node",
+        "id": 1847298134,
+        "lat": 46.0125983,
+        "lon": 8.7631470,
+        "timestamp": "2012-08-01T20:08:02Z",
+        "version": 1,
+        "changeset": 12578285,
+        "user": "coppy",
+        "uid": 215740
+      },
+      {
+        "type": "node",
+        "id": 1847298139,
+        "lat": 46.0126819,
+        "lon": 8.7628939,
+        "timestamp": "2012-08-01T20:08:02Z",
+        "version": 1,
+        "changeset": 12578285,
+        "user": "coppy",
+        "uid": 215740
+      },
+      {
+        "type": "node",
+        "id": 1847298147,
+        "lat": 46.0127549,
+        "lon": 8.7627194,
+        "timestamp": "2012-08-01T20:08:02Z",
+        "version": 1,
+        "changeset": 12578285,
+        "user": "coppy",
+        "uid": 215740
+      },
+      {
+        "type": "node",
+        "id": 1847298152,
+        "lat": 46.0128194,
+        "lon": 8.7626153,
+        "timestamp": "2012-08-01T20:08:02Z",
+        "version": 1,
+        "changeset": 12578285,
+        "user": "coppy",
+        "uid": 215740
+      },
+      {
+        "type": "node",
+        "id": 1847298162,
+        "lat": 46.0129052,
+        "lon": 8.7625132,
+        "timestamp": "2012-08-01T20:08:03Z",
+        "version": 1,
+        "changeset": 12578285,
+        "user": "coppy",
+        "uid": 215740
+      },
+      {
+        "type": "node",
+        "id": 1847298170,
+        "lat": 46.0129817,
+        "lon": 8.7624417,
+        "timestamp": "2012-08-01T20:08:03Z",
+        "version": 1,
+        "changeset": 12578285,
+        "user": "coppy",
+        "uid": 215740
+      },
+      {
+        "type": "node",
+        "id": 1847298178,
+        "lat": 46.0130370,
+        "lon": 8.7624213,
+        "timestamp": "2012-08-01T20:08:03Z",
+        "version": 1,
+        "changeset": 12578285,
+        "user": "coppy",
+        "uid": 215740
+      },
+      {
+        "type": "node",
+        "id": 1847298184,
+        "lat": 46.0131008,
+        "lon": 8.7624009,
+        "timestamp": "2012-08-01T20:08:03Z",
+        "version": 1,
+        "changeset": 12578285,
+        "user": "coppy",
+        "uid": 215740
+      },
+      {
+        "type": "node",
+        "id": 1847298192,
+        "lat": 46.0131469,
+        "lon": 8.7623672,
+        "timestamp": "2012-08-01T20:08:03Z",
+        "version": 1,
+        "changeset": 12578285,
+        "user": "coppy",
+        "uid": 215740
+      },
+      {
+        "type": "node",
+        "id": 1847298195,
+        "lat": 46.0131653,
+        "lon": 8.7622605,
+        "timestamp": "2012-08-01T20:08:03Z",
+        "version": 1,
+        "changeset": 12578285,
+        "user": "coppy",
+        "uid": 215740
+      },
+      {
+        "type": "node",
+        "id": 1847298196,
+        "lat": 46.0131682,
+        "lon": 8.7623162,
+        "timestamp": "2012-08-01T20:08:03Z",
+        "version": 1,
+        "changeset": 12578285,
+        "user": "coppy",
+        "uid": 215740
+      },
+      {
+        "type": "node",
+        "id": 1847298200,
+        "lat": 46.0132192,
+        "lon": 8.7622856,
+        "timestamp": "2012-08-01T20:08:03Z",
+        "version": 1,
+        "changeset": 12578285,
+        "user": "coppy",
+        "uid": 215740
+      },
+      {
+        "type": "node",
+        "id": 1847298213,
+        "lat": 46.0133042,
+        "lon": 8.7623299,
+        "timestamp": "2012-08-01T20:08:04Z",
+        "version": 1,
+        "changeset": 12578285,
+        "user": "coppy",
+        "uid": 215740
+      },
+      {
+        "type": "node",
+        "id": 1847298237,
+        "lat": 46.0134176,
+        "lon": 8.7624401,
+        "timestamp": "2012-08-01T20:08:04Z",
+        "version": 1,
+        "changeset": 12578285,
+        "user": "coppy",
+        "uid": 215740
+      },
+      {
+        "type": "node",
+        "id": 1847298250,
+        "lat": 46.0135268,
+        "lon": 8.7625361,
+        "timestamp": "2012-08-01T20:08:04Z",
+        "version": 1,
+        "changeset": 12578285,
+        "user": "coppy",
+        "uid": 215740
+      },
+      {
+        "type": "node",
+        "id": 6411473524,
+        "lat": 46.0136533,
+        "lon": 8.7625888,
+        "timestamp": "2019-04-17T10:22:44Z",
+        "version": 1,
+        "changeset": 69303394,
+        "user": "sahanki",
+        "uid": 8683359
+      },
+      {
+        "type": "node",
+        "id": 6411473525,
+        "lat": 46.0137286,
+        "lon": 8.7626379,
+        "timestamp": "2019-04-17T10:22:44Z",
+        "version": 1,
+        "changeset": 69303394,
+        "user": "sahanki",
+        "uid": 8683359
+      },
+      {
+        "type": "node",
+        "id": 6411473526,
+        "lat": 46.0138111,
+        "lon": 8.7627153,
+        "timestamp": "2019-04-17T10:22:44Z",
+        "version": 1,
+        "changeset": 69303394,
+        "user": "sahanki",
+        "uid": 8683359
+      },
+      {
+        "type": "node",
+        "id": 6411473527,
+        "lat": 46.0138559,
+        "lon": 8.7627799,
+        "timestamp": "2019-04-17T10:22:44Z",
+        "version": 1,
+        "changeset": 69303394,
+        "user": "sahanki",
+        "uid": 8683359
+      },
+      {
+        "type": "node",
+        "id": 6411473528,
+        "lat": 46.0138989,
+        "lon": 8.7628057,
+        "timestamp": "2019-04-17T10:22:44Z",
+        "version": 1,
+        "changeset": 69303394,
+        "user": "sahanki",
+        "uid": 8683359
+      },
+      {
+        "type": "node",
+        "id": 6411473529,
+        "lat": 46.0139240,
+        "lon": 8.7628315,
+        "timestamp": "2019-04-17T10:22:44Z",
+        "version": 1,
+        "changeset": 69303394,
+        "user": "sahanki",
+        "uid": 8683359
+      },
+      {
+        "type": "node",
+        "id": 6411473530,
+        "lat": 46.0139707,
+        "lon": 8.7629064,
+        "timestamp": "2019-04-17T10:22:44Z",
+        "version": 1,
+        "changeset": 69303394,
+        "user": "sahanki",
+        "uid": 8683359
+      },
+      {
+        "type": "node",
+        "id": 9875906204,
+        "lat": 46.0125304,
+        "lon": 8.7635394,
+        "timestamp": "2022-07-09T08:58:51Z",
+        "version": 1,
+        "changeset": 123392559,
+        "user": "Sergio P",
+        "uid": 633272
+      },
+      {
+        "type": "node",
+        "id": 9875906205,
+        "lat": 46.0124370,
+        "lon": 8.7638842,
+        "timestamp": "2022-07-09T08:58:51Z",
+        "version": 1,
+        "changeset": 123392559,
+        "user": "Sergio P",
+        "uid": 633272
+      },
+      {
+        "type": "node",
+        "id": 9875906206,
+        "lat": 46.0124158,
+        "lon": 8.7639051,
+        "timestamp": "2022-07-09T08:58:51Z",
+        "version": 1,
+        "changeset": 123392559,
+        "user": "Sergio P",
+        "uid": 633272
+      },
+      {
+        "type": "node",
+        "id": 9875906207,
+        "lat": 46.0123684,
+        "lon": 8.7640055,
+        "timestamp": "2022-07-09T08:58:51Z",
+        "version": 1,
+        "changeset": 123392559,
+        "user": "Sergio P",
+        "uid": 633272
+      },
+      {
+        "type": "node",
+        "id": 9875906208,
+        "lat": 46.0123008,
+        "lon": 8.7641851,
+        "timestamp": "2022-07-09T08:58:51Z",
+        "version": 1,
+        "changeset": 123392559,
+        "user": "Sergio P",
+        "uid": 633272
+      },
+      {
+        "type": "node",
+        "id": 9875906209,
+        "lat": 46.0123938,
+        "lon": 8.7645767,
+        "timestamp": "2022-07-09T08:58:51Z",
+        "version": 1,
+        "changeset": 123392559,
+        "user": "Sergio P",
+        "uid": 633272
+      },
+      {
+        "type": "node",
+        "id": 9875906210,
+        "lat": 46.0124497,
+        "lon": 8.7647551,
+        "timestamp": "2022-07-09T08:58:51Z",
+        "version": 1,
+        "changeset": 123392559,
+        "user": "Sergio P",
+        "uid": 633272
+      },
+      {
+        "type": "node",
+        "id": 9875906211,
+        "lat": 46.0124885,
+        "lon": 8.7648488,
+        "timestamp": "2022-07-09T08:58:51Z",
+        "version": 1,
+        "changeset": 123392559,
+        "user": "Sergio P",
+        "uid": 633272
+      },
+      {
+        "type": "node",
+        "id": 9875906212,
+        "lat": 46.0125287,
+        "lon": 8.7649340,
+        "timestamp": "2022-07-09T08:58:51Z",
+        "version": 1,
+        "changeset": 123392559,
+        "user": "Sergio P",
+        "uid": 633272
+      },
+      {
+        "type": "node",
+        "id": 9875906213,
+        "lat": 46.0125973,
+        "lon": 8.7650345,
+        "timestamp": "2022-07-09T08:58:51Z",
+        "version": 1,
+        "changeset": 123392559,
+        "user": "Sergio P",
+        "uid": 633272
+      },
+      {
+        "type": "node",
+        "id": 9875906214,
+        "lat": 46.0126565,
+        "lon": 8.7651077,
+        "timestamp": "2022-07-09T08:58:51Z",
+        "version": 1,
+        "changeset": 123392559,
+        "user": "Sergio P",
+        "uid": 633272
+      },
+      {
+        "type": "node",
+        "id": 9875906215,
+        "lat": 46.0127156,
+        "lon": 8.7651963,
+        "timestamp": "2022-07-09T08:58:51Z",
+        "version": 1,
+        "changeset": 123392559,
+        "user": "Sergio P",
+        "uid": 633272
+      },
+      {
+        "type": "node",
+        "id": 9875906216,
+        "lat": 46.0127586,
+        "lon": 8.7652244,
+        "timestamp": "2022-07-09T08:58:51Z",
+        "version": 1,
+        "changeset": 123392559,
+        "user": "Sergio P",
+        "uid": 633272
+      },
+      {
+        "type": "node",
+        "id": 9875945720,
+        "lat": 46.0142527,
+        "lon": 8.7646655,
+        "timestamp": "2022-07-09T09:00:19Z",
+        "version": 1,
+        "changeset": 123392597,
+        "user": "Sergio P",
+        "uid": 633272
+      },
+      {
+        "type": "node",
+        "id": 9875945721,
+        "lat": 46.0142354,
+        "lon": 8.7646188,
+        "timestamp": "2022-07-09T09:00:19Z",
+        "version": 1,
+        "changeset": 123392597,
+        "user": "Sergio P",
+        "uid": 633272
+      },
+      {
+        "type": "node",
+        "id": 9875945722,
+        "lat": 46.0142739,
+        "lon": 8.7644171,
+        "timestamp": "2022-07-09T09:00:19Z",
+        "version": 1,
+        "changeset": 123392597,
+        "user": "Sergio P",
+        "uid": 633272
+      },
+      {
+        "type": "node",
+        "id": 9875945723,
+        "lat": 46.0143123,
+        "lon": 8.7642428,
+        "timestamp": "2022-07-09T09:00:19Z",
+        "version": 1,
+        "changeset": 123392597,
+        "user": "Sergio P",
+        "uid": 633272
+      },
+      {
+        "type": "node",
+        "id": 9875945724,
+        "lat": 46.0143380,
+        "lon": 8.7640853,
+        "timestamp": "2022-07-09T09:00:19Z",
+        "version": 1,
+        "changeset": 123392597,
+        "user": "Sergio P",
+        "uid": 633272
+      },
+      {
+        "type": "node",
+        "id": 9875945725,
+        "lat": 46.0143374,
+        "lon": 8.7640363,
+        "timestamp": "2022-07-09T09:00:19Z",
+        "version": 1,
+        "changeset": 123392597,
+        "user": "Sergio P",
+        "uid": 633272
+      },
+      {
+        "type": "node",
+        "id": 9875945726,
+        "lat": 46.0143307,
+        "lon": 8.7639928,
+        "timestamp": "2022-07-09T09:00:19Z",
+        "version": 1,
+        "changeset": 123392597,
+        "user": "Sergio P",
+        "uid": 633272
+      },
+      {
+        "type": "node",
+        "id": 9875945727,
+        "lat": 46.0142874,
+        "lon": 8.7638035,
+        "timestamp": "2022-07-09T09:00:19Z",
+        "version": 1,
+        "changeset": 123392597,
+        "user": "Sergio P",
+        "uid": 633272
+      },
+      {
+        "type": "node",
+        "id": 9875945728,
+        "lat": 46.0141702,
+        "lon": 8.7636203,
+        "timestamp": "2022-07-09T09:00:19Z",
+        "version": 1,
+        "changeset": 123392597,
+        "user": "Sergio P",
+        "uid": 633272
+      },
+      {
+        "type": "node",
+        "id": 9875945729,
+        "lat": 46.0141074,
+        "lon": 8.7634649,
+        "timestamp": "2022-07-09T09:00:19Z",
+        "version": 1,
+        "changeset": 123392597,
+        "user": "Sergio P",
+        "uid": 633272
+      },
+      {
+        "type": "node",
+        "id": 9875945730,
+        "lat": 46.0141448,
+        "lon": 8.7633195,
+        "timestamp": "2022-07-09T09:00:19Z",
+        "version": 1,
+        "changeset": 123392597,
+        "user": "Sergio P",
+        "uid": 633272
+      },
+      {
+        "type": "node",
+        "id": 9875947117,
+        "lat": 46.0127853,
+        "lon": 8.7652252,
+        "timestamp": "2022-07-09T08:58:51Z",
+        "version": 1,
+        "changeset": 123392559,
+        "user": "Sergio P",
+        "uid": 633272
+      },
+      {
+        "type": "node",
+        "id": 9875965003,
+        "lat": 46.0142592,
+        "lon": 8.7646534,
+        "timestamp": "2022-07-09T09:21:44Z",
+        "version": 1,
+        "changeset": 123393168,
+        "user": "Sergio P",
+        "uid": 633272,
+        "tags": {
+          "destination": "Poppino 0:05;Bonga 0:15;Colmegna 0:45|Rebisello 0:05|Monte Bedea 1:10;Longhirolo 1:50",
+          "ele": "410",
+          "hiking": "yes",
+          "information": "guidepost",
+          "ref": "171C/01",
+          "rwn:name": "Rete Escursionistica Lombarda (REL)",
+          "source:ref": "9216064",
+          "support": "pole",
+          "survey:date": "2011-06-12",
+          "tourism": "information"
+        }
+      },
+      {
+        "type": "node",
+        "id": 9875965004,
+        "lat": 46.0131875,
+        "lon": 8.7621066,
+        "timestamp": "2022-07-09T09:21:44Z",
+        "version": 1,
+        "changeset": 123393168,
+        "user": "Sergio P",
+        "uid": 633272,
+        "tags": {
+          "destination": "Motte 0:10|Poppino 0:15",
+          "ele": "368",
+          "hiking": "yes",
+          "information": "guidepost",
+          "ref": "171C/02",
+          "rwn:name": "Rete Escursionistica Lombarda (REL)",
+          "source:ref": "9216064",
+          "support": "pole",
+          "survey:date": "2011-06-12",
+          "tourism": "information"
+        }
+      },
+      {
+        "type": "node",
+        "id": 9875965005,
+        "lat": 46.0127694,
+        "lon": 8.7652309,
+        "timestamp": "2022-07-09T09:21:44Z",
+        "version": 1,
+        "changeset": 123393168,
+        "user": "Sergio P",
+        "uid": 633272,
+        "tags": {
+          "destination": "Rebisello 0:05|Poppino 0:05;Bonga 0:15;Colmegna 0:45|Monte Bedea 1:00;Longhirolo 1:40",
+          "ele": "400",
+          "hiking": "yes",
+          "information": "guidepost",
+          "ref": "171C/03",
+          "rwn:name": "Rete Escursionistica Lombarda (REL)",
+          "source:ref": "9216064",
+          "support": "pole",
+          "survey:date": "2011-06-12",
+          "tourism": "information"
+        }
+      },
+      {
+        "type": "way",
+        "id": 173988993,
+        "timestamp": "2022-07-09T09:12:04Z",
+        "version": 2,
+        "changeset": 123392909,
+        "user": "Sergio P",
+        "uid": 633272,
+        "nodes": [
+          1847298195,
+          1847298196,
+          1847298192,
+          1847298184,
+          1847298178,
+          1847298170,
+          1847298162,
+          1847298152,
+          1847298147,
+          1847298139,
+          1847298134,
+          1847298132,
+          1847298131
+        ],
+        "tags": {
+          "highway": "residential"
+        }
+      },
+      {
+        "type": "way",
+        "id": 684351206,
+        "timestamp": "2022-07-09T09:12:04Z",
+        "version": 3,
+        "changeset": 123392909,
+        "user": "Sergio P",
+        "uid": 633272,
+        "nodes": [
+          1847298250,
+          6411473524,
+          6411473525,
+          6411473526,
+          6411473527,
+          6411473528,
+          6411473529,
+          6411473530,
+          9875945730
+        ],
+        "tags": {
+          "highway": "residential"
+        }
+      },
+      {
+        "type": "way",
+        "id": 1077041715,
+        "timestamp": "2022-07-09T08:58:51Z",
+        "version": 1,
+        "changeset": 123392559,
+        "user": "Sergio P",
+        "uid": 633272,
+        "nodes": [
+          1847298131,
+          9875906204,
+          9875906205,
+          9875906206,
+          9875906207,
+          9875906208,
+          9875906209,
+          9875906210,
+          9875906211,
+          9875906212,
+          9875906213,
+          9875906214,
+          9875906215,
+          9875906216,
+          9875947117
+        ],
+        "tags": {
+          "highway": "path"
+        }
+      },
+      {
+        "type": "way",
+        "id": 1077041808,
+        "timestamp": "2022-07-09T09:00:19Z",
+        "version": 1,
+        "changeset": 123392597,
+        "user": "Sergio P",
+        "uid": 633272,
+        "nodes": [
+          9875945720,
+          9875945721,
+          9875945722,
+          9875945723,
+          9875945724,
+          9875945725,
+          9875945726,
+          9875945727,
+          9875945728,
+          9875945729,
+          9875945730
+        ],
+        "tags": {
+          "highway": "path"
+        }
+      },
+      {
+        "type": "way",
+        "id": 1077042798,
+        "timestamp": "2022-07-09T09:12:04Z",
+        "version": 1,
+        "changeset": 123392909,
+        "user": "Sergio P",
+        "uid": 633272,
+        "nodes": [
+          1847298195,
+          1847298200,
+          1847298213,
+          1847298237,
+          1847298250
+        ],
+        "tags": {
+          "highway": "residential"
+        }
+      },
+      {
+        "type": "relation",
+        "id": 14336243,
+        "timestamp": "2022-10-23T08:54:30Z",
+        "version": 5,
+        "changeset": 127947500,
+        "user": "Sergio P",
+        "uid": 633272,
+        "members": [
+          {
+            "type": "way",
+            "ref": 1077041808,
+            "role": ""
+          },
+          {
+            "type": "way",
+            "ref": 684351206,
+            "role": ""
+          },
+          {
+            "type": "way",
+            "ref": 1077042798,
+            "role": ""
+          },
+          {
+            "type": "way",
+            "ref": 173988993,
+            "role": ""
+          },
+          {
+            "type": "way",
+            "ref": 1077041715,
+            "role": ""
+          },
+          {
+            "type": "node",
+            "ref": 9875965005,
+            "role": ""
+          },
+          {
+            "type": "node",
+            "ref": 9875965004,
+            "role": ""
+          },
+          {
+            "type": "node",
+            "ref": 9875965003,
+            "role": ""
+          }
+        ],
+        "tags": {
+          "ascent": "24",
+          "cai_scale": "E",
+          "descent": "45",
+          "distance": "0.547",
+          "duration:backward": "00:15",
+          "duration:forward": "00:15",
+          "from": "Motte",
+          "network": "lwn",
+          "osmc:symbol": "red:red:white_stripe:171C:black",
+          "ref": "171C",
+          "ref:REI": "DVAA171C",
+          "ref:Ry:date": "2021-01-03",
+          "route": "hiking",
+          "rwn:name": "Rete Escursionistica Lombarda (REL)",
+          "source": "survey:CAI",
+          "source:ref": "9216064",
+          "survey:date": "2013-01-23",
+          "symbol:it": "segnavia bianco e rosso",
+          "to": "Motte",
+          "type": "route",
+          "website": "https://www.cailuino.it/itinerari/179-sentiero-171c-variante-rebisello"
+        }
+      }
+    ]
+  }

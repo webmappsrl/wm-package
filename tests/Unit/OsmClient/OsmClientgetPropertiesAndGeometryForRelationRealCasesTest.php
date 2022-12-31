@@ -12,8 +12,6 @@ use Wm\WmPackage\Tests\TestCase;
  *  relation_id | distance 
  * -------------+----------
  *     12254933 |     0.04
- *     12254949 |     0.07
- *     14448538 |    0.521
  *     14336243 |    0.547 
  * 
  *  How to build fixtures file for relation 12254933
@@ -28,11 +26,19 @@ class OsmClientgetPropertiesAndGeometryForRelationRealCasesTest extends TestCase
         // Simple artificial case
         $this->checkInput(31);
     }
+
     /** @test */
     public function real_case_case_with_relation_12254933_it_works()
     {
         // Simple artificial case
         $this->checkInput(12254933);
+    }
+
+    /** @test */
+    public function real_case_case_with_relation_14336243_it_works()
+    {
+        // Simple artificial case
+        $this->checkInput(14336243);
     }
 
     private function checkInput($relation_id) {
