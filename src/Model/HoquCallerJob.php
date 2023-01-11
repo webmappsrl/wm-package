@@ -13,6 +13,6 @@ class HoquCallerJob extends Model
         'job_id',
         'class',
         'feature_id',
-        'field_to_update'
+        'field_to_update',
     ];
 }
