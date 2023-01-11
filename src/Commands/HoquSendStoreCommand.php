@@ -4,9 +4,9 @@ namespace Wm\WmPackage\Commands;
 
 use Exception;
 use Illuminate\Console\Command;
-use Wm\WmPackage\Http\HoquClient;
 use Illuminate\Support\Facades\Validator;
 use Throwable;
+use Wm\WmPackage\Http\HoquClient;
 use Wm\WmPackage\Model\HoquCallerJob;
 
 class HoquSendStoreCommand extends Command
@@ -61,6 +61,7 @@ class HoquSendStoreCommand extends Command
             foreach ($validator->errors()->all() as $error) {
                 $this->error($error);
             }
+
             return Command::INVALID;
         }
 
@@ -71,7 +72,7 @@ class HoquSendStoreCommand extends Command
          */
         $response = $hoquClient->store([
             'name' => $class,
-            'input' => $input
+            'input' => $input,
         ]);
 
         try {
@@ -81,13 +82,10 @@ class HoquSendStoreCommand extends Command
                 'feature_id' => $featureId,
                 'field_to_update' => $field,
             ]);
-        } catch (Throwable | Exception $e) {
+        } catch (Throwable|Exception $e) {
             $this->error(print_r($response, true));
             throw $e;
         }
-
-
-
 
         return Command::SUCCESS;
     }
