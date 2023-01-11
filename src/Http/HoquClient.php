@@ -105,8 +105,8 @@ class HoquClient
     /**
      * Register a new (simple) user to Hoqu that can use api via token
      *
-     * @param string $token
-     * @param array $json - json in json_decoded format
+     * @param  string  $token
+     * @param  array  $json - json in json_decoded format
      * @return mixed - can return array or scalar value
      */
     public function register($token, $json)
