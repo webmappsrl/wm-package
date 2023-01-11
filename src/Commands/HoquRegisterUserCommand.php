@@ -3,16 +3,14 @@
 namespace Wm\WmPackage\Commands;
 
 use Exception;
-use Throwable;
-use Illuminate\Support\Env;
-use Illuminate\Support\Str;
 use Illuminate\Console\Command;
-use Wm\WmPackage\Http\HoquClient;
-use Illuminate\Support\Facades\URL;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Console\ConfirmableTrait;
 use Illuminate\Contracts\Console\Isolatable;
-use Illuminate\Contracts\Support\Jsonable;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Str;
+use Throwable;
+use Wm\WmPackage\Http\HoquClient;
 use Wm\WmPackage\Services\HoquCredentialsProvider;
 
 class HoquRegisterUserCommand extends Command implements Isolatable
@@ -27,7 +25,6 @@ class HoquRegisterUserCommand extends Command implements Isolatable
     protected $signature = 'hoqu:register-user
                             {--R|role= : required, the role of this instance: "caller" , "processor" or "caller,processor" }
                             {--endpoint=false : the endpoint of this instance, default is APP_URL in .env file}';
-
 
     /**
      * The console command description.
@@ -71,7 +68,6 @@ class HoquRegisterUserCommand extends Command implements Isolatable
 
         // $endpoint = $this->ask('Where HOQU should call you (the endpoint on HOQU instance)? Eg: https://geohub2.webmapp.it/api/processor');
 
-
         /**
          * TODO: generate an user with token to send to HOKU
          * STEP 2
@@ -92,13 +88,12 @@ class HoquRegisterUserCommand extends Command implements Isolatable
         $this->info('Storing the TOKEN received from HOQU in .env file ...');
         try {
             $credentialsProvider->setToken($json['token']);
-        } catch (Throwable | Exception $e) {
+        } catch (Throwable|Exception $e) {
             //TODO: add specific exception
-            $this->error("Something goes wrong during hoqu registration. Here the hoqu response in json format:");
+            $this->error('Something goes wrong during hoqu registration. Here the hoqu response in json format:');
             $this->error(print_r($json, true));
             throw $e;
         }
-
 
         $this->info('Storing the USERNAME received from HOQU in .env file ...');
         $credentialsProvider->setUsername($json['user']['email']);
