@@ -72,7 +72,7 @@ class HoquClient
     }
 
     /**
-     * The REGISTER LOGIN call to hoqu
+     * The REGISTER LOGIN call to hoqu that use the "special" (that can register other users on hoku) user credentials
      * use the config keys:
      *
      * HOQU_REGISTER_USERNAME
@@ -104,6 +104,13 @@ class HoquClient
         return $json;
     }
 
+    /**
+     * Register a new (simple) user to Hoqu that can use api via token
+     *
+     * @param string $token
+     * @param array $json - json in json_decoded format
+     * @return mixed - can return array or scalar value
+     */
     public function register($token, $json)
     {
         $response = $this->httpWithToken($token)->acceptJson()
