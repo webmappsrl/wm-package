@@ -48,7 +48,17 @@ class HoquRegisterUserCommand extends Command implements Isolatable
 
         $this->info('Registering/retrieving register user token on HOQU instance ...');
         $json = $hoquClient->registerLogin();
-        $hoqu_register_token = $json['token']; //special token for register user on hoqu instance
+
+
+        try {
+            $hoqu_register_token = $json['token']; //special token for register user on hoqu instance
+        } catch (Throwable | Exception $e) {
+            //TODO: add specific exception
+            $this->error("Something goes wrong during hoqu login. Here the hoqu response in json format:");
+            $this->error(print_r($json, true));
+            throw $e;
+        }
+
 
         $this->info('Generate a random password and save it in .env file on this istance ...');
         $password = Str::random(20);

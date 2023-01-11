@@ -2,6 +2,7 @@
 
 namespace Wm\WmPackage\Services;
 
+use Illuminate\Support\Env;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Artisan;
 
@@ -81,7 +82,7 @@ class HoquCredentialsProvider
     private function setCredential($name, $value)
     {
         $check = $this->writeNewEnvironmentFileWith($name, $value);
-        Artisan::call('config:cache');
+        Artisan::call('config:cache'); //TODO: it doesnt work, it's necessary to call manually ...
 
         return $check;
     }
@@ -94,7 +95,7 @@ class HoquCredentialsProvider
      */
     private function getCredential($name)
     {
-        return env($this->getEnvKeyByName($name), false);
+        return Env::get($this->getEnvKeyByName($name), false);
     }
 
     /**
