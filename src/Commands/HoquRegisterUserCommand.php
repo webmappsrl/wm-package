@@ -5,15 +5,13 @@ namespace Wm\WmPackage\Commands;
 use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Console\ConfirmableTrait;
-use Illuminate\Contracts\Console\Isolatable;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use Throwable;
 use Wm\WmPackage\Http\HoquClient;
 use Wm\WmPackage\Services\HoquCredentialsProvider;
 
-class HoquRegisterUserCommand extends Command implements Isolatable
+class HoquRegisterUserCommand extends Command
 {
     use ConfirmableTrait;
 
@@ -98,7 +96,7 @@ class HoquRegisterUserCommand extends Command implements Isolatable
         $this->info('Storing the TOKEN received from HOQU in .env file ...');
         try {
             $credentialsProvider->setToken($json['token']);
-        } catch (Throwable|Exception $e) {
+        } catch (Throwable | Exception $e) {
             //TODO: add specific exception
             $this->error('Something goes wrong during hoqu registration. Here the hoqu response in json format:');
             $this->error(print_r($json, true));
