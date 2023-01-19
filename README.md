@@ -22,6 +22,11 @@ php artisan vendor:publish --tag="wm-package-migrations"
 php artisan migrate
 ```
 
+Available migrations are:
+
+-   `create_jobs_table`, for default laravel job with an extra column
+-   `create_hoqu_caller_jobs`, HoquCallerJob model table, necessary for processor/caller instances
+
 You can publish the config file with:
 
 ```bash
@@ -41,8 +46,16 @@ return [
 ## Usage
 
 ```php
-$wmPackage = new Wm\WmPackage();
-echo $wmPackage->echoPhrase('Hello, Wm!');
+use Wm\WmPackage\Facades\HoquClient;
+/** Start store call to hoqu (1)**/
+HoquClient::store(['name' => 'test','input' => '{ ... }' ]);
+...
+/** It logins (to retrieve a token) as an user that can create processors/callers on hoqu **/
+HoquClient::registerLogin()
+...
+/** Register a new processor/caller on hoqu **/
+HoquClient::register()
+
 ```
 
 ## Update
@@ -100,3 +113,14 @@ https://pestphp.com/
         consente la logout tramite Bearer token
     -   `GET /user`
         restituisce i dettagli dell'utente loggato tramite Bearer token
+
+### Artisan commands
+
+-   `hoqu:register-user`. Create a new user on Hoqu instance based on credetials provided in `.env` file. Options:
+    -   `--R|role`: required, the role of this instance: "caller" , "processor" or "caller,processor"
+    -   `--endpoint=false` : the endpoint of this instance, default is `APP_URL` in .env file
+-   `hoqu:store`. Performs a call to Hoqu to store a job, saves a new `HoquCallerModel` in the database with the hoqu response. Options:
+    -   `--class` : required, the class that will execute job on processor}
+    -   `--featureId` : required, the feature id to update after completed job}
+    -   `--field` : required, the field to update after completed job}
+    -   `--input` : required, the input to send to processor}

@@ -2,10 +2,12 @@
 
 namespace Wm\WmPackage\Commands;
 
+use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Console\ConfirmableTrait;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
+use Throwable;
 use Wm\WmPackage\Http\HoquClient;
 use Wm\WmPackage\Services\HoquCredentialsProvider;
 
@@ -18,18 +20,9 @@ class HoquRegisterUserCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'hoqu:register-user';
-
-    /**
-     * The name of the console command.
-     *
-     * This name is used to identify the command during lazy loading.
-     *
-     * @var string|null
-     *
-     * @deprecated
-     */
-    protected static $defaultName = 'hoqu:register-user';
+    protected $signature = 'hoqu:register-user
+                            {--R|role= : required, the role of this instance: "caller" , "processor" or "caller,processor" }
+                            {--endpoint=false : the endpoint of this instance, default is APP_URL in .env file}';
 
     /**
      * The console command description.
@@ -45,28 +38,41 @@ class HoquRegisterUserCommand extends Command
      */
     public function handle(HoquClient $hoquClient, HoquCredentialsProvider $credentialsProvider)
     {
+        $role = $this->option('role');
+        $endpoint = $this->option('endpoint') ?? URL::to('/');
+
         $this->info('Registering/retrieving register user token on HOQU instance ...');
         $json = $hoquClient->registerLogin();
-        $hoqu_register_token = $json['token']; //special token for register user on hoqu instance
+
+        try {
+            $hoqu_register_token = $json['token']; //special token for register user on hoqu instance
+        } catch (Throwable|Exception $e) {
+            //TODO: add specific exception
+            $this->error('Something goes wrong during hoqu login. Here the hoqu response in json format:');
+            $this->error(print_r($json, true));
+            throw $e;
+        }
 
         $this->info('Generate a random password and save it in .env file on this istance ...');
         $password = Str::random(20);
         //$passwordHash = Hash::make();
         $credentialsProvider->setPassword($password);
 
-        $role = $this->anticipate('Are you a caller, a processor or both (the hoqu_roles on HOQU instance)?', [
-            'caller',
-            'processor',
-            'caller,processor',
-        ]);
+        // $role = $this->anticipate('Are you a caller, a processor or both (the hoqu_roles on HOQU instance)?', [
+        //     'caller',
+        //     'processor',
+        //     'caller,processor',
+        // ]);
+
         $roles = explode(',', $role);
         //TODO: validation of roles by enum
 
-        $capability = $this->ask('Which are your classes capabilities (the hoqu_processor_capabilities on HOQU instance)? Separate them with comma (eg: "AddLocationsToPoint,AddLocationsToPoint2")');
-        $capabilities = explode(',', $capability);
+        //TODO: enable capabilities
+        // $capability = $this->ask('Which are your classes capabilities (the hoqu_processor_capabilities on HOQU instance)? Separate them with comma (eg: "AddLocationsToPoint,AddLocationsToPoint2")');
+        // $capabilities = explode(',', $capability);
         //TODO? validation
 
-        $endpoint = $this->ask('Where HOQU should call you (the endpoint on HOQU instance)? Eg: https://geohub2.webmapp.it/api/processor');
+        // $endpoint = $this->ask('Where HOQU should call you (the endpoint on HOQU instance)? Eg: https://geohub2.webmapp.it/api/processor');
 
         /**
          * TODO: generate an user with token to send to HOKU
@@ -77,7 +83,7 @@ class HoquRegisterUserCommand extends Command
         $json = [
             'password' => $password,
             'hoqu_roles' => $roles,
-            'hoqu_processor_capabilities' => $capabilities,
+            'hoqu_processor_capabilities' => $capabilities ?? [], //TODO: handle capabilities
             'hoqu_api_token' => $instance_token,
             'endpoint' => $endpoint,
         ];
@@ -86,7 +92,14 @@ class HoquRegisterUserCommand extends Command
         $json = $hoquClient->register($hoqu_register_token, $json);
 
         $this->info('Storing the TOKEN received from HOQU in .env file ...');
-        $credentialsProvider->setToken($json['token']);
+        try {
+            $credentialsProvider->setToken($json['token']);
+        } catch (Throwable|Exception $e) {
+            //TODO: add specific exception
+            $this->error('Something goes wrong during hoqu registration. Here the hoqu response in json format:');
+            $this->error(print_r($json, true));
+            throw $e;
+        }
 
         $this->info('Storing the USERNAME received from HOQU in .env file ...');
         $credentialsProvider->setUsername($json['user']['email']);

@@ -2,6 +2,7 @@
 
 namespace Wm\WmPackage\Http;
 
+use Exception;
 use Illuminate\Support\Facades\Http;
 use Wm\WmPackage\Exceptions\HoquClientException;
 use Wm\WmPackage\Services\HoquCredentialsProvider;
@@ -70,7 +71,7 @@ class HoquClient
     }
 
     /**
-     * The REGISTER LOGIN call to hoqu
+     * The REGISTER LOGIN call to hoqu that use the "special" (that can register other users on hoku) user credentials
      * use the config keys:
      *
      * HOQU_REGISTER_USERNAME
@@ -80,15 +81,34 @@ class HoquClient
      * or `php artisan hoqu:create-register-user` command on hoqu if you need credentials
      *
      * @return array
+     *
+     * @throws Exception
      */
     public function registerLogin()
     {
-        return Http::post($this->getHoquApiUrl().'register-login', [
+        $url = $this->getHoquApiUrl().'register-login';
+        $response = Http::acceptJson()->post($url, [
             'email' => config('HOQU_REGISTER_USERNAME', 'register@webmapp.it'),
             'password' => config('HOQU_REGISTER_PASSWORD', 'test'),
-        ])->json();
+        ]);
+
+        $json = $response->json();
+
+        if (! isset($json['token'])) {
+            //TODO: add specific exception
+            throw new Exception("Something goes wrong during hoqu login ($url). Here the hoqu response status:".$response->status());
+        }
+
+        return $json;
     }
 
+    /**
+     * Register a new (simple) user to Hoqu that can use api via token
+     *
+     * @param  string  $token
+     * @param  array  $json - json in json_decoded format
+     * @return mixed - can return array or scalar value
+     */
     public function register($token, $json)
     {
         $response = $this->httpWithToken($token)->acceptJson()
