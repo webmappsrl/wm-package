@@ -1,0 +1,149 @@
+{
+    "version": "0.6",
+    "generator": "CGImap 0.8.8 (1864950 spike-06.openstreetmap.org)",
+    "copyright": "OpenStreetMap and contributors",
+    "attribution": "http://www.openstreetmap.org/copyright",
+    "license": "http://opendatacommons.org/licenses/odbl/1-0/",
+    "elements": [
+      {
+        "type": "node",
+        "id": 1420012930,
+        "lat": 41.2356363,
+        "lon": 13.0708203,
+        "timestamp": "2011-09-01T11:39:09Z",
+        "version": 1,
+        "changeset": 9183795,
+        "user": "gluca",
+        "uid": 124084
+      },
+      {
+        "type": "node",
+        "id": 1420012932,
+        "lat": 41.2356726,
+        "lon": 13.0709329,
+        "timestamp": "2011-09-01T11:39:09Z",
+        "version": 1,
+        "changeset": 9183795,
+        "user": "gluca",
+        "uid": 124084
+      },
+      {
+        "type": "node",
+        "id": 1420012945,
+        "lat": 41.2355515,
+        "lon": 13.0705199,
+        "timestamp": "2011-09-01T11:39:09Z",
+        "version": 1,
+        "changeset": 9183795,
+        "user": "gluca",
+        "uid": 124084
+      },
+      {
+        "type": "node",
+        "id": 1420012947,
+        "lat": 41.2355798,
+        "lon": 13.0706111,
+        "timestamp": "2011-09-01T11:39:10Z",
+        "version": 1,
+        "changeset": 9183795,
+        "user": "gluca",
+        "uid": 124084
+      },
+      {
+        "type": "node",
+        "id": 1420012954,
+        "lat": 41.2357884,
+        "lon": 13.0712002,
+        "timestamp": "2021-12-31T15:00:25Z",
+        "version": 2,
+        "changeset": 115612847,
+        "user": "birdplay",
+        "uid": 4444076
+      },
+      {
+        "type": "node",
+        "id": 1420013050,
+        "lat": 41.2356121,
+        "lon": 13.0707130,
+        "timestamp": "2011-09-01T11:39:12Z",
+        "version": 1,
+        "changeset": 9183795,
+        "user": "gluca",
+        "uid": 124084
+      },
+      {
+        "type": "node",
+        "id": 1420013055,
+        "lat": 41.2357169,
+        "lon": 13.0710670,
+        "timestamp": "2011-09-01T11:39:12Z",
+        "version": 1,
+        "changeset": 9183795,
+        "user": "gluca",
+        "uid": 124084
+      },
+      {
+        "type": "way",
+        "id": 128504190,
+        "timestamp": "2022-09-25T06:47:39Z",
+        "version": 6,
+        "changeset": 126603902,
+        "user": "Andrea Del Sarto",
+        "uid": 3215770,
+        "nodes": [
+          1420012954,
+          1420013055,
+          1420012932,
+          1420012930,
+          1420013050,
+          1420012947,
+          1420012945
+        ],
+        "tags": {
+          "highway": "path",
+          "mtb:scale": "2",
+          "sac_scale": "hiking",
+          "sac_scale_ref": "T1"
+        }
+      },
+      {
+        "type": "relation",
+        "id": 12254933,
+        "timestamp": "2022-09-29T07:38:40Z",
+        "version": 3,
+        "changeset": 126766091,
+        "user": "Federico Ce",
+        "uid": 4713219,
+        "members": [
+          {
+            "type": "way",
+            "ref": 128504190,
+            "role": ""
+          }
+        ],
+        "tags": {
+          "ascent": "10",
+          "cai_scale": "E",
+          "distance": "00.04",
+          "duration:backward": "00:05",
+          "duration:forward": "00:05",
+          "from": "percorso 751",
+          "name": "raccordo 751-755",
+          "network": "lwn",
+          "operator": "Ente Parco del Circeo",
+          "osmc:symbol": "red:red:white_stripe:751A:black",
+          "ref": "751A",
+          "ref:REI": "OLTS751A",
+          "route": "hiking",
+          "rwn:name": "Rete Escursionistica del Lazio (REL)",
+          "source": "survey:CAI",
+          "source:ref": "9232006",
+          "survey_date": "2022-09-29",
+          "symbol": "751A on white red flags",
+          "symbol:it": "751A su bandierina bianca e rossa",
+          "to": "percorso 755",
+          "type": "route"
+        }
+      }
+    ]
+  }

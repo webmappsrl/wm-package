@@ -4,7 +4,10 @@ namespace Tests\Unit\Providers;
 
 use Exception;
 use Illuminate\Support\Facades\Http;
-use Mockery\MockInterface;
+use Wm\WmPackage\Exceptions\OsmClientExceptionNodeHasNoLat;
+use Wm\WmPackage\Exceptions\OsmClientExceptionNodeHasNoLon;
+use Wm\WmPackage\Exceptions\OsmClientExceptionNoTags;
+use Wm\WmPackage\Exceptions\OsmClientExceptionWayHasNoNodes;
 use Wm\WmPackage\Facades\OsmClient;
 use Wm\WmPackage\Tests\TestCase;
 
@@ -67,9 +70,10 @@ class OsmClientgetPropertiesAndGeometryForWayTest extends TestCase
         //          ->andReturn($return);
         // });
 
-        Http::fake(function (Request $request) {
-            return Http::response($return, 200);
-        });
+        Http::fake([
+            $url => Http::sequence()->push($return, 200),
+        ]);
+
         $this->expectException(Exception::class);
         OsmClient::getPropertiesAndGeometry($osmid);
         $this->assertTrue(false);
@@ -106,14 +110,18 @@ class OsmClientgetPropertiesAndGeometryForWayTest extends TestCase
 
         ]);
         $url = 'https://api.openstreetmap.org/api/0.6/way/1/full.json';
-        $mock = $this->mock(Http::class, function (MockInterface $mock) use ($url, $return) {
-            $mock->shouldReceive('get')
-                    ->once()
-                    ->with($url)
-                    ->andReturn($return);
-        });
+        // $mock = $this->mock(Http::class, function (MockInterface $mock) use ($url, $return) {
+        //     $mock->shouldReceive('get')
+        //         ->once()
+        //         ->with($url)
+        //         ->andReturn($return);
+        // });
 
-        $this->expectException(OsmServiceProviderExceptionNoTags::class);
+        Http::fake([
+            $url => Http::sequence()->push($return, 200),
+        ]);
+
+        $this->expectException(OsmClientExceptionNoTags::class);
         OsmClient::getPropertiesAndGeometry($osmid);
         $this->assertTrue(false);
     }
@@ -148,14 +156,16 @@ class OsmClientgetPropertiesAndGeometryForWayTest extends TestCase
 
         ]);
         $url = 'https://api.openstreetmap.org/api/0.6/way/1/full.json';
-        $mock = $this->mock(Http::class, function (MockInterface $mock) use ($url, $return) {
-            $mock->shouldReceive('get')
-                    ->once()
-                    ->with($url)
-                    ->andReturn($return);
-        });
-
-        $this->expectException(OsmServiceProviderExceptionWayHasNoNodes::class);
+        // $mock = $this->mock(Http::class, function (MockInterface $mock) use ($url, $return) {
+        //     $mock->shouldReceive('get')
+        //         ->once()
+        //         ->with($url)
+        //         ->andReturn($return);
+        // });
+        Http::fake([
+            $url => Http::sequence()->push($return, 200),
+        ]);
+        $this->expectException(OsmClientExceptionWayHasNoNodes::class);
         OsmClient::getPropertiesAndGeometry($osmid);
         $this->assertTrue(false);
     }
@@ -193,15 +203,20 @@ class OsmClientgetPropertiesAndGeometryForWayTest extends TestCase
 
         ]);
         $url = 'https://api.openstreetmap.org/api/0.6/way/1/full.json';
-        $mock = $this->mock(CurlServiceProvider::class, function (MockInterface $mock) use ($url, $return) {
-            $mock->shouldReceive('exec')
-                    ->once()
-                    ->with($url)
-                    ->andReturn($return);
-        });
-        $osmp = app(OsmServiceProvider::class);
-        $this->expectException(OsmServiceProviderExceptionNodeHasNoLon::class);
-        $osmp->getPropertiesAndGeometry($osmid);
+        // $mock = $this->mock(CurlServiceProvider::class, function (MockInterface $mock) use ($url, $return) {
+        //     $mock->shouldReceive('exec')
+        //         ->once()
+        //         ->with($url)
+        //         ->andReturn($return);
+        // });
+        // $osmp = app(OsmServiceProvider::class);
+
+        Http::fake([
+            $url => Http::sequence()->push($return, 200),
+        ]);
+
+        $this->expectException(OsmClientExceptionNodeHasNoLon::class);
+        OsmClient::getPropertiesAndGeometry($osmid);
         $this->assertTrue(false);
     }
 
@@ -241,15 +256,19 @@ class OsmClientgetPropertiesAndGeometryForWayTest extends TestCase
 
         ]);
         $url = 'https://api.openstreetmap.org/api/0.6/way/1/full.json';
-        $mock = $this->mock(CurlServiceProvider::class, function (MockInterface $mock) use ($url, $return) {
-            $mock->shouldReceive('exec')
-                    ->once()
-                    ->with($url)
-                    ->andReturn($return);
-        });
-        $osmp = app(OsmServiceProvider::class);
-        $this->expectException(OsmServiceProviderExceptionNodeHasNoLat::class);
-        $osmp->getPropertiesAndGeometry($osmid);
+        // $mock = $this->mock(CurlServiceProvider::class, function (MockInterface $mock) use ($url, $return) {
+        //     $mock->shouldReceive('exec')
+        //         ->once()
+        //         ->with($url)
+        //         ->andReturn($return);
+        // });
+        // $osmp = app(OsmServiceProvider::class);
+        Http::fake([
+            $url => Http::sequence()->push($return, 200),
+        ]);
+
+        $this->expectException(OsmClientExceptionNodeHasNoLat::class);
+        OsmClient::getPropertiesAndGeometry($osmid);
         $this->assertTrue(false);
     }
 
@@ -260,14 +279,19 @@ class OsmClientgetPropertiesAndGeometryForWayTest extends TestCase
         $osmid = 'way/1';
         $return = $this->getJsonWay();
         $url = 'https://api.openstreetmap.org/api/0.6/way/1/full.json';
-        $mock = $this->mock(CurlServiceProvider::class, function (MockInterface $mock) use ($url, $return) {
-            $mock->shouldReceive('exec')
-                 ->once()
-                 ->with($url)
-                 ->andReturn($return);
-        });
-        $osmp = app(OsmServiceProvider::class);
-        $result = $osmp->getPropertiesAndGeometry($osmid);
+        // $mock = $this->mock(CurlServiceProvider::class, function (MockInterface $mock) use ($url, $return) {
+        //     $mock->shouldReceive('exec')
+        //         ->once()
+        //         ->with($url)
+        //         ->andReturn($return);
+        // });
+        // $osmp = app(OsmServiceProvider::class);
+
+        Http::fake([
+            $url => Http::sequence()->push($return, 200),
+        ]);
+
+        $result = OsmClient::getPropertiesAndGeometry($osmid);
 
         $expected = [
             [

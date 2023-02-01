@@ -8,23 +8,19 @@ use Wm\WmPackage\Exceptions\OsmClientExceptionNodeHasNoLat;
 use Wm\WmPackage\Exceptions\OsmClientExceptionNodeHasNoLon;
 use Wm\WmPackage\Exceptions\OsmClientExceptionNoElements;
 use Wm\WmPackage\Exceptions\OsmClientExceptionNoTags;
+use Wm\WmPackage\Exceptions\OsmClientExceptionRelationHasInvalidGeometry;
+use Wm\WmPackage\Exceptions\OsmClientExceptionRelationHasNoMembers;
+use Wm\WmPackage\Exceptions\OsmClientExceptionRelationHasNoNodes;
+use Wm\WmPackage\Exceptions\OsmClientExceptionRelationHasNoRelationElement;
+use Wm\WmPackage\Exceptions\OsmClientExceptionRelationHasNoWays;
 use Wm\WmPackage\Exceptions\OsmClientExceptionWayHasNoNodes;
 
 /**
- * General purpose OpenStreetMap Service provider.
+ * General purpose OpenStreetMap http client.
  *
  * Based on OSM V0.6 API: https://wiki.openstreetmap.org/wiki/API_v0.6
- * This service provider can be used to obtain geojson format for node, way and relation from
+ * This service can be used to obtain geojson format for node, way and relation from
  * OpenStreetMap.
- *
- * IMPORTANT NOTE: on laravel 8.X if you use this provider remember to activate
- * on config/app.php:
- *
- *  'providers' => [
- *         ...
- *         App\Providers\OsmServiceProvider::class,
- *         ...,
- *         ]
  *
  *
  * Useful examples:
@@ -47,14 +43,22 @@ use Wm\WmPackage\Exceptions\OsmClientExceptionWayHasNoNodes;
  * JSON: https://api.openstreetmap.org/api/0.6/relation/12312405.json
  * JSONFULL: https://api.openstreetmap.org/api/0.6/relation/12312405/full.json
  *
- * TODO: implement relation
- * TODO: Exception remove all generic relation (throw new OsmClientException) with specific Exception and
- *       update test with specific Exception
+ *
+ * ROADMAP:
+ *
+ * BACKLOG:
+ * osmclient_relation_224.4 Result from roundtrip cases (impostazione test con caso semplice e casi reale)
+ *
+ * DONE:
+ * osmclient_relation_224.1 Impostazione funzionamento per la relation (eccezioni di base e costruzione struttura interna)
+ * osmclient_relation_224.2 Eccezioni per integrità della geometria (deve essere linestring)
+ * osmclient_relation_224.3 Result from linear cases (impostazione test con caso semplice e casi reale)
+ *
  *
  * TRY ON TINKER
- * $osmp = app(\App\Providers\OsmServiceProvider::class);
- * $s = $osmp->getGeojson('node/770561143');
- * $s = $osmp->getGeojson('way/145096288 ');
+ * $s = Wm\WmPackage\Facades\OsmClient::getGeojson('node/770561143');
+ * $s = Wm\WmPackage\Facades\OsmClient::getGeojson('way/145096288');
+ * $s = Wm\WmPackage\Facades\OsmClient::getGeojson('relation/14336243');
  */
 class OsmClient
 {
@@ -72,7 +76,7 @@ class OsmClient
 
         $geojson = [];
         $geojson['version'] = 0.6;
-        $geojson['generator'] = 'Laravel OsmServiceProvider by WEBMAPP';
+        $geojson['generator'] = 'Laravel OsmClient by WEBMAPP';
         $geojson['_osmid'] = $osmid;
         $geojson['type'] = 'Feature';
 
@@ -213,11 +217,173 @@ class OsmClient
         return [$properties, $geometry];
     }
 
-    // TODO: implement and test it!
-    private function getPropertiesAndGeometryForRelation($json): array
+    /**
+     * Check $json consinstency and builds proper properies and geometry (MultiLineString)
+     *
+     *
+     * The following example is the minimal working version (two nodes)
+     * (json format)
+     *
+     * @param  array  $json relation coming from Osm v0.6 full API (https://api.openstreetmap.org/api/0.6/relation/12312405/full.json)
+     *
+     * {
+     *    "elements": [
+     *         { "type": "node", "id": 11, "lon": 11.1, "lat": 11.2, "timestamp": "2020-01-01T01:01:01Z" },
+     *         { "type": "node", "id": 12, "lon": 12.1, "lat": 12.2, "timestamp": "2020-02-02T02:02:02Z" },
+     *         { "type": "way", "id": 31, "timestamp": "2020-01-01T01:01:01Z", "nodes": [11,12] },
+     *         { "type": "relation", "id": 31, "timestamp": "2020-01-01T01:01:01Z",
+     *           "members": [
+     *                         { "type": "way", "ref": 11, "role": "" }
+     *                      ],
+     *           "tags": { "key1": "val1", "key2": "val2" }
+     *         }
+     *       ]
+     * }
+     * @return array
+     */
+    private function getPropertiesAndGeometryForRelation(array $json): array
     {
         $properties = [];
         $geometry = [];
+        $nodes = [];
+        $ways = [];
+        $relation = [];
+
+        foreach ($json['elements'] as $element) {
+            if ($element['type'] == 'node') {
+                $nodes[$element['id']] = $element;
+            } elseif ($element['type'] == 'way') {
+                $ways[$element['id']] = $element;
+            } elseif ($element['type'] == 'relation') {
+                $relation = $element;
+            }
+        }
+
+        // Check input
+        if (count($nodes) == 0) {
+            throw new OsmClientExceptionRelationHasNoNodes('It seems that relation has no nodes in elements');
+        }
+        if (count($ways) == 0) {
+            throw new OsmClientExceptionRelationHasNoWays('It seems that relation has no ways in elements');
+        }
+        if (count($relation) == 0) {
+            throw new OsmClientExceptionRelationHasNoRelationElement('It seems that relation has no nodes in elements');
+        }
+
+        if (! array_key_exists('members', $relation)) {
+            throw new OsmClientExceptionRelationHasNoMembers('It seems that relation has no members');
+        }
+
+        if (! array_key_exists('tags', $relation)) {
+            throw new OsmClientExceptionNoTags('It seems that relation has no tags');
+        }
+
+        // Builds border nodes counter for geometry check
+        $border_nodes_counter = [];
+        foreach ($ways as $way) {
+            $first = $way['nodes'][0];
+            $last = end($way['nodes']);
+            if (! array_key_exists($first, $border_nodes_counter)) {
+                $border_nodes_counter[$first] = 1;
+            } else {
+                $border_nodes_counter[$first] = $border_nodes_counter[$first] + 1;
+            }
+            if (! array_key_exists($last, $border_nodes_counter)) {
+                $border_nodes_counter[$last] = 1;
+            } else {
+                $border_nodes_counter[$last] = $border_nodes_counter[$last] + 1;
+            }
+        }
+        $values_count = array_count_values($border_nodes_counter);
+
+        // Geometry check disconnected
+        if (array_key_exists(1, $values_count) && $values_count[1] > 2) {
+            throw new OsmClientExceptionRelationHasInvalidGeometry('It seems that relation has invalid geometry (not connected ways)');
+        }
+        if (max(array_keys($values_count)) > 2) {
+            throw new OsmClientExceptionRelationHasInvalidGeometry('It seems that relation has invalid geometry (maybe some mustache)');
+        }
+
+        // Check roundtrip
+        $roundtrip = false;
+        if (! array_key_exists(1, $values_count)) {
+            $roundtrip == true;
+        }
+
+        // Build Properties
+        $properties = $relation['tags'];
+        $properties['_roundtrip'] = $roundtrip;
+        $properties['_updated_at'] = $this->getUpdatedAt($json);
+
+        // Build Geometry
+        // Find first node & first way
+        $first_node_id = $first_way_id = 0;
+        if ($roundtrip) {
+            foreach ($relation['members'] as $member) {
+                if ($member['type'] == 'way') {
+                    $first_way_id = $member['ref'];
+                    $first_node_id = $ways[$first_way_id]['nodes'][0];
+                }
+            }
+        } else {
+            foreach ($relation['members'] as $member) {
+                if ($member['type'] == 'way') {
+                    $way_id = $member['ref'];
+                    if (
+                        $border_nodes_counter[$ways[$way_id]['nodes'][0]] == 1 ||
+                        $border_nodes_counter[end($ways[$way_id]['nodes'])] == 1
+                    ) {
+                        $first_way_id = $way_id;
+                        if ($border_nodes_counter[$ways[$way_id]['nodes'][0]] == 1) {
+                            $first_node_id = $ways[$way_id]['nodes'][0];
+                        } else {
+                            $first_node_id = end($ways[$way_id]['nodes']);
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Prepare for ordered ways loop
+        $first_way = $ways[$first_way_id];
+        if ($first_way['nodes'][0] != $first_node_id) {
+            $first_way['nodes'] = array_reverse($first_way['nodes']);
+        }
+        $next_node_id = end($first_way['nodes']);
+        $ordered_ways[] = $first_way;
+        unset($ways[$first_way['id']]);
+
+        // Build ordered ways array
+        while (count($ways) > 0) {
+            foreach ($ways as $way) {
+                if ($way['nodes'][0] == $next_node_id || end($way['nodes']) == $next_node_id) {
+                    $next_way = $way;
+                    if ($next_way['nodes'][0] != $next_node_id) {
+                        $next_way['nodes'] = array_reverse($next_way['nodes']);
+                    }
+                    $ordered_ways[] = $next_way;
+                    $next_node_id = end($next_way['nodes']);
+                    unset($ways[$next_way['id']]);
+                }
+            }
+        }
+        $last_node_id = $next_node_id;
+
+        // Now build coordinates
+        $coordinates = [];
+        foreach ($ordered_ways as $way) {
+            $way_nodes = $way['nodes'];
+            array_pop($way_nodes);
+            foreach ($way_nodes as $node_id) {
+                $coordinates[] = [$nodes[$node_id]['lon'], $nodes[$node_id]['lat']];
+            }
+        }
+        $coordinates[] = [$nodes[$last_node_id]['lon'], $nodes[$last_node_id]['lat']];
+
+        // build geometry (force to MultiLineString)
+        $geometry['type'] = 'MultiLineString';
+        $geometry['coordinates'] = [$coordinates];
 
         return [$properties, $geometry];
     }

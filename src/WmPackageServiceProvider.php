@@ -4,6 +4,8 @@ namespace Wm\WmPackage;
 
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
+use Wm\WmPackage\Commands\HoquRegisterUserCommand;
+use Wm\WmPackage\Commands\HoquSendStoreCommand;
 use Wm\WmPackage\Commands\WmPackageCommand;
 
 class WmPackageServiceProvider extends PackageServiceProvider
@@ -17,10 +19,17 @@ class WmPackageServiceProvider extends PackageServiceProvider
          */
         $package
             ->name('wm-package')
-            //->hasConfigFile()
-            ->hasRoutes(['api'])
+            ->hasConfigFile()
+            ->hasRoute('api')
             //->hasViews()
-            //->hasMigration('create_wm-package_table')
-            ->hasCommands([WmPackageCommand::class]);
+            ->hasMigrations([
+                'create_jobs_table',
+                'create_hoqu_caller_jobs_table',
+            ])
+            ->hasCommands([
+                WmPackageCommand::class,
+                HoquRegisterUserCommand::class,
+                HoquSendStoreCommand::class,
+            ]);
     }
 }

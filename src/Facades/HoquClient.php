@@ -7,15 +7,15 @@ use Illuminate\Support\Facades\Facade;
 /**
  * @see \Wm\WmPackage\WmPackage
  */
-class OsmClient extends Facade
+class HoquClient extends Facade
 {
     /**
      * Undocumented function
      *
-     * @return \Wm\WmPackage\Http\OsmClient
+     * @return string
      */
     protected static function getFacadeAccessor()
     {
-        return \Wm\WmPackage\Http\OsmClient::class;
+        return \Wm\WmPackage\Http\HoquClient::class;
     }
 }

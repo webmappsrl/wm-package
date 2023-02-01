@@ -1,0 +1,41 @@
+{
+    "type": "Feature",
+    "geometry": {
+        "type": "MultiLineString",
+        "coordinates": [[
+            [13.0712002, 41.2357884],
+            [13.0710670, 41.2357169],
+            [13.0709329, 41.2356726],
+            [13.0708203, 41.2356363],
+            [13.0707130, 41.2356121],
+            [13.0706111, 41.2355798],
+            [13.0705199, 41.2355515]
+        ]]
+    },
+    "properties": {
+        "ascent": "10",
+        "cai_scale": "E",
+        "distance": "00.04",
+        "duration:backward": "00:05",
+        "duration:forward": "00:05",
+        "from": "percorso 751",
+        "name": "raccordo 751-755",
+        "network": "lwn",
+        "operator": "Ente Parco del Circeo",
+        "osmc:symbol": "red:red:white_stripe:751A:black",
+        "ref": "751A",
+        "ref:REI": "OLTS751A",
+        "route": "hiking",
+        "rwn:name": "Rete Escursionistica del Lazio (REL)",
+        "source": "survey:CAI",
+        "source:ref": "9232006",
+        "survey_date": "2022-09-29",
+        "symbol": "751A on white red flags",
+        "symbol:it": "751A su bandierina bianca e rossa",
+        "to": "percorso 755",
+        "type": "route",
+        "_roundtrip": false,
+        "_updated_at": "2022-09-29 07:38:40"
+    }
+}
+  

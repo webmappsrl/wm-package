@@ -22,6 +22,11 @@ php artisan vendor:publish --tag="wm-package-migrations"
 php artisan migrate
 ```
 
+Available migrations are:
+
+-   `create_jobs_table`, for default laravel job with an extra column
+-   `create_hoqu_caller_jobs`, HoquCallerJob model table, necessary for processor/caller instances
+
 You can publish the config file with:
 
 ```bash
@@ -32,14 +37,25 @@ This is the contents of the published config file:
 
 ```php
 return [
+    'hoqu_url' => env('HOQU_URL', 'https://hoqu2.webmapp.it'),
+    'hoqu_register_username' => env('HOQU_REGISTER_USERNAME'),
+    'hoqu_register_password' => env('HOQU_REGISTER_PASSWORD ')
 ];
 ```
 
 ## Usage
 
 ```php
-$wmPackage = new Wm\WmPackage();
-echo $wmPackage->echoPhrase('Hello, Wm!');
+use Wm\WmPackage\Facades\HoquClient;
+/** Start store call to hoqu (1)**/
+HoquClient::store(['name' => 'test','input' => '{ ... }' ]);
+...
+/** It logins (to retrieve a token) as an user that can create processors/callers on hoqu **/
+HoquClient::registerLogin()
+...
+/** Register a new processor/caller on hoqu **/
+HoquClient::register()
+
 ```
 
 ## Update
@@ -86,3 +102,25 @@ https://github.com/spatie/laravel-package-tools
 https://laravel.com/docs/9.x/facades#facades-vs-dependency-injection
 
 https://pestphp.com/
+
+### Default private/public routes (powered by [Sanctum](https://laravel.com/docs/9.x/sanctum) )
+
+-   public routes
+    -   `POST /login` :
+        consente la login tramite parametri `email` e `password` in formato `x-www-form-urlencoded`
+-   private routes
+    -   `POST /logout`
+        consente la logout tramite Bearer token
+    -   `GET /user`
+        restituisce i dettagli dell'utente loggato tramite Bearer token
+
+### Artisan commands
+
+-   `hoqu:register-user`. Create a new user on Hoqu instance based on credetials provided in `.env` file. Options:
+    -   `--R|role`: required, the role of this instance: "caller" , "processor" or "caller,processor"
+    -   `--endpoint=false` : the endpoint of this instance, default is `APP_URL` in .env file
+-   `hoqu:store`. Performs a call to Hoqu to store a job, saves a new `HoquCallerModel` in the database with the hoqu response. Options:
+    -   `--class` : required, the class that will execute job on processor}
+    -   `--featureId` : required, the feature id to update after completed job}
+    -   `--field` : required, the field to update after completed job}
+    -   `--input` : required, the input to send to processor}
