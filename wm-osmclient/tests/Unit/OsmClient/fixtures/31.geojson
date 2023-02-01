@@ -1,0 +1,17 @@
+{
+    "type" : "Feature",
+    "properties" : {
+        "key1" : "val1",
+        "key2" : "val2",
+        "_roundtrip" : false,
+        "_updated_at" : "2020-02-02 03:03:03"
+    },
+    "geometry" : {
+        "type" : "MultiLineString",
+        "coordinates" : [[
+            [11.1,11.2],
+            [12.1,12.2],
+            [13.1,13.2]
+        ]]
+    }
+}
