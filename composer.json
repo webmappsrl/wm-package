@@ -16,6 +16,7 @@
         }
     ],
     "require": {
+        "wm/wm-osmclient": "*",
         "php": "^8.1",
         "illuminate/contracts": "^9.0",
         "laravel/sanctum": "^3.0",
@@ -72,6 +73,12 @@
             }
         }
     },
+    "repositories": [
+        {
+            "type": "path",
+            "url": "./wm-osmclient"
+        }
+    ],
     "minimum-stability": "dev",
     "prefer-stable": true
 }
