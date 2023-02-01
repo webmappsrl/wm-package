@@ -20,6 +20,6 @@ class WmOsmclientServiceProvider extends PackageServiceProvider
             //->hasViews()
             //->hasMigration('create_wm-osmclient_table')
             //->hasCommand(WmOsmclientCommand::class)
-        ;
+;
     }
 }
