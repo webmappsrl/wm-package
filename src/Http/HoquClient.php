@@ -33,7 +33,7 @@ class HoquClient
     private function getHoquApiUrl(): string
     {
         return config('wm-package.hoqu_url')
-            .'/api/hoqu/';
+            . '/api/hoqu/';
     }
 
     /**
@@ -46,18 +46,18 @@ class HoquClient
     private function httpWithToken($token = false)
     {
         $token = $token !== false ? $token : $this->tokenProvider->getToken();
-        if (! $token) {
+        if (!$token) {
             throw new HoquClientException('Impossible make an authenticated call to hoqu, the token is not available!');
         }
 
         return Http::withToken($token);
     }
 
-    // TODO:
-    // public function done($what)
-    // {
-    //     return Http::postJson($this->getHoquApiUrl() . 'done', $what)->body();
-    // }
+    // TODO: test, implement the route done on hoqu
+    public function done($what)
+    {
+        return $this->httpWithToken()->acceptJson()->post($this->getHoquApiUrl() . 'done', $what)->json();
+    }
 
     /**
      * The STORE call to hoqu
@@ -67,7 +67,7 @@ class HoquClient
      */
     public function store($what)
     {
-        return $this->httpWithToken()->acceptJson()->post($this->getHoquApiUrl().'store', $what)->json();
+        return $this->httpWithToken()->acceptJson()->post($this->getHoquApiUrl() . 'store', $what)->json();
     }
 
     /**
@@ -86,7 +86,7 @@ class HoquClient
      */
     public function registerLogin()
     {
-        $url = $this->getHoquApiUrl().'register-login';
+        $url = $this->getHoquApiUrl() . 'register-login';
         $response = Http::acceptJson()->post($url, [
             'email' => config('HOQU_REGISTER_USERNAME', 'register@webmapp.it'),
             'password' => config('HOQU_REGISTER_PASSWORD', 'test'),
@@ -94,9 +94,9 @@ class HoquClient
 
         $json = $response->json();
 
-        if (! isset($json['token'])) {
+        if (!isset($json['token'])) {
             //TODO: add specific exception
-            throw new Exception("Something goes wrong during hoqu login ($url). Here the hoqu response status:".$response->status());
+            throw new Exception("Something goes wrong during hoqu login ($url). Here the hoqu response status:" . $response->status());
         }
 
         return $json;
@@ -112,7 +112,7 @@ class HoquClient
     public function register($token, $json)
     {
         $response = $this->httpWithToken($token)->acceptJson()
-            ->post($this->getHoquApiUrl().'register', $json);
+            ->post($this->getHoquApiUrl() . 'register', $json);
 
         return $response->json();
     }

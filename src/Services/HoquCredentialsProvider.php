@@ -82,7 +82,7 @@ class HoquCredentialsProvider
     private function setCredential($name, $value)
     {
         $check = $this->writeNewEnvironmentFileWith($name, $value);
-        Artisan::call('config:cache'); //TODO: it doesnt work, it's necessary to call manually ...
+        Artisan::call('config:clear');
 
         return $check;
     }
