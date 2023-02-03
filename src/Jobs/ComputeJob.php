@@ -3,10 +3,10 @@
 namespace Wm\WmPackage\Jobs;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
 use Wm\WmPackage\Http\HoquClient as HttpHoquClient;
 
 /**
@@ -14,10 +14,9 @@ use Wm\WmPackage\Http\HoquClient as HttpHoquClient;
  *
  * The store job that validate input and start the HokuJob pipeline
  */
-class ComputeJob  implements ShouldQueue
+class ComputeJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
-
 
     protected $input;
 
@@ -44,7 +43,9 @@ class ComputeJob  implements ShouldQueue
 
         //TODO: send the output to hoqu
         $hoquClient->done($output);
+
         return true; //on success
+
         return false; //on failure
     }
 }

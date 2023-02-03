@@ -7,10 +7,7 @@ use Illuminate\Foundation\Bus\DispatchesJobs;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Illuminate\Support\Facades\Hash;
 use Wm\WmPackage\Jobs\ComputeJob;
-use Wm\WmPackage\Model\HoquProcessorJob;
-use Wm\WmPackage\Model\User;
 
 class ProcessorController extends Controller
 {
@@ -26,6 +23,6 @@ class ProcessorController extends Controller
 
         ComputeJob::dispatch($fields);
 
-        return response("ok", 200);
+        return response('ok', 200);
     }
 }
