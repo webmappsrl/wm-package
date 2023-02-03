@@ -7,10 +7,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 /**
- * This code creates a class called HoquCallerJob that extends the Model class.
- * It represents a job of Caller instance
+ * This code creates a class called HoquProcessorJob that extends the Model class.
+ * It represents a job of Processor instance
  */
-class HoquCallerJob extends Model
+class HoquProcessorJob extends Model
 {
     use HasFactory;
 
@@ -28,7 +28,7 @@ class HoquCallerJob extends Model
         'job_id',
         'class',
         'feature_id',
-        'field_to_update',
+        'output',
         'status'
     ];
 }

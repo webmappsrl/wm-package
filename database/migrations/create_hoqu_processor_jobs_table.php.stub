@@ -13,13 +13,13 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('hoqu_caller_jobs', function (Blueprint $table) {
+        Schema::create('hoqu_processor_jobs', function (Blueprint $table) {
             $table->id();
             $table->timestamps();
             $table->integer('job_id');
             $table->string('class');
             $table->integer('feature_id');
-            $table->string('field_to_update');
+            $table->longText('output')->nullable();
             $table->string('status');
 
         });
