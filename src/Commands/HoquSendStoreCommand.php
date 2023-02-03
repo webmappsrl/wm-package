@@ -70,6 +70,7 @@ class HoquSendStoreCommand extends Command
         $this->info($input);
 
 
+        //Send a STORE request to hoqu, then create a job with status progress on this instance
         $jobsService->createCallerStoreJobsPipeline($class, $input, $featureId, $field);
 
 

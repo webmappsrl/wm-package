@@ -3,6 +3,7 @@
 namespace Wm\WmPackage\Services;
 
 use Exception;
+use Wm\WmPackage\Enums\JobStatus;
 use Wm\WmPackage\Facades\HoquClient;
 use Wm\WmPackage\Model\HoquCallerJob;
 
@@ -11,7 +12,7 @@ class JobsPipelineHandler
 
 
   /**
-   * Undocumented function
+   * Send a STORE request to hoqu, then create a job with status progress on this instance
    *
    * @param [type] $class
    * @param [type] $input
@@ -37,6 +38,7 @@ class JobsPipelineHandler
         'class' => $class,
         'feature_id' => $featureId,
         'field_to_update' => $field,
+        'status' => JobStatus::New
       ]);
     } else {
       //TODO: create specific exception
