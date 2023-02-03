@@ -2,9 +2,9 @@
 
 namespace Wm\WmPackage\Model;
 
-use Wm\WmPackage\Enums\JobStatus;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Wm\WmPackage\Enums\JobStatus;
 
 /**
  * This code creates a class called HoquProcessorJob that extends the Model class.
@@ -29,6 +29,6 @@ class HoquProcessorJob extends Model
         'class',
         'feature_id',
         'output',
-        'status'
+        'status',
     ];
 }

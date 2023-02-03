@@ -2,9 +2,9 @@
 
 namespace Wm\WmPackage\Model;
 
-use Wm\WmPackage\Enums\JobStatus;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Wm\WmPackage\Enums\JobStatus;
 
 /**
  * This code creates a class called HoquCallerJob that extends the Model class.
@@ -29,6 +29,6 @@ class HoquCallerJob extends Model
         'class',
         'feature_id',
         'field_to_update',
-        'status'
+        'status',
     ];
 }
