@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Validator;
 use Throwable;
 use Wm\WmPackage\Http\HoquClient;
 use Wm\WmPackage\Model\HoquCallerJob;
+use Wm\WmPackage\Services\JobsPipelineHandler;
 
 class HoquSendStoreCommand extends Command
 {
@@ -34,7 +35,7 @@ class HoquSendStoreCommand extends Command
      *
      * @return int
      */
-    public function handle(HoquClient $hoquClient)
+    public function handle(JobsPipelineHandler $jobsService)
     {
         $class = $this->option('class');
         $input = $this->option('input');
@@ -67,25 +68,10 @@ class HoquSendStoreCommand extends Command
 
         $this->info($class);
         $this->info($input);
-        /**
-         * Send store authenticated request to hoqu
-         */
-        $response = $hoquClient->store([
-            'name' => $class,
-            'input' => $input,
-        ]);
 
-        try {
-            HoquCallerJob::create([
-                'job_id' => $response['job_id'],
-                'class' => $class,
-                'feature_id' => $featureId,
-                'field_to_update' => $field,
-            ]);
-        } catch (Throwable|Exception $e) {
-            $this->error(print_r($response, true));
-            throw $e;
-        }
+
+        $jobsService->createCallerStoreJobsPipeline($class, $input, $featureId, $field);
+
 
         return Command::SUCCESS;
     }
