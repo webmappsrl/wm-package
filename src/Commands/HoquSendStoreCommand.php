@@ -2,12 +2,8 @@
 
 namespace Wm\WmPackage\Commands;
 
-use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Validator;
-use Throwable;
-use Wm\WmPackage\Http\HoquClient;
-use Wm\WmPackage\Model\HoquCallerJob;
 use Wm\WmPackage\Services\JobsPipelineHandler;
 
 class HoquSendStoreCommand extends Command
@@ -69,10 +65,8 @@ class HoquSendStoreCommand extends Command
         $this->info($class);
         $this->info($input);
 
-
         //Send a STORE request to hoqu, then create a job with status progress on this instance
         $jobsService->createCallerStoreJobsPipeline($class, $input, $featureId, $field);
-
 
         return Command::SUCCESS;
     }
