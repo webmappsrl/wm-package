@@ -33,7 +33,6 @@ class HoquCallerJob extends Model
         'status',
     ];
 
-
     public function feature()
     {
         return $this->morphTo(__FUNCTION__, 'feature_type', 'feature_id');

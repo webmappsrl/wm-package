@@ -2,16 +2,15 @@
 
 namespace Wm\WmPackage\Commands;
 
-use Exception;
-use Throwable;
 use App\Models\User;
-
-use Illuminate\Support\Str;
+use Exception;
 use Illuminate\Console\Command;
-use Wm\WmPackage\Http\HoquClient;
-use Illuminate\Support\Facades\URL;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Console\ConfirmableTrait;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Str;
+use Throwable;
+use Wm\WmPackage\Http\HoquClient;
 use Wm\WmPackage\Services\HoquCredentialsProvider;
 
 class HoquRegisterUserCommand extends Command
@@ -51,7 +50,7 @@ class HoquRegisterUserCommand extends Command
 
         try {
             $hoqu_register_token = $json['token']; //special token for register user on hoqu instance
-        } catch (Throwable | Exception $e) {
+        } catch (Throwable|Exception $e) {
             //TODO: add specific exception
             $this->error('Something goes wrong during hoqu login. Here the hoqu response in json format:');
             $this->error(print_r($json, true));
@@ -86,7 +85,7 @@ class HoquRegisterUserCommand extends Command
 
         $user = User::where($newUserFill)->first();
 
-        if (!$user) {
+        if (! $user) {
             $newUserFill = array_merge($newUserFill, [
                 'email_verified_at' => now(),
                 'password' => Hash::make(Str::random(20)),
@@ -96,7 +95,7 @@ class HoquRegisterUserCommand extends Command
 
         $instance_token = $user->createToken('default')->plainTextToken;
 
-        if (!is_array($capabilities)) {
+        if (! is_array($capabilities)) {
             $capabilities = explode(',', $capabilities);
         }
 
@@ -114,7 +113,7 @@ class HoquRegisterUserCommand extends Command
         $this->info('Storing the TOKEN received from HOQU in .env file ...');
         try {
             $credentialsProvider->setToken($json['token']);
-        } catch (Throwable | Exception $e) {
+        } catch (Throwable|Exception $e) {
             //TODO: add specific exception
             $this->error('Something goes wrong during hoqu registration. Here the hoqu response in json format:');
             $this->error(print_r($json, true));

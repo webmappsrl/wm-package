@@ -34,7 +34,6 @@ class HoquSendStoreCommand extends Command
      */
     public function handle(JobsPipelineHandler $jobsService)
     {
-
         //TODO: add verbosity to command
         //TODO: handle a log
 
@@ -49,14 +48,14 @@ class HoquSendStoreCommand extends Command
             'input' => $input,
             'field' => $field,
             'featureId' => $featureId,
-            'model' => $modelNamespace
+            'model' => $modelNamespace,
         ], [
             //TODO: add more validation rules
             'class' => ['required'],
             'input' => ['required'],
             'field' => ['required'],
             'featureId' => ['required'],
-            'model' => ['required'] //TODO: check model existence
+            'model' => ['required'], //TODO: check model existence
 
         ]);
 
@@ -78,6 +77,7 @@ class HoquSendStoreCommand extends Command
         $jobsService->createCallerStoreJobsPipeline($class, $input, $field, $model);
 
         $this->info('STORE pipeline successfully started');
+
         return Command::SUCCESS;
     }
 }
