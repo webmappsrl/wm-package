@@ -3,8 +3,8 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Wm\WmPackage\Http\Controllers\AuthController;
-use Wm\WmPackage\Http\Controllers\ProcessorController;
 use Wm\WmPackage\Http\Controllers\CallerController;
+use Wm\WmPackage\Http\Controllers\ProcessorController;
 
 Route::prefix('api/wm-geobox')->middleware('api')->group(function () {
     // Public routes

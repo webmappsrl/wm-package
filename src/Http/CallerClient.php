@@ -20,23 +20,22 @@ class CallerClient
      */
     private function httpWithToken($token)
     {
-        if (!$token) {
+        if (! $token) {
             throw new CallerClientException('Impossible make an authenticated call to client, the token is not available!');
         }
 
         return Http::withToken($token);
     }
 
-
     /**
      * Returns the endpoint of provided users
      *
-     * @param \App\Models\User $user
+     * @param  \App\Models\User  $user
      * @return string
      */
     public function getEndpointByUser($user)
     {
-        return $user->endpoint . '/api/wm-geobox/cll/';
+        return $user->endpoint.'/api/wm-geobox/cll/';
     }
 
     /**
@@ -48,6 +47,6 @@ class CallerClient
      */
     public function done($user, $what)
     {
-        return $this->httpWithToken($user->hoqu_api_token)->acceptJson()->post($this->getEndpointByUser($user) . 'donedone', $what);
+        return $this->httpWithToken($user->hoqu_api_token)->acceptJson()->post($this->getEndpointByUser($user).'donedone', $what);
     }
 }

@@ -2,11 +2,11 @@
 
 namespace Wm\WmPackage\Http\Controllers;
 
+use Illuminate\Foundation\Bus\DispatchesJobs;
+use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Wm\WmPackage\Model\HoquCallerJob;
-use Illuminate\Foundation\Bus\DispatchesJobs;
-use Illuminate\Foundation\Validation\ValidatesRequests;
 
 class CallerController extends Controller
 {
@@ -15,7 +15,6 @@ class CallerController extends Controller
 
     /**
      * Alias of done()
-     *
      */
     public function donedone(Request $request)
     {
@@ -25,13 +24,11 @@ class CallerController extends Controller
     /**
      * When caller receive output
      *
-     * @param Request $request
+     * @param  Request  $request
      * @return void
      */
     public function done(Request $request)
     {
-
-
         $fields = $request->validate([
             'output' => 'required|string',
             'hoqu_job_id' => 'required|integer',

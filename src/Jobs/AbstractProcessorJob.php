@@ -20,6 +20,7 @@ abstract class AbstractProcessorJob implements ProcessorJobInterface
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     protected $input;
+
     protected $hoquJobId;
 
     /**
@@ -48,12 +49,12 @@ abstract class AbstractProcessorJob implements ProcessorJobInterface
     {
         try {
             $output = $this->process($this->getInput());
-        } catch (Throwable | Exception $e) {
+        } catch (Throwable|Exception $e) {
             $output = json_encode($e); //json encode exception to send it to hoqu
         } finally {
             $this->done($hoquClient, [
                 'output' => $output,
-                'hoqu_job_id' => $this->hoquJobId
+                'hoqu_job_id' => $this->hoquJobId,
             ]); //on failure send to hoqu an exception
         }
     }
@@ -62,16 +63,16 @@ abstract class AbstractProcessorJob implements ProcessorJobInterface
      * Uses the hoquClient service to send to hoqu the job output
      *
      * @param  HoquClient  $hoquClient
-     * @param array $data
+     * @param  array  $data
      * @return void
      */
     public function done(HoquClient $hoquClient, $data)
     {
         $response = $hoquClient->done($data);
-        if (!$response->ok()) {
-            throw new Exception('Something went wrong sending DONE to hoqu. Http status: ' . $response->status());
+        if (! $response->ok()) {
+            throw new Exception('Something went wrong sending DONE to hoqu. Http status: '.$response->status());
         } elseif (isset($response['error'])) {
-            throw new Exception('Something went wrong sending DONE to hoqu.' . $response['error']);
+            throw new Exception('Something went wrong sending DONE to hoqu.'.$response['error']);
         }
     }
 
