@@ -28,7 +28,14 @@ class HoquCallerJob extends Model
         'job_id',
         'class',
         'feature_id',
+        'feature_type',
         'field_to_update',
         'status',
     ];
+
+
+    public function feature()
+    {
+        return $this->morphTo(__FUNCTION__, 'feature_type', 'feature_id');
+    }
 }
