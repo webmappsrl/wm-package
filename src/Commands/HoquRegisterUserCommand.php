@@ -24,7 +24,8 @@ class HoquRegisterUserCommand extends Command
      */
     protected $signature = 'hoqu:register-user
                             {--R|role= : required, the role of this instance: "caller" , "processor" or "caller,processor" }
-                            {--endpoint=false : the endpoint of this instance, default is APP_URL in .env file}';
+                            {--endpoint= : the endpoint of this instance, default is APP_URL in .env file}
+                            {--capabilities=false : the endpoint of this instance, default is APP_URL in .env file}';
 
     /**
      * The console command description.
@@ -40,8 +41,11 @@ class HoquRegisterUserCommand extends Command
      */
     public function handle(HoquClient $hoquClient, HoquCredentialsProvider $credentialsProvider)
     {
-        $role = $this->option('role');
+        $role = $this->option('role') ?? 'caller';
         $endpoint = $this->option('endpoint') ?? URL::to('/');
+        $capabilities = $this->option('capabilities') ?? [];
+
+
 
         $this->info('Registering/retrieving register user token on HOQU instance ...');
         $json = $hoquClient->registerLogin();
@@ -69,10 +73,7 @@ class HoquRegisterUserCommand extends Command
         $roles = explode(',', $role);
         //TODO: validation of roles by enum
 
-        //TODO: enable capabilities
-        // $capability = $this->ask('Which are your classes capabilities (the hoqu_processor_capabilities on HOQU instance)? Separate them with comma (eg: "AddLocationsToPoint,AddLocationsToPoint2")');
-        // $capabilities = explode(',', $capability);
-        //TODO? validation
+
 
         // $endpoint = $this->ask('Where HOQU should call you (the endpoint on HOQU instance)? Eg: https://geohub2.webmapp.it/api/processor');
 
@@ -81,19 +82,33 @@ class HoquRegisterUserCommand extends Command
          */
         $newUserFill = [
             'email' => 'hoqu@webmapp.it',
-            'name' => 'Hoqu',
-            'email_verified_at' => now(),
-            'password' => Hash::make(Str::random(20))
+            'name' => 'Hoqu'
         ];
 
-        $user = User::firstOrCreate($newUserFill);
+        // $capability = $this->ask('Which are your classes capabilities (the hoqu_processor_capabilities on HOQU instance)? Separate them with comma (eg: "AddLocationsToPoint,AddLocationsToPoint2")');
+
+
+        $user = User::where($newUserFill)->first();
+
+        if (!$user) {
+            $newUserFill = array_merge($newUserFill, [
+                'email_verified_at' => now(),
+                'password' => Hash::make(Str::random(20))
+            ]);
+            $user = User::create($newUserFill);
+        }
 
         $instance_token = $user->createToken('default')->plainTextToken;
+
+
+        if (!is_array($capabilities)) {
+            $capabilities = explode(',', $capabilities);
+        }
 
         $json = [
             'password' => $password,
             'hoqu_roles' => $roles,
-            'hoqu_processor_capabilities' => $capabilities ?? [], //TODO: handle capabilities
+            'hoqu_processor_capabilities' => $capabilities,
             'hoqu_api_token' => $instance_token,
             'endpoint' => $endpoint,
         ];
