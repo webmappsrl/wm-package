@@ -20,7 +20,7 @@ class ProcessorClient
      */
     private function httpWithToken($token)
     {
-        if (!$token) {
+        if (! $token) {
             throw new ProcessorClientException('Impossible make an authenticated call to processor, the token is not available!');
         }
 
@@ -30,14 +30,12 @@ class ProcessorClient
     /**
      * Do a job on processor
      *
-     * @param \App\Models\User $user - User Model that represents the remote processor
-     * @param array $what - The input for the processor job
-     *
+     * @param  \App\Models\User  $user - User Model that represents the remote processor
+     * @param  array  $what - The input for the processor job
      * @return \Illuminate\Http\Client\Request
-     *
      */
     public function do($user, $what)
     {
-        return $this->httpWithToken($user->hoqu_api_token)->acceptJson()->post($user->endpoint . '/api/wm/processor-do', $what);
+        return $this->httpWithToken($user->hoqu_api_token)->acceptJson()->post($user->endpoint.'/api/wm/processor-do', $what);
     }
 }
