@@ -23,7 +23,7 @@ class ProcessorController extends Controller
                 'string',
                 function ($attribute, $value, $fail) {
                     //eg: AddAreaToJob
-                    $classNamespace = $this->getJobClassNamemespace($value);
+                    $classNamespace = $this->getJobClassNamespace($value);
                     if (!class_exists($classNamespace)) {
                         $fail('The ' . $attribute . ' is invalid. Impossible found the class with namespace ' . $classNamespace);
                     }
@@ -33,13 +33,13 @@ class ProcessorController extends Controller
 
         //could response error to hoqu
         //TODO: send job id?
-        $this->getJobClassNamemespace($fields['name'])::dispatch($fields);
+        $this->getJobClassNamespace($fields['name'])::dispatch($fields);
 
         return response('ok', 200);
     }
 
-    protected function getJobClassNamespace($name)
+    public function getJobClassNamespace($name)
     {
-        return "\App\Jobs\$name";
+        return "\App\Jobs\\" . $name;
     }
 }
