@@ -13,7 +13,7 @@ class ProcessorController extends Controller
     //use AuthorizesRequests, DispatchesJobs, ValidatesRequests;
     use  DispatchesJobs, ValidatesRequests;
 
-    public function processorDo(Request $request)
+    public function do(Request $request)
     {
         $fields = $request->validate([
             'input' => 'required|string',
@@ -24,14 +24,15 @@ class ProcessorController extends Controller
                 function ($attribute, $value, $fail) {
                     //eg: AddAreaToJob
                     $classNamespace = $this->getJobClassNamemespace($value);
-                    if (! class_exists($classNamespace)) {
-                        $fail('The '.$attribute.' is invalid. Impossible found the class with namespace '.$classNamespace);
+                    if (!class_exists($classNamespace)) {
+                        $fail('The ' . $attribute . ' is invalid. Impossible found the class with namespace ' . $classNamespace);
                     }
                 },
             ],
         ]);
 
         //could response error to hoqu
+        //TODO: send job id?
         $this->getJobClassNamemespace($fields['name'])::dispatch($fields);
 
         return response('ok', 200);
@@ -39,6 +40,6 @@ class ProcessorController extends Controller
 
     protected function getJobClassNamespace($name)
     {
-        return "\App\Jobs\$value";
+        return "\App\Jobs\$name";
     }
 }
