@@ -2,15 +2,15 @@
 
 namespace Wm\WmPackage\Commands;
 
-use Exception;
-use Throwable;
 use App\Models\User;
-use Illuminate\Support\Str;
+use Exception;
 use Illuminate\Console\Command;
-use Wm\WmPackage\Http\HoquClient;
-use Illuminate\Support\Facades\URL;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Console\ConfirmableTrait;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Str;
+use Throwable;
+use Wm\WmPackage\Http\HoquClient;
 use Wm\WmPackage\Services\HoquCredentialsProvider;
 
 class HoquRegisterUserCommand extends Command
