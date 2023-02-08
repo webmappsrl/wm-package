@@ -13,10 +13,11 @@ class ProcessorController extends Controller
     //use AuthorizesRequests, DispatchesJobs, ValidatesRequests;
     use  DispatchesJobs, ValidatesRequests;
 
-    public function do(Request $request)
+    public function process(Request $request)
     {
         $fields = $request->validate([
             'input' => 'required|string',
+            'hoqu_job_id' => 'required|integer',
             //https://laravel.com/docs/9.x/validation#using-closures
             'name' => [
                 'required',
@@ -33,7 +34,9 @@ class ProcessorController extends Controller
 
         //could response error to hoqu
         //TODO: send job id?
-        $this->getJobClassNamespace($fields['name'])::dispatch($fields);
+        $laravelJob = $this->getJobClassNamespace($fields['name'])::dispatch($fields)->onQueue('process');
+
+        dump($laravelJob);
 
         return response('ok', 200);
     }

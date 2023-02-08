@@ -20,15 +20,17 @@ abstract class AbstractProcessorJob implements ProcessorJobInterface
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     protected $input;
+    protected $hoquJobId;
 
     /**
      * Create a new store job instance.
      *
      * @return void
      */
-    public function __construct($input)
+    public function __construct($fields)
     {
-        $this->input = $input;
+        $this->input = $fields['input'];
+        $this->hoquJobId = $fields['hoqu_job_id'];
     }
 
     public function getInput()
@@ -38,6 +40,7 @@ abstract class AbstractProcessorJob implements ProcessorJobInterface
 
     /**
      * Execute the job.
+     * PLEASE: dont override this method
      *
      * @return void
      */
@@ -45,10 +48,13 @@ abstract class AbstractProcessorJob implements ProcessorJobInterface
     {
         try {
             $output = $this->process($this->getInput());
-        } catch (Throwable|Exception $e) {
+        } catch (Throwable | Exception $e) {
             $output = json_encode($e); //json encode exception to send it to hoqu
         } finally {
-            $this->done($hoquClient, $output); //on failure send to hoqu an exception
+            $this->done($hoquClient, [
+                'output' => $output,
+                'hoqu_job_id' => $this->hoquJobId
+            ]); //on failure send to hoqu an exception
         }
     }
 
@@ -56,12 +62,17 @@ abstract class AbstractProcessorJob implements ProcessorJobInterface
      * Uses the hoquClient service to send to hoqu the job output
      *
      * @param  HoquClient  $hoquClient
-     * @param [type] $output
+     * @param array $data
      * @return void
      */
-    public function done(HoquClient $hoquClient, $output)
+    public function done(HoquClient $hoquClient, $data)
     {
-        $hoquClient->done($output);
+        $response = $hoquClient->done($data);
+        if (!$response->ok()) {
+            throw new Exception('Something went wrong sending DONE to hoqu. Http status: ' . $response->status());
+        } elseif (isset($response['error'])) {
+            throw new Exception('Something went wrong sending DONE to hoqu.' . $response['error']);
+        }
     }
 
     abstract public function process($input);

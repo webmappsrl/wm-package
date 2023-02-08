@@ -56,12 +56,12 @@ class HoquClient
     /**
      * When the processor has done its job
      *
-     * @param [type] $what
-     * @return void
+     * @param array $what
+     * @return \Illuminate\Http\Client\Response
      */
     public function done($what)
     {
-        return $this->httpWithToken()->acceptJson()->post($this->getHoquApiUrl() . 'done', $what)->json();
+        return $this->httpWithToken()->acceptJson()->post($this->getHoquApiUrl() . 'done', $what);
     }
 
     /**
