@@ -7,7 +7,6 @@ use Illuminate\Foundation\Bus\DispatchesJobs;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Wm\WmPackage\Jobs\ComputeJob;
 
 class ProcessorController extends Controller
 {
@@ -25,13 +24,12 @@ class ProcessorController extends Controller
                 function ($attribute, $value, $fail) {
                     //eg: AddAreaToJob
                     $classNamespace = $this->getJobClassNamemespace($value);
-                    if (!class_exists($classNamespace)) {
-                        $fail('The ' . $attribute . ' is invalid. Impossible found the class with namespace ' . $classNamespace);
+                    if (! class_exists($classNamespace)) {
+                        $fail('The '.$attribute.' is invalid. Impossible found the class with namespace '.$classNamespace);
                     }
-                }
-            ]
+                },
+            ],
         ]);
-
 
         //could response error to hoqu
         $this->getJobClassNamemespace($fields['name'])::dispatch($fields);

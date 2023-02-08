@@ -40,7 +40,7 @@ class JobsPipelineHandler
             ]);
         } else {
             //TODO: create specific exception
-            throw new Exception("Something went wrong during hoqu http store request:\n" . print_r($response, true));
+            throw new Exception("Something went wrong during hoqu http store request:\n".print_r($response, true));
         }
     }
 }

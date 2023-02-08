@@ -34,6 +34,7 @@ class HoquPingCommand extends Command
         } else {
             dump($response);
         }
+
         return 1;
     }
 }

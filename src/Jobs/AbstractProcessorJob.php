@@ -4,9 +4,9 @@ namespace Wm\WmPackage\Jobs;
 
 use Exception;
 use Illuminate\Bus\Queueable;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
 use Throwable;
 use Wm\WmPackage\Http\HoquClient;
 
@@ -18,7 +18,6 @@ use Wm\WmPackage\Http\HoquClient;
 abstract class AbstractProcessorJob implements ProcessorJobInterface
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
-
 
     protected $input;
 
@@ -46,7 +45,7 @@ abstract class AbstractProcessorJob implements ProcessorJobInterface
     {
         try {
             $output = $this->process($this->getInput());
-        } catch (Throwable | Exception $e) {
+        } catch (Throwable|Exception $e) {
             $output = json_encode($e); //json encode exception to send it to hoqu
         } finally {
             $this->done($hoquClient, $output); //on failure send to hoqu an exception
@@ -56,7 +55,7 @@ abstract class AbstractProcessorJob implements ProcessorJobInterface
     /**
      * Uses the hoquClient service to send to hoqu the job output
      *
-     * @param HoquClient $hoquClient
+     * @param  HoquClient  $hoquClient
      * @param [type] $output
      * @return void
      */
@@ -65,7 +64,5 @@ abstract class AbstractProcessorJob implements ProcessorJobInterface
         $hoquClient->done($output);
     }
 
-
-
-    abstract function process($input);
+    abstract public function process($input);
 }

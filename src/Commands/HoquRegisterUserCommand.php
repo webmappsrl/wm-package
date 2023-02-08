@@ -45,14 +45,12 @@ class HoquRegisterUserCommand extends Command
         $endpoint = $this->option('endpoint') ?? URL::to('/');
         $capabilities = $this->option('capabilities') ?? [];
 
-
-
         $this->info('Registering/retrieving register user token on HOQU instance ...');
         $json = $hoquClient->registerLogin();
 
         try {
             $hoqu_register_token = $json['token']; //special token for register user on hoqu instance
-        } catch (Throwable | Exception $e) {
+        } catch (Throwable|Exception $e) {
             //TODO: add specific exception
             $this->error('Something goes wrong during hoqu login. Here the hoqu response in json format:');
             $this->error(print_r($json, true));
@@ -73,8 +71,6 @@ class HoquRegisterUserCommand extends Command
         $roles = explode(',', $role);
         //TODO: validation of roles by enum
 
-
-
         // $endpoint = $this->ask('Where HOQU should call you (the endpoint on HOQU instance)? Eg: https://geohub2.webmapp.it/api/processor');
 
         /**
@@ -82,26 +78,24 @@ class HoquRegisterUserCommand extends Command
          */
         $newUserFill = [
             'email' => 'hoqu@webmapp.it',
-            'name' => 'Hoqu'
+            'name' => 'Hoqu',
         ];
 
         // $capability = $this->ask('Which are your classes capabilities (the hoqu_processor_capabilities on HOQU instance)? Separate them with comma (eg: "AddLocationsToPoint,AddLocationsToPoint2")');
 
-
         $user = User::where($newUserFill)->first();
 
-        if (!$user) {
+        if (! $user) {
             $newUserFill = array_merge($newUserFill, [
                 'email_verified_at' => now(),
-                'password' => Hash::make(Str::random(20))
+                'password' => Hash::make(Str::random(20)),
             ]);
             $user = User::create($newUserFill);
         }
 
         $instance_token = $user->createToken('default')->plainTextToken;
 
-
-        if (!is_array($capabilities)) {
+        if (! is_array($capabilities)) {
             $capabilities = explode(',', $capabilities);
         }
 
@@ -119,7 +113,7 @@ class HoquRegisterUserCommand extends Command
         $this->info('Storing the TOKEN received from HOQU in .env file ...');
         try {
             $credentialsProvider->setToken($json['token']);
-        } catch (Throwable | Exception $e) {
+        } catch (Throwable|Exception $e) {
             //TODO: add specific exception
             $this->error('Something goes wrong during hoqu registration. Here the hoqu response in json format:');
             $this->error(print_r($json, true));

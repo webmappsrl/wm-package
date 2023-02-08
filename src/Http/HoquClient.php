@@ -66,7 +66,7 @@ class HoquClient
      */
     public function ping()
     {
-        return $this->httpWithToken()->get($this->getHoquApiUrl() . 'ping');
+        return $this->httpWithToken()->get($this->getHoquApiUrl().'ping');
     }
 
     /**
@@ -76,7 +76,7 @@ class HoquClient
      */
     public function unAuthPing()
     {
-        return Http::get($this->getHoquApiUrl() . 'ping');
+        return Http::get($this->getHoquApiUrl().'ping');
     }
 
     /**

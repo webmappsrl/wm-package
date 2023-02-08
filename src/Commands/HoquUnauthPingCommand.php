@@ -29,13 +29,14 @@ class HoquUnauthPingCommand extends Command
     public function handle(HoquClient $hoquClient)
     {
         $response = $hoquClient->unAuthPing();
-        if (!$response->ok()) {
-            $this->info('Status code: ' .  $response->status());
+        if (! $response->ok()) {
+            $this->info('Status code: '.$response->status());
             $this->info('Everithing ok!');
         } else {
             dump($response);
             $this->error('Something went wrong!');
         }
+
         return 1;
     }
 }
