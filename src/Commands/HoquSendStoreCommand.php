@@ -17,7 +17,8 @@ class HoquSendStoreCommand extends Command
     {--class= : required, the class that will execute job on processor}
     {--featureId= : required, the feature id to update after completed job}
     {--field= : required, the field to update after completed job}
-    {--input= : required, the input to send to processor}';
+    {--input= : required, the input to send to processor}
+    {--model= : required, the model to update}';
 
     /**
      * The console command description.
@@ -37,6 +38,8 @@ class HoquSendStoreCommand extends Command
         $input = $this->option('input');
         $field = $this->option('field');
         $featureId = $this->option('featureId');
+        $featureId = $this->option('model');
+
 
         $validator = Validator::make([
             'class' => $class,
@@ -49,6 +52,7 @@ class HoquSendStoreCommand extends Command
             'input' => ['required'],
             'field' => ['required'],
             'featureId' => ['required'],
+            'model' => ['required'] //TODO: check model existence
 
         ]);
 
@@ -66,7 +70,7 @@ class HoquSendStoreCommand extends Command
         $this->info($input);
 
         //Send a STORE request to hoqu, then create a job with status progress on this instance
-        $jobsService->createCallerStoreJobsPipeline($class, $input, $featureId, $field);
+        $jobsService->createCallerStoreJobsPipeline($class, $input, $featureId, $field, $model);
 
         return Command::SUCCESS;
     }

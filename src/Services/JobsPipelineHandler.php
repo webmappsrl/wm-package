@@ -20,7 +20,7 @@ class JobsPipelineHandler
      *
      * @throws Exception
      */
-    public function createCallerStoreJobsPipeline($class, $input, $featureId, $field)
+    public function createCallerStoreJobsPipeline($class, $input, $featureId, $field, $model)
     {
         /**
          * Send store authenticated request to hoqu
@@ -36,11 +36,12 @@ class JobsPipelineHandler
                 'class' => $class,
                 'feature_id' => $featureId,
                 'field_to_update' => $field,
+                'feature_type' => $model,
                 'status' => JobStatus::New,
             ]);
         } else {
             //TODO: create specific exception
-            throw new Exception("Something went wrong during hoqu http store request:\n".print_r($response, true));
+            throw new Exception("Something went wrong during hoqu http store request:\n" . print_r($response, true));
         }
     }
 }
