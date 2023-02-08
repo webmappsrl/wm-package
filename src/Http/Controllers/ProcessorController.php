@@ -25,8 +25,8 @@ class ProcessorController extends Controller
                 function ($attribute, $value, $fail) {
                     //eg: AddAreaToJob
                     $classNamespace = $this->getJobClassNamespace($value);
-                    if (!class_exists($classNamespace)) {
-                        $fail('The ' . $attribute . ' is invalid. Impossible found the class with namespace ' . $classNamespace);
+                    if (! class_exists($classNamespace)) {
+                        $fail('The '.$attribute.' is invalid. Impossible found the class with namespace '.$classNamespace);
                     }
                 },
             ],
@@ -43,6 +43,6 @@ class ProcessorController extends Controller
 
     public function getJobClassNamespace($name)
     {
-        return "\App\Jobs\\" . $name;
+        return "\App\Jobs\\".$name;
     }
 }
