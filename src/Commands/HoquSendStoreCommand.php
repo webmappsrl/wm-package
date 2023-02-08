@@ -34,18 +34,22 @@ class HoquSendStoreCommand extends Command
      */
     public function handle(JobsPipelineHandler $jobsService)
     {
+
+        //TODO: add verbosity to command
+        //TODO: handle a log
+
         $class = $this->option('class');
         $input = $this->option('input');
         $field = $this->option('field');
         $featureId = $this->option('featureId');
-        $featureId = $this->option('model');
-
+        $modelNamespace = $this->option('model');
 
         $validator = Validator::make([
             'class' => $class,
             'input' => $input,
             'field' => $field,
             'featureId' => $featureId,
+            'model' => $modelNamespace
         ], [
             //TODO: add more validation rules
             'class' => ['required'],
@@ -66,12 +70,14 @@ class HoquSendStoreCommand extends Command
             return Command::INVALID;
         }
 
-        $this->info($class);
-        $this->info($input);
+        //retrieve the model by class namespace and id
+        //the model MUST exists
+        $model = $modelNamespace::find($featureId);
 
         //Send a STORE request to hoqu, then create a job with status progress on this instance
-        $jobsService->createCallerStoreJobsPipeline($class, $input, $featureId, $field, $model);
+        $jobsService->createCallerStoreJobsPipeline($class, $input, $field, $model);
 
+        $this->info('STORE pipeline successfully started');
         return Command::SUCCESS;
     }
 }

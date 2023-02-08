@@ -4,8 +4,9 @@ namespace Wm\WmPackage\Commands;
 
 use Exception;
 use Throwable;
+use App\Models\User;
+
 use Illuminate\Support\Str;
-use Wm\WmPackage\Model\User;
 use Illuminate\Console\Command;
 use Wm\WmPackage\Http\HoquClient;
 use Illuminate\Support\Facades\URL;
