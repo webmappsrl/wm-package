@@ -1,6 +1,6 @@
 <?php
 
-namespace Wm\WmPackage\Http;
+namespace Wm\WmPackage\Services;
 
 
 use Illuminate\Support\Facades\Http;

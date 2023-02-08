@@ -3,10 +3,12 @@
 namespace Wm\WmPackage;
 
 use Spatie\LaravelPackageTools\Package;
-use Spatie\LaravelPackageTools\PackageServiceProvider;
-use Wm\WmPackage\Commands\HoquRegisterUserCommand;
-use Wm\WmPackage\Commands\HoquSendStoreCommand;
+use Wm\WmPackage\Commands\HoquPingCommand;
 use Wm\WmPackage\Commands\WmPackageCommand;
+use Wm\WmPackage\Commands\HoquSendStoreCommand;
+use Wm\WmPackage\Commands\HoquUnauthPingCommand;
+use Wm\WmPackage\Commands\HoquRegisterUserCommand;
+use Spatie\LaravelPackageTools\PackageServiceProvider;
 
 class WmPackageServiceProvider extends PackageServiceProvider
 {
@@ -30,6 +32,8 @@ class WmPackageServiceProvider extends PackageServiceProvider
                 WmPackageCommand::class,
                 HoquRegisterUserCommand::class,
                 HoquSendStoreCommand::class,
+                HoquPingCommand::class,
+                HoquUnauthPingCommand::class
             ]);
     }
 }

@@ -21,11 +21,29 @@ class ProcessorController extends Controller
     {
         $fields = $request->validate([
             'input' => 'required|string',
-            'name' => 'required|string',
+            //https://laravel.com/docs/9.x/validation#using-closures
+            'name' => [
+                'required',
+                'string',
+                function ($attribute, $value, $fail) {
+                    //eg: AddAreaToJob
+                    $classNamespace = $this->getJobClassNamemespace($value);
+                    if (!class_exists($classNamespace)) {
+                        $fail('The ' . $attribute . ' is invalid. Impossible found the class with namespace ' . $classNamespace);
+                    }
+                }
+            ]
         ]);
 
-        ComputeJob::dispatch($fields);
+
+        //could response error to hoqu
+        $this->getJobClassNamemespace($fields['name'])::dispatch($fields);
 
         return response("ok", 200);
+    }
+
+    protected function getJobClassNamespace($name)
+    {
+        return "\App\Jobs\$value";
     }
 }
