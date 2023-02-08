@@ -60,6 +60,26 @@ class HoquClient
     }
 
     /**
+     * Execute an authenticated ping to hoqu
+     *
+     * @return \Illuminate\Http\Client\Response
+     */
+    public function ping()
+    {
+        return $this->httpWithToken()->get($this->getHoquApiUrl() . 'ping');
+    }
+
+    /**
+     * Execute an unauthenticated ping to hoqu
+     *
+     * @return \Illuminate\Http\Client\Response
+     */
+    public function unAuthPing()
+    {
+        return Http::get($this->getHoquApiUrl() . 'ping');
+    }
+
+    /**
      * The STORE call to hoqu
      *
      * @param  array  $what - the body to send as json that mush have these keys: name, input
