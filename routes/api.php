@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Wm\WmPackage\Http\Controllers\AuthController;
+use Wm\WmPackage\Http\Controllers\ProcessorController;
 
 Route::prefix('api/wm')->middleware('api')->group(function () {
     // Public routes
@@ -19,6 +20,6 @@ Route::prefix('api/wm')->middleware('api')->group(function () {
         Route::post('logout', [AuthController::class, 'logout']);
 
         //Route to handle processor job execution
-        Route::post('processor-do', [ProcessorDo::class]);
+        Route::post('processor-do', [ProcessorController::class, 'do']);
     });
 });
