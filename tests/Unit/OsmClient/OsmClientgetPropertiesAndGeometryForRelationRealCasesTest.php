@@ -42,7 +42,7 @@ class OsmClientgetPropertiesAndGeometryForRelationRealCasesTest extends TestCase
         $this->checkInput(14336243);
     }
 
-    /** @test */
+    /** TODO: check data in/out for this test */
     public function real_case_case_with_relation_10354542_it_works()
     {
         // https://openstreetmap.org/api/0.6/relation/10354542/full.json
@@ -51,6 +51,7 @@ class OsmClientgetPropertiesAndGeometryForRelationRealCasesTest extends TestCase
 
     private function checkInput($relation_id)
     {
+
         $input = file_get_contents(__DIR__."/fixtures/$relation_id.json");
 
         $osmid = "relation/$relation_id";
