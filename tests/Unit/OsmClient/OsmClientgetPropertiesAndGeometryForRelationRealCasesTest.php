@@ -51,7 +51,6 @@ class OsmClientgetPropertiesAndGeometryForRelationRealCasesTest extends TestCase
 
     private function checkInput($relation_id)
     {
-
         $input = file_get_contents(__DIR__."/fixtures/$relation_id.json");
 
         $osmid = "relation/$relation_id";
