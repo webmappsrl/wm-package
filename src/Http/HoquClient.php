@@ -53,21 +53,46 @@ class HoquClient
         return Http::withToken($token);
     }
 
-    // TODO:
-    // public function done($what)
-    // {
-    //     return Http::postJson($this->getHoquApiUrl() . 'done', $what)->body();
-    // }
+    /**
+     * When the processor has done its job
+     *
+     * @param  array  $what
+     * @return \Illuminate\Http\Client\Response
+     */
+    public function done($what)
+    {
+        return $this->httpWithToken()->acceptJson()->post($this->getHoquApiUrl().'done', $what);
+    }
+
+    /**
+     * Execute an authenticated ping to hoqu
+     *
+     * @return \Illuminate\Http\Client\Response
+     */
+    public function ping()
+    {
+        return $this->httpWithToken()->get($this->getHoquApiUrl().'ping');
+    }
+
+    /**
+     * Execute an unauthenticated ping to hoqu
+     *
+     * @return \Illuminate\Http\Client\Response
+     */
+    public function unAuthPing()
+    {
+        return Http::get($this->getHoquApiUrl().'ping');
+    }
 
     /**
      * The STORE call to hoqu
      *
      * @param  array  $what - the body to send as json that mush have these keys: name, input
-     * @return array?
+     * @return \Illuminate\Http\Client\Response
      */
     public function store($what)
     {
-        return $this->httpWithToken()->acceptJson()->post($this->getHoquApiUrl().'store', $what)->json();
+        return $this->httpWithToken()->acceptJson()->post($this->getHoquApiUrl().'store', $what);
     }
 
     /**

@@ -2,12 +2,9 @@
 
 namespace Wm\WmPackage\Commands;
 
-use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Validator;
-use Throwable;
-use Wm\WmPackage\Http\HoquClient;
-use Wm\WmPackage\Model\HoquCallerJob;
+use Wm\WmPackage\Services\JobsPipelineHandler;
 
 class HoquSendStoreCommand extends Command
 {
@@ -20,7 +17,8 @@ class HoquSendStoreCommand extends Command
     {--class= : required, the class that will execute job on processor}
     {--featureId= : required, the feature id to update after completed job}
     {--field= : required, the field to update after completed job}
-    {--input= : required, the input to send to processor}';
+    {--input= : required, the input to send to processor}
+    {--model= : required, the model to update}';
 
     /**
      * The console command description.
@@ -34,24 +32,30 @@ class HoquSendStoreCommand extends Command
      *
      * @return int
      */
-    public function handle(HoquClient $hoquClient)
+    public function handle(JobsPipelineHandler $jobsService)
     {
+        //TODO: add verbosity to command
+        //TODO: handle a log
+
         $class = $this->option('class');
         $input = $this->option('input');
         $field = $this->option('field');
         $featureId = $this->option('featureId');
+        $modelNamespace = $this->option('model');
 
         $validator = Validator::make([
             'class' => $class,
             'input' => $input,
             'field' => $field,
             'featureId' => $featureId,
+            'model' => $modelNamespace,
         ], [
             //TODO: add more validation rules
             'class' => ['required'],
             'input' => ['required'],
             'field' => ['required'],
             'featureId' => ['required'],
+            'model' => ['required'], //TODO: check model existence
 
         ]);
 
@@ -65,27 +69,14 @@ class HoquSendStoreCommand extends Command
             return Command::INVALID;
         }
 
-        $this->info($class);
-        $this->info($input);
-        /**
-         * Send store authenticated request to hoqu
-         */
-        $response = $hoquClient->store([
-            'name' => $class,
-            'input' => $input,
-        ]);
+        //retrieve the model by class namespace and id
+        //the model MUST exists
+        $model = $modelNamespace::find($featureId);
 
-        try {
-            HoquCallerJob::create([
-                'job_id' => $response['job_id'],
-                'class' => $class,
-                'feature_id' => $featureId,
-                'field_to_update' => $field,
-            ]);
-        } catch (Throwable|Exception $e) {
-            $this->error(print_r($response, true));
-            throw $e;
-        }
+        //Send a STORE request to hoqu, then create a job with status progress on this instance
+        $jobsService->createCallerStoreJobsPipeline($class, $input, $field, $model);
+
+        $this->info('STORE pipeline successfully started');
 
         return Command::SUCCESS;
     }
