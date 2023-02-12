@@ -4,6 +4,7 @@ namespace Wm\WmPackage\Http;
 
 use Illuminate\Support\Facades\Http;
 use Wm\WmPackage\Exceptions\OsmClientException;
+use Wm\WmPackage\Exceptions\OsmClientExceptionInvalidOsmId;
 use Wm\WmPackage\Exceptions\OsmClientExceptionNodeHasNoLat;
 use Wm\WmPackage\Exceptions\OsmClientExceptionNodeHasNoLon;
 use Wm\WmPackage\Exceptions\OsmClientExceptionNoElements;
@@ -24,24 +25,35 @@ use Wm\WmPackage\Exceptions\OsmClientExceptionWayHasNoNodes;
  *
  *
  * Useful examples:
- * NODE:
+ * NODE: Returns Point Geometry (REF: https://www.rfc-editor.org/rfc/rfc7946#section-3.1.2)
  * OSM: https://openstreetmap.org/node/770561143
  * XML: https://api.openstreetmap.org/api/0.6/node/770561143
  * JSON: https://api.openstreetmap.org/api/0.6/node/770561143.json
+ * JSONFULL: https://api.openstreetmap.org/api/0.6/way/770561143/full.json
  *
- * WAY:
+ * WAY: Returns LineString Geometry (REF: https://www.rfc-editor.org/rfc/rfc7946#section-3.1.4)
  * OSM: https://openstreetmap.org/way/145096288
  * XML: https://api.openstreetmap.org/api/0.6/way/145096288
  * XMLFULL: https://api.openstreetmap.org/api/0.6/way/145096288/full
  * JSON: https://api.openstreetmap.org/api/0.6/way/145096288.json
  * JSONFULL: https://api.openstreetmap.org/api/0.6/way/145096288/full.json
  *
- * RELATION:
+ * RELATION: Returns MultiLineString Geometry (REF: https://www.rfc-editor.org/rfc/rfc7946#section-3.1.5)
  * OSM: https://openstreetmap.org/relation/12312405
  * XML: https://api.openstreetmap.org/api/0.6/relation/12312405
  * XMLFULL: https://api.openstreetmap.org/api/0.6/relation/12312405/full
  * JSON: https://api.openstreetmap.org/api/0.6/relation/12312405.json
  * JSONFULL: https://api.openstreetmap.org/api/0.6/relation/12312405/full.json
+ *
+ * RELATION (AREA PISA): MultiPolygon Geometry
+ * REF 1: https://www.rfc-editor.org/rfc/rfc7946#section-3.1.7
+ * REF 2: https://www.rfc-editor.org/rfc/rfc7946#appendix-A.6
+ * 
+ * OSM: https://openstreetmap.org/relation/42527
+ * XML: https://api.openstreetmap.org/api/0.6/relation/42527
+ * XMLFULL: https://api.openstreetmap.org/api/0.6/relation/42527/full
+ * JSON: https://api.openstreetmap.org/api/0.6/relation/42527.json
+ * JSONFULL: https://api.openstreetmap.org/api/0.6/relation/42527/full.json
  *
  *
  * ROADMAP:
@@ -104,8 +116,21 @@ class OsmClient
             // way and relation directly call full.json
             $url = $url.'/full.json';
         }
-
         return $url;
+    }
+
+    /**
+     * Returns the URL OSM v06 JSON API string
+     *
+     * @param [type] $osmid
+     * @return string
+     */
+    public function getOsmApiUrlByOsmId($osmid): string
+    {
+        if(!$this->checkOsmId($osmid)) {
+            throw new OsmClientExceptionInvalidOsmId("$osmid is not a valid OSMID, it must be one of the node/1234 way/1234 relation/1234");
+        }
+        return 'https://api.openstreetmap.org/api/0.6/'.$osmid.'.json';
     }
 
     /**
