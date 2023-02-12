@@ -8,7 +8,7 @@ class OsmClientException extends Exception
 {
 }
 class OsmClientExceptionInvalidOsmId extends OsmClientException
-{ 
+{
 }
 class OsmClientExceptionNodeHasNoLat extends OsmClientException
 {

@@ -28,5 +28,5 @@ class OsmClientgetOsmApiUrlByOsmIdTest extends TestCase
         $this->assertEquals($url, OsmClient::getOsmApiUrlByOsmId($osmid));
     }
 
-    // TODO: test invalid case it must return a OsmClientExceptionInvalidOsmId exception 
+    // TODO: test invalid case it must return a OsmClientExceptionInvalidOsmId exception
 }

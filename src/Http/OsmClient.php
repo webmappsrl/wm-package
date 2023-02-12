@@ -48,7 +48,7 @@ use Wm\WmPackage\Exceptions\OsmClientExceptionWayHasNoNodes;
  * RELATION (AREA PISA): MultiPolygon Geometry
  * REF 1: https://www.rfc-editor.org/rfc/rfc7946#section-3.1.7
  * REF 2: https://www.rfc-editor.org/rfc/rfc7946#appendix-A.6
- * 
+ *
  * OSM: https://openstreetmap.org/relation/42527
  * XML: https://api.openstreetmap.org/api/0.6/relation/42527
  * XMLFULL: https://api.openstreetmap.org/api/0.6/relation/42527/full
@@ -116,6 +116,7 @@ class OsmClient
             // way and relation directly call full.json
             $url = $url.'/full.json';
         }
+
         return $url;
     }
 
@@ -127,9 +128,10 @@ class OsmClient
      */
     public function getOsmApiUrlByOsmId($osmid): string
     {
-        if(!$this->checkOsmId($osmid)) {
+        if (! $this->checkOsmId($osmid)) {
             throw new OsmClientExceptionInvalidOsmId("$osmid is not a valid OSMID, it must be one of the node/1234 way/1234 relation/1234");
         }
+
         return 'https://api.openstreetmap.org/api/0.6/'.$osmid.'.json';
     }
 
