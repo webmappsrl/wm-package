@@ -24,7 +24,6 @@ class CallerController extends Controller
     /**
      * When caller receive output
      *
-     * @param  Request  $request
      * @return void
      */
     public function done(Request $request)
