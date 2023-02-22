@@ -27,8 +27,6 @@ class HoquClient
 
     /**
      * Get the default hoqu api endpoint
-     *
-     * @return string
      */
     private function getHoquApiUrl(): string
     {

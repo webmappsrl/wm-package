@@ -93,7 +93,6 @@ class OsmClient
      * Returns the URL OSM v06 JSON API string (full form way and relation)
      *
      * @param [type] $osmid
-     * @return string
      */
     public function getFullOsmApiUrlByOsmId($osmid): string
     {
@@ -111,7 +110,6 @@ class OsmClient
     /**
      * Return true if osmid is valid: node/[id], way/[id], relation/[id]
      *
-     * @param  string  $osmid
      * @return bool true if is valid false otherwise
      */
     public function checkOsmId(string $osmid): bool
@@ -239,7 +237,6 @@ class OsmClient
      *         }
      *       ]
      * }
-     * @return array
      */
     private function getPropertiesAndGeometryForRelation(array $json): array
     {
@@ -394,7 +391,6 @@ class OsmClient
      * way member has timestamp 01-01-2001 the return value will be 01-01-2001 and NOT 01-01-2000
      *
      * @param  array  $json Json array response from node/way/relation full API (v06)
-     * @return string
      */
     public function getUpdatedAt(array $json): string
     {

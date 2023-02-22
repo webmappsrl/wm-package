@@ -62,7 +62,6 @@ abstract class AbstractProcessorJob implements ProcessorJobInterface
     /**
      * Uses the hoquClient service to send to hoqu the job output
      *
-     * @param  HoquClient  $hoquClient
      * @param  array  $data
      * @return void
      */
