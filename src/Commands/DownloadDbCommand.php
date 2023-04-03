@@ -6,6 +6,7 @@ use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+
 class DownloadDbCommand extends Command
 {
     /**
@@ -43,16 +44,16 @@ class DownloadDbCommand extends Command
     public function handle()
     {
         Log::info('db:download -> is started');
-        $fileName = "last-dump.sql.gz";
-        $lastDumpRemotePath = 'maphub/'. $this->appName .'/'. $fileName;
-        $localDirectory = "database";
-        $localRootPath = "storage/app";
+        $fileName = 'last-dump.sql.gz';
+        $lastDumpRemotePath = 'maphub/'.$this->appName.'/'.$fileName;
+        $localDirectory = 'database';
+        $localRootPath = 'storage/app';
         $lastDumpLocalPath = "$localDirectory/$fileName";
 
         $wmdumps = Storage::disk('wmdumps');
         $local = Storage::disk('local');
 
-        if (!$wmdumps->exists($lastDumpRemotePath)) {
+        if (! $wmdumps->exists($lastDumpRemotePath)) {
             Log::error("db:download -> $lastDumpRemotePath does not exist");
             throw new Exception("db:download -> $lastDumpRemotePath does not exist");
         }
@@ -60,7 +61,7 @@ class DownloadDbCommand extends Command
         Log::info('db:download -> START last-dump');
         $lastDump = $wmdumps->get($lastDumpRemotePath);
 
-        if (!$lastDump) {
+        if (! $lastDump) {
             Log::error("db:download -> $lastDumpRemotePath download error");
             throw new Exception("db:download -> $lastDumpRemotePath download error");
         }
@@ -69,12 +70,13 @@ class DownloadDbCommand extends Command
         $local->makeDirectory($localDirectory);
         $local->put($lastDumpLocalPath, $lastDump);
 
-        $AbsolutePath = base_path() . "/$localRootPath/$localDirectory/last-dump.sql.gz";
-        if (!file_exists($AbsolutePath)) {
+        $AbsolutePath = base_path()."/$localRootPath/$localDirectory/last-dump.sql.gz";
+        if (! file_exists($AbsolutePath)) {
             Log::error('db:download -> download dump.sql FAILED');
             throw new Exception('db:download -> download dump.sql FAILED');
         }
         Log::info('db:download -> finished');
+
         return 0;
     }
 }
