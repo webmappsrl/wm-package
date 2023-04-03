@@ -4,13 +4,13 @@ namespace Wm\WmPackage;
 
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
+use Wm\WmPackage\Commands\DownloadDbCommand;
 use Wm\WmPackage\Commands\HoquPingCommand;
 use Wm\WmPackage\Commands\HoquRegisterUserCommand;
 use Wm\WmPackage\Commands\HoquSendStoreCommand;
 use Wm\WmPackage\Commands\HoquUnauthPingCommand;
-use Wm\WmPackage\Commands\WmPackageCommand;
 use Wm\WmPackage\Commands\UploadDbAWS;
-use Wm\WmPackage\Commands\DownloadDbCommand;
+use Wm\WmPackage\Commands\WmPackageCommand;
 
 class WmPackageServiceProvider extends PackageServiceProvider
 {
