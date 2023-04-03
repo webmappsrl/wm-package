@@ -1,6 +1,6 @@
 # Webmapp Laravel wm-package
 
-Version: 1.0
+Version: 1.1
 
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/wm/wm-package.svg?style=flat-square)](https://packagist.org/packages/wm/wm-package)
 [![GitHub Tests Action Status](https://img.shields.io/github/actions/workflow/status/wm/wm-package/run-tests.yml?branch=main&label=tests&style=flat-square)](https://github.com/wm/wm-package/actions?query=workflow%3Arun-tests+branch%3Amain)
@@ -126,3 +126,6 @@ https://pestphp.com/
     -   `--featureId` : required, the feature id to update after completed job}
     -   `--field` : required, the field to update after completed job}
     -   `--input` : required, the input to send to processor}
+-   `db:upload_db_aws`. Uploads the given sql file and the last-dump of the database to AWS. only from production Arguments:
+    -   `dumpname?` : the name of the sql zip file to upload
+-   `db:download`. download a dump.sql from server in storage/app/database folder. Has no arguments:
