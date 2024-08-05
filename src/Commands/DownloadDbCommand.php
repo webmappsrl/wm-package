@@ -46,24 +46,24 @@ class DownloadDbCommand extends Command
         try {
             Log::info('db:download -> is started');
             $fileName = 'last-dump.sql.gz';
-            $lastDumpRemotePath = 'maphub/' . $this->getAppName() . '/' . $fileName;
+            $lastDumpRemotePath = 'maphub/'.$this->getAppName().'/'.$fileName;
             $localDirectory = 'database';
             $localRootPath = 'storage/app';
             $lastDumpLocalPath = "$localDirectory/$fileName";
 
             $wmdumps = Storage::disk('wmdumps');
-            if (!$wmdumps) {
+            if (! $wmdumps) {
                 Log::error('db:download -> wmdumps disk not found');
                 throw new Exception('db:download -> wmdumps disk not found');
             }
             $local = Storage::disk('local');
 
-            if (!$local) {
+            if (! $local) {
                 Log::error('db:download -> local disk not found');
                 throw new Exception('db:download -> local disk not found');
             }
 
-            if (!$wmdumps->exists($lastDumpRemotePath)) {
+            if (! $wmdumps->exists($lastDumpRemotePath)) {
                 Log::error("db:download -> {$lastDumpRemotePath} does not exist");
                 throw new Exception("db:download -> {$lastDumpRemotePath} does not exist");
             }
@@ -71,7 +71,7 @@ class DownloadDbCommand extends Command
             Log::info('db:download -> START last-dump');
             $lastDump = $wmdumps->get($lastDumpRemotePath);
 
-            if (!$lastDump) {
+            if (! $lastDump) {
                 Log::error("db:download -> {$lastDumpRemotePath} download error");
                 throw new Exception("db:download -> {$lastDumpRemotePath} download error");
             }
@@ -80,8 +80,8 @@ class DownloadDbCommand extends Command
             $local->makeDirectory($localDirectory);
             $local->put($lastDumpLocalPath, $lastDump);
 
-            $AbsolutePath = base_path() . "/$localRootPath/$localDirectory/last-dump.sql.gz";
-            if (!file_exists($AbsolutePath)) {
+            $AbsolutePath = base_path()."/$localRootPath/$localDirectory/last-dump.sql.gz";
+            if (! file_exists($AbsolutePath)) {
                 Log::error('db:download -> download dump.sql FAILED');
                 throw new Exception('db:download -> download dump.sql FAILED');
             }
@@ -89,7 +89,8 @@ class DownloadDbCommand extends Command
 
             return 0;
         } catch (Exception $e) {
-            Log::error('db:download -> ' . $e->getMessage());
+            Log::error('db:download -> '.$e->getMessage());
+
             return 1;
         }
     }

@@ -9,12 +9,13 @@ trait WmNovaFieldsTrait
     /**
      * Generate Nova fields based on a JSON schema or a provnameed schema array.
      *
-     * @param string|null $name The name of the column where the form JSON is stored. Default is null.
-     * @param array|null $formSchema The optional schema for fields.
+     * @param  string|null  $name  The name of the column where the form JSON is stored. Default is null.
+     * @param  array|null  $formSchema  The optional schema for fields.
      * @return array
+     *
      * @throws \Exception
      */
-    public function jsonForm(string $columnName, array $formSchema = null)
+    public function jsonForm(string $columnName, ?array $formSchema = null)
     {
         // Ensure Laravel Nova is installed
         $this->ensureNovaIsInstalled();
@@ -24,7 +25,7 @@ trait WmNovaFieldsTrait
         if ($columnName && Schema::hasColumn($this->getTable(), $columnName)) {
             // Fetch the JSON data from the column
             $column = $this->$columnName ?? '';
-            if (!is_array($column)) {
+            if (! is_array($column)) {
                 $formData = json_decode($column, true) ?? [];
             } else {
                 $formData = $column;
@@ -36,7 +37,7 @@ trait WmNovaFieldsTrait
                     $fieldSchema = [
                         'name' => $key,
                         'type' => is_numeric($value) ? 'number' : 'text',
-                        'value' => $value
+                        'value' => $value,
                     ];
                     $novaField = $this->createFieldFromSchema($fieldSchema, $columnName);
                     if ($novaField) {
@@ -74,8 +75,7 @@ provnamee a form schema.');
     /**
      * Create a Nova field based on the field schema.
      *
-     * @param array $fieldSchema
-     * @param string|null $columnName
+     * @param  string|null  $columnName
      * @return \Laravel\Nova\Fields\Field|null
      */
     protected function createFieldFromSchema(array $fieldSchema, $columnName = null)
@@ -97,13 +97,12 @@ provnamee a form schema.');
                 } elseif ($rule['name'] === 'email') {
                     $rules[] = 'email';
                 } elseif ($rule['name'] === 'minLength' && isset($rule['value'])) {
-                    $rules[] = 'min:' . $rule['value'];
+                    $rules[] = 'min:'.$rule['value'];
                 }
             }
         }
 
         $field = null;
-
 
         if ($fieldType === 'number') {
             $field = \Laravel\Nova\Fields\Number::make(__($label), "$columnName->$key")
@@ -126,7 +125,7 @@ provnamee a form schema.');
      */
     protected function ensureNovaIsInstalled()
     {
-        if (!class_exists('Laravel\Nova\Fields\Field')) {
+        if (! class_exists('Laravel\Nova\Fields\Field')) {
             throw new \Exception('Laravel Nova is not installed. Please install Laravel Nova to use this feature.');
         }
     }

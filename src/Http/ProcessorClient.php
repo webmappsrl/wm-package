@@ -41,8 +41,8 @@ class ProcessorClient
     /**
      * Do a job on processor
      *
-     * @param  \App\Models\User  $user - User Model that represents the remote processor
-     * @param  array  $what - The input for the processor job
+     * @param  \App\Models\User  $user  - User Model that represents the remote processor
+     * @param  array  $what  - The input for the processor job
      * @return \Illuminate\Http\Client\Request
      */
     public function process($user, $what)

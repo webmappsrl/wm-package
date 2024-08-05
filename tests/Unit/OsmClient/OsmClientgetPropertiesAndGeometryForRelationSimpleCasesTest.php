@@ -148,11 +148,11 @@ class OsmClientgetPropertiesAndGeometryForRelationSimpleCasesTest extends TestCa
         $this->assertEquals($geometry_expected, $geometry);
     }
 
-        /** @test */
-        public function simple_case_inverted_it_works()
-        {
-            // Prepare data
-            $input = <<<'EOF'
+    /** @test */
+    public function simple_case_inverted_it_works()
+    {
+        // Prepare data
+        $input = <<<'EOF'
             {
                 "elements": [
                     { "type": "node", "id": 11, "lon": 11.1, "lat": 11.2, "timestamp": "2020-01-01T01:01:01Z" },
@@ -171,8 +171,8 @@ class OsmClientgetPropertiesAndGeometryForRelationSimpleCasesTest extends TestCa
             }
             EOF;
 
-            $this->checkInputInverted($input);
-        }
+        $this->checkInputInverted($input);
+    }
 
     private function checkInputInverted($input)
     {

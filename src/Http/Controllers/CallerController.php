@@ -11,7 +11,7 @@ use Wm\WmPackage\Model\HoquCallerJob;
 class CallerController extends Controller
 {
     //use AuthorizesRequests, DispatchesJobs, ValidatesRequests;
-    use  DispatchesJobs, ValidatesRequests;
+    use DispatchesJobs, ValidatesRequests;
 
     /**
      * Alias of done()
