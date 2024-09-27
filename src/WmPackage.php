@@ -2,6 +2,4 @@
 
 namespace Wm\WmPackage;
 
-class WmPackage
-{
-}
+class WmPackage {}

@@ -2,36 +2,37 @@
 
 namespace Wm\WmPackage\Exports;
 
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\WithStyles;
-use Illuminate\Support\Collection;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
-use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\DB;
 
 class GenericExport implements FromCollection, WithHeadings, WithMapping, WithStyles
 {
     protected $modelClass;
+
     protected $fields;
+
     protected $filters;
 
     public function __construct(string $modelClass, array $fields, array $filters = [])
     {
-        $this->modelClass = 'App\Models\\' . $modelClass;
+        $this->modelClass = 'App\Models\\'.$modelClass;
         $this->fields = $fields;
         $this->filters = $filters;
     }
 
     public function collection(): Collection
     {
-        if (!class_exists($this->modelClass)) {
+        if (! class_exists($this->modelClass)) {
             throw new \Exception("Class {$this->modelClass} not found");
         }
 
-        $class = new $this->modelClass();
+        $class = new $this->modelClass;
         $query = $class::query();
 
         // Apply filters if defined
@@ -46,7 +47,7 @@ class GenericExport implements FromCollection, WithHeadings, WithMapping, WithSt
         foreach ($this->fields as $field) {
             if ($field === 'geometry' || $field === 'geom') {
                 // Convert geometry to text using PostGIS function ST_AsText()
-                $selectFields[] = DB::raw('ST_AsText(' . $field . ') AS ' . $field);
+                $selectFields[] = DB::raw('ST_AsText('.$field.') AS '.$field);
             } else {
                 $selectFields[] = $field;
             }

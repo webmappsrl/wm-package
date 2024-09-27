@@ -2,8 +2,8 @@
 
 namespace Wm\WmPackage\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
 use Maatwebsite\Excel\Facades\Excel;
 use Wm\WmPackage\Exports\GenericExport;
 
@@ -12,13 +12,14 @@ class ExportCsvController extends Controller
     public function showModelSelection()
     {
         $models = config('wm-csv-export.models');
+
         return view('wm-package::select-model', compact('models'));
     }
 
     public function handleModelSelection(Request $request)
     {
         $request->validate([
-            'model' => 'required|string|in:' . implode(',', array_keys(config('wm-csv-export.models'))),
+            'model' => 'required|string|in:'.implode(',', array_keys(config('wm-csv-export.models'))),
         ]);
 
         $model = $request->input('model');
@@ -30,7 +31,7 @@ class ExportCsvController extends Controller
     public function exportModel(Request $request)
     {
         $request->validate([
-            'model' => 'required|string|in:' . implode(',', array_keys(config('wm-csv-export.models'))),
+            'model' => 'required|string|in:'.implode(',', array_keys(config('wm-csv-export.models'))),
         ]);
 
         $model = $request->input('model');
@@ -51,7 +52,7 @@ class ExportCsvController extends Controller
             }
         }
 
-        $fileName = class_basename($model) . '_export_' . now()->format('Ymd') . '.csv';
+        $fileName = class_basename($model).'_export_'.now()->format('Ymd').'.csv';
 
         return Excel::download(new GenericExport($model, $fields, $filters), $fileName);
     }

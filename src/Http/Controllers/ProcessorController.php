@@ -11,7 +11,7 @@ use Illuminate\Routing\Controller;
 class ProcessorController extends Controller
 {
     //use AuthorizesRequests, DispatchesJobs, ValidatesRequests;
-    use  DispatchesJobs, ValidatesRequests;
+    use DispatchesJobs, ValidatesRequests;
 
     public function process(Request $request)
     {

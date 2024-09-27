@@ -41,8 +41,8 @@ class CallerClient
     /**
      * Send DONE DONE response to a caller
      *
-     * @param  \App\Models\User  $user - User Model that represents the remote caller
-     * @param  array  $what - The job output for the caller
+     * @param  \App\Models\User  $user  - User Model that represents the remote caller
+     * @param  array  $what  - The job output for the caller
      * @return \Illuminate\Http\Client\Request
      */
     public function done($user, $what)

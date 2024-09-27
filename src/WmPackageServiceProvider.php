@@ -40,7 +40,6 @@ class WmPackageServiceProvider extends PackageServiceProvider
         $this->publishPackageAssets();
     }
 
-
     /**
      * Register any filesystem configurations needed by the package.
      */
@@ -68,23 +67,23 @@ class WmPackageServiceProvider extends PackageServiceProvider
     private function publishPackageAssets(): void
     {
         $this->publishes([
-            __DIR__ . '/../config/wm-csv-export.php' => config_path('wm-csv-export.php'),
+            __DIR__.'/../config/wm-csv-export.php' => config_path('wm-csv-export.php'),
         ], 'wm-package-config');
 
         $this->publishes([
-            __DIR__ . '/../src/Http/Controllers' => app_path('Http/Controllers/WmPackage'),
+            __DIR__.'/../src/Http/Controllers' => app_path('Http/Controllers/WmPackage'),
         ], 'wm-package-controllers');
 
         $this->publishes([
-            __DIR__ . '/../src/Exports' => app_path('Exports/WmPackage'),
+            __DIR__.'/../src/Exports' => app_path('Exports/WmPackage'),
         ], 'wm-package-exports');
 
         $this->publishes([
-            __DIR__ . '/../resources/views' => resource_path('views/vendor/wm-package'),
+            __DIR__.'/../resources/views' => resource_path('views/vendor/wm-package'),
         ], 'wm-package-views');
 
         $this->publishes([
-            __DIR__ . '/../routes/exports.php' => base_path('routes/wm-package-export-routes.php'),
+            __DIR__.'/../routes/exports.php' => base_path('routes/wm-package-export-routes.php'),
         ], 'wm-package-routes');
     }
 
@@ -95,7 +94,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
             $this->loadRoutesFrom(base_path('routes/wm-package-export-routes.php'));
         } else {
             \Log::info('Loading routes from package: routes/exports.php');
-            $this->loadRoutesFrom(__DIR__ . '/../routes/exports.php');
+            $this->loadRoutesFrom(__DIR__.'/../routes/exports.php');
         }
     }
 }
