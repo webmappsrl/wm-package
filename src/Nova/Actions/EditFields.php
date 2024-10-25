@@ -3,10 +3,10 @@
 namespace Wm\WmPackage\Nova\Actions;
 
 use Illuminate\Bus\Queueable;
-use Laravel\Nova\Actions\Action;
-use Illuminate\Support\Collection;
-use Laravel\Nova\Fields\ActionFields;
 use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Support\Collection;
+use Laravel\Nova\Actions\Action;
+use Laravel\Nova\Fields\ActionFields;
 use Laravel\Nova\Http\Requests\NovaRequest;
 
 class EditFields extends Action
@@ -21,19 +21,21 @@ class EditFields extends Action
      * @var string
      */
     public $name = 'Edit';
+
     protected $fields = [];
+
     protected $resource = null;
+
     public function __construct($name = 'Edit', array $fields = [], $resource = null)
     {
         $this->fields = $fields;
         $this->name = __($name);
         $this->resource = $resource;
     }
+
     /**
      * Perform the action on the given models.
      *
-     * @param  \Laravel\Nova\Fields\ActionFields  $fields
-     * @param  \Illuminate\Support\Collection  $models
      * @return mixed
      */
     public function handle(ActionFields $fields, Collection $models)
@@ -51,7 +53,6 @@ class EditFields extends Action
     /**
      * Get the fields available on the action.
      *
-     * @param  \Laravel\Nova\Http\Requests\NovaRequest  $request
      * @return array
      */
     public function fields(NovaRequest $request)
@@ -70,7 +71,7 @@ class EditFields extends Action
                 ->all();
 
             //if $this->fields is not empty, filter the fields
-            if (!empty($this->fields)) {
+            if (! empty($this->fields)) {
                 $filteredFields = collect($filteredFields)->filter(function ($field) {
                     return in_array($field->attribute, $this->fields);
                 })->values()->all();
