@@ -56,7 +56,16 @@ class UploadDbAWS extends Command
 
             $this->log('db:upload_db_aws -> is started');
             $wmdumps = Storage::disk('wmdumps');
+            if (! $wmdumps) {
+                Log::error('db:upload_db_aws -> wmdumps disk not found');
+                throw new Exception('db:upload_db_aws -> wmdumps disk not found');
+            }
             $local = Storage::disk('backups');
+
+            if (! $local) {
+                Log::error('db:upload_db_aws -> local disk not found');
+                throw new Exception('db:upload_db_aws -> local disk not found');
+            }
 
             if ($this->argument('dumpname')) {
                 $this->dumpName = $this->argument('dumpname');

@@ -65,8 +65,8 @@ class OsmClient
     /**
      * Undocumented function
      *
-     * @param  string  $osmid Osmid string with type: node/[id], way/[id], relation/[id]
-     * @param  bool  $retun_array set it as true if you want return value as array
+     * @param  string  $osmid  Osmid string with type: node/[id], way/[id], relation/[id]
+     * @param  bool  $retun_array  set it as true if you want return value as array
      */
     public function getGeojson(string $osmid): string
     {
@@ -222,7 +222,7 @@ class OsmClient
      * The following example is the minimal working version (two nodes)
      * (json format)
      *
-     * @param  array  $json relation coming from Osm v0.6 full API (https://api.openstreetmap.org/api/0.6/relation/12312405/full.json)
+     * @param  array  $json  relation coming from Osm v0.6 full API (https://api.openstreetmap.org/api/0.6/relation/12312405/full.json)
      *
      * {
      *    "elements": [
@@ -390,7 +390,7 @@ class OsmClient
      * that builds up the feature. For example if a relation has timestamp value 01-01-2000 and one of
      * way member has timestamp 01-01-2001 the return value will be 01-01-2001 and NOT 01-01-2000
      *
-     * @param  array  $json Json array response from node/way/relation full API (v06)
+     * @param  array  $json  Json array response from node/way/relation full API (v06)
      */
     public function getUpdatedAt(array $json): string
     {
