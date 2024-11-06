@@ -2,28 +2,27 @@
 
 namespace Wm\WmPackage\Http\Controllers;
 
-use Exception;
-use App\Models\App;
-use App\Models\User;
-use App\Models\UgcMedia;
-use Illuminate\Http\Request;
 use App\Models\TaxonomyWhere;
+use App\Models\UgcMedia;
+use App\Models\User;
+use Exception;
+use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
-use Wm\WmPackage\Traits\UGCFeatureCollectionTrait;
 use Wm\WmPackage\Http\Resources\UgcMediaCollection;
+use Wm\WmPackage\Traits\UGCFeatureCollectionTrait;
 
 class UgcMediaController extends Controller
 {
     use UGCFeatureCollectionTrait;
+
     /**
      * Display a listing of the resource.
      *
-     * @param Request $request
      * @return Response
      */
     public function index(Request $request)
@@ -31,14 +30,16 @@ class UgcMediaController extends Controller
         $user = auth('api')->user();
         if (isset($user)) {
 
-            if (!empty($request->header('app-id'))) {
+            if (! empty($request->header('app-id'))) {
                 $reqAppId = $request->header('app-id');
-                $appId = 'geohub_' . $reqAppId;
+                $appId = 'geohub_'.$reqAppId;
                 $medias = UgcMedia::where([['user_id', $user->id], ['app_id', $appId]])->orderByRaw('updated_at DESC')->get();
+
                 return $this->getUGCFeatureCollection($medias);
             }
 
             $medias = UgcMedia::where('user_id', $user->id)->orderByRaw('updated_at DESC')->get();
+
             return $this->getUGCFeatureCollection($medias);
         } else {
             return new UgcMediaCollection(UgcMedia::currentUser()->paginate(10));
@@ -57,10 +58,6 @@ class UgcMediaController extends Controller
 
     /**
      * Store a newly created resource in storage.
-     *
-     * @param Request $request
-     *
-     * @return Response
      */
     public function store(Request $request): Response
     {
@@ -68,25 +65,26 @@ class UgcMediaController extends Controller
 
         $validator = Validator::make($data, [
             'geojson' => 'required',
-            'image' => 'required'
+            'image' => 'required',
         ]);
 
-        if ($validator->fails())
+        if ($validator->fails()) {
             return response(['error' => $validator->errors()], 400);
+        }
 
         $geojson = json_decode($data['geojson'], true);
 
         $validator = Validator::make($geojson, [
             'type' => 'required',
             'properties' => 'required|array',
-            'properties.app_id' => 'required|max:255'
+            'properties.app_id' => 'required|max:255',
         ]);
 
         if ($validator->fails()) {
             $currentErrors = json_decode($validator->errors(), true);
             $errors = [];
             foreach ($currentErrors as $key => $error) {
-                $errors['geojson.' . $key] = $error;
+                $errors['geojson.'.$key] = $error;
             }
 
             return response(['error' => $errors], 400);
@@ -94,20 +92,23 @@ class UgcMediaController extends Controller
 
         $user = auth('api')->user();
 
-        $media = new UgcMedia();
+        $media = new UgcMedia;
         $media->name = $geojson['properties']['name'] ?? 'placeholder_name';
-        if (isset($geojson['properties']['description']))
+        if (isset($geojson['properties']['description'])) {
             $media->description = $geojson['properties']['description'];
+        }
         $media->user_id = $user->id;
         $media->relative_url = '';
 
-        if (isset($geojson['geometry']))
-            $media->geometry = DB::raw("ST_GeomFromGeojson('" . json_encode($geojson['geometry']) . "')");
+        if (isset($geojson['geometry'])) {
+            $media->geometry = DB::raw("ST_GeomFromGeojson('".json_encode($geojson['geometry'])."')");
+        }
 
         if (isset($geojson['properties']['app_id'])) {
-            $appId = 'geohub_' . $geojson['properties']['app_id'];
-            if ($appId)
+            $appId = 'geohub_'.$geojson['properties']['app_id'];
+            if ($appId) {
                 $media->app_id = $appId;
+            }
         }
 
         unset($geojson['properties']['name']);
@@ -119,9 +120,10 @@ class UgcMediaController extends Controller
         try {
             $id = $media->id;
             $imageName = "image_$id";
-            $basePath = "ugc-media/";
-            if (Storage::disk('public')->exists("$basePath$imageName"))
+            $basePath = 'ugc-media/';
+            if (Storage::disk('public')->exists("$basePath$imageName")) {
                 Storage::disk('public')->delete("$basePath$imageName");
+            }
             Storage::disk('public')->put("$basePath$imageName", $data['image']);
 
             $savedPath = Storage::disk('public')->files("$basePath$imageName/")[0];
@@ -133,12 +135,14 @@ class UgcMediaController extends Controller
             Storage::disk('public')->delete("$basePath$imageName.$ext");
             Storage::disk('public')->move("{$basePath}image_$id/$savedName", "$basePath$imageName.$ext");
             Storage::disk('public')->deleteDirectory("$basePath$imageName");
-            $media->relative_url = $basePath . $imageName . '.' . $ext;
+            $media->relative_url = $basePath.$imageName.'.'.$ext;
 
-            if ($media->name == 'placeholder_name')
+            if ($media->name == 'placeholder_name') {
                 $media->name = $imageName;
-            if (empty($media->description))
+            }
+            if (empty($media->description)) {
                 $media->description = $imageName;
+            }
             $media->save();
         } catch (Exception $e) {
             Log::error($e);
@@ -152,7 +156,6 @@ class UgcMediaController extends Controller
     /**
      * Display the specified resource.
      *
-     * @param UgcMedia $ugcMedia
      *
      * @return Response
      */
@@ -164,7 +167,6 @@ class UgcMediaController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @param UgcMedia $ugcMedia
      *
      * @return Response
      */
@@ -176,8 +178,7 @@ class UgcMediaController extends Controller
     /**
      * Remove the specified resource from storage.
      *
-     * @param UgcMedia $ugcMedia
-     *
+     * @param  UgcMedia  $ugcMedia
      * @return Response
      */
     public function destroy($id)
@@ -185,10 +186,10 @@ class UgcMediaController extends Controller
         try {
             $media = UgcMedia::find($id);
 
-            if (!$media) {
+            if (! $media) {
                 return response()->json([
                     'error' => 'Media not found',
-                    'code' => 404
+                    'code' => 404,
                 ], 404);
             }
 
@@ -202,7 +203,7 @@ class UgcMediaController extends Controller
         } catch (Exception $e) {
             return response()->json([
                 'error' => "this media can't be deleted by api",
-                'code' => 400
+                'code' => 400,
             ], 400);
         }
     }
@@ -216,9 +217,9 @@ class UgcMediaController extends Controller
 
         $user = User::find($user_id);
         if ($user == null) {
-            $geojson = ["error" => "User Not Found"];
-        } else if (count($user->ugc_medias) == 0) {
-            $geojson = ["error" => "User has no Media"];
+            $geojson = ['error' => 'User Not Found'];
+        } elseif (count($user->ugc_medias) == 0) {
+            $geojson = ['error' => 'User has no Media'];
         } else {
             $geojson = ['type' => 'FeatureCollection'];
             $geojson['features'] = [];
@@ -226,7 +227,7 @@ class UgcMediaController extends Controller
                 $feature = ['type' => 'Feature'];
                 $feature['properties']['id'] = $media->id;
                 $feature['properties']['name'] = $media->name;
-                $feature['properties']['url'] = env('APP_URL') . Storage::url($media->relative_url);
+                $feature['properties']['url'] = env('APP_URL').Storage::url($media->relative_url);
                 $emptygeojson = $media->getEmptyGeojson();
                 $feature['geometry'] = $emptygeojson['geometry'];
                 $geojson['features'][] = $feature;
@@ -612,15 +613,15 @@ class UgcMediaController extends Controller
     {
         $media = UgcMedia::find($id);
 
-        if (!$media) {
+        if (! $media) {
             return response()->json([
-                "error" => "UGC Media $id not found"
+                'error' => "UGC Media $id not found",
             ], 404);
         }
 
-        if (!Storage::disk('public')->exists($media->relative_url)) {
+        if (! Storage::disk('public')->exists($media->relative_url)) {
             return response()->json([
-                "error" => "UGC Media image not found"
+                'error' => 'UGC Media image not found',
             ], 404);
         }
         $filename = $media->name;
@@ -629,7 +630,7 @@ class UgcMediaController extends Controller
         $mime = $this->ext2mime($extension);
         $headers = [
             'Content-type' => $mime,
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ];
 
         return response(readfile(Storage::disk('public')->path($media->relative_url)), 200, $headers);
@@ -637,17 +638,17 @@ class UgcMediaController extends Controller
 
     /**
      * Update an ugc media, setting coordinates and taxonomy where if available
-     * 
-     * @param Request $request the request
-     * @param int $id the ugc media id
+     *
+     * @param  Request  $request  the request
+     * @param  int  $id  the ugc media id
      */
     public function update(Request $request, int $id)
     {
         $media = UgcMedia::find($id);
 
-        if (!$media) {
+        if (! $media) {
             return response()->json([
-                "error" => "UGC Media $id not found"
+                'error' => "UGC Media $id not found",
             ], 404);
         }
 
@@ -655,16 +656,17 @@ class UgcMediaController extends Controller
 
         $validator = Validator::make($data, [
             'geojson' => 'required',
-            'geojson.type' => 'required'
+            'geojson.type' => 'required',
         ]);
 
-        if ($validator->fails())
+        if ($validator->fails()) {
             return response(['error' => $validator->errors()], 400);
+        }
 
         $geojson = $data['geojson'];
 
         if (isset($geojson['geometry']['type']) && $geojson['geometry']['type'] === 'Point' && isset($geojson['geometry']['coordinates'])) {
-            $media->geometry = DB::raw("ST_GeomFromGeojson('" . json_encode($geojson['geometry']) . "')");
+            $media->geometry = DB::raw("ST_GeomFromGeojson('".json_encode($geojson['geometry'])."')");
             $media->save();
         }
 
@@ -679,7 +681,6 @@ class UgcMediaController extends Controller
         //     }
         //     $media->taxonomy_wheres()->sync($ids);
         // }
-
 
         return response()->noContent();
     }

@@ -2,17 +2,20 @@
 
 namespace Wm\WmPackage\Tests\Api;
 
-use Wm\WmPackage\Tests\TestCase;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Wm\WmPackage\Tests\TestCase;
 
 class AuthTest extends TestCase
 {
     use RefreshDatabase;
 
     protected $baseUrl = '/api/auth/';
+
     protected $userData;
+
     protected $token;
+
     protected $user;
 
     protected function setUp(): void
@@ -22,7 +25,7 @@ class AuthTest extends TestCase
         $this->userData = [
             'name' => 'Test User',
             'email' => 'test@example.com',
-            'password' => 'password123'
+            'password' => 'password123',
         ];
     }
 
@@ -31,14 +34,15 @@ class AuthTest extends TestCase
      */
     private function createAndAuthenticateUser()
     {
-        if (!$this->token) {
-            $this->postJson($this->baseUrl . 'signup', $this->userData);
-            $loginResponse = $this->postJson($this->baseUrl . 'login', [
+        if (! $this->token) {
+            $this->postJson($this->baseUrl.'signup', $this->userData);
+            $loginResponse = $this->postJson($this->baseUrl.'login', [
                 'email' => $this->userData['email'],
-                'password' => $this->userData['password']
+                'password' => $this->userData['password'],
             ]);
             $this->token = $loginResponse->json('access_token');
         }
+
         return $this->token;
     }
 
@@ -48,8 +52,8 @@ class AuthTest extends TestCase
     private function makeAuthenticatedRequest($method, $endpoint, $data = [])
     {
         return $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->createAndAuthenticateUser()
-        ])->postJson($this->baseUrl . $endpoint, $data);
+            'Authorization' => 'Bearer '.$this->createAndAuthenticateUser(),
+        ])->postJson($this->baseUrl.$endpoint, $data);
     }
 
     /**
@@ -57,7 +61,7 @@ class AuthTest extends TestCase
      */
     public function test_user_can_signup()
     {
-        $response = $this->postJson($this->baseUrl . 'signup', $this->userData);
+        $response = $this->postJson($this->baseUrl.'signup', $this->userData);
 
         $response->assertStatus(200)
             ->assertJsonStructure([
@@ -67,12 +71,12 @@ class AuthTest extends TestCase
                 'id',
                 'name',
                 'email',
-                'email_verified_at'
+                'email_verified_at',
             ]);
 
         $this->assertDatabaseHas('users', [
             'email' => $this->userData['email'],
-            'name' => $this->userData['name']
+            'name' => $this->userData['name'],
         ]);
     }
 
@@ -82,15 +86,15 @@ class AuthTest extends TestCase
     public function test_user_cannot_signup_with_existing_email()
     {
         // First registration
-        $this->postJson($this->baseUrl . 'signup', $this->userData);
+        $this->postJson($this->baseUrl.'signup', $this->userData);
 
         // Attempt registration with same email
-        $response = $this->postJson($this->baseUrl . 'signup', $this->userData);
+        $response = $this->postJson($this->baseUrl.'signup', $this->userData);
 
         $response->assertStatus(400)
             ->assertJson([
                 'error' => 'Un utente è già stato registrato con questa email.',
-                'code' => 400
+                'code' => 400,
             ]);
     }
 
@@ -100,12 +104,12 @@ class AuthTest extends TestCase
     public function test_user_can_login()
     {
         // Create a user
-        $this->postJson($this->baseUrl . 'signup', $this->userData);
+        $this->postJson($this->baseUrl.'signup', $this->userData);
 
         // Try login
-        $response = $this->postJson($this->baseUrl . 'login', [
+        $response = $this->postJson($this->baseUrl.'login', [
             'email' => $this->userData['email'],
-            'password' => $this->userData['password']
+            'password' => $this->userData['password'],
         ]);
 
         $response->assertStatus(200)
@@ -116,7 +120,7 @@ class AuthTest extends TestCase
                 'id',
                 'name',
                 'email',
-                'email_verified_at'
+                'email_verified_at',
             ]);
     }
 
@@ -126,18 +130,18 @@ class AuthTest extends TestCase
     public function test_user_cannot_login_with_wrong_credentials()
     {
         // Create a user
-        $this->postJson($this->baseUrl . 'signup', $this->userData);
+        $this->postJson($this->baseUrl.'signup', $this->userData);
 
         // Try login with wrong password
-        $response = $this->postJson($this->baseUrl . 'login', [
+        $response = $this->postJson($this->baseUrl.'login', [
             'email' => $this->userData['email'],
-            'password' => 'wrong_password'
+            'password' => 'wrong_password',
         ]);
 
         $response->assertStatus(401)
             ->assertJson([
                 'error' => 'La password inserita non è corretta. Per favore, riprova.',
-                'code' => 401
+                'code' => 401,
             ]);
     }
 
@@ -150,7 +154,7 @@ class AuthTest extends TestCase
 
         $response->assertStatus(200)
             ->assertJson([
-                'message' => 'Logout effettuato con successo.'
+                'message' => 'Logout effettuato con successo.',
             ]);
     }
 
@@ -166,7 +170,7 @@ class AuthTest extends TestCase
                 'id',
                 'name',
                 'email',
-                'email_verified_at'
+                'email_verified_at',
             ]);
     }
 
@@ -179,11 +183,11 @@ class AuthTest extends TestCase
 
         $response->assertStatus(200)
             ->assertJson([
-                'success' => 'Account utente cancellato con successo.'
+                'success' => 'Account utente cancellato con successo.',
             ]);
 
         $this->assertDatabaseMissing('users', [
-            'email' => $this->userData['email']
+            'email' => $this->userData['email'],
         ]);
     }
 
@@ -199,7 +203,7 @@ class AuthTest extends TestCase
             ->assertJsonStructure([
                 'access_token',
                 'token_type',
-                'expires_in'
+                'expires_in',
             ]);
 
         $this->assertNotEquals($oldToken, $response->json('access_token'));

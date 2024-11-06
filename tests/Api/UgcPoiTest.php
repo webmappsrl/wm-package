@@ -2,19 +2,22 @@
 
 namespace Tests\Api;
 
-use Wm\WmPackage\Tests\TestCase;
-use App\Models\User;
 use App\Models\UgcPoi;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Wm\WmPackage\Tests\TestCase;
 
 class UgcPoiTest extends TestCase
 {
     use RefreshDatabase;
 
     protected $baseUrl = '/api/ugc/poi/';
+
     protected $userData;
+
     protected $token;
+
     protected $user;
 
     protected function setUp(): void
@@ -25,13 +28,13 @@ class UgcPoiTest extends TestCase
         $this->userData = [
             'name' => 'Test User',
             'email' => 'test@example.com',
-            'password' => 'password123'
+            'password' => 'password123',
         ];
 
         $this->otherUserData = [
             'name' => 'Other Test User',
             'email' => 'other@example.com',
-            'password' => 'password123'
+            'password' => 'password123',
         ];
 
         $response = $this->postJson('/api/auth/signup', $this->userData);
@@ -48,24 +51,24 @@ class UgcPoiTest extends TestCase
             'type' => 'Feature',
             'geometry' => [
                 'type' => 'Point',
-                'coordinates' => [10.0, 45.0]
+                'coordinates' => [10.0, 45.0],
             ],
             'properties' => [
                 'name' => 'Test POI',
                 'description' => 'Test Description',
                 'id' => 'test_form',
-                'app_id' => 'test_app'
-            ]
+                'app_id' => 'test_app',
+            ],
         ];
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token
-        ])->postJson($this->baseUrl . 'store', $poiData);
+            'Authorization' => 'Bearer '.$this->token,
+        ])->postJson($this->baseUrl.'store', $poiData);
 
         $response->assertStatus(201)
             ->assertJson([
                 'id' => $response->json('id'),
-                'message' => 'Created successfully'
+                'message' => 'Created successfully',
             ]);
 
         $this->assertDatabaseHas('ugc_pois', [
@@ -73,7 +76,7 @@ class UgcPoiTest extends TestCase
             'description' => 'Test Description',
             'user_id' => $this->user->id,
             'form_id' => 'test_form',
-            'app_id' => 'geohub_test_app'
+            'app_id' => 'geohub_test_app',
         ]);
     }
 
@@ -86,15 +89,15 @@ class UgcPoiTest extends TestCase
             'type' => 'Feature',
             'geometry' => [
                 'type' => 'Point',
-                'coordinates' => [10.0, 45.0]
+                'coordinates' => [10.0, 45.0],
             ],
             'properties' => [
                 'name' => 'Test POI',
-                'id' => 'test_form'
-            ]
+                'id' => 'test_form',
+            ],
         ];
 
-        $response = $this->postJson($this->baseUrl . 'store', $poiData);
+        $response = $this->postJson($this->baseUrl.'store', $poiData);
 
         $response->assertStatus(401);
     }
@@ -111,15 +114,15 @@ class UgcPoiTest extends TestCase
             'form_id' => 'test_form',
             'description' => 'Test Description',
             'raw_data' => 'Test Raw Data',
-            'geometry' => DB::raw("ST_GeomFromGeoJSON('" . json_encode([
+            'geometry' => DB::raw("ST_GeomFromGeoJSON('".json_encode([
                 'type' => 'Point',
-                'coordinates' => [10.0, 45.0]
-            ]) . "')"),
+                'coordinates' => [10.0, 45.0],
+            ])."')"),
         ]);
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token
-        ])->getJson($this->baseUrl . 'index');
+            'Authorization' => 'Bearer '.$this->token,
+        ])->getJson($this->baseUrl.'index');
 
         $response->assertStatus(200)
             ->assertJsonStructure([
@@ -138,10 +141,10 @@ class UgcPoiTest extends TestCase
                             'form_id',
                             'validated',
                             'water_flow_rate_validated',
-                            'app_id'
-                        ]
-                    ]
-                ]
+                            'app_id',
+                        ],
+                    ],
+                ],
             ]);
 
         $this->assertEquals(3, count($response->json('features')));
@@ -154,20 +157,20 @@ class UgcPoiTest extends TestCase
     {
         // Crea un POI
         $poi = UgcPoi::factory()->create([
-            'user_id' => $this->user->id
+            'user_id' => $this->user->id,
         ]);
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token
-        ])->deleteJson($this->baseUrl . 'delete/' . $poi->id);
+            'Authorization' => 'Bearer '.$this->token,
+        ])->deleteJson($this->baseUrl.'delete/'.$poi->id);
 
         $response->assertStatus(200)
             ->assertJson([
-                'success' => true
+                'success' => true,
             ]);
 
         $this->assertDatabaseMissing('ugc_pois', [
-            'id' => $poi->id
+            'id' => $poi->id,
         ]);
     }
 
@@ -180,24 +183,24 @@ class UgcPoiTest extends TestCase
             'type' => 'Feature',
             'geometry' => [
                 'type' => 'Point',
-                'coordinates' => [10.0, 45.0]
+                'coordinates' => [10.0, 45.0],
             ],
             'properties' => [
-                'id' => 'test_form'
-            ]
+                'id' => 'test_form',
+            ],
         ];
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token
-        ])->postJson($this->baseUrl . 'store', $poiData);
+            'Authorization' => 'Bearer '.$this->token,
+        ])->postJson($this->baseUrl.'store', $poiData);
 
         $response->assertStatus(400)
             ->assertJson([
                 'error' => [
                     'properties.name' => ['validation.required'],
-                    'properties.app_id' => ['validation.required']
+                    'properties.app_id' => ['validation.required'],
                 ],
-                '0' => 'Validation Error'
+                '0' => 'Validation Error',
             ]);
     }
 
@@ -210,23 +213,23 @@ class UgcPoiTest extends TestCase
             'type' => 'Feature',
             'geometry' => [
                 'type' => 'Point',
-                'coordinates' => [10.0, 45.0]
+                'coordinates' => [10.0, 45.0],
             ],
             'properties' => [
                 'name' => 'Test POI',
-            ]
+            ],
         ];
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token
-        ])->postJson($this->baseUrl . 'store', $poiData);
+            'Authorization' => 'Bearer '.$this->token,
+        ])->postJson($this->baseUrl.'store', $poiData);
 
         $response->assertStatus(400)
             ->assertJson([
                 'error' => [
-                    'properties.app_id' => ['validation.required']
+                    'properties.app_id' => ['validation.required'],
                 ],
-                '0' => 'Validation Error'
+                '0' => 'Validation Error',
             ]);
     }
 
@@ -241,20 +244,20 @@ class UgcPoiTest extends TestCase
             'properties' => [
                 'name' => 'Test POI',
                 'id' => 'test_form',
-                'app_id' => 'test_app'
-            ]
+                'app_id' => 'test_app',
+            ],
         ];
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token
-        ])->postJson($this->baseUrl . 'store', $poiData);
+            'Authorization' => 'Bearer '.$this->token,
+        ])->postJson($this->baseUrl.'store', $poiData);
 
         $response->assertStatus(400)
             ->assertJson([
                 'error' => [
-                    'geometry' => ['validation.required']
+                    'geometry' => ['validation.required'],
                 ],
-                '0' => 'Validation Error'
+                '0' => 'Validation Error',
             ]);
     }
 }

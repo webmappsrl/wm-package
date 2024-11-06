@@ -2,21 +2,23 @@
 
 namespace Tests\Api;
 
-use Wm\WmPackage\Tests\TestCase;
-use App\Models\User;
 use App\Models\UgcMedia;
+use App\Models\User;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Foundation\Testing\DatabaseTransactions;
-use Illuminate\Support\Facades\DB;
+use Wm\WmPackage\Tests\TestCase;
 
 class UgcMediaTest extends TestCase
 {
     use DatabaseTransactions;
 
     protected $baseUrl = '/api/ugc/media/';
+
     protected $userData;
+
     protected $token;
+
     protected $user;
 
     protected function setUp(): void
@@ -28,7 +30,7 @@ class UgcMediaTest extends TestCase
         $this->userData = [
             'name' => 'Test User',
             'email' => 'test@example.com',
-            'password' => 'password123'
+            'password' => 'password123',
         ];
 
         $response = $this->postJson('/api/auth/signup', $this->userData);
@@ -44,33 +46,33 @@ class UgcMediaTest extends TestCase
             'type' => 'Feature',
             'geometry' => [
                 'type' => 'Point',
-                'coordinates' => [10.0, 45.0]
+                'coordinates' => [10.0, 45.0],
             ],
             'properties' => [
                 'name' => 'Test Media',
                 'description' => 'Test Description',
-                'app_id' => 'test_app'
-            ]
+                'app_id' => 'test_app',
+            ],
         ];
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token
-        ])->postJson($this->baseUrl . 'store', [
+            'Authorization' => 'Bearer '.$this->token,
+        ])->postJson($this->baseUrl.'store', [
             'image' => $file,
-            'geojson' => json_encode($geojson)
+            'geojson' => json_encode($geojson),
         ]);
 
         $response->assertStatus(201)
             ->assertJson([
                 'id' => $response->json('id'),
-                'message' => 'Created successfully'
+                'message' => 'Created successfully',
             ]);
 
         $this->assertDatabaseHas('ugc_media', [
             'name' => 'Test Media',
             'description' => 'Test Description',
             'user_id' => $this->user->id,
-            'app_id' => 'geohub_test_app'
+            'app_id' => 'geohub_test_app',
         ]);
 
         Storage::disk('public')->assertExists($response->json('relative_url'));
@@ -84,13 +86,13 @@ class UgcMediaTest extends TestCase
             'type' => 'Feature',
             'properties' => [
                 'name' => 'Test Media',
-                'app_id' => 'test_app'
-            ]
+                'app_id' => 'test_app',
+            ],
         ];
 
-        $response = $this->postJson($this->baseUrl . 'store', [
+        $response = $this->postJson($this->baseUrl.'store', [
             'image' => $file,
-            'geojson' => json_encode($geojson)
+            'geojson' => json_encode($geojson),
         ]);
 
         $response->assertStatus(401);
@@ -103,8 +105,8 @@ class UgcMediaTest extends TestCase
         ]);
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token
-        ])->getJson($this->baseUrl . 'index');
+            'Authorization' => 'Bearer '.$this->token,
+        ])->getJson($this->baseUrl.'index');
 
         $response->assertStatus(200)
             ->assertJsonStructure([
@@ -122,9 +124,9 @@ class UgcMediaTest extends TestCase
                             'user_id',
                             'raw_data',
                             'app_id',
-                        ]
-                    ]
-                ]
+                        ],
+                    ],
+                ],
             ]);
 
         $this->assertEquals(3, count($response->json('features')));
@@ -135,23 +137,23 @@ class UgcMediaTest extends TestCase
         Storage::fake('public');
 
         $media = UgcMedia::factory()->create([
-            'user_id' => $this->user->id
+            'user_id' => $this->user->id,
         ]);
 
         // Crea un file finto nel filesystem
         Storage::disk('public')->put($media->relative_url, 'fake content');
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token
-        ])->deleteJson($this->baseUrl . 'delete/' . $media->id);
+            'Authorization' => 'Bearer '.$this->token,
+        ])->deleteJson($this->baseUrl.'delete/'.$media->id);
 
         $response->assertStatus(200)
             ->assertJson([
-                'success' => 'media deleted'
+                'success' => 'media deleted',
             ]);
 
         $this->assertDatabaseMissing('ugc_media', [
-            'id' => $media->id
+            'id' => $media->id,
         ]);
 
         Storage::disk('public')->assertMissing($media->relative_url);
@@ -163,21 +165,21 @@ class UgcMediaTest extends TestCase
             'type' => 'Feature',
             'properties' => [
                 'name' => 'Test Media',
-                'app_id' => 'test_app'
-            ]
+                'app_id' => 'test_app',
+            ],
         ];
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token
-        ])->postJson($this->baseUrl . 'store', [
-            'geojson' => json_encode($geojson)
+            'Authorization' => 'Bearer '.$this->token,
+        ])->postJson($this->baseUrl.'store', [
+            'geojson' => json_encode($geojson),
         ]);
 
         $response->assertStatus(400)
             ->assertJson([
                 'error' => [
-                    'image' => ['validation.required']
-                ]
+                    'image' => ['validation.required'],
+                ],
             ]);
     }
 
@@ -186,16 +188,16 @@ class UgcMediaTest extends TestCase
         $file = UploadedFile::fake()->image('test.jpg');
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token
-        ])->postJson($this->baseUrl . 'store', [
-            'image' => $file
+            'Authorization' => 'Bearer '.$this->token,
+        ])->postJson($this->baseUrl.'store', [
+            'image' => $file,
         ]);
 
         $response->assertStatus(400)
             ->assertJson([
                 'error' => [
-                    'geojson' => ['validation.required']
-                ]
+                    'geojson' => ['validation.required'],
+                ],
             ]);
     }
 
@@ -206,22 +208,22 @@ class UgcMediaTest extends TestCase
         $geojson = [
             'type' => 'Feature',
             'properties' => [
-                'name' => 'Test Media'
-            ]
+                'name' => 'Test Media',
+            ],
         ];
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token
-        ])->postJson($this->baseUrl . 'store', [
+            'Authorization' => 'Bearer '.$this->token,
+        ])->postJson($this->baseUrl.'store', [
             'image' => $file,
-            'geojson' => json_encode($geojson)
+            'geojson' => json_encode($geojson),
         ]);
 
         $response->assertStatus(400)
             ->assertJson([
                 'error' => [
-                    'geojson.properties.app_id' => ['validation.required']
-                ]
+                    'geojson.properties.app_id' => ['validation.required'],
+                ],
             ]);
     }
 }

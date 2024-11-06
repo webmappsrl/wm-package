@@ -2,19 +2,22 @@
 
 namespace Tests\Api;
 
-use Wm\WmPackage\Tests\TestCase;
-use App\Models\User;
 use App\Models\UgcTrack;
-use Illuminate\Support\Facades\DB;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Wm\WmPackage\Tests\TestCase;
 
 class UgcTrackTest extends TestCase
 {
     use RefreshDatabase;
 
     protected $baseUrl = '/api/ugc/track/';
+
     protected $userData;
+
     protected $token;
+
     protected $user;
 
     protected function setUp(): void
@@ -24,11 +27,10 @@ class UgcTrackTest extends TestCase
         //mock rate limiting (resolve error 429 in github actions tests)
         $this->withoutMiddleware(\Illuminate\Routing\Middleware\ThrottleRequests::class);
 
-
         $this->userData = [
             'name' => 'Test User',
             'email' => 'test@example.com',
-            'password' => 'password123'
+            'password' => 'password123',
         ];
 
         $response = $this->postJson('/api/auth/signup', $this->userData);
@@ -48,8 +50,8 @@ class UgcTrackTest extends TestCase
                 'coordinates' => [
                     [10.0, 45.0, 0],
                     [10.1, 45.1, 0],
-                    [10.2, 45.2, 0]
-                ]
+                    [10.2, 45.2, 0],
+                ],
             ],
             'properties' => [
                 'name' => 'Test Track',
@@ -57,26 +59,26 @@ class UgcTrackTest extends TestCase
                 'app_id' => 'test_app',
                 'metadata' => [
                     'distance' => 1000,
-                    'duration' => 3600
-                ]
-            ]
+                    'duration' => 3600,
+                ],
+            ],
         ];
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token
-        ])->postJson($this->baseUrl . 'store', $trackData);
+            'Authorization' => 'Bearer '.$this->token,
+        ])->postJson($this->baseUrl.'store', $trackData);
 
         $response->assertStatus(201)
             ->assertJson([
                 'id' => $response->json('id'),
-                'message' => 'Created successfully'
+                'message' => 'Created successfully',
             ]);
 
         $this->assertDatabaseHas('ugc_tracks', [
             'name' => 'Test Track',
             'description' => 'Test Description',
             'user_id' => $this->user->id,
-            'app_id' => 'geohub_test_app'
+            'app_id' => 'geohub_test_app',
         ]);
     }
 
@@ -89,15 +91,15 @@ class UgcTrackTest extends TestCase
             'type' => 'Feature',
             'geometry' => [
                 'type' => 'LineString',
-                'coordinates' => [[10.0, 45.0], [10.1, 45.1]]
+                'coordinates' => [[10.0, 45.0], [10.1, 45.1]],
             ],
             'properties' => [
                 'name' => 'Test Track',
-                'app_id' => 'test_app'
-            ]
+                'app_id' => 'test_app',
+            ],
         ];
 
-        $response = $this->postJson($this->baseUrl . 'store', $trackData);
+        $response = $this->postJson($this->baseUrl.'store', $trackData);
 
         $response->assertStatus(401);
     }
@@ -113,16 +115,16 @@ class UgcTrackTest extends TestCase
             'app_id' => 'geohub_123',
             'description' => 'Test Description',
             'raw_data' => ['test_key' => 'test_value'],
-            'geometry' => DB::raw("ST_GeomFromGeoJSON('" . json_encode([
+            'geometry' => DB::raw("ST_GeomFromGeoJSON('".json_encode([
                 'type' => 'LineString',
-                'coordinates' => [[10.0, 45.0, 0], [10.1, 45.1, 0], [10.2, 45.2, 0]]
-            ]) . "')"),
-            'metadata' => json_encode(['distance' => 1000, 'duration' => 3600])
+                'coordinates' => [[10.0, 45.0, 0], [10.1, 45.1, 0], [10.2, 45.2, 0]],
+            ])."')"),
+            'metadata' => json_encode(['distance' => 1000, 'duration' => 3600]),
         ]);
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token
-        ])->getJson($this->baseUrl . 'index');
+            'Authorization' => 'Bearer '.$this->token,
+        ])->getJson($this->baseUrl.'index');
 
         $response->assertStatus(200)
             ->assertJsonStructure([
@@ -141,10 +143,10 @@ class UgcTrackTest extends TestCase
                             'raw_data',
                             'metadata',
                             'app_id',
-                            'validated'
-                        ]
-                    ]
-                ]
+                            'validated',
+                        ],
+                    ],
+                ],
             ]);
 
         $this->assertEquals(3, count($response->json('features')));
@@ -161,27 +163,26 @@ class UgcTrackTest extends TestCase
             'name' => 'Test Track',
             'description' => 'Test Description',
             'raw_data' => ['test_key' => 'test_value'],
-            'geometry' => DB::raw("ST_GeomFromGeoJSON('" . json_encode([
+            'geometry' => DB::raw("ST_GeomFromGeoJSON('".json_encode([
                 'type' => 'LineString',
-                'coordinates' => [[10.0, 45.0, 0], [10.1, 45.1, 0], [10.2, 45.2, 0]]
-            ]) . "')"),
-            'metadata' => json_encode(['distance' => 1000, 'duration' => 3600])
+                'coordinates' => [[10.0, 45.0, 0], [10.1, 45.1, 0], [10.2, 45.2, 0]],
+            ])."')"),
+            'metadata' => json_encode(['distance' => 1000, 'duration' => 3600]),
         ]);
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token
-        ])->deleteJson($this->baseUrl . 'delete/' . $track->id);
+            'Authorization' => 'Bearer '.$this->token,
+        ])->deleteJson($this->baseUrl.'delete/'.$track->id);
 
         $response->assertStatus(200)
             ->assertJson([
-                'success' => 'track deleted'
+                'success' => 'track deleted',
             ]);
 
         $this->assertDatabaseMissing('ugc_tracks', [
-            'id' => $track->id
+            'id' => $track->id,
         ]);
     }
-
 
     /**
      * @test track creation requires name
@@ -192,22 +193,22 @@ class UgcTrackTest extends TestCase
             'type' => 'Feature',
             'geometry' => [
                 'type' => 'LineString',
-                'coordinates' => [[10.0, 45.0, 0], [10.1, 45.1, 0], [10.2, 45.2, 0]]
+                'coordinates' => [[10.0, 45.0, 0], [10.1, 45.1, 0], [10.2, 45.2, 0]],
             ],
-            'properties' => []
+            'properties' => [],
         ];
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token
-        ])->postJson($this->baseUrl . 'store', $trackData);
+            'Authorization' => 'Bearer '.$this->token,
+        ])->postJson($this->baseUrl.'store', $trackData);
 
         $response->assertStatus(400)
             ->assertJson([
                 'error' => [
                     'properties.name' => ['validation.required'],
-                    'properties.app_id' => ['validation.required']
+                    'properties.app_id' => ['validation.required'],
                 ],
-                '0' => 'Validation Error'
+                '0' => 'Validation Error',
             ]);
     }
 
@@ -220,23 +221,23 @@ class UgcTrackTest extends TestCase
             'type' => 'Feature',
             'geometry' => [
                 'type' => 'LineString',
-                'coordinates' => [[10.0, 45.0, 0], [10.1, 45.1, 0], [10.2, 45.2, 0]]
+                'coordinates' => [[10.0, 45.0, 0], [10.1, 45.1, 0], [10.2, 45.2, 0]],
             ],
             'properties' => [
-                'name' => 'Test Track'
-            ]
+                'name' => 'Test Track',
+            ],
         ];
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token
-        ])->postJson($this->baseUrl . 'store', $trackData);
+            'Authorization' => 'Bearer '.$this->token,
+        ])->postJson($this->baseUrl.'store', $trackData);
 
         $response->assertStatus(400)
             ->assertJson([
                 'error' => [
-                    'properties.app_id' => ['validation.required']
+                    'properties.app_id' => ['validation.required'],
                 ],
-                '0' => 'Validation Error'
+                '0' => 'Validation Error',
             ]);
     }
 
@@ -250,20 +251,20 @@ class UgcTrackTest extends TestCase
             'geometry' => [],
             'properties' => [
                 'name' => 'Test Track',
-                'app_id' => 'test_app'
-            ]
+                'app_id' => 'test_app',
+            ],
         ];
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token
-        ])->postJson($this->baseUrl . 'store', $trackData);
+            'Authorization' => 'Bearer '.$this->token,
+        ])->postJson($this->baseUrl.'store', $trackData);
 
         $response->assertStatus(400)
             ->assertJson([
                 'error' => [
-                    'geometry' => ['validation.required']
+                    'geometry' => ['validation.required'],
                 ],
-                '0' => 'Validation Error'
+                '0' => 'Validation Error',
             ]);
     }
 }
