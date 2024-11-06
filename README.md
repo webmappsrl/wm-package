@@ -129,3 +129,13 @@ https://pestphp.com/
 -   `db:upload_db_aws`. Uploads the given sql file and the last-dump of the database to AWS. only from production Arguments:
     -   `dumpname?` : the name of the sql zip file to upload
 -   `db:download`. download a dump.sql from server in storage/app/database folder. Has no arguments:
+
+
+
+WT verrà installato automaticamente come dipendenza. Gli utenti dovranno solo:
+
+1. Eseguire `composer require wm/wm-package`
+2. Pubblicare la configurazione JWT con `php artisan vendor:publish --tag="wm-package-jwt-config"`
+3. Configurare le variabili d'ambiente JWT nel file .env utilizzando il comando `php artisan jwt:secret`
+
+Il pacchetto JWT sarà gestito come dipendenza del wm-package invece che dover essere installato separatamente nell'applicazione principale.
