@@ -132,7 +132,8 @@ https://pestphp.com/
 
 
 
-WT verrà installato automaticamente come dipendenza. Gli utenti dovranno solo:
+## JWT 
+JWT verrà installato automaticamente come dipendenza. Gli utenti dovranno solo:
 
 1. Eseguire `composer require wm/wm-package`
 2. Pubblicare la configurazione JWT con `php artisan vendor:publish --tag="wm-package-jwt-config"`
