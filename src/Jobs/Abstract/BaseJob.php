@@ -6,8 +6,8 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Queue\SerializesModels;
 use Illuminate\Queue\Middleware\WithoutOverlapping;
+use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 
 abstract class BaseJob implements ShouldQueue
@@ -33,7 +33,8 @@ abstract class BaseJob implements ShouldQueue
     public function middleware()
     {
         $lockKey = $this->getLockKey();
-        $this->logInfo('lockKey: ' . $lockKey);
+        $this->logInfo('lockKey: '.$lockKey);
+
         return [(new WithoutOverlapping($lockKey, 60))->dontRelease()];
     }
 
@@ -45,7 +46,8 @@ abstract class BaseJob implements ShouldQueue
     protected function getLockKey()
     {
         $serializable = $this->getSerializableProperties();
-        $lockKey = 'job_lock:' . static::class . ':' . md5(serialize($serializable) . ':' . $this->getRedisLockKey());
+        $lockKey = 'job_lock:'.static::class.':'.md5(serialize($serializable).':'.$this->getRedisLockKey());
+
         return $lockKey;
     }
 
@@ -91,7 +93,7 @@ abstract class BaseJob implements ShouldQueue
     /**
      * Log an info message.
      *
-     * @param string $message
+     * @param  string  $message
      * @return void
      */
     protected function logInfo($message)
@@ -105,7 +107,7 @@ abstract class BaseJob implements ShouldQueue
     /**
      * Log an error message.
      *
-     * @param string $message
+     * @param  string  $message
      * @return void
      */
     protected function logError($message)
@@ -119,8 +121,6 @@ abstract class BaseJob implements ShouldQueue
     /**
      * Get the log channel for the job.
      * Must be implemented by child classes.
-     *
-     * @return string
      */
     abstract protected function getLogChannel(): string;
 
@@ -134,11 +134,10 @@ abstract class BaseJob implements ShouldQueue
     /**
      * Handle a job failure.
      *
-     * @param \Throwable $exception
      * @return void
      */
     public function failed(\Throwable $exception)
     {
-        $this->logError('Job fallito: ' . $exception->getMessage());
+        $this->logError('Job fallito: '.$exception->getMessage());
     }
 }
