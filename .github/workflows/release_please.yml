@@ -15,12 +15,3 @@ jobs:
     steps:
       # https://github.com/marketplace/actions/release-please-action
       - uses: googleapis/release-please-action@v4
-        with:
-          target-branch: ${{ github.ref_name }}
-          skip-github-pull-request: true
-          release-type: php
-          package-name: release-please-action
-          pull-request-title-pattern: "release${component} ${version}"
-          pull-request-header: ":robot: I have created a release. Changelog updated with this data:"
-          extra-files: |
-            config/wm-package.php

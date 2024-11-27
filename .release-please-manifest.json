@@ -1,7 +1,14 @@
 {
   "release-type": "php",
   "skip-github-release": true,
+  "package-name": "wm-package",
+  "pull-request-title-pattern": "release${component} ${version}",
+  "pull-request-header": ":robot: I have created a release. Changelog updated with this data:",
   "packages": {
-    ".": {}
+    ".": {
+      "extra-files": [
+        "config/wm-package.php"
+      ]
+    }
   }
 }
