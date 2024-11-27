@@ -45,19 +45,19 @@ class WmPackageServiceProvider extends PackageServiceProvider
         // Pubblica la configurazione JWT
         if ($this->app->runningInConsole()) {
             $this->publishes([
-                __DIR__.'/../config/jwt.php' => config_path('jwt.php'),
+                __DIR__ . '/../config/jwt.php' => config_path('jwt.php'),
             ], 'wm-package-jwt-config');
         }
 
-        $this->app->config['filesystems.disks.wmdumps'] = [
-            'driver' => 's3',
-            'key' => env('AWS_DUMPS_ACCESS_KEY_ID'),
-            'secret' => env('AWS_DUMPS_SECRET_ACCESS_KEY'),
-            'region' => env('AWS_DEFAULT_REGION'),
-            'bucket' => env('AWS_DUMPS_BUCKET'),
-            'url' => env('AWS_URL'),
-            'endpoint' => env('AWS_ENDPOINT'),
-        ];
+        // $this->app->config['filesystems.disks.wmdumps'] = [
+        //     'driver' => 's3',
+        //     'key' => env('AWS_DUMPS_ACCESS_KEY_ID'),
+        //     'secret' => env('AWS_DUMPS_SECRET_ACCESS_KEY'),
+        //     'region' => env('AWS_DEFAULT_REGION'),
+        //     'bucket' => env('AWS_DUMPS_BUCKET'),
+        //     'url' => env('AWS_URL'),
+        //     'endpoint' => env('AWS_ENDPOINT'),
+        // ];
         $this->app->config['filesystems.disks.backups'] = [
             'driver' => 'local',
             'root' => storage_path('backups'),
@@ -66,7 +66,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
 
     public function packageBooted()
     {
-        $this->loadRoutesFrom(__DIR__.'/Routes/api.php');
+        $this->loadRoutesFrom(__DIR__ . '/Routes/api.php');
     }
 
     public function packageRegistered()
