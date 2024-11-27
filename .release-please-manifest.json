@@ -5,6 +5,6 @@
   "pull-request-title-pattern": "release${component} ${version}",
   "pull-request-header": ":robot: I have created a release. Changelog updated with this data:",
   "packages": {
-    "webmapp/wm-package": "1.1.0"
+    ".": "1.1.0"
   }
 }
