@@ -5,5 +5,5 @@ return [
     'hoqu_url' => env('HOQU_URL', 'https://hoqu2.webmapp.it'),
     'hoqu_register_username' => env('HOQU_REGISTER_USERNAME'),
     'hoqu_register_password' => env('HOQU_REGISTER_PASSWORD '),
-    'version' => '1.2.0', //x-release-please-version
+    'version' => '1.3.0', //x-release-please-version
 ];
