@@ -4,6 +4,4 @@ namespace Wm\WmPackage\Exceptions;
 
 use Exception;
 
-class HoquClientException extends Exception
-{
-}
+class HoquClientException extends Exception {}

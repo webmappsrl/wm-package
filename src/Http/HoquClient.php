@@ -85,7 +85,7 @@ class HoquClient
     /**
      * The STORE call to hoqu
      *
-     * @param  array  $what - the body to send as json that mush have these keys: name, input
+     * @param  array  $what  - the body to send as json that mush have these keys: name, input
      * @return \Illuminate\Http\Client\Response
      */
     public function store($what)
@@ -129,7 +129,7 @@ class HoquClient
      * Register a new (simple) user to Hoqu that can use api via token
      *
      * @param  string  $token
-     * @param  array  $json - json in json_decoded format
+     * @param  array  $json  - json in json_decoded format
      * @return mixed - can return array or scalar value
      */
     public function register($token, $json)
