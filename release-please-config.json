@@ -1,5 +1,4 @@
 {
-  "last-release-sha": "4fe0473539fdd64781bb74dfbd76523f55b5ca03",
   "packages": {
     ".": {
       "component": "webmappsrl/wm-package",
