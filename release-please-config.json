@@ -1,5 +1,4 @@
 {
-  "last-release-sha": "645149858fca96db61a21c59eb71b1a41214dac6",
   "packages": {
     ".": {
       "release-type": "php",
