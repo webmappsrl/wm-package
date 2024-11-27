@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.3](https://github.com/webmappsrl/wm-package/compare/v1.2.2...v1.2.3) (2024-11-27)
+
+
+### Miscellaneous Chores
+
+* test another minor fix release change ([40acd07](https://github.com/webmappsrl/wm-package/commit/40acd07781c87e969dd6502383b11173376aaa1c))
+
 ## [1.2.2](https://github.com/webmappsrl/wm-package/compare/v1.2.1...v1.2.2) (2024-11-27)
 
 
