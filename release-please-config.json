@@ -1,7 +1,6 @@
 {
   "packages": {
     ".": {
-      "component": "webmappsrl/wm-package",
       "release-type": "php",
       "extra-files": [
         "config/wm-package.php"
