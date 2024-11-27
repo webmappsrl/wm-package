@@ -27,7 +27,7 @@ Available migrations are:
 -   `create_jobs_table`, for default laravel job with an extra column
 -   `create_hoqu_caller_jobs`, HoquCallerJob model table, necessary for processor/caller instances
 
-You can publish the config file with:
+You can publish the config file with :
 
 ```bash
 php artisan vendor:publish --tag="wm-package-config"
