@@ -1,10 +1,9 @@
 {
-  "release-type": "php",
-  "pull-request-title-pattern": "release${component} ${version} ${scope}",
-  "pull-request-header": ":robot: I have created a release. Changelog updated with this data:",
+  "last-release-sha": "4fe0473539fdd64781bb74dfbd76523f55b5ca03",
   "packages": {
     ".": {
       "component": "webmappsrl/wm-package",
+      "release-type": "php",
       "extra-files": [
         "config/wm-package.php"
       ]
