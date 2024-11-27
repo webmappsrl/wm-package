@@ -1,10 +1,14 @@
 {
-  "bootstrap-sha": "04283261e5525c036dfc0985ad89127c6a60ba44",
   "release-type": "php",
   "skip-github-release": true,
   "pull-request-title-pattern": "release${component} ${version}",
   "pull-request-header": ":robot: I have created a release. Changelog updated with this data:",
   "packages": {
-    ".": "1.1.0"
+    ".": {
+      "component": "webmapp/wm-package",
+      "extra-files": [
+        "config/wm-package.php"
+      ]
+    }
   }
 }
