@@ -1,0 +1,7 @@
+{
+  "release-type": "php",
+  "skip-github-release": true,
+  "packages": {
+    ".": {}
+  }
+}
