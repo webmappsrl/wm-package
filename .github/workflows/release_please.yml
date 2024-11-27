@@ -17,6 +17,7 @@ jobs:
       - uses: google-github-actions/release-please-action@v3
         with:
           target-branch: ${{ github.ref_name }}
+          skip-github-pull-request: true
           release-type: php
           package-name: release-please-action
           pull-request-title-pattern: "release${component} ${version}"
