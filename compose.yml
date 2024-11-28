@@ -1,0 +1,14 @@
+services:
+  php:
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    # user: root
+    build: ./docker/configs/phpfpm
+    restart: always
+    container_name: "php_wm_package"
+    image: wm-phpfpm:8.2.15-fpm
+    ports:
+      - ${DOCKER_PHP_PORT:-9000}:9000
+    volumes:
+      - ".:/var/www/html/wm-package"
+    working_dir: "/var/www/html/wm-package"

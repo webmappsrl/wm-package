@@ -1,7 +1,5 @@
 # Webmapp Laravel wm-package
 
-Version: 1.1
-
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/wm/wm-package.svg?style=flat-square)](https://packagist.org/packages/wm/wm-package)
 [![GitHub Tests Action Status](https://img.shields.io/github/actions/workflow/status/wm/wm-package/run-tests.yml?branch=main&label=tests&style=flat-square)](https://github.com/wm/wm-package/actions?query=workflow%3Arun-tests+branch%3Amain)
 [![GitHub Code Style Action Status](https://img.shields.io/github/actions/workflow/status/wm/wm-package/fix-php-code-style-issues.yml?branch=main&label=code%20style&style=flat-square)](https://github.com/wm/wm-package/actions?query=workflow%3A"Fix+PHP+code+style+issues"+branch%3Amain)
@@ -29,13 +27,13 @@ Available migrations are:
 -   `create_jobs_table`, for default laravel job with an extra column
 -   `create_hoqu_caller_jobs`, HoquCallerJob model table, necessary for processor/caller instances
 
-You can publish the config file with:
+You can publish the config file with :
 
 ```bash
 php artisan vendor:publish --tag="wm-package-config"
 ```
 
-This is the contents of the published config file:
+This is the contents of the published config file :
 
 ```php
 return [
@@ -130,9 +128,8 @@ https://pestphp.com/
     -   `dumpname?` : the name of the sql zip file to upload
 -   `db:download`. download a dump.sql from server in storage/app/database folder. Has no arguments:
 
+## JWT
 
-
-## JWT 
 JWT verrà installato automaticamente come dipendenza. Gli utenti dovranno solo:
 
 1. Eseguire `composer require wm/wm-package`

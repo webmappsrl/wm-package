@@ -10,7 +10,7 @@ class OsmClientGetUpdatedAtTest extends TestCase
 {
     // Exceptions
     /** @test */
-    public function no_elements_throw_Exception()
+    public function no_elements_throw_exception()
     {
         // $osmp = app(OsmServiceProvider::class);
         $json = [];
@@ -19,7 +19,7 @@ class OsmClientGetUpdatedAtTest extends TestCase
     }
 
     /** @test */
-    public function no_timestamp_throw_Exception()
+    public function no_timestamp_throw_exception()
     {
         // $osmp = app(OsmServiceProvider::class);
         $json = [
