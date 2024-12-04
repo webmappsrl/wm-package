@@ -60,7 +60,6 @@ class UploadDbAWS extends Command
 
             $local = Storage::disk('backups');
 
-
             if ($this->argument('dumpname')) {
                 $this->dumpName = $this->argument('dumpname');
                 $lastLocalDump = $local->get($this->dumpName);
