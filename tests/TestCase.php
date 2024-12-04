@@ -2,22 +2,23 @@
 
 namespace Wm\WmPackage\Tests;
 
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Orchestra\Testbench\Attributes\WithMigration;
 use Orchestra\Testbench\TestCase as Orchestra;
 use Wm\WmPackage\WmPackageServiceProvider;
-use Orchestra\Testbench\Attributes\WithMigration;
 
 #[WithMigration]
 class TestCase extends Orchestra
 {
     use RefreshDatabase;
+
     protected function setUp(): void
     {
         parent::setUp();
 
         Factory::guessFactoryNamesUsing(
-            fn(string $modelName) => 'Wm\\WmPackage\\Database\\Factories\\' . class_basename($modelName) . 'Factory'
+            fn (string $modelName) => 'Wm\\WmPackage\\Database\\Factories\\'.class_basename($modelName).'Factory'
         );
     }
 
