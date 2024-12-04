@@ -6,8 +6,6 @@ use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Spatie\DbDumper\Exceptions\DumpFailed;
-use Spatie\DbDumper\Exceptions\CannotStartDump;
 
 class UploadDbAWS extends Command
 {
@@ -64,20 +62,20 @@ class UploadDbAWS extends Command
                 $this->dumpName = $this->argument('dumpname');
                 $lastLocalDump = $local->get($this->dumpName);
                 $this->log('db:upload_db_aws -> START upload to aws');
-                $wmdumps->put('maphub/' . $this->appName . '/' . $this->dumpName . '.gz', $lastLocalDump);
+                $wmdumps->put('maphub/'.$this->appName.'/'.$this->dumpName.'.gz', $lastLocalDump);
                 $this->log('db:upload_db_aws -> DONE upload to aws');
             }
 
             $this->log('db:upload_db_aws -> START create last-dump to aws');
             $last_dump = $local->get('last-dump.sql.gz');
-            $wmdumps->put('maphub/' . $this->appName . '/last-dump.sql.gz', $last_dump);
+            $wmdumps->put('maphub/'.$this->appName.'/last-dump.sql.gz', $last_dump);
             $this->log('db:upload_db_aws -> DONE create last-dump to aws');
 
             $this->log('db:upload_db_aws -> finished');
 
             return 0;
         } catch (Exception $e) {
-            $this->log('db:upload_db_aws -> The dump process cannot be initialized: ' . $e->getMessage(), 'error');
+            $this->log('db:upload_db_aws -> The dump process cannot be initialized: '.$e->getMessage(), 'error');
             $this->log('db:upload_db_aws -> Make sure to clear the config cache when changing the environment: `php artisan config:cache`', 'error');
 
             return 1;
