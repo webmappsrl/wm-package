@@ -74,18 +74,18 @@ composer test
 
 ## Developing
 
-If you need to test the package on full laravel instance clone this repository in the same folder of the laravel dir, then add a new composer path repository in the laravel `composer.json` file:
+If you need this package on full laravel instance you have to add this repository as submodule in the root path of Laravel with `git submodule add {git repo}`, then add a new composer path repository in the laravel `composer.json` file:
 
 ```json
 "repositories": [
         {
             "type": "path",
-            "url": "../wm-package"
+            "url": "./wm-package"
         }
     ]
 ```
 
-then you can install the package with `compose require wm/wm-package`
+at last you can install the package with `compose require wm/wm-package`
 
 ## Testing
 
@@ -103,6 +103,8 @@ If an evaluation of testbench env I suggest to use the `config()` function (eg: 
 
 Testbench reference: https://packages.tools/testbench.html
 Workbench reference: https://packages.tools/workbench.html
+
+Also a simple php docker container is available to run tests, you can start it using `docker compose up -d` and enter inside with `docker compose exec -it php bash` or directly `docker compose exec -it php ./vendor/bin/pest` (check permissions on files before run it, if you have problems use the `-u` param on exec command with the id of the user who owns project files and directories, to check your current user id you can use the command `id`).
 
 ## Pushing
 
