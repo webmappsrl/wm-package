@@ -12,7 +12,7 @@ class OsmClient extends Facade
     /**
      * Undocumented function
      *
-     * @return \Wm\WmPackage\Http\OsmClient
+     * @return string
      */
     protected static function getFacadeAccessor()
     {

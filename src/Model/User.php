@@ -8,4 +8,8 @@ use Laravel\Sanctum\HasApiTokens;
 class User extends Authenticatable
 {
     use HasApiTokens;
+
+    public $endpoint;
+    public $hoqu_api_token;
+    public $password;
 }

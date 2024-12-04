@@ -12,9 +12,9 @@ class JobsPipelineHandler
     /**
      * Send a STORE request to hoqu, then create a job with status progress on this instance
      *
-     * @param [type] $class
-     * @param [type] $input
-     * @param [type] $field
+     * @param string $class
+     * @param string $input
+     * @param string $field
      * @param  Model  $model
      * @return void
      *
@@ -42,7 +42,7 @@ class JobsPipelineHandler
             $hoquCallerJob->feature()->associate($model)->save();
         } else {
             //TODO: create specific exception
-            throw new Exception("Something went wrong during hoqu http store request:\n".print_r($response->body(), true));
+            throw new Exception("Something went wrong during hoqu http store request:\n" . print_r($response->body(), true));
         }
     }
 }

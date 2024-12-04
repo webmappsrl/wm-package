@@ -2,7 +2,7 @@
 
 namespace Wm\WmPackage\Http\Controllers;
 
-use App\Models\User;
+use Wm\WmPackage\Model\User;
 use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -206,7 +206,7 @@ class AppAuthController extends Controller
      *
      * @throws Exception
      */
-    private function createUser(array $data): User
+    private function createUser(array $data)
     {
         $user = new User;
         $user->fill([

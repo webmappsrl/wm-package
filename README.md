@@ -110,6 +110,8 @@ Also a simple php docker container is available to run tests, you can start it u
 
 We use git flow to add features to this repo. Please create a new feature then push it and ask a pull request via github interface from your feature branch to develop.
 
+Run `./vendor/bin/phpstan` before push to evaluate errors
+
 ## License
 
 The MIT License (MIT). Please see [License File](LICENSE.md) for more information.

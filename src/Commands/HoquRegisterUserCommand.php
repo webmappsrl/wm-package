@@ -49,14 +49,13 @@ class HoquRegisterUserCommand extends Command
         $this->info('Registering/retrieving register user token on HOQU instance ...');
         $json = $hoquClient->registerLogin();
 
-        try {
-            $hoqu_register_token = $json['token']; //special token for register user on hoqu instance
-        } catch (Exception $e) {
+        if (! isset($json['token'])) {
             //TODO: add specific exception
-            $this->error('Something goes wrong during hoqu login. Here the hoqu response in json format:');
-            $this->error(print_r($json, true));
-            throw $e;
+            throw new Exception('Something goes wrong during hoqu login. Here the hoqu response in json format:' . print_r($json, true));
         }
+        $hoqu_register_token = $json['token']; //special token for register user on hoqu instance
+
+
 
         $this->info('Generate a random password and save it in .env file on this istance ...');
         $password = Str::random(20);

@@ -30,23 +30,23 @@ class CallerClient
     /**
      * Returns the endpoint of provided users
      *
-     * @param  \App\Models\User  $user
+     * @param  Wm\WmPackage\Model\User  $user
      * @return string
      */
     public function getEndpointByUser($user)
     {
-        return $user->endpoint.'/api/wm-geobox/cll/';
+        return $user->endpoint . '/api/wm-geobox/cll/';
     }
 
     /**
      * Send DONE DONE response to a caller
      *
-     * @param  \App\Models\User  $user  - User Model that represents the remote caller
+     * @param  Wm\WmPackage\Model\User  $user  - User Model that represents the remote caller
      * @param  array  $what  - The job output for the caller
      * @return \Illuminate\Http\Client\Request
      */
     public function done($user, $what)
     {
-        return $this->httpWithToken($user->hoqu_api_token)->acceptJson()->post($this->getEndpointByUser($user).'donedone', $what);
+        return $this->httpWithToken($user->hoqu_api_token)->acceptJson()->post($this->getEndpointByUser($user) . 'donedone', $what);
     }
 }
