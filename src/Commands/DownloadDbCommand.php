@@ -46,7 +46,7 @@ class DownloadDbCommand extends Command
         try {
             Log::info('db:download -> is started');
             $fileName = 'last-dump.sql.gz';
-            $lastDumpRemotePath = 'maphub/' . $this->getAppName() . '/' . $fileName;
+            $lastDumpRemotePath = 'maphub/'.$this->getAppName().'/'.$fileName;
             $localDirectory = 'database';
             $localRootPath = 'storage/app';
             $lastDumpLocalPath = "$localDirectory/$fileName";
@@ -72,7 +72,7 @@ class DownloadDbCommand extends Command
             $local->makeDirectory($localDirectory);
             $local->put($lastDumpLocalPath, $lastDump);
 
-            $AbsolutePath = base_path() . "/$localRootPath/$localDirectory/last-dump.sql.gz";
+            $AbsolutePath = base_path()."/$localRootPath/$localDirectory/last-dump.sql.gz";
             if (! file_exists($AbsolutePath)) {
                 Log::error('db:download -> download dump.sql FAILED');
                 throw new Exception('db:download -> download dump.sql FAILED');
@@ -81,7 +81,7 @@ class DownloadDbCommand extends Command
 
             return 0;
         } catch (Exception $e) {
-            Log::error('db:download -> ' . $e->getMessage());
+            Log::error('db:download -> '.$e->getMessage());
 
             return 1;
         }
