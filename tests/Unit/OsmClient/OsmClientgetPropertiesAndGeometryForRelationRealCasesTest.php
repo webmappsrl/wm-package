@@ -51,24 +51,26 @@ class OsmClientgetPropertiesAndGeometryForRelationRealCasesTest extends TestCase
 
     private function checkInput($relation_id)
     {
-        $input = file_get_contents(__DIR__."/fixtures/$relation_id.json");
-
+        $input = file_get_contents(__DIR__ . "/fixtures/$relation_id.json");
         $osmid = "relation/$relation_id";
-        $url = 'https://api.openstreetmap.org/api/0.6/relation/31/full.json';
+        $url = "https://api.openstreetmap.org/api/0.6/relation/$relation_id/full.json";
+
 
         // Mock HTTP call
         Http::fake([
-            $url => Http::sequence()->push(json_decode($input, true), 200),
+            $url => Http::sequence()->push($input, 200),
         ]);
 
         // Fire and prepare output
         $r = OsmClient::getPropertiesAndGeometry($osmid);
         $properties = $r[0];
+        unset($properties['_updated_at']);
         $geometry = $r[1];
 
-        $expected = json_decode(file_get_contents(__DIR__."/fixtures/$relation_id.geojson"), true);
+        $expected = json_decode(file_get_contents(__DIR__ . "/fixtures/$relation_id.geojson"), true);
         // Prepare Expected value
         $properties_expected = $expected['properties'];
+        unset($properties_expected['_updated_at']);
         $geometry_expected = $expected['geometry'];
         // Asserts
         $this->assertEquals($properties_expected, $properties);

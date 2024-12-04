@@ -87,6 +87,23 @@ If you need to test the package on full laravel instance clone this repository i
 
 then you can install the package with `compose require wm/wm-package`
 
+## Testing
+
+These tools are used to test the stand alone instance of wm-package: https://packages.tools/
+
+Execute these commands to runs tests:
+
+`./vendor/bin/testbench migrate`
+It migrates workbench tables on a sqlite database located in a vendor folder. Phpunit will use this database as tests memory support.
+
+`./vendor/bin/pest`
+To run tests.
+
+If an evaluation of testbench env I suggest to use the `config()` function (eg: `config('database.connections.sqlite')`) with the testbench implementation of tinker `./vendor/bin/testbench tinker`, it is also useful to understand which things are loaded on the testbench env.
+
+Testbench reference: https://packages.tools/testbench.html
+Workbench reference: https://packages.tools/workbench.html
+
 ## Pushing
 
 We use git flow to add features to this repo. Please create a new feature then push it and ask a pull request via github interface from your feature branch to develop.

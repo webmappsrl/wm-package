@@ -2,18 +2,22 @@
 
 namespace Wm\WmPackage\Tests;
 
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Orchestra\Testbench\TestCase as Orchestra;
 use Wm\WmPackage\WmPackageServiceProvider;
+use Orchestra\Testbench\Attributes\WithMigration;
 
+#[WithMigration]
 class TestCase extends Orchestra
 {
+    use RefreshDatabase;
     protected function setUp(): void
     {
         parent::setUp();
 
         Factory::guessFactoryNamesUsing(
-            fn (string $modelName) => 'Wm\\WmPackage\\Database\\Factories\\'.class_basename($modelName).'Factory'
+            fn(string $modelName) => 'Wm\\WmPackage\\Database\\Factories\\' . class_basename($modelName) . 'Factory'
         );
     }
 
@@ -24,13 +28,8 @@ class TestCase extends Orchestra
         ];
     }
 
-    public function getEnvironmentSetUp($app)
+    protected function defineEnvironment($app)
     {
-        config()->set('database.default', 'testing');
-        config()->set('database.connections.testing', [
-            'driver' => 'sqlite',
-            'database' => ':memory:',
-            'prefix' => '',
-        ]);
+        $app['config']->set('database.default', 'testing');
     }
 }
