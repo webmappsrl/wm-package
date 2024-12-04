@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.4](https://github.com/webmappsrl/wm-package/compare/v1.2.3...v1.2.4) (2024-12-04)
+
+
+### Bug Fixes
+
+* php stan errors oc: 4377 ([c7819f6](https://github.com/webmappsrl/wm-package/commit/c7819f65ef44458edf11e9d18774657e9a28873f))
+* php stan errors oc: 4377 ([73d7783](https://github.com/webmappsrl/wm-package/commit/73d7783271eaeccfa9719c4962a4a511bc8ef748))
+
 ## [1.2.3](https://github.com/webmappsrl/wm-package/compare/v1.2.2...v1.2.3) (2024-11-27)
 
 
