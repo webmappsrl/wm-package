@@ -24,7 +24,7 @@ class CallerController extends Controller
     /**
      * When caller receive output
      *
-     * @return void
+     * @return \Illuminate\Http\Response
      */
     public function done(Request $request)
     {

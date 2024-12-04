@@ -52,16 +52,8 @@ class DownloadDbCommand extends Command
             $lastDumpLocalPath = "$localDirectory/$fileName";
 
             $wmdumps = Storage::disk('wmdumps');
-            if (! $wmdumps) {
-                Log::error('db:download -> wmdumps disk not found');
-                throw new Exception('db:download -> wmdumps disk not found');
-            }
-            $local = Storage::disk('local');
 
-            if (! $local) {
-                Log::error('db:download -> local disk not found');
-                throw new Exception('db:download -> local disk not found');
-            }
+            $local = Storage::disk('local');
 
             if (! $wmdumps->exists($lastDumpRemotePath)) {
                 Log::error("db:download -> {$lastDumpRemotePath} does not exist");

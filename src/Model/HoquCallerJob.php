@@ -14,6 +14,10 @@ class HoquCallerJob extends Model
 {
     use HasFactory;
 
+    public $field_to_update;
+
+    public $feature;
+
     /**
      * The attributes that should be cast.
      *

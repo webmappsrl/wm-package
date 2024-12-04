@@ -2,7 +2,6 @@
 
 namespace Wm\WmPackage\Http\Controllers;
 
-use App\Models\TaxonomyWhere;
 use App\Models\UgcMedia;
 use App\Models\User;
 use Exception;

@@ -16,7 +16,7 @@ class ApiRouteTest extends TestCase
     {
         $response = $this->postJson('/api/wm/login', []);
         $response->assertJson(
-            fn (AssertableJson $json) => $json->hasAll(['message', 'errors'])
+            fn(AssertableJson $json) => $json->hasAll(['message', 'errors'])
         );
     }
 
@@ -29,7 +29,7 @@ class ApiRouteTest extends TestCase
     {
         $response = $this->getJson('/api/wm/user', []);
         $response->assertJson(
-            fn (AssertableJson $json) => $json->hasAll(['message'])
+            fn(AssertableJson $json) => $json->hasAll(['message'])
         );
     }
 
@@ -42,7 +42,7 @@ class ApiRouteTest extends TestCase
     {
         $response = $this->postJson('/api/wm/logout', []);
         $response->assertJson(
-            fn (AssertableJson $json) => $json->hasAll(['message'])
+            fn(AssertableJson $json) => $json->hasAll(['message'])
         );
     }
 }
