@@ -3,7 +3,7 @@
 namespace Tests\Api;
 
 use App\Models\UgcPoi;
-use App\Models\User;
+use Workbench\App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Wm\WmPackage\Tests\TestCase;
@@ -62,8 +62,8 @@ class UgcPoiTest extends TestCase
         ];
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer '.$this->token,
-        ])->postJson($this->baseUrl.'store', $poiData);
+            'Authorization' => 'Bearer ' . $this->token,
+        ])->postJson($this->baseUrl . 'store', $poiData);
 
         $response->assertStatus(201)
             ->assertJson([
@@ -97,7 +97,7 @@ class UgcPoiTest extends TestCase
             ],
         ];
 
-        $response = $this->postJson($this->baseUrl.'store', $poiData);
+        $response = $this->postJson($this->baseUrl . 'store', $poiData);
 
         $response->assertStatus(401);
     }
@@ -114,15 +114,15 @@ class UgcPoiTest extends TestCase
             'form_id' => 'test_form',
             'description' => 'Test Description',
             'raw_data' => 'Test Raw Data',
-            'geometry' => DB::raw("ST_GeomFromGeoJSON('".json_encode([
+            'geometry' => DB::raw("ST_GeomFromGeoJSON('" . json_encode([
                 'type' => 'Point',
                 'coordinates' => [10.0, 45.0],
-            ])."')"),
+            ]) . "')"),
         ]);
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer '.$this->token,
-        ])->getJson($this->baseUrl.'index');
+            'Authorization' => 'Bearer ' . $this->token,
+        ])->getJson($this->baseUrl . 'index');
 
         $response->assertStatus(200)
             ->assertJsonStructure([
@@ -161,8 +161,8 @@ class UgcPoiTest extends TestCase
         ]);
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer '.$this->token,
-        ])->deleteJson($this->baseUrl.'delete/'.$poi->id);
+            'Authorization' => 'Bearer ' . $this->token,
+        ])->deleteJson($this->baseUrl . 'delete/' . $poi->id);
 
         $response->assertStatus(200)
             ->assertJson([
@@ -191,8 +191,8 @@ class UgcPoiTest extends TestCase
         ];
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer '.$this->token,
-        ])->postJson($this->baseUrl.'store', $poiData);
+            'Authorization' => 'Bearer ' . $this->token,
+        ])->postJson($this->baseUrl . 'store', $poiData);
 
         $response->assertStatus(400)
             ->assertJson([
@@ -221,8 +221,8 @@ class UgcPoiTest extends TestCase
         ];
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer '.$this->token,
-        ])->postJson($this->baseUrl.'store', $poiData);
+            'Authorization' => 'Bearer ' . $this->token,
+        ])->postJson($this->baseUrl . 'store', $poiData);
 
         $response->assertStatus(400)
             ->assertJson([
@@ -249,8 +249,8 @@ class UgcPoiTest extends TestCase
         ];
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer '.$this->token,
-        ])->postJson($this->baseUrl.'store', $poiData);
+            'Authorization' => 'Bearer ' . $this->token,
+        ])->postJson($this->baseUrl . 'store', $poiData);
 
         $response->assertStatus(400)
             ->assertJson([

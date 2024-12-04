@@ -2,7 +2,6 @@
 
 namespace Wm\WmPackage\Commands;
 
-use App\Models\User;
 use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Console\ConfirmableTrait;
@@ -11,6 +10,7 @@ use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use Throwable;
 use Wm\WmPackage\Http\HoquClient;
+use Wm\WmPackage\Model\User;
 use Wm\WmPackage\Services\HoquCredentialsProvider;
 
 class HoquRegisterUserCommand extends Command
@@ -36,10 +36,8 @@ class HoquRegisterUserCommand extends Command
 
     /**
      * Execute the console command.
-     *
-     * @return void
      */
-    public function handle(HoquClient $hoquClient, HoquCredentialsProvider $credentialsProvider)
+    public function handle(HoquClient $hoquClient, HoquCredentialsProvider $credentialsProvider): int
     {
         $role = $this->option('role') ?? 'caller';
         $endpoint = $this->option('endpoint') ?? URL::to('/');
@@ -48,14 +46,11 @@ class HoquRegisterUserCommand extends Command
         $this->info('Registering/retrieving register user token on HOQU instance ...');
         $json = $hoquClient->registerLogin();
 
-        try {
-            $hoqu_register_token = $json['token']; //special token for register user on hoqu instance
-        } catch (Throwable|Exception $e) {
+        if (! isset($json['token'])) {
             //TODO: add specific exception
-            $this->error('Something goes wrong during hoqu login. Here the hoqu response in json format:');
-            $this->error(print_r($json, true));
-            throw $e;
+            throw new Exception('Something goes wrong during hoqu login. Here the hoqu response in json format:'.print_r($json, true));
         }
+        $hoqu_register_token = $json['token']; //special token for register user on hoqu instance
 
         $this->info('Generate a random password and save it in .env file on this istance ...');
         $password = Str::random(20);

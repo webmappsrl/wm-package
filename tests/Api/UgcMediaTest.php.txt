@@ -3,7 +3,7 @@
 namespace Tests\Api;
 
 use App\Models\UgcMedia;
-use App\Models\User;
+use Workbench\App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -56,8 +56,8 @@ class UgcMediaTest extends TestCase
         ];
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer '.$this->token,
-        ])->postJson($this->baseUrl.'store', [
+            'Authorization' => 'Bearer ' . $this->token,
+        ])->postJson($this->baseUrl . 'store', [
             'image' => $file,
             'geojson' => json_encode($geojson),
         ]);
@@ -90,7 +90,7 @@ class UgcMediaTest extends TestCase
             ],
         ];
 
-        $response = $this->postJson($this->baseUrl.'store', [
+        $response = $this->postJson($this->baseUrl . 'store', [
             'image' => $file,
             'geojson' => json_encode($geojson),
         ]);
@@ -105,8 +105,8 @@ class UgcMediaTest extends TestCase
         ]);
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer '.$this->token,
-        ])->getJson($this->baseUrl.'index');
+            'Authorization' => 'Bearer ' . $this->token,
+        ])->getJson($this->baseUrl . 'index');
 
         $response->assertStatus(200)
             ->assertJsonStructure([
@@ -144,8 +144,8 @@ class UgcMediaTest extends TestCase
         Storage::disk('public')->put($media->relative_url, 'fake content');
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer '.$this->token,
-        ])->deleteJson($this->baseUrl.'delete/'.$media->id);
+            'Authorization' => 'Bearer ' . $this->token,
+        ])->deleteJson($this->baseUrl . 'delete/' . $media->id);
 
         $response->assertStatus(200)
             ->assertJson([
@@ -170,8 +170,8 @@ class UgcMediaTest extends TestCase
         ];
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer '.$this->token,
-        ])->postJson($this->baseUrl.'store', [
+            'Authorization' => 'Bearer ' . $this->token,
+        ])->postJson($this->baseUrl . 'store', [
             'geojson' => json_encode($geojson),
         ]);
 
@@ -188,8 +188,8 @@ class UgcMediaTest extends TestCase
         $file = UploadedFile::fake()->image('test.jpg');
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer '.$this->token,
-        ])->postJson($this->baseUrl.'store', [
+            'Authorization' => 'Bearer ' . $this->token,
+        ])->postJson($this->baseUrl . 'store', [
             'image' => $file,
         ]);
 
@@ -213,8 +213,8 @@ class UgcMediaTest extends TestCase
         ];
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer '.$this->token,
-        ])->postJson($this->baseUrl.'store', [
+            'Authorization' => 'Bearer ' . $this->token,
+        ])->postJson($this->baseUrl . 'store', [
             'image' => $file,
             'geojson' => json_encode($geojson),
         ]);

@@ -30,7 +30,7 @@ class CallerClient
     /**
      * Returns the endpoint of provided users
      *
-     * @param  \App\Models\User  $user
+     * @param  Wm\WmPackage\Model\User  $user
      * @return string
      */
     public function getEndpointByUser($user)
@@ -41,7 +41,7 @@ class CallerClient
     /**
      * Send DONE DONE response to a caller
      *
-     * @param  \App\Models\User  $user  - User Model that represents the remote caller
+     * @param  Wm\WmPackage\Model\User  $user  - User Model that represents the remote caller
      * @param  array  $what  - The job output for the caller
      * @return \Illuminate\Http\Client\Request
      */

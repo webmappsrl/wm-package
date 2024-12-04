@@ -2,7 +2,7 @@
 
 namespace Wm\WmPackage\Tests\Api;
 
-use App\Models\User;
+use Workbench\App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Wm\WmPackage\Tests\TestCase;
 
@@ -35,8 +35,8 @@ class AuthTest extends TestCase
     private function createAndAuthenticateUser()
     {
         if (! $this->token) {
-            $this->postJson($this->baseUrl.'signup', $this->userData);
-            $loginResponse = $this->postJson($this->baseUrl.'login', [
+            $this->postJson($this->baseUrl . 'signup', $this->userData);
+            $loginResponse = $this->postJson($this->baseUrl . 'login', [
                 'email' => $this->userData['email'],
                 'password' => $this->userData['password'],
             ]);
@@ -52,8 +52,8 @@ class AuthTest extends TestCase
     private function makeAuthenticatedRequest($method, $endpoint, $data = [])
     {
         return $this->withHeaders([
-            'Authorization' => 'Bearer '.$this->createAndAuthenticateUser(),
-        ])->postJson($this->baseUrl.$endpoint, $data);
+            'Authorization' => 'Bearer ' . $this->createAndAuthenticateUser(),
+        ])->postJson($this->baseUrl . $endpoint, $data);
     }
 
     /**
@@ -61,7 +61,7 @@ class AuthTest extends TestCase
      */
     public function test_user_can_signup()
     {
-        $response = $this->postJson($this->baseUrl.'signup', $this->userData);
+        $response = $this->postJson($this->baseUrl . 'signup', $this->userData);
 
         $response->assertStatus(200)
             ->assertJsonStructure([
@@ -86,10 +86,10 @@ class AuthTest extends TestCase
     public function test_user_cannot_signup_with_existing_email()
     {
         // First registration
-        $this->postJson($this->baseUrl.'signup', $this->userData);
+        $this->postJson($this->baseUrl . 'signup', $this->userData);
 
         // Attempt registration with same email
-        $response = $this->postJson($this->baseUrl.'signup', $this->userData);
+        $response = $this->postJson($this->baseUrl . 'signup', $this->userData);
 
         $response->assertStatus(400)
             ->assertJson([
@@ -104,10 +104,10 @@ class AuthTest extends TestCase
     public function test_user_can_login()
     {
         // Create a user
-        $this->postJson($this->baseUrl.'signup', $this->userData);
+        $this->postJson($this->baseUrl . 'signup', $this->userData);
 
         // Try login
-        $response = $this->postJson($this->baseUrl.'login', [
+        $response = $this->postJson($this->baseUrl . 'login', [
             'email' => $this->userData['email'],
             'password' => $this->userData['password'],
         ]);
@@ -130,10 +130,10 @@ class AuthTest extends TestCase
     public function test_user_cannot_login_with_wrong_credentials()
     {
         // Create a user
-        $this->postJson($this->baseUrl.'signup', $this->userData);
+        $this->postJson($this->baseUrl . 'signup', $this->userData);
 
         // Try login with wrong password
-        $response = $this->postJson($this->baseUrl.'login', [
+        $response = $this->postJson($this->baseUrl . 'login', [
             'email' => $this->userData['email'],
             'password' => 'wrong_password',
         ]);

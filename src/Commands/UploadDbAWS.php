@@ -2,11 +2,10 @@
 
 namespace Wm\WmPackage\Commands;
 
+use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Spatie\DbDumper\Exceptions\CannotStartDump;
-use Spatie\DbDumper\Exceptions\DumpFailed;
 
 class UploadDbAWS extends Command
 {
@@ -56,16 +55,8 @@ class UploadDbAWS extends Command
 
             $this->log('db:upload_db_aws -> is started');
             $wmdumps = Storage::disk('wmdumps');
-            if (! $wmdumps) {
-                Log::error('db:upload_db_aws -> wmdumps disk not found');
-                throw new Exception('db:upload_db_aws -> wmdumps disk not found');
-            }
-            $local = Storage::disk('backups');
 
-            if (! $local) {
-                Log::error('db:upload_db_aws -> local disk not found');
-                throw new Exception('db:upload_db_aws -> local disk not found');
-            }
+            $local = Storage::disk('backups');
 
             if ($this->argument('dumpname')) {
                 $this->dumpName = $this->argument('dumpname');
@@ -83,13 +74,9 @@ class UploadDbAWS extends Command
             $this->log('db:upload_db_aws -> finished');
 
             return 0;
-        } catch (CannotStartDump $e) {
+        } catch (Exception $e) {
             $this->log('db:upload_db_aws -> The dump process cannot be initialized: '.$e->getMessage(), 'error');
             $this->log('db:upload_db_aws -> Make sure to clear the config cache when changing the environment: `php artisan config:cache`', 'error');
-
-            return 2;
-        } catch (DumpFailed $e) {
-            $this->log('db:upload_db_aws -> Error while creating the database dump: '.$e->getMessage(), 'error');
 
             return 1;
         }

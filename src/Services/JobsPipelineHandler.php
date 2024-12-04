@@ -12,9 +12,9 @@ class JobsPipelineHandler
     /**
      * Send a STORE request to hoqu, then create a job with status progress on this instance
      *
-     * @param [type] $class
-     * @param [type] $input
-     * @param [type] $field
+     * @param  string  $class
+     * @param  string  $input
+     * @param  string  $field
      * @param  Model  $model
      * @return void
      *
