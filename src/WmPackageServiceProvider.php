@@ -3,17 +3,17 @@
 namespace Wm\WmPackage;
 
 use Lorisleiva\Actions\Facades\Actions;
-use Wm\WmPackage\Actions\TestAction;
-use Wm\WmPackage\Commands\UploadDbAWS;
 use Spatie\LaravelPackageTools\Package;
-use Wm\WmPackage\Commands\HoquPingCommand;
-use Wm\WmPackage\Commands\WmPackageCommand;
+use Spatie\LaravelPackageTools\PackageServiceProvider;
+use Tymon\JWTAuth\Providers\LaravelServiceProvider;
+use Wm\WmPackage\Actions\TestAction;
 use Wm\WmPackage\Commands\DownloadDbCommand;
+use Wm\WmPackage\Commands\HoquPingCommand;
+use Wm\WmPackage\Commands\HoquRegisterUserCommand;
 use Wm\WmPackage\Commands\HoquSendStoreCommand;
 use Wm\WmPackage\Commands\HoquUnauthPingCommand;
-use Wm\WmPackage\Commands\HoquRegisterUserCommand;
-use Tymon\JWTAuth\Providers\LaravelServiceProvider;
-use Spatie\LaravelPackageTools\PackageServiceProvider;
+use Wm\WmPackage\Commands\UploadDbAWS;
+use Wm\WmPackage\Commands\WmPackageCommand;
 
 class WmPackageServiceProvider extends PackageServiceProvider
 {
@@ -43,13 +43,13 @@ class WmPackageServiceProvider extends PackageServiceProvider
                 UploadDbAWS::class,
                 DownloadDbCommand::class,
                 //ACTIONS
-                TestAction::class
+                TestAction::class,
             ]);
 
         // Pubblica la configurazione JWT
         if ($this->app->runningInConsole()) {
             $this->publishes([
-                __DIR__ . '/../config/jwt.php' => config_path('jwt.php'),
+                __DIR__.'/../config/jwt.php' => config_path('jwt.php'),
             ], 'wm-package-jwt-config');
         }
 
@@ -70,7 +70,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
 
     public function packageBooted()
     {
-        $this->loadRoutesFrom(__DIR__ . '/Routes/api.php');
+        $this->loadRoutesFrom(__DIR__.'/Routes/api.php');
     }
 
     public function packageRegistered()
