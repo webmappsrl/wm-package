@@ -9,7 +9,7 @@ class ExportDownloadController extends Controller
 {
     public function download($fileName)
     {
-        if (!Storage::disk('public')->exists($fileName)) {
+        if (! Storage::disk('public')->exists($fileName)) {
             abort(404);
         }
 
@@ -18,7 +18,7 @@ class ExportDownloadController extends Controller
 
         return response()->file($filePath, [
             'Content-Type' => $mimeType,
-            'Content-Disposition' => 'attachment; filename=' . $fileName
+            'Content-Disposition' => 'attachment; filename='.$fileName,
         ])->deleteFileAfterSend(true);
     }
 }

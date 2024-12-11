@@ -29,6 +29,7 @@ enum ExportFormat: string
     {
         return array_reduce(self::cases(), function ($carry, ExportFormat $format) {
             $carry[$format->value] = $format->label();
+
             return $carry;
         }, []);
     }

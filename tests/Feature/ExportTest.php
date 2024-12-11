@@ -2,15 +2,14 @@
 
 namespace Wm\WmPackage\Tests\Feature;
 
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
-use Wm\WmPackage\Tests\TestCase;
-use Wm\WmPackage\Exporters\ModelExporter;
 use Maatwebsite\Excel\Facades\Excel;
+use Wm\WmPackage\Exporters\ModelExporter;
+use Wm\WmPackage\Tests\TestCase;
 
 class ExportTest extends TestCase
 {
-    public function setUp(): void
+    protected function setUp(): void
     {
         parent::setUp();
         Storage::fake('public');
@@ -27,7 +26,7 @@ class ExportTest extends TestCase
         $columns = [
             'id' => 'ID',
             'name' => 'Nome',
-            'active' => 'Attivo'
+            'active' => 'Attivo',
         ];
 
         $exporter = new ModelExporter($data, $columns);
