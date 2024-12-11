@@ -2,19 +2,18 @@
 
 namespace Wm\WmPackage\Actions;
 
-use Wm\WmPackage\Enums\ExportFormat;
-use Wm\WmPackage\Exporters\ModelExporter;
 use Illuminate\Bus\Queueable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Laravel\Nova\Actions\Action;
 use Laravel\Nova\Actions\ActionResponse;
 use Laravel\Nova\Fields\ActionFields;
 use Laravel\Nova\Fields\Select;
-use Maatwebsite\Excel\Facades\Excel;
 use Laravel\Nova\Http\Requests\NovaRequest;
+use Maatwebsite\Excel\Facades\Excel;
+use Wm\WmPackage\Enums\ExportFormat;
+use Wm\WmPackage\Exporters\ModelExporter;
 
 /**
  * Nova Action to export models to Excel/CSV formats.
@@ -23,14 +22,14 @@ use Laravel\Nova\Http\Requests\NovaRequest;
  * defined in the ExportFormat enum (e.g., XLSX, CSV) using the
  * Maatwebsite/Excel library.
  *
- * @package App\Nova\Actions
  *
- * @property array $exportModels    Models to be exported
- * @property array $columns         Columns to include in the export
- * @property array $relations       Relations to load for the export
- * @property string $fileName       Export file name (without extension)
- * @property array $styleCallback  Callback to customize export styling
- * @property string $defaultFormat  Default export format (@see ExportFormat)
+ * @property array $exportModels Models to be exported
+ * @property array $columns Columns to include in the export
+ * @property array $relations Relations to load for the export
+ * @property string $fileName Export file name (without extension)
+ * @property array $styleCallback Callback to customize export styling
+ * @property string $defaultFormat Default export format (@see ExportFormat)
+ *
  * @see \App\Enums\ExportFormat
  */
 class ExportTo extends Action
@@ -59,15 +58,13 @@ class ExportTo extends Action
     /**
      * Perform the action on the given models.
      *
-     * @param  \Laravel\Nova\Fields\ActionFields  $fields
-     * @param  \Illuminate\Support\Collection  $models
      * @return mixed
      */
     public function handle(ActionFields $fields, Collection $models)
     {
         $format = isset($fields->format) ? $fields->format : $this->defaultFormat;
         $uniqueId = now()->timestamp;
-        $fileName = $this->fileName . '_' . $uniqueId . '.' . ExportFormat::from($format)->extension();
+        $fileName = $this->fileName.'_'.$uniqueId.'.'.ExportFormat::from($format)->extension();
 
         Excel::store(
             new ModelExporter($models, $this->columns, $this->relations, $this->styles),
@@ -81,6 +78,7 @@ class ExportTo extends Action
             now()->addMinutes(5),
             ['fileName' => $fileName]
         );
+
         return ActionResponse::openInNewTab($signedUrl);
     }
 
@@ -91,7 +89,7 @@ class ExportTo extends Action
                 ->options(ExportFormat::toArray())
                 ->default([$this->defaultFormat])
                 ->placeholder(__("Seleziona il formato dell'esportazione"))
-                ->help(__("Seleziona il formato dell'esportazione"))
+                ->help(__("Seleziona il formato dell'esportazione")),
         ];
     }
 }

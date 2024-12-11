@@ -8,7 +8,7 @@ use Wm\WmPackage\Tests\TestCase;
 
 class ExportDownloadControllerTest extends TestCase
 {
-    public function setUp(): void
+    protected function setUp(): void
     {
         parent::setUp();
         Storage::fake('public');
@@ -31,7 +31,7 @@ class ExportDownloadControllerTest extends TestCase
 
         $response->assertStatus(200)
             ->assertHeader('content-type', 'text/plain; charset=UTF-8')
-            ->assertHeader('content-disposition', 'attachment; filename=' . $fileName);
+            ->assertHeader('content-disposition', 'attachment; filename='.$fileName);
     }
 
     /** @test */

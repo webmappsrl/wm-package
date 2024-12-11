@@ -12,7 +12,6 @@ use Wm\WmPackage\Commands\HoquSendStoreCommand;
 use Wm\WmPackage\Commands\HoquUnauthPingCommand;
 use Wm\WmPackage\Commands\UploadDbAWS;
 use Wm\WmPackage\Commands\WmPackageCommand;
-use Laravel\Nova\Nova;
 
 class WmPackageServiceProvider extends PackageServiceProvider
 {
@@ -45,7 +44,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
         // Pubblica la configurazione JWT
         if ($this->app->runningInConsole()) {
             $this->publishes([
-                __DIR__ . '/../config/jwt.php' => config_path('jwt.php'),
+                __DIR__.'/../config/jwt.php' => config_path('jwt.php'),
             ], 'wm-package-jwt-config');
         }
 
@@ -66,7 +65,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
 
     public function packageBooted()
     {
-        $this->loadRoutesFrom(__DIR__ . '/Routes/api.php');
+        $this->loadRoutesFrom(__DIR__.'/Routes/api.php');
     }
 
     public function packageRegistered()

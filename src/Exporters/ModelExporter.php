@@ -47,7 +47,7 @@ use PhpOffice\PhpSpreadsheet\Style\Fill;
  * @link https://docs.laravel-excel.com/ Laravel Excel Documentation
  * @link https://phpspreadsheet.readthedocs.io/en/latest/topics/styling/ PhpSpreadsheet Styling Documentation
  */
-class ModelExporter implements FromCollection, WithHeadings, WithStyles, WithMapping, ShouldAutoSize
+class ModelExporter implements FromCollection, ShouldAutoSize, WithHeadings, WithMapping, WithStyles
 {
     const DEFAULT_STYLE = [
         1 => [
@@ -57,14 +57,17 @@ class ModelExporter implements FromCollection, WithHeadings, WithStyles, WithMap
             ],
             'fill' => [
                 'fillType' => Fill::FILL_SOLID,
-                'startColor' => ['rgb' => 'E2E8F0']
-            ]
-        ]
+                'startColor' => ['rgb' => 'E2E8F0'],
+            ],
+        ],
     ];
 
     protected Collection $models;
+
     protected array $columns;
+
     protected array $relations;
+
     protected array $styles;
 
     public function __construct(Collection $models, array $columns = [], array $relations = [], array $styles = self::DEFAULT_STYLE)
@@ -103,8 +106,7 @@ class ModelExporter implements FromCollection, WithHeadings, WithStyles, WithMap
      *
      * Converts boolean values to localized "Yes"/"No".
      *
-     * @param mixed $row Row to map
-     * @return array
+     * @param  mixed  $row  Row to map
      */
     public function map($row): array
     {
@@ -112,6 +114,7 @@ class ModelExporter implements FromCollection, WithHeadings, WithStyles, WithMap
             if (is_bool($value)) {
                 return $value ? __('Yes') : __('No');
             }
+
             return $value;
         })->toArray();
     }
@@ -119,8 +122,9 @@ class ModelExporter implements FromCollection, WithHeadings, WithStyles, WithMap
     /**
      * Applies styles to the Excel sheet.
      *
-     * @param \PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $sheet
+     * @param  \PhpOffice\PhpSpreadsheet\Worksheet\Worksheet  $sheet
      * @return array Array of styles for the sheet
+     *
      * @link https://phpspreadsheet.readthedocs.io/en/latest/topics/styling/
      */
     public function styles($sheet): array
@@ -133,13 +137,12 @@ class ModelExporter implements FromCollection, WithHeadings, WithStyles, WithMap
      *
      * If no columns are specified, uses the table column names.
      * Otherwise, uses the labels specified in the columns array.
-     *
-     * @return array
      */
     public function headings(): array
     {
         if ($this->columns === []) {
             $table = $this->models->first()->getTable();
+
             return Schema::getColumnListing($table);
         }
 
