@@ -1,6 +1,6 @@
 <?php
 
-namespace Wm\WmPackage\Actions;
+namespace Wm\WmPackage\Nova\Actions;
 
 use Wm\WmPackage\Enums\ExportFormat;
 use Wm\WmPackage\Exporters\ModelExporter;
