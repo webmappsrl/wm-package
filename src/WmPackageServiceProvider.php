@@ -26,8 +26,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
             ->name('wm-package')
             ->hasConfigFile()
             ->hasConfigFile('jwt')
-            ->hasRoutes(['api'])
-            //->hasViews()
+            ->hasRoutes(['api', 'web'])
             ->hasMigrations([
                 'create_jobs_table',
                 'create_hoqu_caller_jobs_table',
