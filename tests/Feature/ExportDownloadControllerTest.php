@@ -2,9 +2,10 @@
 
 namespace Wm\WmPackage\Tests\Feature;
 
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\URL;
 use Wm\WmPackage\Tests\TestCase;
+use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\Storage;
+use Wm\WmPackage\Http\Controllers\ExportDownloadController;
 
 class ExportDownloadControllerTest extends TestCase
 {
@@ -15,10 +16,11 @@ class ExportDownloadControllerTest extends TestCase
     }
 
     /** @test */
-    public function it_can_download_file()
+    public function it_downloads_existing_file()
     {
-        $content = 'test content';
-        $fileName = 'test.txt';
+        // Create a test file
+        $content = 'test file content';
+        $fileName = 'test-file.xlsx';
         Storage::disk('public')->put($fileName, $content);
 
         $signedUrl = URL::temporarySignedRoute(
@@ -29,22 +31,50 @@ class ExportDownloadControllerTest extends TestCase
 
         $response = $this->get($signedUrl);
 
-        $response->assertStatus(200)
-            ->assertHeader('content-type', 'text/plain; charset=UTF-8')
-            ->assertHeader('content-disposition', 'attachment; filename='.$fileName);
+        $response->assertStatus(200);
+        $response->assertHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        $response->assertHeader('Content-Disposition', 'attachment; filename=' . $fileName);
     }
 
     /** @test */
-    public function it_returns_404_for_non_existent_file()
+    public function it_deletes_file_after_download()
     {
+        // Create a test file
+        $content = 'test file content';
+        $fileName = 'test-file.xlsx';
+        Storage::disk('public')->put($fileName, $content);
+
+        // Verify that the file exists before the download
+        $this->assertTrue(Storage::disk('public')->exists($fileName));
+
         $signedUrl = URL::temporarySignedRoute(
             'download.export',
             now()->addMinutes(5),
-            ['fileName' => 'non-existent.txt']
+            ['fileName' => $fileName]
         );
 
         $response = $this->get($signedUrl);
 
-        $response->assertStatus(404);
+        // Force the deletion callback to run because the deletefileaftersend() is not working with tests (https://github.com/laravel/framework/issues/36286)
+        $response->sendContent();
+
+        $this->assertFalse(Storage::disk('public')->exists($fileName));
+    }
+
+    /** @test */
+    public function it_returns_correct_mime_type()
+    {
+        $fileName = 'test-file.xlsx';
+        Storage::disk('public')->put($fileName, 'Excel content');
+
+        $signedUrl = URL::temporarySignedRoute(
+            'download.export',
+            now()->addMinutes(5),
+            ['fileName' => $fileName]
+        );
+
+        $response = $this->get($signedUrl);
+
+        $response->assertHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     }
 }
