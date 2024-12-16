@@ -2,10 +2,9 @@
 
 namespace Wm\WmPackage\Tests\Feature;
 
-use Wm\WmPackage\Tests\TestCase;
-use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Storage;
-use Wm\WmPackage\Http\Controllers\ExportDownloadController;
+use Illuminate\Support\Facades\URL;
+use Wm\WmPackage\Tests\TestCase;
 
 class ExportDownloadControllerTest extends TestCase
 {
@@ -33,7 +32,7 @@ class ExportDownloadControllerTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        $response->assertHeader('Content-Disposition', 'attachment; filename=' . $fileName);
+        $response->assertHeader('Content-Disposition', 'attachment; filename='.$fileName);
     }
 
     /** @test */
