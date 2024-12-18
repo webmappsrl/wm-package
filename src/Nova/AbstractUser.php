@@ -15,7 +15,6 @@ use Vyuldashev\NovaPermission\RoleBooleanGroup;
 
 abstract class AbstractUser extends Resource
 {
-
     /**
      * The single value that should be used to represent the resource when being displayed.
      *
@@ -37,7 +36,6 @@ abstract class AbstractUser extends Resource
     /**
      * Get the fields displayed by the resource.
      *
-     * @param  NovaRequest  $request
      * @return array
      */
     public function fields(NovaRequest $request)
