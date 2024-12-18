@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.2.6](https://github.com/webmappsrl/wm-package/compare/v1.2.5...v1.2.6) (2024-12-18)
+
+
+### Miscellaneous Chores
+
+* tests reviewed ([b9359fc](https://github.com/webmappsrl/wm-package/commit/b9359fc197de8a3d04279ff3e9f949bbd3e411a2))
+
+## [1.2.5](https://github.com/webmappsrl/wm-package/compare/v1.2.4...v1.2.5) (2024-12-09)
+
+
+### Bug Fixes
+
+* remove laravel actions oc: 4437 ([83a5d77](https://github.com/webmappsrl/wm-package/commit/83a5d771326df07c3e3d9254556b750c39317a8e))
+
 ## [1.2.4](https://github.com/webmappsrl/wm-package/compare/v1.2.3...v1.2.4) (2024-12-04)
 
 
