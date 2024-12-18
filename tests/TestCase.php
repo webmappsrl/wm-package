@@ -2,35 +2,23 @@
 
 namespace Wm\WmPackage\Tests;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Orchestra\Testbench\Attributes\WithMigration;
+use Maatwebsite\Excel\ExcelServiceProvider;
 use Orchestra\Testbench\TestCase as Orchestra;
 use Wm\WmPackage\WmPackageServiceProvider;
 
-#[WithMigration]
 class TestCase extends Orchestra
 {
-    use RefreshDatabase;
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        Factory::guessFactoryNamesUsing(
-            fn (string $modelName) => 'Wm\\WmPackage\\Database\\Factories\\'.class_basename($modelName).'Factory'
-        );
-    }
-
     protected function getPackageProviders($app)
     {
         return [
             WmPackageServiceProvider::class,
+            ExcelServiceProvider::class,
         ];
     }
 
-    protected function defineEnvironment($app)
+    protected function getEnvironmentSetUp($app)
     {
-        $app['config']->set('database.default', 'testing');
+        // set app key for testing routes
+        $app['config']->set('app.key', 'base64:'.base64_encode(random_bytes(32)));
     }
 }
