@@ -25,7 +25,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
             ->hasRoutes(['api', 'web'])
             ->hasMigrations([
                 'add_last_login_at_to_users_table',
-                'add_sku_field_to_users'
+                'add_sku_field_to_users',
             ])
             ->hasCommands([
                 WmPackageCommand::class,
