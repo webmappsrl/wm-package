@@ -11,15 +11,23 @@ use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Traits\HasRoles;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 
-#[\AllowDynamicProperties]
-abstract class User extends Authenticatable implements JWTSubject
+
+/**
+ * Undocumented class
+ *
+ * @property string $name
+ * @property string $email
+ * @property string $sku
+ * @property \Illuminate\Support\Carbon $last_login_at
+ */
+class User extends Authenticatable implements JWTSubject
 {
     use HasApiTokens, HasFactory, HasRoles, Notifiable;
 
     /**
      * The attributes that are mass assignable.
      *
-     * @var array<int, string>
+     * @var list<string>
      */
     protected $fillable = [
         'name',
@@ -31,7 +39,7 @@ abstract class User extends Authenticatable implements JWTSubject
     /**
      * The attributes that should be hidden for serialization.
      *
-     * @var array<int, string>
+     * @var list<string>
      */
     protected $hidden = [
         'password',

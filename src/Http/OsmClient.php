@@ -66,12 +66,11 @@ class OsmClient
      * Undocumented function
      *
      * @param  string  $osmid  Osmid string with type: node/[id], way/[id], relation/[id]
-     * @param  bool  $retun_array  set it as true if you want return value as array
      */
     public function getGeojson(string $osmid): string
     {
         if (! $this->checkOsmId($osmid)) {
-            throw new OsmClientException('Invalid osmid '.$osmid);
+            throw new OsmClientException('Invalid osmid ' . $osmid);
         }
 
         $geojson = [];
@@ -92,16 +91,16 @@ class OsmClient
     /**
      * Returns the URL OSM v06 JSON API string (full form way and relation)
      *
-     * @param [type] $osmid
+     * @param int|string $osmid
      */
     public function getFullOsmApiUrlByOsmId($osmid): string
     {
-        $url = 'https://api.openstreetmap.org/api/0.6/'.$osmid;
+        $url = 'https://api.openstreetmap.org/api/0.6/' . $osmid;
         if (preg_match('/node/', $osmid)) {
-            $url = $url.'.json';
+            $url = $url . '.json';
         } else {
             // way and relation directly call full.json
-            $url = $url.'/full.json';
+            $url = $url . '/full.json';
         }
 
         return $url;
@@ -141,10 +140,8 @@ class OsmClient
         } elseif (preg_match('/relation/', $osmid)) {
             return $this->getPropertiesAndGeometryForRelation($json);
         } else {
-            throw new OsmClientException('OSMID has not vali type (node,way,relation) '.$osmid);
+            throw new OsmClientException('OSMID has not vali type (node,way,relation) ' . $osmid);
         }
-
-        return [];
     }
 
     private function getPropertiesAndGeometryForNode(array $json): array
@@ -304,7 +301,7 @@ class OsmClient
         // Check roundtrip
         $roundtrip = false;
         if (! array_key_exists(1, $values_count)) {
-            $roundtrip == true;
+            $roundtrip = true;
         }
 
         // Build Properties

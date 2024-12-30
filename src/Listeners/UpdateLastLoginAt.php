@@ -13,7 +13,11 @@ class UpdateLastLoginAt
      */
     public function handle(Login $event)
     {
-        $event->user->last_login_at = now();
+        /**
+         * @var \Wm\WmPackage\Models\User
+         */
+        $user = $event->user;
+        $user->last_login_at = now();
         $event->user->save();
     }
 }

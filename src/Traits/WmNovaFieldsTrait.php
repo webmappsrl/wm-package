@@ -4,6 +4,9 @@ namespace App\Traits;
 
 use Illuminate\Support\Facades\Schema;
 
+/**
+ * @phpstan-ignore trait.unused
+ */
 trait WmNovaFieldsTrait
 {
     /**
@@ -97,7 +100,7 @@ provnamee a form schema.');
                 } elseif ($rule['name'] === 'email') {
                     $rules[] = 'email';
                 } elseif ($rule['name'] === 'minLength' && isset($rule['value'])) {
-                    $rules[] = 'min:'.$rule['value'];
+                    $rules[] = 'min:' . $rule['value'];
                 }
             }
         }
