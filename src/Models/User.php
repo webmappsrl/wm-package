@@ -11,7 +11,6 @@ use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Traits\HasRoles;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 
-
 /**
  * Undocumented class
  *
@@ -33,7 +32,7 @@ class User extends Authenticatable implements JWTSubject
         'name',
         'email',
         'password',
-        'sku'
+        'sku',
     ];
 
     /**
@@ -81,13 +80,13 @@ class User extends Authenticatable implements JWTSubject
             return true;
         }
         //if permission does not exist, return true
-        if (! Permission::where('name', 'validate ' . $formId . 's')->exists()) {
+        if (! Permission::where('name', 'validate '.$formId.'s')->exists()) {
             return true;
         }
         if ($formId === 'water') {
             return $this->hasPermissionTo('validate source surveys');
         }
-        $permissionName = 'validate ' . $formId;
+        $permissionName = 'validate '.$formId;
         if (! str_ends_with($formId, 's')) {
             $permissionName .= 's';
         }
