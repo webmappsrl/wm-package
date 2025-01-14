@@ -2,11 +2,8 @@
 
 namespace Wm\WmPackage\Models;
 
-use Wm\WmPackage\Models\User;
-use Wm\WmPackage\Models\Abstracts\Track;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Wm\WmPackage\Models\Abstracts\Track;
 
 /**
  * Class UgcTrack

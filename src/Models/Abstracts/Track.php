@@ -2,8 +2,8 @@
 
 namespace Wm\WmPackage\Models\Abstracts;
 
-use Wm\WmPackage\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Wm\WmPackage\Models\User;
 
 abstract class Track extends GeometryModel
 {
@@ -17,7 +17,6 @@ abstract class Track extends GeometryModel
         'geometry',
     ];
 
-
     /**
      * Alias for the user relation
      */
@@ -25,6 +24,7 @@ abstract class Track extends GeometryModel
     {
         return $this->user();
     }
+
     public function user()
     {
         return $this->belongsTo(User::class);

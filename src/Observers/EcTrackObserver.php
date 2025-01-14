@@ -2,14 +2,10 @@
 
 namespace App\Observers;
 
-
-
-
-
-use Wm\WmPackage\Models\EcTrack;
 use Illuminate\Support\Facades\Log;
-use Wm\WmPackage\Services\UserService;
 use Wm\WmPackage\Jobs\DeleteTrackPBFJob;
+use Wm\WmPackage\Models\EcTrack;
+use Wm\WmPackage\Services\UserService;
 use Workbench\App\Models\User;
 
 class EcTrackObserver
@@ -85,7 +81,7 @@ class EcTrackObserver
             if ($apps && $bbox && $author_id) {
                 DeleteTrackPBFJob::dispatch($apps, $author_id, $bbox);
             } else {
-                Log::info('No apps or bbox or author_id found for track ' . $ecTrack->id . ' to delete PBFs.');
+                Log::info('No apps or bbox or author_id found for track '.$ecTrack->id.' to delete PBFs.');
             }
         }
     }

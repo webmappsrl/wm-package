@@ -4,8 +4,8 @@
 return [
     'service' => [
         'geometry_computation' => [
-            'neighbours_distance' => env('WM_NEIGHBOURS_DISTANCE', 500)
-        ]
+            'neighbours_distance' => env('WM_NEIGHBOURS_DISTANCE', 500),
+        ],
     ],
-    'version' => '1.3.0', //x-release-please-version
+    'version' => '1.3.0', // x-release-please-version
 ];

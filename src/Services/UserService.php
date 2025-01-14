@@ -2,9 +2,7 @@
 
 namespace Wm\WmPackage\Services;
 
-
 use Wm\WmPackage\Models\User;
-use Wm\WmPackage\Services\MakeableService;
 
 class UserService extends MakeableService
 {
