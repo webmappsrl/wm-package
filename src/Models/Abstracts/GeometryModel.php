@@ -2,17 +2,14 @@
 
 namespace Wm\WmPackage\Models\Abstracts;
 
-
 use Illuminate\Database\Eloquent\Model;
 use Wm\WmPackage\Services\GeometryComputationService;
 
 abstract class GeometryModel extends Model
 {
-
-
-    #
-    # FROM GEOHUB App\Traits\GeometryFeatureTrait
-    #
+    //
+    // FROM GEOHUB App\Traits\GeometryFeatureTrait
+    //
 
     /**
      * Calculate the geojson of a model with only the geometry

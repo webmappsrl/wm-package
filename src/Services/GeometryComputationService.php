@@ -3,27 +3,24 @@
 namespace Wm\WmPackage\Services;
 
 use Exception;
+use Illuminate\Database\Query\Expression;
 use Illuminate\Support\Facades\DB;
 use Symm\Gisconverter\Gisconverter;
-use Illuminate\Database\Query\Expression;
 use Wm\WmPackage\Models\Abstracts\GeometryModel;
 
 class GeometryComputationService extends MakeableService
 {
-
-
     public function get3dLineMergeWktFromGeojson(string $geojson): string
     {
         return DB::select(
-            "SELECT ST_AsText(ST_Force3D(ST_LineMerge(ST_GeomFromGeoJSON('" . $geojson . "')))) As wkt"
+            "SELECT ST_AsText(ST_Force3D(ST_LineMerge(ST_GeomFromGeoJSON('".$geojson."')))) As wkt"
         )[0]->wkt;
     }
 
     public function get3dGeometryFromGeojsonRAW(string $geojson): Expression
     {
-        return DB::raw("(ST_Force3D(ST_GeomFromGeoJSON('" . $geojson . "')))");
+        return DB::raw("(ST_Force3D(ST_GeomFromGeoJSON('".$geojson."')))");
     }
-
 
     protected function getNeighoursByGeometryAndTable($geometry, $table): array
     {
@@ -54,9 +51,9 @@ class GeometryComputationService extends MakeableService
         if (isset($geom)) {
             $formattedGeometry = Gisconverter::geojsonToKml($geom);
 
-            $name = '<name>' . ($this->name ?? '') . '</name>';
+            $name = '<name>'.($this->name ?? '').'</name>';
 
-            return $name . $formattedGeometry;
+            return $name.$formattedGeometry;
         } else {
             return null;
         }
@@ -88,26 +85,23 @@ class GeometryComputationService extends MakeableService
     /**
      * Calculate the bounding box of the track
      */
-    public function bbox($geometry = '', GeometryModel|null $model = null): array
+    public function bbox($geometry = '', ?GeometryModel $model = null): array
     {
 
         $bboxString = '';
         if ($geometry) {
             $b = DB::select('SELECT ST_Extent(?) as bbox', [$geometry]);
             if (! empty($b)) {
-                $bboxString =  $b[0]->bbox;
+                $bboxString = $b[0]->bbox;
             }
         } else {
             $modelId = $model->id;
             $rawResult = $model::where('id', $modelId)->selectRaw('ST_Extent(geometry) as bbox')->first();
-            $bboxString =  $rawResult['bbox'];
+            $bboxString = $rawResult['bbox'];
         }
 
-
-        return array_map('floatval', explode(' ',  str_replace(',', ' ', str_replace(['B', 'O', 'X', '(', ')'], '', $bboxString))));
+        return array_map('floatval', explode(' ', str_replace(',', ' ', str_replace(['B', 'O', 'X', '(', ')'], '', $bboxString))));
     }
-
-
 
     /**
      * Calculate the centroid of the ec track
@@ -126,8 +120,6 @@ class GeometryComputationService extends MakeableService
 
         return [floatval($rawResult['lon']), floatval($rawResult['lat'])];
     }
-
-
 
     public function getNeighboursGeojson(GeometryModel $model, string $neighboursModelClass): array
     {
@@ -162,18 +154,17 @@ class GeometryComputationService extends MakeableService
         $modelType = get_class($model);
         $features = [];
 
-
         unset($classes[$modelType]);
 
         foreach ($classes as $class => $table) {
             $result = DB::select(
                 'SELECT id FROM '
-                    . $table
-                    . ' WHERE user_id = ?'
-                    . " AND ABS(EXTRACT(EPOCH FROM created_at) - EXTRACT(EPOCH FROM TIMESTAMP '"
-                    . $model->created_at
-                    . "')) < 5400"
-                    . ' AND St_DWithin(geometry, ?, 400);',
+                    .$table
+                    .' WHERE user_id = ?'
+                    ." AND ABS(EXTRACT(EPOCH FROM created_at) - EXTRACT(EPOCH FROM TIMESTAMP '"
+                    .$model->created_at
+                    ."')) < 5400"
+                    .' AND St_DWithin(geometry, ?, 400);',
                 [
                     $model->user_id,
                     $model->geometry,
@@ -193,13 +184,6 @@ class GeometryComputationService extends MakeableService
         ];
     }
 
-
-
-
-
-
-
-
     public function gpxToGeojson(string $gpx): string
     {
         return Gisconverter::gpxToGeojson($gpx);
@@ -217,7 +201,6 @@ class GeometryComputationService extends MakeableService
         //     "SELECT ST_AsGeoJSON(ST_GeomFromKML('" . $kml . "')) As geojson"
         // )[0]->geojson;
     }
-
 
     /**
      * @param string json encoded geometry.
@@ -266,10 +249,6 @@ class GeometryComputationService extends MakeableService
 
         return $geometry;
     }
-
-
-
-
 
     public function isRoundtrip(array $coords): bool
     {

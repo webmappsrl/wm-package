@@ -2,14 +2,14 @@
 
 namespace Wm\WmPackage;
 
-use Wm\WmPackage\Commands\UploadDbAWS;
-use Spatie\LaravelPackageTools\Package;
-use Wm\WmPackage\Commands\WmPackageCommand;
-use Wm\WmPackage\Commands\DownloadDbCommand;
-use Wm\WmPackage\Providers\EventServiceProvider;
-use Tymon\JWTAuth\Providers\LaravelServiceProvider;
-use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Matchish\ScoutElasticSearch\ElasticSearchServiceProvider;
+use Spatie\LaravelPackageTools\Package;
+use Spatie\LaravelPackageTools\PackageServiceProvider;
+use Tymon\JWTAuth\Providers\LaravelServiceProvider;
+use Wm\WmPackage\Commands\DownloadDbCommand;
+use Wm\WmPackage\Commands\UploadDbAWS;
+use Wm\WmPackage\Commands\WmPackageCommand;
+use Wm\WmPackage\Providers\EventServiceProvider;
 
 class WmPackageServiceProvider extends PackageServiceProvider
 {
@@ -42,13 +42,13 @@ class WmPackageServiceProvider extends PackageServiceProvider
 
     public function packageRegistered()
     {
-        #This package events
+        // This package events
         $this->app->register(EventServiceProvider::class);
 
-        #JWT
+        // JWT
         $this->app->register(LaravelServiceProvider::class);
 
-        #ElasticSearch
+        // ElasticSearch
         $this->app->register(ElasticSearchServiceProvider::class);
     }
 }
