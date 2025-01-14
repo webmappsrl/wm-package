@@ -17,14 +17,19 @@
     ],
     "require": {
         "php": ">8.1",
+        "christiankuri/laravel-favorite": "^1.4",
         "illuminate/contracts": ">10.0",
         "kiritokatklian/nova-permission": "*",
+        "laravel/nova": "^4.0 <=4.33.3",
         "laravel/sanctum": "*",
+        "laravel/scout": "^10.11",
         "maatwebsite/excel": "^3.1",
+        "matchish/laravel-scout-elasticsearch": "^7.10",
+        "ndamiens/gisconverter": "^1.0",
         "spatie/laravel-package-tools": ">1.16",
         "spatie/laravel-permission": "*",
-        "tymon/jwt-auth": ">2.0",
-        "laravel/nova": "^4.0 <=4.33.3"
+        "spatie/laravel-translatable": "^6.9",
+        "tymon/jwt-auth": ">2.0"
     },
     "require-dev": {
         "guzzlehttp/guzzle": "^7.9",
@@ -83,6 +88,7 @@
         "sort-packages": true,
         "allow-plugins": {
             "pestphp/pest-plugin": true,
+            "php-http/discovery": true,
             "phpstan/extension-installer": true
         }
     },
