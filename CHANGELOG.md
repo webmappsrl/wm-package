@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.3.0](https://github.com/webmappsrl/wm-package/compare/v1.2.6...v1.3.0) (2024-12-30)
+
+
+### Features
+
+* user model abstraction over wm-package oc: 4498 ([#46](https://github.com/webmappsrl/wm-package/issues/46)) ([79635db](https://github.com/webmappsrl/wm-package/commit/79635db2ad180d396eac1f8cc5f34940b1a5aafb))
+
+
+### Bug Fixes
+
+* add sku field to users due its usage in controller ([42d944f](https://github.com/webmappsrl/wm-package/commit/42d944fc64cfe5c770853244fcaa88dd2db44394))
+* fix wp stan errors ([b37dfd0](https://github.com/webmappsrl/wm-package/commit/b37dfd010c043fa39be4ed5282ad1eff6f6fb670))
+
 ## [1.2.6](https://github.com/webmappsrl/wm-package/compare/v1.2.5...v1.2.6) (2024-12-18)
 
 
