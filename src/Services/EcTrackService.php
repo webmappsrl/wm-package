@@ -3,24 +3,24 @@
 namespace Wm\WmPackage\Services;
 
 use Exception;
+use Wm\WmPackage\Models\EcTrack;
 use Illuminate\Support\Facades\Bus;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Wm\WmPackage\Facades\OsmClient;
-use Wm\WmPackage\Jobs\GeneratePBFByTrackJob;
-use Wm\WmPackage\Jobs\Track\UpdateEcTrack3DDemJob;
+use Illuminate\Support\Facades\Http;
+use Wm\WmPackage\Jobs\UpdateLayerTracksJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackDemJob;
+use Wm\WmPackage\Jobs\Pbf\GenerateEcTrackPBFBatch;
+use Wm\WmPackage\Jobs\Track\UpdateEcTrack3DDemJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackFromOsmJob;
-use Wm\WmPackage\Jobs\Track\UpdateEcTrackGenerateElevationChartImage;
-use Wm\WmPackage\Jobs\Track\UpdateEcTrackManualDataJob;
-use Wm\WmPackage\Jobs\Track\UpdateEcTrackOrderRelatedPoi;
-use Wm\WmPackage\Jobs\Track\UpdateEcTrackPBFInfoJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackSlopeValues;
-use Wm\WmPackage\Jobs\UpdateCurrentDataJob;
-use Wm\WmPackage\Jobs\UpdateLayerTracksJob;
+use Wm\WmPackage\Jobs\Track\UpdateEcTrackManualDataJob;
+use Wm\WmPackage\Jobs\Track\UpdateEcTrackCurrentDataJob;
+use Wm\WmPackage\Jobs\Track\UpdateEcTrackOrderRelatedPoi;
 use Wm\WmPackage\Jobs\UpdateModelWithGeometryTaxonomyWhere;
-use Wm\WmPackage\Models\EcTrack;
+use Wm\WmPackage\Jobs\Track\UpdateEcTrackAppRelationsInfoJob;
+use Wm\WmPackage\Jobs\Track\UpdateEcTrackGenerateElevationChartImage;
 
 class EcTrackService extends BaseService
 {
@@ -54,7 +54,7 @@ class EcTrackService extends BaseService
         $response = Http::withHeaders([
             'Content-Type' => 'application/json',
         ])->post(
-            rtrim(config('services.dem.host'), '/').rtrim(config('services.dem.tech_data_api'), '/'),
+            rtrim(config('services.dem.host'), '/') . rtrim(config('services.dem.tech_data_api'), '/'),
             $data
         );
 
@@ -82,7 +82,7 @@ class EcTrackService extends BaseService
                 //    }
                 $track->saveQuietly();
             } catch (\Exception $e) {
-                Log::error('An error occurred during DEM operation: '.$e->getMessage());
+                Log::error('An error occurred during DEM operation: ' . $e->getMessage());
             }
         } else {
             // Request failed, handle the error here
@@ -99,7 +99,7 @@ class EcTrackService extends BaseService
         try {
             $osmId = trim($track->osmid);
             $osmClient = new OsmClient;
-            $geojson_content = $osmClient::getGeojson('relation/'.$osmId);
+            $geojson_content = $osmClient::getGeojson('relation/' . $osmId);
             $geojson_content = json_decode($geojson_content, true);
             $osmData = $geojson_content['properties'];
             if (isset($osmData['duration:forward'])) {
@@ -167,10 +167,10 @@ class EcTrackService extends BaseService
                     $osmData = json_decode($track->osm_data, true);
                     if (isset($osmData[$field]) && ! is_null($osmData[$field])) {
                         $track[$field] = $osmData[$field];
-                        Log::info("Updated $field with OSM value: ".$osmData[$field]);
+                        Log::info("Updated $field with OSM value: " . $osmData[$field]);
                     } elseif (isset($demData[$field]) && ! is_null($demData[$field])) {
                         $track[$field] = $demData[$field];
-                        Log::info("Updated $field with DEM value: ".$demData[$field]);
+                        Log::info("Updated $field with DEM value: " . $demData[$field]);
                     }
                 }
             }
@@ -178,7 +178,7 @@ class EcTrackService extends BaseService
             $track->manual_data = $manualData;
             $track->saveQuietly();
         } catch (\Exception $e) {
-            Log::error($track->id.': HandlesData: An error occurred during a store operation: '.$e->getMessage());
+            Log::error($track->id . ': HandlesData: An error occurred during a store operation: ' . $e->getMessage());
         }
     }
 
@@ -271,15 +271,14 @@ class EcTrackService extends BaseService
         }
         $chain[] = new UpdateEcTrackDemJob($track);
         $chain[] = new UpdateEcTrackManualDataJob($track);
-        $chain[] = new UpdateCurrentDataJob($track);
+        $chain[] = new UpdateEcTrackCurrentDataJob($track);
         $chain[] = new UpdateEcTrack3DDemJob($track);
         $chain[] = new UpdateEcTrackSlopeValues($track);
         $chain[] = new UpdateModelWithGeometryTaxonomyWhere($track);
         $chain[] = new UpdateEcTrackGenerateElevationChartImage($track);
         $chain[] = new UpdateEcTrackAwsJob($track);
-        // $chain[] = new UpdateEcTrackElasticIndexJob($track);
-        $chain[] = new UpdateEcTrackPBFInfoJob($track);
-        $chain[] = new GeneratePBFByTrackJob($track);
+        $chain[] = new UpdateEcTrackAppRelationsInfoJob($track);
+        $chain[] = new GenerateEcTrackPBFBatch($track);
         $chain[] = new UpdateEcTrackOrderRelatedPoi($track);
 
         Bus::chain($chain)->dispatch();
@@ -308,7 +307,7 @@ class EcTrackService extends BaseService
         return array_keys($oredered_pois);
     }
 
-    public function updateTrackPBFInfo(EcTrack $ecTrack)
+    public function updateTrackAppRelationsInfo(EcTrack $ecTrack)
     {
 
         $updates = null;

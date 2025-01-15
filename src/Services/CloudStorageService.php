@@ -12,6 +12,14 @@ class CloudStorageService extends BaseService
         return $this->getWmFeTracksDisk()->put($path, $contents);
     }
 
+    /**
+     * Memorizza il PBF generato.
+     */
+    public function storePBF(string $relativePath, $pbfContent)
+    {
+        return $this->getDisk('s3-wmpbf')->put($relativePath, $pbfContent);
+    }
+
     //
     // GETTERS
     //
