@@ -2,20 +2,23 @@
 
 namespace Wm\WmPackage\Jobs;
 
+use App\Traits\HandlesData;
 use Illuminate\Bus\Queueable;
+use Wm\WmPackage\Models\EcTrack;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Queue\SerializesModels;
+use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Queue\SerializesModels;
-use Wm\WmPackage\Models\EcTrack;
-use Wm\WmPackage\Services\CloudStorageService;
+use Wm\WmPackage\Services\EcTrackService;
 
-class UpdateEcTrackAwsJob implements ShouldQueue
+class UpdateEcTrackDemJob implements ShouldQueue
 {
     use Dispatchable;
     use InteractsWithQueue;
     use Queueable;
     use SerializesModels;
+
 
     /**
      * Create a new job instance.
@@ -29,10 +32,8 @@ class UpdateEcTrackAwsJob implements ShouldQueue
      *
      * @return void
      */
-    public function handle(CloudStorageService $cloudStorageService)
+    public function handle(EcTrackService $ecTrackService)
     {
-        $geojson = $this->ecTrack->getGeojson();
-        $trackUri = $this->ecTrack->id . '.json';
-        $cloudStorageService->storeTrack($trackUri, json_encode($geojson));
+        $ecTrackService->updateDemData($this->ecTrack);
     }
 }

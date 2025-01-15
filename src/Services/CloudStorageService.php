@@ -8,8 +8,8 @@ class CloudStorageService extends BaseService
 {
 
 
-    public function storeTrack($where, $what)
+    public function storeTrack($path, $contents)
     {
-        return Storage::disk('wmfetracks')->put($where, $what);
+        return Storage::disk('wmfetracks')->put($path, $contents);
     }
 }
