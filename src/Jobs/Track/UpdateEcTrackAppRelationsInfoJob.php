@@ -4,7 +4,7 @@ namespace Wm\WmPackage\Jobs\Track;
 
 use Wm\WmPackage\Services\EcTrackService;
 
-class UpdateEcTrackPBFInfoJob extends BaseEcTrackJob
+class UpdateEcTrackAppRelationsInfoJob extends BaseEcTrackJob
 {
     /**
      * Execute the job.
@@ -13,6 +13,6 @@ class UpdateEcTrackPBFInfoJob extends BaseEcTrackJob
      */
     public function handle(EcTrackService $ecTrackService)
     {
-        $ecTrackService->updateTrackPBFInfo($this->ecTrack);
+        $ecTrackService->updateTrackAppRelationsInfo($this->ecTrack);
     }
 }
