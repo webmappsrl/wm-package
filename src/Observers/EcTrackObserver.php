@@ -2,13 +2,13 @@
 
 namespace App\Observers;
 
-use Workbench\App\Models\User;
-use Wm\WmPackage\Models\EcTrack;
 use Illuminate\Support\Facades\Log;
-use Wm\WmPackage\Services\UserService;
 use Wm\WmPackage\Jobs\Pbf\GenerateAppPBFJob;
+use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Services\EcTrackService;
 use Wm\WmPackage\Services\GeometryComputationService;
+use Wm\WmPackage\Services\UserService;
+use Workbench\App\Models\User;
 
 class EcTrackObserver
 {
@@ -19,8 +19,7 @@ class EcTrackObserver
      */
     public $afterCommit = true;
 
-
-    function __construct(protected GeometryComputationService $geometryComputationService, protected EcTrackService $ecTrackService) {}
+    public function __construct(protected GeometryComputationService $geometryComputationService, protected EcTrackService $ecTrackService) {}
 
     /**
      * Handle the EcTrack "saved" event.
@@ -85,7 +84,7 @@ class EcTrackObserver
         if ($apps && $bbox && $author_id) {
             GenerateAppPBFJob::dispatch($apps, $bbox);
         } else {
-            Log::info('No apps or bbox or author_id found for track ' . $ecTrack->id . ' to delete PBFs.');
+            Log::info('No apps or bbox or author_id found for track '.$ecTrack->id.' to delete PBFs.');
         }
     }
 }

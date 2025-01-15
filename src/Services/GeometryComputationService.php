@@ -15,18 +15,18 @@ class GeometryComputationService extends BaseService
     public function get3dLineMergeWktFromGeojson(string $geojson): string
     {
         return DB::select(
-            "SELECT ST_AsText(ST_Force3D(ST_LineMerge(ST_GeomFromGeoJSON('" . $geojson . "')))) As wkt"
+            "SELECT ST_AsText(ST_Force3D(ST_LineMerge(ST_GeomFromGeoJSON('".$geojson."')))) As wkt"
         )[0]->wkt;
     }
 
     public function getWktFromGeojson(string $geojson): string
     {
-        return DB::select("SELECT ST_GeomFromGeoJSON('" . $geojson . "') As wkt")[0]->wkt;
+        return DB::select("SELECT ST_GeomFromGeoJSON('".$geojson."') As wkt")[0]->wkt;
     }
 
     public function get3dGeometryFromGeojsonRAW(string $geojson): Expression
     {
-        return DB::raw("(ST_Force3D(ST_GeomFromGeoJSON('" . $geojson . "')))");
+        return DB::raw("(ST_Force3D(ST_GeomFromGeoJSON('".$geojson."')))");
     }
 
     protected function getNeighoursByGeometryAndTable($geometry, $table): array
@@ -45,8 +45,8 @@ class GeometryComputationService extends BaseService
     public function getLineLocatePointFloat(string $trackGeojson, string $poiGeojson): float
     {
         // POI VAL along track https://postgis.net/docs/ST_LineLocatePoint.html
-        $line = "ST_GeomFromGeoJSON('" . $trackGeojson . "')";
-        $point = "ST_GeomFromGeoJSON('" . $poiGeojson . "')";
+        $line = "ST_GeomFromGeoJSON('".$trackGeojson."')";
+        $point = "ST_GeomFromGeoJSON('".$poiGeojson."')";
         $sql = DB::raw("SELECT ST_LineLocatePoint($line,$point) as val;");
         $result = DB::select($sql);
 
@@ -69,9 +69,9 @@ class GeometryComputationService extends BaseService
         if (isset($geom)) {
             $formattedGeometry = Gisconverter::geojsonToKml($geom);
 
-            $name = '<name>' . ($this->name ?? '') . '</name>';
+            $name = '<name>'.($this->name ?? '').'</name>';
 
-            return $name . $formattedGeometry;
+            return $name.$formattedGeometry;
         } else {
             return null;
         }
@@ -182,12 +182,12 @@ class GeometryComputationService extends BaseService
         foreach ($classes as $class => $table) {
             $result = DB::select(
                 'SELECT id FROM '
-                    . $table
-                    . ' WHERE user_id = ?'
-                    . " AND ABS(EXTRACT(EPOCH FROM created_at) - EXTRACT(EPOCH FROM TIMESTAMP '"
-                    . $model->created_at
-                    . "')) < 5400"
-                    . ' AND St_DWithin(geometry, ?, 400);',
+                    .$table
+                    .' WHERE user_id = ?'
+                    ." AND ABS(EXTRACT(EPOCH FROM created_at) - EXTRACT(EPOCH FROM TIMESTAMP '"
+                    .$model->created_at
+                    ."')) < 5400"
+                    .' AND St_DWithin(geometry, ?, 400);',
                 [
                     $model->user_id,
                     $model->geometry,
@@ -309,10 +309,10 @@ class GeometryComputationService extends BaseService
     {
         return $targetModelClass::whereRaw(
             'public.ST_Intersects('
-                . 'public.ST_Force2D('
-                . "(SELECT geometry from {$model->getTable()} where id = {$model->id})"
-                . '::geometry)'
-                . ', geometry)'
+                .'public.ST_Force2D('
+                ."(SELECT geometry from {$model->getTable()} where id = {$model->id})"
+                .'::geometry)'
+                .', geometry)'
         )->get();
     }
 
@@ -380,7 +380,7 @@ class GeometryComputationService extends BaseService
      */
     public function getDistanceComp(array $geometry): float
     {
-        $distanceQuery = "SELECT ST_Length(ST_GeomFromGeoJSON('" . json_encode($geometry) . "')::geography)/1000 as length";
+        $distanceQuery = "SELECT ST_Length(ST_GeomFromGeoJSON('".json_encode($geometry)."')::geography)/1000 as length";
         $distance = DB::select(DB::raw($distanceQuery));
 
         return $distance[0]->length;
