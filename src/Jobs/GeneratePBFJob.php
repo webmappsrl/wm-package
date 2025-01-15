@@ -2,13 +2,13 @@
 
 namespace Wm\WmPackage\Jobs;
 
-use Wm\WmPackage\Services\PBFGenerator;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use Wm\WmPackage\Services\PBFGenerator;
 
 class GeneratePBFJob implements ShouldQueue
 {
@@ -57,7 +57,7 @@ class GeneratePBFJob implements ShouldQueue
             $generator->generate($this->z, $this->x, $this->y);
         } catch (\Exception $e) {
             // Log dell'errore
-            Log::error('Errore durante la generazione del PBF: ' . $e->getMessage());
+            Log::error('Errore durante la generazione del PBF: '.$e->getMessage());
             // Opzionalmente, puoi reintrodurre l'eccezione per far fallire il job
             throw $e;
         }

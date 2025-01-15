@@ -6,7 +6,6 @@ use Wm\WmPackage\Services\EcTrackService;
 
 class UpdateEcTrackPBFInfoJob extends BaseEcTrackJob
 {
-
     /**
      * Execute the job.
      *

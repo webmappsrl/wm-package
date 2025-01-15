@@ -5,10 +5,8 @@ namespace Wm\WmPackage\Jobs\Track;
 use Exception;
 use Wm\WmPackage\Services\EcTrackService;
 
-
 class UpdateEcTrackFromOsmJob extends BaseEcTrackJob
 {
-
     /**
      * Execute the job.
      *
@@ -19,7 +17,7 @@ class UpdateEcTrackFromOsmJob extends BaseEcTrackJob
 
         $result = $ecTrackService->updateOsmData($this->ecTrack);
         if (! $result['success']) {
-            throw new Exception($this->ecTrack->id . ' UpdateTrackFromOsmJob: FAILED: ' . $this->ecTrack->name . ' (' . $this->ecTrack->osmid . '): ' . $result['message']);
+            throw new Exception($this->ecTrack->id.' UpdateTrackFromOsmJob: FAILED: '.$this->ecTrack->name.' ('.$this->ecTrack->osmid.'): '.$result['message']);
         }
     }
 }

@@ -5,7 +5,6 @@ namespace Wm\WmPackage\Jobs\Track;
 use Exception;
 use Wm\WmPackage\Services\NodeJsService;
 
-
 class UpdateEcTrackGenerateElevationChartImage extends BaseEcTrackJob
 {
     /**

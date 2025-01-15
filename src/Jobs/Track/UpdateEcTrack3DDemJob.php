@@ -2,14 +2,12 @@
 
 namespace Wm\WmPackage\Jobs\Track;
 
-
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Wm\WmPackage\Services\GeometryComputationService;
 
 class UpdateEcTrack3DDemJob extends BaseEcTrackJob
 {
-
     /**
      * Execute the job.
      *
@@ -21,7 +19,7 @@ class UpdateEcTrack3DDemJob extends BaseEcTrackJob
         $response = Http::withHeaders([
             'Content-Type' => 'application/json',
         ])->post(
-            rtrim(config('wm-package.services.dem.host'), '/') . rtrim(config('wm-package.services.dem.3d_data_api'), '/'),
+            rtrim(config('wm-package.services.dem.host'), '/').rtrim(config('wm-package.services.dem.3d_data_api'), '/'),
             $data
         );
 
@@ -31,7 +29,7 @@ class UpdateEcTrack3DDemJob extends BaseEcTrackJob
             $responseData = $response->json();
 
             if (isset($responseData['geometry']) && ! empty($responseData['geometry'])) {
-                //TODO: here we can set in the geometry a raw expression to execute only 1 query
+                // TODO: here we can set in the geometry a raw expression to execute only 1 query
                 $this->ecTrack->geometry = $geometryComputationService->getWktFromGeojson(json_encode($responseData['geometry']));
                 $this->ecTrack->saveQuietly();
                 // Log::info($this->ecTrack->id . ' UpdateEcTrack3DDemJob: SUCCESS');
@@ -40,7 +38,7 @@ class UpdateEcTrack3DDemJob extends BaseEcTrackJob
             // Request failed, handle the error here
             $errorCode = $response->status();
             $errorBody = $response->body();
-            throw new Exception($this->ecTrack->id . "UpdateEcTrack3DDemJob: FAILED: Error {$errorCode}: {$errorBody}");
+            throw new Exception($this->ecTrack->id."UpdateEcTrack3DDemJob: FAILED: Error {$errorCode}: {$errorBody}");
         }
     }
 }

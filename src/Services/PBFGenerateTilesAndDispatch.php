@@ -2,10 +2,10 @@
 
 namespace Wm\WmPackage\Services;
 
-use Wm\WmPackage\Jobs\GenerateLayerPBFJob;
-use Wm\WmPackage\Jobs\GeneratePBFJob;
 use Exception;
 use Illuminate\Support\Facades\Log;
+use Wm\WmPackage\Jobs\GenerateLayerPBFJob;
+use Wm\WmPackage\Jobs\GeneratePBFJob;
 
 class PBFGenerateTilesAndDispatch
 {
@@ -35,12 +35,12 @@ class PBFGenerateTilesAndDispatch
                     } else {
                         GeneratePBFJob::dispatch($z, $x, $y, $this->app_id, $this->author_id);
                     }
-                    Log::info($zoom . ' ' . ++$c . '/' . count($tiles));
+                    Log::info($zoom.' '.++$c.'/'.count($tiles));
                 }
             }
             // Dopo che tutte le tiles sono state generate e le job sono state dispatchate
         } catch (Exception $e) {
-            throw new Exception('ERROR ' . $e->getMessage());
+            throw new Exception('ERROR '.$e->getMessage());
         }
     }
 

@@ -41,7 +41,7 @@ class UpdateEcTrack3DDemJob implements ShouldQueue
         $response = Http::withHeaders([
             'Content-Type' => 'application/json',
         ])->post(
-            rtrim(config('wm-package.services.dem.host'), '/') . rtrim(config('wm-package.services.dem.3d_data_api'), '/'),
+            rtrim(config('wm-package.services.dem.host'), '/').rtrim(config('wm-package.services.dem.3d_data_api'), '/'),
             $data
         );
 
@@ -51,19 +51,19 @@ class UpdateEcTrack3DDemJob implements ShouldQueue
             $responseData = $response->json();
             try {
                 if (isset($responseData['geometry']) && ! empty($responseData['geometry'])) {
-                    //TODO: here we can set in the geometry a raw expression to execute only 1 query
+                    // TODO: here we can set in the geometry a raw expression to execute only 1 query
                     $this->ecTrack->geometry = GeometryComputationService::make()->getWktFromGeojson(json_encode($responseData['geometry']));
                     $this->ecTrack->saveQuietly();
                     // Log::info($this->ecTrack->id . ' UpdateEcTrack3DDemJob: SUCCESS');
                 }
             } catch (\Exception $e) {
-                Log::error($this->ecTrack->id . 'UpdateEcTrack3DDemJob: FAILED: ' . $e->getMessage());
+                Log::error($this->ecTrack->id.'UpdateEcTrack3DDemJob: FAILED: '.$e->getMessage());
             }
         } else {
             // Request failed, handle the error here
             $errorCode = $response->status();
             $errorBody = $response->body();
-            Log::error($this->ecTrack->id . "UpdateEcTrack3DDemJob: FAILED: Error {$errorCode}: {$errorBody}");
+            Log::error($this->ecTrack->id."UpdateEcTrack3DDemJob: FAILED: Error {$errorCode}: {$errorBody}");
         }
     }
 }

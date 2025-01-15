@@ -1,16 +1,14 @@
 <?php
 
-
 namespace Wm\WmPackage\Services;
 
 use Exception;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 
 class NodeJsService extends BaseService
 {
-
     public function __construct(protected CloudStorageService $cloudStorageService) {}
+
     /**
      * Generate the elevation chart image for the ec track
      * Imported from geomixer
@@ -43,7 +41,7 @@ class NodeJsService extends BaseService
         $src = $localDisk->path("geojson/$id.geojson");
         $dest = $localDisk->path("elevation_charts/$id.svg");
 
-        $cmd = config('wm-package.nodejs.node_executable') . " node/jobs/build-elevation-chart.js --geojson=$src --dest=$dest --type=svg";
+        $cmd = config('wm-package.nodejs.node_executable')." node/jobs/build-elevation-chart.js --geojson=$src --dest=$dest --type=svg";
 
         // Log::info("Running node command: {$cmd}");
 

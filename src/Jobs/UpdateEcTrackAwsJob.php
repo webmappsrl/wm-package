@@ -32,7 +32,7 @@ class UpdateEcTrackAwsJob implements ShouldQueue
     public function handle(CloudStorageService $cloudStorageService)
     {
         $geojson = $this->ecTrack->getGeojson();
-        $trackUri = $this->ecTrack->id . '.json';
+        $trackUri = $this->ecTrack->id.'.json';
         $cloudStorageService->storeTrack($trackUri, json_encode($geojson));
     }
 }

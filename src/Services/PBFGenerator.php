@@ -2,12 +2,12 @@
 
 namespace Wm\WmPackage\Services;
 
-use Wm\WmPackage\Models\App;
 use Exception;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Wm\WmPackage\Models\App;
 
 class PBFGenerator
 {
@@ -41,7 +41,7 @@ class PBFGenerator
 
         // Controlla se il tile corrente è in un quadrante vuoto a un livello di zoom inferiore
         if ($this->isTileInEmptyParent($z, $x, $y)) {
-            Log::channel('pbf')->info($this->app_id . '/' . $z . '/' . $x . '/' . $y . '.pbf -> JUMP PARENT EMPTY');
+            Log::channel('pbf')->info($this->app_id.'/'.$z.'/'.$x.'/'.$y.'.pbf -> JUMP PARENT EMPTY');
 
             return '';
         }
@@ -63,13 +63,13 @@ class PBFGenerator
         if (! empty($pbfContent)) {
             $storage_name = config('geohub.s3_pbf_storage_name');
             $s3_osfmedia = Storage::disk($storage_name);
-            $s3_osfmedia->put($this->app_id . '/' . $z . '/' . $x . '/' . $y . '.pbf', $pbfContent);
-            Log::channel('pbf')->info($this->app_id . '/' . $z . '/' . $x . '/' . $y . '.pbf');
+            $s3_osfmedia->put($this->app_id.'/'.$z.'/'.$x.'/'.$y.'.pbf', $pbfContent);
+            Log::channel('pbf')->info($this->app_id.'/'.$z.'/'.$x.'/'.$y.'.pbf');
 
-            return $this->app_id . '/' . $z . '/' . $x . '/' . $y . '.pbf';
+            return $this->app_id.'/'.$z.'/'.$x.'/'.$y.'.pbf';
         }
         $this->markTileAsEmpty($z, $x, $y);
-        Log::channel('pbf')->info($this->app_id . '/' . $z . '/' . $x . '/' . $y . '.pbf -> EMPTY');
+        Log::channel('pbf')->info($this->app_id.'/'.$z.'/'.$x.'/'.$y.'.pbf -> EMPTY');
 
         return '';
     }

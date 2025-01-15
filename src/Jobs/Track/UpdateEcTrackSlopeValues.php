@@ -6,7 +6,6 @@ use Wm\WmPackage\Services\GeometryComputationService;
 
 class UpdateEcTrackSlopeValues extends BaseEcTrackJob
 {
-
     /**
      * Execute the job.
      *
