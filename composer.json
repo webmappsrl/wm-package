@@ -27,6 +27,7 @@
         "maatwebsite/excel": "^3.1",
         "matchish/laravel-scout-elasticsearch": "^7.10",
         "ndamiens/gisconverter": "^1.0",
+        "simplesoftwareio/simple-qrcode": "^4.2",
         "spatie/laravel-package-tools": ">1.16",
         "spatie/laravel-permission": "*",
         "spatie/laravel-translatable": "^6.9",
@@ -46,6 +47,9 @@
         "phpstan/phpstan-phpunit": "^1.0 || ^2.0"
     },
     "autoload": {
+        "files": [
+            "src/helpers.php"
+        ],
         "psr-4": {
             "Wm\\WmPackage\\": "src",
             "Wm\\WmPackage\\Http\\Controllers\\": "src/Http/Controllers"

@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Log;
 
 class NodeJsService extends BaseService
 {
-    public function __construct(protected CloudStorageService $cloudStorageService) {}
+    public function __construct(protected StorageService $cloudStorageService) {}
 
     /**
      * Generate the elevation chart image for the ec track
@@ -41,7 +41,7 @@ class NodeJsService extends BaseService
         $src = $localDisk->path("geojson/$id.geojson");
         $dest = $localDisk->path("elevation_charts/$id.svg");
 
-        $cmd = config('wm-package.nodejs.node_executable')." node/jobs/build-elevation-chart.js --geojson=$src --dest=$dest --type=svg";
+        $cmd = config('wm-package.nodejs.node_executable') . " node/jobs/build-elevation-chart.js --geojson=$src --dest=$dest --type=svg";
 
         // Log::info("Running node command: {$cmd}");
 

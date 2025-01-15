@@ -18,20 +18,19 @@ class PBFGeneratorService extends BaseService
 
     protected $zoomTreshold = 6;
 
-    public function __construct(protected CloudStorageService $cloudStorageService) {}
+    public function __construct(protected StorageService $cloudStorageService) {}
 
     public function generate($app_id, $z, $x, $y)
     {
         $boundingBox = $this->tileToBoundingBox(['zoom' => $z, 'x' => $x, 'y' => $y]);
         $sql = $this->generateSQL($boundingBox, $app_id, $z);
         $pbf = DB::select($sql);
-        $path = $this->getPbfFileRelativePath($app_id, $z, $x, $y);
+        $path = false;
         $pbfContent = stream_get_contents($pbf[0]->st_asmvt) ?? null;
         if (! empty($pbfContent)) {
-            $this->cloudStorageService->storePBF($path, $pbfContent);
+            $path = $this->cloudStorageService->storePBF($app_id, $z, $x, $y, $pbfContent);
         } else {
             $this->markTileAsEmpty($z, $x, $y);
-            Log::channel('pbf')->info("{$path} -> EMPTY");
         }
 
         return $path;
@@ -48,10 +47,6 @@ class PBFGeneratorService extends BaseService
         return 0.1 / ($zoom + 1);  // Semplificazione inversamente proporzionale per altri zoom
     }
 
-    private function getPbfFileRelativePath($app_id, $z, $x, $y)
-    {
-        return "{$app_id}/{$z}/{$x}/{$y}.pbf";
-    }
 
     // ///////////////////////////// TRACKPBFJOB
 
@@ -93,7 +88,7 @@ class PBFGeneratorService extends BaseService
         SQL;
 
         $result = DB::select($sql, [
-            'layer_ids' => '{'.implode(',', $layerIds).'}', // Converti in array PostgreSQL
+            'layer_ids' => '{' . implode(',', $layerIds) . '}', // Converti in array PostgreSQL
         ]);
 
         return $result[0]->total_tracks ?? 0;

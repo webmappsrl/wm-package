@@ -105,6 +105,25 @@ class GeometryComputationService extends BaseService
         return $this->bbox(false, $model);
     }
 
+    public function getEcTracksBboxByUserId(int $userId)
+    {
+        $query = "
+            SELECT ST_Extent(geometry) as bbox
+            FROM ec_tracks
+            WHERE user_id = ?
+        ";
+
+        $result = DB::select($query, [$userId]);
+
+        if (! empty($result)) {
+
+
+            return $this->bboxArrayFromString($result[0]->bbox);
+        }
+
+        return null;
+    }
+
     /**
      * Calculate the bounding box of the track
      */
@@ -123,6 +142,11 @@ class GeometryComputationService extends BaseService
             $bboxString = $rawResult['bbox'];
         }
 
+        return $this->bboxArrayFromString($bboxString);
+    }
+
+    private function bboxArrayFromString(string $bboxString): array
+    {
         return array_map('floatval', explode(' ', str_replace(',', ' ', str_replace(['B', 'O', 'X', '(', ')'], '', $bboxString))));
     }
 

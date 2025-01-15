@@ -2,7 +2,7 @@
 
 namespace Wm\WmPackage\Jobs\Track;
 
-use Wm\WmPackage\Services\CloudStorageService;
+use Wm\WmPackage\Services\StorageService;
 
 class UpdateEcTrackAwsJob extends BaseEcTrackJob
 {
@@ -11,10 +11,9 @@ class UpdateEcTrackAwsJob extends BaseEcTrackJob
      *
      * @return void
      */
-    public function handle(CloudStorageService $cloudStorageService)
+    public function handle(StorageService $cloudStorageService)
     {
         $geojson = $this->ecTrack->getGeojson();
-        $trackUri = $this->ecTrack->id.'.json';
-        $cloudStorageService->storeTrack($trackUri, json_encode($geojson));
+        $cloudStorageService->storeTrack($this->ecTrack->id, json_encode($geojson));
     }
 }
