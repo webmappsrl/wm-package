@@ -44,12 +44,14 @@ class GeometryComputationService extends BaseService
     public function getLineLocatePointFloat(string $trackGeojson, string $poiGeojson): float
     {
         // POI VAL along track https://postgis.net/docs/ST_LineLocatePoint.html
-        $line = "ST_GeomFromGeoJSON('" . $trackGeojson . "')";
-        $point = "ST_GeomFromGeoJSON('" . $poiGeojson . "')";
+        $line = "ST_GeomFromGeoJSON('".$trackGeojson."')";
+        $point = "ST_GeomFromGeoJSON('".$poiGeojson."')";
         $sql = DB::raw("SELECT ST_LineLocatePoint($line,$point) as val;");
         $result = DB::select($sql);
-        return  $result[0]->val;
+
+        return $result[0]->val;
     }
+
     public function getModelGeometryAsGeojson(GeometryModel $model): string
     {
         return $model::where('id', '=', $model->id)
@@ -318,7 +320,6 @@ class GeometryComputationService extends BaseService
         return $tiles;
     }
 
-
     /**
      * From geomixer
      */
@@ -367,7 +368,7 @@ class GeometryComputationService extends BaseService
      */
     public function getDistanceComp(array $geometry): float
     {
-        $distanceQuery = "SELECT ST_Length(ST_GeomFromGeoJSON('" . json_encode($geometry) . "')::geography)/1000 as length";
+        $distanceQuery = "SELECT ST_Length(ST_GeomFromGeoJSON('".json_encode($geometry)."')::geography)/1000 as length";
         $distance = DB::select(DB::raw($distanceQuery));
 
         return $distance[0]->length;

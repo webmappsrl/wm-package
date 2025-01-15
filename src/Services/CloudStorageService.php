@@ -7,16 +7,14 @@ use Illuminate\Support\Facades\Storage;
 
 class CloudStorageService extends BaseService
 {
-
-
     public function storeTrack($path, $contents): bool
     {
         return $this->getWmFeTracksDisk()->put($path, $contents);
     }
 
-    #
-    # GETTERS
-    #
+    //
+    // GETTERS
+    //
 
     public function getWmFeTracksDisk(): Filesystem
     {

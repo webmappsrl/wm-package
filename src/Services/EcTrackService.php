@@ -8,18 +8,18 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Wm\WmPackage\Facades\OsmClient;
 use Wm\WmPackage\Jobs\GeneratePBFByTrackJob;
-use Wm\WmPackage\Jobs\UpdateCurrentDataJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrack3DDemJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackDemJob;
-use Wm\WmPackage\Jobs\Track\UpdateEcTrackGenerateElevationChartImage;
-use Wm\WmPackage\Jobs\Track\UpdateEcTrackOrderRelatedPoi;
-use Wm\WmPackage\Jobs\Track\UpdateEcTrackSlopeValues;
-use Wm\WmPackage\Jobs\UpdateLayerTracksJob;
-use Wm\WmPackage\Jobs\Track\UpdateEcTrackManualDataJob;
-use Wm\WmPackage\Jobs\UpdateModelWithGeometryTaxonomyWhere;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackFromOsmJob;
+use Wm\WmPackage\Jobs\Track\UpdateEcTrackGenerateElevationChartImage;
+use Wm\WmPackage\Jobs\Track\UpdateEcTrackManualDataJob;
+use Wm\WmPackage\Jobs\Track\UpdateEcTrackOrderRelatedPoi;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackPBFInfoJob;
+use Wm\WmPackage\Jobs\Track\UpdateEcTrackSlopeValues;
+use Wm\WmPackage\Jobs\UpdateCurrentDataJob;
+use Wm\WmPackage\Jobs\UpdateLayerTracksJob;
+use Wm\WmPackage\Jobs\UpdateModelWithGeometryTaxonomyWhere;
 use Wm\WmPackage\Models\EcTrack;
 
 class EcTrackService extends BaseService
@@ -36,7 +36,7 @@ class EcTrackService extends BaseService
         'duration_backward',
     ];
 
-    function __construct(protected GeometryComputationService $geometryComputationService) {}
+    public function __construct(protected GeometryComputationService $geometryComputationService) {}
 
     public function getDemDataFields()
     {
@@ -300,14 +300,13 @@ class EcTrackService extends BaseService
         $oredered_pois = [];
         foreach ($related_pois as $poi) {
             $poi_geometry = $poi['geometry'];
-            $oredered_pois[$poi['properties']['id']] =  $this->geometryComputationService
+            $oredered_pois[$poi['properties']['id']] = $this->geometryComputationService
                 ->getLineLocatePointFloat(json_encode($track_geometry), json_encode($poi_geometry));
         }
         asort($oredered_pois);
 
         return array_keys($oredered_pois);
     }
-
 
     public function updateTrackPBFInfo(EcTrack $ecTrack)
     {
