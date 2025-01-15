@@ -62,7 +62,7 @@ class GeneratePBFByTrackJob implements ShouldQueue
                 ->name("Track PBF batch: {$this->track->id}")
                 ->onConnection('redis')->onQueue('pbf')->dispatch();
         } catch (Throwable $e) {
-            Log::channel('pbf')->error('Errore nel Job track PBF: ' . $e->getMessage());
+            Log::channel('pbf')->error('Errore nel Job track PBF: '.$e->getMessage());
         }
     }
 }

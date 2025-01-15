@@ -2,8 +2,6 @@
 
 namespace Wm\WmPackage\Jobs\Track;
 
-
-
 use Wm\WmPackage\Services\EcTrackService;
 
 class UpdateEcTrackDemJob extends BaseEcTrackJob

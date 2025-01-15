@@ -2,12 +2,12 @@
 
 namespace Wm\WmPackage\Jobs;
 
-use Wm\WmPackage\Services\PBFGenerateTilesAndDispatch;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Wm\WmPackage\Services\PBFGenerateTilesAndDispatch;
 
 class DeleteTrackPBFJob implements ShouldQueue
 {
