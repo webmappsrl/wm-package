@@ -9,18 +9,17 @@ use Illuminate\Support\Facades\Log;
 use Wm\WmPackage\Facades\OsmClient;
 use Wm\WmPackage\Jobs\GeneratePBFByTrackJob;
 use Wm\WmPackage\Jobs\UpdateCurrentDataJob;
-use Wm\WmPackage\Jobs\UpdateEcTrack3DDemJob;
-use Wm\WmPackage\Jobs\UpdateEcTrackAwsJob;
-use Wm\WmPackage\Jobs\UpdateEcTrackDemJob;
-use Wm\WmPackage\Jobs\UpdateEcTrackElasticIndexJob;
-use Wm\WmPackage\Jobs\UpdateEcTrackGenerateElevationChartImage;
-use Wm\WmPackage\Jobs\UpdateEcTrackOrderRelatedPoi;
-use Wm\WmPackage\Jobs\UpdateEcTrackSlopeValues;
+use Wm\WmPackage\Jobs\Track\UpdateEcTrack3DDemJob;
+use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
+use Wm\WmPackage\Jobs\Track\UpdateEcTrackDemJob;
+use Wm\WmPackage\Jobs\Track\UpdateEcTrackGenerateElevationChartImage;
+use Wm\WmPackage\Jobs\Track\UpdateEcTrackOrderRelatedPoi;
+use Wm\WmPackage\Jobs\Track\UpdateEcTrackSlopeValues;
 use Wm\WmPackage\Jobs\UpdateLayerTracksJob;
-use Wm\WmPackage\Jobs\UpdateManualDataJob;
+use Wm\WmPackage\Jobs\Track\UpdateEcTrackManualDataJob;
 use Wm\WmPackage\Jobs\UpdateModelWithGeometryTaxonomyWhere;
-use Wm\WmPackage\Jobs\UpdateTrackFromOsmJob;
-use Wm\WmPackage\Jobs\UpdateTrackPBFInfoJob;
+use Wm\WmPackage\Jobs\Track\UpdateEcTrackFromOsmJob;
+use Wm\WmPackage\Jobs\Track\UpdateEcTrackPBFInfoJob;
 use Wm\WmPackage\Models\EcTrack;
 
 class EcTrackService extends BaseService
@@ -36,6 +35,8 @@ class EcTrackService extends BaseService
         'duration_forward',
         'duration_backward',
     ];
+
+    function __construct(protected GeometryComputationService $geometryComputationService) {}
 
     public function getDemDataFields()
     {
@@ -181,7 +182,7 @@ class EcTrackService extends BaseService
         }
     }
 
-    protected function updateManualData(EcTrack $track)
+    public function updateManualData(EcTrack $track)
     {
 
         $manualData = null;
@@ -259,7 +260,7 @@ class EcTrackService extends BaseService
     {
         $chain = [];
         if ($track->osmid) {
-            $chain[] = new UpdateTrackFromOsmJob($track);
+            $chain[] = new UpdateEcTrackFromOsmJob($track);
         }
         $layers = $track->associatedLayers;
         // Verifica se ci sono layers associati
@@ -269,18 +270,62 @@ class EcTrackService extends BaseService
             }
         }
         $chain[] = new UpdateEcTrackDemJob($track);
-        $chain[] = new UpdateManualDataJob($track);
+        $chain[] = new UpdateEcTrackManualDataJob($track);
         $chain[] = new UpdateCurrentDataJob($track);
         $chain[] = new UpdateEcTrack3DDemJob($track);
         $chain[] = new UpdateEcTrackSlopeValues($track);
         $chain[] = new UpdateModelWithGeometryTaxonomyWhere($track);
         $chain[] = new UpdateEcTrackGenerateElevationChartImage($track);
         $chain[] = new UpdateEcTrackAwsJob($track);
-        $chain[] = new UpdateEcTrackElasticIndexJob($track);
-        $chain[] = new UpdateTrackPBFInfoJob($track);
+        // $chain[] = new UpdateEcTrackElasticIndexJob($track);
+        $chain[] = new UpdateEcTrackPBFInfoJob($track);
         $chain[] = new GeneratePBFByTrackJob($track);
         $chain[] = new UpdateEcTrackOrderRelatedPoi($track);
 
         Bus::chain($chain)->dispatch();
+    }
+
+    // IT GETS data from ec TRACK and compute the proper order filling outputData['related_pois_order'] array
+    public function getRelatedPoisOrder(EcTrack $ecTrack)
+    {
+        $geojson = $ecTrack->getGeojson();
+        // CHeck if TRACK has related POIS
+        if (! isset($geojson['ecTrack']['properties']['related_pois'])) {
+            // SKIP;
+            return;
+        }
+        $related_pois = $geojson['ecTrack']['properties']['related_pois'];
+        $track_geometry = $geojson['ecTrack']['geometry'];
+
+        $oredered_pois = [];
+        foreach ($related_pois as $poi) {
+            $poi_geometry = $poi['geometry'];
+            $oredered_pois[$poi['properties']['id']] =  $this->geometryComputationService
+                ->getLineLocatePointFloat(json_encode($track_geometry), json_encode($poi_geometry));
+        }
+        asort($oredered_pois);
+
+        return array_keys($oredered_pois);
+    }
+
+
+    public function updateTrackPBFInfo(EcTrack $ecTrack)
+    {
+
+        $updates = null;
+        $ecTrackLayers = $ecTrack->associatedLayers;
+        foreach ($ecTrackLayers as $layer) {
+            if (! empty($layer)) {
+                $updates['layers'][$layer->app_id] = $layer->id;
+                $updates['activities'][$layer->app_id] = $ecTrack->getTaxonomyArray($ecTrack->taxonomyActivities);
+                $updates['themes'][$layer->app_id] = $ecTrack->getTaxonomyArray($ecTrack->taxonomyThemes);
+                $updates['searchable'][$layer->app_id] = $ecTrack->getSearchableString($layer->app_id);
+            }
+        }
+        if ($updates) {
+            EcTrack::withoutEvents(function () use ($updates, $ecTrack) {
+                $ecTrack->update($updates);
+            });
+        }
     }
 }
