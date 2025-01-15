@@ -13,7 +13,6 @@ class GenerateAppPBFJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-
     /**
      * Create a new job instance.
      *
@@ -47,7 +46,7 @@ class GenerateAppPBFJob implements ShouldQueue
                         } else {
                             GeneratePBFJob::dispatch($z, $x, $y, $app_id);
                         }
-                        //Log::info($zoom . ' ' . ++$c . '/' . count($tiles));
+                        // Log::info($zoom . ' ' . ++$c . '/' . count($tiles));
                     }
                 }
             }

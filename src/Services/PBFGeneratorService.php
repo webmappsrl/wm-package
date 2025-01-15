@@ -2,11 +2,11 @@
 
 namespace Wm\WmPackage\Services;
 
-use Wm\WmPackage\Models\App;
-use Wm\WmPackage\Models\EcTrack;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Cache;
+use Wm\WmPackage\Models\App;
+use Wm\WmPackage\Models\EcTrack;
 
 class PBFGeneratorService extends BaseService
 {
@@ -19,7 +19,6 @@ class PBFGeneratorService extends BaseService
     protected $zoomTreshold = 6;
 
     public function __construct(protected CloudStorageService $cloudStorageService) {}
-
 
     public function generate($app_id, $z, $x, $y)
     {
@@ -38,7 +37,6 @@ class PBFGeneratorService extends BaseService
         return $path;
     }
 
-
     // Funzione per calcolare il fattore di semplificazione in base al livello di zoom
     private function getSimplificationFactor($zoom)
     {
@@ -55,8 +53,7 @@ class PBFGeneratorService extends BaseService
         return "{$app_id}/{$z}/{$x}/{$y}.pbf";
     }
 
-
-    /////////////////////////////// TRACKPBFJOB
+    // ///////////////////////////// TRACKPBFJOB
 
     protected function countTracks($boundingBox): int
     {
@@ -96,7 +93,7 @@ class PBFGeneratorService extends BaseService
         SQL;
 
         $result = DB::select($sql, [
-            'layer_ids' => '{' . implode(',', $layerIds) . '}', // Converti in array PostgreSQL
+            'layer_ids' => '{'.implode(',', $layerIds).'}', // Converti in array PostgreSQL
         ]);
 
         return $result[0]->total_tracks ?? 0;

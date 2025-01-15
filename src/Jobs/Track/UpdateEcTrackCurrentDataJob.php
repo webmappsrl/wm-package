@@ -2,12 +2,10 @@
 
 namespace Wm\WmPackage\Jobs\Track;
 
-
 use Wm\WmPackage\Services\EcTrackService;
 
 class UpdateEcTrackCurrentDataJob extends BaseEcTrackJob
 {
-
     /**
      * Execute the job.
      *

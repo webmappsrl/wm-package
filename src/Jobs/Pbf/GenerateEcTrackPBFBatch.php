@@ -3,19 +3,16 @@
 namespace Wm\WmPackage\Jobs\Pbf;
 
 use Illuminate\Support\Facades\Bus;
-use Wm\WmPackage\Jobs\Pbf\GeneratePBFJob;
 use Wm\WmPackage\Jobs\Track\BaseEcTrackJob;
 use Wm\WmPackage\Services\GeometryComputationService;
 
 class GenerateEcTrackPBFBatch extends BaseEcTrackJob
 {
-
     // Numero massimo di tentativi
     public $tries = 5;
 
     // Tempo massimo di esecuzione in secondi
     public $timeout = 900; // 10 minuti
-
 
     public function handle(GeometryComputationService $geometryComputationService)
     {

@@ -2,13 +2,13 @@
 
 namespace Wm\WmPackage\Jobs;
 
-use Wm\WmPackage\Models\TaxonomyWhere;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Wm\WmPackage\Models\Abstracts\GeometryModel;
+use Wm\WmPackage\Models\TaxonomyWhere;
 use Wm\WmPackage\Services\GeometryComputationService;
 
 class UpdateModelWithGeometryTaxonomyWhere implements ShouldQueue
@@ -17,7 +17,6 @@ class UpdateModelWithGeometryTaxonomyWhere implements ShouldQueue
         InteractsWithQueue,
         Queueable,
         SerializesModels;
-
 
     /**
      * Create a new job instance.
