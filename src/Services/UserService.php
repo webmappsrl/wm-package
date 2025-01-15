@@ -4,7 +4,7 @@ namespace Wm\WmPackage\Services;
 
 use Wm\WmPackage\Models\User;
 
-class UserService extends MakeableService
+class UserService extends BaseService
 {
     /**
      * Undocumented function

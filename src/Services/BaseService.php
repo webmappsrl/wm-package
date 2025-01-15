@@ -2,7 +2,7 @@
 
 namespace Wm\WmPackage\Services;
 
-abstract class MakeableService
+abstract class BaseService
 {
     public static function make(): static
     {

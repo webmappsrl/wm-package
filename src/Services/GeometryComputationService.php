@@ -8,25 +8,30 @@ use Illuminate\Support\Facades\DB;
 use Symm\Gisconverter\Gisconverter;
 use Wm\WmPackage\Models\Abstracts\GeometryModel;
 
-class GeometryComputationService extends MakeableService
+class GeometryComputationService extends BaseService
 {
     public function get3dLineMergeWktFromGeojson(string $geojson): string
     {
         return DB::select(
-            "SELECT ST_AsText(ST_Force3D(ST_LineMerge(ST_GeomFromGeoJSON('".$geojson."')))) As wkt"
+            "SELECT ST_AsText(ST_Force3D(ST_LineMerge(ST_GeomFromGeoJSON('" . $geojson . "')))) As wkt"
         )[0]->wkt;
+    }
+
+    public function getWktFromGeojson(string $geojson): string
+    {
+        return DB::select("SELECT ST_GeomFromGeoJSON('" . $geojson . "') As wkt")[0]->wkt;
     }
 
     public function get3dGeometryFromGeojsonRAW(string $geojson): Expression
     {
-        return DB::raw("(ST_Force3D(ST_GeomFromGeoJSON('".$geojson."')))");
+        return DB::raw("(ST_Force3D(ST_GeomFromGeoJSON('" . $geojson . "')))");
     }
 
     protected function getNeighoursByGeometryAndTable($geometry, $table): array
     {
         return DB::select(
             "SELECT id FROM {$table}
-                WHERE St_DWithin(geometry, ?, ' . config('wm-package.neighbours_distance') . ')
+                WHERE St_DWithin(geometry, ?, ' . config('wm-package.services.neighbours_distance') . ')
                 order by St_Linelocatepoint(St_Geomfromgeojson(St_Asgeojson(?)),St_Geomfromgeojson(St_Asgeojson(geometry)));",
             [
                 $geometry,
@@ -51,9 +56,9 @@ class GeometryComputationService extends MakeableService
         if (isset($geom)) {
             $formattedGeometry = Gisconverter::geojsonToKml($geom);
 
-            $name = '<name>'.($this->name ?? '').'</name>';
+            $name = '<name>' . ($this->name ?? '') . '</name>';
 
-            return $name.$formattedGeometry;
+            return $name . $formattedGeometry;
         } else {
             return null;
         }
@@ -82,10 +87,14 @@ class GeometryComputationService extends MakeableService
         //     ->geom;
     }
 
+    public function getGeometryModelBbox(GeometryModel $model): array
+    {
+        return $this->bbox(false, $model);
+    }
     /**
      * Calculate the bounding box of the track
      */
-    public function bbox($geometry = '', ?GeometryModel $model = null): array
+    protected function bbox($geometry = false, GeometryModel|false $model = false): array
     {
 
         $bboxString = '';
@@ -159,12 +168,12 @@ class GeometryComputationService extends MakeableService
         foreach ($classes as $class => $table) {
             $result = DB::select(
                 'SELECT id FROM '
-                    .$table
-                    .' WHERE user_id = ?'
-                    ." AND ABS(EXTRACT(EPOCH FROM created_at) - EXTRACT(EPOCH FROM TIMESTAMP '"
-                    .$model->created_at
-                    ."')) < 5400"
-                    .' AND St_DWithin(geometry, ?, 400);',
+                    . $table
+                    . ' WHERE user_id = ?'
+                    . " AND ABS(EXTRACT(EPOCH FROM created_at) - EXTRACT(EPOCH FROM TIMESTAMP '"
+                    . $model->created_at
+                    . "')) < 5400"
+                    . ' AND St_DWithin(geometry, ?, 400);',
                 [
                     $model->user_id,
                     $model->geometry,
@@ -262,5 +271,39 @@ class GeometryComputationService extends MakeableService
         $lastY = $lastCoord[1];
 
         return (abs($lastX - $firstX) < $treshold) && (abs($lastY - $firstY) < $treshold);
+    }
+
+    /**
+     * Converts lat/lon degrees to x/y coordinates with the provided zoom level
+     *
+     * @param [type] $lat_deg
+     * @param [type] $lon_deg
+     * @param [type] $zoom
+     * @return void
+     */
+    private function deg2num($lat_deg, $lon_deg, $zoom)
+    {
+        $lat_rad = deg2rad($lat_deg);
+        $n = pow(2, $zoom);
+        $xtile = intval(($lon_deg + 180.0) / 360.0 * $n);
+        $ytile = intval((1.0 - log(tan($lat_rad) + (1 / cos($lat_rad))) / pi()) / 2.0 * $n);
+
+        return [$xtile, $ytile];
+    }
+
+    public function generateTiles($bbox, $zoom)
+    {
+        [$minLon, $minLat, $maxLon, $maxLat] = $bbox;
+        [$minTileX, $minTileY] = $this->deg2num($maxLat, $minLon, $zoom);
+        [$maxTileX, $maxTileY] = $this->deg2num($minLat, $maxLon, $zoom);
+
+        $tiles = [];
+        for ($x = $minTileX; $x <= $maxTileX; $x++) {
+            for ($y = $minTileY; $y <= $maxTileY; $y++) {
+                $tiles[] = [$x, $y, $zoom];
+            }
+        }
+
+        return $tiles;
     }
 }
