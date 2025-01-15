@@ -1,13 +1,13 @@
 <?php
 
-
 if (! function_exists('hexToRgba')) {
     /**
      * Convert hex color to rgba color.
      *
-     * @param string $hexColor
-     * @param float $opacity
+     * @param  string  $hexColor
+     * @param  float  $opacity
      * @return string
+     *
      * @throws Exception
      */
     function hexToRgba($hexColor, $opacity = 1.0)

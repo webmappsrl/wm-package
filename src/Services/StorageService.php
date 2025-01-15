@@ -10,12 +10,14 @@ class StorageService extends BaseService
     public function storeTrack(int $trackId, $contents): string|false
     {
         $path = "{$trackId}.json";
+
         return $this->getWmFeTracksDisk()->put($path, $contents) ? $path : false;
     }
 
     public function storePBF(int $appId, string $z, string $x, string $y, $pbfContent): string|false
     {
         $path = "{$appId}/{$z}/{$x}/{$y}.pbf";
+
         return $this->getPbfDisk()->put($path, $pbfContent) ? $path : false;
     }
 
@@ -24,6 +26,7 @@ class StorageService extends BaseService
         $path = "{$appId}.json";
         $a = $this->getRemoteAppConfigDisk()->put($path, $contents);
         $b = $this->getLocalAppConfigDisk()->put($path, $contents);
+
         return $a && $b ? $path : false;
     }
 
@@ -32,12 +35,14 @@ class StorageService extends BaseService
         $path = "{$appId}.geojson";
         $a = $this->getRemotePoisDisk()->put($path, $contents);
         $b = $this->getLocalPoisDisk()->put($path, $contents);
+
         return $a && $b ? $path : false;
     }
 
     public function storeAppQrCode(int $appId, string $svg): string|false
     {
         $path = "qrcode/{$appId}/webapp-qrcode.svg";
+
         return $this->getPublicDisk()->put($path, $svg) ? $path : false;
     }
 
@@ -48,6 +53,7 @@ class StorageService extends BaseService
     {
         return $this->getDisk('pois');
     }
+
     private function getRemotePoisDisk(): Filesystem
     {
         return $this->getDisk('wmfepois');
@@ -57,6 +63,7 @@ class StorageService extends BaseService
     {
         return $this->getDisk('conf');
     }
+
     private function getRemoteAppConfigDisk(): Filesystem
     {
         return $this->getDisk('wmfeconf');

@@ -107,16 +107,15 @@ class GeometryComputationService extends BaseService
 
     public function getEcTracksBboxByUserId(int $userId)
     {
-        $query = "
+        $query = '
             SELECT ST_Extent(geometry) as bbox
             FROM ec_tracks
             WHERE user_id = ?
-        ";
+        ';
 
         $result = DB::select($query, [$userId]);
 
         if (! empty($result)) {
-
 
             return $this->bboxArrayFromString($result[0]->bbox);
         }

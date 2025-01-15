@@ -4,7 +4,6 @@ namespace Wm\WmPackage\Services;
 
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcTrack;
 
@@ -47,7 +46,6 @@ class PBFGeneratorService extends BaseService
         return 0.1 / ($zoom + 1);  // Semplificazione inversamente proporzionale per altri zoom
     }
 
-
     // ///////////////////////////// TRACKPBFJOB
 
     protected function countTracks($boundingBox): int
@@ -88,7 +86,7 @@ class PBFGeneratorService extends BaseService
         SQL;
 
         $result = DB::select($sql, [
-            'layer_ids' => '{' . implode(',', $layerIds) . '}', // Converti in array PostgreSQL
+            'layer_ids' => '{'.implode(',', $layerIds).'}', // Converti in array PostgreSQL
         ]);
 
         return $result[0]->total_tracks ?? 0;
