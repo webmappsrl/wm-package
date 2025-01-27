@@ -2,6 +2,7 @@
 
 // config for Wm/WmPackage
 return [
+    'version' => '1.3.0', // x-release-please-version
     'services' => [
         'geometry_computation' => [
             'neighbours_distance' => env('WM_NEIGHBOURS_DISTANCE', 500),
@@ -33,6 +34,9 @@ return [
             'tech_data_api' => env('DEM_TECH_DATA_API', '/api/v1/track'),
             '3d_data_api' => env('DEM_3D_DATA_API', '/api/v1/track3d'),
         ],
-    ],
-    'version' => '1.3.0', // x-release-please-version
+        'cai' => [
+            'basic_auth_user' => env('CAI_BASIC_AUTH_USER'),
+            'basic_auth_password' => env('CAI_BASIC_AUTH_PASSWORD'),
+        ],
+    ]
 ];
