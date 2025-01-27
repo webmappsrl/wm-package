@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.1](https://github.com/webmappsrl/wm-package/compare/v1.3.0...v1.3.1) (2025-01-27)
+
+
+### Miscellaneous Chores
+
+* **deps:** bump dependabot/fetch-metadata from 1.6.0 to 2.3.0 ([06bf1ed](https://github.com/webmappsrl/wm-package/commit/06bf1eda43941433f713010ab16cbf72e0ee65d3))
+
 ## [1.3.0](https://github.com/webmappsrl/wm-package/compare/v1.2.6...v1.3.0) (2024-12-30)
 
 
