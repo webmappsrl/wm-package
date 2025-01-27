@@ -2,20 +2,18 @@
 
 namespace Wm\WmPackage\Models\Abstracts;
 
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\User;
-use Illuminate\Database\Eloquent\Model;
-use Wm\WmPackage\Services\StorageService;
-use Illuminate\Database\Eloquent\Builder;
 use Wm\WmPackage\Services\GeometryComputationService;
+use Wm\WmPackage\Services\StorageService;
 
 abstract class GeometryModel extends Model
 {
     protected $casts = [
         'properties' => 'array',
     ];
-
-
 
     /**
      * Alias for the user relation
@@ -91,7 +89,6 @@ abstract class GeometryModel extends Model
         return GeometryComputationService::make()->getRelatedUgcGeojson($this);
     }
 
-
     public function getJson(): array
     {
         $array = $this->toArray();
@@ -111,7 +108,6 @@ abstract class GeometryModel extends Model
 
         return $array;
     }
-
 
     public function populateProperties(): void
     {

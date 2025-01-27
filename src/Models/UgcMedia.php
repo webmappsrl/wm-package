@@ -2,10 +2,6 @@
 
 namespace Wm\WmPackage\Models;
 
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
-use Wm\WmPackage\Models\Abstracts\GeometryModel;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Wm\WmPackage\Models\Abstracts\Media;

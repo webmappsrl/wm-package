@@ -2,9 +2,9 @@
 
 namespace Wm\WmPackage\Traits;
 
-use Wm\WmPackage\Models\UgcMedia;
-use Wm\WmPackage\Models\TaxonomyWhere;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Wm\WmPackage\Models\TaxonomyWhere;
+use Wm\WmPackage\Models\UgcMedia;
 
 trait UgcAbleModel
 {

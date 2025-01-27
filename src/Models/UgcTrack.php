@@ -2,7 +2,6 @@
 
 namespace Wm\WmPackage\Models;
 
-
 use Wm\WmPackage\Models\Abstracts\Track;
 use Wm\WmPackage\Traits\UgcAbleModel;
 

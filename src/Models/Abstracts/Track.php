@@ -3,7 +3,6 @@
 namespace Wm\WmPackage\Models\Abstracts;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Wm\WmPackage\Models\User;
 
 abstract class Track extends GeometryModel
 {

@@ -6,7 +6,6 @@ use Wm\WmPackage\Models\App;
 
 class AppObserver extends AbstractObserver
 {
-
     /**
      * Handle the App "saving" event.
      *

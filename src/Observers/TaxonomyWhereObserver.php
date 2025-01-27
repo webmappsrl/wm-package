@@ -2,13 +2,11 @@
 
 namespace Wm\WmPackage\Observers;
 
-use Illuminate\Support\Str;
-use Wm\WmPackage\Models\TaxonomyWhere;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\MessageBag;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
-
-
+use Wm\WmPackage\Models\TaxonomyWhere;
 
 class TaxonomyWhereObserver extends AbstractObserver
 {

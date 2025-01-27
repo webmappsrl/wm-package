@@ -2,9 +2,9 @@
 
 namespace Wm\WmPackage\Traits;
 
-use Wm\WmPackage\Models\EcMedia;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Wm\WmPackage\Models\EcMedia;
 
 trait FeatureImageAbleModel
 {

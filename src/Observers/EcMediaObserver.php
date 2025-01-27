@@ -17,7 +17,7 @@ class EcMediaObserver extends AbstractObserver
         try {
             $ecMedia->updateDataChain($ecMedia);
         } catch (\Exception $e) {
-            Log::error($ecMedia->id . 'created  EcMedia: An error occurred during a store operation: ' . $e->getMessage());
+            Log::error($ecMedia->id.'created  EcMedia: An error occurred during a store operation: '.$e->getMessage());
         }
     }
 }

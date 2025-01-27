@@ -3,12 +3,9 @@
 namespace Wm\WmPackage\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Spatie\Translatable\HasTranslations;
-use Wm\WmPackage\Models\Abstracts\GeometryModel;
 use Wm\WmPackage\Models\Abstracts\Media;
 use Wm\WmPackage\Observers\EcMediaObserver;
 use Wm\WmPackage\Traits\TaxonomyAbleModel;
@@ -43,7 +40,6 @@ class EcMedia extends Media
     {
         return $this->belongsToMany(Layer::class);
     }
-
 
     public function featureImageEcPois(): HasMany
     {

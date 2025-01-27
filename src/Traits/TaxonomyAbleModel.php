@@ -2,17 +2,16 @@
 
 namespace Wm\WmPackage\Traits;
 
-use Wm\WmPackage\Models\TaxonomyWhen;
-use Wm\WmPackage\Models\TaxonomyTheme;
-use Wm\WmPackage\Models\TaxonomyWhere;
-use Wm\WmPackage\Models\TaxonomyTarget;
-use Wm\WmPackage\Models\TaxonomyPoiType;
-use Wm\WmPackage\Models\TaxonomyActivity;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
+use Wm\WmPackage\Models\TaxonomyActivity;
+use Wm\WmPackage\Models\TaxonomyPoiType;
+use Wm\WmPackage\Models\TaxonomyTarget;
+use Wm\WmPackage\Models\TaxonomyTheme;
+use Wm\WmPackage\Models\TaxonomyWhen;
+use Wm\WmPackage\Models\TaxonomyWhere;
 
 trait TaxonomyAbleModel
 {
-
     public function taxonomyWheres(): MorphToMany
     {
         return $this->morphToMany(TaxonomyWhere::class, 'taxonomy_whereable');
@@ -36,7 +35,7 @@ trait TaxonomyAbleModel
     public function taxonomyActivities(): MorphToMany
     {
         return $this->morphToMany(TaxonomyActivity::class, 'taxonomy_activityable')
-            ->withPivot(['duration_forward', 'duration_backward']);;
+            ->withPivot(['duration_forward', 'duration_backward']);
     }
 
     public function taxonomyPoiTypes(): MorphToMany

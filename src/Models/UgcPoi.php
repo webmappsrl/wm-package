@@ -2,12 +2,8 @@
 
 namespace Wm\WmPackage\Models;
 
-use Wm\WmPackage\Traits\UgcAbleModel;
-use Wm\WmPackage\Models\Abstracts\GeometryModel;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Wm\WmPackage\Models\Abstracts\Poi;
+use Wm\WmPackage\Traits\UgcAbleModel;
 
 /**
  * Class UgcPoi

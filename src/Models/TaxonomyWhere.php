@@ -2,27 +2,13 @@
 
 namespace Wm\WmPackage\Models;
 
-use Illuminate\Support\Str;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\MessageBag;
-use Illuminate\Support\Facades\Log;
-use Symm\Gisconverter\Gisconverter;
-use App\Traits\GeometryFeatureTrait;
-use App\Traits\HasTranslationsFixed;
-use App\Providers\HoquServiceProvider;
-use Illuminate\Database\Eloquent\Model;
-use Spatie\Translatable\HasTranslations;
-use Wm\WmPackage\Services\GeoJsonService;
-use Symm\Gisconverter\Exceptions\InvalidText;
-use Illuminate\Validation\ValidationException;
-use Wm\WmPackage\Traits\FeatureImageAbleModel;
-use Wm\WmPackage\Models\Abstracts\GeometryModel;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
+use Spatie\Translatable\HasTranslations;
+use Wm\WmPackage\Models\Abstracts\GeometryModel;
 use Wm\WmPackage\Observers\TaxonomyWhereObserver;
-use Wm\WmPackage\Services\GeometryComputationService;
+use Wm\WmPackage\Traits\FeatureImageAbleModel;
 
 /**
  * Class TaxonomyWhere
@@ -33,7 +19,7 @@ use Wm\WmPackage\Services\GeometryComputationService;
  */
 class TaxonomyWhere extends GeometryModel
 {
-    use HasFactory, HasTranslations, FeatureImageAbleModel;
+    use FeatureImageAbleModel, HasFactory, HasTranslations;
 
     public array $translatable = ['name', 'description', 'excerpt'];
 
@@ -48,7 +34,6 @@ class TaxonomyWhere extends GeometryModel
     {
         App::observe(TaxonomyWhereObserver::class);
     }
-
 
     /**
      * All the taxonomy where imported using a sync command are not editable
@@ -65,7 +50,6 @@ class TaxonomyWhere extends GeometryModel
     {
         return ! is_null($this->import_method);
     }
-
 
     public function ugc_pois(): BelongsToMany
     {
