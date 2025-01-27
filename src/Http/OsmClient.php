@@ -66,7 +66,6 @@ class OsmClient
      * Undocumented function
      *
      * @param  string  $osmid  Osmid string with type: node/[id], way/[id], relation/[id]
-     * @param  bool  $retun_array  set it as true if you want return value as array
      */
     public function getGeojson(string $osmid): string
     {
@@ -92,7 +91,7 @@ class OsmClient
     /**
      * Returns the URL OSM v06 JSON API string (full form way and relation)
      *
-     * @param [type] $osmid
+     * @param  int|string  $osmid
      */
     public function getFullOsmApiUrlByOsmId($osmid): string
     {
@@ -143,8 +142,6 @@ class OsmClient
         } else {
             throw new OsmClientException('OSMID has not vali type (node,way,relation) '.$osmid);
         }
-
-        return [];
     }
 
     private function getPropertiesAndGeometryForNode(array $json): array
@@ -304,7 +301,7 @@ class OsmClient
         // Check roundtrip
         $roundtrip = false;
         if (! array_key_exists(1, $values_count)) {
-            $roundtrip == true;
+            $roundtrip = true;
         }
 
         // Build Properties

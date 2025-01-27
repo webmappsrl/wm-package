@@ -17,12 +17,6 @@ use PhpOffice\PhpSpreadsheet\Style\Fill;
  * This class enables easy export of Eloquent model data to Excel, CSV, and other
  * spreadsheet formats, with support for custom columns, relationships, and styling.
  *
- * @implements FromCollection
- * @implements WithHeadings
- * @implements WithStyles
- * @implements WithMapping
- * @implements ShouldAutoSize
- *
  * @example
  * ```php
  * // Using key => value pairs for custom headers

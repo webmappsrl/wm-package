@@ -7,7 +7,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Validator;
-use Wm\WmPackage\Model\User;
+use Wm\WmPackage\Models\User;
 
 class AppAuthController extends Controller
 {
@@ -101,8 +101,8 @@ class AppAuthController extends Controller
             ], 401);
         }
 
-        if (($request->input('referrer') != null) && ($request->input('referrer') != $user->referrer)) {
-            $user->referrer = $request->input('referrer');
+        if (($request->input('referrer') != null) && ($request->input('referrer') != $user->sku)) {
+            $user->sku = $request->input('referrer');
             $user->save();
         }
 
@@ -173,6 +173,7 @@ class AppAuthController extends Controller
     public function refresh(): JsonResponse
     {
         try {
+            /** @phpstan-ignore method.notFound */
             return $this->respondWithToken(auth('api')->refresh());
         } catch (Exception $e) {
             return response()->json(['error' => 'Impossibile aggiornare il token.'], 401);
@@ -187,6 +188,7 @@ class AppAuthController extends Controller
         return response()->json([
             'access_token' => $token,
             'token_type' => 'bearer',
+            /** @phpstan-ignore method.notFound */
             'expires_in' => auth('api')->factory()->getTTL() * 60,
         ]);
     }

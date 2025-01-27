@@ -4,6 +4,9 @@ namespace App\Traits;
 
 use Illuminate\Support\Facades\Schema;
 
+/**
+ * @phpstan-ignore trait.unused
+ */
 trait WmNovaFieldsTrait
 {
     /**
