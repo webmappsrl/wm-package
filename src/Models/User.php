@@ -11,7 +11,6 @@ use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Traits\HasRoles;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 
-
 /**
  * Undocumented class
  *
@@ -76,11 +75,11 @@ class User extends Authenticatable implements JWTSubject
     public function isValidatorForFormId($formId)
     {
         $formId = str_replace('_', ' ', $formId);
-        //if form id is empty, return true
+        // if form id is empty, return true
         if (empty($formId)) {
             return true;
         }
-        //if permission does not exist, return true
+        // if permission does not exist, return true
         if (! Permission::where('name', 'validate '.$formId.'s')->exists()) {
             return true;
         }

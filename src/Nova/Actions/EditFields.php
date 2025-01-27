@@ -70,7 +70,7 @@ class EditFields extends Action
                 ->values()
                 ->all();
 
-            //if $this->fields is not empty, filter the fields
+            // if $this->fields is not empty, filter the fields
             if (! empty($this->fields)) {
                 $filteredFields = collect($filteredFields)->filter(function ($field) {
                     return in_array($field->attribute, $this->fields);

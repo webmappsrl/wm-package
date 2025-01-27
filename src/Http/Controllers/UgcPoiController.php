@@ -30,7 +30,7 @@ class UgcPoiController extends Controller
 
             if (! empty($request->header('app-id'))) {
                 $reqAppId = $request->header('app-id');
-                $appId = 'geohub_' . $reqAppId;
+                $appId = 'geohub_'.$reqAppId;
                 $pois = UgcPoi::where([['user_id', $user->id], ['app_id', $appId]])->orderByRaw('updated_at DESC')->get();
 
                 return $this->getUGCFeatureCollection($pois);
@@ -81,12 +81,12 @@ class UgcPoiController extends Controller
         if (isset($data['properties']['description'])) {
             $poi->description = $data['properties']['description'];
         }
-        $poi->geometry = DB::raw("ST_GeomFromGeojson('" . json_encode($data['geometry']) . ")')");
+        $poi->geometry = DB::raw("ST_GeomFromGeojson('".json_encode($data['geometry']).")')");
         $poi->user_id = $user->id;
         $poi->form_id = $data['properties']['id'];
 
         if (isset($data['properties']['app_id'])) {
-            $appId = 'geohub_' . $data['properties']['app_id'];
+            $appId = 'geohub_'.$data['properties']['app_id'];
             if ($appId) {
                 $poi->app_id = $appId;
             }
