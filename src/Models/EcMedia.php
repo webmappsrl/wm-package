@@ -9,10 +9,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Spatie\Translatable\HasTranslations;
 use Wm\WmPackage\Models\Abstracts\GeometryModel;
+use Wm\WmPackage\Models\Abstracts\Media;
 use Wm\WmPackage\Observers\EcMediaObserver;
 use Wm\WmPackage\Traits\TaxonomyAbleModel;
 
-class EcMedia extends GeometryModel
+class EcMedia extends Media
 {
     use HasFactory, HasTranslations, TaxonomyAbleModel;
 

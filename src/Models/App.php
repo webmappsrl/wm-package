@@ -2,19 +2,19 @@
 
 namespace Wm\WmPackage\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\MorphToMany;
+use Laravel\Scout\Searchable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
-use Laravel\Scout\Searchable;
-use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use Wm\WmPackage\Observers\AppObserver;
-use Wm\WmPackage\Services\AppConfigService;
 use Wm\WmPackage\Services\StorageService;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Wm\WmPackage\Services\Models\App\AppConfigService;
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
 
 /**
  * Class App
@@ -25,8 +25,7 @@ use Wm\WmPackage\Services\StorageService;
  */
 class App extends Model
 {
-    use HasFactory;
-    use Searchable;
+    use HasFactory, Searchable;
 
     protected $fillable = [
         'welcome',

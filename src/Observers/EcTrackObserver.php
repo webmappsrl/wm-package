@@ -2,12 +2,12 @@
 
 namespace Wm\WmPackage\Observers;
 
+use Wm\WmPackage\Models\EcTrack;
 use Illuminate\Support\Facades\Log;
 use Wm\WmPackage\Jobs\Pbf\GenerateAppPBFJob;
-use Wm\WmPackage\Models\EcTrack;
-use Wm\WmPackage\Services\EcTrackService;
+use Wm\WmPackage\Services\Models\UserService;
+use Wm\WmPackage\Services\Models\EcTrackService;
 use Wm\WmPackage\Services\GeometryComputationService;
-use Wm\WmPackage\Services\UserService;
 
 class EcTrackObserver extends AbstractObserver
 {
@@ -43,13 +43,6 @@ class EcTrackObserver extends AbstractObserver
     }
 
     /**
-     * Handle the EcTrack "updated" event.
-     *
-     * @return void
-     */
-    public function updated(EcTrack $ecTrack) {}
-
-    /**
      * Handle the EcTrack "deleted" event.
      *
      * @return void
@@ -70,7 +63,7 @@ class EcTrackObserver extends AbstractObserver
         if ($apps && $bbox && $author_id) {
             GenerateAppPBFJob::dispatch($apps, $bbox);
         } else {
-            Log::info('No apps or bbox or author_id found for track '.$ecTrack->id.' to delete PBFs.');
+            Log::info('No apps or bbox or author_id found for track ' . $ecTrack->id . ' to delete PBFs.');
         }
     }
 }

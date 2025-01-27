@@ -32,7 +32,8 @@ class WmPackageServiceProvider extends PackageServiceProvider
                 WmPackageCommand::class,
                 UploadDbAWS::class,
                 DownloadDbCommand::class,
-            ]);
+            ])
+            ->hasViews();
 
         $this->app->config['filesystems.disks.backups'] = [
             'driver' => 'local',

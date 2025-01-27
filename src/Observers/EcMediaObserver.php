@@ -8,13 +8,6 @@ use Wm\WmPackage\Models\EcMedia;
 class EcMediaObserver extends AbstractObserver
 {
     /**
-     * Handle the EcMedia "saved" event.
-     *
-     * @return void
-     */
-    public function saved(EcMedia $ecMedia) {}
-
-    /**
      * Handle the EcMedia "saving" event.
      *
      * @return void
@@ -24,21 +17,7 @@ class EcMediaObserver extends AbstractObserver
         try {
             $ecMedia->updateDataChain($ecMedia);
         } catch (\Exception $e) {
-            Log::error($ecMedia->id.'created  EcMedia: An error occurred during a store operation: '.$e->getMessage());
+            Log::error($ecMedia->id . 'created  EcMedia: An error occurred during a store operation: ' . $e->getMessage());
         }
     }
-
-    /**
-     * Handle the EcMedia "updated" event.
-     *
-     * @return void
-     */
-    public function updated(EcMedia $ecMedia) {}
-
-    /**
-     * Handle the EcMedia "deleted" event.
-     *
-     * @return void
-     */
-    public function deleted(EcMedia $ecMedia) {}
 }
