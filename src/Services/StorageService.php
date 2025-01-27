@@ -2,11 +2,15 @@
 
 namespace Wm\WmPackage\Services;
 
-use Illuminate\Contracts\Filesystem\Filesystem;
+use Exception;
+use Wm\WmPackage\Models\EcMedia;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Contracts\Filesystem\Filesystem;
 
 class StorageService extends BaseService
 {
+
+
     public function storeTrack(int $trackId, $contents): string|false
     {
         $path = "{$trackId}.json";
@@ -44,6 +48,77 @@ class StorageService extends BaseService
         $path = "qrcode/{$appId}/webapp-qrcode.svg";
 
         return $this->getPublicDisk()->put($path, $svg) ? $path : false;
+    }
+
+    /**
+     * Upload an existing image to the s3 bucket
+     * Copied (and updated) from geomixer
+     *
+     * @param  string  $imagePath  the path of the image to upload
+     * @return string the uploaded image url
+     *
+     * @throws Exception
+     */
+    public function storeEcMediaImage(string $imagePath): string
+    {
+        if (! file_exists($imagePath)) {
+            throw new Exception("The image $imagePath does not exists");
+        }
+
+        $filename = pathinfo($imagePath)['filename'] . '.' . pathinfo($imagePath)['extension'];
+
+        $path = 'EcMedia/' . $filename;
+
+        $disk = $this->getEcMediaDisk();
+        $disk->put($path, file_get_contents($imagePath));
+
+        return $disk->url($path);
+    }
+
+    public function storeLocalEcMediaImage(EcMedia $ecMedia): bool
+    {
+        return $this->getPublicDisk()->put($ecMedia->path, file_get_contents($ecMedia->url));
+    }
+    public function getLocalEcMediaImagePath(EcMedia $ecMedia): string
+    {
+        return $this->getPublicDisk()->path($ecMedia->path);
+    }
+    public function deleteLocalEcMediaImage(EcMedia $ecMedia): bool
+    {
+        return $this->getPublicDisk()->delete($ecMedia->path);
+    }
+
+    /**
+     * Upload an already resized image to the s3 bucket
+     *
+     * @param  string  $imagePath  the resized image
+     * @param  int  $width  the image width
+     * @param  int  $height  the image height
+     * @return string the uploaded image url
+     *
+     * @throws Exception
+     */
+    public function storeEcMediaImageResize(string $imagePath, int $width, int $height): string
+    {
+
+        if (! file_exists($imagePath)) {
+            throw new Exception("The image $imagePath does not exists");
+        }
+
+        $filename = basename($imagePath);
+        if ($width == 0) {
+            $cloudPath = 'EcMedia/Resize/x' . $height . DIRECTORY_SEPARATOR . $filename;
+        } elseif ($height == 0) {
+            $cloudPath = 'EcMedia/Resize/' . $width . 'x' . DIRECTORY_SEPARATOR . $filename;
+        } else {
+            $cloudPath = 'EcMedia/Resize/' . $width . 'x' . $height . DIRECTORY_SEPARATOR . $filename;
+        }
+
+        $disk = $this->getStorageDisk();
+
+        Storage::disk($disk)->put($cloudPath, file_get_contents($imagePath));
+
+        return Storage::disk($disk)->url($cloudPath);
     }
 
     //
