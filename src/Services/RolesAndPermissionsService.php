@@ -16,7 +16,7 @@ class RolesAndPermissionsService
     {
         Role::firstOrCreate(['name' => 'Administrator']);
         Role::firstOrCreate(['name' => 'Validator']);
-        Role::firstOrCreate(['name' => 'Guest']); //can login but no permissions
+        Role::firstOrCreate(['name' => 'Guest']); // can login but no permissions
 
         Permission::firstOrCreate(['name' => 'validate source surveys']);
         Permission::firstOrCreate(['name' => 'validate pois']);

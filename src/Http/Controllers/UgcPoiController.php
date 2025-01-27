@@ -171,7 +171,7 @@ class UgcPoiController extends Controller
 
         foreach ($pois as $poi) {
             $feature = $poi->getEmptyGeojson();
-            $feature['properties'] = $poi->getJson();
+            $feature['properties'] = $poi->getJsonProperties();
             $featureCollection['features'][] = $feature;
         }
 
