@@ -3,14 +3,12 @@
 namespace Wm\WmPackage\Services;
 
 use Exception;
-use Wm\WmPackage\Models\EcMedia;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Contracts\Filesystem\Filesystem;
+use Illuminate\Support\Facades\Storage;
+use Wm\WmPackage\Models\EcMedia;
 
 class StorageService extends BaseService
 {
-
-
     public function storeTrack(int $trackId, $contents): string|false
     {
         $path = "{$trackId}.json";
@@ -65,9 +63,9 @@ class StorageService extends BaseService
             throw new Exception("The image $imagePath does not exists");
         }
 
-        $filename = pathinfo($imagePath)['filename'] . '.' . pathinfo($imagePath)['extension'];
+        $filename = pathinfo($imagePath)['filename'].'.'.pathinfo($imagePath)['extension'];
 
-        $path = 'EcMedia/' . $filename;
+        $path = 'EcMedia/'.$filename;
 
         $disk = $this->getEcMediaDisk();
         $disk->put($path, file_get_contents($imagePath));
@@ -79,10 +77,12 @@ class StorageService extends BaseService
     {
         return $this->getPublicDisk()->put($ecMedia->path, file_get_contents($ecMedia->url));
     }
+
     public function getLocalEcMediaImagePath(EcMedia $ecMedia): string
     {
         return $this->getPublicDisk()->path($ecMedia->path);
     }
+
     public function deleteLocalEcMediaImage(EcMedia $ecMedia): bool
     {
         return $this->getPublicDisk()->delete($ecMedia->path);
@@ -107,11 +107,11 @@ class StorageService extends BaseService
 
         $filename = basename($imagePath);
         if ($width == 0) {
-            $cloudPath = 'EcMedia/Resize/x' . $height . DIRECTORY_SEPARATOR . $filename;
+            $cloudPath = 'EcMedia/Resize/x'.$height.DIRECTORY_SEPARATOR.$filename;
         } elseif ($height == 0) {
-            $cloudPath = 'EcMedia/Resize/' . $width . 'x' . DIRECTORY_SEPARATOR . $filename;
+            $cloudPath = 'EcMedia/Resize/'.$width.'x'.DIRECTORY_SEPARATOR.$filename;
         } else {
-            $cloudPath = 'EcMedia/Resize/' . $width . 'x' . $height . DIRECTORY_SEPARATOR . $filename;
+            $cloudPath = 'EcMedia/Resize/'.$width.'x'.$height.DIRECTORY_SEPARATOR.$filename;
         }
 
         $disk = $this->getStorageDisk();

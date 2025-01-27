@@ -3,20 +3,15 @@
 namespace Wm\WmPackage\Observers;
 
 use Wm\WmPackage\Models\App;
-use Wm\WmPackage\Models\User;
-use Wm\WmPackage\Observers\AbstractObserver;
-use Wm\WmPackage\Services\GeometryComputationService;
 
 class AppObserver extends AbstractObserver
 {
-
     /**
      * Handle the App "saved" event.
      *
      * @return void
      */
     public function saved(App $app) {}
-
 
     /**
      * Handle the App "saving" event.

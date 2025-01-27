@@ -8,7 +8,6 @@ use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Services\EcTrackService;
 use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Services\UserService;
-use Workbench\App\Models\User;
 
 class EcTrackObserver extends AbstractObserver
 {
@@ -32,7 +31,6 @@ class EcTrackObserver extends AbstractObserver
 
         UserService::make()->assigUserSkuAndAppIdIfNeeded($ecTrack->user, $ecTrack->sku, $ecTrack->app_id);
     }
-
 
     /**
      * Handle the EcTrack "saving" event.
@@ -72,7 +70,7 @@ class EcTrackObserver extends AbstractObserver
         if ($apps && $bbox && $author_id) {
             GenerateAppPBFJob::dispatch($apps, $bbox);
         } else {
-            Log::info('No apps or bbox or author_id found for track ' . $ecTrack->id . ' to delete PBFs.');
+            Log::info('No apps or bbox or author_id found for track '.$ecTrack->id.' to delete PBFs.');
         }
     }
 }

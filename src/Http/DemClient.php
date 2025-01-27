@@ -5,19 +5,18 @@ namespace Wm\WmPackage\Http;
 use Exception;
 use Illuminate\Support\Facades\Http;
 
-
 class DemClient
 {
-
     public function getElevation($x, $y)
     {
         $response = $this->getHttpClient()->get($this->getElevationUrl($x, $y));
+
         return $response->json()['ele'];
     }
 
     private function getElevationUrl($x, $y)
     {
-        return $this->getDemHost() . '/' . rtrim(config('wm-package.clients.dem.ele_api'), '/') . "/$x/$y";
+        return $this->getDemHost().'/'.rtrim(config('wm-package.clients.dem.ele_api'), '/')."/$x/$y";
     }
 
     public function getTechData($geojson)
@@ -39,7 +38,7 @@ class DemClient
 
     private function getTechDataUrl()
     {
-        return $this->getDemHost() . '/' . rtrim(config('wm-package.clients.dem.tech_data_api'), '/');
+        return $this->getDemHost().'/'.rtrim(config('wm-package.clients.dem.tech_data_api'), '/');
     }
 
     protected function getDemHost()

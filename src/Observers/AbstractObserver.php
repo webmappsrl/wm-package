@@ -2,8 +2,8 @@
 
 namespace Wm\WmPackage\Observers;
 
-use Wm\WmPackage\Models\User;
 use Illuminate\Database\Eloquent\Model;
+use Wm\WmPackage\Models\User;
 
 abstract class AbstractObserver
 {

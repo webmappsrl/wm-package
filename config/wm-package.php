@@ -24,7 +24,7 @@ return [
                 ['width' => 1920, 'height' => 1080],
                 ['width' => 250, 'height' => 150],
             ],
-        ]
+        ],
     ],
     'clients' => [
         'dem' => [

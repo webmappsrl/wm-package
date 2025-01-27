@@ -4,15 +4,12 @@ namespace Wm\WmPackage\Jobs;
 
 use Exception;
 use Illuminate\Bus\Queueable;
-use Wm\WmPackage\Models\EcMedia;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Intervention\Image\Facades\Image;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
+use Wm\WmPackage\Models\EcMedia;
 use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Services\ImageService;
 use Wm\WmPackage\Services\StorageService;
@@ -80,11 +77,11 @@ class UpdateEcMedia implements ShouldQueue
                 if (file_exists($imageResize)) {
                     $thumbnailUrl = $storageService->storeEcMediaImageResize($imageResize, $size['width'], $size['height']);
                     if ($size['width'] == 0) {
-                        $key = 'x' . $size['height'];
+                        $key = 'x'.$size['height'];
                     } elseif ($size['height'] == 0) {
-                        $key = $size['width'] . 'x';
+                        $key = $size['width'].'x';
                     } else {
-                        $key = $size['width'] . 'x' . $size['height'];
+                        $key = $size['width'].'x'.$size['height'];
                     }
 
                     $thumbnailList[$key] = $thumbnailUrl;

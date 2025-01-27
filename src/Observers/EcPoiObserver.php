@@ -2,17 +2,12 @@
 
 namespace Wm\WmPackage\Observers;
 
-use Wm\WmPackage\Models\User;
-use Wm\WmPackage\Models\EcPoi;
-use Wm\WmPackage\Models\EcMedia;
-use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpKernel\Exception\HttpException;
+use Wm\WmPackage\Models\EcMedia;
+use Wm\WmPackage\Models\EcPoi;
 
 class EcPoiObserver extends AbstractObserver
 {
-
-
-
     /**
      * Handle the EcMedia "deleted" event.
      *

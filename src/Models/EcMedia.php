@@ -2,14 +2,14 @@
 
 namespace Wm\WmPackage\Models;
 
-use Spatie\Translatable\HasTranslations;
-use Wm\WmPackage\Observers\EcMediaObserver;
-use Wm\WmPackage\Models\Abstracts\GeometryModel;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\MorphToMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
+use Spatie\Translatable\HasTranslations;
+use Wm\WmPackage\Models\Abstracts\GeometryModel;
+use Wm\WmPackage\Observers\EcMediaObserver;
 
 class EcMedia extends GeometryModel
 {
@@ -91,8 +91,6 @@ class EcMedia extends GeometryModel
     {
         return $this->hasMany(Layer::class, 'feature_image');
     }
-
-
 
     public function getPathAttribute()
     {

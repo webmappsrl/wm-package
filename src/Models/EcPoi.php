@@ -3,24 +3,14 @@
 namespace Wm\WmPackage\Models;
 
 use Exception;
-use Throwable;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\App;
-use Illuminate\Support\Facades\Bus;
-use Illuminate\Support\Facades\Log;
-use App\Traits\GeometryFeatureTrait;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Storage;
-use Spatie\Translatable\HasTranslations;
-use Wm\WmPackage\Jobs\UpdateEcPoiDemJob;
-use Wm\WmPackage\Observers\EcPoiObserver;
-use Wm\WmPackage\Models\Abstracts\GeometryModel;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\MorphToMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Symfony\Component\HttpKernel\Exception\HttpException;
-use Wm\WmPackage\Jobs\UpdateModelWithGeometryTaxonomyWhere;
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
+use Illuminate\Support\Facades\App;
+use Spatie\Translatable\HasTranslations;
+use Wm\WmPackage\Models\Abstracts\GeometryModel;
+use Wm\WmPackage\Observers\EcPoiObserver;
 
 class EcPoi extends GeometryModel
 {
@@ -42,7 +32,6 @@ class EcPoi extends GeometryModel
         'related_url' => 'array',
         'accessibility_validity_date' => 'datetime',
     ];
-
 
     protected static function boot()
     {
@@ -162,12 +151,12 @@ class EcPoi extends GeometryModel
         }
 
         if (isset($this->outSourcePoi->source_id) && strpos($this->outSourcePoi->source_id, '/')) {
-            $array['osm_url'] = 'https://www.openstreetmap.org/' . $this->outSourcePoi->source_id;
+            $array['osm_url'] = 'https://www.openstreetmap.org/'.$this->outSourcePoi->source_id;
         }
 
         $fileTypes = ['geojson', 'gpx', 'kml'];
         foreach ($fileTypes as $fileType) {
-            $array[$fileType . '_url'] = route('api.ec.poi.download.' . $fileType, ['id' => $this->id]);
+            $array[$fileType.'_url'] = route('api.ec.poi.download.'.$fileType, ['id' => $this->id]);
         }
 
         if (array_key_exists('related_url', $array) && ! is_array($array['related_url']) && empty($array['related_url'])) {
@@ -234,7 +223,7 @@ class EcPoi extends GeometryModel
     private function addPrefix($array, $prefix)
     {
         return array_map(function ($elem) use ($prefix) {
-            return $prefix . '_' . $elem;
+            return $prefix.'_'.$elem;
         }, $array);
     }
 
@@ -269,7 +258,7 @@ class EcPoi extends GeometryModel
     {
         return $relation->get(['identifier', 'name', 'id', 'icon', 'color'])->map(function ($item) use ($slug) {
             unset($item['pivot']);
-            $item['identifier'] = $slug . '_' . $item['identifier'];
+            $item['identifier'] = $slug.'_'.$item['identifier'];
 
             return $item;
         })->toArray();
@@ -345,7 +334,7 @@ class EcPoi extends GeometryModel
     {
         $geojson = $this->getGeojson();
         // MAPPING
-        $geojson['properties']['id'] = 'ec_poi_' . $this->id;
+        $geojson['properties']['id'] = 'ec_poi_'.$this->id;
         $geojson = $this->_mapElbrusGeojsonProperties($geojson);
 
         return $geojson;
@@ -368,9 +357,9 @@ class EcPoi extends GeometryModel
 
         $fields = ['kml', 'gpx'];
         foreach ($fields as $field) {
-            if (isset($geojson['properties'][$field . '_url'])) {
-                $geojson['properties'][$field] = $geojson['properties'][$field . '_url'];
-                unset($geojson['properties'][$field . '_url']);
+            if (isset($geojson['properties'][$field.'_url'])) {
+                $geojson['properties'][$field] = $geojson['properties'][$field.'_url'];
+                unset($geojson['properties'][$field.'_url']);
             }
         }
 
@@ -380,7 +369,7 @@ class EcPoi extends GeometryModel
                 try {
 
                     $geojson['properties']['taxonomy'][$name] = array_map(function ($item) use ($name) {
-                        return $name . '_' . $item;
+                        return $name.'_'.$item;
                     }, $values);
                 } catch (Exception $e) {
                     // TODO: viene generato durante indicizzazione capire perchè
@@ -412,24 +401,24 @@ class EcPoi extends GeometryModel
         }
 
         if (empty($searchables) || (in_array('name', $searchables) && ! empty($this->name))) {
-            $string .= str_replace('"', '', json_encode($this->getTranslations('name'))) . ' ';
+            $string .= str_replace('"', '', json_encode($this->getTranslations('name'))).' ';
         }
         if (empty($searchables) || (in_array('description', $searchables) && ! empty($this->description))) {
             $description = str_replace('"', '', json_encode($this->getTranslations('description')));
             $description = str_replace('\\', '', $description);
-            $string .= strip_tags($description) . ' ';
+            $string .= strip_tags($description).' ';
         }
         if (empty($searchables) || (in_array('excerpt', $searchables) && ! empty($this->excerpt))) {
             $excerpt = str_replace('"', '', json_encode($this->getTranslations('excerpt')));
             $excerpt = str_replace('\\', '', $excerpt);
-            $string .= strip_tags($excerpt) . ' ';
+            $string .= strip_tags($excerpt).' ';
         }
         if (empty($searchables) || (in_array('osmid', $searchables) && ! empty($this->osmid))) {
-            $string .= $this->osmid . ' ';
+            $string .= $this->osmid.' ';
         }
         if (empty($searchables) || (in_array('taxonomyPoiTypes', $searchables) && ! empty($this->taxonomyPoiTypes))) {
             foreach ($this->taxonomyPoiTypes as $tax) {
-                $string .= str_replace('"', '', json_encode($tax->getTranslations('name'))) . ' ';
+                $string .= str_replace('"', '', json_encode($tax->getTranslations('name'))).' ';
             }
         }
 

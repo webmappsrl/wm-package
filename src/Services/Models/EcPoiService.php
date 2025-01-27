@@ -2,13 +2,13 @@
 
 namespace Wm\WmPackage\Services\Models;
 
-use Throwable;
-use Wm\WmPackage\Models\EcPoi;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
-use Wm\WmPackage\Services\BaseService;
+use Throwable;
 use Wm\WmPackage\Jobs\UpdateEcPoiDemJob;
 use Wm\WmPackage\Jobs\UpdateModelWithGeometryTaxonomyWhere;
+use Wm\WmPackage\Models\EcPoi;
+use Wm\WmPackage\Services\BaseService;
 
 class EcPoiService extends BaseService
 {

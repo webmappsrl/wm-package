@@ -2,8 +2,6 @@
 
 namespace Wm\WmPackage\Models;
 
-
-use Wm\WmPackage\Observers\AppObserver;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,10 +9,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Scout\Searchable;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
+use Wm\WmPackage\Observers\AppObserver;
 use Wm\WmPackage\Services\AppConfigService;
 use Wm\WmPackage\Services\StorageService;
 
@@ -27,8 +25,8 @@ use Wm\WmPackage\Services\StorageService;
  */
 class App extends Model
 {
-    use Searchable;
     use HasFactory;
+    use Searchable;
 
     protected $fillable = [
         'welcome',
@@ -161,7 +159,7 @@ class App extends Model
             foreach ($pois as $count => $poi) {
                 $feature = $poi->getEmptyGeojson();
                 if (isset($feature['properties'])) {
-                    $feature['properties']['view'] = '/resources/ugc-pois/' . $poi->id;
+                    $feature['properties']['view'] = '/resources/ugc-pois/'.$poi->id;
                 }
 
                 $features[] = $feature;
@@ -182,7 +180,7 @@ class App extends Model
             foreach ($medias as $count => $media) {
                 $feature = $media->getEmptyGeojson();
                 if (isset($feature['properties'])) {
-                    $feature['properties']['view'] = '/resources/ugc-medias/' . $media->id;
+                    $feature['properties']['view'] = '/resources/ugc-medias/'.$media->id;
                 }
 
                 $features[] = $feature;
@@ -203,7 +201,7 @@ class App extends Model
             foreach ($tracks as $count => $track) {
                 $feature = $track->getEmptyGeojson();
                 if (isset($feature['properties'])) {
-                    $feature['properties']['view'] = '/resources/ugc-tracks/' . $track->id;
+                    $feature['properties']['view'] = '/resources/ugc-tracks/'.$track->id;
                 }
 
                 $features[] = $feature;
@@ -213,8 +211,6 @@ class App extends Model
             return json_encode($geoJson);
         }
     }
-
-
 
     public function getAllPoisGeojson()
     {
@@ -255,6 +251,7 @@ class App extends Model
             $json['JIDO_UPDATE_TIME'] = $jidoTime;
         }
         StorageService::make()->storeAppConfig($this->id, json_encode($json));
+
         return $json;
     }
 
@@ -287,7 +284,7 @@ class App extends Model
                             $new_array[$key] = json_decode($val, true);
                         }
                         if ($key == 'identifier') {
-                            $new_array[$key] = 'poi_type_' . $val;
+                            $new_array[$key] = 'poi_type_'.$val;
                         }
                         if (! empty($val) && $key != 'name' && $key != 'identifier') {
                             $new_array[$key] = $val;
@@ -311,7 +308,7 @@ class App extends Model
                             $new_array[$key] = json_decode($val, true);
                         }
                         if ($key == 'identifier') {
-                            $new_array[$key] = 'poi_type_' . $val;
+                            $new_array[$key] = 'poi_type_'.$val;
                         }
                         if (! empty($val) && $key != 'name' && $key != 'identifier') {
                             $new_array[$key] = $val;
@@ -376,7 +373,7 @@ class App extends Model
                     });
                 break;
             default:
-                throw new \Exception('Wrong taxonomy name: ' . $taxonomy_name);
+                throw new \Exception('Wrong taxonomy name: '.$taxonomy_name);
         }
 
         $tracks = $query->orderBy('name')->get();
@@ -398,8 +395,6 @@ class App extends Model
         $this->BuildConfJson();
     }
 
-
-
     public function GenerateAppConfig()
     {
         $this->BuildConfJson();
@@ -409,8 +404,6 @@ class App extends Model
     {
         $this->BuildPoisGeojson();
     }
-
-
 
     /**
      * Returns array of all tracks'id in APP through layers deifinition
@@ -518,7 +511,7 @@ class App extends Model
         if (isset($customUrl) && $customUrl != null) {
             $url = $customUrl;
         } else {
-            $url = 'https://' . $this->id . '.app.webmapp.it';
+            $url = 'https://'.$this->id.'.app.webmapp.it';
         }
         // create the svg code for the QR code
         $svg = QrCode::size(80)->generate($url);
@@ -527,7 +520,7 @@ class App extends Model
         $this->save();
 
         // save the file in storage/app/public/qrcode/app_id/
-        Storage::disk('public')->put('qrcode/' . $this->id . '/webapp-qrcode.svg', $svg);
+        Storage::disk('public')->put('qrcode/'.$this->id.'/webapp-qrcode.svg', $svg);
 
         return $svg;
     }

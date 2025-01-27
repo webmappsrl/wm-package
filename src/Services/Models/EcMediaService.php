@@ -2,14 +2,14 @@
 
 namespace Wm\WmPackage\Services\Models;
 
-use Throwable;
-use Wm\WmPackage\Models\EcMedia;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 use Wm\WmPackage\Jobs\UpdateEcMedia;
+use Wm\WmPackage\Jobs\UpdateModelWithGeometryTaxonomyWhere;
+use Wm\WmPackage\Models\EcMedia;
 use Wm\WmPackage\Services\BaseService;
 use Wm\WmPackage\Services\StorageService;
-use Wm\WmPackage\Jobs\UpdateModelWithGeometryTaxonomyWhere;
 
 class EcMediaService extends BaseService
 {
@@ -42,7 +42,7 @@ class EcMediaService extends BaseService
     /**
      * Return json to be used in features API.
      */
-    public function getJson($allData = true, EcMedia $model): array
+    public function getJson($allData, EcMedia $model): array
     {
         $array = $model->toArray();
         $toSave = ['id', 'name', 'url', 'description'];

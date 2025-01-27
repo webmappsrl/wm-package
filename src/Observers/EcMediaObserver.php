@@ -2,21 +2,17 @@
 
 namespace Wm\WmPackage\Observers;
 
-use Wm\WmPackage\Models\User;
-use Wm\WmPackage\Models\EcMedia;
 use Illuminate\Support\Facades\Log;
-use Wm\WmPackage\Observers\AbstractObserver;
+use Wm\WmPackage\Models\EcMedia;
 
 class EcMediaObserver extends AbstractObserver
 {
-
     /**
      * Handle the EcMedia "saved" event.
      *
      * @return void
      */
     public function saved(EcMedia $ecMedia) {}
-
 
     /**
      * Handle the EcMedia "saving" event.
@@ -28,7 +24,7 @@ class EcMediaObserver extends AbstractObserver
         try {
             $ecMedia->updateDataChain($ecMedia);
         } catch (\Exception $e) {
-            Log::error($ecMedia->id . 'created  EcMedia: An error occurred during a store operation: ' . $e->getMessage());
+            Log::error($ecMedia->id.'created  EcMedia: An error occurred during a store operation: '.$e->getMessage());
         }
     }
 
