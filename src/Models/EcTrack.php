@@ -606,7 +606,7 @@ class EcTrack extends Track
     public function toSearchableArray()
     {
         $geom = $this->getGeometry();
-        $taxonomy_activities = $this->getTaxonomyArray($this->taxonomyActivities)
+        $taxonomy_activities = $this->getTaxonomyArray($this->taxonomyActivities);
         $taxonomy_wheres = $this->getTaxonomyWheres();
         $taxonomy_themes = $this->getTaxonomyArray($this->taxonomyThemes);
         $feature_image = $this->getFeatureImage();
