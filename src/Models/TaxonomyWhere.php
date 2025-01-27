@@ -21,6 +21,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Wm\WmPackage\Observers\TaxonomyWhereObserver;
 use Wm\WmPackage\Services\GeometryComputationService;
 
 /**
@@ -43,25 +44,9 @@ class TaxonomyWhere extends GeometryModel
         'import_method',
     ];
 
-
     protected static function boot()
     {
-        parent::boot();
-        static::creating(function ($taxonomyWhere) {
-            if ($taxonomyWhere->identifier != null) {
-                $validateTaxonomyWhere = TaxonomyWhere::where('identifier', 'LIKE', $taxonomyWhere->identifier)->first();
-                if (! $validateTaxonomyWhere == null) {
-                    self::validationError("The inserted 'identifier' field already exists.");
-                }
-            }
-        });
-
-
-        static::saving(function ($taxonomyWhere) {
-            if ($taxonomyWhere->identifier !== null) {
-                $taxonomyWhere->identifier = Str::slug($taxonomyWhere->identifier, '-');
-            }
-        });
+        App::observe(TaxonomyWhereObserver::class);
     }
 
 
@@ -110,17 +95,6 @@ class TaxonomyWhere extends GeometryModel
     public function layers(): MorphToMany
     {
         return $this->morphedByMany(Layer::class, 'taxonomy_whereable');
-    }
-
-    /**
-     * @throws ValidationException
-     */
-    private static function validationError($message)
-    {
-        $messageBag = new MessageBag;
-        $messageBag->add('error', __($message));
-
-        throw ValidationException::withMessages($messageBag->getMessages());
     }
 
     /**
