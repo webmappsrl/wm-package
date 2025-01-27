@@ -8,7 +8,7 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Wm\WmPackage\Models\TaxonomyWhere;
 
-class TaxonomyWhereObserver extends AbstractObserver
+class TaxonomyObserver extends AbstractObserver
 {
     /**
      * Handle the TaxonomyWhere "creating" event.

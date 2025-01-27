@@ -7,7 +7,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Spatie\Translatable\HasTranslations;
 use Wm\WmPackage\Models\Abstracts\GeometryModel;
-use Wm\WmPackage\Observers\TaxonomyWhereObserver;
+use Wm\WmPackage\Models\Abstracts\Taxonomy;
+use Wm\WmPackage\Observers\TaxonomyObserver;
 use Wm\WmPackage\Traits\FeatureImageAbleModel;
 
 /**
@@ -17,23 +18,22 @@ use Wm\WmPackage\Traits\FeatureImageAbleModel;
  * @property string import_method
  * @property int    id
  */
-class TaxonomyWhere extends GeometryModel
+class TaxonomyWhere extends Taxonomy
 {
-    use FeatureImageAbleModel, HasFactory, HasTranslations;
 
-    public array $translatable = ['name', 'description', 'excerpt'];
+
+
 
     protected $table = 'taxonomy_wheres';
 
-    protected $fillable = [
-        'name',
-        'import_method',
-    ];
 
-    protected static function boot()
+    protected function getRelationKey(): string
     {
-        App::observe(TaxonomyWhereObserver::class);
+        return 'whereable';
     }
+
+
+
 
     /**
      * All the taxonomy where imported using a sync command are not editable
@@ -66,20 +66,7 @@ class TaxonomyWhere extends GeometryModel
         return $this->belongsToMany(UgcMedia::class);
     }
 
-    public function ecTracks(): MorphToMany
-    {
-        return $this->morphedByMany(EcTrack::class, 'taxonomy_whereable');
-    }
 
-    public function ecPois(): MorphToMany
-    {
-        return $this->morphedByMany(EcPoi::class, 'taxonomy_whereable');
-    }
-
-    public function layers(): MorphToMany
-    {
-        return $this->morphedByMany(Layer::class, 'taxonomy_whereable');
-    }
 
     /**
      * Return the json version of the taxonomy where, avoiding the geometry
