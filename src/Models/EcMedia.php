@@ -10,10 +10,11 @@ use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Spatie\Translatable\HasTranslations;
 use Wm\WmPackage\Models\Abstracts\GeometryModel;
 use Wm\WmPackage\Observers\EcMediaObserver;
+use Wm\WmPackage\Traits\TaxonomyAbleModel;
 
 class EcMedia extends GeometryModel
 {
-    use HasFactory, HasTranslations;
+    use HasFactory, HasTranslations, TaxonomyAbleModel;
 
     /**
      * @var array
@@ -25,11 +26,6 @@ class EcMedia extends GeometryModel
     protected static function boot()
     {
         App::observe(EcMediaObserver::class);
-    }
-
-    public function author(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'user_id', 'id');
     }
 
     public function ecPois(): BelongsToMany
@@ -47,35 +43,6 @@ class EcMedia extends GeometryModel
         return $this->belongsToMany(Layer::class);
     }
 
-    public function taxonomyActivities(): MorphToMany
-    {
-        return $this->morphToMany(TaxonomyActivity::class, 'taxonomy_activityable');
-    }
-
-    public function taxonomyPoiTypes(): MorphToMany
-    {
-        return $this->morphToMany(TaxonomyPoiType::class, 'taxonomy_poi_typeable');
-    }
-
-    public function taxonomyTargets(): MorphToMany
-    {
-        return $this->morphToMany(TaxonomyTarget::class, 'taxonomy_targetable');
-    }
-
-    public function taxonomyThemes(): MorphToMany
-    {
-        return $this->morphToMany(TaxonomyTheme::class, 'taxonomy_themeable');
-    }
-
-    public function taxonomyWhens(): MorphToMany
-    {
-        return $this->morphToMany(TaxonomyWhen::class, 'taxonomy_whenable');
-    }
-
-    public function taxonomyWheres(): MorphToMany
-    {
-        return $this->morphToMany(TaxonomyWhere::class, 'taxonomy_whereable');
-    }
 
     public function featureImageEcPois(): HasMany
     {

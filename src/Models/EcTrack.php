@@ -14,10 +14,12 @@ use Spatie\Translatable\HasTranslations;
 use Wm\WmPackage\Models\Abstracts\Track;
 use Wm\WmPackage\Observers\EcTrackObserver;
 use Wm\WmPackage\Services\GeometryComputationService;
+use Wm\WmPackage\Traits\FeatureImageAbleModel;
+use Wm\WmPackage\Traits\TaxonomyAbleModel;
 
 class EcTrack extends Track
 {
-    use Favoriteable, HasTranslations, Searchable;
+    use Favoriteable, HasTranslations, Searchable, TaxonomyAbleModel, FeatureImageAbleModel;
 
     protected $fillable = [
         'name',
@@ -91,50 +93,9 @@ class EcTrack extends Track
         $this->manual_data[$field] = $value;
     }
 
-    public function ecMedia(): BelongsToMany
-    {
-        return $this->belongsToMany(EcMedia::class);
-    }
-
     public function ecPois(): BelongsToMany
     {
         return $this->belongsToMany(EcPoi::class)->withPivot('order')->orderByPivot('order');
-    }
-
-    public function taxonomyWheres()
-    {
-        return $this->morphToMany(TaxonomyWhere::class, 'taxonomy_whereable');
-    }
-
-    public function taxonomyWhens()
-    {
-        return $this->morphToMany(TaxonomyWhen::class, 'taxonomy_whenable');
-    }
-
-    public function taxonomyTargets()
-    {
-        return $this->morphToMany(TaxonomyTarget::class, 'taxonomy_targetable');
-    }
-
-    public function taxonomyThemes()
-    {
-        return $this->morphToMany(TaxonomyTheme::class, 'taxonomy_themeable');
-    }
-
-    public function taxonomyActivities()
-    {
-        return $this->morphToMany(TaxonomyActivity::class, 'taxonomy_activityable')
-            ->withPivot(['duration_forward', 'duration_backward']);
-    }
-
-    public function taxonomyPoiTypes()
-    {
-        return $this->morphToMany(TaxonomyPoiType::class, 'taxonomy_poi_typeable');
-    }
-
-    public function featureImage(): BelongsTo
-    {
-        return $this->belongsTo(EcMedia::class, 'feature_image');
     }
 
     public function usersCanDownload(): BelongsToMany
@@ -224,12 +185,12 @@ class EcTrack extends Track
         }
 
         if (isset($this->osmid)) {
-            $array['osm_url'] = 'https://www.openstreetmap.org/relation/'.$this->osmid;
+            $array['osm_url'] = 'https://www.openstreetmap.org/relation/' . $this->osmid;
         }
 
         $fileTypes = ['geojson', 'gpx', 'kml'];
         foreach ($fileTypes as $fileType) {
-            $array[$fileType.'_url'] = route('api.ec.track.download.'.$fileType, ['id' => $this->id]);
+            $array[$fileType . '_url'] = route('api.ec.track.download.' . $fileType, ['id' => $this->id]);
         }
 
         $activities = [];
@@ -315,10 +276,10 @@ class EcTrack extends Track
         if ($this->allow_print_pdf) {
             $user = User::find($this->user_id);
             if ($user->apps->count() > 0) {
-                $pdf_url = url('/track/pdf/'.$this->id.'?app_id='.$user->apps[0]->id);
+                $pdf_url = url('/track/pdf/' . $this->id . '?app_id=' . $user->apps[0]->id);
                 $array['related_url']['Print PDF'] = $pdf_url;
             } else {
-                $pdf_url = url('/track/pdf/'.$this->id);
+                $pdf_url = url('/track/pdf/' . $this->id);
                 $array['related_url']['Print PDF'] = $pdf_url;
             }
         }
@@ -429,7 +390,7 @@ class EcTrack extends Track
     {
         $geojson = $this->getGeojson();
         // MAPPING
-        $geojson['properties']['id'] = 'ec_track_'.$this->id;
+        $geojson['properties']['id'] = 'ec_track_' . $this->id;
         $geojson = $this->_mapElbrusGeojsonProperties($geojson);
 
         if ($this->ecPois) {
@@ -464,9 +425,9 @@ class EcTrack extends Track
 
         $fields = ['kml', 'gpx'];
         foreach ($fields as $field) {
-            if (isset($geojson['properties'][$field.'_url'])) {
-                $geojson['properties'][$field] = $geojson['properties'][$field.'_url'];
-                unset($geojson['properties'][$field.'_url']);
+            if (isset($geojson['properties'][$field . '_url'])) {
+                $geojson['properties'][$field] = $geojson['properties'][$field . '_url'];
+                unset($geojson['properties'][$field . '_url']);
             }
         }
 
@@ -476,13 +437,13 @@ class EcTrack extends Track
 
                 if ($taxonomy === 'activity') {
                     $geojson['properties']['taxonomy'][$name] = array_map(function ($item) use ($name) {
-                        return $name.'_'.$item;
+                        return $name . '_' . $item;
                     }, array_map(function ($item) {
                         return $item['id'];
                     }, $values));
                 } else {
                     $geojson['properties']['taxonomy'][$name] = array_map(function ($item) use ($name) {
-                        return $name.'_'.$item;
+                        return $name . '_' . $item;
                     }, $values);
                 }
             }
@@ -645,8 +606,7 @@ class EcTrack extends Track
     public function toSearchableArray()
     {
         $geom = $this->getGeometry();
-        $taxonomy_activities = $this->getTaxonomyArray($this->taxonomyActivities);
-        log::info($taxonomy_activities);
+        $taxonomy_activities = $this->getTaxonomyArray($this->taxonomyActivities)
         $taxonomy_wheres = $this->getTaxonomyWheres();
         $taxonomy_themes = $this->getTaxonomyArray($this->taxonomyThemes);
         $feature_image = $this->getFeatureImage();
@@ -694,32 +654,32 @@ class EcTrack extends Track
         }
 
         if (empty($searchables) || (in_array('name', $searchables) && ! empty($this->name))) {
-            $string .= str_replace('"', '', json_encode($this->getTranslations('name'))).' ';
+            $string .= str_replace('"', '', json_encode($this->getTranslations('name'))) . ' ';
         }
         if (empty($searchables) || (in_array('description', $searchables) && ! empty($this->description))) {
             $description = str_replace('"', '', json_encode($this->getTranslations('description')));
             $description = str_replace('\\', '', $description);
-            $string .= strip_tags($description).' ';
+            $string .= strip_tags($description) . ' ';
         }
         if (empty($searchables) || (in_array('excerpt', $searchables) && ! empty($this->excerpt))) {
             $excerpt = str_replace('"', '', json_encode($this->getTranslations('excerpt')));
             $excerpt = str_replace('\\', '', $excerpt);
-            $string .= strip_tags($excerpt).' ';
+            $string .= strip_tags($excerpt) . ' ';
         }
         if (empty($searchables) || (in_array('ref', $searchables) && ! empty($this->ref))) {
-            $string .= $this->ref.' ';
+            $string .= $this->ref . ' ';
         }
         if (empty($searchables) || (in_array('osmid', $searchables) && ! empty($this->osmid))) {
-            $string .= $this->osmid.' ';
+            $string .= $this->osmid . ' ';
         }
         if (empty($searchables) || (in_array('taxonomyThemes', $searchables) && ! empty($this->taxonomyThemes))) {
             foreach ($this->taxonomyThemes as $tax) {
-                $string .= str_replace('"', '', json_encode($tax->getTranslations('name'))).' ';
+                $string .= str_replace('"', '', json_encode($tax->getTranslations('name'))) . ' ';
             }
         }
         if (empty($searchables) || (in_array('taxonomyActivities', $searchables) && ! empty($this->taxonomyActivities))) {
             foreach ($this->taxonomyActivities as $tax) {
-                $string .= str_replace('"', '', json_encode($tax->getTranslations('name'))).' ';
+                $string .= str_replace('"', '', json_encode($tax->getTranslations('name'))) . ' ';
             }
         }
 

@@ -16,17 +16,4 @@ abstract class Track extends GeometryModel
         'description',
         'geometry',
     ];
-
-    /**
-     * Alias for the user relation
-     */
-    public function author()
-    {
-        return $this->user();
-    }
-
-    public function user()
-    {
-        return $this->belongsTo(User::class);
-    }
 }
