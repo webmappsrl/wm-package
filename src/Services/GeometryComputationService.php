@@ -2,21 +2,22 @@
 
 namespace Wm\WmPackage\Services;
 
-use Exception;
-use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Database\Query\Expression;
-use Illuminate\Support\Facades\DB;
 use stdClass;
-use Symm\Gisconverter\Gisconverter;
-use Wm\WmPackage\Models\Abstracts\GeometryModel;
+use Exception;
 use Wm\WmPackage\Models\EcTrack;
+use Illuminate\Support\Facades\DB;
+use Symm\Gisconverter\Gisconverter;
+use Illuminate\Database\Query\Expression;
+use Illuminate\Database\Eloquent\Collection;
+use Symm\Gisconverter\Exceptions\InvalidText;
+use Wm\WmPackage\Models\Abstracts\GeometryModel;
 
 class GeometryComputationService extends BaseService
 {
     public function get3dLineMergeWktFromGeojson(string $geojson): string
     {
         return DB::select(
-            "SELECT ST_AsText(ST_Force3D(ST_LineMerge(ST_GeomFromGeoJSON('".$geojson."')))) As wkt"
+            "SELECT ST_AsText(ST_Force3D(ST_LineMerge(ST_GeomFromGeoJSON('" . $geojson . "')))) As wkt"
         )[0]->wkt;
     }
 
@@ -29,24 +30,24 @@ class GeometryComputationService extends BaseService
 
     public function getWktFromGeojson(string $geojson): string
     {
-        return DB::select("SELECT ST_GeomFromGeoJSON('".$geojson."') As wkt")[0]->wkt;
+        return DB::select("SELECT ST_GeomFromGeoJSON('" . $geojson . "') As wkt")[0]->wkt;
     }
 
     public function get3dGeometryFromGeojsonRAW(string $geojson): Expression
     {
-        return DB::raw("(ST_Force3D(ST_GeomFromGeoJSON('".$geojson."')))");
+        return DB::raw("(ST_Force3D(ST_GeomFromGeoJSON('" . $geojson . "')))");
     }
 
     public function get2dGeometryFromGeojsonRAW(string $geojson): Expression
     {
-        return DB::raw("(ST_Force2D(ST_GeomFromGeoJSON('".$geojson."')))");
+        return DB::raw("(ST_Force2D(ST_GeomFromGeoJSON('" . $geojson . "')))");
     }
 
     protected function getNeighoursByGeometryAndTable($geometry, $table): array
     {
         return DB::select(
             "SELECT id, St_Distance(geometry,?) as dist FROM {$table}
-                WHERE St_DWithin(geometry, ?, ".config('wm-package.services.neighbours_distance').')
+                WHERE St_DWithin(geometry, ?, " . config('wm-package.services.neighbours_distance') . ')
                 order by St_Linelocatepoint(St_Geomfromgeojson(St_Asgeojson(?)),St_Geomfromgeojson(St_Asgeojson(geometry)));',
             [
                 $geometry,
@@ -59,8 +60,8 @@ class GeometryComputationService extends BaseService
     public function getLineLocatePointFloat(string $trackGeojson, string $poiGeojson): float
     {
         // POI VAL along track https://postgis.net/docs/ST_LineLocatePoint.html
-        $line = "ST_GeomFromGeoJSON('".$trackGeojson."')";
-        $point = "ST_GeomFromGeoJSON('".$poiGeojson."')";
+        $line = "ST_GeomFromGeoJSON('" . $trackGeojson . "')";
+        $point = "ST_GeomFromGeoJSON('" . $poiGeojson . "')";
         $sql = DB::raw("SELECT ST_LineLocatePoint($line,$point) as val;");
         $result = DB::select($sql);
 
@@ -83,9 +84,9 @@ class GeometryComputationService extends BaseService
         if (isset($geom)) {
             $formattedGeometry = Gisconverter::geojsonToKml($geom);
 
-            $name = '<name>'.($this->name ?? '').'</name>';
+            $name = '<name>' . ($this->name ?? '') . '</name>';
 
-            return $name.$formattedGeometry;
+            return $name . $formattedGeometry;
         } else {
             return null;
         }
@@ -219,12 +220,12 @@ class GeometryComputationService extends BaseService
         foreach ($classes as $class => $table) {
             $result = DB::select(
                 'SELECT id FROM '
-                    .$table
-                    .' WHERE user_id = ?'
-                    ." AND ABS(EXTRACT(EPOCH FROM created_at) - EXTRACT(EPOCH FROM TIMESTAMP '"
-                    .$model->created_at
-                    ."')) < 5400"
-                    .' AND St_DWithin(geometry, ?, 400);',
+                    . $table
+                    . ' WHERE user_id = ?'
+                    . " AND ABS(EXTRACT(EPOCH FROM created_at) - EXTRACT(EPOCH FROM TIMESTAMP '"
+                    . $model->created_at
+                    . "')) < 5400"
+                    . ' AND St_DWithin(geometry, ?, 400);',
                 [
                     $model->user_id,
                     $model->geometry,
@@ -272,39 +273,33 @@ class GeometryComputationService extends BaseService
             if (substr($fileContent, 0, 5) == '<?xml') {
                 $geojson = '';
                 if ($geojson === '') {
-
-                    $geojson = $this->gpxToGeojson($fileContent);
-                    $content = json_decode($geojson);
-                    $contentType = @$content->type;
+                    try {
+                        $geojson = Gisconverter::gpxToGeojson($fileContent);
+                        $content = json_decode($geojson);
+                        $contentType = @$content->type;
+                    } catch (InvalidText $ec) {
+                    }
                 }
 
                 if ($geojson === '') {
-                    $geojson = $this->kmlToGeojson($fileContent);
-                    $content = json_decode($geojson);
-                    $contentType = @$content->type;
+                    try {
+                        $geojson = Gisconverter::kmlToGeojson($fileContent);
+                        $content = json_decode($geojson);
+                        //$contentType = @$content->type;
+                    } catch (InvalidText $ec) {
+                    }
                 }
             } else {
+                $fileContent = GeoJsonService::make()->convertCollectionToFirstFeature($fileContent);
+                $fileContent = GeoJsonService::make()->convertPolygonToMultiPolygon($fileContent);
                 $content = json_decode($fileContent);
-                $isJson = json_last_error() === JSON_ERROR_NONE;
-                if ($isJson) {
-                    $contentType = $content->type;
-                }
+                //$isJson = json_last_error() === JSON_ERROR_NONE;
+                // if ($isJson) {
+                //     $contentType = $content->type;
+                // }
             }
-
-            if ($contentType) {
-                switch ($contentType) {
-                    case 'FeatureCollection':
-                        $contentGeometry = $content->features[0]->geometry;
-                        break;
-                    case 'LineString':
-                        $contentGeometry = $content;
-                        break;
-                    default:
-                        $contentGeometry = $content->geometry;
-                        break;
-                }
-                $geometry = $this->get3dGeometryFromGeojsonRAW(json_encode($contentGeometry));
-            }
+            $contentGeometry = $content->geometry;
+            $geometry = $this->get2dGeometryFromGeojsonRAW(json_encode($contentGeometry));
         }
 
         return $geometry;
@@ -346,10 +341,10 @@ class GeometryComputationService extends BaseService
     {
         return $targetModelClass::whereRaw(
             'public.ST_Intersects('
-                .'public.ST_Force2D('
-                ."(SELECT geometry from {$model->getTable()} where id = {$model->id})"
-                .'::geometry)'
-                .', geometry)'
+                . 'public.ST_Force2D('
+                . "(SELECT geometry from {$model->getTable()} where id = {$model->id})"
+                . '::geometry)'
+                . ', geometry)'
         )->get();
     }
 
@@ -417,7 +412,7 @@ class GeometryComputationService extends BaseService
      */
     public function getDistanceComp(array $geometry): float
     {
-        $distanceQuery = "SELECT ST_Length(ST_GeomFromGeoJSON('".json_encode($geometry)."')::geography)/1000 as length";
+        $distanceQuery = "SELECT ST_Length(ST_GeomFromGeoJSON('" . json_encode($geometry) . "')::geography)/1000 as length";
         $distance = DB::select(DB::raw($distanceQuery));
 
         return $distance[0]->length;
