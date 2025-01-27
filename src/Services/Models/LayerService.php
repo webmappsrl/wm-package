@@ -2,9 +2,8 @@
 
 namespace Wm\WmPackage\Services;
 
-use Wm\WmPackage\Models\Layer;
 use Illuminate\Support\Facades\DB;
-use Wm\WmPackage\Services\BaseService;
+use Wm\WmPackage\Models\Layer;
 
 class LayerService extends BaseService
 {
