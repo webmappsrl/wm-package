@@ -36,3 +36,30 @@ if (! function_exists('hexToRgba')) {
         return $rgbaColor;
     }
 }
+
+if (! function_exists('isReallyEmpty')) {
+
+    function isReallyEmpty($val): bool
+    {
+        if (is_null($val)) {
+            return true;
+        }
+        if (empty($val)) {
+            return true;
+        }
+        if (is_array($val)) {
+            if (count($val) == 0) {
+                return true;
+            }
+            foreach ($val as $lang => $cont) {
+                if (! empty($cont)) {
+                    return false;
+                }
+
+                return true;
+            }
+        }
+
+        return false;
+    }
+}

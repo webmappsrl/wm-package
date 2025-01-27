@@ -360,7 +360,7 @@ class EcTrack extends Track
 
     private function setOutSourceSingleValue($array, $varname): array
     {
-        if ($this->isReallyEmpty($array[$varname])) {
+        if (isReallyEmpty($array[$varname])) {
             if (isset($this->outSourceTrack->tags[$varname])) {
                 $array[$varname] = $this->outSourceTrack->tags[$varname];
             }
@@ -385,31 +385,6 @@ class EcTrack extends Track
         }
 
         return null;
-    }
-
-    private function isReallyEmpty($val): bool
-    {
-        if (is_null($val)) {
-            return true;
-        }
-        if (empty($val)) {
-            return true;
-        }
-        if (is_array($val)) {
-            if (count($val) == 0) {
-                return true;
-            }
-
-            foreach ($val as $lang => $cont) {
-                if (! empty($cont)) {
-                    return false;
-                }
-
-                return true;
-            }
-        }
-
-        return false;
     }
 
     /**
