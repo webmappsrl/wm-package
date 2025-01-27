@@ -38,5 +38,5 @@ return [
             'basic_auth_user' => env('CAI_BASIC_AUTH_USER'),
             'basic_auth_password' => env('CAI_BASIC_AUTH_PASSWORD'),
         ],
-    ]
+    ],
 ];

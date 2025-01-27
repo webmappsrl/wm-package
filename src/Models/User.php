@@ -3,18 +3,17 @@
 namespace Wm\WmPackage\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use ChristianKuri\LaravelFavorite\Traits\Favoriteability;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Traits\HasRoles;
 use Tymon\JWTAuth\Contracts\JWTSubject;
-use Illuminate\Notifications\Notifiable;
-use Spatie\Permission\Models\Permission;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\MorphToMany;
-use Illuminate\Foundation\Auth\User as Authenticatable;
-use ChristianKuri\LaravelFavorite\Traits\Favoriteability;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 /**
  * Undocumented class
@@ -26,7 +25,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
  */
 class User extends Authenticatable implements JWTSubject
 {
-    use HasApiTokens, HasFactory, HasRoles, Notifiable, Favoriteability;
+    use Favoriteability, HasApiTokens, HasFactory, HasRoles, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -116,7 +115,6 @@ class User extends Authenticatable implements JWTSubject
     {
         return $this->belongsToMany(Partnership::class, 'partnership_user');
     }
-
 
     /**
      * Get the identifier that will be stored in the subject claim of the JWT.
