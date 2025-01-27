@@ -2,14 +2,8 @@
 
 namespace Wm\WmPackage\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\MorphToMany;
-use Spatie\Translatable\HasTranslations;
-use Wm\WmPackage\Models\Abstracts\GeometryModel;
 use Wm\WmPackage\Models\Abstracts\Taxonomy;
-use Wm\WmPackage\Observers\TaxonomyObserver;
-use Wm\WmPackage\Traits\FeatureImageAbleModel;
 
 /**
  * Class TaxonomyWhere
@@ -20,20 +14,12 @@ use Wm\WmPackage\Traits\FeatureImageAbleModel;
  */
 class TaxonomyWhere extends Taxonomy
 {
-
-
-
-
     protected $table = 'taxonomy_wheres';
-
 
     protected function getRelationKey(): string
     {
         return 'whereable';
     }
-
-
-
 
     /**
      * All the taxonomy where imported using a sync command are not editable
@@ -65,8 +51,6 @@ class TaxonomyWhere extends Taxonomy
     {
         return $this->belongsToMany(UgcMedia::class);
     }
-
-
 
     /**
      * Return the json version of the taxonomy where, avoiding the geometry

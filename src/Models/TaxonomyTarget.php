@@ -2,9 +2,7 @@
 
 namespace Wm\WmPackage\Models;
 
-
 use Wm\WmPackage\Models\Abstracts\Taxonomy;
-
 
 class TaxonomyTarget extends Taxonomy
 {

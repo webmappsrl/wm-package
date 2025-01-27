@@ -2,9 +2,6 @@
 
 namespace Wm\WmPackage\Models;
 
-
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Wm\WmPackage\Models\Abstracts\Taxonomy;
 
 class TaxonomyActivity extends Taxonomy

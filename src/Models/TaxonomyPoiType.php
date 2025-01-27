@@ -2,20 +2,10 @@
 
 namespace Wm\WmPackage\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\MessageBag;
-use Illuminate\Support\Str;
-use Illuminate\Validation\ValidationException;
-use Spatie\Translatable\HasTranslations;
 use Wm\WmPackage\Models\Abstracts\Taxonomy;
-use Wm\WmPackage\Traits\FeatureImageAbleModel;
 
 class TaxonomyPoiType extends Taxonomy
 {
-
-
     protected function getRelationKey(): string
     {
         return 'poi_typeable';

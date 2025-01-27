@@ -2,15 +2,15 @@
 
 namespace Wm\WmPackage\Models\Abstracts;
 
-use Wm\WmPackage\Models\App;
-use Wm\WmPackage\Models\EcPoi;
-use Wm\WmPackage\Models\Layer;
-use Wm\WmPackage\Models\EcTrack;
-use Spatie\Translatable\HasTranslations;
-use Wm\WmPackage\Observers\TaxonomyObserver;
-use Wm\WmPackage\Traits\FeatureImageAbleModel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
+use Spatie\Translatable\HasTranslations;
+use Wm\WmPackage\Models\App;
+use Wm\WmPackage\Models\EcPoi;
+use Wm\WmPackage\Models\EcTrack;
+use Wm\WmPackage\Models\Layer;
+use Wm\WmPackage\Observers\TaxonomyObserver;
+use Wm\WmPackage\Traits\FeatureImageAbleModel;
 
 abstract class Taxonomy extends GeometryModel
 {
@@ -21,13 +21,12 @@ abstract class Taxonomy extends GeometryModel
     protected $fillable = [
         'name',
         'import_method',
-        'identifier'
+        'identifier',
     ];
 
     protected $casts = ['name' => 'array'];
 
     abstract protected function getRelationKey(): string;
-
 
     protected static function boot()
     {
@@ -36,16 +35,16 @@ abstract class Taxonomy extends GeometryModel
 
     public function ecTracks(): MorphToMany
     {
-        return $this->morphedByMany(EcTrack::class, 'taxonomy_' . $this->getRelationKey());
+        return $this->morphedByMany(EcTrack::class, 'taxonomy_'.$this->getRelationKey());
     }
 
     public function layers(): MorphToMany
     {
-        return $this->morphedByMany(Layer::class, 'taxonomy_' . $this->getRelationKey());
+        return $this->morphedByMany(Layer::class, 'taxonomy_'.$this->getRelationKey());
     }
 
     public function ecPois(): MorphToMany
     {
-        return $this->morphedByMany(EcPoi::class, 'taxonomy_' . $this->getRelationKey());
+        return $this->morphedByMany(EcPoi::class, 'taxonomy_'.$this->getRelationKey());
     }
 }
