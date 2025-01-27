@@ -1,0 +1,23 @@
+<?php
+
+namespace Wm\WmPackage\Observers;
+
+use Wm\WmPackage\Models\User;
+use Illuminate\Database\Eloquent\Model;
+
+abstract class AbstractObserver
+{
+    /**
+     * Handle the Model "creating" event.
+     *
+     * @return void
+     */
+    public function creating(Model $model)
+    {
+        $user = User::getEmulatedUser();
+        if (is_null($user)) {
+            $user = User::where('email', '=', 'team@webmapp.it')->first();
+        }
+        $model->author()->associate($user);
+    }
+}

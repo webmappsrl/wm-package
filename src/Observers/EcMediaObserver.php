@@ -1,58 +1,48 @@
 <?php
 
-namespace App\Observers;
+namespace Wm\WmPackage\Observers;
 
-use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\User;
-use Wm\WmPackage\Services\GeometryComputationService;
+use Wm\WmPackage\Models\EcMedia;
+use Illuminate\Support\Facades\Log;
+use Wm\WmPackage\Observers\AbstractObserver;
 
-class AppObserver
+class EcMediaObserver extends AbstractObserver
 {
 
     /**
-     * Handle the EcTrack "saved" event.
+     * Handle the EcMedia "saved" event.
      *
      * @return void
      */
-    public function saved(App $app) {}
+    public function saved(EcMedia $ecMedia) {}
+
 
     /**
-     * Handle the EcTrack "creating" event.
+     * Handle the EcMedia "saving" event.
      *
      * @return void
      */
-    public function creating(App $app)
+    public function created(EcMedia $ecMedia)
     {
-        $user = User::getEmulatedUser();
-        if (is_null($user)) {
-            $user = User::where('email', '=', 'team@webmapp.it')->first();
+        try {
+            $ecMedia->updateDataChain($ecMedia);
+        } catch (\Exception $e) {
+            Log::error($ecMedia->id . 'created  EcMedia: An error occurred during a store operation: ' . $e->getMessage());
         }
-        $app->author()->associate($user);
     }
 
     /**
-     * Handle the EcTrack "saving" event.
+     * Handle the EcMedia "updated" event.
      *
      * @return void
      */
-    public function saving(App $app)
-    {
-        $json = json_encode(json_decode($app->external_overlays));
-
-        $app->external_overlays = $json;
-    }
+    public function updated(EcMedia $ecMedia) {}
 
     /**
-     * Handle the EcTrack "updated" event.
+     * Handle the EcMedia "deleted" event.
      *
      * @return void
      */
-    public function updated(App $app) {}
-
-    /**
-     * Handle the EcTrack "deleted" event.
-     *
-     * @return void
-     */
-    public function deleted(App $app) {}
+    public function deleted(EcMedia $ecMedia) {}
 }

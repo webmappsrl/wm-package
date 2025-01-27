@@ -47,6 +47,15 @@ class StorageService extends BaseService
     }
 
     //
+    // PUBLIC GETTERS
+    //
+
+    public function getPublicPath(string $path): string
+    {
+        return $this->getPublicDisk()->path($path);
+    }
+
+    //
     // PRIVATE GETTERS
     //
     private function getLocalPoisDisk(): Filesystem

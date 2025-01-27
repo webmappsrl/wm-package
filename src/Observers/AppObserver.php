@@ -1,12 +1,13 @@
 <?php
 
-namespace App\Observers;
+namespace Wm\WmPackage\Observers;
 
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\User;
+use Wm\WmPackage\Observers\AbstractObserver;
 use Wm\WmPackage\Services\GeometryComputationService;
 
-class AppObserver
+class AppObserver extends AbstractObserver
 {
 
     /**
@@ -16,19 +17,6 @@ class AppObserver
      */
     public function saved(App $app) {}
 
-    /**
-     * Handle the App "creating" event.
-     *
-     * @return void
-     */
-    public function creating(App $app)
-    {
-        $user = User::getEmulatedUser();
-        if (is_null($user)) {
-            $user = User::where('email', '=', 'team@webmapp.it')->first();
-        }
-        $app->author()->associate($user);
-    }
 
     /**
      * Handle the App "saving" event.

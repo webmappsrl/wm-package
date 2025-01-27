@@ -3,7 +3,7 @@
 namespace Wm\WmPackage\Models;
 
 
-use App\Observers\AppObserver;
+use Wm\WmPackage\Observers\AppObserver;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;

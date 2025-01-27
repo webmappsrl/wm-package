@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Observers;
+namespace Wm\WmPackage\Observers;
 
 use Illuminate\Support\Facades\Log;
 use Wm\WmPackage\Jobs\Pbf\GenerateAppPBFJob;
@@ -10,7 +10,7 @@ use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Services\UserService;
 use Workbench\App\Models\User;
 
-class EcTrackObserver
+class EcTrackObserver extends AbstractObserver
 {
     /**
      * Handle events after all transactions are committed.
@@ -33,18 +33,6 @@ class EcTrackObserver
         UserService::make()->assigUserSkuAndAppIdIfNeeded($ecTrack->user, $ecTrack->sku, $ecTrack->app_id);
     }
 
-    /**
-     * Handle the EcTrack "creating" event.
-     *
-     * @return void
-     */
-    public function creating(EcTrack $ecTrack)
-    {
-        $user = User::getEmulatedUser();
-        if (! is_null($user)) {
-            $ecTrack->author()->associate($user);
-        }
-    }
 
     /**
      * Handle the EcTrack "saving" event.
@@ -84,7 +72,7 @@ class EcTrackObserver
         if ($apps && $bbox && $author_id) {
             GenerateAppPBFJob::dispatch($apps, $bbox);
         } else {
-            Log::info('No apps or bbox or author_id found for track '.$ecTrack->id.' to delete PBFs.');
+            Log::info('No apps or bbox or author_id found for track ' . $ecTrack->id . ' to delete PBFs.');
         }
     }
 }
