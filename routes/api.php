@@ -3,8 +3,8 @@
 use Wm\WmPackage\Models\User;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
+use App\Http\Controllers\Api\AppController;
 use Wm\WmPackage\Http\Controllers\AuthController;
-use Wm\WmPackage\Http\Controllers\Api\AppController;
 use Wm\WmPackage\Http\Controllers\Api\EcPoiController;
 use Wm\WmPackage\Http\Controllers\Api\UgcPoiController;
 use Wm\WmPackage\Http\Controllers\Api\WalletController;
