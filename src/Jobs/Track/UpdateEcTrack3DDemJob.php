@@ -2,7 +2,7 @@
 
 namespace Wm\WmPackage\Jobs\Track;
 
-use Wm\WmPackage\Http\DemClient;
+use Wm\WmPackage\Http\Clients\DemClient;
 use Wm\WmPackage\Services\GeometryComputationService;
 
 class UpdateEcTrack3DDemJob extends BaseEcTrackJob

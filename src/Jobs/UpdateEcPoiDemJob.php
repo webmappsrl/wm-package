@@ -7,7 +7,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Wm\WmPackage\Http\DemClient;
+use Wm\WmPackage\Http\Clients\DemClient;
 use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Services\GeometryComputationService;
 

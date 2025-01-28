@@ -63,9 +63,9 @@ class StorageService extends BaseService
             throw new Exception("The image $imagePath does not exists");
         }
 
-        $filename = pathinfo($imagePath)['filename'].'.'.pathinfo($imagePath)['extension'];
+        $filename = pathinfo($imagePath)['filename'] . '.' . pathinfo($imagePath)['extension'];
 
-        $path = 'EcMedia/'.$filename;
+        $path = 'EcMedia/' . $filename;
 
         $disk = $this->getEcMediaDisk();
         $disk->put($path, file_get_contents($imagePath));
@@ -116,18 +116,16 @@ class StorageService extends BaseService
 
         $filename = basename($imagePath);
         if ($width == 0) {
-            $cloudPath = 'EcMedia/Resize/x'.$height.DIRECTORY_SEPARATOR.$filename;
+            $cloudPath = 'EcMedia/Resize/x' . $height . DIRECTORY_SEPARATOR . $filename;
         } elseif ($height == 0) {
-            $cloudPath = 'EcMedia/Resize/'.$width.'x'.DIRECTORY_SEPARATOR.$filename;
+            $cloudPath = 'EcMedia/Resize/' . $width . 'x' . DIRECTORY_SEPARATOR . $filename;
         } else {
-            $cloudPath = 'EcMedia/Resize/'.$width.'x'.$height.DIRECTORY_SEPARATOR.$filename;
+            $cloudPath = 'EcMedia/Resize/' . $width . 'x' . $height . DIRECTORY_SEPARATOR . $filename;
         }
 
-        $disk = $this->getStorageDisk();
+        $this->getEcMediaDisk()->put($cloudPath, file_get_contents($imagePath));
 
-        Storage::disk($disk)->put($cloudPath, file_get_contents($imagePath));
-
-        return Storage::disk($disk)->url($cloudPath);
+        return $this->getEcMediaDisk()->url($cloudPath);
     }
 
     //
