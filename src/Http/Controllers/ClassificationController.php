@@ -3,8 +3,8 @@
 namespace Wm\WmPackage\Http\Controllers;
 
 use Exception;
-use Wm\WmPackage\Models\App;
 use Illuminate\Support\Facades\Log;
+use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Services\Models\App\AppClassificationService;
 
 class ClassificationController extends Controller
@@ -30,7 +30,6 @@ class ClassificationController extends Controller
             if (empty($classification)) {
                 throw new Exception('Nessun utente classificato.');
             }
-
 
             $data = $getRankedUserPositionNearPoisQuery->getAllRankedUsersNearPoisData($app);
 
