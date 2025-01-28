@@ -2,11 +2,11 @@
 
 namespace Wm\WmPackage\Observers;
 
-use Wm\WmPackage\Models\App;
-use Wm\WmPackage\Models\User;
-use Wm\WmPackage\Models\UgcMedia;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Mail;
+use Wm\WmPackage\Models\App;
+use Wm\WmPackage\Models\UgcMedia;
+use Wm\WmPackage\Models\User;
 use Wm\WmPackage\Services\Models\App\AppClassificationService;
 
 class UgcMediaObserver extends AbstractObserver
@@ -42,7 +42,7 @@ class UgcMediaObserver extends AbstractObserver
                     $position = $service->getRankedUserPositionNearPoisQuery($app, $user->id);
                     Mail::send('wm-package::mails.gamification.rankingIncreased', ['user' => $user, 'position' => $position, 'app' => $app], function ($message) use ($user, $app) {
                         $message->to($user->email);
-                        $message->subject($app->name . ': Your Ranking Has Increased');
+                        $message->subject($app->name.': Your Ranking Has Increased');
                     });
                 }
             }

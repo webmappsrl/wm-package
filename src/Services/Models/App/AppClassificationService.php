@@ -2,11 +2,11 @@
 
 namespace Wm\WmPackage\Services\Models\App;
 
+use Illuminate\Support\Facades\DB;
 use Wm\WmPackage\Models\App;
-use Wm\WmPackage\Models\User;
 use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Models\UgcMedia;
-use Illuminate\Support\Facades\DB;
+use Wm\WmPackage\Models\User;
 
 class AppClassificationService extends AppBaseService
 {
@@ -82,7 +82,7 @@ class AppClassificationService extends AppBaseService
         $ugcMedias = UgcMedia::whereIn('id', $transformedArray['UgcMedia'])->get(['id', 'relative_url']);
         $formattedugcMedias = $ugcMedias->reduce(function ($carry, $item) {
             $carry[$item->id] = [
-                'url' => 'https://geohub.webmapp.it/storage/' . $item->relative_url,
+                'url' => 'https://geohub.webmapp.it/storage/'.$item->relative_url,
             ];
 
             return $carry;
@@ -117,9 +117,9 @@ class AppClassificationService extends AppBaseService
                 'ec_pois.*' // Seleziona tutti i campi di ec_pois
             )
             ->join('ugc_media', function ($join) use ($app) {
-                $join->on('ec_pois.user_id', '=', DB::raw("'" . $app->user_id . "'"))
+                $join->on('ec_pois.user_id', '=', DB::raw("'".$app->user_id."'"))
                     ->whereRaw('ST_DWithin(ugc_media.geometry, ec_pois.geometry, 100.0)')
-                    ->where('ugc_media.app_id', '=', DB::raw("'" . $app->app_id . "'"));
+                    ->where('ugc_media.app_id', '=', DB::raw("'".$app->app_id."'"));
             });
 
         if ($ugcUserId) {

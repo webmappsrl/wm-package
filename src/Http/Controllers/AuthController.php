@@ -3,14 +3,12 @@
 namespace Wm\WmPackage\Http\Controllers;
 
 use Exception;
-use Illuminate\Http\Request;
-use Wm\WmPackage\Models\User;
 use Illuminate\Http\JsonResponse;
-use Spatie\Permission\Models\Role;
-use Wm\WmPackage\Models\Partnership;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Spatie\Permission\Models\Role;
+use Wm\WmPackage\Models\User;
 use Wm\WmPackage\Services\Models\UserService;
-use Wm\WmPackage\Providers\PartnershipValidationProvider;
 
 class AuthController extends Controller
 {

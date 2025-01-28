@@ -3,8 +3,8 @@
 namespace Wm\WmPackage\Http\Controllers\Api;
 
 use Illuminate\Http\JsonResponse;
-use Wm\WmPackage\Models\TaxonomyTheme;
 use Wm\WmPackage\Http\Controllers\Controller;
+use Wm\WmPackage\Models\TaxonomyTheme;
 
 class TaxonomyThemeController extends Controller
 {

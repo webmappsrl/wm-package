@@ -3,11 +3,11 @@
 namespace Wm\WmPackage\Http\Controllers\Api;
 
 use Exception;
-use Illuminate\Http\Request;
-use Wm\WmPackage\Models\User;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Wm\WmPackage\Http\Controllers\Controller;
+use Wm\WmPackage\Models\User;
 
 class AppAuthController extends Controller
 {

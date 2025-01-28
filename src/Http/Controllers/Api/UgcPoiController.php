@@ -2,19 +2,18 @@
 
 namespace Wm\WmPackage\Http\Controllers\Api;
 
-use Wm\WmPackage\Http\Resources\UgcPoiCollection;
-use Wm\WmPackage\Models\App;
-use Wm\WmPackage\Models\UgcMedia;
-use Wm\WmPackage\Models\UgcPoi;
-use Wm\WmPackage\Providers\HoquServiceProvider;
-use Wm\WmPackage\Traits\UGCFeatureCollectionTrait;
-use Wm\WmPackage\Traits\ValidationTrait;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Wm\WmPackage\Http\Controllers\Controller;
+use Wm\WmPackage\Http\Resources\UgcPoiCollection;
+use Wm\WmPackage\Models\App;
+use Wm\WmPackage\Models\UgcMedia;
+use Wm\WmPackage\Models\UgcPoi;
+use Wm\WmPackage\Providers\HoquServiceProvider;
+use Wm\WmPackage\Traits\UGCFeatureCollectionTrait;
 
 class UgcPoiController extends Controller
 {
@@ -31,13 +30,13 @@ class UgcPoiController extends Controller
         $user = auth('api')->user();
         if (isset($user)) {
             Log::channel('ugc')->info('*************index ugc poi*****************');
-            Log::channel('ugc')->info('version:' . $version);
-            Log::channel('ugc')->info('user email:' . $user->email);
+            Log::channel('ugc')->info('version:'.$version);
+            Log::channel('ugc')->info('user email:'.$user->email);
 
             if (! empty($request->header('app-id'))) {
                 $appId = $request->header('app-id');
-                Log::channel('ugc')->info('request app-id' . $appId);
-                Log::channel('ugc')->info('request App-id' . $request->header('App-id'));
+                Log::channel('ugc')->info('request app-id'.$appId);
+                Log::channel('ugc')->info('request App-id'.$request->header('App-id'));
                 if (is_numeric($appId)) {
                     $app = App::where('id', $appId)->first();
                 } else {
@@ -47,7 +46,7 @@ class UgcPoiController extends Controller
                     ['user_id', $user->id],
                     ['app_id', $app->id],
                 ])->orderByRaw('updated_at DESC')->get();
-                Log::channel('ugc')->info('pois count:' . count($pois));
+                Log::channel('ugc')->info('pois count:'.count($pois));
 
                 return $this->getUGCFeatureCollection($pois, $version);
             }
@@ -69,8 +68,8 @@ class UgcPoiController extends Controller
         Log::channel('ugc')->info('*************store ugc poi*****************');
         $data = $request->all();
         $dataProperties = $data['properties'];
-        Log::channel('ugc')->info('ugc poi store properties name:' . $dataProperties['name']);
-        Log::channel('ugc')->info('ugc poi store properties app_id(sku):' . $dataProperties['app_id']);
+        Log::channel('ugc')->info('ugc poi store properties name:'.$dataProperties['name']);
+        Log::channel('ugc')->info('ugc poi store properties app_id(sku):'.$dataProperties['app_id']);
 
         switch ($version) {
             case 'v1':
@@ -99,8 +98,8 @@ class UgcPoiController extends Controller
         ]);
 
         $user = auth('api')->user();
-        Log::channel('ugc')->info('user email:' . $user->email);
-        Log::channel('ugc')->info('user id:' . $user->id);
+        Log::channel('ugc')->info('user email:'.$user->email);
+        Log::channel('ugc')->info('user id:'.$user->id);
         if (is_null($user)) {
             Log::channel('ugc')->info('Utente non autenticato');
 
@@ -112,7 +111,7 @@ class UgcPoiController extends Controller
         if (isset($data['properties']['description'])) {
             $poi->description = $data['properties']['description'];
         }
-        $poi->geometry = DB::raw("ST_GeomFromGeojson('" . json_encode($data['geometry']) . ")')");
+        $poi->geometry = DB::raw("ST_GeomFromGeojson('".json_encode($data['geometry']).")')");
         $poi->user_id = $user->id;
 
         if (isset($data['properties']['app_id'])) {
@@ -141,7 +140,7 @@ class UgcPoiController extends Controller
         try {
             $poi->save();
         } catch (\Exception $e) {
-            Log::channel('ugc')->info('Errore nel salvataggio del poi:' . $e->getMessage());
+            Log::channel('ugc')->info('Errore nel salvataggio del poi:'.$e->getMessage());
 
             return response(['error' => 'Error saving POI'], 500);
         }
@@ -174,11 +173,11 @@ class UgcPoiController extends Controller
         $user = auth('api')->user();
         $data = $request->all();
         Log::channel('ugc')->info('*************store v2 ugc poi*****************');
-        Log::channel('ugc')->info('user email:' . $user->email);
-        Log::channel('ugc')->info('user id:' . $user->id);
+        Log::channel('ugc')->info('user email:'.$user->email);
+        Log::channel('ugc')->info('user id:'.$user->id);
         $properties = $data['properties'];
-        Log::channel('ugc')->info('ugc poi store properties name:' . $properties['name']);
-        Log::channel('ugc')->info('ugc poi store properties app_id:' . $properties['app_id']);
+        Log::channel('ugc')->info('ugc poi store properties name:'.$properties['name']);
+        Log::channel('ugc')->info('ugc poi store properties app_id:'.$properties['app_id']);
 
         $this->checkValidation($data, [
             'type' => 'required',
@@ -191,8 +190,8 @@ class UgcPoiController extends Controller
         ]);
 
         $user = auth('api')->user();
-        Log::channel('ugc')->info('user email:' . $user->email);
-        Log::channel('ugc')->info('user id:' . $user->id);
+        Log::channel('ugc')->info('user email:'.$user->email);
+        Log::channel('ugc')->info('user id:'.$user->id);
         if (is_null($user)) {
             Log::channel('ugc')->info('Utente non autenticato');
 
@@ -201,7 +200,7 @@ class UgcPoiController extends Controller
 
         $poi = new UgcPoi;
         $poi->name = $properties['name'];
-        $poi->geometry = DB::raw("ST_GeomFromGeojson('" . json_encode($data['geometry']) . ")')");
+        $poi->geometry = DB::raw("ST_GeomFromGeojson('".json_encode($data['geometry']).")')");
         $poi->properties = $properties;
         $poi->user_id = $user->id;
 
@@ -227,7 +226,7 @@ class UgcPoiController extends Controller
         try {
             $poi->save();
         } catch (\Exception $e) {
-            Log::channel('ugc')->info('Errore nel salvataggio del poi:' . $e->getMessage());
+            Log::channel('ugc')->info('Errore nel salvataggio del poi:'.$e->getMessage());
 
             return response(['error' => 'Error saving POI'], 500);
         }
@@ -278,7 +277,7 @@ class UgcPoiController extends Controller
         $id = $data['properties']['id'];
         $properties = $data['properties'];
 
-        Log::channel('ugc')->info('Modifica del POI con ID: ' . $id);
+        Log::channel('ugc')->info('Modifica del POI con ID: '.$id);
 
         // Validazione dei dati
         $this->checkValidation($data, [
@@ -307,22 +306,22 @@ class UgcPoiController extends Controller
             return response(['error' => 'POI not found or unauthorized access'], 404);
         }
 
-        Log::channel('ugc')->info('user email:' . $user->email);
-        Log::channel('ugc')->info('user id:' . $user->id);
+        Log::channel('ugc')->info('user email:'.$user->email);
+        Log::channel('ugc')->info('user id:'.$user->id);
 
         // Aggiornamento dei campi principali
         $ugcPoi->name = $properties['name'] ?? $ugcPoi->name;
         if (isset($properties['description'])) {
             $ugcPoi->description = $properties['description'];
         }
-        $ugcPoi->geometry = DB::raw("ST_GeomFromGeojson('" . json_encode($data['geometry']) . "')");
+        $ugcPoi->geometry = DB::raw("ST_GeomFromGeojson('".json_encode($data['geometry'])."')");
         $ugcPoi->properties = $properties;
 
         // Salvataggio del POI
         try {
             $ugcPoi->save();
         } catch (Exception $e) {
-            Log::channel('ugc')->info('Errore nel salvataggio del POI: ' . $e->getMessage());
+            Log::channel('ugc')->info('Errore nel salvataggio del POI: '.$e->getMessage());
 
             return response(['error' => 'Error updating POI'], 500);
         }

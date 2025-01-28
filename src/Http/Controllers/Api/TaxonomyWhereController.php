@@ -3,8 +3,8 @@
 namespace Wm\WmPackage\Http\Controllers\Api;
 
 use Illuminate\Http\JsonResponse;
-use Wm\WmPackage\Models\TaxonomyWhere;
 use Wm\WmPackage\Http\Controllers\Controller;
+use Wm\WmPackage\Models\TaxonomyWhere;
 
 class TaxonomyWhereController extends Controller
 {

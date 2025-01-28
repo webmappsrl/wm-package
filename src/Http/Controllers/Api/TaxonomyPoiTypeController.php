@@ -3,9 +3,9 @@
 namespace Wm\WmPackage\Http\Controllers\Api;
 
 use Illuminate\Http\JsonResponse;
+use Wm\WmPackage\Http\Controllers\Controller;
 use Wm\WmPackage\Http\Resources\TaxonomyPoiTypeResource;
 use Wm\WmPackage\Models\TaxonomyPoiType;
-use Wm\WmPackage\Http\Controllers\Controller;
 
 class TaxonomyPoiTypeController extends Controller
 {

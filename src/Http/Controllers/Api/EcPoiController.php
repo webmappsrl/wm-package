@@ -2,21 +2,20 @@
 
 namespace Wm\WmPackage\Http\Controllers\Api;
 
-use Wm\WmPackage\Models\User;
-use Wm\WmPackage\Models\EcPoi;
-use Wm\WmPackage\Models\EcMedia;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
-use Symm\Gisconverter\Geometry\Geometry;
 use Wm\WmPackage\Http\Controllers\Controller;
-use Wm\WmPackage\Services\Models\EcPoiService;
+use Wm\WmPackage\Models\EcMedia;
+use Wm\WmPackage\Models\EcPoi;
+use Wm\WmPackage\Models\User;
 use Wm\WmPackage\Services\GeometryComputationService;
+use Wm\WmPackage\Services\Models\EcPoiService;
 
 class EcPoiController extends Controller
 {
     public static function getNeighbourEcMedia(EcPoi $ecPoi): JsonResponse
     {
         $geometryComputationService = GeometryComputationService::make();
+
         return response()->json($geometryComputationService->getNeighboursGeojson($ecPoi, EcMedia::class));
     }
 
@@ -26,7 +25,7 @@ class EcPoiController extends Controller
             'type' => 'FeatureCollection',
             'features' => [],
         ];
-        foreach ($ecPoi->ecMedia as  $media) {
+        foreach ($ecPoi->ecMedia as $media) {
             $result['features'][] = $media->getGeojson();
         }
 
@@ -111,6 +110,6 @@ class EcPoiController extends Controller
             return response()->json(['code' => 404, 'error' => 'Not Found'], 404);
         }
 
-        return redirect('https://' . $app_id . '.app.webmapp.it/#/map?poi=' . $poi_id);
+        return redirect('https://'.$app_id.'.app.webmapp.it/#/map?poi='.$poi_id);
     }
 }

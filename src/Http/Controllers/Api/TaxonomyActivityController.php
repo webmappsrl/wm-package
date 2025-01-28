@@ -3,9 +3,9 @@
 namespace Wm\WmPackage\Http\Controllers\Api;
 
 use Illuminate\Http\JsonResponse;
+use Wm\WmPackage\Http\Controllers\Controller;
 use Wm\WmPackage\Http\Resources\TaxonomyActivityResource;
 use Wm\WmPackage\Models\TaxonomyActivity;
-use Wm\WmPackage\Http\Controllers\Controller;
 
 class TaxonomyActivityController extends Controller
 {

@@ -3,14 +3,15 @@
 namespace Wm\WmPackage\Http\Controllers;
 
 use Wm\WmPackage\Models\App;
-use Workbench\App\Models\User;
 use Wm\WmPackage\Services\Models\App\AppClassificationService;
+use Workbench\App\Models\User;
 
 class RankingController extends Controller
 {
     public function showTopTen(App $app)
     {
         $topTen = AppClassificationService::make()->getRankedUsersNearPois($app);
+
         return view('wm-package::top-ten', ['topTen' => $topTen, 'app' => $app]);
     }
 

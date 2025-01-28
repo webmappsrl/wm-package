@@ -8,13 +8,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Wm\WmPackage\Http\Controllers\Controller;
 use Wm\WmPackage\Models\TaxonomyWhere;
 use Wm\WmPackage\Models\UgcMedia;
 use Wm\WmPackage\Models\UgcPoi;
 use Wm\WmPackage\Models\UgcTrack;
 use Wm\WmPackage\Models\User;
 use Wm\WmPackage\Services\GeometryComputationService;
-use Wm\WmPackage\Http\Controllers\Controller;
 
 class UserGeneratedDataController extends Controller
 {
@@ -35,7 +35,7 @@ class UserGeneratedDataController extends Controller
                 $this->_storeUgc($feature, $user);
                 $createdCount++;
             }
-            $message = $createdCount . ' new user generated data created';
+            $message = $createdCount.' new user generated data created';
             Log::info($message);
 
             return response()->json(['message' => $message, 'code' => 201], 201);
@@ -135,12 +135,12 @@ class UserGeneratedDataController extends Controller
         $image = preg_replace('/data:image\/(.*?);base64,/', '', $base64); // remove the type part
         $image = str_replace(' ', '+', $image);
         while (Storage::disk('public')->exists(
-            $baseImageName . $maxId . '.' . $imageExtension[1]
+            $baseImageName.$maxId.'.'.$imageExtension[1]
         )) {
             $maxId++;
         }
 
-        $imageName = $baseImageName . $maxId . '.' . $imageExtension[1];
+        $imageName = $baseImageName.$maxId.'.'.$imageExtension[1];
         Storage::disk('public')->put(
             $imageName,
             base64_decode($image)

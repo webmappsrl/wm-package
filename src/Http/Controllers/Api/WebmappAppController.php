@@ -2,13 +2,13 @@
 
 namespace Wm\WmPackage\Http\Controllers\Api;
 
-use Illuminate\Http\Request;
-use Wm\WmPackage\Models\EcTrack;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Wm\WmPackage\Models\TaxonomyWhere;
-use Wm\WmPackage\Models\TaxonomyPoiType;
 use Wm\WmPackage\Http\Controllers\Controller;
+use Wm\WmPackage\Models\EcTrack;
+use Wm\WmPackage\Models\TaxonomyPoiType;
+use Wm\WmPackage\Models\TaxonomyWhere;
 use Wm\WmPackage\Services\GeometryComputationService;
 
 class WebmappAppController extends Controller
@@ -29,7 +29,7 @@ class WebmappAppController extends Controller
         }
 
         $escapedSearchString = preg_replace('/[^0-9a-z\s]/', '', strtolower($searchString));
-        $escapedSearchString = implode(':* || ', explode(' ', $escapedSearchString)) . ':*';
+        $escapedSearchString = implode(':* || ', explode(' ', $escapedSearchString)).':*';
 
         return response()->json([
             'places' => $this->getPlacesSearchSection($escapedSearchString, $language),
@@ -128,16 +128,16 @@ class WebmappAppController extends Controller
     public function getSearchQuery(string $table, string $escapedSearchString, string $language, array $columnToCheck = []): string
     {
         return 'SELECT id
-            FROM ' . $table . ',
+            FROM '.$table.',
                  to_tsvector(
                     regexp_replace(
                         LOWER(
-                            ((' . $table . ".name::json))->>'" . $language . "'
+                            (('.$table.".name::json))->>'".$language."'
                         ),
                         '[^0-9a-z\s]', '', 'g'
                     )
                 ) as documentNameVector,
-                to_tsquery('" . $escapedSearchString . "') as searchQuery
+                to_tsquery('".$escapedSearchString."') as searchQuery
             WHERE documentNameVector @@ searchQuery 
             ORDER BY ts_rank_cd(documentNameVector, searchQuery)
             LIMIT 5;";

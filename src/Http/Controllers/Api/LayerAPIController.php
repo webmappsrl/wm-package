@@ -2,8 +2,8 @@
 
 namespace Wm\WmPackage\Http\Controllers\Api;
 
-use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Http\Controllers\Controller;
+use Wm\WmPackage\Models\Layer;
 
 class LayerAPIController extends Controller
 {
