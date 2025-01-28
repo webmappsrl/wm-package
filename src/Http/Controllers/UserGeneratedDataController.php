@@ -54,14 +54,11 @@ class UserGeneratedDataController extends Controller
      */
     private function _storeUgc(array $feature, ?User $user = null): void
     {
-        $ugcType = null;
         $userGeneratedData = null;
         if (! isset($feature['geometry']['type']) || $feature['geometry']['type'] === 'Point') {
             $userGeneratedData = new UgcPoi;
-            $ugcType = 'poi';
         } elseif (isset($feature['geometry']['type']) && $feature['geometry']['type'] === 'LineString') {
             $userGeneratedData = new UgcTrack;
-            $ugcType = 'track';
         }
 
         if (! is_null($userGeneratedData)) {
