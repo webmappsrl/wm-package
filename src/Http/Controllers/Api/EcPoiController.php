@@ -2,13 +2,15 @@
 
 namespace Wm\WmPackage\Http\Controllers\Api;
 
+use Wm\WmPackage\Models\User;
+use Wm\WmPackage\Models\EcPoi;
+use Wm\WmPackage\Models\EcMedia;
 use Illuminate\Http\JsonResponse;
 use Wm\WmPackage\Http\Controllers\Controller;
-use Wm\WmPackage\Models\EcMedia;
-use Wm\WmPackage\Models\EcPoi;
-use Wm\WmPackage\Models\User;
-use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Services\Models\EcPoiService;
+use Wm\WmPackage\Services\Models\EcMediaService;
+use Wm\WmPackage\Services\GeometryComputationService;
+use Wm\WmPackage\Services\Models\OutSourceFeatureService;
 
 class EcPoiController extends Controller
 {
@@ -21,15 +23,7 @@ class EcPoiController extends Controller
 
     public static function getAssociatedEcMedia(EcPoi $ecPoi): JsonResponse
     {
-        $result = [
-            'type' => 'FeatureCollection',
-            'features' => [],
-        ];
-        foreach ($ecPoi->ecMedia as $media) {
-            $result['features'][] = $media->getGeojson();
-        }
-
-        return response()->json($result);
+        return response()->json(EcMediaService::make()->getAssociatedEcMedia($ecPoi));
     }
 
     public static function getFeatureImage(EcPoi $ecPoi)
@@ -70,7 +64,7 @@ class EcPoiController extends Controller
      */
     public function getEcPoiFromSourceID($endpoint_slug, $source_id)
     {
-        return EcPoiService::make()->getEcPoiIdFromSourceID($endpoint_slug, $source_id);
+        return OutSourceFeatureService::make()->getModelIdFromOutSourceFeature($endpoint_slug, $source_id, EcPoi::class);
     }
 
     /**
@@ -82,7 +76,7 @@ class EcPoiController extends Controller
      */
     public function getPoiGeojsonFromSourceID($endpoint_slug, $source_id)
     {
-        $poi_id = EcPoiService::make()->getEcPoiIdFromSourceID($endpoint_slug, $source_id);
+        $poi_id = OutSourceFeatureService::make()->getModelIdFromOutSourceFeature($endpoint_slug, $source_id, EcPoi::class);
         $poi = EcPoi::find($poi_id);
         $headers = [];
 
@@ -102,7 +96,7 @@ class EcPoiController extends Controller
      */
     public function getEcPoiWebappURLFromSourceID($endpoint_slug, $source_id)
     {
-        $poi_id = EcPoiService::make()->getEcPoiIdFromSourceID($endpoint_slug, $source_id);
+        $poi_id = OutSourceFeatureService::make()->getModelIdFromOutSourceFeature($endpoint_slug, $source_id, EcPoi::class);
         $poi = EcPoi::find($poi_id);
         $app_id = $poi->user->apps[0]->id;
 
@@ -110,6 +104,6 @@ class EcPoiController extends Controller
             return response()->json(['code' => 404, 'error' => 'Not Found'], 404);
         }
 
-        return redirect('https://'.$app_id.'.app.webmapp.it/#/map?poi='.$poi_id);
+        return redirect('https://' . $app_id . '.app.webmapp.it/#/map?poi=' . $poi_id);
     }
 }

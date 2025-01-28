@@ -193,7 +193,6 @@ abstract class GeometryModel extends Model
 
     public function getGeojson($version = 'v1'): ?array
     {
-        $model = get_class($this);
         if ($version === 'v1') {
             $properties = $this->getJson();
         } else {

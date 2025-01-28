@@ -2,14 +2,15 @@
 
 namespace Wm\WmPackage\Services\Models;
 
+use Throwable;
+use Wm\WmPackage\Models\EcMedia;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
-use Throwable;
 use Wm\WmPackage\Jobs\UpdateEcMedia;
-use Wm\WmPackage\Jobs\UpdateModelWithGeometryTaxonomyWhere;
-use Wm\WmPackage\Models\EcMedia;
 use Wm\WmPackage\Services\BaseService;
 use Wm\WmPackage\Services\StorageService;
+use Wm\WmPackage\Models\Abstracts\GeometryModel;
+use Wm\WmPackage\Jobs\UpdateModelWithGeometryTaxonomyWhere;
 
 class EcMediaService extends BaseService
 {
@@ -39,53 +40,21 @@ class EcMediaService extends BaseService
         return $result;
     }
 
-    /**
-     * Return json to be used in features API.
-     */
-    public function getJson($allData, EcMedia $model): array
-    {
-        $array = $model->toArray();
-        $toSave = ['id', 'name', 'url', 'description'];
-        $thumbnailSize = '400x200';
-
-        foreach ($array as $key => $property) {
-            if (! in_array($key, $toSave)) {
-                unset($array[$key]);
-            }
-        }
-
-        if (isset($array['description'])) {
-            $array['caption'] = $array['description'];
-        }
-        unset($array['description']);
-
-        if (! empty($model->thumbnail($thumbnailSize))) {
-            $array['thumbnail'] = $model->thumbnail($thumbnailSize);
-        }
-        $array['api_url'] = route('api.ec.media.geojson', ['id' => $model->id], true);
-        if ($allData) {
-            $array['sizes'] = json_decode($model->thumbnails, true);
-        }
-
-        return $array;
-    }
 
     /**
-     * Create a geojson from the ec track
+     * Get a feature collection with the related media
      */
-    public function getGeojson(EcMedia $model): ?array
+    public function getAssociatedEcMedia(GeometryModel $model)
     {
-        $feature = $model->getEmptyGeojson();
-        if (isset($feature['properties'])) {
-            $feature['properties'] = $model->getJson();
 
-            return $feature;
-        } else {
-            return [
-                'type' => 'Feature',
-                'properties' => $model->getJson(),
-                'coordinates' => [],
-            ];
+        $result = [
+            'type' => 'FeatureCollection',
+            'features' => [],
+        ];
+        foreach ($model->ecMedia as $media) {
+            $result['features'][] = $media->getGeojson();
         }
+
+        return $result;
     }
 }

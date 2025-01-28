@@ -1,31 +1,31 @@
 <?php
 
+use Wm\WmPackage\Models\User;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
-use Wm\WmPackage\Http\Controllers\Api\AppAuthController;
+use Wm\WmPackage\Http\Controllers\AuthController;
 use Wm\WmPackage\Http\Controllers\Api\AppController;
-use Wm\WmPackage\Http\Controllers\Api\AppElbrusEditorialContentController;
-use Wm\WmPackage\Http\Controllers\Api\AppElbrusTaxonomyController;
-use Wm\WmPackage\Http\Controllers\Api\AuthController;
-use Wm\WmPackage\Http\Controllers\Api\ClassificationController;
 use Wm\WmPackage\Http\Controllers\Api\EcPoiController;
-use Wm\WmPackage\Http\Controllers\Api\EcTrackController;
-use Wm\WmPackage\Http\Controllers\Api\EditorialContentController;
-use Wm\WmPackage\Http\Controllers\Api\LayerAPIController;
-use Wm\WmPackage\Http\Controllers\Api\TaxonomyActivityController;
-use Wm\WmPackage\Http\Controllers\Api\TaxonomyPoiTypeController;
-use Wm\WmPackage\Http\Controllers\Api\TaxonomyTargetController;
-use Wm\WmPackage\Http\Controllers\Api\TaxonomyThemeController;
-use Wm\WmPackage\Http\Controllers\Api\TaxonomyWhenController;
-use Wm\WmPackage\Http\Controllers\Api\TaxonomyWhereController;
-use Wm\WmPackage\Http\Controllers\Api\UgcMediaController;
 use Wm\WmPackage\Http\Controllers\Api\UgcPoiController;
-use Wm\WmPackage\Http\Controllers\Api\UgcTrackController;
-use Wm\WmPackage\Http\Controllers\Api\UserGeneratedDataController;
-use Wm\WmPackage\Http\Controllers\Api\V1\AppAPIController;
 use Wm\WmPackage\Http\Controllers\Api\WalletController;
+use Wm\WmPackage\Http\Controllers\Api\AppAuthController;
+use Wm\WmPackage\Http\Controllers\Api\EcTrackController;
+use Wm\WmPackage\Http\Controllers\Api\LayerAPIController;
+use Wm\WmPackage\Http\Controllers\Api\UgcMediaController;
+use Wm\WmPackage\Http\Controllers\Api\UgcTrackController;
+use Wm\WmPackage\Http\Controllers\Api\V1\AppAPIController;
 use Wm\WmPackage\Http\Controllers\Api\WebmappAppController;
-use Wm\WmPackage\Models\User;
+use Wm\WmPackage\Http\Controllers\Api\TaxonomyWhenController;
+use Wm\WmPackage\Http\Controllers\Api\TaxonomyThemeController;
+use Wm\WmPackage\Http\Controllers\Api\TaxonomyWhereController;
+use Wm\WmPackage\Http\Controllers\Api\ClassificationController;
+use Wm\WmPackage\Http\Controllers\Api\TaxonomyTargetController;
+use Wm\WmPackage\Http\Controllers\Api\TaxonomyPoiTypeController;
+use Wm\WmPackage\Http\Controllers\Api\EditorialContentController;
+use Wm\WmPackage\Http\Controllers\Api\TaxonomyActivityController;
+use Wm\WmPackage\Http\Controllers\Api\AppElbrusTaxonomyController;
+use Wm\WmPackage\Http\Controllers\Api\UserGeneratedDataController;
+use Wm\WmPackage\Http\Controllers\Api\AppElbrusEditorialContentController;
 
 Route::middleware('api')->group(function () {
 
@@ -215,12 +215,12 @@ Route::name('api.')->group(function () {
             Route::get('/nearest/{lon}/{lat}', [EcTrackController::class, 'nearestToLocation'])->name('nearest_to_location');
             Route::get('/most_viewed', [EcTrackController::class, 'mostViewed'])->name('most_viewed');
             Route::get('/multiple', [EcTrackController::class, 'multiple'])->name('multiple');
-            Route::get('/pdf/{id}', [EcTrackController::class, 'getFeatureCollectionForTrackPdf'])->name('feature_collection_for_pdf');
+            Route::get('/pdf/{ecTrack}', [EcTrackController::class, 'getFeatureCollectionForTrackPdf'])->name('feature_collection_for_pdf');
             Route::middleware('auth.jwt')
                 ->prefix('favorite')->name('favorite.')->group(function () {
-                    Route::post('/add/{id}', [EcTrackController::class, 'addFavorite'])->name('add');
-                    Route::post('/remove/{id}', [EcTrackController::class, 'removeFavorite'])->name('remove');
-                    Route::post('/toggle/{id}', [EcTrackController::class, 'toggleFavorite'])->name('toggle');
+                    Route::post('/add/{ecTrack}', [EcTrackController::class, 'addFavorite'])->name('add');
+                    Route::post('/remove/{ecTrack}', [EcTrackController::class, 'removeFavorite'])->name('remove');
+                    Route::post('/toggle/{ecTrack}', [EcTrackController::class, 'toggleFavorite'])->name('toggle');
                     Route::get('/list', [EcTrackController::class, 'listFavorites'])->name('list');
                 });
             Route::prefix('download')->group(function () {
@@ -229,12 +229,12 @@ Route::name('api.')->group(function () {
                 Route::get('/{id}.kml', [EditorialContentController::class, 'downloadEcKml'])->name('download.kml');
                 Route::get('/{id}', [EditorialContentController::class, 'downloadEcGeojson'])->name('download');
             });
-            Route::get('/{id}/neighbour_pois', [EcTrackController::class, 'getNeighbourEcPoi']);
-            Route::get('/{id}/associated_ec_pois', [EcTrackController::class, 'getAssociatedEcPois']);
-            Route::get('/{id}/neighbour_media', [EcTrackController::class, 'getNeighbourEcMedia']);
-            Route::get('/{id}/associated_ec_media', [EcTrackController::class, 'getAssociatedEcMedia']);
-            Route::get('/{id}/feature_image', [EcTrackController::class, 'getFeatureImage']);
-            Route::get('/{id}.geojson', [EcTrackController::class, 'getGeojson'])->name('view.geojson');
+            Route::get('/{ecTrack}/neighbour_pois', [EcTrackController::class, 'getNeighbourEcPoi']);
+            Route::get('/{ecTrack}/associated_ec_pois', [EcTrackController::class, 'getAssociatedEcPois']);
+            Route::get('/{ecTrack}/neighbour_media', [EcTrackController::class, 'getNeighbourEcMedia']);
+            Route::get('/{ecTrack}/associated_ec_media', [EcTrackController::class, 'getAssociatedEcMedia']);
+            Route::get('/{ecTrack}/feature_image', [EcTrackController::class, 'getFeatureImage']);
+            Route::get('/{ecTrack}.geojson', [EcTrackController::class, 'getGeojson'])->name('view.geojson');
             Route::get('/{id}.gpx', [EditorialContentController::class, 'viewEcGpx'])->name('view.gpx');
             Route::get('/{id}.kml', [EditorialContentController::class, 'viewEcKml'])->name('view.kml');
             Route::get('/{id}', [EcTrackController::class, 'getGeojson'])->name('json');
@@ -264,9 +264,9 @@ Route::name('api.')->group(function () {
                 'taxonomy_name' => '[a-z\_]+',
                 'term_id' => '[0-9]+',
             ])->name('track.taxonomies');
-            Route::get('/{app_id}/taxonomies/{taxonomy_name}.json', [AppElbrusTaxonomyController::class, 'getTerms'])->name('taxonomies');
+            Route::get('/{app}/taxonomies/{taxonomy_name}.json', [AppElbrusTaxonomyController::class, 'getTerms'])->name('taxonomies');
             Route::get('/{app_id}/tiles/map.mbtiles', function ($app_id) {
-                return redirect('https://k.webmapp.it/elbrus/'.$app_id.'.mbtiles');
+                return redirect('https://k.webmapp.it/elbrus/' . $app_id . '.mbtiles');
             });
         });
         Route::prefix('webmapp')->name('webmapp.')->group(function () {
