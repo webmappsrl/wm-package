@@ -3,30 +3,30 @@
 namespace Wm\WmPackage\Services\Models;
 
 use Exception;
-use Wm\WmPackage\Models\App;
-use Wm\WmPackage\Models\User;
-use Wm\WmPackage\Models\EcTrack;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Wm\WmPackage\Facades\OsmClient;
-use Wm\WmPackage\Services\BaseService;
 use Wm\WmPackage\Http\Clients\DemClient;
-use Wm\WmPackage\Jobs\UpdateLayerTracksJob;
-use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
-use Wm\WmPackage\Jobs\Track\UpdateEcTrackDemJob;
 use Wm\WmPackage\Jobs\Pbf\GenerateEcTrackPBFBatch;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrack3DDemJob;
-use Wm\WmPackage\Jobs\Track\UpdateEcTrackFromOsmJob;
-use Wm\WmPackage\Jobs\Track\UpdateEcTrackSlopeValues;
-use Wm\WmPackage\Services\GeometryComputationService;
-use Wm\WmPackage\Jobs\Track\UpdateEcTrackManualDataJob;
-use Wm\WmPackage\Jobs\Track\UpdateEcTrackCurrentDataJob;
-use Wm\WmPackage\Jobs\Track\UpdateEcTrackOrderRelatedPoi;
-use Wm\WmPackage\Jobs\UpdateModelWithGeometryTaxonomyWhere;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackAppRelationsInfoJob;
+use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
+use Wm\WmPackage\Jobs\Track\UpdateEcTrackCurrentDataJob;
+use Wm\WmPackage\Jobs\Track\UpdateEcTrackDemJob;
+use Wm\WmPackage\Jobs\Track\UpdateEcTrackFromOsmJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackGenerateElevationChartImage;
+use Wm\WmPackage\Jobs\Track\UpdateEcTrackManualDataJob;
+use Wm\WmPackage\Jobs\Track\UpdateEcTrackOrderRelatedPoi;
+use Wm\WmPackage\Jobs\Track\UpdateEcTrackSlopeValues;
+use Wm\WmPackage\Jobs\UpdateLayerTracksJob;
+use Wm\WmPackage\Jobs\UpdateModelWithGeometryTaxonomyWhere;
+use Wm\WmPackage\Models\App;
+use Wm\WmPackage\Models\EcTrack;
+use Wm\WmPackage\Models\User;
+use Wm\WmPackage\Services\BaseService;
+use Wm\WmPackage\Services\GeometryComputationService;
 
 class EcTrackService extends BaseService
 {
@@ -80,7 +80,7 @@ class EcTrackService extends BaseService
 
             $track->saveQuietly();
         } catch (\Exception $e) {
-            Log::error('An error occurred during DEM operation: ' . $e->getMessage());
+            Log::error('An error occurred during DEM operation: '.$e->getMessage());
         }
     }
 
@@ -91,7 +91,7 @@ class EcTrackService extends BaseService
         try {
             $osmId = trim($track->osmid);
             $osmClient = new OsmClient;
-            $geojson_content = $osmClient::getGeojson('relation/' . $osmId);
+            $geojson_content = $osmClient::getGeojson('relation/'.$osmId);
             $geojson_content = json_decode($geojson_content, true);
             $osmData = $geojson_content['properties'];
             if (isset($osmData['duration:forward'])) {
@@ -159,10 +159,10 @@ class EcTrackService extends BaseService
                     $osmData = json_decode($track->osm_data, true);
                     if (isset($osmData[$field]) && ! is_null($osmData[$field])) {
                         $track[$field] = $osmData[$field];
-                        Log::info("Updated $field with OSM value: " . $osmData[$field]);
+                        Log::info("Updated $field with OSM value: ".$osmData[$field]);
                     } elseif (isset($demData[$field]) && ! is_null($demData[$field])) {
                         $track[$field] = $demData[$field];
-                        Log::info("Updated $field with DEM value: " . $demData[$field]);
+                        Log::info("Updated $field with DEM value: ".$demData[$field]);
                     }
                 }
             }
@@ -170,7 +170,7 @@ class EcTrackService extends BaseService
             $track->manual_data = $manualData;
             $track->saveQuietly();
         } catch (\Exception $e) {
-            Log::error($track->id . ': HandlesData: An error occurred during a store operation: ' . $e->getMessage());
+            Log::error($track->id.': HandlesData: An error occurred during a store operation: '.$e->getMessage());
         }
     }
 

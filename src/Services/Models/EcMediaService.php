@@ -2,15 +2,15 @@
 
 namespace Wm\WmPackage\Services\Models;
 
-use Throwable;
-use Wm\WmPackage\Models\EcMedia;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 use Wm\WmPackage\Jobs\UpdateEcMedia;
+use Wm\WmPackage\Jobs\UpdateModelWithGeometryTaxonomyWhere;
+use Wm\WmPackage\Models\Abstracts\GeometryModel;
+use Wm\WmPackage\Models\EcMedia;
 use Wm\WmPackage\Services\BaseService;
 use Wm\WmPackage\Services\StorageService;
-use Wm\WmPackage\Models\Abstracts\GeometryModel;
-use Wm\WmPackage\Jobs\UpdateModelWithGeometryTaxonomyWhere;
 
 class EcMediaService extends BaseService
 {
@@ -39,7 +39,6 @@ class EcMediaService extends BaseService
 
         return $result;
     }
-
 
     /**
      * Get a feature collection with the related media

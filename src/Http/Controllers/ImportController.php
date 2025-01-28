@@ -2,14 +2,13 @@
 
 namespace Wm\WmPackage\Http\Controllers;
 
-use Wm\WmPackage\Models\EcTrack;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Services\GeometryComputationService;
 
 class ImportController extends Controller
 {
-    //TODO: security leak, use a middleware to check if the user is authenticated
+    // TODO: security leak, use a middleware to check if the user is authenticated
     public function importGeojson(Request $request)
     {
         if (! $request->geojson) {
@@ -24,14 +23,14 @@ class ImportController extends Controller
         }
     }
 
-    //TODO: security leak, use a middleware to check if the user is authenticated
+    // TODO: security leak, use a middleware to check if the user is authenticated
     public function saveImport(Request $request)
     {
 
         $features = json_decode($request->features);
         foreach ($features->features as $feature) {
             $geometryTracks = json_encode($feature->geometry);
-            $name = 'ecTrack_' . date('Y-m-d');
+            $name = 'ecTrack_'.date('Y-m-d');
             if (isset($feature->properties->name)) {
                 $name = $feature->properties->name;
             }
@@ -39,7 +38,7 @@ class ImportController extends Controller
             EcTrack::create([
                 'name' => $name,
                 'geometry' => GeometryComputationService::make()->get2dGeometryFromGeojsonRAW($geometryTracks),
-                'import_method' => 'massive_import'
+                'import_method' => 'massive_import',
             ]);
         }
 
