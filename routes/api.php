@@ -2,29 +2,29 @@
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
-use Wm\WmPackage\Http\Controllers\AppAuthController;
-use Wm\WmPackage\Http\Controllers\AppController;
-use Wm\WmPackage\Http\Controllers\AppElbrusEditorialContentController;
-use Wm\WmPackage\Http\Controllers\AppElbrusTaxonomyController;
-use Wm\WmPackage\Http\Controllers\AuthController;
-use Wm\WmPackage\Http\Controllers\ClassificationController;
-use Wm\WmPackage\Http\Controllers\EcPoiController;
-use Wm\WmPackage\Http\Controllers\EcTrackController;
-use Wm\WmPackage\Http\Controllers\EditorialContentController;
-use Wm\WmPackage\Http\Controllers\LayerAPIController;
-use Wm\WmPackage\Http\Controllers\TaxonomyActivityController;
-use Wm\WmPackage\Http\Controllers\TaxonomyPoiTypeController;
-use Wm\WmPackage\Http\Controllers\TaxonomyTargetController;
-use Wm\WmPackage\Http\Controllers\TaxonomyThemeController;
-use Wm\WmPackage\Http\Controllers\TaxonomyWhenController;
-use Wm\WmPackage\Http\Controllers\TaxonomyWhereController;
-use Wm\WmPackage\Http\Controllers\UgcMediaController;
-use Wm\WmPackage\Http\Controllers\UgcPoiController;
-use Wm\WmPackage\Http\Controllers\UgcTrackController;
-use Wm\WmPackage\Http\Controllers\UserGeneratedDataController;
-use Wm\WmPackage\Http\Controllers\V1\AppAPIController;
-use Wm\WmPackage\Http\Controllers\WalletController;
-use Wm\WmPackage\Http\Controllers\WebmappAppController;
+use Wm\WmPackage\Http\Controllers\Api\AppAuthController;
+use Wm\WmPackage\Http\Controllers\Api\AppController;
+use Wm\WmPackage\Http\Controllers\Api\AppElbrusEditorialContentController;
+use Wm\WmPackage\Http\Controllers\Api\AppElbrusTaxonomyController;
+use Wm\WmPackage\Http\Controllers\Api\AuthController;
+use Wm\WmPackage\Http\Controllers\Api\ClassificationController;
+use Wm\WmPackage\Http\Controllers\Api\EcPoiController;
+use Wm\WmPackage\Http\Controllers\Api\EcTrackController;
+use Wm\WmPackage\Http\Controllers\Api\EditorialContentController;
+use Wm\WmPackage\Http\Controllers\Api\LayerAPIController;
+use Wm\WmPackage\Http\Controllers\Api\TaxonomyActivityController;
+use Wm\WmPackage\Http\Controllers\Api\TaxonomyPoiTypeController;
+use Wm\WmPackage\Http\Controllers\Api\TaxonomyTargetController;
+use Wm\WmPackage\Http\Controllers\Api\TaxonomyThemeController;
+use Wm\WmPackage\Http\Controllers\Api\TaxonomyWhenController;
+use Wm\WmPackage\Http\Controllers\Api\TaxonomyWhereController;
+use Wm\WmPackage\Http\Controllers\Api\UgcMediaController;
+use Wm\WmPackage\Http\Controllers\Api\UgcPoiController;
+use Wm\WmPackage\Http\Controllers\Api\UgcTrackController;
+use Wm\WmPackage\Http\Controllers\Api\UserGeneratedDataController;
+use Wm\WmPackage\Http\Controllers\Api\V1\AppAPIController;
+use Wm\WmPackage\Http\Controllers\Api\WalletController;
+use Wm\WmPackage\Http\Controllers\Api\WebmappAppController;
 use Wm\WmPackage\Models\User;
 
 Route::middleware('api')->group(function () {
@@ -266,7 +266,7 @@ Route::name('api.')->group(function () {
             ])->name('track.taxonomies');
             Route::get('/{app_id}/taxonomies/{taxonomy_name}.json', [AppElbrusTaxonomyController::class, 'getTerms'])->name('taxonomies');
             Route::get('/{app_id}/tiles/map.mbtiles', function ($app_id) {
-                return redirect('https://k.webmapp.it/elbrus/'.$app_id.'.mbtiles');
+                return redirect('https://k.webmapp.it/elbrus/' . $app_id . '.mbtiles');
             });
         });
         Route::prefix('webmapp')->name('webmapp.')->group(function () {
