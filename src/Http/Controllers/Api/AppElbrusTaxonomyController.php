@@ -2,16 +2,16 @@
 
 namespace Wm\WmPackage\Http\Controllers\Api;
 
-use Wm\WmPackage\Models\App;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
-use Wm\WmPackage\Models\TaxonomyWhen;
-use Wm\WmPackage\Models\TaxonomyTheme;
-use Wm\WmPackage\Models\TaxonomyWhere;
-use Wm\WmPackage\Models\TaxonomyTarget;
-use Wm\WmPackage\Models\TaxonomyPoiType;
-use Wm\WmPackage\Models\TaxonomyActivity;
 use Wm\WmPackage\Http\Controllers\Controller;
+use Wm\WmPackage\Models\App;
+use Wm\WmPackage\Models\TaxonomyActivity;
+use Wm\WmPackage\Models\TaxonomyPoiType;
+use Wm\WmPackage\Models\TaxonomyTarget;
+use Wm\WmPackage\Models\TaxonomyTheme;
+use Wm\WmPackage\Models\TaxonomyWhen;
+use Wm\WmPackage\Models\TaxonomyWhere;
 
 class AppElbrusTaxonomyController extends Controller
 {
@@ -35,7 +35,6 @@ class AppElbrusTaxonomyController extends Controller
             return response()->json($json, $code);
         }
 
-
         $terms = $this->_termsByUserId($app, $taxonomy_name);
 
         if (count($terms) > 0) {
@@ -43,8 +42,8 @@ class AppElbrusTaxonomyController extends Controller
                 $tax = $this->getTaxonomyModelByIdAndName($taxonomy_name, $tid);
                 $tax = $tax->toArray();
                 $tax['items'] = $items;
-                $tax['id'] = $taxonomy_name . '_' . $tid;
-                $json[$taxonomy_name . '_' . $tid] = $tax;
+                $tax['id'] = $taxonomy_name.'_'.$tid;
+                $json[$taxonomy_name.'_'.$tid] = $tax;
             }
         }
 
@@ -107,7 +106,7 @@ class AppElbrusTaxonomyController extends Controller
          ");
         if (count($res) > 0) {
             foreach ($res as $item) {
-                $terms[$item->tid]['track'][] = 'ec_track_' . $item->fid;
+                $terms[$item->tid]['track'][] = 'ec_track_'.$item->fid;
             }
         }
 
@@ -123,7 +122,7 @@ class AppElbrusTaxonomyController extends Controller
 
             if (count($res) > 0) {
                 foreach ($res as $item) {
-                    $terms[$item->tid]['poi'][] = 'ec_poi_' . $item->fid;
+                    $terms[$item->tid]['poi'][] = 'ec_poi_'.$item->fid;
                 }
             }
         }
@@ -151,7 +150,7 @@ class AppElbrusTaxonomyController extends Controller
         $term = $this->_getTermByTaxonomy($taxonomy_name, $term_id);
         if (is_null($term)) {
             $code = 404;
-            $json = ['code' => $code, 'Term NOT found in taxonomy ' . $taxonomy_name];
+            $json = ['code' => $code, 'Term NOT found in taxonomy '.$taxonomy_name];
 
             return response()->json($json, $code);
         }

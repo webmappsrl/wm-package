@@ -15,7 +15,6 @@ class OutSourceFeatureService extends BaseService
      *
      * @param  string  $endpoint_slug
      * @param  int  $source_id
-     * @param string $geometryModelClass
      * @return JsonResponse
      */
     public function getModelIdFromOutSourceFeature($endpoint_slug, $source_id, string $geometryModelClass): int

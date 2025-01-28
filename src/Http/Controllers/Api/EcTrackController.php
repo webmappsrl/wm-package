@@ -3,20 +3,18 @@
 namespace Wm\WmPackage\Http\Controllers\Api;
 
 use Exception;
-use Illuminate\Http\Request;
-use Wm\WmPackage\Models\App;
-use Wm\WmPackage\Models\User;
-use Wm\WmPackage\Models\EcTrack;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Wm\WmPackage\Http\Controllers\Controller;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
+use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcMedia;
 use Wm\WmPackage\Models\EcPoi;
-use Wm\WmPackage\Providers\EcTrackServiceProvider;
+use Wm\WmPackage\Models\EcTrack;
+use Wm\WmPackage\Models\User;
 use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Services\Models\EcMediaService;
 use Wm\WmPackage\Services\Models\EcPoiService;
@@ -139,7 +137,7 @@ class EcTrackController extends Controller
     {
         $data = $request->all();
 
-        //TODO: add app as path parameter
+        // TODO: add app as path parameter
         //      this validation is wrong ... it should check over db the app_id existence before the App::where below
         $validator = Validator::make($data, [
             'app_id' => 'required|max:255',
@@ -181,7 +179,7 @@ class EcTrackController extends Controller
     {
         $data = $request->all();
 
-        //TODO: add app as path parameter
+        // TODO: add app as path parameter
         //      this validation is wrong ... it should check over db the app_id existence before the App::where below
         $validator = Validator::make($data, [
             'app_id' => 'required|max:255',
@@ -373,7 +371,7 @@ class EcTrackController extends Controller
             return response()->json(['code' => 404, 'error' => 'Not Found'], 404);
         }
 
-        return redirect('https://' . $app_id . '.app.webmapp.it/#/map?track=' . $track_id);
+        return redirect('https://'.$app_id.'.app.webmapp.it/#/map?track='.$track_id);
     }
 
     /**
@@ -389,7 +387,7 @@ class EcTrackController extends Controller
 
         $features = [];
 
-        //TODO: move the json format out of here, it should be in the model, resource or in a service
+        // TODO: move the json format out of here, it should be in the model, resource or in a service
         $trackFeature = [
             'type' => 'Feature',
             'properties' => [
@@ -408,7 +406,7 @@ class EcTrackController extends Controller
             foreach ($ecTrack->ecPois as $poi) {
                 $poiGeometry = GeometryComputationService::make()->getModelGeometryAsGeojson($poi);
                 $poiGeometry = json_decode($poiGeometry);
-                //TODO: move the json format out of here, it should be in the model, resource or in a service
+                // TODO: move the json format out of here, it should be in the model, resource or in a service
                 $poiFeature = [
                     'type' => 'Feature',
                     'properties' => [
@@ -424,7 +422,7 @@ class EcTrackController extends Controller
             }
         }
 
-        //TODO: move the json format out of here, it should be in the model, resource or in a service
+        // TODO: move the json format out of here, it should be in the model, resource or in a service
         $featureCollection = [
             'type' => 'FeatureCollection',
             'features' => $features,
