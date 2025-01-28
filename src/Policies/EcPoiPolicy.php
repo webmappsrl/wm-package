@@ -2,9 +2,9 @@
 
 namespace App\Policies;
 
+use Illuminate\Auth\Access\HandlesAuthorization;
 use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Models\User;
-use Illuminate\Auth\Access\HandlesAuthorization;
 
 class EcPoiPolicy
 {
