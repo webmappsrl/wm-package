@@ -237,7 +237,7 @@ Route::name('api.')->group(function () {
             Route::get('/{ecTrack}.geojson', [EcTrackController::class, 'getGeojson'])->name('view.geojson');
             Route::get('/{id}.gpx', [EditorialContentController::class, 'viewEcGpx'])->name('view.gpx');
             Route::get('/{id}.kml', [EditorialContentController::class, 'viewEcKml'])->name('view.kml');
-            Route::get('/{id}', [EcTrackController::class, 'getGeojson'])->name('json');
+            Route::get('/{ecTrack}', [EcTrackController::class, 'getGeojson'])->name('json');
         });
     });
 
@@ -251,11 +251,12 @@ Route::name('api.')->group(function () {
          * ELBRUS API
          */
         Route::prefix('elbrus')->name('elbrus.')->group(function () {
-            Route::get('/{id}/config.json', [AppController::class, 'config'])->name('config');
-            Route::get('/{id}/resources/icon.png', [AppController::class, 'icon'])->name('icon');
-            Route::get('/{id}/resources/splash.png', [AppController::class, 'splash'])->name('splash');
-            Route::get('/{id}/resources/icon_small.png', [AppController::class, 'iconSmall'])->name('icon_small');
-            Route::get('/{id}/resources/feature_image.png', [AppController::class, 'featureImage'])->name('feature_image');
+            Route::get('/{app}/config.json', [AppController::class, 'config'])->name('config');
+            Route::get('/{app}/resources/icon.png', [AppController::class, 'icon'])->name('icon');
+            Route::get('/{app}/resources/splash.png', [AppController::class, 'splash'])->name('splash');
+            Route::get('/{app}/resources/icon_small.png', [AppController::class, 'iconSmall'])->name('icon_small');
+            Route::get('/{app}/resources/feature_image.png', [AppController::class, 'featureImage'])->name('feature_image');
+
             Route::get('/{app}/geojson/ec_poi_{poi}.geojson', [AppElbrusEditorialContentController::class, 'getPoiGeojson'])->name('geojson.poi');
             Route::get('/{app}/geojson/ec_track_{track}.geojson', [AppElbrusEditorialContentController::class, 'getTrackGeojson'])->name('geojson.track');
             Route::get('/{app}/geojson/ec_track_{track}.json', [AppElbrusEditorialContentController::class, 'getTrackJson'])->name('geojson.track.json');
@@ -266,28 +267,28 @@ Route::name('api.')->group(function () {
             ])->name('track.taxonomies');
             Route::get('/{app}/taxonomies/{taxonomy_name}.json', [AppElbrusTaxonomyController::class, 'getTerms'])->name('taxonomies');
             Route::get('/{app_id}/tiles/map.mbtiles', function ($app_id) {
-                return redirect('https://k.webmapp.it/elbrus/'.$app_id.'.mbtiles');
+                return redirect('https://k.webmapp.it/elbrus/' . $app_id . '.mbtiles');
             });
         });
         Route::prefix('webmapp')->name('webmapp.')->group(function () {
-            Route::get('/{id}/config.json', [AppController::class, 'config'])->name('config');
-            Route::get('/{id}/base-config.json', [AppController::class, 'baseConfig'])->name('baseConfig');
+            Route::get('/{app}/config.json', [AppController::class, 'config'])->name('config');
+            Route::get('/{app}/base-config.json', [AppController::class, 'baseConfig'])->name('baseConfig');
             Route::get('/{app}/classification/ranked_users_near_pois.json', [ClassificationController::class, 'getRankedUsersNearPois'])->name('getRankedUsersNearPois');
-            Route::get('/{id}/resources/icon.png', [AppController::class, 'icon'])->name('icon');
-            Route::get('/{id}/resources/splash.png', [AppController::class, 'splash'])->name('splash');
-            Route::get('/{id}/resources/icon_small.png', [AppController::class, 'iconSmall'])->name('icon_small');
-            Route::get('/{id}/resources/feature_image.png', [AppController::class, 'featureImage'])->name('feature_image');
-            Route::get('/{id}/resources/icon_notify.png', [AppController::class, 'iconNotify'])->name('icon_notify');
-            Route::get('/{id}/resources/logo_homepage.svg', [AppController::class, 'logoHomepage'])->name('logo_homepage');
+            Route::get('/{app}/resources/icon.png', [AppController::class, 'icon'])->name('icon');
+            Route::get('/{app}/resources/splash.png', [AppController::class, 'splash'])->name('splash');
+            Route::get('/{app}/resources/icon_small.png', [AppController::class, 'iconSmall'])->name('icon_small');
+            Route::get('/{app}/resources/feature_image.png', [AppController::class, 'featureImage'])->name('feature_image');
+            Route::get('/{app}/resources/icon_notify.png', [AppController::class, 'iconNotify'])->name('icon_notify');
+            Route::get('/{app}/resources/logo_homepage.svg', [AppController::class, 'logoHomepage'])->name('logo_homepage');
         });
         Route::prefix('webapp')->name('webapp.')->group(function () {
-            Route::get('/{id}/config', [AppController::class, 'config'])->name('config');
-            Route::get('/{id}/vector_style', [AppController::class, 'vectorStyle'])->name('vector_style');
-            Route::get('/{id}/vector_layer', [AppController::class, 'vectorLayer'])->name('vector_layer');
-            Route::get('/{id}/tracks_list', [AppController::class, 'tracksList'])->name('tracks_list');
-            Route::get('/{id}/pois_list', [AppController::class, 'poisList'])->name('pois_list');
-            Route::get('/{id}/layer/{layer_id}', [AppController::class, 'layer'])->name('layer');
-            Route::get('/{id}/taxonomies/{taxonomy_name}/{term_id}', [AppController::class, 'getFeaturesByAppAndTerm'])->where([
+            Route::get('/{app}/config', [AppController::class, 'config'])->name('config');
+            Route::get('/{app}/vector_style', [AppController::class, 'vectorStyle'])->name('vector_style');
+            Route::get('/{app}/vector_layer', [AppController::class, 'vectorLayer'])->name('vector_layer');
+            Route::get('/{app}/tracks_list', [AppController::class, 'tracksList'])->name('tracks_list');
+            Route::get('/{app}/pois_list', [AppController::class, 'poisList'])->name('pois_list');
+            Route::get('/{app}/layer/{layer}', [AppController::class, 'layer'])->name('layer');
+            Route::get('/{app}/taxonomies/{taxonomy_name}/{term_id}', [AppController::class, 'getFeaturesByAppAndTerm'])->where([
                 'app_id' => '[0-9]+',
                 'taxonomy_name' => '[a-z\_]+',
                 'term_id' => '[0-9]+',

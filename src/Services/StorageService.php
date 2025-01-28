@@ -31,11 +31,18 @@ class StorageService extends BaseService
 
     public function storeAppConfig(int $appId, string $contents): string|false
     {
-        $path = "{$appId}.json";
+        $path = $this->getAppConfigPath($appId);
         $a = $this->getRemoteAppConfigDisk()->put($path, $contents);
         $b = $this->getLocalAppConfigDisk()->put($path, $contents);
 
         return $a && $b ? $path : false;
+    }
+
+    public function getAppConfigJson(int $appId): string|null
+    {
+        $path = $this->getAppConfigPath($appId);
+
+        return $this->getRemoteAppConfigDisk()->get($path) ?? $this->getLocalAppConfigDisk()->get($path);
     }
 
     public function storePois(int $appId, string $contents): string|false
@@ -47,7 +54,7 @@ class StorageService extends BaseService
         return $a && $b ? $path : false;
     }
 
-    public function getPoisGeojson(int $appId): string|false
+    public function getPoisGeojson(int $appId): string|null
     {
         $path = $this->getPoisPath($appId);
 
@@ -76,9 +83,9 @@ class StorageService extends BaseService
             throw new Exception("The image $imagePath does not exists");
         }
 
-        $filename = pathinfo($imagePath)['filename'].'.'.pathinfo($imagePath)['extension'];
+        $filename = pathinfo($imagePath)['filename'] . '.' . pathinfo($imagePath)['extension'];
 
-        $path = 'EcMedia/'.$filename;
+        $path = 'EcMedia/' . $filename;
 
         $disk = $this->getEcMediaDisk();
         $disk->put($path, file_get_contents($imagePath));
@@ -129,11 +136,11 @@ class StorageService extends BaseService
 
         $filename = basename($imagePath);
         if ($width == 0) {
-            $cloudPath = 'EcMedia/Resize/x'.$height.DIRECTORY_SEPARATOR.$filename;
+            $cloudPath = 'EcMedia/Resize/x' . $height . DIRECTORY_SEPARATOR . $filename;
         } elseif ($height == 0) {
-            $cloudPath = 'EcMedia/Resize/'.$width.'x'.DIRECTORY_SEPARATOR.$filename;
+            $cloudPath = 'EcMedia/Resize/' . $width . 'x' . DIRECTORY_SEPARATOR . $filename;
         } else {
-            $cloudPath = 'EcMedia/Resize/'.$width.'x'.$height.DIRECTORY_SEPARATOR.$filename;
+            $cloudPath = 'EcMedia/Resize/' . $width . 'x' . $height . DIRECTORY_SEPARATOR . $filename;
         }
 
         $this->getEcMediaDisk()->put($cloudPath, file_get_contents($imagePath));
@@ -145,16 +152,20 @@ class StorageService extends BaseService
     // PATHS
     // TODO: move all paths here
     //
-    private function getPoisPath(int $appId)
+    private function getPoisPath(int $appId): string
     {
         return "{$appId}.geojson";
     }
 
-    private function getTrackPath(int $trackId)
+    private function getTrackPath(int $trackId): string
     {
         return "{$trackId}.json";
     }
 
+    private function getAppConfigPath(int $appId): string
+    {
+        return "{$appId}.json";
+    }
     //
     // PUBLIC GETTERS
     //
