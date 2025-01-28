@@ -1,6 +1,6 @@
 <?php
 
-namespace Wm\WmPackage\Http;
+namespace Wm\WmPackage\Http\Clients;
 
 use Illuminate\Support\Facades\Http;
 use Wm\WmPackage\Exceptions\OsmClientException;
@@ -70,7 +70,7 @@ class OsmClient
     public function getGeojson(string $osmid): string
     {
         if (! $this->checkOsmId($osmid)) {
-            throw new OsmClientException('Invalid osmid '.$osmid);
+            throw new OsmClientException('Invalid osmid ' . $osmid);
         }
 
         $geojson = [];
@@ -95,12 +95,12 @@ class OsmClient
      */
     public function getFullOsmApiUrlByOsmId($osmid): string
     {
-        $url = 'https://api.openstreetmap.org/api/0.6/'.$osmid;
+        $url = 'https://api.openstreetmap.org/api/0.6/' . $osmid;
         if (preg_match('/node/', $osmid)) {
-            $url = $url.'.json';
+            $url = $url . '.json';
         } else {
             // way and relation directly call full.json
-            $url = $url.'/full.json';
+            $url = $url . '/full.json';
         }
 
         return $url;
@@ -140,7 +140,7 @@ class OsmClient
         } elseif (preg_match('/relation/', $osmid)) {
             return $this->getPropertiesAndGeometryForRelation($json);
         } else {
-            throw new OsmClientException('OSMID has not vali type (node,way,relation) '.$osmid);
+            throw new OsmClientException('OSMID has not vali type (node,way,relation) ' . $osmid);
         }
     }
 

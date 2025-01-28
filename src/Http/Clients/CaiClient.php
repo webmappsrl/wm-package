@@ -1,6 +1,6 @@
 <?php
 
-namespace Wm\WmPackage\Http;
+namespace Wm\WmPackage\Http\Clients;
 
 use Illuminate\Support\Facades\Http;
 
@@ -31,6 +31,6 @@ class CaiClient
 
     protected function getIsMemberUrl($fiscalCode)
     {
-        return 'https://services.cai.it/cai-integration-ws/secured/ismember/'.$fiscalCode;
+        return 'https://services.cai.it/cai-integration-ws/secured/ismember/' . $fiscalCode;
     }
 }
