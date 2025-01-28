@@ -1,10 +1,11 @@
 <?php
 
-namespace Wm\WmPackage\Http\Controllers\V1;
+namespace Wm\WmPackage\Http\Controllers\Api\V1;
 
 use Wm\WmPackage\Http\Controllers\Controller;
 use Wm\WmPackage\Models\App;
 use Illuminate\Support\Facades\Storage;
+use Wm\WmPackage\Services\StorageService;
 
 class AppAPIController extends Controller
 {
@@ -89,30 +90,16 @@ class AppAPIController extends Controller
      *     ),
      * )
      */
-    public function pois(int $id)
+    public function pois(App $app)
     {
-        $app = App::find($id);
-        if (is_null($app)) {
-            return response()->json(['code' => 404, 'error' => '404 not found'], 404);
-        }
+        $appId = $app->id;
 
-        $poisUri = $id . '.geojson';
-        if (Storage::disk('wmfepois')->exists($poisUri)) {
-            $json = Storage::disk('wmfepois')->get($poisUri);
+        $json = StorageService::make()->getPoisGeojson($appId) ?? $app->BuildPoisGeojson($appId);
 
-            return response()->json(json_decode($json));
-        } elseif (Storage::disk('pois')->exists($poisUri)) {
-            $json = Storage::disk('pois')->get($poisUri);
-
-            return response()->json(json_decode($json));
-        } else {
-            $json = $app->BuildPoisGeojson($id);
-
-            return response()->json($json);
-        }
+        return response()->json($json);
     }
 
-    public function all()
+    public function index()
     {
         return App::all()->toArray();
     }

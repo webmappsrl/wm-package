@@ -310,8 +310,8 @@ Route::name('api.')->group(function () {
      */
     Route::prefix('v2')->group(function () {
         Route::prefix('app')->group(function () {
-            Route::get('/{id}/pois.geojson', [AppAPIController::class, 'pois'])->name('app_pois');
-            Route::get('/all', [AppAPIController::class, 'all'])->name('apps_json');
+            Route::get('/{app}/pois.geojson', [AppAPIController::class, 'pois'])->name('app_pois');
+            Route::get('/all', [AppAPIController::class, 'index'])->name('apps_json');
             Route::prefix('webmapp')->name('webmapp.')->group(function () {
                 Route::get('/{id}/config.json', [AppController::class, 'config'])->name('config');
                 Route::get('/{id}/resources/icon.png', [AppController::class, 'icon'])->name('icon');
@@ -326,7 +326,7 @@ Route::name('api.')->group(function () {
 
     // Export API
     Route::prefix('export')->name('export.')->group(function () {
-        Route::get('/layers', [LayerAPIController::class, 'layers'])->name('export_layers');
+        Route::get('/layers', [LayerAPIController::class, 'index'])->name('export_layers');
         Route::get('/editors', function () {
             return User::whereHas('roles', function ($q) {
                 $q->where('role_id', 2);
