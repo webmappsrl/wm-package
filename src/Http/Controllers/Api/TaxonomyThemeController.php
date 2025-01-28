@@ -4,6 +4,7 @@ namespace Wm\WmPackage\Http\Controllers\Api;
 
 use Illuminate\Http\JsonResponse;
 use Wm\WmPackage\Models\TaxonomyTheme;
+use Wm\WmPackage\Http\Controllers\Controller;
 
 class TaxonomyThemeController extends Controller
 {

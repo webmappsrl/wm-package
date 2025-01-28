@@ -6,6 +6,7 @@ use Exception;
 use Illuminate\Support\Facades\Log;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Services\Models\App\AppClassificationService;
+use Wm\WmPackage\Http\Controllers\Controller;
 
 class ClassificationController extends Controller
 {

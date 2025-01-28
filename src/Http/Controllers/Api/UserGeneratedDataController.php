@@ -14,6 +14,7 @@ use Wm\WmPackage\Models\UgcPoi;
 use Wm\WmPackage\Models\UgcTrack;
 use Wm\WmPackage\Models\User;
 use Wm\WmPackage\Services\GeometryComputationService;
+use Wm\WmPackage\Http\Controllers\Controller;
 
 class UserGeneratedDataController extends Controller
 {

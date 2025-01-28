@@ -2,16 +2,17 @@
 
 namespace Wm\WmPackage\Services\Models\App;
 
-use Illuminate\Support\Facades\DB;
+use Wm\WmPackage\Models\App;
+use Wm\WmPackage\Models\User;
 use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Models\UgcMedia;
-use Wm\WmPackage\Models\User;
+use Illuminate\Support\Facades\DB;
 
 class AppClassificationService extends AppBaseService
 {
-    public function getRankedUsersNearPois()
+    public function getRankedUsersNearPois(App $app)
     {
-        $rankings = $this->getRankedUsersNearPoisQuery();
+        $rankings = $this->getRankedUsersNearPoisQuery($app);
 
         $groupedArray = [];
         foreach ($rankings as $item) {
@@ -33,9 +34,9 @@ class AppClassificationService extends AppBaseService
         return $groupedArray;
     }
 
-    public function getAllRankedUsersNearPoisData()
+    public function getAllRankedUsersNearPoisData(App $app)
     {
-        $rankings = $this->getRankedUsersNearPoisQuery();
+        $rankings = $this->getRankedUsersNearPoisQuery($app);
 
         // Array where we will store the results
         $transformedArray = [
@@ -81,7 +82,7 @@ class AppClassificationService extends AppBaseService
         $ugcMedias = UgcMedia::whereIn('id', $transformedArray['UgcMedia'])->get(['id', 'relative_url']);
         $formattedugcMedias = $ugcMedias->reduce(function ($carry, $item) {
             $carry[$item->id] = [
-                'url' => 'https://geohub.webmapp.it/storage/'.$item->relative_url,
+                'url' => 'https://geohub.webmapp.it/storage/' . $item->relative_url,
             ];
 
             return $carry;
@@ -106,7 +107,7 @@ class AppClassificationService extends AppBaseService
         return $data;
     }
 
-    public function getRankedUsersNearPoisQuery($ugcUserId = null)
+    public function getRankedUsersNearPoisQuery(App $app, $ugcUserId = null)
     {
         $query = EcPoi::query()
             ->select(
@@ -115,18 +116,18 @@ class AppClassificationService extends AppBaseService
                 DB::raw('COUNT(DISTINCT ugc_media.user_id) as unique_media_count'),
                 'ec_pois.*' // Seleziona tutti i campi di ec_pois
             )
-            ->join('ugc_media', function ($join) {
-                $join->on('ec_pois.user_id', '=', DB::raw("'".$this->app->user_id."'"))
+            ->join('ugc_media', function ($join) use ($app) {
+                $join->on('ec_pois.user_id', '=', DB::raw("'" . $app->user_id . "'"))
                     ->whereRaw('ST_DWithin(ugc_media.geometry, ec_pois.geometry, 100.0)')
-                    ->where('ugc_media.app_id', '=', DB::raw("'".$this->app->app_id."'"));
+                    ->where('ugc_media.app_id', '=', DB::raw("'" . $app->app_id . "'"));
             });
 
         if ($ugcUserId) {
             $query->where('ugc_media.user_id', '=', $ugcUserId);
         }
 
-        if ($this->app->classification_start_date && $this->app->classification_end_date) {
-            $query->whereBetween('ugc_media.created_at', [$this->app->classification_start_date, $this->app->classification_end_date]);
+        if ($app->classification_start_date && $app->classification_end_date) {
+            $query->whereBetween('ugc_media.created_at', [$app->classification_start_date, $app->classification_end_date]);
         }
 
         $result = $query
@@ -148,10 +149,10 @@ class AppClassificationService extends AppBaseService
         return $result;
     }
 
-    public function getRankedUserPositionNearPoisQuery($ugcUserId)
+    public function getRankedUserPositionNearPoisQuery(App $app, $ugcUserId)
     {
         // Ottieni la classifica completa degli utenti
-        $rankings = $this->getRankedUsersNearPois();
+        $rankings = $this->getRankedUsersNearPois($app);
 
         $userIds = array_keys($rankings);
         $position = array_search($ugcUserId, $userIds);

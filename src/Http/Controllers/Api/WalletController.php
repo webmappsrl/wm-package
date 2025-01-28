@@ -4,6 +4,7 @@ namespace Wm\WmPackage\Http\Controllers\Api;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Wm\WmPackage\Http\Controllers\Controller;
 
 class WalletController extends Controller
 {

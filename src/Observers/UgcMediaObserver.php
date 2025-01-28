@@ -2,11 +2,12 @@
 
 namespace Wm\WmPackage\Observers;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Mail;
 use Wm\WmPackage\Models\App;
-use Wm\WmPackage\Models\UgcMedia;
 use Wm\WmPackage\Models\User;
+use Wm\WmPackage\Models\UgcMedia;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Database\Eloquent\Model;
+use Wm\WmPackage\Services\Models\App\AppClassificationService;
 
 class UgcMediaObserver extends AbstractObserver
 {
@@ -20,7 +21,7 @@ class UgcMediaObserver extends AbstractObserver
         parent::creating($ugcMedia);
         $app = App::where('id', $ugcMedia->app_id)->first();
         if ($app && $app->classification_show) {
-            $ugcMedia->beforeCount = count($app->getRankedUsersNearPoisQuery($ugcMedia->user_id));
+            $ugcMedia->beforeCount = count(AppClassificationService::make()->getRankedUsersNearPoisQuery($app, $ugcMedia->user_id));
         }
     }
 
@@ -32,15 +33,16 @@ class UgcMediaObserver extends AbstractObserver
     public function created(UgcMedia $ugcMedia)
     {
         $app = App::where('id', $ugcMedia->app_id)->first();
+        $service = AppClassificationService::make();
         if ($app && $app->classification_show) {
-            $afterCount = count($app->getRankedUsersNearPoisQuery($ugcMedia->user_id));
+            $afterCount = count($service->getRankedUsersNearPoisQuery($app, $ugcMedia->user_id));
             if ($afterCount > $ugcMedia->beforeCount) {
                 $user = User::find($ugcMedia->user_id);
                 if (! is_null($user)) {
-                    $position = $app->getRankedUserPositionNearPoisQuery($user->id);
+                    $position = $service->getRankedUserPositionNearPoisQuery($app, $user->id);
                     Mail::send('wm-package::mails.gamification.rankingIncreased', ['user' => $user, 'position' => $position, 'app' => $app], function ($message) use ($user, $app) {
                         $message->to($user->email);
-                        $message->subject($app->name.': Your Ranking Has Increased');
+                        $message->subject($app->name . ': Your Ranking Has Increased');
                     });
                 }
             }
