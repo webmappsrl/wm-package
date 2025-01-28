@@ -16,7 +16,7 @@ class DemClient
 
     private function getElevationUrl($x, $y)
     {
-        return $this->getDemHost() . '/' . rtrim(config('wm-package.clients.dem.ele_api'), '/') . "/$x/$y";
+        return $this->getDemHost().'/'.rtrim(config('wm-package.clients.dem.ele_api'), '/')."/$x/$y";
     }
 
     public function getTechData($geojson)
@@ -38,7 +38,7 @@ class DemClient
 
     private function getTechDataUrl()
     {
-        return $this->getDemHost() . '/' . rtrim(config('wm-package.clients.dem.tech_data_api'), '/');
+        return $this->getDemHost().'/'.rtrim(config('wm-package.clients.dem.tech_data_api'), '/');
     }
 
     protected function getDemHost()

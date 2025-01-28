@@ -31,6 +31,6 @@ class CaiClient
 
     protected function getIsMemberUrl($fiscalCode)
     {
-        return 'https://services.cai.it/cai-integration-ws/secured/ismember/' . $fiscalCode;
+        return 'https://services.cai.it/cai-integration-ws/secured/ismember/'.$fiscalCode;
     }
 }

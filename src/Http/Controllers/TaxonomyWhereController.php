@@ -2,12 +2,11 @@
 
 namespace Wm\WmPackage\Http\Controllers;
 
-use Wm\WmPackage\Models\TaxonomyWhere;
 use Illuminate\Http\JsonResponse;
+use Wm\WmPackage\Models\TaxonomyWhere;
 
 class TaxonomyWhereController extends Controller
 {
-
     /**
      * Get Taxonomy by ID as geoJson
      *

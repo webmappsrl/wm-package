@@ -2,10 +2,6 @@
 
 namespace Wm\WmPackage\Http\Resources;
 
-use Wm\WmPackage\Models\UgcMedia;
-use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Facades\DB;
-
 class UgcMediaResource extends GeometryModelResource
 {
     /**

@@ -2,12 +2,11 @@
 
 namespace Wm\WmPackage\Http\Controllers;
 
-use Wm\WmPackage\Models\TaxonomyTheme;
 use Illuminate\Http\JsonResponse;
+use Wm\WmPackage\Models\TaxonomyTheme;
 
 class TaxonomyThemeController extends Controller
 {
-
     /**
      * Get Taxonomy by ID
      *
@@ -27,6 +26,7 @@ class TaxonomyThemeController extends Controller
     public function index(): JsonResponse
     {
         $taxonomyThemes = TaxonomyTheme::select('id', 'name', 'identifier')->get();
+
         return response()->json($taxonomyThemes, 200);
     }
 }

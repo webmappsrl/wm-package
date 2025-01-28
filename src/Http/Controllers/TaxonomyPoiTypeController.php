@@ -3,12 +3,11 @@
 namespace Wm\WmPackage\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
-use Wm\WmPackage\Models\TaxonomyPoiType;
 use Wm\WmPackage\Http\Resources\TaxonomyPoiTypeResource;
+use Wm\WmPackage\Models\TaxonomyPoiType;
 
 class TaxonomyPoiTypeController extends Controller
 {
-
     /**
      * Get Taxonomy by ID
      *

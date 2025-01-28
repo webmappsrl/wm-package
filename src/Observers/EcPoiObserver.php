@@ -2,10 +2,10 @@
 
 namespace Wm\WmPackage\Observers;
 
-use Wm\WmPackage\Models\EcPoi;
-use Wm\WmPackage\Services\Models\UserService;
 use Symfony\Component\HttpKernel\Exception\HttpException;
+use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Services\Models\EcPoiService;
+use Wm\WmPackage\Services\Models\UserService;
 
 class EcPoiObserver extends AbstractObserver
 {

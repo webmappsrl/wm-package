@@ -3,8 +3,8 @@
 namespace Wm\WmPackage\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
-use Wm\WmPackage\Models\TaxonomyActivity;
 use Wm\WmPackage\Http\Resources\TaxonomyActivityResource;
+use Wm\WmPackage\Models\TaxonomyActivity;
 
 class TaxonomyActivityController extends Controller
 {

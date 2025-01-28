@@ -1,6 +1,7 @@
 <?php
 
-
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 use Wm\WmPackage\Http\Controllers\AppAuthController;
 use Wm\WmPackage\Http\Controllers\AppController;
 use Wm\WmPackage\Http\Controllers\AppElbrusEditorialContentController;
@@ -24,14 +25,7 @@ use Wm\WmPackage\Http\Controllers\UserGeneratedDataController;
 use Wm\WmPackage\Http\Controllers\V1\AppAPIController;
 use Wm\WmPackage\Http\Controllers\WalletController;
 use Wm\WmPackage\Http\Controllers\WebmappAppController;
-use Wm\WmPackage\Http\Resources\TaxonomyActivityResource;
-use Wm\WmPackage\Http\Resources\TaxonomyPoiTypeResource;
-use Wm\WmPackage\Models\TaxonomyActivity;
-use Wm\WmPackage\Models\TaxonomyPoiType;
-use Wm\WmPackage\Models\TaxonomyWhere;
 use Wm\WmPackage\Models\User;
-use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Storage;
 
 Route::middleware('api')->group(function () {
 
@@ -72,13 +66,6 @@ Route::middleware('api')->group(function () {
         });
     });
 });
-
-
-
-
-
-
-
 
 /*
 |--------------------------------------------------------------------------
@@ -279,7 +266,7 @@ Route::name('api.')->group(function () {
             ])->name('track.taxonomies');
             Route::get('/{app_id}/taxonomies/{taxonomy_name}.json', [AppElbrusTaxonomyController::class, 'getTerms'])->name('taxonomies');
             Route::get('/{app_id}/tiles/map.mbtiles', function ($app_id) {
-                return redirect('https://k.webmapp.it/elbrus/' . $app_id . '.mbtiles');
+                return redirect('https://k.webmapp.it/elbrus/'.$app_id.'.mbtiles');
             });
         });
         Route::prefix('webmapp')->name('webmapp.')->group(function () {

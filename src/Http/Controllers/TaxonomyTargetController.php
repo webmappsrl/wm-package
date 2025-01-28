@@ -2,12 +2,11 @@
 
 namespace Wm\WmPackage\Http\Controllers;
 
-use Wm\WmPackage\Models\TaxonomyTarget;
 use Illuminate\Http\JsonResponse;
+use Wm\WmPackage\Models\TaxonomyTarget;
 
 class TaxonomyTargetController extends Controller
 {
-
     /**
      * Get Taxonomy by ID
      *
