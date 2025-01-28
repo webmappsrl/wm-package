@@ -2,10 +2,10 @@
 
 namespace Wm\WmPackage\Http\Controllers;
 
+use Illuminate\Http\JsonResponse;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Models\EcTrack;
-use Illuminate\Http\JsonResponse;
 
 class AppElbrusEditorialContentController extends Controller
 {
@@ -31,6 +31,7 @@ class AppElbrusEditorialContentController extends Controller
     public function getTrackJson(App $app, EcTrack $ecTrack): JsonResponse
     {
         $geojson = $ecTrack->getElbrusGeojson();
+
         return response()->json($geojson['properties']);
     }
 }

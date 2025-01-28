@@ -2,8 +2,8 @@
 
 namespace Wm\WmPackage\Http\Controllers;
 
-use Wm\WmPackage\Models\TaxonomyWhen;
 use Illuminate\Http\JsonResponse;
+use Wm\WmPackage\Models\TaxonomyWhen;
 
 class TaxonomyWhenController extends Controller
 {
