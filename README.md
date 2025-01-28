@@ -127,8 +127,21 @@ Il pacchetto JWT sarà gestito come dipendenza del wm-package invece che dover e
 https://laravel.com/docs/11.x/scout
 https://github.com/matchish/laravel-scout-elasticsearch
 
-## Notes
+## Refactor Notes
 
 Horizon needs 1GB memory and infinite time execution due pbf generation
+
 Molti jobs fallivano silenziosamente a causa dei try catch all'interno, nel catch solo un log
+
 JIDO è sempre utilizzato? va fatta pulizia nel caso nel modello App e AppConfigService
+
+## Indicazioni per sviluppatori
+
+### Elasticsearch
+
+Vedi sezione eleasticsearch di questo documento
+
+### Metodi controllers:
+
+https://laravel.com/docs/10.x/controllers#resource-controllers
+https://laravel.com/docs/10.x/controllers#actions-handled-by-resource-controllers
