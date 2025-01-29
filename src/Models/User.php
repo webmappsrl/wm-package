@@ -144,8 +144,6 @@ class User extends Authenticatable implements JWTSubject
             : null;
     }
 
-
-
     /**
      * defines the default roles of this app
      *
