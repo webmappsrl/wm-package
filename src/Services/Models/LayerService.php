@@ -28,8 +28,8 @@ class LayerService extends BaseService
 
         // Logga gli utenti associati
         Log::channel('layer')->info('*************getTracks*****************');
-        Log::channel('layer')->info('id: ' . $layer->id);
-        Log::channel('layer')->info('layer: ' . $layer->name);
+        Log::channel('layer')->info('id: '.$layer->id);
+        Log::channel('layer')->info('layer: '.$layer->name);
         Log::channel('layer')->info('Utenti associati per il layer: ', ['associated_users' => $associated_app_users]);
 
         // Partiamo recuperando tutte le tracce
@@ -48,11 +48,11 @@ class LayerService extends BaseService
             });
 
         // Logga il numero di tracce iniziali
-        Log::channel('layer')->info('Numero iniziale di tracce: ' . $allEcTracks->count());
+        Log::channel('layer')->info('Numero iniziale di tracce: '.$allEcTracks->count());
 
         // Per ogni tassonomia, applichiamo un filtro sulle tracce
         foreach ($taxonomies as $taxonomy) {
-            $taxonomyField = 'taxonomy' . $taxonomy;
+            $taxonomyField = 'taxonomy'.$taxonomy;
 
             Log::channel('layer')->info("Inizio processamento tassonomia: $taxonomyField");
 
@@ -72,14 +72,14 @@ class LayerService extends BaseService
                         // Controlla se la traccia ha almeno un termine della tassonomia corrente
                         return $track->$taxonomyField->intersect($taxonomyTerms)->isNotEmpty();
                     } catch (Exception $e) {
-                        Log::channel('layer')->error("Errore durante il filtraggio delle tracce per la tassonomia $taxonomyField: " . $e->getMessage());
+                        Log::channel('layer')->error("Errore durante il filtraggio delle tracce per la tassonomia $taxonomyField: ".$e->getMessage());
 
                         return false;
                     }
                 });
 
                 // Logga il numero di tracce rimanenti dopo il filtro per questa tassonomia
-                Log::channel('layer')->info("Tracce rimanenti dopo il filtro di $taxonomyField: " . $allEcTracks->count());
+                Log::channel('layer')->info("Tracce rimanenti dopo il filtro di $taxonomyField: ".$allEcTracks->count());
 
                 // Se non ci sono più tracce comuni, restituisci subito un array vuoto
                 if ($allEcTracks->isEmpty()) {
@@ -97,7 +97,7 @@ class LayerService extends BaseService
 
         // Se collection è true, ritorna direttamente tutte le tracce raccolte
         if ($collection) {
-            Log::channel('layer')->info('Ritorno tutte le tracce come collezione. Totale tracce: ' . $allEcTracks->count());
+            Log::channel('layer')->info('Ritorno tutte le tracce come collezione. Totale tracce: '.$allEcTracks->count());
 
             return $allEcTracks;
         }
@@ -106,7 +106,7 @@ class LayerService extends BaseService
         $trackIds = $allEcTracks->pluck('id')->toArray();
 
         // Logga il numero finale di track IDs raccolti
-        Log::channel('layer')->info('Numero totale di track IDs raccolti: ' . count($trackIds));
+        Log::channel('layer')->info('Numero totale di track IDs raccolti: '.count($trackIds));
 
         // Libera la memoria utilizzata dalla collezione di tracce
         unset($allEcTracks);
@@ -128,7 +128,7 @@ class LayerService extends BaseService
         }
 
         // Logga il numero di tracce filtrate dalla geometria e dalle tassonomie
-        Log::channel('layer')->info('Numero di tracce finali filtrate da getTracks: ' . $allEcTracks->count());
+        Log::channel('layer')->info('Numero di tracce finali filtrate da getTracks: '.$allEcTracks->count());
 
         // Restituisci tracce uniche in base all'ID
         return $allEcTracks->unique('id');
@@ -138,8 +138,6 @@ class LayerService extends BaseService
     {
         return DB::table('apps')->where('id', $layer->app_id)->select(['user_id'])->first()->user_id;
     }
-
-
 
     /**
      * Returns a list of taxonomy IDs associated with the layer.

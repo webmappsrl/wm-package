@@ -3,8 +3,8 @@
 namespace Wm\WmPackage\Http\Controllers;
 
 use Wm\WmPackage\Models\App;
-use Wm\WmPackage\Services\Models\App\AppClassificationService;
 use Wm\WmPackage\Models\User;
+use Wm\WmPackage\Services\Models\App\AppClassificationService;
 
 class RankingController extends Controller
 {
