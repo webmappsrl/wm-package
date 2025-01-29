@@ -22,7 +22,7 @@
         "intervention/image": "^2.5",
         "kiritokatklian/nova-permission": "*",
         "laravel/framework": "^10.0 || ^11.0",
-        "laravel/nova": "^4.3",
+        "laravel/nova": "4.33.3",
         "laravel/sanctum": "*",
         "laravel/scout": "^10.11",
         "maatwebsite/excel": "^3.1",

@@ -144,43 +144,7 @@ class User extends Authenticatable implements JWTSubject
             : null;
     }
 
-    /**
-     * Get the current emulated User
-     */
-    public static function getEmulatedUser(?User $user = null): ?User
-    {
-        if (! isset($user)) {
-            $user = self::getLoggedUser();
-        }
 
-        $result = $user;
-        $emulateUserId = session('emulate_user_id');
-        if (isset($emulateUserId)) {
-            $result = User::find($emulateUserId);
-        }
-
-        return $result;
-    }
-
-    /**
-     * Set the emulated user id
-     *
-     * @param  int  $userId  the user to emulate
-     */
-    public static function emulateUser(int $userId)
-    {
-        if (! is_null(User::find($userId))) {
-            session(['emulate_user_id' => $userId]);
-        }
-    }
-
-    /**
-     * Restore the emulated user to the logged user
-     */
-    public static function restoreEmulatedUser()
-    {
-        session(['emulate_user_id' => null]);
-    }
 
     /**
      * defines the default roles of this app
