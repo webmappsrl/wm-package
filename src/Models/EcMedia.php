@@ -23,6 +23,7 @@ class EcMedia extends Media
 
     protected static function boot()
     {
+        parent::boot();
         App::observe(EcMediaObserver::class);
     }
 

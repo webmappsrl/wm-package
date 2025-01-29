@@ -35,49 +35,42 @@ class RolePolicy
 
     public function viewAny(User $user): bool
     {
-        $user = User::getEmulatedUser($user);
 
         return $user->can('view_role');
     }
 
     public function view(User $user, Role $model): bool
     {
-        $user = User::getEmulatedUser($user);
 
         return $user->can('view_role');
     }
 
     public function create(User $user): bool
     {
-        $user = User::getEmulatedUser($user);
 
         return $user->can('create_role');
     }
 
     public function update(User $user, Role $model): bool
     {
-        $user = User::getEmulatedUser($user);
 
         return $user->can('edit_role');
     }
 
     public function delete(User $user, Role $model): bool
     {
-        $user = User::getEmulatedUser($user);
 
         return $user->can('delete_role');
     }
 
     public function restore(User $user, Role $model): bool
     {
-        $user = User::getEmulatedUser($user);
 
         return $user->can('delete_role');
     }
 
     public function forceDelete(User $user, Role $model): bool
     {
-        $user = User::getEmulatedUser($user);
 
         return $user->can('delete_role');
     }

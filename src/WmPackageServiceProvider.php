@@ -48,7 +48,10 @@ class WmPackageServiceProvider extends PackageServiceProvider
          */
         $package
             ->name('wm-package')
-            ->hasConfigFile()
+            ->hasConfigFile([
+                'wm-package',
+                'wm-filesystems'
+            ])
             //->hasRoutes(['api', 'web'])// Check the boot method, routes are registered there
             ->hasMigrations([
                 'add_last_login_at_to_users_table',
@@ -60,11 +63,6 @@ class WmPackageServiceProvider extends PackageServiceProvider
                 DownloadDbCommand::class,
             ])
             ->hasViews();
-
-        $this->app->config['filesystems.disks.backups'] = [
-            'driver' => 'local',
-            'root' => storage_path('backups'),
-        ];
     }
 
     public function packageRegistered()
@@ -77,5 +75,11 @@ class WmPackageServiceProvider extends PackageServiceProvider
 
         // ElasticSearch
         $this->app->register(ElasticSearchServiceProvider::class);
+
+
+        $this->app->config['filesystems.disks'] = [
+            ...$this->app->config['filesystems.disks'],
+            ...config('wm-filesystems.disks')
+        ];
     }
 }

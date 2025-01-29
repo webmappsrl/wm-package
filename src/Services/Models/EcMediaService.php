@@ -29,7 +29,7 @@ class EcMediaService extends BaseService
             })->dispatch();
     }
 
-    public function thumbnail($size, EcMedia $model): string
+    public function thumbnail(EcMedia $model, $size): string
     {
         $thumbnails = json_decode($model->thumbnails, true);
         $result = substr($model->url, 0, 4) === 'http' ? $model->url : StorageService::make()->getPublicPath($model->url);

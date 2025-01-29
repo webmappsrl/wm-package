@@ -35,16 +35,12 @@ class AppPolicy
 
     public function viewAny(User $user): bool
     {
-        $user = User::getEmulatedUser($user);
-
         return $user->can('view_apps') ||
             $user->can('view_self_apps');
     }
 
     public function view(User $user, App $model): bool
     {
-        $user = User::getEmulatedUser($user);
-
         return $user->can('view_apps') ||
             ($user->id === $model->user_id && $user->can('view_self_apps'));
     }
@@ -64,8 +60,6 @@ class AppPolicy
             return false;
         }
 
-        $user = User::getEmulatedUser($user);
-
         return $user->can('delete_self_apps');
     }
 
@@ -75,8 +69,6 @@ class AppPolicy
             return false;
         }
 
-        $user = User::getEmulatedUser($user);
-
         return $user->can('delete_apps');
     }
 
@@ -85,9 +77,6 @@ class AppPolicy
         if ($user->hasRole('Editor')) {
             return false;
         }
-
-        $user = User::getEmulatedUser($user);
-
         return $user->can('delete_apps');
     }
 
@@ -96,8 +85,6 @@ class AppPolicy
         if ($user->hasRole('Editor')) {
             return false;
         }
-
-        $user = User::getEmulatedUser($user);
 
         return $user->hasRole('Admin') && $user->id !== $model->id;
     }

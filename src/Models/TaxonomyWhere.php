@@ -2,8 +2,9 @@
 
 namespace Wm\WmPackage\Models;
 
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Spatie\Translatable\HasTranslations;
 use Wm\WmPackage\Models\Abstracts\Taxonomy;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 /**
  * Class TaxonomyWhere

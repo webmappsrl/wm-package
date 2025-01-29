@@ -39,6 +39,7 @@ class UgcMedia extends Media
 
     protected static function boot()
     {
+        parent::boot();
         App::observe(UgcMediaObserver::class);
     }
 

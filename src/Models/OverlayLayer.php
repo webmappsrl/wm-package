@@ -2,14 +2,15 @@
 
 namespace Wm\WmPackage\Models;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\MorphToMany;
+use Spatie\Translatable\HasTranslations;
 use Wm\WmPackage\Models\Abstracts\GeometryModel;
 use Wm\WmPackage\Observers\OverlayLayerObserver;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
 
 class OverlayLayer extends GeometryModel
 {
+    use HasTranslations;
     /**
      * The attributes translatable
      *
@@ -19,6 +20,7 @@ class OverlayLayer extends GeometryModel
 
     protected static function boot()
     {
+        parent::boot();
         App::observe(OverlayLayerObserver::class);
     }
 

@@ -14,6 +14,7 @@ use Wm\WmPackage\Models\Abstracts\GeometryModel;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\Layer;
+use Wm\WmPackage\Services\Models\EcMediaService;
 
 class GeometryComputationService extends BaseService
 {
@@ -191,61 +192,66 @@ class GeometryComputationService extends BaseService
 
     /**
      * Determines next and previous stage of each track inside the layer
-     *
+     * 
+     * This is the old Layer method "generateLayerEdges()"
+     * public function generateLayerEdges() -> for the search match
+     * 
+     * Used in the AppConfigService
+     * 
      * @return JSON
      */
-    public function getLayerEdges($tracks)
-    {
+    // public function getLayerEdges($tracks)
+    // {
 
-        if (empty($tracks)) {
-            return null;
-        }
+    //     if (empty($tracks)) {
+    //         return null;
+    //     }
 
-        $trackIds = $tracks->pluck('id')->toArray();
-        $edges = [];
+    //     $trackIds = $tracks->pluck('id')->toArray();
+    //     $edges = [];
 
-        foreach ($tracks as $track) {
+    //     foreach ($tracks as $track) {
 
-            $geometry = $track->geometry;
+    //         $geometry = $track->geometry;
 
-            $start_point = DB::select(
-                <<<SQL
-                    SELECT ST_AsText(ST_SetSRID(ST_Force2D(ST_StartPoint('$geometry')), 4326)) As wkt
-                SQL
-            )[0]->wkt;
+    //         $start_point = DB::select(
+    //             <<<SQL
+    //                 SELECT ST_AsText(ST_SetSRID(ST_Force2D(ST_StartPoint('$geometry')), 4326)) As wkt
+    //             SQL
+    //         )[0]->wkt;
 
-            $end_point = DB::select(
-                <<<SQL
-                    SELECT ST_AsText(ST_SetSRID(ST_Force2D(ST_EndPoint('$geometry')), 4326)) As wkt
-                SQL
-            )[0]->wkt;
+    //         $end_point = DB::select(
+    //             <<<SQL
+    //                 SELECT ST_AsText(ST_SetSRID(ST_Force2D(ST_EndPoint('$geometry')), 4326)) As wkt
+    //             SQL
+    //         )[0]->wkt;
 
-            // Find the next tracks
-            $nextTrack = EcTrack::whereIn('id', $trackIds)
-                ->where('id', '<>', $track->id)
-                ->whereRaw(
-                    <<<SQL
-                        ST_DWithin(ST_SetSRID(geometry, 4326), 'SRID=4326;{$end_point}', 0.001)
-                    SQL
-                )
-                ->get();
+    //         // Find the next tracks
+    //         $nextTrack = EcTrack::whereIn('id', $trackIds)
+    //             ->where('id', '<>', $track->id)
+    //             ->whereRaw(
+    //                 <<<SQL
+    //                     ST_DWithin(ST_SetSRID(geometry, 4326), 'SRID=4326;{$end_point}', 0.001)
+    //                 SQL
+    //             )
+    //             ->get();
 
-            // Find the previous tracks
-            $previousTrack = EcTrack::whereIn('id', $trackIds)
-                ->where('id', '<>', $track->id)
-                ->whereRaw(
-                    <<<SQL
-                        ST_DWithin(ST_SetSRID(geometry, 4326), 'SRID=4326;{$start_point}', 0.001)
-                    SQL
-                )
-                ->get();
+    //         // Find the previous tracks
+    //         $previousTrack = EcTrack::whereIn('id', $trackIds)
+    //             ->where('id', '<>', $track->id)
+    //             ->whereRaw(
+    //                 <<<SQL
+    //                     ST_DWithin(ST_SetSRID(geometry, 4326), 'SRID=4326;{$start_point}', 0.001)
+    //                 SQL
+    //             )
+    //             ->get();
 
-            $edges[$track->id]['prev'] = $previousTrack->pluck('id')->toArray();
-            $edges[$track->id]['next'] = $nextTrack->pluck('id')->toArray();
-        }
+    //         $edges[$track->id]['prev'] = $previousTrack->pluck('id')->toArray();
+    //         $edges[$track->id]['next'] = $nextTrack->pluck('id')->toArray();
+    //     }
 
-        return $edges;
-    }
+    //     return $edges;
+    // }
 
     /**
      * Calculate the centroid of the ec track
@@ -600,7 +606,7 @@ GROUP BY
             while ($i < count($ids) && count($images) < 3) {
                 $track = EcTrack::find($ids[$i]);
 
-                $image = isset($track->featureImage) ? $track->featureImage->thumbnail('150x150') : '';
+                $image = isset($track->featureImage) ? EcMediaService::make()->thumbnail($track->featureImage, '150x150') : '';
                 if (isset($image) && ! empty($image) && ! in_array($image, $images)) {
                     $images[] = $image;
                 }

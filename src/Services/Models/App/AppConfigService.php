@@ -2,16 +2,17 @@
 
 namespace Wm\WmPackage\Services\Models\App;
 
-use Wm\WmPackage\Enums\AppTiles;
 use Exception;
+use Illuminate\Support\Str;
+use Wm\WmPackage\Enums\AppTiles;
+use Wm\WmPackage\Models\EcMedia;
+use Wm\WmPackage\Models\EcTrack;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
-use Wm\WmPackage\Models\EcMedia;
-use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\OverlayLayer;
+use Illuminate\Support\Facades\Storage;
+use Wm\WmPackage\Services\Models\EcMediaService;
 use Wm\WmPackage\Services\GeometryComputationService;
 
 class AppConfigService extends AppBaseService
@@ -301,9 +302,9 @@ class AppConfigService extends AppBaseService
                 // FEATURE IMAGE:
                 $feature_image = null;
                 if (! empty($layer->featureImage) && $layer->featureImage->count() > 0) {
-                    $feature_image = $layer->featureImage->thumbnail('400x200');
-                    if (! is_null($layer->featureImage->thumbnail('400x200'))) {
-                        $item['feature_image'] = $layer->featureImage->thumbnail('400x200');
+                    $feature_image = EcMediaService::make()->thumbnail($layer->featureImage, '400x200');
+                    if (! is_null($feature_image)) {
+                        $item['feature_image'] = $feature_image;
                     }
                 } else {
                     if ($layer->taxonomyWheres->count() > 0) {
@@ -356,8 +357,8 @@ class AppConfigService extends AppBaseService
                     if ($feature_image != null) {
                         // Retrieve proper image
                         $image = EcMedia::find($feature_image);
-                        if (! is_null($image->thumbnail('400x200'))) {
-                            $item['feature_image'] = $image->thumbnail('400x200');
+                        if (! is_null(($resizedImage = EcMediaService::make()->thumbnail($image, '400x200')))) {
+                            $item['feature_image'] = $resizedImage;
                         }
                     }
                 }
@@ -372,9 +373,12 @@ class AppConfigService extends AppBaseService
                     }
                 }
 
-                if ($layer->generate_edges || $this->app->generate_layers_edges) {
-                    $item['edges'] = $layer->generateLayerEdges();
-                }
+                // TODO: check if this computation is really needed
+                //       then delete this and then the commented out method in the service
+
+                // if ($layer->generate_edges || $this->app->generate_layers_edges) {
+                //     $item['edges'] = GometryComputationService::make()->generateLayerEdges();//without params this is null
+                // }
 
                 $layers[] = $item;
             }

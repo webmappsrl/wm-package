@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Scout\Searchable;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
+use Spatie\Translatable\HasTranslations;
 use Wm\WmPackage\Observers\AppObserver;
 use Wm\WmPackage\Services\Models\App\AppConfigService;
 use Wm\WmPackage\Services\StorageService;
@@ -24,7 +25,7 @@ use Wm\WmPackage\Services\StorageService;
  */
 class App extends Model
 {
-    use HasFactory, Searchable;
+    use HasFactory, Searchable, HasTranslations;
 
     protected $fillable = [
         'welcome',
@@ -52,6 +53,7 @@ class App extends Model
 
     protected static function boot()
     {
+        parent::boot();
         App::observe(AppObserver::class);
     }
 

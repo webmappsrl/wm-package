@@ -35,49 +35,42 @@ class PermissionPolicy
 
     public function viewAny(User $user): bool
     {
-        $user = User::getEmulatedUser($user);
 
         return $user->can('view_permission');
     }
 
     public function view(User $user, Permission $model): bool
     {
-        $user = User::getEmulatedUser($user);
 
         return $user->can('view_permission');
     }
 
     public function create(User $user): bool
     {
-        $user = User::getEmulatedUser($user);
 
         return $user->can('create_permission');
     }
 
     public function update(User $user, Permission $model): bool
     {
-        $user = User::getEmulatedUser($user);
 
         return $user->can('edit_permission');
     }
 
     public function delete(User $user, Permission $model): bool
     {
-        $user = User::getEmulatedUser($user);
 
         return $user->can('delete_permission');
     }
 
     public function restore(User $user, Permission $model): bool
     {
-        $user = User::getEmulatedUser($user);
 
         return $user->can('delete_permission');
     }
 
     public function forceDelete(User $user, Permission $model): bool
     {
-        $user = User::getEmulatedUser($user);
 
         return $user->can('delete_permission');
     }

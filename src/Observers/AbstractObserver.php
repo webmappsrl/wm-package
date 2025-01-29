@@ -14,7 +14,7 @@ abstract class AbstractObserver
      */
     public function creating(Model $model)
     {
-        $user = User::getEmulatedUser();
+        $user = auth()->user();
         if (is_null($user)) {
             $user = User::where('email', '=', 'team@webmapp.it')->first();
         }

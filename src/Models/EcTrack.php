@@ -350,7 +350,7 @@ class EcTrack extends Track
     /**
      * Create a geojson from the ec track
      */
-    public function getGeojson(): ?array
+    public function getGeojson($version = 'v1'): ?array
     {
         $feature = $this->getEmptyGeojson();
         if (isset($feature['properties'])) {
