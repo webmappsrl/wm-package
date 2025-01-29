@@ -77,6 +77,7 @@ class AppPolicy
         if ($user->hasRole('Editor')) {
             return false;
         }
+
         return $user->can('delete_apps');
     }
 

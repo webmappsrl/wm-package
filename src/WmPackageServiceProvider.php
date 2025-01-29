@@ -3,18 +3,17 @@
 namespace Wm\WmPackage;
 
 use Illuminate\Support\Facades\Route;
-use Wm\WmPackage\Commands\UploadDbAWS;
-use Spatie\LaravelPackageTools\Package;
-use Wm\WmPackage\Commands\WmPackageCommand;
-use Wm\WmPackage\Commands\DownloadDbCommand;
-use Wm\WmPackage\Providers\EventServiceProvider;
-use Tymon\JWTAuth\Providers\LaravelServiceProvider;
-use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Matchish\ScoutElasticSearch\ElasticSearchServiceProvider;
+use Spatie\LaravelPackageTools\Package;
+use Spatie\LaravelPackageTools\PackageServiceProvider;
+use Tymon\JWTAuth\Providers\LaravelServiceProvider;
+use Wm\WmPackage\Commands\DownloadDbCommand;
+use Wm\WmPackage\Commands\UploadDbAWS;
+use Wm\WmPackage\Commands\WmPackageCommand;
+use Wm\WmPackage\Providers\EventServiceProvider;
 
 class WmPackageServiceProvider extends PackageServiceProvider
 {
-
     /**
      * Define your route model bindings, pattern filters, and other route configuration.
      *
@@ -31,13 +30,12 @@ class WmPackageServiceProvider extends PackageServiceProvider
         $this->app->call(function () use ($packageDirPath) {
             Route::middleware('api')
                 ->prefix('api')
-                ->group($packageDirPath . 'routes/api.php');
+                ->group($packageDirPath.'routes/api.php');
 
             Route::middleware('web')
-                ->group($packageDirPath . 'routes/web.php');
+                ->group($packageDirPath.'routes/web.php');
         });
     }
-
 
     public function configurePackage(Package $package): void
     {
@@ -50,9 +48,9 @@ class WmPackageServiceProvider extends PackageServiceProvider
             ->name('wm-package')
             ->hasConfigFile([
                 'wm-package',
-                'wm-filesystems'
+                'wm-filesystems',
             ])
-            //->hasRoutes(['api', 'web'])// Check the boot method, routes are registered there
+            // ->hasRoutes(['api', 'web'])// Check the boot method, routes are registered there
             ->hasMigrations([
                 'add_last_login_at_to_users_table',
                 'add_sku_field_to_users',
@@ -76,10 +74,9 @@ class WmPackageServiceProvider extends PackageServiceProvider
         // ElasticSearch
         $this->app->register(ElasticSearchServiceProvider::class);
 
-
         $this->app->config['filesystems.disks'] = [
             ...$this->app->config['filesystems.disks'],
-            ...config('wm-filesystems.disks')
+            ...config('wm-filesystems.disks'),
         ];
     }
 }

@@ -42,8 +42,8 @@ class AppElbrusTaxonomyController extends Controller
                 $tax = $this->getTaxonomyModelByIdAndName($taxonomy_name, $tid);
                 $tax = $tax->toArray();
                 $tax['items'] = $items;
-                $tax['id'] = $taxonomy_name . '_' . $tid;
-                $json[$taxonomy_name . '_' . $tid] = $tax;
+                $tax['id'] = $taxonomy_name.'_'.$tid;
+                $json[$taxonomy_name.'_'.$tid] = $tax;
             }
         }
 
@@ -106,12 +106,12 @@ class AppElbrusTaxonomyController extends Controller
          ");
         if (count($res) > 0) {
             foreach ($res as $item) {
-                $terms[$item->tid]['track'][] = 'ec_track_' . $item->fid;
+                $terms[$item->tid]['track'][] = 'ec_track_'.$item->fid;
             }
         }
 
         if ($add_poi_types) {
-            //TODO: use relation instead of raw model query
+            // TODO: use relation instead of raw model query
             $res = DB::select("
                 SELECT $tid as tid, $fid as fid
                 FROM $table
@@ -123,7 +123,7 @@ class AppElbrusTaxonomyController extends Controller
 
             if (count($res) > 0) {
                 foreach ($res as $item) {
-                    $terms[$item->tid]['poi'][] = 'ec_poi_' . $item->fid;
+                    $terms[$item->tid]['poi'][] = 'ec_poi_'.$item->fid;
                 }
             }
         }
@@ -151,7 +151,7 @@ class AppElbrusTaxonomyController extends Controller
         $term = $this->_getTermByTaxonomy($taxonomy_name, $term_id);
         if (is_null($term)) {
             $code = 404;
-            $json = ['code' => $code, 'Term NOT found in taxonomy ' . $taxonomy_name];
+            $json = ['code' => $code, 'Term NOT found in taxonomy '.$taxonomy_name];
 
             return response()->json($json, $code);
         }

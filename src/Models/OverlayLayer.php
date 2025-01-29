@@ -2,15 +2,16 @@
 
 namespace Wm\WmPackage\Models;
 
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Spatie\Translatable\HasTranslations;
 use Wm\WmPackage\Models\Abstracts\GeometryModel;
 use Wm\WmPackage\Observers\OverlayLayerObserver;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\MorphToMany;
 
 class OverlayLayer extends GeometryModel
 {
     use HasTranslations;
+
     /**
      * The attributes translatable
      *

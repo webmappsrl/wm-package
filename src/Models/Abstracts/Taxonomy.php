@@ -36,16 +36,16 @@ abstract class Taxonomy extends GeometryModel
 
     public function ecTracks(): MorphToMany
     {
-        return $this->morphedByMany(EcTrack::class, 'taxonomy_' . $this->getRelationKey());
+        return $this->morphedByMany(EcTrack::class, 'taxonomy_'.$this->getRelationKey());
     }
 
     public function layers(): MorphToMany
     {
-        return $this->morphedByMany(Layer::class, 'taxonomy_' . $this->getRelationKey());
+        return $this->morphedByMany(Layer::class, 'taxonomy_'.$this->getRelationKey());
     }
 
     public function ecPois(): MorphToMany
     {
-        return $this->morphedByMany(EcPoi::class, 'taxonomy_' . $this->getRelationKey());
+        return $this->morphedByMany(EcPoi::class, 'taxonomy_'.$this->getRelationKey());
     }
 }
