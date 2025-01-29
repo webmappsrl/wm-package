@@ -152,7 +152,7 @@ class App extends Model
             foreach ($pois as $count => $poi) {
                 $feature = $poi->getEmptyGeojson();
                 if (isset($feature['properties'])) {
-                    $feature['properties']['view'] = '/resources/ugc-pois/'.$poi->id;
+                    $feature['properties']['view'] = '/resources/ugc-pois/' . $poi->id;
                 }
 
                 $features[] = $feature;
@@ -173,7 +173,7 @@ class App extends Model
             foreach ($medias as $count => $media) {
                 $feature = $media->getEmptyGeojson();
                 if (isset($feature['properties'])) {
-                    $feature['properties']['view'] = '/resources/ugc-medias/'.$media->id;
+                    $feature['properties']['view'] = '/resources/ugc-medias/' . $media->id;
                 }
 
                 $features[] = $feature;
@@ -194,7 +194,7 @@ class App extends Model
             foreach ($tracks as $count => $track) {
                 $feature = $track->getEmptyGeojson();
                 if (isset($feature['properties'])) {
-                    $feature['properties']['view'] = '/resources/ugc-tracks/'.$track->id;
+                    $feature['properties']['view'] = '/resources/ugc-tracks/' . $track->id;
                 }
 
                 $features[] = $feature;
@@ -277,7 +277,7 @@ class App extends Model
                             $new_array[$key] = json_decode($val, true);
                         }
                         if ($key == 'identifier') {
-                            $new_array[$key] = 'poi_type_'.$val;
+                            $new_array[$key] = 'poi_type_' . $val;
                         }
                         if (! empty($val) && $key != 'name' && $key != 'identifier') {
                             $new_array[$key] = $val;
@@ -301,7 +301,7 @@ class App extends Model
                             $new_array[$key] = json_decode($val, true);
                         }
                         if ($key == 'identifier') {
-                            $new_array[$key] = 'poi_type_'.$val;
+                            $new_array[$key] = 'poi_type_' . $val;
                         }
                         if (! empty($val) && $key != 'name' && $key != 'identifier') {
                             $new_array[$key] = $val;
@@ -366,7 +366,7 @@ class App extends Model
                     });
                 break;
             default:
-                throw new \Exception('Wrong taxonomy name: '.$taxonomy_name);
+                throw new \Exception('Wrong taxonomy name: ' . $taxonomy_name);
         }
 
         $tracks = $query->orderBy('name')->get();
@@ -504,7 +504,7 @@ class App extends Model
         if (isset($customUrl) && $customUrl != null) {
             $url = $customUrl;
         } else {
-            $url = 'https://'.$this->id.'.app.webmapp.it';
+            $url = 'https://' . $this->id . '.app.webmapp.it';
         }
         // create the svg code for the QR code
         $svg = QrCode::size(80)->generate($url);
@@ -513,7 +513,7 @@ class App extends Model
         $this->save();
 
         // save the file in storage/app/public/qrcode/app_id/
-        Storage::disk('public')->put('qrcode/'.$this->id.'/webapp-qrcode.svg', $svg);
+        Storage::disk('public')->put('qrcode/' . $this->id . '/webapp-qrcode.svg', $svg);
 
         return $svg;
     }

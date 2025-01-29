@@ -30,7 +30,7 @@ use Wm\WmPackage\Exporters\ModelExporter;
  * @property array $styleCallback Callback to customize export styling
  * @property string $defaultFormat Default export format (@see ExportFormat)
  *
- * @see \App\Enums\ExportFormat
+ * @see \Wm\WmPackage\Enums\ExportFormat
  */
 class ExportTo extends Action
 {
@@ -64,7 +64,7 @@ class ExportTo extends Action
     {
         $format = isset($fields->format) ? $fields->format : $this->defaultFormat;
         $uniqueId = now()->timestamp;
-        $fileName = $this->fileName.'_'.$uniqueId.'.'.ExportFormat::from($format)->extension();
+        $fileName = $this->fileName . '_' . $uniqueId . '.' . ExportFormat::from($format)->extension();
 
         Excel::store(
             new ModelExporter($models, $this->columns, $this->relations, $this->styles),

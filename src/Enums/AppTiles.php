@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Enums;
+namespace Wm\WmPackage\Enums;
 
 use ReflectionClass;
 
 /**
- *  $t = new App\Enums\AppTiles()
+ *  $t = new Wm\WmPackage\Enums\AppTiles()
  *  $t->getConstants()
  *  collect($t->getConstants())->pluck('url','name')
  */

@@ -13,7 +13,7 @@ use Wm\WmPackage\Services\Models\UserService;
 class AuthController extends Controller
 {
     /**
-     * @var \App\Services\UserService
+     * @var \Wm\WmPackage\Services\UserService
      */
     protected $userService;
 

@@ -4,7 +4,7 @@ namespace Wm\WmPackage\Http\Controllers;
 
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Services\Models\App\AppClassificationService;
-use Workbench\App\Models\User;
+use Wm\WmPackage\Models\User;
 
 class RankingController extends Controller
 {

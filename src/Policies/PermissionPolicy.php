@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Policies;
+namespace Wm\WmPackage\Policies;
 
 use Illuminate\Auth\Access\HandlesAuthorization;
 use Spatie\Permission\Models\Permission;
