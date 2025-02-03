@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class AddSkuFieldToUsers extends Migration
+return new class extends Migration
 {
     /**
      * Run the migrations.
@@ -13,8 +13,8 @@ class AddSkuFieldToUsers extends Migration
      */
     public function up()
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->string('sku')->nullable();
+        Schema::table('ugc_pois', function (Blueprint $table) {
+            $table->foreign(['app_id'])->references(['id'])->on('apps')->onDelete('CASCADE');
         });
     }
 
@@ -25,8 +25,8 @@ class AddSkuFieldToUsers extends Migration
      */
     public function down()
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn('sku');
+        Schema::table('ugc_pois', function (Blueprint $table) {
+            $table->dropForeign('ugc_pois_app_id_foreign');
         });
     }
-}
+};
