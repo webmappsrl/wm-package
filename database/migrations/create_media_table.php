@@ -28,6 +28,8 @@ return new class extends Migration
             $table->unsignedInteger('order_column')->nullable()->index();
 
             $table->nullableTimestamps();
+
+            $table->spatialIndex('geometry');
         });
     }
 };
