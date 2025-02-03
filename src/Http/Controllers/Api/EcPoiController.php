@@ -2,28 +2,28 @@
 
 namespace Wm\WmPackage\Http\Controllers\Api;
 
+use Wm\WmPackage\Models\User;
+use Wm\WmPackage\Models\EcPoi;
+use Wm\WmPackage\Models\Media;
 use Illuminate\Http\JsonResponse;
 use Wm\WmPackage\Http\Controllers\Controller;
-use Wm\WmPackage\Models\EcMedia;
-use Wm\WmPackage\Models\EcPoi;
-use Wm\WmPackage\Models\User;
-use Wm\WmPackage\Services\GeometryComputationService;
-use Wm\WmPackage\Services\Models\EcMediaService;
 use Wm\WmPackage\Services\Models\EcPoiService;
+use Wm\WmPackage\Services\Models\MediaService;
+use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Services\Models\OutSourceFeatureService;
 
 class EcPoiController extends Controller
 {
-    public static function getNeighbourEcMedia(EcPoi $ecPoi): JsonResponse
+    public static function getNeighbourMedia(EcPoi $ecPoi): JsonResponse
     {
         $geometryComputationService = GeometryComputationService::make();
 
-        return response()->json($geometryComputationService->getNeighboursGeojson($ecPoi, EcMedia::class));
+        return response()->json($geometryComputationService->getNeighboursGeojson($ecPoi, Media::class));
     }
 
-    public static function getAssociatedEcMedia(EcPoi $ecPoi): JsonResponse
+    public static function getAssociatedMedia(EcPoi $ecPoi): JsonResponse
     {
-        return response()->json(EcMediaService::make()->getAssociatedEcMedia($ecPoi));
+        return response()->json(MediaService::make()->getAssociatedMedia($ecPoi));
     }
 
     public static function getFeatureImage(EcPoi $ecPoi)
@@ -104,6 +104,6 @@ class EcPoiController extends Controller
             return response()->json(['code' => 404, 'error' => 'Not Found'], 404);
         }
 
-        return redirect('https://'.$app_id.'.app.webmapp.it/#/map?poi='.$poi_id);
+        return redirect('https://' . $app_id . '.app.webmapp.it/#/map?poi=' . $poi_id);
     }
 }

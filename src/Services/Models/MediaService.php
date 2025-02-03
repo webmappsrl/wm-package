@@ -5,21 +5,21 @@ namespace Wm\WmPackage\Services\Models;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
 use Throwable;
-use Wm\WmPackage\Jobs\UpdateEcMedia;
+use Wm\WmPackage\Jobs\UpdateMedia;
 use Wm\WmPackage\Jobs\UpdateModelWithGeometryTaxonomyWhere;
 use Wm\WmPackage\Models\Abstracts\GeometryModel;
-use Wm\WmPackage\Models\EcMedia;
+use Wm\WmPackage\Models\Media;
 use Wm\WmPackage\Services\BaseService;
 use Wm\WmPackage\Services\StorageService;
 
-class EcMediaService extends BaseService
+class MediaService extends BaseService
 {
-    public function updateDataChain(EcMedia $model)
+    public function updateDataChain(Media $model)
     {
 
         $chain = [
-            new UpdateEcMedia($model), // it updates: geometry(if available on exif), thumbnails and url
-            new UpdateModelWithGeometryTaxonomyWhere($model), // it relates where taxonomy terms to the ecMedia model based on geometry attribute
+            new UpdateMedia($model), // it updates: geometry(if available on exif), thumbnails and url
+            new UpdateModelWithGeometryTaxonomyWhere($model), // it relates where taxonomy terms to the Media model based on geometry attribute
         ];
 
         Bus::chain($chain)
@@ -29,7 +29,7 @@ class EcMediaService extends BaseService
             })->dispatch();
     }
 
-    public function thumbnail(EcMedia $model, $size): string
+    public function thumbnail(Media $model, $size): string
     {
         $thumbnails = json_decode($model->thumbnails, true);
         $result = substr($model->url, 0, 4) === 'http' ? $model->url : StorageService::make()->getPublicPath($model->url);
@@ -43,14 +43,14 @@ class EcMediaService extends BaseService
     /**
      * Get a feature collection with the related media
      */
-    public function getAssociatedEcMedia(GeometryModel $model)
+    public function getAssociatedMedia(GeometryModel $model)
     {
 
         $result = [
             'type' => 'FeatureCollection',
             'features' => [],
         ];
-        foreach ($model->ecMedia as $media) {
+        foreach ($model->Media as $media) {
             $result['features'][] = $media->getGeojson();
         }
 

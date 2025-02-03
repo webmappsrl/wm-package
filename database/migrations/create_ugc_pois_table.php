@@ -18,7 +18,7 @@ return new class extends Migration
             $table->jsonb('properties');
             $table->text('name')->default('');
             $table->point('geometry', 4326);
-            $table->string('app_id', 100);
+            $table->integer('app_id');
             $table->timestamps();
 
             $table->index('osmid');

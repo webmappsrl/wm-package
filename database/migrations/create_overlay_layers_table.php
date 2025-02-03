@@ -16,10 +16,12 @@ return new class extends Migration
         Schema::create('overlay_layers', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->string('name');
-            $table->bigInteger('app_id');
+            $table->integer('app_id');
             $table->jsonb('properties');
             $table->jsonb('configuration')->nullable();
             $table->timestamps();
+
+            $table->index('app_id');
         });
     }
 

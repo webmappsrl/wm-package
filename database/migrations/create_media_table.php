@@ -16,6 +16,7 @@ return new class extends Migration
             $table->string('collection_name');
             $table->string('name');
             $table->point('geometry', 4326);
+            $table->integer('app_id');
             $table->string('file_name');
             $table->string('mime_type')->nullable();
             $table->string('disk');
@@ -30,6 +31,7 @@ return new class extends Migration
             $table->nullableTimestamps();
 
             $table->spatialIndex('geometry');
+            $table->index('app_id')
         });
     }
 };

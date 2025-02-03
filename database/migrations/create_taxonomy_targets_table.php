@@ -37,6 +37,8 @@ return new class extends Migration
             $table->float('max_size', 0, 0)->nullable();
             $table->float('icon_zoom', 0, 0)->nullable();
             $table->float('icon_size', 0, 0)->nullable();
+
+            $table->index('app_id');
         });
     }
 

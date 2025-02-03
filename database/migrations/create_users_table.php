@@ -14,7 +14,7 @@ return new class extends Migration
     public function up()
     {
         Schema::create('users', function (Blueprint $table) {
-            $table->bigIncrements('id');
+            $table->id('id');
             $table->string('name');
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
@@ -26,7 +26,9 @@ return new class extends Migration
             $table->string('sku')->nullable();
             $table->float('balance', 0, 0)->default(0);
             $table->string('fiscal_code', 16)->nullable()->unique();
-            $table->string('app_id', 100)->nullable();
+            $table->integer('app_id')->nullable();
+
+            $table->index('app_id');
         });
     }
 

@@ -15,7 +15,7 @@ return new class extends Migration
     {
         Schema::create('layers', function (Blueprint $table) {
             $table->bigIncrements('id');
-            $table->bigInteger('app_id');
+            $table->integer('app_id');
             $table->jsonb('properties');
             $table->timestamps();
             $table->string('name');
@@ -23,6 +23,7 @@ return new class extends Migration
             $table->geography('geometry')->nullable();
 
             $table->spatialIndex('geometry');
+            $table->index('app_id');
         });
     }
 
