@@ -2,18 +2,19 @@
 
 namespace Wm\WmPackage\Models;
 
-use Laravel\Scout\Searchable;
+use chillerlan\QRCode\QRCode;
+use chillerlan\QRCode\QROptions;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Database\Eloquent\Model;
-use Wm\WmPackage\Observers\AppObserver;
+use Laravel\Scout\Searchable;
 use Spatie\Translatable\HasTranslations;
-use Wm\WmPackage\Services\StorageService;
-use chillerlan\QRCode\{QRCode, QROptions};
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Wm\WmPackage\Observers\AppObserver;
 use Wm\WmPackage\Services\Models\App\AppConfigService;
-use Illuminate\Database\Eloquent\Relations\MorphToMany;
+use Wm\WmPackage\Services\StorageService;
 
 /**
  * Class App
@@ -153,7 +154,7 @@ class App extends Model
             foreach ($pois as $count => $poi) {
                 $feature = $poi->getEmptyGeojson();
                 if (isset($feature['properties'])) {
-                    $feature['properties']['view'] = '/resources/ugc-pois/' . $poi->id;
+                    $feature['properties']['view'] = '/resources/ugc-pois/'.$poi->id;
                 }
 
                 $features[] = $feature;
@@ -174,7 +175,7 @@ class App extends Model
             foreach ($medias as $count => $media) {
                 $feature = $media->getEmptyGeojson();
                 if (isset($feature['properties'])) {
-                    $feature['properties']['view'] = '/resources/ugc-medias/' . $media->id;
+                    $feature['properties']['view'] = '/resources/ugc-medias/'.$media->id;
                 }
 
                 $features[] = $feature;
@@ -195,7 +196,7 @@ class App extends Model
             foreach ($tracks as $count => $track) {
                 $feature = $track->getEmptyGeojson();
                 if (isset($feature['properties'])) {
-                    $feature['properties']['view'] = '/resources/ugc-tracks/' . $track->id;
+                    $feature['properties']['view'] = '/resources/ugc-tracks/'.$track->id;
                 }
 
                 $features[] = $feature;
@@ -278,7 +279,7 @@ class App extends Model
                             $new_array[$key] = json_decode($val, true);
                         }
                         if ($key == 'identifier') {
-                            $new_array[$key] = 'poi_type_' . $val;
+                            $new_array[$key] = 'poi_type_'.$val;
                         }
                         if (! empty($val) && $key != 'name' && $key != 'identifier') {
                             $new_array[$key] = $val;
@@ -302,7 +303,7 @@ class App extends Model
                             $new_array[$key] = json_decode($val, true);
                         }
                         if ($key == 'identifier') {
-                            $new_array[$key] = 'poi_type_' . $val;
+                            $new_array[$key] = 'poi_type_'.$val;
                         }
                         if (! empty($val) && $key != 'name' && $key != 'identifier') {
                             $new_array[$key] = $val;
@@ -367,7 +368,7 @@ class App extends Model
                     });
                 break;
             default:
-                throw new \Exception('Wrong taxonomy name: ' . $taxonomy_name);
+                throw new \Exception('Wrong taxonomy name: '.$taxonomy_name);
         }
 
         $tracks = $query->orderBy('name')->get();
@@ -505,7 +506,7 @@ class App extends Model
         if (isset($customUrl) && $customUrl != null) {
             $url = $customUrl;
         } else {
-            $url = 'https://' . $this->id . '.app.webmapp.it';
+            $url = 'https://'.$this->id.'.app.webmapp.it';
         }
         // create the svg code for the QR code
 
@@ -514,7 +515,6 @@ class App extends Model
         $options->outputBase64 = false; // output raw image instead of base64 data URI
 
         $svg = (new QRCode($options))->render($url);
-
 
         $this->qr_code = $svg;
         $this->save();
@@ -548,6 +548,6 @@ class App extends Model
      */
     public function getMorphClass()
     {
-        return 'App\\Models\\' . class_basename($this);
+        return 'App\\Models\\'.class_basename($this);
     }
 }
