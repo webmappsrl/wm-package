@@ -31,7 +31,7 @@ return new class extends Migration
             $table->nullableTimestamps();
 
             $table->spatialIndex('geometry');
-            $table->index('app_id')
+            $table->index('app_id');
         });
     }
 };
