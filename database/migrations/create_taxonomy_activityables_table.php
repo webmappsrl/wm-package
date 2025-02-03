@@ -15,12 +15,9 @@ return new class extends Migration
     {
         Schema::create('taxonomy_activityables', function (Blueprint $table) {
             $table->integer('taxonomy_activity_id');
-            $table->string('taxonomy_activityable_type');
-            $table->integer('taxonomy_activityable_id');
+            $table->morphs('taxonomy_activityable');
             $table->integer('duration_forward')->nullable()->default(0);
             $table->integer('duration_backward')->nullable()->default(0);
-
-            $table->index(['taxonomy_activityable_id', 'taxonomy_activityable_type']);
         });
     }
 

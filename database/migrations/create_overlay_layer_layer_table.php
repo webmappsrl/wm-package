@@ -17,7 +17,8 @@ return new class extends Migration
             $table->integer('overlay_layer_id');
             $table->bigInteger('layer_id');
 
-            $table->index(['overlay_layer_id', 'layer_id']);
+            $table->index('layer_id');
+            $table->index('overlay_layer_id');
         });
     }
 

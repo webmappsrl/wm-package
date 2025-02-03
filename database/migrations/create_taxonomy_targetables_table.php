@@ -15,9 +15,7 @@ return new class extends Migration
     {
         Schema::create('taxonomy_targetables', function (Blueprint $table) {
             $table->integer('taxonomy_target_id');
-            $table->string('taxonomy_targetable_type');
-            $table->integer('taxonomy_targetable_id');
-            $table->index(['taxonomy_targetable_type', 'taxonomy_targetable_id']);
+            $table->morphs('taxonomy_targetable');
         });
     }
 

@@ -15,10 +15,7 @@ return new class extends Migration
     {
         Schema::create('taxonomy_poi_typeables', function (Blueprint $table) {
             $table->integer('taxonomy_poi_type_id');
-            $table->string('taxonomy_poi_typeable_type');
-            $table->integer('taxonomy_poi_typeable_id');
-
-            $table->index(['taxonomy_poi_typeable_type', 'taxonomy_poi_typeable_id']);
+            $table->morphs('taxonomy_poi_typeable');
         });
     }
 

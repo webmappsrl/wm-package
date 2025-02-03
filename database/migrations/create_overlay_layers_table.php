@@ -14,7 +14,7 @@ return new class extends Migration
     public function up()
     {
         Schema::create('overlay_layers', function (Blueprint $table) {
-            $table->bigIncrements('id');
+            $table->id('id');
             $table->string('name');
             $table->integer('app_id');
             $table->jsonb('properties');

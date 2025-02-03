@@ -14,9 +14,9 @@ return new class extends Migration
     public function up()
     {
         Schema::create('taxonomy_activities', function (Blueprint $table) {
-            $table->bigIncrements('id');
+            $table->id('id');
             $table->timestamps();
-            $table->integer('user_id');
+            $table->integer('app_id');
             $table->text('name');
             $table->text('description')->nullable();
             $table->string('excerpt')->nullable();
@@ -36,6 +36,8 @@ return new class extends Migration
             $table->float('max_size', 0, 0)->nullable();
             $table->float('icon_zoom', 0, 0)->nullable();
             $table->float('icon_size', 0, 0)->nullable();
+
+            $table->index('app_id');
         });
     }
 

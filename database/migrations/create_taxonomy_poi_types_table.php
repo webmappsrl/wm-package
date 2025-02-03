@@ -16,7 +16,7 @@ return new class extends Migration
         Schema::create('taxonomy_poi_types', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->timestamps();
-            $table->integer('user_id');
+            $table->integer('app_id');
             $table->text('name');
             $table->text('description')->nullable();
             $table->string('excerpt')->nullable();
@@ -37,6 +37,8 @@ return new class extends Migration
             $table->float('max_size', 0, 0)->nullable();
             $table->float('icon_zoom', 0, 0)->nullable();
             $table->float('icon_size', 0, 0)->nullable();
+
+            $table->index('app_id');
         });
     }
 

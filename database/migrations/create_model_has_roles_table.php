@@ -15,11 +15,10 @@ return new class extends Migration
     {
         Schema::create('model_has_roles', function (Blueprint $table) {
             $table->bigInteger('role_id');
-            $table->string('model_type');
+            $table->morphs('model');
             $table->bigInteger('model_id');
 
             $table->primary(['role_id', 'model_id', 'model_type']);
-            $table->index(['model_id', 'model_type']);
         });
     }
 

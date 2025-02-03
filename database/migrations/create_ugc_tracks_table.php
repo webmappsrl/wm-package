@@ -17,7 +17,7 @@ return new class extends Migration
             $table->id('id');
             $table->jsonb('properties');
             $table->text('name');
-            $table->point('geometry', 4326)->nullable();
+            $table->linestring('geometry', 4326)->nullable();
             $table->integer('app_id');
             $table->timestamps();
 

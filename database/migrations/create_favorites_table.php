@@ -16,11 +16,8 @@ return new class extends Migration
         Schema::create('favorites', function (Blueprint $table) {
             $table->id('id');
             $table->integer('user_id');
-            $table->string('favoriteable_type');
-            $table->bigInteger('favoriteable_id');
+            $table->morphs('favoriteable');
             $table->timestamps();
-
-            $table->index(['favoriteable_type', 'favoriteable_id']);
             $table->unique(['user_id', 'favoriteable_id', 'favoriteable_type']);
         });
     }

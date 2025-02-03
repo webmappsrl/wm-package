@@ -15,9 +15,7 @@ return new class extends Migration
     {
         Schema::create('taxonomy_themeables', function (Blueprint $table) {
             $table->integer('taxonomy_theme_id');
-            $table->string('taxonomy_themeable_type');
-            $table->integer('taxonomy_themeable_id');
-            $table->index(['taxonomy_themeable_type', 'taxonomy_themeable_id']);
+            $table->morphs('taxonomy_themeable');
         });
     }
 

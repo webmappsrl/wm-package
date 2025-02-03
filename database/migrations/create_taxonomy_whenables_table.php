@@ -15,10 +15,7 @@ return new class extends Migration
     {
         Schema::create('taxonomy_whenables', function (Blueprint $table) {
             $table->integer('taxonomy_when_id');
-            $table->string('taxonomy_whenable_type');
-            $table->integer('taxonomy_whenable_id');
-
-            $table->index(['taxonomy_wheneable_type', 'taxonomy_wheneable_id']);
+            $table->morphs('taxonomy_whenable');
         });
     }
 
