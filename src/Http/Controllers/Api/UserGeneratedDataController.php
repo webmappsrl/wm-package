@@ -35,7 +35,7 @@ class UserGeneratedDataController extends Controller
                 $this->_storeUgc($feature, $user);
                 $createdCount++;
             }
-            $message = $createdCount.' new user generated data created';
+            $message = $createdCount . ' new user generated data created';
             Log::info($message);
 
             return response()->json(['message' => $message, 'code' => 201], 201);
@@ -135,12 +135,12 @@ class UserGeneratedDataController extends Controller
         $image = preg_replace('/data:image\/(.*?);base64,/', '', $base64); // remove the type part
         $image = str_replace(' ', '+', $image);
         while (Storage::disk('public')->exists(
-            $baseImageName.$maxId.'.'.$imageExtension[1]
+            $baseImageName . $maxId . '.' . $imageExtension[1]
         )) {
             $maxId++;
         }
 
-        $imageName = $baseImageName.$maxId.'.'.$imageExtension[1];
+        $imageName = $baseImageName . $maxId . '.' . $imageExtension[1];
         Storage::disk('public')->put(
             $imageName,
             base64_decode($image)
@@ -211,64 +211,71 @@ class UserGeneratedDataController extends Controller
         return response()->json($ugc);
     }
 
-    public function getUgcGeojsonOsm2cai(int $id)
-    {
-        $apiUrl = explode('/', request()->path());
-        try {
-            $model = $this->_getUgcModelFromType($apiUrl[2]);
-        } catch (Exception $e) {
-            return response()->json(['code' => 400, 'error' => $e->getMessage()], 400);
-        }
-        $ugc = $model::find($id);
-        if (is_null($ugc)) {
-            return response()->json(['code' => 404, 'error' => 'Not Found'], 404);
-        }
+    /**
+     * Undocumented function
+     * TODO: probably this is needed only for the osm2cai connection
+     *
+     * @param integer $id
+     * @return void
+     */
+    // public function getUgcGeojsonOsm2cai(int $id)
+    // {
+    //     $apiUrl = explode('/', request()->path());
+    //     try {
+    //         $model = $this->_getUgcModelFromType($apiUrl[2]);
+    //     } catch (Exception $e) {
+    //         return response()->json(['code' => 400, 'error' => $e->getMessage()], 400);
+    //     }
+    //     $ugc = $model::find($id);
+    //     if (is_null($ugc)) {
+    //         return response()->json(['code' => 404, 'error' => 'Not Found'], 404);
+    //     }
 
-        $taxonomyWheres = $ugc->taxonomy_wheres;
-        $taxonomyWheresNames = [];
-        if (count($taxonomyWheres) > 0) {
-            foreach ($taxonomyWheres as $taxonomyWhere) {
-                $taxonomyWheresNames[] = $taxonomyWhere->name;
-            }
-            $taxonomyWheresNames = implode(',', $taxonomyWheresNames);
-        } else {
-            $taxonomyWheresNames = null;
-        }
+    //     $taxonomyWheres = $ugc->taxonomy_wheres;
+    //     $taxonomyWheresNames = [];
+    //     if (count($taxonomyWheres) > 0) {
+    //         foreach ($taxonomyWheres as $taxonomyWhere) {
+    //             $taxonomyWheresNames[] = $taxonomyWhere->name;
+    //         }
+    //         $taxonomyWheresNames = implode(',', $taxonomyWheresNames);
+    //     } else {
+    //         $taxonomyWheresNames = null;
+    //     }
 
-        $ugcGeojson = ! is_null($ugc) ? $ugc->getGeojson() : null;
-        $email = $ugcGeojson['properties']['user_id'] ? User::find($ugcGeojson['properties']['user_id'])->email : '';
-        $ugcGeojson['properties']['user_email'] = $email;
-        if (! is_null($taxonomyWheresNames)) {
-            $ugcGeojson['properties']['taxonomy_wheres'] = $taxonomyWheresNames;
-        }
-        if ($ugc instanceof UgcMedia) {
-            $ugcGeojson['properties']['relative_url'] = $ugc->relative_url;
-            $ugcPois = $ugc->ugc_pois;
-            $ugcTracks = $ugc->ugc_tracks;
-            if (count($ugcPois) > 0) {
-                $ugcGeojson['properties']['ugc_pois'] = [];
-                foreach ($ugcPois as $ugcPoi) {
-                    $ugcGeojson['properties']['ugc_pois'][] = $ugcPoi->id;
-                }
-            }
-            if (count($ugcTracks) > 0) {
-                $ugcGeojson['properties']['ugc_tracks'] = [];
-                foreach ($ugcTracks as $ugcTrack) {
-                    $ugcGeojson['properties']['ugc_tracks'][] = $ugcTrack->id;
-                }
-            }
-        } else {
-            $ugcMedia = $ugc->ugc_media;
-            if (count($ugcMedia) > 0) {
-                $ugcGeojson['properties']['ugc_media'] = [];
-                foreach ($ugcMedia as $media) {
-                    $ugcGeojson['properties']['ugc_media'][] = $media->id;
-                }
-            }
-        }
+    //     $ugcGeojson = ! is_null($ugc) ? $ugc->getGeojson() : null;
+    //     $email = $ugcGeojson['properties']['user_id'] ? User::find($ugcGeojson['properties']['user_id'])->email : '';
+    //     $ugcGeojson['properties']['user_email'] = $email;
+    //     if (! is_null($taxonomyWheresNames)) {
+    //         $ugcGeojson['properties']['taxonomy_wheres'] = $taxonomyWheresNames;
+    //     }
+    //     if ($ugc instanceof UgcMedia) {
+    //         $ugcGeojson['properties']['relative_url'] = $ugc->relative_url;
+    //         $ugcPois = $ugc->ugc_pois;
+    //         $ugcTracks = $ugc->ugc_tracks;
+    //         if (count($ugcPois) > 0) {
+    //             $ugcGeojson['properties']['ugc_pois'] = [];
+    //             foreach ($ugcPois as $ugcPoi) {
+    //                 $ugcGeojson['properties']['ugc_pois'][] = $ugcPoi->id;
+    //             }
+    //         }
+    //         if (count($ugcTracks) > 0) {
+    //             $ugcGeojson['properties']['ugc_tracks'] = [];
+    //             foreach ($ugcTracks as $ugcTrack) {
+    //                 $ugcGeojson['properties']['ugc_tracks'][] = $ugcTrack->id;
+    //             }
+    //         }
+    //     } else {
+    //         $ugcMedia = $ugc->ugc_media;
+    //         if (count($ugcMedia) > 0) {
+    //             $ugcGeojson['properties']['ugc_media'] = [];
+    //             foreach ($ugcMedia as $media) {
+    //                 $ugcGeojson['properties']['ugc_media'][] = $media->id;
+    //             }
+    //         }
+    //     }
 
-        return response()->json($ugcGeojson);
-    }
+    //     return response()->json($ugcGeojson);
+    // }
 
     /**
      *  Associate UcgFeature to TaxonomyWhere

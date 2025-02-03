@@ -2,7 +2,7 @@
 
 namespace Wm\WmPackage\Models;
 
-use Wm\WmPackage\Models\Abstracts\Poi;
+use Wm\WmPackage\Models\Abstracts\Point;
 use Wm\WmPackage\Traits\UgcAbleModel;
 
 /**
@@ -18,7 +18,7 @@ use Wm\WmPackage\Traits\UgcAbleModel;
  * @property string raw_data
  * @property mixed  ugc_media
  */
-class UgcPoi extends Poi
+class UgcPoi extends Point
 {
     use UgcAbleModel;
 

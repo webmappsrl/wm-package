@@ -204,7 +204,7 @@ class AppAuthController extends Controller
     }
 
     /**
-     * Create a new user and handle partnerships
+     * Create a new user
      *
      * @throws Exception
      */

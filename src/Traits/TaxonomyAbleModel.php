@@ -12,11 +12,6 @@ use Wm\WmPackage\Models\TaxonomyWhere;
 
 trait TaxonomyAbleModel
 {
-    public function taxonomyWheres(): MorphToMany
-    {
-        return $this->morphToMany(TaxonomyWhere::class, 'taxonomy_whereable');
-    }
-
     public function taxonomyWhens(): MorphToMany
     {
         return $this->morphToMany(TaxonomyWhen::class, 'taxonomy_whenable');

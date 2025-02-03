@@ -111,11 +111,6 @@ class User extends Authenticatable implements JWTSubject
         return $this->belongsToMany(EcTrack::class, 'downloadable_ec_track_user');
     }
 
-    public function partnerships(): BelongsToMany
-    {
-        return $this->belongsToMany(Partnership::class, 'partnership_user');
-    }
-
     /**
      * Get the identifier that will be stored in the subject claim of the JWT.
      *

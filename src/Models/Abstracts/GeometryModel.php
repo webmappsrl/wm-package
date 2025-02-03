@@ -43,7 +43,7 @@ abstract class GeometryModel extends Model
     /**
      * Calculate the geojson of a model with only the geometry
      */
-    public function getEmptyGeojson(): ?array
+    public function getGeojson(): ?array
     {
         $properties = $this->properties ?? [];
         $geom = GeometryComputationService::make()->getModelGeometryAsGeojson($this);
@@ -87,26 +87,6 @@ abstract class GeometryModel extends Model
     public function getRelatedUgcGeojson(): array
     {
         return GeometryComputationService::make()->getRelatedUgcGeojson($this);
-    }
-
-    public function getJson(): array
-    {
-        $array = $this->toArray();
-
-        $propertiesToClear = ['geometry', 'properties'];
-        foreach ($array as $property => $value) {
-            if (is_null($value) || in_array($property, $propertiesToClear)) {
-                unset($array[$property]);
-            } elseif ($property == 'relative_url') {
-                $url = StorageService::make()->getLocalImageUrl($value);
-                if ($url) {
-                    $array['url'] = $url;
-                }
-                unset($array[$property]);
-            }
-        }
-
-        return $array;
     }
 
     public function populateProperties(): void
@@ -191,28 +171,15 @@ abstract class GeometryModel extends Model
         $this->saveQuietly();
     }
 
-    public function getGeojson($version = 'v1'): ?array
-    {
-        if ($version === 'v1') {
-            $properties = $this->getJson();
-        } else {
-            $properties = $this->properties;
-        }
-        $properties['id'] = $this->id;
-        $geom = GeometryComputationService::make()->getModelGeometryAsGeojson($this);
 
-        if (isset($geom)) {
-            return [
-                'type' => 'Feature',
-                'properties' => $properties,
-                'geometry' => json_decode($geom, true),
-            ];
-        } else {
-            return [
-                'type' => 'Feature',
-                'properties' => $properties,
-                'geometry' => null,
-            ];
-        }
+
+    /**
+     * Get the class name for polymorphic relations.
+     *
+     * @return string
+     */
+    public function getMorphClass()
+    {
+        return 'App\\Models\\' . class_basename($this);
     }
 }

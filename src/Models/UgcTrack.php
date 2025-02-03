@@ -2,7 +2,7 @@
 
 namespace Wm\WmPackage\Models;
 
-use Wm\WmPackage\Models\Abstracts\Track;
+use Wm\WmPackage\Models\Abstracts\Linestring;
 use Wm\WmPackage\Traits\UgcAbleModel;
 
 /**
@@ -17,7 +17,7 @@ use Wm\WmPackage\Traits\UgcAbleModel;
  * @property string description
  * @property string raw_data
  */
-class UgcTrack extends Track
+class UgcTrack extends Linestring
 {
     use UgcAbleModel;
 }
