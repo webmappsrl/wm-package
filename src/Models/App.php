@@ -2,19 +2,18 @@
 
 namespace Wm\WmPackage\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\MorphToMany;
+use Laravel\Scout\Searchable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
-use Laravel\Scout\Searchable;
-use SimpleSoftwareIO\QrCode\Facades\QrCode;
-use Spatie\Translatable\HasTranslations;
+use Illuminate\Database\Eloquent\Model;
 use Wm\WmPackage\Observers\AppObserver;
-use Wm\WmPackage\Services\Models\App\AppConfigService;
+use Spatie\Translatable\HasTranslations;
 use Wm\WmPackage\Services\StorageService;
+use chillerlan\QRCode\{QRCode, QROptions};
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Wm\WmPackage\Services\Models\App\AppConfigService;
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
 
 /**
  * Class App
@@ -509,13 +508,19 @@ class App extends Model
             $url = 'https://' . $this->id . '.app.webmapp.it';
         }
         // create the svg code for the QR code
-        $svg = QrCode::size(80)->generate($url);
+
+        // https://php-qrcode.readthedocs.io/en/stable/Usage/Quickstart.html#quickstart
+        $options = new QROptions;
+        $options->outputBase64 = false; // output raw image instead of base64 data URI
+
+        $svg = (new QRCode($options))->render($url);
+
 
         $this->qr_code = $svg;
         $this->save();
 
         // save the file in storage/app/public/qrcode/app_id/
-        Storage::disk('public')->put('qrcode/' . $this->id . '/webapp-qrcode.svg', $svg);
+        StorageService::make()->storeAppQrCode($this->id, $svg);
 
         return $svg;
     }

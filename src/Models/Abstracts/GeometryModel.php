@@ -48,19 +48,13 @@ abstract class GeometryModel extends Model
         $properties = $this->properties ?? [];
         $geom = GeometryComputationService::make()->getModelGeometryAsGeojson($this);
 
-        if (isset($geom)) {
-            return [
-                'type' => 'Feature',
-                'properties' => $properties,
-                'geometry' => json_decode($geom, true),
-            ];
-        } else {
-            return [
-                'type' => 'Feature',
-                'properties' => $properties,
-                'geometry' => null,
-            ];
-        }
+        $decodedGeom = isset($geom) ? json_decode($geom, true) : null;
+
+        return [
+            'type' => 'Feature',
+            'properties' => $properties,
+            'geometry' => $decodedGeom,
+        ];
     }
 
     /**
