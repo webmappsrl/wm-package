@@ -80,18 +80,18 @@ class ImageService extends BaseService
         return config('wm-package.services.image.thumbnail_sizes');
     }
 
-    public function getImageResizeFilePathBySize($localImagePath, array $size): string
-    {
-        if ($size['width'] == 0) {
-            $imageResize = $this->imgResizeSingleDimension($localImagePath, $size['height'], 'height');
-        } elseif ($size['height'] == 0) {
-            $imageResize = $this->imgResizeSingleDimension($localImagePath, $size['width'], 'width');
-        } else {
-            $imageResize = $this->imgResize($localImagePath, $size['width'], $size['height']);
-        }
+    // public function getImageResizeFilePathBySize($localImagePath, array $size): string
+    // {
+    //     if ($size['width'] == 0) {
+    //         $imageResize = $this->imgResizeSingleDimension($localImagePath, $size['height'], 'height');
+    //     } elseif ($size['height'] == 0) {
+    //         $imageResize = $this->imgResizeSingleDimension($localImagePath, $size['width'], 'width');
+    //     } else {
+    //         $imageResize = $this->imgResize($localImagePath, $size['width'], $size['height']);
+    //     }
 
-        return $imageResize;
-    }
+    //     return $imageResize;
+    // }
 
     /**
      * Resize the given image to the specified width and height
@@ -114,7 +114,7 @@ class ImageService extends BaseService
 
             $img = $this->correctImageOrientation(Image::make($imagePath));
             $pathInfo = pathinfo($imagePath);
-            $newPathImage = $pathInfo['dirname'].DIRECTORY_SEPARATOR.$this->resizedFileName($imagePath, $width = '', $dim);
+            $newPathImage = $pathInfo['dirname'] . DIRECTORY_SEPARATOR . $this->resizedFileName($imagePath, $width = '', $dim);
             $img->fit(null, $dim, function ($const) {
                 $const->aspectRatio();
             })->save($newPathImage);
@@ -127,7 +127,7 @@ class ImageService extends BaseService
 
             $img = $this->correctImageOrientation(Image::make($imagePath));
             $pathInfo = pathinfo($imagePath);
-            $newPathImage = $pathInfo['dirname'].DIRECTORY_SEPARATOR.$this->resizedFileName($imagePath, $dim, $height = 0);
+            $newPathImage = $pathInfo['dirname'] . DIRECTORY_SEPARATOR . $this->resizedFileName($imagePath, $dim, $height = 0);
             $img->fit($dim, null, function ($const) {
                 $const->aspectRatio();
             })->save($newPathImage);
@@ -173,11 +173,11 @@ class ImageService extends BaseService
     {
         $pathInfo = pathinfo($imagePath);
         if ($width == 0) {
-            return $pathInfo['filename'].'_x'.$height.'.'.$pathInfo['extension'];
+            return $pathInfo['filename'] . '_x' . $height . '.' . $pathInfo['extension'];
         } elseif ($height == 0) {
-            return $pathInfo['filename'].'_'.$width.'x.'.$pathInfo['extension'];
+            return $pathInfo['filename'] . '_' . $width . 'x.' . $pathInfo['extension'];
         } else {
-            return $pathInfo['filename'].'_'.$width.'x'.$height.'.'.$pathInfo['extension'];
+            return $pathInfo['filename'] . '_' . $width . 'x' . $height . '.' . $pathInfo['extension'];
         }
     }
 
@@ -201,7 +201,7 @@ class ImageService extends BaseService
 
         $img = $this->correctImageOrientation(Image::make($imagePath));
         $pathInfo = pathinfo($imagePath);
-        $newPathImage = $pathInfo['dirname'].DIRECTORY_SEPARATOR.$this->resizedFileName($imagePath, $width, $height);
+        $newPathImage = $pathInfo['dirname'] . DIRECTORY_SEPARATOR . $this->resizedFileName($imagePath, $width, $height);
         $img->fit($width, $height, function ($const) {
             $const->aspectRatio();
         })->save($newPathImage);

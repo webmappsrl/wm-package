@@ -10,11 +10,10 @@ use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Observers\TaxonomyObserver;
-use Wm\WmPackage\Traits\FeatureImageAbleModel;
 
 abstract class Taxonomy extends Polygon
 {
-    use FeatureImageAbleModel, HasFactory, HasTranslations;
+    use HasFactory, HasTranslations;
 
     public array $translatable = ['name', 'description', 'excerpt'];
 
@@ -36,16 +35,16 @@ abstract class Taxonomy extends Polygon
 
     public function ecTracks(): MorphToMany
     {
-        return $this->morphedByMany(EcTrack::class, 'taxonomy_'.$this->getRelationKey());
+        return $this->morphedByMany(EcTrack::class, 'taxonomy_' . $this->getRelationKey());
     }
 
     public function layers(): MorphToMany
     {
-        return $this->morphedByMany(Layer::class, 'taxonomy_'.$this->getRelationKey());
+        return $this->morphedByMany(Layer::class, 'taxonomy_' . $this->getRelationKey());
     }
 
     public function ecPois(): MorphToMany
     {
-        return $this->morphedByMany(EcPoi::class, 'taxonomy_'.$this->getRelationKey());
+        return $this->morphedByMany(EcPoi::class, 'taxonomy_' . $this->getRelationKey());
     }
 }

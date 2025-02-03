@@ -11,6 +11,7 @@ use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\Media;
 use Wm\WmPackage\Models\User;
 use Wm\WmPackage\Services\GeometryComputationService;
+use Wm\WmPackage\Services\ImageService;
 use Wm\WmPackage\Services\StorageService;
 
 abstract class GeometryModel extends Model implements HasMedia
@@ -178,7 +179,7 @@ abstract class GeometryModel extends Model implements HasMedia
      */
     public function getMorphClass()
     {
-        return 'App\\Models\\'.class_basename($this);
+        return 'App\\Models\\' . class_basename($this);
     }
 
     //
@@ -187,7 +188,7 @@ abstract class GeometryModel extends Model implements HasMedia
 
     public function registerMediaConversions($media = null): void
     {
-        foreach (config('wm-package.image.thumbnail_sizes', []) as $size) {
+        foreach (ImageService::make()->getThumbnailSizes() as $size) {
             $this
                 ->addMediaConversion('thumbnail')
                 ->fit(Fit::Contain, $size['width'], $size['height'])

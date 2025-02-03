@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Log;
 
 class NodeJsService extends BaseService
 {
-    public function __construct(protected StorageService $cloudStorageService) {}
+    public function __construct(protected StorageService $storageService) {}
 
     /**
      * Generate the elevation chart image for the ec track
@@ -24,8 +24,9 @@ class NodeJsService extends BaseService
             throw new Exception('The geojson id is not defined');
         }
 
-        $localDisk = $this->cloudStorageService->getLocalDisk();
-        $ecMediaDisk = $this->cloudStorageService->getEcMediaDisk();
+        //TODO: mv all to the storage service
+        $localDisk = $this->storageService->getLocalDisk();
+        $mediaDisk = $this->storageService->getMediaDisk();
 
         if (! $localDisk->exists('elevation_charts')) {
             $localDisk->makeDirectory('elevation_charts');
@@ -41,34 +42,36 @@ class NodeJsService extends BaseService
         $src = $localDisk->path("geojson/$id.geojson");
         $dest = $localDisk->path("elevation_charts/$id.svg");
 
-        $cmd = config('wm-package.nodejs.node_executable')." node/jobs/build-elevation-chart.js --geojson=$src --dest=$dest --type=svg";
+        $cmd = config('wm-package.nodejs.node_executable') . " node/jobs/build-elevation-chart.js --geojson=$src --dest=$dest --type=svg";
 
         // Log::info("Running node command: {$cmd}");
 
         $this->runNodeJsCommand($cmd);
 
+        //TODO: mv all to the storage service
+
         $localDisk->delete("geojson/$id.geojson");
 
-        if ($ecMediaDisk->exists("ectrack/elevation_charts/$id.svg")) {
-            if ($ecMediaDisk->exists("ectrack/elevation_charts/{$id}_old.svg")) {
-                $ecMediaDisk->delete("ectrack/elevation_charts/{$id}_old.svg");
+        if ($mediaDisk->exists("ectrack/elevation_charts/$id.svg")) {
+            if ($mediaDisk->exists("ectrack/elevation_charts/{$id}_old.svg")) {
+                $mediaDisk->delete("ectrack/elevation_charts/{$id}_old.svg");
             }
-            $ecMediaDisk->move("ectrack/elevation_charts/$id.svg", "ectrack/elevation_charts/{$id}_old.svg");
+            $mediaDisk->move("ectrack/elevation_charts/$id.svg", "ectrack/elevation_charts/{$id}_old.svg");
         }
         try {
-            $ecMediaDisk->writeStream("ectrack/elevation_charts/$id.svg", $localDisk->readStream("elevation_charts/$id.svg"));
+            $mediaDisk->writeStream("ectrack/elevation_charts/$id.svg", $localDisk->readStream("elevation_charts/$id.svg"));
         } catch (Exception $e) {
             Log::warning('The elevation chart image could not be written');
-            if ($ecMediaDisk->exists("ectrack/elevation_charts/{$id}_old.svg")) {
-                $ecMediaDisk->move("ectrack/elevation_charts/{$id}_old.svg", "ectrack/elevation_charts/$id.svg");
+            if ($mediaDisk->exists("ectrack/elevation_charts/{$id}_old.svg")) {
+                $mediaDisk->move("ectrack/elevation_charts/{$id}_old.svg", "ectrack/elevation_charts/$id.svg");
             }
         }
 
-        if ($ecMediaDisk->exists("ectrack/elevation_charts/{$id}_old.svg")) {
-            $ecMediaDisk->delete("ectrack/elevation_charts/{$id}_old.svg");
+        if ($mediaDisk->exists("ectrack/elevation_charts/{$id}_old.svg")) {
+            $mediaDisk->delete("ectrack/elevation_charts/{$id}_old.svg");
         }
 
-        return $ecMediaDisk->path("ectrack/elevation_charts/{$id}.svg");
+        return $mediaDisk->path("ectrack/elevation_charts/{$id}.svg");
     }
 
     /**

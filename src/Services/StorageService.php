@@ -5,7 +5,6 @@ namespace Wm\WmPackage\Services;
 use Exception;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Storage;
-use Wm\WmPackage\Models\EcMedia;
 
 class StorageService extends BaseService
 {
@@ -208,17 +207,17 @@ class StorageService extends BaseService
         return $this->getDisk('wmfetracks');
     }
 
-    // private function getEcMediaDisk(): Filesystem
-    // {
-    //     return $this->getDisk('s3');
-    // }
+    public function getMediaDisk(): Filesystem
+    {
+        return $this->getDisk('s3');
+    }
 
     private function getPublicDisk(): Filesystem
     {
         return $this->getDisk('public');
     }
 
-    private function getLocalDisk(): Filesystem
+    public function getLocalDisk(): Filesystem
     {
         return $this->getDisk('local');
     }

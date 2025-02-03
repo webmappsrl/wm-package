@@ -21,7 +21,7 @@ class EcPoiService extends BaseService
 
         $chain = [
 
-            new UpdateModelWithGeometryTaxonomyWhere($model), // it relates where taxonomy terms to the ecMedia model based on geometry attribute
+            new UpdateModelWithGeometryTaxonomyWhere($model), // it relates where taxonomy terms to the media model based on geometry attribute
             new UpdateEcPoiDemJob($model),
         ];
 

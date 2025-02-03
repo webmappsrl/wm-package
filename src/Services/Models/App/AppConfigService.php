@@ -47,6 +47,7 @@ class AppConfigService extends AppBaseService
         return $data;
     }
 
+    //TODO: is jido stuff used anymore?
     public function config_update_jido_time()
     {
         $confUri = $this->app->id . '.json';
@@ -354,13 +355,13 @@ class AppConfigService extends AppBaseService
                         }
                     }
 
-                    if ($feature_image != null) {
-                        // Retrieve proper image
-                        $image = EcMedia::find($feature_image);
-                        if (! is_null(($resizedImage = MediaService::make()->thumbnail($image, '400x200')))) {
-                            $item['feature_image'] = $resizedImage;
-                        }
-                    }
+                    // if ($feature_image != null) {
+                    //     // Retrieve proper image
+                    //     $image = EcMedia::find($feature_image);
+                    //     if (! is_null(($resizedImage = MediaService::make()->thumbnail($image, '400x200')))) {
+                    //         $item['feature_image'] = $resizedImage;
+                    //     }
+                    // }
                 }
 
                 // remove useless attribute geometry from taxonomy where of layer

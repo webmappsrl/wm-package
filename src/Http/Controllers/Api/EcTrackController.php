@@ -3,24 +3,23 @@
 namespace Wm\WmPackage\Http\Controllers\Api;
 
 use Exception;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use Wm\WmPackage\Models\App;
+use Wm\WmPackage\Models\User;
+use Wm\WmPackage\Models\EcPoi;
+use Wm\WmPackage\Models\Media;
+use Wm\WmPackage\Models\EcTrack;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
-use Wm\WmPackage\Http\Controllers\Controller;
-use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
-use Wm\WmPackage\Models\App;
-use Wm\WmPackage\Models\EcMedia;
-use Wm\WmPackage\Models\EcPoi;
-use Wm\WmPackage\Models\EcTrack;
-use Wm\WmPackage\Models\User;
-use Wm\WmPackage\Services\GeometryComputationService;
-use Wm\WmPackage\Services\Models\MediaService;
-use Wm\WmPackage\Services\Models\EcPoiService;
-use Wm\WmPackage\Services\Models\EcTrackService;
-use Wm\WmPackage\Services\Models\OutSourceFeatureService;
 use Wm\WmPackage\Services\StorageService;
+use Wm\WmPackage\Http\Controllers\Controller;
+use Wm\WmPackage\Services\Models\EcPoiService;
+use Wm\WmPackage\Services\Models\MediaService;
+use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
+use Wm\WmPackage\Services\Models\EcTrackService;
+use Wm\WmPackage\Services\GeometryComputationService;
+use Wm\WmPackage\Services\Models\OutSourceFeatureService;
 
 class EcTrackController extends Controller
 {
@@ -43,9 +42,9 @@ class EcTrackController extends Controller
     /**
      * Get a feature collection with the neighbour media
      */
-    public static function getNeighbourEcMedia(EcTrack $ecTrack): JsonResponse
+    public static function getNeighbourMedia(EcTrack $ecTrack): JsonResponse
     {
-        return response()->json(GeometryComputationService::make()->getNeighboursGeojson($ecTrack, EcMedia::class));
+        return response()->json(GeometryComputationService::make()->getNeighboursGeojson($ecTrack, Media::class));
     }
 
     /**
@@ -59,9 +58,9 @@ class EcTrackController extends Controller
     /**
      * Get a feature collection with the related media
      */
-    public static function getAssociatedEcMedia(EcTrack $ecTrack): JsonResponse
+    public static function getAssociatedMedia(EcTrack $ecTrack): JsonResponse
     {
-        return response()->json(MediaService::make()->getAssociatedEcMedia($ecTrack));
+        return response()->json(MediaService::make()->getAssociatedMedia($ecTrack));
     }
 
     /**

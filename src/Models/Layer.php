@@ -10,12 +10,11 @@ use Illuminate\Support\Facades\Log;
 use Spatie\Translatable\HasTranslations;
 use Wm\WmPackage\Observers\LayerObserver;
 use Wm\WmPackage\Services\GeometryComputationService;
-use Wm\WmPackage\Traits\FeatureImageAbleModel;
 use Wm\WmPackage\Traits\TaxonomyAbleModel;
 
 class Layer extends Model
 {
-    use FeatureImageAbleModel, HasFactory, HasTranslations, TaxonomyAbleModel;
+    use HasFactory, HasTranslations, TaxonomyAbleModel;
     // protected $fillable = ['rank'];
 
     protected static function boot()
@@ -67,7 +66,7 @@ class Layer extends Model
             $this->bbox = $bbox ?? $defaultBBOX;
             $this->save();
         } catch (Exception $e) {
-            Log::channel('layer')->error('computeBB of layer with id: '.$this->id);
+            Log::channel('layer')->error('computeBB of layer with id: ' . $this->id);
         }
     }
 

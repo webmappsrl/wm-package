@@ -5,13 +5,9 @@ namespace Wm\WmPackage\Http\Controllers\Api;
 use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Wm\WmPackage\Http\Controllers\Controller;
-use Wm\WmPackage\Models\EcMedia;
-use Wm\WmPackage\Models\EcPoi;
-use Wm\WmPackage\Models\EcTrack;
-use Wm\WmPackage\Services\GeometryComputationService;
+
 
 class EditorialContentController extends Controller
 {
@@ -33,7 +29,7 @@ class EditorialContentController extends Controller
                 $model = "\Wm\WmPackage\Models\EcTrack";
                 break;
             case 'media':
-                $model = "\Wm\WmPackage\Models\EcMedia";
+                $model = "\Wm\WmPackage\Models\Media";
                 break;
             default:
                 throw new Exception("Invalid type ' . $type . '. Available types: poi, track, media");
@@ -61,7 +57,7 @@ class EditorialContentController extends Controller
             return response()->json(['code' => 404, 'error' => 'Not Found'], 404);
         }
 
-        // https://wmptest.s3.eu-central-1.amazonaws.com/EcMedia/2.jpg
+        // https://wmptest.s3.eu-central-1.amazonaws.com/Media/2.jpg
 
         /*if (preg_match('/\.amazonaws\.com\//', $ec->url)) {
             $explode = explode('.amazonaws.com/', $ec->url);
@@ -77,12 +73,12 @@ class EditorialContentController extends Controller
 
             return response()->streamDownload(function () use ($ec) {
                 file_get_contents($ec->url);
-            }, 'name.'.$pathInfo['extension']);
+            }, 'name.' . $pathInfo['extension']);
         } else {
             // Scaricare risorsa locale
             $filename = 'name';
             if (isset($pathInfo['extension'])) {
-                $filename = 'name.'.$pathInfo['extension'];
+                $filename = 'name.' . $pathInfo['extension'];
             }
 
             return Storage::disk('public')->download($ec->url, $filename);
@@ -93,7 +89,7 @@ class EditorialContentController extends Controller
      * TODO: probably this isn't used anymore
      *
      * @param  Request  $request  the request with data from geomixer POST
-     * @param  int  $id  the id of the EcMedia
+     * @param  int  $id  the id of the Media
      */
     // public function update(Request $request, EcPoi $ecPoi)
     // {
@@ -186,7 +182,7 @@ class EditorialContentController extends Controller
     public function downloadEcGeojson(Request $request, int $id): JsonResponse
     {
         $headers['Content-Type'] = 'application/vnd.api+json';
-        $headers['Content-Disposition'] = 'attachment; filename="'.$id.'.geojson"';
+        $headers['Content-Disposition'] = 'attachment; filename="' . $id . '.geojson"';
 
         return $this->viewEcGeojson($request, $id, $headers);
     }
@@ -197,7 +193,7 @@ class EditorialContentController extends Controller
     public function downloadEcGpx(Request $request, int $id)
     {
         $headers['Content-Type'] = 'application/xml';
-        $headers['Content-Disposition'] = 'attachment; filename="'.$id.'.gpx"';
+        $headers['Content-Disposition'] = 'attachment; filename="' . $id . '.gpx"';
 
         return $this->viewEcGpx($request, $id, $headers);
     }
@@ -208,7 +204,7 @@ class EditorialContentController extends Controller
     public function downloadEcKml(Request $request, int $id)
     {
         $headers['Content-Type'] = 'application/xml';
-        $headers['Content-Disposition'] = 'attachment; filename="'.$id.'.kml"';
+        $headers['Content-Disposition'] = 'attachment; filename="' . $id . '.kml"';
 
         return $this->viewEcKml($request, $id, $headers);
     }
@@ -231,7 +227,7 @@ class EditorialContentController extends Controller
             $originalFileName = $headers['Content-Disposition'];
             $extension = trim(pathinfo($originalFileName, PATHINFO_EXTENSION), '"');
 
-            $headers['Content-Disposition'] = 'attachment; filename="'.$fileName.'.'.$extension.'"';
+            $headers['Content-Disposition'] = 'attachment; filename="' . $fileName . '.' . $extension . '"';
         }
 
         return $headers;

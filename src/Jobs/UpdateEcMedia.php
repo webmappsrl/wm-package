@@ -9,15 +9,15 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
-use Wm\WmPackage\Models\EcMedia;
+use Wm\WmPackage\Models\Media;
 use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Services\ImageService;
 use Wm\WmPackage\Services\StorageService;
 
 /**
- * Updates EcMedia: geometry, thumbnails and url
+ * Updates Media: geometry, thumbnails and url
  */
-class UpdateEcMedia implements ShouldQueue
+class UpdateMedia implements ShouldQueue
 {
     use Dispatchable;
     use InteractsWithQueue;
@@ -29,7 +29,7 @@ class UpdateEcMedia implements ShouldQueue
      *
      * @return void
      */
-    public function __construct(protected EcMedia $ecMedia) {}
+    public function __construct(protected Media $ecMedia) {}
 
     /**
      * Execute the job.
@@ -67,31 +67,31 @@ class UpdateEcMedia implements ShouldQueue
             $this->ecMedia->url = $imageCloudUrl;
         }
 
-        $sizes = $imageService->getThumbnailSizes();
+        // $sizes = $imageService->getThumbnailSizes();
 
-        foreach ($sizes as $size) {
-            try {
+        // foreach ($sizes as $size) {
+        //     try {
 
-                $imageResize = $imageService->getImageResizeFilePathBySize($localImagePath, $size);
+        //         $imageResize = $imageService->getImageResizeFilePathBySize($localImagePath, $size);
 
-                if (file_exists($imageResize)) {
-                    $thumbnailUrl = $storageService->storeEcMediaImageResize($imageResize, $size['width'], $size['height']);
-                    if ($size['width'] == 0) {
-                        $key = 'x'.$size['height'];
-                    } elseif ($size['height'] == 0) {
-                        $key = $size['width'].'x';
-                    } else {
-                        $key = $size['width'].'x'.$size['height'];
-                    }
+        //         if (file_exists($imageResize)) {
+        //             $thumbnailUrl = $storageService->storeEcMediaImageResize($imageResize, $size['width'], $size['height']);
+        //             if ($size['width'] == 0) {
+        //                 $key = 'x' . $size['height'];
+        //             } elseif ($size['height'] == 0) {
+        //                 $key = $size['width'] . 'x';
+        //             } else {
+        //                 $key = $size['width'] . 'x' . $size['height'];
+        //             }
 
-                    $thumbnailList[$key] = $thumbnailUrl;
-                }
-            } catch (Exception $e) {
-                Log::warning($e->getMessage());
-            }
-        }
+        //             $thumbnailList[$key] = $thumbnailUrl;
+        //         }
+        //     } catch (Exception $e) {
+        //         Log::warning($e->getMessage());
+        //     }
+        // }
 
-        $this->ecMedia->thumbnails = $thumbnailList;
+        // $this->ecMedia->thumbnails = $thumbnailList;
         // persists changes on the database
         $this->ecMedia->saveQuietly();
 
