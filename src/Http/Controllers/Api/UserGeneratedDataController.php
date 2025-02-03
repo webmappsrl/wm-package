@@ -35,7 +35,7 @@ class UserGeneratedDataController extends Controller
                 $this->_storeUgc($feature, $user);
                 $createdCount++;
             }
-            $message = $createdCount . ' new user generated data created';
+            $message = $createdCount.' new user generated data created';
             Log::info($message);
 
             return response()->json(['message' => $message, 'code' => 201], 201);
@@ -135,12 +135,12 @@ class UserGeneratedDataController extends Controller
         $image = preg_replace('/data:image\/(.*?);base64,/', '', $base64); // remove the type part
         $image = str_replace(' ', '+', $image);
         while (Storage::disk('public')->exists(
-            $baseImageName . $maxId . '.' . $imageExtension[1]
+            $baseImageName.$maxId.'.'.$imageExtension[1]
         )) {
             $maxId++;
         }
 
-        $imageName = $baseImageName . $maxId . '.' . $imageExtension[1];
+        $imageName = $baseImageName.$maxId.'.'.$imageExtension[1];
         Storage::disk('public')->put(
             $imageName,
             base64_decode($image)
@@ -215,7 +215,7 @@ class UserGeneratedDataController extends Controller
      * Undocumented function
      * TODO: probably this is needed only for the osm2cai connection
      *
-     * @param integer $id
+     * @param  int  $id
      * @return void
      */
     // public function getUgcGeojsonOsm2cai(int $id)
