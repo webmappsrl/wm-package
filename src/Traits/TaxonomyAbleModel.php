@@ -8,7 +8,6 @@ use Wm\WmPackage\Models\TaxonomyPoiType;
 use Wm\WmPackage\Models\TaxonomyTarget;
 use Wm\WmPackage\Models\TaxonomyTheme;
 use Wm\WmPackage\Models\TaxonomyWhen;
-use Wm\WmPackage\Models\TaxonomyWhere;
 
 trait TaxonomyAbleModel
 {

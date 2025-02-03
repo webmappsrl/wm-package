@@ -165,8 +165,6 @@ abstract class GeometryModel extends Model
         $this->saveQuietly();
     }
 
-
-
     /**
      * Get the class name for polymorphic relations.
      *
@@ -174,6 +172,6 @@ abstract class GeometryModel extends Model
      */
     public function getMorphClass()
     {
-        return 'App\\Models\\' . class_basename($this);
+        return 'App\\Models\\'.class_basename($this);
     }
 }

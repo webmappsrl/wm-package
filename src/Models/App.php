@@ -541,7 +541,6 @@ class App extends Model
         return $temp_array;
     }
 
-
     /**
      * Get the class name for polymorphic relations.
      *
