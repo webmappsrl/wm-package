@@ -3,23 +3,23 @@
 namespace Wm\WmPackage\Http\Controllers\Api;
 
 use Exception;
-use Illuminate\Http\Request;
-use Wm\WmPackage\Models\App;
-use Wm\WmPackage\Models\User;
-use Wm\WmPackage\Models\EcPoi;
-use Wm\WmPackage\Models\Media;
-use Wm\WmPackage\Models\EcTrack;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
-use Wm\WmPackage\Services\StorageService;
 use Wm\WmPackage\Http\Controllers\Controller;
-use Wm\WmPackage\Services\Models\EcPoiService;
-use Wm\WmPackage\Services\Models\MediaService;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
-use Wm\WmPackage\Services\Models\EcTrackService;
+use Wm\WmPackage\Models\App;
+use Wm\WmPackage\Models\EcPoi;
+use Wm\WmPackage\Models\EcTrack;
+use Wm\WmPackage\Models\Media;
+use Wm\WmPackage\Models\User;
 use Wm\WmPackage\Services\GeometryComputationService;
+use Wm\WmPackage\Services\Models\EcPoiService;
+use Wm\WmPackage\Services\Models\EcTrackService;
+use Wm\WmPackage\Services\Models\MediaService;
 use Wm\WmPackage\Services\Models\OutSourceFeatureService;
+use Wm\WmPackage\Services\StorageService;
 
 class EcTrackController extends Controller
 {
@@ -370,7 +370,7 @@ class EcTrackController extends Controller
             return response()->json(['code' => 404, 'error' => 'Not Found'], 404);
         }
 
-        return redirect('https://' . $app_id . '.app.webmapp.it/#/map?track=' . $track_id);
+        return redirect('https://'.$app_id.'.app.webmapp.it/#/map?track='.$track_id);
     }
 
     /**

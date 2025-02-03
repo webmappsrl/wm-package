@@ -2,14 +2,14 @@
 
 namespace Wm\WmPackage\Http\Controllers\Api;
 
-use Wm\WmPackage\Models\User;
-use Wm\WmPackage\Models\EcPoi;
-use Wm\WmPackage\Models\Media;
 use Illuminate\Http\JsonResponse;
 use Wm\WmPackage\Http\Controllers\Controller;
+use Wm\WmPackage\Models\EcPoi;
+use Wm\WmPackage\Models\Media;
+use Wm\WmPackage\Models\User;
+use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Services\Models\EcPoiService;
 use Wm\WmPackage\Services\Models\MediaService;
-use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Services\Models\OutSourceFeatureService;
 
 class EcPoiController extends Controller
@@ -104,6 +104,6 @@ class EcPoiController extends Controller
             return response()->json(['code' => 404, 'error' => 'Not Found'], 404);
         }
 
-        return redirect('https://' . $app_id . '.app.webmapp.it/#/map?poi=' . $poi_id);
+        return redirect('https://'.$app_id.'.app.webmapp.it/#/map?poi='.$poi_id);
     }
 }
