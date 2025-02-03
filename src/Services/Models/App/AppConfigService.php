@@ -47,10 +47,10 @@ class AppConfigService extends AppBaseService
         return $data;
     }
 
-    //TODO: is jido stuff used anymore?
+    // TODO: is jido stuff used anymore?
     public function config_update_jido_time()
     {
-        $confUri = $this->app->id . '.json';
+        $confUri = $this->app->id.'.json';
         if (Storage::disk('conf')->exists($confUri)) {
             $json = json_decode(Storage::disk('conf')->get($confUri));
             $json->JIDO_UPDATE_TIME = floor(microtime(true) * 1000);
@@ -60,7 +60,7 @@ class AppConfigService extends AppBaseService
 
     public function config_get_jido_time()
     {
-        $confUri = $this->app->id . '.json';
+        $confUri = $this->app->id.'.json';
         if (Storage::disk('conf')->exists($confUri)) {
             $json = json_decode(Storage::disk('conf')->get($confUri));
             if (isset($json->JIDO_UPDATE_TIME)) {
@@ -269,7 +269,7 @@ class AppConfigService extends AppBaseService
             try {
                 $data['MAP']['overlays'] = json_decode($this->app->external_overlays);
             } catch (\Exception $e) {
-                Log::warning('The overlays in the app ' . $this->app->id . ' are not correctly mapped. Error: ' . $e->getMessage());
+                Log::warning('The overlays in the app '.$this->app->id.' are not correctly mapped. Error: '.$e->getMessage());
             }
         }
 
@@ -283,7 +283,7 @@ class AppConfigService extends AppBaseService
                         $item['bbox'] = array_map('floatval', json_decode(strval($item['bbox']), true));
                     }
                 } catch (\Exception  $e) {
-                    Log::warning('The bbox value ' . $layer->id . ' are not correct. Error: ' . $e->getMessage());
+                    Log::warning('The bbox value '.$layer->id.' are not correct. Error: '.$e->getMessage());
                 }
                 // style
                 foreach (['color', 'fill_color', 'fill_opacity', 'stroke_width', 'stroke_opacity', 'zindex', 'line_dash'] as $field) {
@@ -530,7 +530,7 @@ class AppConfigService extends AppBaseService
 
             foreach ($poi_types as $poi_type) {
                 $a = [
-                    'identifier' => 'poi_type_' . $poi_type->identifier,
+                    'identifier' => 'poi_type_'.$poi_type->identifier,
                     'name' => json_decode($poi_type->name, true),
                     'id' => $poi_type->id,
                     'icon' => $poi_type->icon,
@@ -632,7 +632,7 @@ class AppConfigService extends AppBaseService
         $data = [];
         if (in_array($this->app->api, ['elbrus'])) {
             // OPTIONS section
-            $data['OPTIONS']['baseUrl'] = 'https://geohub.webmapp.it/api/app/elbrus/' . $this->app->id . '/';
+            $data['OPTIONS']['baseUrl'] = 'https://geohub.webmapp.it/api/app/elbrus/'.$this->app->id.'/';
         }
 
         $data['OPTIONS']['startUrl'] = $this->app->start_url;

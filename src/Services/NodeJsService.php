@@ -24,7 +24,7 @@ class NodeJsService extends BaseService
             throw new Exception('The geojson id is not defined');
         }
 
-        //TODO: mv all to the storage service
+        // TODO: mv all to the storage service
         $localDisk = $this->storageService->getLocalDisk();
         $mediaDisk = $this->storageService->getMediaDisk();
 
@@ -42,13 +42,13 @@ class NodeJsService extends BaseService
         $src = $localDisk->path("geojson/$id.geojson");
         $dest = $localDisk->path("elevation_charts/$id.svg");
 
-        $cmd = config('wm-package.nodejs.node_executable') . " node/jobs/build-elevation-chart.js --geojson=$src --dest=$dest --type=svg";
+        $cmd = config('wm-package.nodejs.node_executable')." node/jobs/build-elevation-chart.js --geojson=$src --dest=$dest --type=svg";
 
         // Log::info("Running node command: {$cmd}");
 
         $this->runNodeJsCommand($cmd);
 
-        //TODO: mv all to the storage service
+        // TODO: mv all to the storage service
 
         $localDisk->delete("geojson/$id.geojson");
 
