@@ -77,45 +77,45 @@ class StorageService extends BaseService
      *
      * @throws Exception
      */
-    public function storeEcMediaImage(string $imagePath): string
-    {
-        if (! file_exists($imagePath)) {
-            throw new Exception("The image $imagePath does not exists");
-        }
+    // public function storeEcMediaImage(string $imagePath): string
+    // {
+    //     if (! file_exists($imagePath)) {
+    //         throw new Exception("The image $imagePath does not exists");
+    //     }
 
-        $filename = pathinfo($imagePath)['filename'].'.'.pathinfo($imagePath)['extension'];
+    //     $filename = pathinfo($imagePath)['filename'].'.'.pathinfo($imagePath)['extension'];
 
-        $path = 'EcMedia/'.$filename;
+    //     $path = 'EcMedia/'.$filename;
 
-        $disk = $this->getEcMediaDisk();
-        $disk->put($path, file_get_contents($imagePath));
+    //     $disk = $this->getEcMediaDisk();
+    //     $disk->put($path, file_get_contents($imagePath));
 
-        return $disk->url($path);
-    }
+    //     return $disk->url($path);
+    // }
 
-    public function storeLocalEcMediaImage(EcMedia $ecMedia): bool
-    {
-        return $this->getPublicDisk()->put($ecMedia->path, file_get_contents($ecMedia->url));
-    }
+    // public function storeLocalEcMediaImage(EcMedia $ecMedia): bool
+    // {
+    //     return $this->getPublicDisk()->put($ecMedia->path, file_get_contents($ecMedia->url));
+    // }
 
-    public function getLocalEcMediaImagePath(EcMedia $ecMedia): string
-    {
-        return $this->getPublicDisk()->path($ecMedia->path);
-    }
+    // public function getLocalEcMediaImagePath(EcMedia $ecMedia): string
+    // {
+    //     return $this->getPublicDisk()->path($ecMedia->path);
+    // }
 
-    public function getLocalImageUrl(string $relativePath): string|false
-    {
-        if (! $this->getPublicDisk()->exists($relativePath)) {
-            return false;
-        }
+    // public function getLocalImageUrl(string $relativePath): string|false
+    // {
+    //     if (! $this->getPublicDisk()->exists($relativePath)) {
+    //         return false;
+    //     }
 
-        return $this->getPublicDisk()->url($relativePath);
-    }
+    //     return $this->getPublicDisk()->url($relativePath);
+    // }
 
-    public function deleteLocalEcMediaImage(EcMedia $ecMedia): bool
-    {
-        return $this->getPublicDisk()->delete($ecMedia->path);
-    }
+    // public function deleteLocalEcMediaImage(EcMedia $ecMedia): bool
+    // {
+    //     return $this->getPublicDisk()->delete($ecMedia->path);
+    // }
 
     /**
      * Upload an already resized image to the s3 bucket
@@ -127,26 +127,26 @@ class StorageService extends BaseService
      *
      * @throws Exception
      */
-    public function storeEcMediaImageResize(string $imagePath, int $width, int $height): string
-    {
+    // public function storeEcMediaImageResize(string $imagePath, int $width, int $height): string
+    // {
 
-        if (! file_exists($imagePath)) {
-            throw new Exception("The image $imagePath does not exists");
-        }
+    //     if (! file_exists($imagePath)) {
+    //         throw new Exception("The image $imagePath does not exists");
+    //     }
 
-        $filename = basename($imagePath);
-        if ($width == 0) {
-            $cloudPath = 'EcMedia/Resize/x'.$height.DIRECTORY_SEPARATOR.$filename;
-        } elseif ($height == 0) {
-            $cloudPath = 'EcMedia/Resize/'.$width.'x'.DIRECTORY_SEPARATOR.$filename;
-        } else {
-            $cloudPath = 'EcMedia/Resize/'.$width.'x'.$height.DIRECTORY_SEPARATOR.$filename;
-        }
+    //     $filename = basename($imagePath);
+    //     if ($width == 0) {
+    //         $cloudPath = 'EcMedia/Resize/x'.$height.DIRECTORY_SEPARATOR.$filename;
+    //     } elseif ($height == 0) {
+    //         $cloudPath = 'EcMedia/Resize/'.$width.'x'.DIRECTORY_SEPARATOR.$filename;
+    //     } else {
+    //         $cloudPath = 'EcMedia/Resize/'.$width.'x'.$height.DIRECTORY_SEPARATOR.$filename;
+    //     }
 
-        $this->getEcMediaDisk()->put($cloudPath, file_get_contents($imagePath));
+    //     $this->getEcMediaDisk()->put($cloudPath, file_get_contents($imagePath));
 
-        return $this->getEcMediaDisk()->url($cloudPath);
-    }
+    //     return $this->getEcMediaDisk()->url($cloudPath);
+    // }
 
     //
     // PATHS
@@ -208,10 +208,10 @@ class StorageService extends BaseService
         return $this->getDisk('wmfetracks');
     }
 
-    private function getEcMediaDisk(): Filesystem
-    {
-        return $this->getDisk('s3');
-    }
+    // private function getEcMediaDisk(): Filesystem
+    // {
+    //     return $this->getDisk('s3');
+    // }
 
     private function getPublicDisk(): Filesystem
     {

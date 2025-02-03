@@ -2,15 +2,21 @@
 
 namespace Wm\WmPackage\Models\Abstracts;
 
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Model;
+use Spatie\Image\Enums\Fit;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\User;
-use Wm\WmPackage\Services\GeometryComputationService;
+use Wm\WmPackage\Models\Media;
+use Spatie\MediaLibrary\HasMedia;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
 use Wm\WmPackage\Services\StorageService;
+use Spatie\MediaLibrary\InteractsWithMedia;
+use Wm\WmPackage\Services\GeometryComputationService;
 
-abstract class GeometryModel extends Model
+abstract class GeometryModel extends Model implements HasMedia
 {
+    use InteractsWithMedia;
+
     protected $casts = [
         'properties' => 'array',
     ];
@@ -172,6 +178,27 @@ abstract class GeometryModel extends Model
      */
     public function getMorphClass()
     {
-        return 'App\\Models\\'.class_basename($this);
+        return 'App\\Models\\' . class_basename($this);
+    }
+
+    //
+    // MEDIA
+    //
+
+    public function registerMediaConversions($media = null): void
+    {
+        foreach (config('wm-package.image.thumbnail_sizes', []) as $size)
+            $this
+                ->addMediaConversion('thumbnail')
+                ->fit(Fit::Contain, $size['width'], $size['height'])
+                ->nonQueued();
+    }
+
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('featureImage');
+        //add options
+        // you can define as many collections as needed
+        $this->addMediaCollection('main');
     }
 }
