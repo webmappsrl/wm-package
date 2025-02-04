@@ -4,18 +4,14 @@ namespace Wm\WmPackage\Http\Controllers\Api\Abstracts;
 
 use Exception;
 use Illuminate\Http\Request;
-use Wm\WmPackage\Models\App;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
-use Spatie\MediaLibrary\HasMedia;
 use Wm\WmPackage\Http\Controllers\Controller;
-use Wm\WmPackage\Traits\FeatureCollectionTrait;
 use Wm\WmPackage\Models\Abstracts\GeometryModel;
 use Wm\WmPackage\Services\GeometryComputationService;
 
 abstract class UgcController extends Controller
 {
-
     abstract protected function getModelIstance(): GeometryModel;
 
     /**
@@ -29,7 +25,7 @@ abstract class UgcController extends Controller
 
         $query = $this->getModelIstance()->getQuery()->where('user_id', $user->id);
 
-        //TODO: is it regular on header?
+        // TODO: is it regular on header?
         if (! empty($request->header('app-id'))) {
             $validated = $this->validateAppId($request->headers(), 'app-id');
             $query = $query->where('app_id', $validated['app-id']);
@@ -52,7 +48,6 @@ abstract class UgcController extends Controller
         return response(['id' => $model->id, 'message' => 'Created successfully'], 201);
     }
 
-
     /**
      * Show the form for editing the specified resource.
      */
@@ -66,11 +61,9 @@ abstract class UgcController extends Controller
         return response(['id' => $model->id, 'message' => 'Updated successfully'], 200);
     }
 
-
     /**
      * Remove the specified resource from storage.
      *
-     * @param  \Wm\WmPackage\Models\Abstracts\GeometryModel $model
      * @return Response
      */
     protected function _destroy(GeometryModel $model)
@@ -88,28 +81,25 @@ abstract class UgcController extends Controller
         return response()->json(['success' => 'model deleted']);
     }
 
-
-
-
-
     protected function fillModelWithRequest($model, $request, $validated)
     {
         $geometry = $validated['geometry'];
         $properties = $validated['properties'];
 
         $model = ($this->getModelIstance())->fill([
-            //validated in the validateProperties method
+            // validated in the validateProperties method
             'geometry' => GeometryComputationService::make()->get2dGeometryFromGeojsonRAW(json_encode($geometry)),
             'properties' => $properties,
-            'name' => $properties['name'], //validated in the validateProperties method
-            'app_id' =>  $properties['app_id'] //validated in the validateProperties method
+            'name' => $properties['name'], // validated in the validateProperties method
+            'app_id' => $properties['app_id'], // validated in the validateProperties method
         ]);
 
         try {
             $model->save();
         } catch (\Exception $e) {
-            Log::channel('ugc')->info('Errore nel salvataggio dell\'oggetto ' . $this->getModelIstance()::class . ':' . $e->getMessage());
-            return response(['error' => 'Error saving ' . class_basename($this->getModelIstance()::class)], 500);
+            Log::channel('ugc')->info('Errore nel salvataggio dell\'oggetto '.$this->getModelIstance()::class.':'.$e->getMessage());
+
+            return response(['error' => 'Error saving '.class_basename($this->getModelIstance()::class)], 500);
         }
 
         if ($request->has('images')) {

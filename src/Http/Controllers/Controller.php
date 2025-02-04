@@ -2,13 +2,13 @@
 
 namespace Wm\WmPackage\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Foundation\Bus\DispatchesJobs;
-use Wm\WmPackage\Models\Abstracts\GeometryModel;
-use Illuminate\Routing\Controller as BaseController;
-use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Foundation\Bus\DispatchesJobs;
+use Illuminate\Foundation\Validation\ValidatesRequests;
+use Illuminate\Http\Request;
+use Illuminate\Routing\Controller as BaseController;
+use Illuminate\Support\Facades\Validator;
+use Wm\WmPackage\Models\Abstracts\GeometryModel;
 
 /**
  * @OA\Info(
@@ -30,7 +30,6 @@ class Controller extends BaseController
 {
     use AuthorizesRequests, DispatchesJobs, ValidatesRequests;
 
-
     protected function validateAppId($data, $key = 'appId')
     {
         // https://laravel.com/docs/11.x/validation#stopping-on-first-validation-failure
@@ -51,13 +50,13 @@ class Controller extends BaseController
             'geometry' => 'required|array',
             'geometry.type' => 'required',
             'geometry.coordinates' => 'required|array',
-            ...$additionalRules
+            ...$additionalRules,
         ]);
     }
 
     protected function validateUser(GeometryModel $model)
     {
-        //TODO: skip this when there will be better model policies
+        // TODO: skip this when there will be better model policies
         $user = auth('api')->user();
         if ($model->user_id !== $user->id) {
             return response(['error' => 'Forbidden access to another user model'], 403);
