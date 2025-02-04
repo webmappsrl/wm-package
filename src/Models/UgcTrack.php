@@ -2,10 +2,9 @@
 
 namespace Wm\WmPackage\Models;
 
-use Wm\WmPackage\Traits\OwnedByUserModel;
-use Wm\WmPackage\Traits\UgcAbleModel;
-use Wm\WmPackage\Observers\UgcObserver;
 use Wm\WmPackage\Models\Abstracts\Linestring;
+use Wm\WmPackage\Observers\UgcObserver;
+use Wm\WmPackage\Traits\OwnedByUserModel;
 
 /**
  * Class UgcTrack

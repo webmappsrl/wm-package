@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Builder;
 
 trait OwnedByUserModel
 {
-
     /**
      * Scope a query to only include current user EcPois.
      */

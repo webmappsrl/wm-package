@@ -2,7 +2,6 @@
 
 namespace Wm\WmPackage\Models\Abstracts;
 
-
 use Illuminate\Database\Eloquent\Model;
 use Spatie\Image\Enums\Fit;
 use Spatie\MediaLibrary\HasMedia;
@@ -34,8 +33,6 @@ abstract class GeometryModel extends Model implements HasMedia
     {
         return $this->belongsTo(User::class);
     }
-
-
 
     //
     // FROM GEOHUB App\Traits\GeometryFeatureTrait
@@ -173,7 +170,7 @@ abstract class GeometryModel extends Model implements HasMedia
      */
     public function getMorphClass()
     {
-        return 'App\\Models\\' . class_basename($this);
+        return 'App\\Models\\'.class_basename($this);
     }
 
     //
