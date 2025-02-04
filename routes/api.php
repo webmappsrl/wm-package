@@ -51,9 +51,6 @@ Route::middleware('api')->group(function () {
     });
 });
 
-
-
-
 Route::name('api.')->group(function () {
 
     /**
