@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('name');
             $table->point('geometry', 4326);
             $table->integer('app_id');
+            $table->integer('user_id')->nullable();
             $table->string('file_name');
             $table->string('mime_type')->nullable();
             $table->string('disk');
@@ -32,6 +33,7 @@ return new class extends Migration
 
             $table->spatialIndex('geometry');
             $table->index('app_id');
+            $table->index('user_id');
         });
     }
 };

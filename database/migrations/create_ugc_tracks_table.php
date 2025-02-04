@@ -19,9 +19,11 @@ return new class extends Migration
             $table->text('name');
             $table->linestring('geometry', 4326)->nullable();
             $table->integer('app_id');
+            $table->integer('user_id');
             $table->timestamps();
 
             $table->index('app_id');
+            $table->index('user_id');
             $table->spatialIndex('geometry');
         });
     }
