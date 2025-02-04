@@ -2,11 +2,13 @@
 
 namespace Wm\WmPackage\Http\Controllers;
 
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use Illuminate\Foundation\Bus\DispatchesJobs;
-use Illuminate\Foundation\Validation\ValidatesRequests;
-use Illuminate\Routing\Controller as BaseController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Foundation\Bus\DispatchesJobs;
+use Wm\WmPackage\Models\Abstracts\GeometryModel;
+use Illuminate\Routing\Controller as BaseController;
+use Illuminate\Foundation\Validation\ValidatesRequests;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 /**
  * @OA\Info(
@@ -28,18 +30,37 @@ class Controller extends BaseController
 {
     use AuthorizesRequests, DispatchesJobs, ValidatesRequests;
 
-    protected function checkValidation($data, $rules)
+
+    protected function validateAppId($data, $key = 'appId')
     {
-        $validator = Validator::make($data, $rules);
+        // https://laravel.com/docs/11.x/validation#stopping-on-first-validation-failure
+        // https://laravel.com/docs/11.x/validation#rule-exists
 
-        if ($validator->fails()) {
-            $currentErrors = json_decode($validator->errors(), true);
-            $errors = [];
-            foreach ($currentErrors as $key => $error) {
-                $errors[$key] = $error;
-            }
+        return Validator::make($data, [
+            $key => 'integer|required|exists:apps,id',
+        ])->validate();
+    }
 
-            return response(['error' => $errors], 400);
+    protected function validateGeojson(Request $request, $additionalRules = [])
+    {
+        return $request->validate($request->get('properties'), [
+            'type' => 'required',
+            'properties' => 'required|array',
+            'properties.name' => 'required|max:255',
+            'properties.app_id' => 'integer|required|exists:apps,id',
+            'geometry' => 'required|array',
+            'geometry.type' => 'required',
+            'geometry.coordinates' => 'required|array',
+            ...$additionalRules
+        ]);
+    }
+
+    protected function validateUser(GeometryModel $model)
+    {
+        //TODO: skip this when there will be better model policies
+        $user = auth('api')->user();
+        if ($model->user_id !== $user->id) {
+            return response(['error' => 'Forbidden access to another user model'], 403);
         }
     }
 }

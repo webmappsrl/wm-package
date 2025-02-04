@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\MessageBag;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
-use Wm\WmPackage\Models\TaxonomyWhere;
 
 class TaxonomyObserver extends AbstractObserver
 {
@@ -15,10 +14,10 @@ class TaxonomyObserver extends AbstractObserver
      *
      * @return void
      */
-    public function creating(Model $taxonomyWhere)
+    public function creating(Model $taxonomy)
     {
-        if ($taxonomyWhere->identifier != null) {
-            $validateTaxonomyWhere = TaxonomyWhere::where('identifier', 'LIKE', $taxonomyWhere->identifier)->first();
+        if ($taxonomy->identifier != null) {
+            $validateTaxonomyWhere = $taxonomy::where('identifier', 'LIKE', $taxonomy->identifier)->first();
             if (! $validateTaxonomyWhere == null) {
                 self::validationError("The inserted 'identifier' field already exists.");
             }
@@ -30,10 +29,10 @@ class TaxonomyObserver extends AbstractObserver
      *
      * @return void
      */
-    public function updating(TaxonomyWhere $taxonomyWhere)
+    public function updating(Model $taxonomy)
     {
-        if ($taxonomyWhere->identifier !== null) {
-            $taxonomyWhere->identifier = Str::slug($taxonomyWhere->identifier, '-');
+        if ($taxonomy->identifier !== null) {
+            $taxonomy->identifier = Str::slug($taxonomy->identifier, '-');
         }
     }
 

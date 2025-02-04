@@ -2,7 +2,7 @@
 
 namespace Wm\WmPackage\Models\Abstracts;
 
-use Illuminate\Database\Eloquent\Builder;
+
 use Illuminate\Database\Eloquent\Model;
 use Spatie\Image\Enums\Fit;
 use Spatie\MediaLibrary\HasMedia;
@@ -35,13 +35,7 @@ abstract class GeometryModel extends Model implements HasMedia
         return $this->belongsTo(User::class);
     }
 
-    /**
-     * Scope a query to only include current user EcPois.
-     */
-    public function scopeCurrentUser(Builder $query): Builder
-    {
-        return $query->where('user_id', Auth()->user()->id);
-    }
+
 
     //
     // FROM GEOHUB App\Traits\GeometryFeatureTrait
@@ -179,7 +173,7 @@ abstract class GeometryModel extends Model implements HasMedia
      */
     public function getMorphClass()
     {
-        return 'App\\Models\\'.class_basename($this);
+        return 'App\\Models\\' . class_basename($this);
     }
 
     //
@@ -198,9 +192,8 @@ abstract class GeometryModel extends Model implements HasMedia
 
     public function registerMediaCollections(): void
     {
-        $this->addMediaCollection('featureImage');
         // add options
         // you can define as many collections as needed
-        $this->addMediaCollection('main');
+        $this->addMediaCollection('default');
     }
 }

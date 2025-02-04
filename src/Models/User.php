@@ -91,11 +91,6 @@ class User extends Authenticatable implements JWTSubject
         return $this->hasMany(UgcTrack::class);
     }
 
-    public function ugc_medias(): HasMany
-    {
-        return $this->hasMany(UgcMedia::class);
-    }
-
     public function taxonomy_targets(): HasMany
     {
         return $this->hasMany(TaxonomyTarget::class);

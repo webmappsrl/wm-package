@@ -2,8 +2,10 @@
 
 namespace Wm\WmPackage\Models;
 
-use Wm\WmPackage\Models\Abstracts\Linestring;
+use Wm\WmPackage\Traits\OwnedByUserModel;
 use Wm\WmPackage\Traits\UgcAbleModel;
+use Wm\WmPackage\Observers\UgcObserver;
+use Wm\WmPackage\Models\Abstracts\Linestring;
 
 /**
  * Class UgcTrack
@@ -19,5 +21,10 @@ use Wm\WmPackage\Traits\UgcAbleModel;
  */
 class UgcTrack extends Linestring
 {
-    use UgcAbleModel;
+    use OwnedByUserModel;
+
+    protected static function booted()
+    {
+        UgcTrack::observe(UgcObserver::class);
+    }
 }

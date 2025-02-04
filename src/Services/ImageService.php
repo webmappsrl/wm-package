@@ -114,7 +114,7 @@ class ImageService extends BaseService
 
             $img = $this->correctImageOrientation(Image::make($imagePath));
             $pathInfo = pathinfo($imagePath);
-            $newPathImage = $pathInfo['dirname'].DIRECTORY_SEPARATOR.$this->resizedFileName($imagePath, $width = '', $dim);
+            $newPathImage = $pathInfo['dirname'] . DIRECTORY_SEPARATOR . $this->resizedFileName($imagePath, $width = '', $dim);
             $img->fit(null, $dim, function ($const) {
                 $const->aspectRatio();
             })->save($newPathImage);
@@ -127,7 +127,7 @@ class ImageService extends BaseService
 
             $img = $this->correctImageOrientation(Image::make($imagePath));
             $pathInfo = pathinfo($imagePath);
-            $newPathImage = $pathInfo['dirname'].DIRECTORY_SEPARATOR.$this->resizedFileName($imagePath, $dim, $height = 0);
+            $newPathImage = $pathInfo['dirname'] . DIRECTORY_SEPARATOR . $this->resizedFileName($imagePath, $dim, $height = 0);
             $img->fit($dim, null, function ($const) {
                 $const->aspectRatio();
             })->save($newPathImage);
@@ -173,11 +173,11 @@ class ImageService extends BaseService
     {
         $pathInfo = pathinfo($imagePath);
         if ($width == 0) {
-            return $pathInfo['filename'].'_x'.$height.'.'.$pathInfo['extension'];
+            return $pathInfo['filename'] . '_x' . $height . '.' . $pathInfo['extension'];
         } elseif ($height == 0) {
-            return $pathInfo['filename'].'_'.$width.'x.'.$pathInfo['extension'];
+            return $pathInfo['filename'] . '_' . $width . 'x.' . $pathInfo['extension'];
         } else {
-            return $pathInfo['filename'].'_'.$width.'x'.$height.'.'.$pathInfo['extension'];
+            return $pathInfo['filename'] . '_' . $width . 'x' . $height . '.' . $pathInfo['extension'];
         }
     }
 
@@ -201,11 +201,48 @@ class ImageService extends BaseService
 
         $img = $this->correctImageOrientation(Image::make($imagePath));
         $pathInfo = pathinfo($imagePath);
-        $newPathImage = $pathInfo['dirname'].DIRECTORY_SEPARATOR.$this->resizedFileName($imagePath, $width, $height);
+        $newPathImage = $pathInfo['dirname'] . DIRECTORY_SEPARATOR . $this->resizedFileName($imagePath, $width, $height);
         $img->fit($width, $height, function ($const) {
             $const->aspectRatio();
         })->save($newPathImage);
 
         return $newPathImage;
+    }
+
+
+    public function addImageToMedia($media, $image)
+    {
+        try {
+            $id = $media->id;
+            $imageName = "image_$id";
+            $basePath = 'media/images/ugc/';
+            if (Storage::disk('public')->exists("$basePath$imageName")) {
+                Storage::disk('public')->delete("$basePath$imageName");
+            }
+            Storage::disk('public')->put("$basePath$imageName", $image);
+
+            $savedPath = Storage::disk('public')->files("$basePath$imageName/")[0];
+            $split = explode('/', $savedPath);
+            $savedName = end($split);
+
+            $split = explode('.', $savedName);
+            $ext = end($split);
+            Storage::disk('public')->delete("$basePath$imageName.$ext");
+            Storage::disk('public')->move("{$basePath}image_$id/$savedName", "$basePath$imageName.$ext");
+            Storage::disk('public')->deleteDirectory("$basePath$imageName");
+            $media->relative_url = $basePath . $imageName . '.' . $ext;
+
+            if ($media->name == 'placeholder_name') {
+                $media->name = $imageName;
+            }
+            if (empty($media->description)) {
+                $media->description = $imageName;
+            }
+            $media->save();
+        } catch (Exception $e) {
+            Log::error($e);
+
+            return response(['message' => 'An error occurred while creating the new image'], 500);
+        }
     }
 }

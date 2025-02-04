@@ -2,8 +2,10 @@
 
 namespace Wm\WmPackage\Models;
 
-use Wm\WmPackage\Models\Abstracts\Point;
+use Wm\WmPackage\Traits\OwnedByUserModel;
 use Wm\WmPackage\Traits\UgcAbleModel;
+use Wm\WmPackage\Models\Abstracts\Point;
+use Wm\WmPackage\Observers\UgcObserver;
 
 /**
  * Class UgcPoi
@@ -20,7 +22,7 @@ use Wm\WmPackage\Traits\UgcAbleModel;
  */
 class UgcPoi extends Point
 {
-    use UgcAbleModel;
+    use OwnedByUserModel;
 
     /**
      * @var mixed|string
@@ -33,4 +35,10 @@ class UgcPoi extends Point
         'geometry',
         'properties',
     ];
+
+
+    protected static function booted()
+    {
+        UgcPoi::observe(UgcObserver::class);
+    }
 }
