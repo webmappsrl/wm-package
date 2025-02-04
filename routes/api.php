@@ -46,12 +46,17 @@ Route::middleware('api')->group(function () {
         'middleware' => 'auth.jwt',
     ], function () {
         Route::post('/wallet/buy', [WalletController::class, 'buy'])->name('wallet.buy');
-        Route::prefix('ugc')->name('ugc.')->resources([
-            'poi' => UgcPoiController::class,
-            'track' => UgcTrackController::class,
-        ])->except('create', 'show', 'edit');
+        Route::prefix('ugc')->name('ugc.');
+    });
+
+    Route::name('.ugc')->prefix('ugc')->middleware('auth.jwt')->group(function () {
+        Route::apiResource('pois', UgcPoiController::class)->except('show');
+        Route::apiResource('tracks', UgcTrackController::class)->except('show');
     });
 });
+
+
+
 
 Route::name('api.')->group(function () {
 
