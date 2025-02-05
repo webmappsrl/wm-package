@@ -3,22 +3,20 @@
 namespace Wm\WmPackage\Http\Clients;
 
 use Exception;
-
 use Wm\WmPackage\Http\Clients\Abstracts\JsonClient;
 
 class OsmfeaturesClient extends JsonClient
 {
-
     public function getWheresByGeojson(array $geojson): array
     {
         $wheresGeojson = $this->getAdminAreasIntersected($geojson);
 
-        //{"name": "Scalepranu/Escalaplano", "type": "boundary", "name:it": "Escalaplano", "name:sc": "Scalepranu", "website": "https://www.comune.escalaplano.ca.it/", "alt_name": "Iscalepranu", "boundary": "administrative", "wikidata": "Q179092", "ref:ISTAT": "111018", "wikipedia": "it:Escalaplano", "admin_level": "8", "postal_code": "08043", "ref:catasto": "D430", "wikipedia:sc": "Scalepranu"}
+        // {"name": "Scalepranu/Escalaplano", "type": "boundary", "name:it": "Escalaplano", "name:sc": "Scalepranu", "website": "https://www.comune.escalaplano.ca.it/", "alt_name": "Iscalepranu", "boundary": "administrative", "wikidata": "Q179092", "ref:ISTAT": "111018", "wikipedia": "it:Escalaplano", "admin_level": "8", "postal_code": "08043", "ref:catasto": "D430", "wikipedia:sc": "Scalepranu"}
         $wheres = [];
         foreach ($wheresGeojson['features'] as $feature) {
             $osmType = $feature['osm_type'];
             $osmId = $feature['osm_id'];
-            $whereId = $osmType . $osmId;
+            $whereId = $osmType.$osmId;
             $featureTags = $feature['tags'];
             $name = null;
             foreach ($featureTags as $tagName => $tagValue) {
@@ -37,7 +35,7 @@ class OsmfeaturesClient extends JsonClient
             if (empty($wheres[$whereId]) && $name !== null) {
                 $wheres[$whereId] = [
                     'it' => $name,
-                    'en' => $name
+                    'en' => $name,
                 ];
             }
         }

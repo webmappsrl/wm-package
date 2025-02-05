@@ -3,11 +3,11 @@
 namespace Wm\WmPackage\Jobs;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
 use Wm\WmPackage\Http\Clients\OsmfeaturesClient;
 use Wm\WmPackage\Models\Abstracts\GeometryModel;
 
@@ -34,7 +34,8 @@ class UpdateModelWithGeometryTaxonomyWhere implements ShouldQueue
     {
         $wheres = $osmfeaturesClient->getWheresByGeojson($this->model->getGeojson());
         if (count($wheres) === 0) {
-            Log::warning('No wheres found for ' . class_basename($this->model) . ' ' . $this->model->id);
+            Log::warning('No wheres found for '.class_basename($this->model).' '.$this->model->id);
+
             return;
         }
 
