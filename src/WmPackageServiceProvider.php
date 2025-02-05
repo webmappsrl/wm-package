@@ -2,15 +2,16 @@
 
 namespace Wm\WmPackage;
 
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
-use Matchish\ScoutElasticSearch\ElasticSearchServiceProvider;
-use Spatie\LaravelPackageTools\Package;
-use Spatie\LaravelPackageTools\PackageServiceProvider;
-use Tymon\JWTAuth\Providers\LaravelServiceProvider;
-use Wm\WmPackage\Commands\DownloadDbCommand;
 use Wm\WmPackage\Commands\UploadDbAWS;
+use Spatie\LaravelPackageTools\Package;
 use Wm\WmPackage\Commands\WmPackageCommand;
+use Wm\WmPackage\Commands\DownloadDbCommand;
 use Wm\WmPackage\Providers\EventServiceProvider;
+use Tymon\JWTAuth\Providers\LaravelServiceProvider;
+use Spatie\LaravelPackageTools\PackageServiceProvider;
+use Matchish\ScoutElasticSearch\ElasticSearchServiceProvider;
 
 class WmPackageServiceProvider extends PackageServiceProvider
 {
@@ -30,11 +31,22 @@ class WmPackageServiceProvider extends PackageServiceProvider
         $this->app->call(function () use ($packageDirPath) {
             Route::middleware('api')
                 ->prefix('api')
-                ->group($packageDirPath.'routes/api.php');
+                ->group($packageDirPath . 'routes/api.php');
 
             Route::middleware('web')
-                ->group($packageDirPath.'routes/web.php');
+                ->group($packageDirPath . 'routes/web.php');
         });
+
+        // Register policies
+        // https://laravel.com/docs/11.x/authorization#registering-policies
+        // to check registered policies: 
+        // ./vendor/bin/testbench tinker --execute "dd(Gate::getPolicyFor("\\Wm\\WmPackage\\Models\\User"))"
+        // The procedure below OVERWRITES all application policies.
+        // Gate::guessPolicyNamesUsing(function (string $modelClass) {
+        //     $t =  "Wm\\WmPackage\\Policies\\" . class_basename($modelClass) . "Policy";
+        //     //dump($t);
+        //     return $t;
+        // });
     }
 
     public function configurePackage(Package $package): void
