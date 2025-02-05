@@ -3,9 +3,9 @@
 namespace Wm\WmPackage\Http\Clients;
 
 use Exception;
-use Illuminate\Support\Facades\Http;
+use Wm\WmPackage\Http\Clients\Abstracts\JsonClient;
 
-class DemClient
+class DemClient extends JsonClient
 {
     public function getElevation($x, $y)
     {
@@ -16,7 +16,7 @@ class DemClient
 
     private function getElevationUrl($x, $y)
     {
-        return $this->getDemHost().'/'.rtrim(config('wm-package.clients.dem.ele_api'), '/')."/$x/$y";
+        return $this->getHost() . '/' . rtrim(config('wm-package.clients.dem.ele_api'), '/') . "/$x/$y";
     }
 
     public function getTechData($geojson)
@@ -38,18 +38,11 @@ class DemClient
 
     private function getTechDataUrl()
     {
-        return $this->getDemHost().'/'.rtrim(config('wm-package.clients.dem.tech_data_api'), '/');
+        return $this->getHost() . '/' . rtrim(config('wm-package.clients.dem.tech_data_api'), '/');
     }
 
-    protected function getDemHost()
+    protected function getHost(): string
     {
         return rtrim(config('wm-package.clients.dem.host'));
-    }
-
-    protected function getHttpClient()
-    {
-        return Http::withHeaders([
-            'Content-Type' => 'application/json',
-        ]);
     }
 }

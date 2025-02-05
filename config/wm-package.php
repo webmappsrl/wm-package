@@ -38,5 +38,8 @@ return [
             'basic_auth_user' => env('CAI_BASIC_AUTH_USER'),
             'basic_auth_password' => env('CAI_BASIC_AUTH_PASSWORD'),
         ],
+        'osmfeatures' => [
+            'host' => env('OSMFEATURES_HOST', 'https://osmfeatures.maphub.it')
+        ]
     ],
 ];

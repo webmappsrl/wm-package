@@ -41,7 +41,7 @@ abstract class GeometryModel extends Model implements HasMedia
     /**
      * Calculate the geojson of a model with only the geometry
      */
-    public function getGeojson(): ?array
+    public function getGeojson(): array
     {
         $properties = $this->properties ?? [];
         $geom = GeometryComputationService::make()->getModelGeometryAsGeojson($this);
@@ -170,7 +170,7 @@ abstract class GeometryModel extends Model implements HasMedia
      */
     public function getMorphClass()
     {
-        return 'App\\Models\\'.class_basename($this);
+        return 'App\\Models\\' . class_basename($this);
     }
 
     //

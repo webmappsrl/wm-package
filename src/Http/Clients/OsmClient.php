@@ -70,7 +70,7 @@ class OsmClient
     public function getGeojson(string $osmid): string
     {
         if (! $this->checkOsmId($osmid)) {
-            throw new OsmClientException('Invalid osmid '.$osmid);
+            throw new OsmClientException('Invalid osmid ' . $osmid);
         }
 
         $geojson = [];
@@ -95,12 +95,12 @@ class OsmClient
      */
     public function getFullOsmApiUrlByOsmId($osmid): string
     {
-        $url = 'https://api.openstreetmap.org/api/0.6/'.$osmid;
+        $url = 'https://api.openstreetmap.org/api/0.6/' . $osmid;
         if (preg_match('/node/', $osmid)) {
-            $url = $url.'.json';
+            $url = $url . '.json';
         } else {
             // way and relation directly call full.json
-            $url = $url.'/full.json';
+            $url = $url . '/full.json';
         }
 
         return $url;
@@ -129,6 +129,7 @@ class OsmClient
     public function getPropertiesAndGeometry($osmid): array
     {
         $url = $this->getFullOsmApiUrlByOsmId($osmid);
+        //TODO: extends JsonClient
         $json = Http::get($url)->json();
         if (! array_key_exists('elements', $json)) {
             throw new OsmClientExceptionNoElements("Response from OSM has something wrong: check it out with $url.", 1);
@@ -140,7 +141,7 @@ class OsmClient
         } elseif (preg_match('/relation/', $osmid)) {
             return $this->getPropertiesAndGeometryForRelation($json);
         } else {
-            throw new OsmClientException('OSMID has not vali type (node,way,relation) '.$osmid);
+            throw new OsmClientException('OSMID has not vali type (node,way,relation) ' . $osmid);
         }
     }
 
