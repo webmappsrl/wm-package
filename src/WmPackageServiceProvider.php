@@ -2,16 +2,19 @@
 
 namespace Wm\WmPackage;
 
+use Laravel\Nova\Nova;
 use Illuminate\Support\Facades\Gate;
+use Laravel\Nova\Events\ServingNova;
 use Illuminate\Support\Facades\Route;
-use Matchish\ScoutElasticSearch\ElasticSearchServiceProvider;
-use Spatie\LaravelPackageTools\Package;
-use Spatie\LaravelPackageTools\PackageServiceProvider;
-use Tymon\JWTAuth\Providers\LaravelServiceProvider;
-use Wm\WmPackage\Commands\DownloadDbCommand;
 use Wm\WmPackage\Commands\UploadDbAWS;
+use Spatie\LaravelPackageTools\Package;
 use Wm\WmPackage\Commands\WmPackageCommand;
+use Wm\WmPackage\Commands\DownloadDbCommand;
+use Wm\WmPackage\Providers\NovaServiceProvider;
 use Wm\WmPackage\Providers\EventServiceProvider;
+use Tymon\JWTAuth\Providers\LaravelServiceProvider;
+use Spatie\LaravelPackageTools\PackageServiceProvider;
+use Matchish\ScoutElasticSearch\ElasticSearchServiceProvider;
 
 class WmPackageServiceProvider extends PackageServiceProvider
 {
@@ -31,10 +34,10 @@ class WmPackageServiceProvider extends PackageServiceProvider
         $this->app->call(function () use ($packageDirPath) {
             Route::middleware('api')
                 ->prefix('api')
-                ->group($packageDirPath.'routes/api.php');
+                ->group($packageDirPath . 'routes/api.php');
 
             Route::middleware('web')
-                ->group($packageDirPath.'routes/web.php');
+                ->group($packageDirPath . 'routes/web.php');
         });
 
         // Register policies
@@ -47,6 +50,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
         //     //dump($t);
         //     return $t;
         // });
+
     }
 
     public function configurePackage(Package $package): void
@@ -86,9 +90,41 @@ class WmPackageServiceProvider extends PackageServiceProvider
         // ElasticSearch
         $this->app->register(ElasticSearchServiceProvider::class);
 
+
         $this->app->config['filesystems.disks'] = [
             ...$this->app->config['filesystems.disks'],
             ...config('wm-filesystems.disks'),
         ];
+    }
+
+    /**
+     * Register the application's Nova resources.
+     *
+     * @return void
+     */
+    protected function resources()
+    {
+
+        Nova::resourcesIn($this->getPackageBaseDir() . '/Nova');
+    }
+
+    /**
+     * Get the dashboards that should be listed in the Nova sidebar.
+     *
+     * @return array
+     */
+    protected function dashboards()
+    {
+        return [];
+    }
+
+    /**
+     * Get the tools that should be listed in the Nova sidebar.
+     *
+     * @return array
+     */
+    public function tools()
+    {
+        return [];
     }
 }
