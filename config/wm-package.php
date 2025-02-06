@@ -2,7 +2,7 @@
 
 // config for Wm/WmPackage
 return [
-    'version' => '1.3.0', // x-release-please-version
+    'version' => '2.0.0', // x-release-please-version
     'services' => [
         'geometry_computation' => [
             'neighbours_distance' => env('WM_NEIGHBOURS_DISTANCE', 500),
