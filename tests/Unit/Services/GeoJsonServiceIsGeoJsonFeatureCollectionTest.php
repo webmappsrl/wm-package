@@ -16,31 +16,31 @@ class GeoJsonServiceTestIsGeoJsonFeatureCollection extends TestCase
     }
 
     /** @test */
-    public function it_returns_true_if_geojson_feature_collection()
+    public function is_geojson_feature_collection_returns_true_if_geojson_feature_collection()
     {
         $this->assertTrue($this->geoJsonService->isGeojsonFeatureCollection('{"type":"FeatureCollection"}'));
     }
 
     /** @test */
-    public function it_returns_false_if_not_geojson_feature_collection()
+    public function is_geojson_feature_collection_returns_false_if_not_geojson_feature_collection()
     {
         $this->assertFalse($this->geoJsonService->isGeojsonFeatureCollection('{"type":"Feature"}'));
     }
 
     /** @test */
-    public function it_returns_false_if_missing_type()
+    public function is_geojson_feature_collection_returns_false_if_missing_type()
     {
         $this->assertFalse($this->geoJsonService->isGeojsonFeatureCollection('{"name":"FeatureCollection"}'));
     }
 
     /** @test */
-    public function it_returns_false_if_malformed_json()
+    public function is_geojson_feature_collection_returns_false_if_malformed_json()
     {
         $this->assertFalse($this->geoJsonService->isGeojsonFeatureCollection('{"Whatever": : :}'));
     }
 
     /** @test */
-    public function it_returns_false_if_json_is_missing()
+    public function is_geojson_feature_collection_returns_false_if_json_is_missing()
     {
         $this->assertFalse($this->geoJsonService->isGeojsonFeatureCollection(null));
     }

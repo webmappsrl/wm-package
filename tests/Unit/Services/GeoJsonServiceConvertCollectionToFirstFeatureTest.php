@@ -16,7 +16,7 @@ class GeoJsonServiceConvertCollectionToFirstFeatureTest extends TestCase
     }
 
     /** @test */
-    public function it_returns_the_first_feature_if_collection()
+    public function convert_collection_to_first_feature_returns_the_first_feature_if_collection()
     {
         $json = '{"type":"FeatureCollection", "features":[{"name":"first", "type":"Feature"}, {"name":"second", "type":"Feature"}, {"name":"third", "type":"Feature"}]}';
         $expected = '{"name":"first","type":"Feature"}';
@@ -24,7 +24,7 @@ class GeoJsonServiceConvertCollectionToFirstFeatureTest extends TestCase
     }
 
     /** @test */
-    public function it_returns_the_feature_if_only_feature()
+    public function convert_collection_to_first_feature_returns_the_feature_if_only_feature()
     {
         $json = '{"name":"first","type":"Feature"}';
         $expected = '{"name":"first","type":"Feature"}';
@@ -32,14 +32,14 @@ class GeoJsonServiceConvertCollectionToFirstFeatureTest extends TestCase
     }
 
     /** @test */
-    public function it_returns_null_if_not_feature_or_feature_collection()
+    public function convert_collection_to_first_feature_returns_null_if_not_feature_or_feature_collection()
     {
         $json = '{"name":"first"}';
         $this->assertNull($this->geoJsonService->convertCollectionToFirstFeature($json));
     }
 
     /** @test */
-    public function it_returns_null_if_not_valid_json()
+    public function convert_collection_to_first_feature_returns_null_if_not_valid_json()
     {
         $json = 'Whatever';
         $this->assertNull($this->geoJsonService->convertCollectionToFirstFeature($json));

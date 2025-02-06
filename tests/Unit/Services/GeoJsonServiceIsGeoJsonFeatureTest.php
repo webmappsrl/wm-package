@@ -16,25 +16,25 @@ class GeoJsonServiceIsGeoJsonFeatureTest extends TestCase
     }
 
     /** @test */
-    public function it_returns_true_if_geojson_feature()
+    public function is_geojson_feature_returns_true_if_geojson_feature()
     {
         $this->assertTrue($this->geoJsonService->isGeojsonFeature('{"type":"Feature"}'));
     }
 
     /** @test */
-    public function it_returns_false_if_not_geojson_feature()
+    public function is_geojson_feature_returns_false_if_not_geojson_feature()
     {
         $this->assertFalse($this->geoJsonService->isGeojsonFeature('{"type":"FeatureCollection"}'));
     }
 
     /** @test */
-    public function it_returns_false_if_missing_type()
+    public function is_geojson_feature_returns_false_if_missing_type()
     {
         $this->assertFalse($this->geoJsonService->isGeojsonFeature('{"name":"Feature"}'));
     }
 
     /** @test */
-    public function it_returns_false_if_anything_else()
+    public function is_geojson_feature_returns_false_if_anything_else()
     {
         $this->assertFalse($this->geoJsonService->isGeojsonFeature('{"Whatever": : :}'));
         $this->assertFalse($this->geoJsonService->isGeojsonFeature(''));
