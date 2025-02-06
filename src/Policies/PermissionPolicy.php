@@ -1,0 +1,77 @@
+<?php
+
+namespace Wm\WmPackage\Policies;
+
+use Illuminate\Auth\Access\HandlesAuthorization;
+use Spatie\Permission\Models\Permission;
+use Wm\WmPackage\Models\User;
+
+class PermissionPolicy
+{
+    use HandlesAuthorization;
+
+    /**
+     * Create a new policy instance.
+     *
+     * @return void
+     */
+    public function __construct() {}
+
+    /**
+     * Perform pre-authorization checks.
+     *
+     * @param  string  $ability
+     * @return void|bool
+     */
+    public function before(User $user, $ability)
+    {
+        if ($user->hasRole('Admin')) {
+            return true;
+        }
+        if ($user->hasRole('Author') || $user->hasRole('Contributor')) {
+            return false;
+        }
+    }
+
+    public function viewAny(User $user): bool
+    {
+
+        return $user->can('view_permission');
+    }
+
+    public function view(User $user, Permission $model): bool
+    {
+
+        return $user->can('view_permission');
+    }
+
+    public function create(User $user): bool
+    {
+
+        return $user->can('create_permission');
+    }
+
+    public function update(User $user, Permission $model): bool
+    {
+
+        return $user->can('edit_permission');
+    }
+
+    public function delete(User $user, Permission $model): bool
+    {
+
+        return $user->can('delete_permission');
+    }
+
+    public function restore(User $user, Permission $model): bool
+    {
+
+        return $user->can('delete_permission');
+    }
+
+    public function forceDelete(User $user, Permission $model): bool
+    {
+
+        return $user->can('delete_permission');
+    }
+}

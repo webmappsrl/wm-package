@@ -1,0 +1,407 @@
+<?php
+
+namespace Wm\WmPackage\Models;
+
+use Exception;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Support\Facades\App;
+use Spatie\Translatable\HasTranslations;
+use Wm\WmPackage\Models\Abstracts\GeometryModel;
+use Wm\WmPackage\Observers\EcPoiObserver;
+use Wm\WmPackage\Traits\TaxonomyAbleModel;
+
+class EcPoi extends GeometryModel
+{
+    use HasFactory, HasTranslations, TaxonomyAbleModel;
+    use HasTranslations;
+
+    protected $fillable = [
+        'name',
+        'user_id',
+        'geometry',
+        'out_source_feature_id',
+        'description',
+        'addr_complete',
+        'capacity',
+        'contact_phone',
+        'contact_email',
+        'related_url',
+    ];
+
+    public array $translatable = ['name', 'description', 'excerpt', 'audio'];
+
+    public bool $skip_update = false;
+
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array
+     */
+    protected $casts = [
+        'related_url' => 'array',
+        'accessibility_validity_date' => 'datetime',
+    ];
+
+    protected static function boot()
+    {
+        parent::boot();
+        EcPoi::observe(EcPoiObserver::class);
+    }
+
+    public function ecTracks(): BelongsToMany
+    {
+        return $this->belongsToMany(EcTrack::class);
+    }
+
+    public function outSourcePOI(): BelongsTo
+    {
+        return $this->belongsTo(OutSourcePoi::class, 'out_source_feature_id');
+    }
+
+    /**
+     * Return the json version of the ec poi, avoiding the geometry
+     * TODO: unit TEST
+     */
+    public function getJson($allData = true, $app_id = 0): array
+    {
+        $array = $this->setOutSourceValue();
+
+        $array = $this->array_filter_recursive($array);
+
+        if (array_key_exists('name', $array) && $array['name']) {
+            foreach ($array['name'] as $lang => $val) {
+                if (empty($val) || ! $val) {
+                    unset($array['name'][$lang]);
+                }
+            }
+        }
+
+        if ($this->user_id) {
+            $user = User::find($this->user_id);
+            $array['author_email'] = $user->email;
+        }
+
+        if ($this->featureImage) {
+            $array['feature_image'] = $this->featureImage->getJson($allData);
+        }
+
+        if ($this->ecMedia) {
+            $gallery = [];
+            $ecMedia = $this->ecMedia()->orderBy('rank', 'asc')->get();
+            foreach ($ecMedia as $media) {
+                $gallery[] = $media->getJson($allData);
+            }
+            if (count($gallery)) {
+                // Ensure the feature_image is the first in the gallery and not duplicated
+                if (isset($array['feature_image'])) {
+                    // Remove any duplicate of the feature_image in the gallery
+                    $gallery = array_filter($gallery, function ($image) use ($array) {
+                        return $image['id'] != $array['feature_image']['id'];
+                    });
+
+                    // Add feature_image to the start of the gallery
+                    array_unshift($gallery, $array['feature_image']);
+                } else {
+                    // Set the first image in the gallery as feature_image if it isn't set
+                    $array['feature_image'] = $gallery[0];
+                }
+
+                $array['image_gallery'] = $gallery;
+            }
+        }
+
+        if (isset($this->outSourcePoi->source_id) && strpos($this->outSourcePoi->source_id, '/')) {
+            $array['osm_url'] = 'https://www.openstreetmap.org/'.$this->outSourcePoi->source_id;
+        }
+
+        $fileTypes = ['geojson', 'gpx', 'kml'];
+        foreach ($fileTypes as $fileType) {
+            $array[$fileType.'_url'] = route('api.ec.poi.download.'.$fileType, ['id' => $this->id]);
+        }
+
+        if (array_key_exists('related_url', $array) && ! is_array($array['related_url']) && empty($array['related_url'])) {
+            unset($array['related_url']);
+        }
+
+        $poitypes = [];
+        foreach ($this->taxonomyPoiTypes as $poitype) {
+            $result = $poitype->getGeoJson();
+            if ($result['id'] != 17) {
+                $poitypes[] = $poitype->getGeoJson();
+            }
+        }
+        $poitype = [];
+        if (is_array($poitypes) && count($poitypes) > 0) {
+            $poitype = $poitypes[0];
+        }
+
+        $taxonomy = [
+            'activity' => $this->taxonomyActivities()->pluck('id')->toArray(),
+            'theme' => $this->taxonomyThemes()->pluck('id')->toArray(),
+            'when' => $this->taxonomyWhens()->pluck('id')->toArray(),
+            'where' => $this->taxonomyWheres()->pluck('id')->toArray(),
+            'who' => $this->taxonomyTargets()->pluck('id')->toArray(),
+            'poi_type' => $poitype, // deprecated
+            'poi_types' => $poitypes,
+        ];
+
+        $taxonomiesidentifiers = array_merge(
+            $this->taxonomyActivities()->pluck('identifier')->toArray(),
+            $this->taxonomyThemes()->pluck('identifier')->toArray(),
+            $this->addPrefix($this->taxonomyWhens()->pluck('identifier')->toArray(), 'when'),
+            $this->addPrefix($this->taxonomyWheres()->pluck('identifier')->toArray(), 'where'),
+            $this->addPrefix($this->taxonomyTargets()->pluck('identifier')->toArray(), 'who'),
+            $this->addTaxonomyPoiTypes()
+        );
+
+        foreach ($taxonomy as $key => $value) {
+            if (count($value) === 0) {
+                unset($taxonomy[$key]);
+            }
+        }
+
+        $array['taxonomy'] = $taxonomy;
+        // TODO non so se modificare taxonomy rompe qualcosa per ora ho inseritono una nuova proprietà
+        $array['taxonomyIdentifiers'] = $taxonomiesidentifiers;
+
+        $propertiesToClear = ['geometry'];
+        foreach ($array as $property => $value) {
+            if (
+                in_array($property, $propertiesToClear)
+                || is_null($value)
+                || (is_array($value) && count($value) === 0)
+            ) {
+                unset($array[$property]);
+            }
+        }
+
+        $array['searchable'] = $this->getSearchableString($app_id);
+
+        return $array;
+    }
+
+    private function addPrefix($array, $prefix)
+    {
+        return array_map(function ($elem) use ($prefix) {
+            return $prefix.'_'.$elem;
+        }, $array);
+    }
+
+    private function addTaxonomyPoiTypes()
+    {
+        $taxonomyPoiTypes = $this->taxonomyPoiTypes()->pluck('identifier')->toArray();
+        if (count($taxonomyPoiTypes) > 1 && in_array('poi', $taxonomyPoiTypes) == true) {
+            $taxonomyPoiTypes = array_diff($taxonomyPoiTypes, ['poi']);
+
+            return $this->addPrefix($taxonomyPoiTypes, 'poi_type');
+        }
+        if (in_array('poi', $taxonomyPoiTypes) == false) {
+            return $this->addPrefix($taxonomyPoiTypes, 'poi_type');
+        }
+
+        return ['poi_type_poi'];
+    }
+
+    public function getTaxonomies()
+    {
+        return [
+            'activity' => $this->getValuesOfMorphToMany($this->taxonomyActivities(), 'activity'),
+            'theme' => $this->getValuesOfMorphToMany($this->taxonomyThemes(), 'theme'),
+            'when' => $this->getValuesOfMorphToMany($this->taxonomyWhens(), 'when'),
+            'where' => $this->getValuesOfMorphToMany($this->taxonomyWheres(), 'where'),
+            'who' => $this->getValuesOfMorphToMany($this->taxonomyTargets(), 'who'),
+            'poi_type' => $this->getValuesOfMorphToMany($this->taxonomyPoiTypes(), 'poi_type'),
+        ];
+    }
+
+    private function getValuesOfMorphToMany($relation, $slug): array
+    {
+        return $relation->get(['identifier', 'name', 'id', 'icon', 'color'])->map(function ($item) use ($slug) {
+            unset($item['pivot']);
+            $item['identifier'] = $slug.'_'.$item['identifier'];
+
+            return $item;
+        })->toArray();
+    }
+
+    private function setOutSourceValue(): array
+    {
+        $array = $this->toArray();
+        if (isset($this->out_source_feature_id)) {
+            $keys = [
+                'description',
+                'excerpt',
+            ];
+            foreach ($keys as $key) {
+                $array = $this->setOutSourceSingleValue($array, $key);
+            }
+        }
+
+        return $array;
+    }
+
+    private function setOutSourceSingleValue($array, $varname): array
+    {
+        if (isReallyEmpty($array[$varname])) {
+            if (isset($this->outSourcePOI->tags[$varname])) {
+                $array[$varname] = $this->outSourcePOI->tags[$varname];
+            }
+        }
+
+        return $array;
+    }
+
+    /**
+     * Create a geojson from the ec poi
+     */
+    public function getGeojson($allData = true, $app_id = 0): ?array
+    {
+        $feature = $this->getEmptyGeojson();
+        if (isset($feature['properties'])) {
+            $feature['properties'] = $this->getJson($allData, $app_id);
+
+            return $feature;
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * Return a geojson of the poi with only the basic informations
+     */
+    public function getBasicGeojson(): ?array
+    {
+        $geojson = $this->getGeojson();
+        if (isset($geojson['properties'])) {
+            $geojson['properties'] = $this->getGeoJson();
+            $neededProperties = ['id', 'name', 'feature_image'];
+            foreach ($geojson['properties'] as $property => $value) {
+                if (! in_array($property, $neededProperties)) {
+                    unset($geojson['properties'][$property]);
+                }
+            }
+
+            return $geojson;
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * Create the track geojson using the elbrus standard
+     */
+    public function getElbrusGeojson(): array
+    {
+        $geojson = $this->getGeojson();
+        // MAPPING
+        $geojson['properties']['id'] = 'ec_poi_'.$this->id;
+        $geojson = $this->_mapElbrusGeojsonProperties($geojson);
+
+        return $geojson;
+    }
+
+    /**
+     * Map the geojson properties to the elbrus standard
+     */
+    private function _mapElbrusGeojsonProperties(array $geojson): array
+    {
+        $fields = ['ele_min', 'ele_max', 'ele_from', 'ele_to', 'duration_forward', 'duration_backward', 'contact_phone', 'contact_email'];
+        foreach ($fields as $field) {
+            if (isset($geojson['properties'][$field])) {
+                $field_with_colon = preg_replace('/_/', ':', $field);
+
+                $geojson['properties'][$field_with_colon] = $geojson['properties'][$field];
+                unset($geojson['properties'][$field]);
+            }
+        }
+
+        $fields = ['kml', 'gpx'];
+        foreach ($fields as $field) {
+            if (isset($geojson['properties'][$field.'_url'])) {
+                $geojson['properties'][$field] = $geojson['properties'][$field.'_url'];
+                unset($geojson['properties'][$field.'_url']);
+            }
+        }
+
+        if (isset($geojson['properties']['taxonomy'])) {
+            foreach ($geojson['properties']['taxonomy'] as $taxonomy => $values) {
+                $name = $taxonomy === 'poi_type' ? 'webmapp_category' : $taxonomy;
+                try {
+
+                    $geojson['properties']['taxonomy'][$name] = array_map(function ($item) use ($name) {
+                        return $name.'_'.$item;
+                    }, $values);
+                } catch (Exception $e) {
+                    // TODO: viene generato durante indicizzazione capire perchè
+                }
+            }
+        }
+
+        if (isset($geojson['properties']['feature_image'])) {
+            $geojson['properties']['image'] = $geojson['properties']['feature_image'];
+            unset($geojson['properties']['feature_image']);
+        }
+
+        if (isset($geojson['properties']['image_gallery'])) {
+            $geojson['properties']['imageGallery'] = $geojson['properties']['image_gallery'];
+            unset($geojson['properties']['image_gallery']);
+        }
+
+        return $geojson;
+    }
+
+    public function getSearchableString($app_id = 0)
+    {
+
+        $string = '';
+        $searchables = '';
+        if ($app_id) {
+            $app = App::find($app_id);
+            $searchables = json_decode($app->poi_searchables);
+        }
+
+        if (empty($searchables) || (in_array('name', $searchables) && ! empty($this->name))) {
+            $string .= str_replace('"', '', json_encode($this->getTranslations('name'))).' ';
+        }
+        if (empty($searchables) || (in_array('description', $searchables) && ! empty($this->description))) {
+            $description = str_replace('"', '', json_encode($this->getTranslations('description')));
+            $description = str_replace('\\', '', $description);
+            $string .= strip_tags($description).' ';
+        }
+        if (empty($searchables) || (in_array('excerpt', $searchables) && ! empty($this->excerpt))) {
+            $excerpt = str_replace('"', '', json_encode($this->getTranslations('excerpt')));
+            $excerpt = str_replace('\\', '', $excerpt);
+            $string .= strip_tags($excerpt).' ';
+        }
+        if (empty($searchables) || (in_array('osmid', $searchables) && ! empty($this->osmid))) {
+            $string .= $this->osmid.' ';
+        }
+        if (empty($searchables) || (in_array('taxonomyPoiTypes', $searchables) && ! empty($this->taxonomyPoiTypes))) {
+            foreach ($this->taxonomyPoiTypes as $tax) {
+                $string .= str_replace('"', '', json_encode($tax->getTranslations('name'))).' ';
+            }
+        }
+
+        return html_entity_decode($string);
+    }
+
+    public function array_filter_recursive($array)
+    {
+        $result = [];
+        foreach ($array as $key => $val) {
+            if (! is_array($val) && ! empty($val) && $val) {
+                $result[$key] = $val;
+            } elseif (is_array($val)) {
+                foreach ($val as $lan => $cont) {
+                    if (! is_array($cont) && ! empty($cont) && $cont) {
+                        $result[$key][$lan] = $cont;
+                    }
+                }
+            }
+        }
+
+        return $result;
+    }
+}

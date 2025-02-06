@@ -3,11 +3,15 @@
 namespace Wm\WmPackage\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use ChristianKuri\LaravelFavorite\Traits\Favoriteability;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
-use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 use Spatie\Permission\Traits\HasRoles;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 
@@ -21,24 +25,25 @@ use Tymon\JWTAuth\Contracts\JWTSubject;
  */
 class User extends Authenticatable implements JWTSubject
 {
-    use HasApiTokens, HasFactory, HasRoles, Notifiable;
+    use Favoriteability, HasApiTokens, HasFactory, HasRoles, Notifiable;
 
     /**
      * The attributes that are mass assignable.
      *
-     * @var list<string>
+     * @var array
      */
     protected $fillable = [
         'name',
         'email',
         'password',
         'sku',
+        'app_id',
     ];
 
     /**
-     * The attributes that should be hidden for serialization.
+     * The attributes that should be hidden for arrays.
      *
-     * @var list<string>
+     * @var array
      */
     protected $hidden = [
         'password',
@@ -46,13 +51,60 @@ class User extends Authenticatable implements JWTSubject
     ];
 
     /**
-     * The attributes that should be cast.
+     * The attributes that should be cast to native types.
      *
-     * @var array<string, string>
+     * @var array
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
     ];
+
+    /**
+     * The accessors to append to the model's array form.
+     *
+     * @var array
+     */
+    protected $appends = ['geopass'];
+
+    public function apps(): HasMany
+    {
+        return $this->hasMany(App::class);
+    }
+
+    public function ecTracks(): HasMany
+    {
+        return $this->hasMany(EcTrack::class);
+    }
+
+    public function ugc_pois(): HasMany
+    {
+        return $this->hasMany(UgcPoi::class);
+    }
+
+    public function ecPois()
+    {
+        return $this->hasMany(EcPoi::class);
+    }
+
+    public function ugc_tracks(): HasMany
+    {
+        return $this->hasMany(UgcTrack::class);
+    }
+
+    public function taxonomy_targets(): HasMany
+    {
+        return $this->hasMany(TaxonomyTarget::class);
+    }
+
+    public function roles(): MorphToMany
+    {
+        return $this->morphToMany(Role::class, 'model', 'model_has_roles');
+    }
+
+    public function downloadableEcTracks(): BelongsToMany
+    {
+        return $this->belongsToMany(EcTrack::class, 'downloadable_ec_track_user');
+    }
 
     /**
      * Get the identifier that will be stored in the subject claim of the JWT.
@@ -72,25 +124,101 @@ class User extends Authenticatable implements JWTSubject
         return [];
     }
 
-    public function isValidatorForFormId($formId)
+    /**
+     * Get the current logged User
+     */
+    public static function getLoggedUser(): ?User
     {
-        $formId = str_replace('_', ' ', $formId);
-        // if form id is empty, return true
-        if (empty($formId)) {
+        return isset(auth()->user()->id)
+            ? User::find(auth()->user()->id)
+            : null;
+    }
+
+    /**
+     * defines the default roles of this app
+     *
+     * @param  User|null  $user
+     */
+    public static function isInDefaultRoles(User $user)
+    {
+        if ($user->hasRole('Author') || $user->hasRole('Contributor')) {
             return true;
-        }
-        // if permission does not exist, return true
-        if (! Permission::where('name', 'validate '.$formId.'s')->exists()) {
-            return true;
-        }
-        if ($formId === 'water') {
-            return $this->hasPermissionTo('validate source surveys');
-        }
-        $permissionName = 'validate '.$formId;
-        if (! str_ends_with($formId, 's')) {
-            $permissionName .= 's';
         }
 
-        return $this->hasPermissionTo($permissionName);
+        return false;
+    }
+
+    /**
+     * defines whether at least one app associated to the user has Dashboard show true or not
+     *
+     * @param  User|null  $user
+     */
+    public function hasDashboardShow($app_id = null)
+    {
+        $apps = $this->apps;
+        $result = false;
+
+        if ($app_id) {
+            foreach ($apps as $app) {
+                if ($app->id == $app_id) {
+                    if ($app->dashboard_show == true) {
+                        $result = true;
+                    }
+                }
+            }
+
+            return $result;
+        }
+
+        foreach ($apps as $app) {
+            if ($app->dashboard_show == true) {
+                $result = true;
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * defines whether at least one app associated to the user has Classification show true or not
+     *
+     * @param  User|null  $user
+     */
+    public function hasClassificationShow($app_id = null)
+    {
+        $apps = $this->apps;
+        $result = false;
+
+        if ($app_id) {
+            foreach ($apps as $app) {
+                if ($app->id == $app_id) {
+                    if ($app->classification_show == true) {
+                        $result = true;
+                    }
+                }
+            }
+
+            return $result;
+        }
+
+        foreach ($apps as $app) {
+            if ($app->classification_show == true) {
+                $result = true;
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Determine if the user is an administrator.
+     *
+     * @return bool
+     */
+    public function getGeoPassAttribute()
+    {
+        $pass = $this->attributes['geopass'] = $this->password;
+
+        return $pass;
     }
 }
