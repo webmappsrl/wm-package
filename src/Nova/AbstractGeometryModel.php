@@ -2,15 +2,12 @@
 
 namespace Wm\WmPackage\Nova;
 
-use Illuminate\Http\Request;
 use Laravel\Nova\Fields\ID;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Resource;
 
 abstract class AbstractGeometryModel extends Resource
 {
-
-
     /**
      * The single value that should be used to represent the resource when being displayed.
      *
@@ -36,9 +33,9 @@ abstract class AbstractGeometryModel extends Resource
     {
         return [
             ID::make()->sortable(),
-            //add here a way to edit the geometry
-            //add here a way to edit properties
-            //add here a way to view/edit app_id
+            // add here a way to edit the geometry
+            // add here a way to edit properties
+            // add here a way to view/edit app_id
         ];
     }
 
