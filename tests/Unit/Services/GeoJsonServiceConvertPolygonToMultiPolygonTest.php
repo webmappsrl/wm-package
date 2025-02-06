@@ -32,9 +32,9 @@ class GeoJsonServiceConvertPolygonToMultiPolygonTest extends TestCase
     /** @test */
     public function convert_polygon_to_multi_polygon_returns_false_if_anything_else()
     {
-        $this->assertFalse($this->geoJsonService->convertPolygonToMultiPolygon('{"Whatever": : : :}'));
-        $this->assertFalse($this->geoJsonService->convertPolygonToMultiPolygon(''));
-        $this->assertFalse($this->geoJsonService->convertPolygonToMultiPolygon('Whatever'));
-        $this->assertFalse($this->geoJsonService->convertPolygonToMultiPolygon(null));
+        $this->assertNull($this->geoJsonService->convertPolygonToMultiPolygon('{"Whatever": : : :}'));
+        $this->assertNull($this->geoJsonService->convertPolygonToMultiPolygon(''));
+        $this->assertNull($this->geoJsonService->convertPolygonToMultiPolygon('Whatever'));
+        $this->assertNull($this->geoJsonService->convertPolygonToMultiPolygon(null));
     }
 }
