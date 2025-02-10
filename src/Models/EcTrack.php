@@ -335,20 +335,6 @@ class EcTrack extends Linestring
     }
 
     /**
-     * Create a geojson from the ec track
-     */
-    public function getGeojson($version = 'v1'): ?array
-    {
-        $feature = $this->getEmptyGeojson();
-        if (isset($feature['properties'])) {
-            $feature['properties'] = $this->getGeoJson();
-            $feature['properties']['roundtrip'] = GeometryComputationService::make()->isRoundtrip($feature['geometry']['coordinates']);
-        }
-
-        return $feature;
-    }
-
-    /**
      * Create only the Geometry and track id from the ec track as getGeojsonGeojson
      */
     public function getTrackGeometryGeojson(): ?array
