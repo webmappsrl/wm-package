@@ -129,6 +129,7 @@ class OsmClient
     public function getPropertiesAndGeometry($osmid): array
     {
         $url = $this->getFullOsmApiUrlByOsmId($osmid);
+        // TODO: extends JsonClient
         $json = Http::get($url)->json();
         if (! array_key_exists('elements', $json)) {
             throw new OsmClientExceptionNoElements("Response from OSM has something wrong: check it out with $url.", 1);

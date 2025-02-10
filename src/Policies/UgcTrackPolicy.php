@@ -33,9 +33,7 @@ class UgcTrackPolicy
      */
     public function viewAny(User $user)
     {
-        if ($user->hasRole('Editor') && $user->hasDashboardShow()) {
-            return true;
-        }
+        return true;
     }
 
     /**
@@ -45,9 +43,7 @@ class UgcTrackPolicy
      */
     public function view(User $user, UgcTrack $ugcTrack)
     {
-        if ($user->hasRole('Editor') && $user->hasDashboardShow()) {
-            return true;
-        }
+        return true;
     }
 
     /**

@@ -7,9 +7,9 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
+use Wm\WmPackage\Http\Clients\OsmfeaturesClient;
 use Wm\WmPackage\Models\Abstracts\GeometryModel;
-use Wm\WmPackage\Models\TaxonomyWhere;
-use Wm\WmPackage\Services\GeometryComputationService;
 
 class UpdateModelWithGeometryTaxonomyWhere implements ShouldQueue
 {
@@ -23,24 +23,23 @@ class UpdateModelWithGeometryTaxonomyWhere implements ShouldQueue
      *
      * @return void
      */
-    public function __construct(protected GeometryModel $model)
-    {
-        // TODO: add validation about where taxonomy relation existence
-
-    }
+    public function __construct(protected GeometryModel $model) {}
 
     /**
      * Execute the job.
      *
      * @return void
      */
-    public function handle(GeometryComputationService $geometryComputationService)
+    public function handle(OsmfeaturesClient $osmfeaturesClient)
     {
+        $wheres = $osmfeaturesClient->getWheresByGeojson($this->model->getGeojson());
+        if (count($wheres) === 0) {
+            Log::warning('No wheres found for '.class_basename($this->model).' '.$this->model->id);
 
-        $ids = $geometryComputationService->getModelIntersections($this->model, TaxonomyWhere::class)->pluck('id')->toArray();
-
-        if (! empty($ids)) {
-            $this->model->taxonomyWheres()->sync($ids);
+            return;
         }
+
+        $this->model->properties['taxonomy_where'] = $wheres;
+        $this->model->saveQuietly();
     }
 }
