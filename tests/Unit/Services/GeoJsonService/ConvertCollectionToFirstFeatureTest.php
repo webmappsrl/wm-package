@@ -1,47 +1,36 @@
 <?php
 
-namespace Tests\Unit\Services;
+namespace Tests\Unit\Services\GeoJsonService;
 
-use Wm\WmPackage\Services\GeoJsonService;
-use Wm\WmPackage\Tests\TestCase;
-
-class GeoJsonServiceConvertCollectionToFirstFeatureTest extends TestCase
+class ConvertCollectionToFirstFeatureTest extends AbstractGeoJsonTest
 {
-    protected GeoJsonService $geoJsonService;
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-        $this->geoJsonService = new GeoJsonService();
-    }
-
     /** @test */
     public function convert_collection_to_first_feature_returns_the_first_feature_if_collection()
     {
-        $json = '{"type":"FeatureCollection", "features":[{"name":"first", "type":"Feature"}, {"name":"second", "type":"Feature"}, {"name":"third", "type":"Feature"}]}';
-        $expected = '{"name":"first","type":"Feature"}';
+        $json = self::GEOJSON_FEATURE_COLLECTION_EXAMPLE;
+        $expected = self::GEOJSON_FIRST_FEATURE_CONTENT;
         $this->assertEquals($expected, $this->geoJsonService->convertCollectionToFirstFeature($json));
     }
 
     /** @test */
     public function convert_collection_to_first_feature_returns_the_feature_if_only_feature()
     {
-        $json = '{"name":"first","type":"Feature"}';
-        $expected = '{"name":"first","type":"Feature"}';
+        $json = self::GEOJSON_FIRST_FEATURE_CONTENT;
+        $expected = self::GEOJSON_FIRST_FEATURE_CONTENT;
         $this->assertEquals($expected, $this->geoJsonService->convertCollectionToFirstFeature($json));
     }
 
     /** @test */
     public function convert_collection_to_first_feature_returns_null_if_not_feature_or_feature_collection()
     {
-        $json = '{"name":"first"}';
+        $json = self::INVALID_JSON_MISSING_TYPE;
         $this->assertNull($this->geoJsonService->convertCollectionToFirstFeature($json));
     }
 
     /** @test */
     public function convert_collection_to_first_feature_returns_null_if_not_valid_json()
     {
-        $json = 'Whatever';
+        $json = self::INVALID_VALUE;
         $this->assertNull($this->geoJsonService->convertCollectionToFirstFeature($json));
     }
 }

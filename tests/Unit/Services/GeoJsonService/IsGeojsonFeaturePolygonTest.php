@@ -1,19 +1,8 @@
 <?php
 
-namespace Tests\Unit\Services;
-
-use Wm\WmPackage\Tests\TestCase;
-use Wm\WmPackage\Services\GeoJsonService;
-class GeoJsonServiceTestIsGeojsonFeaturePolygon extends TestCase
+namespace Tests\Unit\Services\GeoJsonService;
+class IsGeojsonFeaturePolygon extends AbstractGeoJsonTest
 {
-    protected GeoJsonService $geoJsonService;
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-        $this->geoJsonService = new GeoJsonService();
-    }
-
     /** @test */
     public function is_geojson_feature_polygon_returns_true_if_geojson_feature_polygon()
     {
@@ -31,9 +20,9 @@ class GeoJsonServiceTestIsGeojsonFeaturePolygon extends TestCase
     /** @test */
     public function is_geojson_feature_polygon_returns_false_if_anything_else()
     {
-        $this->assertFalse($this->geoJsonService->isGeojsonFeaturePolygon('{"Whatever": : : :}'));
-        $this->assertFalse($this->geoJsonService->isGeojsonFeaturePolygon(''));
-        $this->assertFalse($this->geoJsonService->isGeojsonFeaturePolygon('Whatever'));
-        $this->assertFalse($this->geoJsonService->isGeojsonFeaturePolygon(null));
+        $this->assertFalse($this->geoJsonService->isGeojsonFeaturePolygon(self::INVALID_JSON));
+        $this->assertFalse($this->geoJsonService->isGeojsonFeaturePolygon(self::EMPTY_JSON));
+        $this->assertFalse($this->geoJsonService->isGeojsonFeaturePolygon(self::INVALID_VALUE));
+        $this->assertFalse($this->geoJsonService->isGeojsonFeaturePolygon(self::NULL_VALUE));
     }
 }
