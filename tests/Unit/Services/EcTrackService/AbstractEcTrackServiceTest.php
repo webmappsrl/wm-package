@@ -33,6 +33,12 @@ class AbstractEcTrackServiceTest extends TestCase
         $this->ecTrackService = EcTrackService::make();
     }
 
+    public function rebindGeometryComputationService(string $geometryComputationServiceClass): void
+    {
+        $this->app->bind(GeometryComputationService::class, $geometryComputationServiceClass);
+        $this->ecTrackService = EcTrackService::make();
+    }
+
     public function assertFields($track, array $fields, string $messageSuffix): void
     {
         foreach ($fields as $field => $expected) {
@@ -109,6 +115,11 @@ class MockDemClient extends DemClient
 
 class MockGeometryComputationService extends GeometryComputationService
 {
+    public function getLineLocatePointFloat(string $trackGeoJson, string $poiGeoJson): float
+    {
+        $poiGeometry = json_decode($poiGeoJson, true);
+        return $poiGeometry['order'];
+    }
     public function get3dLineMergeWktFromGeojson($geojson): string
     {
         return 'LINESTRING(10.0 45.0, 10.5 45.5)';
