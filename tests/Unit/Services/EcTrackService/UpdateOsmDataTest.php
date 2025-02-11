@@ -131,14 +131,5 @@ class UpdateOsmDataTest extends AbstractEcTrackServiceTest
      */
     
 
-    private function prepareTrackWithOsmData($track): void
-    {
-        $track->shouldReceive('setAttribute')
-              ->with('osm_data', Mockery::type('array'))
-              ->once();
-        $track->shouldReceive('getAttribute')
-              ->with('osm_data')
-              ->andReturn(json_encode([]));
-        $track->shouldReceive('saveQuietly')->once();
-    }
+
 }

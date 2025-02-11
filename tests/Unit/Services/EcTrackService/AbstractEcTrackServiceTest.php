@@ -9,7 +9,7 @@ use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Mockery;
 use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Http\Clients\OsmClient;
-
+use Wm\WmPackage\Models\EcTrack;
 class AbstractEcTrackServiceTest extends TestCase
 {
     use DatabaseTransactions;
@@ -43,7 +43,39 @@ class AbstractEcTrackServiceTest extends TestCase
             );
         }
     }
+    public function prepareTrackWithDirtyFields(array $dirtyFields, array $demDataFields, ?string $manualData = '{}', ?string $osmData = '{}', ?string $demData = '{}'): EcTrack
+    {
+        $track = Mockery::mock(EcTrack::class)->makePartial();
+        $track->manual_data = $manualData;
+        $track->osm_data    = $osmData;
+        $track->dem_data    = $demData;
 
+        // Simula i metodi getDirty() e getDemDataFields()
+        $track->shouldReceive('getDirty')->andReturn($dirtyFields);
+        $track->shouldReceive('getDemDataFields')->andReturn($demDataFields);
+
+        // Ci aspettiamo che venga chiamato saveQuietly una volta.
+        $track->shouldReceive('saveQuietly')->once();
+
+        return $track;
+    }
+
+    private function prepareTrackWithOsmData($track): void
+    {
+        $track->shouldReceive('setAttribute')
+              ->with('osm_data', Mockery::type('array'))
+              ->once();
+        $track->shouldReceive('getAttribute')
+              ->with('osm_data')
+              ->andReturn(json_encode([]));
+        $track->shouldReceive('saveQuietly')->once();
+    }
+    public function getManualData($track): array
+    {
+        return is_array($track->manual_data)
+            ? $track->manual_data
+            : json_decode($track->manual_data, true);
+    }
     protected function tearDown(): void
     {
         Mockery::close();
