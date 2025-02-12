@@ -2,6 +2,7 @@
 
 namespace Wm\WmPackage\Nova;
 
+use Laravel\Nova\Fields\Code;
 use Laravel\Nova\Http\Requests\NovaRequest;
 
 abstract class AbstractUgc extends AbstractGeometryModel
@@ -15,7 +16,8 @@ abstract class AbstractUgc extends AbstractGeometryModel
     {
         return [
             ...parent::fields($request),
-            // add here a way to view/edit user_id
+            Code::make('Properties', 'properties')->json()->rules('required', 'json'),
+            //add here a way to view/edit user_id
         ];
     }
 }
