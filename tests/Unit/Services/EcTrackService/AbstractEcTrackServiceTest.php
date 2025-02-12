@@ -10,6 +10,7 @@ use Mockery;
 use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Http\Clients\OsmClient;
 use Wm\WmPackage\Models\EcTrack;
+
 class AbstractEcTrackServiceTest extends TestCase
 {
     use DatabaseTransactions;
@@ -27,6 +28,7 @@ class AbstractEcTrackServiceTest extends TestCase
         $this->app->bind(GeometryComputationService::class, MockGeometryComputationService::class);
         $this->ecTrackService = EcTrackService::make();
     }
+
     public function rebindOsmClient(string $osmClientClass): void
     {
         $this->app->bind(OsmClient::class, $osmClientClass);
@@ -49,6 +51,7 @@ class AbstractEcTrackServiceTest extends TestCase
             );
         }
     }
+
     public function prepareTrackWithDirtyFields(array $dirtyFields, array $demDataFields, ?string $manualData = '{}', ?string $osmData = '{}', ?string $demData = '{}'): EcTrack
     {
         $track = Mockery::mock(EcTrack::class)->makePartial();
@@ -76,12 +79,35 @@ class AbstractEcTrackServiceTest extends TestCase
               ->andReturn(json_encode([]));
         $track->shouldReceive('saveQuietly')->once();
     }
+
     public function getManualData($track): array
     {
         return is_array($track->manual_data)
             ? $track->manual_data
             : json_decode($track->manual_data, true);
     }
+
+    /**
+     * Helper per creare un mock di EcTrack.
+     *
+     * @param int $id
+     * @param array|null $geojson
+     * @return EcTrack
+     */
+    protected function createMockTrack(int $id, array $geojson = null): EcTrack
+    {
+        if (is_null($geojson)) {
+            $geojson = [
+                'type'       => 'Feature',
+                'properties' => ['id' => $id],
+                'geometry'   => null,
+            ];
+        }
+        $track = Mockery::mock(EcTrack::class);
+        $track->shouldReceive('getGeojson')->andReturn($geojson);
+        return $track;
+    }
+
     protected function tearDown(): void
     {
         Mockery::close();
@@ -100,14 +126,14 @@ class MockDemClient extends DemClient
         return [
             'properties' => [
                 'ele_min' => 100,
-                'ele_max' => 500, 
+                'ele_max' => 500,
                 'ele_from' => 200,
                 'ele_to' => 400,
                 'ascent' => 300,
                 'descent' => 200,
                 'distance' => 5000,
                 'duration_forward_hiking' => 120,
-                'duration_backward_hiking' => 90
+                'duration_backward_hiking' => 90,
             ]
         ];
     }
@@ -148,7 +174,6 @@ class MockOsmClient extends OsmClient
     }
 }
 
-// Mock per il caso in cui manchino le proprietà (solleva un errore)
 class MockOsmClientNoProperties extends OsmClient
 {
     public function getGeojson($osmId): string
@@ -162,7 +187,6 @@ class MockOsmClientNoProperties extends OsmClient
     }
 }
 
-// Mock per il caso in cui manchi la geometria (solleva un errore)
 class MockOsmClientNoGeometry extends OsmClient
 {
     public function getGeojson($osmId): string
