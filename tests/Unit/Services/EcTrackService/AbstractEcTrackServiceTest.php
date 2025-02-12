@@ -14,7 +14,9 @@ use Wm\WmPackage\Models\EcTrack;
 class AbstractEcTrackServiceTest extends TestCase
 {
     use DatabaseTransactions;
+
     protected EcTrackService $ecTrackService;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -106,6 +108,21 @@ class AbstractEcTrackServiceTest extends TestCase
         $track = Mockery::mock(EcTrack::class);
         $track->shouldReceive('getGeojson')->andReturn($geojson);
         return $track;
+    }
+
+    /**
+     * Helper per creare un mock di User.
+     *
+     * @param int $id
+     * @return \Wm\WmPackage\Models\User
+     */
+    protected function createMockUser(int $id)
+    {
+        // Usiamo makePartial() e shouldIgnoreMissing() per evitare errori su metodi non stubmati
+        $user = Mockery::mock(\Wm\WmPackage\Models\User::class)->makePartial();
+        $user->id = $id;
+        $user->shouldIgnoreMissing();
+        return $user;
     }
 
     protected function tearDown(): void
