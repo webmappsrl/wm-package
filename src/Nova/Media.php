@@ -3,8 +3,8 @@
 namespace Wm\WmPackage\Nova;
 
 use Laravel\Nova\Fields\Code;
-use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Fields\Number;
+use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
 
 class Media extends AbstractGeometryModel
@@ -29,7 +29,7 @@ class Media extends AbstractGeometryModel
             Code::make('Custom Properties', 'custom_properties')->json()->rules('required', 'json'),
             Code::make('Generated Conversions', 'generated_conversions')->json()->rules('required', 'json'),
             Code::make('Responsive Images', 'responsive_images')->json()->rules('required', 'json'),
-            Number::make('Order Column', 'order_column')
+            Number::make('Order Column', 'order_column'),
         ];
     }
 }

@@ -17,11 +17,11 @@ class Media extends SpatieMedia
         'responsive_images' => 'array',
     ];
 
-    //temporary disabled for factories (at the moment we do not have author relationship setup)
+    // temporary disabled for factories (at the moment we do not have author relationship setup)
 
     // protected static function booted()
     // {
-    //     Media::observe(UgcObserver::class); 
+    //     Media::observe(UgcObserver::class);
     // }
 
 }
