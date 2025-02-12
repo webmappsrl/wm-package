@@ -22,6 +22,18 @@ class UgcTrack extends Linestring
 {
     use OwnedByUserModel;
 
+    protected $fillable = [
+        'user_id',
+        'app_id',
+        'name',
+        'geometry',
+        'properties',
+    ];
+
+    protected $casts = [
+        'properties' => 'array',
+    ];
+
     protected static function booted()
     {
         UgcTrack::observe(UgcObserver::class);

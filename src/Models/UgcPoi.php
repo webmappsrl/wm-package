@@ -30,9 +30,12 @@ class UgcPoi extends Point
         'user_id',
         'app_id',
         'name',
-        'description',
         'geometry',
         'properties',
+    ];
+
+    protected $casts = [
+        'properties' => 'array',
     ];
 
     protected static function booted()
