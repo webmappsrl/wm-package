@@ -42,12 +42,16 @@ Route::middleware('api')->group(function () {
         'middleware' => 'auth.jwt',
     ], function () {
         Route::post('/wallet/buy', [WalletController::class, 'buy'])->name('wallet.buy');
-        Route::prefix('ugc')->name('ugc.');
     });
 
     Route::name('.ugc')->prefix('ugc')->middleware('auth.jwt')->group(function () {
         Route::apiResource('pois', UgcPoiController::class)->except('show');
         Route::apiResource('tracks', UgcTrackController::class)->except('show');
+    });
+
+    Route::name('.ec')->prefix('ec')->middleware('auth.jwt')->group(function () {
+        Route::apiResource('pois', EcPoiController::class)->except('show');
+        Route::apiResource('tracks', EcTrackController::class)->except('show');
     });
 });
 
@@ -160,7 +164,7 @@ Route::name('api.')->group(function () {
             ])->name('track.taxonomies');
             Route::get('/{app}/taxonomies/{taxonomy_name}.json', [AppElbrusTaxonomyController::class, 'getTerms'])->name('taxonomies');
             Route::get('/{app_id}/tiles/map.mbtiles', function ($app_id) {
-                return redirect('https://k.webmapp.it/elbrus/'.$app_id.'.mbtiles');
+                return redirect('https://k.webmapp.it/elbrus/' . $app_id . '.mbtiles');
             });
         });
         Route::prefix('webmapp')->name('webmapp.')->group(function () {

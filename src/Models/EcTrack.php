@@ -133,217 +133,201 @@ class EcTrack extends Linestring
     /**
      * Return the json version of the ec track, avoiding the geometry
      */
-    public function getJson(): array
-    {
+    // public function getJson(): array
+    // {
 
-        $array = $this->setOutSourceValue();
+    //     $array = $this->setOutSourceValue();
 
-        $array = $this->array_filter_recursive($array);
+    //     $array = $this->array_filter_recursive($array);
 
-        if (array_key_exists('excerpt', $array) && $array['excerpt']) {
-            foreach ($array['excerpt'] as $lang => $val) {
-                $array['excerpt'][$lang] = strip_tags($val);
-            }
-        }
+    //     if (array_key_exists('excerpt', $array) && $array['excerpt']) {
+    //         foreach ($array['excerpt'] as $lang => $val) {
+    //             $array['excerpt'][$lang] = strip_tags($val);
+    //         }
+    //     }
 
-        if ($this->color) {
-            $array['track_color'] = $this->color;
-        }
+    //     if ($this->color) {
+    //         $array['track_color'] = $this->color;
+    //     }
 
-        if ($this->user_id) {
-            $user = User::find($this->user_id);
-            $array['author_email'] = $user->email;
-        }
+    //     if ($this->user_id) {
+    //         $user = User::find($this->user_id);
+    //         $array['author_email'] = $user->email;
+    //     }
 
-        if ($this->featureImage) {
-            $array['feature_image'] = $this->featureImage->getGeoJson();
-        }
+    //     if ($this->featureImage) {
+    //         $array['feature_image'] = $this->featureImage->getGeoJson();
+    //     }
 
-        if ($this->ecMedia) {
-            $gallery = [];
-            $ecMedia = $this->ecMedia()->orderBy('rank', 'asc')->get();
-            foreach ($ecMedia as $media) {
-                $gallery[] = $media->getGeoJson();
-            }
-            if (count($gallery)) {
-                $array['image_gallery'] = $gallery;
-            }
-        }
+    //     if ($this->ecMedia) {
+    //         $gallery = [];
+    //         $ecMedia = $this->ecMedia()->orderBy('rank', 'asc')->get();
+    //         foreach ($ecMedia as $media) {
+    //             $gallery[] = $media->getGeoJson();
+    //         }
+    //         if (count($gallery)) {
+    //             $array['image_gallery'] = $gallery;
+    //         }
+    //     }
 
-        if (isset($this->osmid)) {
-            $array['osm_url'] = 'https://www.openstreetmap.org/relation/'.$this->osmid;
-        }
+    //     if (isset($this->osmid)) {
+    //         $array['osm_url'] = 'https://www.openstreetmap.org/relation/' . $this->osmid;
+    //     }
 
-        $fileTypes = ['geojson', 'gpx', 'kml'];
-        foreach ($fileTypes as $fileType) {
-            $array[$fileType.'_url'] = route('api.ec.track.download.'.$fileType, ['id' => $this->id]);
-        }
+    //     $fileTypes = ['geojson', 'gpx', 'kml'];
+    //     foreach ($fileTypes as $fileType) {
+    //         $array[$fileType . '_url'] = route('api.ec.track.download.' . $fileType, ['id' => $this->id]);
+    //     }
 
-        $activities = [];
+    //     $activities = [];
 
-        foreach ($this->taxonomyActivities as $activity) {
-            $activities[] = $activity->getGeoJson();
-        }
+    //     foreach ($this->taxonomyActivities as $activity) {
+    //         $activities[] = $activity->getGeoJson();
+    //     }
 
-        $wheres = [];
+    //     $wheres = [];
 
-        $wheres = $this->taxonomyWheres()->pluck('id')->toArray();
+    //     $wheres = $this->taxonomyWheres()->pluck('id')->toArray();
 
-        if ($this->taxonomy_wheres_show_first) {
-            $re = $this->taxonomy_wheres_show_first;
-            $wheres = array_diff($wheres, [$re]);
-            array_push($wheres, $this->taxonomy_wheres_show_first);
-            $wheres = array_values($wheres);
-        }
+    //     if ($this->taxonomy_wheres_show_first) {
+    //         $re = $this->taxonomy_wheres_show_first;
+    //         $wheres = array_diff($wheres, [$re]);
+    //         array_push($wheres, $this->taxonomy_wheres_show_first);
+    //         $wheres = array_values($wheres);
+    //     }
 
-        $taxonomies = [
-            'activity' => $activities,
-            'theme' => $this->taxonomyThemes()->pluck('id')->toArray(),
-            'when' => $this->taxonomyWhens()->pluck('id')->toArray(),
-            'where' => $wheres,
-            'who' => $this->taxonomyTargets()->pluck('id')->toArray(),
-        ];
+    //     $taxonomies = [
+    //         'activity' => $activities,
+    //         'theme' => $this->taxonomyThemes()->pluck('id')->toArray(),
+    //         'when' => $this->taxonomyWhens()->pluck('id')->toArray(),
+    //         'where' => $wheres,
+    //         'who' => $this->taxonomyTargets()->pluck('id')->toArray(),
+    //     ];
 
-        foreach ($taxonomies as $key => $value) {
-            if (count($value) === 0) {
-                unset($taxonomies[$key]);
-            }
-        }
+    //     foreach ($taxonomies as $key => $value) {
+    //         if (count($value) === 0) {
+    //             unset($taxonomies[$key]);
+    //         }
+    //     }
 
-        $array['taxonomy'] = $taxonomies;
+    //     $array['taxonomy'] = $taxonomies;
 
-        $durations = [];
-        $activityTerms = $this->taxonomyActivities()->whereIn('identifier', ['hiking', 'cycling'])->get()->toArray();
-        if (count($activityTerms) > 0) {
-            foreach ($activityTerms as $term) {
-                $durations[$term['identifier']] = [
-                    'forward' => $term['pivot']['duration_forward'],
-                    'backward' => $term['pivot']['duration_backward'],
-                ];
-            }
-        }
+    //     $durations = [];
+    //     $activityTerms = $this->taxonomyActivities()->whereIn('identifier', ['hiking', 'cycling'])->get()->toArray();
+    //     if (count($activityTerms) > 0) {
+    //         foreach ($activityTerms as $term) {
+    //             $durations[$term['identifier']] = [
+    //                 'forward' => $term['pivot']['duration_forward'],
+    //                 'backward' => $term['pivot']['duration_backward'],
+    //             ];
+    //         }
+    //     }
 
-        $array['duration'] = $durations;
+    //     $array['duration'] = $durations;
 
-        $propertiesToClear = ['geometry', 'slope'];
-        foreach ($array as $property => $value) {
-            if (
-                in_array($property, $propertiesToClear)
-                || is_null($value)
-                || (is_array($value) && count($value) === 0)
-            ) {
-                unset($array[$property]);
-            }
-        }
+    //     $propertiesToClear = ['geometry', 'slope'];
+    //     foreach ($array as $property => $value) {
+    //         if (
+    //             in_array($property, $propertiesToClear)
+    //             || is_null($value)
+    //             || (is_array($value) && count($value) === 0)
+    //         ) {
+    //             unset($array[$property]);
+    //         }
+    //     }
 
-        $relatedPoi = $this->ecPois;
-        if (count($relatedPoi) > 0) {
-            $array['related_pois'] = [];
-            foreach ($relatedPoi as $poi) {
-                $array['related_pois'][] = $poi->getGeojson();
-            }
-        }
+    //     $relatedPoi = $this->ecPois;
+    //     if (count($relatedPoi) > 0) {
+    //         $array['related_pois'] = [];
+    //         foreach ($relatedPoi as $poi) {
+    //             $array['related_pois'][] = $poi->getGeojson();
+    //         }
+    //     }
 
-        $mbtilesIds = $this->mbtiles;
-        if ($mbtilesIds) {
-            $mbtilesIds = json_decode($mbtilesIds, true);
-            if (count($mbtilesIds)) {
-                $array['mbtiles'] = $mbtilesIds;
-            }
-        }
+    //     $mbtilesIds = $this->mbtiles;
+    //     if ($mbtilesIds) {
+    //         $mbtilesIds = json_decode($mbtilesIds, true);
+    //         if (count($mbtilesIds)) {
+    //             $array['mbtiles'] = $mbtilesIds;
+    //         }
+    //     }
 
-        $user = auth('api')->user();
-        $array['user_can_download'] = isset($user);
+    //     $user = auth('api')->user();
+    //     $array['user_can_download'] = isset($user);
 
-        if (isset($array['difficulty']) && is_array($array['difficulty']) && is_null($array['difficulty']) === false && count(array_keys($array['difficulty'])) === 1 && isset(array_values($array['difficulty'])[0]) === false) {
-            $array['difficulty'] = null;
-        }
+    //     if (isset($array['difficulty']) && is_array($array['difficulty']) && is_null($array['difficulty']) === false && count(array_keys($array['difficulty'])) === 1 && isset(array_values($array['difficulty'])[0]) === false) {
+    //         $array['difficulty'] = null;
+    //     }
 
-        if ($this->allow_print_pdf) {
-            $user = User::find($this->user_id);
-            if ($user->apps->count() > 0) {
-                $pdf_url = url('/track/pdf/'.$this->id.'?app_id='.$user->apps[0]->id);
-                $array['related_url']['Print PDF'] = $pdf_url;
-            } else {
-                $pdf_url = url('/track/pdf/'.$this->id);
-                $array['related_url']['Print PDF'] = $pdf_url;
-            }
-        }
+    //     if ($this->allow_print_pdf) {
+    //         $user = User::find($this->user_id);
+    //         if ($user->apps->count() > 0) {
+    //             $pdf_url = url('/track/pdf/' . $this->id . '?app_id=' . $user->apps[0]->id);
+    //             $array['related_url']['Print PDF'] = $pdf_url;
+    //         } else {
+    //             $pdf_url = url('/track/pdf/' . $this->id);
+    //             $array['related_url']['Print PDF'] = $pdf_url;
+    //         }
+    //     }
 
-        return $array;
-    }
+    //     return $array;
+    // }
 
-    private function setOutSourceValue(): array
-    {
-        $array = $this->toArray();
-        if (isset($this->out_source_feature_id)) {
-            $keys = [
-                'description',
-                'excerpt',
-                'distance',
-                'ascent',
-                'descent',
-                'ele_min',
-                'ele_max',
-                'ele_from',
-                'ele_to',
-                'duration_forward',
-                'duration_backward',
-                'ref',
-                'difficulty',
-                'cai_scale',
-                'from',
-                'to',
-                'audio',
-                'related_url',
-            ];
-            foreach ($keys as $key) {
-                $array = $this->setOutSourceSingleValue($array, $key);
-            }
-        }
+    // private function setOutSourceValue(): array
+    // {
+    //     $array = $this->toArray();
+    //     if (isset($this->out_source_feature_id)) {
+    //         $keys = [
+    //             'description',
+    //             'excerpt',
+    //             'distance',
+    //             'ascent',
+    //             'descent',
+    //             'ele_min',
+    //             'ele_max',
+    //             'ele_from',
+    //             'ele_to',
+    //             'duration_forward',
+    //             'duration_backward',
+    //             'ref',
+    //             'difficulty',
+    //             'cai_scale',
+    //             'from',
+    //             'to',
+    //             'audio',
+    //             'related_url',
+    //         ];
+    //         foreach ($keys as $key) {
+    //             $array = $this->setOutSourceSingleValue($array, $key);
+    //         }
+    //     }
 
-        return $array;
-    }
+    //     return $array;
+    // }
 
-    private function setOutSourceSingleValue($array, $varname): array
-    {
-        if (isReallyEmpty($array[$varname])) {
-            if (isset($this->outSourceTrack->tags[$varname])) {
-                $array[$varname] = $this->outSourceTrack->tags[$varname];
-            }
-        }
-        if (is_array($array[$varname]) && is_null($array[$varname]) === false && count(array_keys($array[$varname])) === 1 && isset(array_values($array[$varname])[0]) === false) {
-            $array[$varname] = null;
-        }
+    // private function setOutSourceSingleValue($array, $varname): array
+    // {
+    //     if (isReallyEmpty($array[$varname])) {
+    //         if (isset($this->outSourceTrack->tags[$varname])) {
+    //             $array[$varname] = $this->outSourceTrack->tags[$varname];
+    //         }
+    //     }
+    //     if (is_array($array[$varname]) && is_null($array[$varname]) === false && count(array_keys($array[$varname])) === 1 && isset(array_values($array[$varname])[0]) === false) {
+    //         $array[$varname] = null;
+    //     }
 
-        return $array;
-    }
-
-    public function getActualOrOSFValue($field)
-    {
-        if (! empty($this->$field)) {
-            return $this->$field;
-        }
-        if (! empty($this->out_source_feature_id)) {
-            $osf = OutSourceTrack::find($this->out_source_feature_id);
-            if (array_key_exists($field, $osf->tags)) {
-                return $osf->tags[$field];
-            }
-        }
-
-        return null;
-    }
+    //     return $array;
+    // }
 
     /**
      * Create a geojson from the ec track
      */
     public function getGeojson(): array
     {
-        $feature = $this->getEmptyGeojson();
-        if (isset($feature['properties'])) {
-            $feature['properties'] = $this->getGeoJson();
-            $feature['properties']['roundtrip'] = GeometryComputationService::make()->isRoundtrip($feature['geometry']['coordinates']);
-        }
+        $feature = parent::getGeojson();
+
+        $feature['properties']['roundtrip'] = GeometryComputationService::make()->isRoundtrip($feature['geometry']['coordinates']);
+
 
         return $feature;
     }
@@ -355,7 +339,7 @@ class EcTrack extends Linestring
     {
         $geojson = $this->getGeojson();
         // MAPPING
-        $geojson['properties']['id'] = 'ec_track_'.$this->id;
+        $geojson['properties']['id'] = 'ec_track_' . $this->id;
         $geojson = $this->_mapElbrusGeojsonProperties($geojson);
 
         if ($this->ecPois) {
@@ -390,9 +374,9 @@ class EcTrack extends Linestring
 
         $fields = ['kml', 'gpx'];
         foreach ($fields as $field) {
-            if (isset($geojson['properties'][$field.'_url'])) {
-                $geojson['properties'][$field] = $geojson['properties'][$field.'_url'];
-                unset($geojson['properties'][$field.'_url']);
+            if (isset($geojson['properties'][$field . '_url'])) {
+                $geojson['properties'][$field] = $geojson['properties'][$field . '_url'];
+                unset($geojson['properties'][$field . '_url']);
             }
         }
 
@@ -402,13 +386,13 @@ class EcTrack extends Linestring
 
                 if ($taxonomy === 'activity') {
                     $geojson['properties']['taxonomy'][$name] = array_map(function ($item) use ($name) {
-                        return $name.'_'.$item;
+                        return $name . '_' . $item;
                     }, array_map(function ($item) {
                         return $item['id'];
                     }, $values));
                 } else {
                     $geojson['properties']['taxonomy'][$name] = array_map(function ($item) use ($name) {
-                        return $name.'_'.$item;
+                        return $name . '_' . $item;
                     }, $values);
                 }
             }
@@ -620,32 +604,32 @@ class EcTrack extends Linestring
         }
 
         if (empty($searchables) || (in_array('name', $searchables) && ! empty($this->name))) {
-            $string .= str_replace('"', '', json_encode($this->getTranslations('name'))).' ';
+            $string .= str_replace('"', '', json_encode($this->getTranslations('name'))) . ' ';
         }
         if (empty($searchables) || (in_array('description', $searchables) && ! empty($this->description))) {
             $description = str_replace('"', '', json_encode($this->getTranslations('description')));
             $description = str_replace('\\', '', $description);
-            $string .= strip_tags($description).' ';
+            $string .= strip_tags($description) . ' ';
         }
         if (empty($searchables) || (in_array('excerpt', $searchables) && ! empty($this->excerpt))) {
             $excerpt = str_replace('"', '', json_encode($this->getTranslations('excerpt')));
             $excerpt = str_replace('\\', '', $excerpt);
-            $string .= strip_tags($excerpt).' ';
+            $string .= strip_tags($excerpt) . ' ';
         }
         if (empty($searchables) || (in_array('ref', $searchables) && ! empty($this->ref))) {
-            $string .= $this->ref.' ';
+            $string .= $this->ref . ' ';
         }
         if (empty($searchables) || (in_array('osmid', $searchables) && ! empty($this->osmid))) {
-            $string .= $this->osmid.' ';
+            $string .= $this->osmid . ' ';
         }
         if (empty($searchables) || (in_array('taxonomyThemes', $searchables) && ! empty($this->taxonomyThemes))) {
             foreach ($this->taxonomyThemes as $tax) {
-                $string .= str_replace('"', '', json_encode($tax->getTranslations('name'))).' ';
+                $string .= str_replace('"', '', json_encode($tax->getTranslations('name'))) . ' ';
             }
         }
         if (empty($searchables) || (in_array('taxonomyActivities', $searchables) && ! empty($this->taxonomyActivities))) {
             foreach ($this->taxonomyActivities as $tax) {
-                $string .= str_replace('"', '', json_encode($tax->getTranslations('name'))).' ';
+                $string .= str_replace('"', '', json_encode($tax->getTranslations('name'))) . ' ';
             }
         }
 
