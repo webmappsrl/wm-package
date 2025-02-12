@@ -10,6 +10,7 @@ use Mockery;
 use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Http\Clients\OsmClient;
 use Wm\WmPackage\Models\EcTrack;
+use Illuminate\Database\ConnectionInterface;
 
 class AbstractEcTrackServiceTest extends TestCase
 {
@@ -71,7 +72,7 @@ class AbstractEcTrackServiceTest extends TestCase
         return $track;
     }
 
-    private function prepareTrackWithOsmData($track): void
+    public function prepareTrackWithOsmData($track): void
     {
         $track->shouldReceive('setAttribute')
               ->with('osm_data', Mockery::type('array'))

@@ -11,8 +11,6 @@ class GetRelatedPoisOrderTest extends AbstractEcTrackServiceTest
     /** @test */
     public function get_related_pois_order_returns_null_when_no_related_pois_exist()
     {
-        // Prepara un mock di EcTrack in cui getGeojson() restituisce un array
-        // senza la chiave 'related_pois'.
         $geojson = [
             'ecTrack' => [
                 'properties' => [
@@ -21,8 +19,7 @@ class GetRelatedPoisOrderTest extends AbstractEcTrackServiceTest
                 'geometry' => ['some' => 'track_geometry']
             ]
         ];
-        $track = Mockery::mock(EcTrack::class)->makePartial();
-        $track->shouldReceive('getGeojson')->andReturn($geojson);
+        $track = $this->createMockTrack(1, $geojson);
 
         $result = $this->ecTrackService->getRelatedPoisOrder($track);
         $this->assertNull($result);
@@ -52,9 +49,8 @@ class GetRelatedPoisOrderTest extends AbstractEcTrackServiceTest
                 'geometry' => ['some' => 'track_geometry']
             ]
         ];
-        $track = Mockery::mock(EcTrack::class)->makePartial();
-        $track->shouldReceive('getGeojson')->andReturn($geojson);
-
+        $track = $this->createMockTrack(1, $geojson);
+        
         $result = $this->ecTrackService->getRelatedPoisOrder($track);
         $this->assertEquals(['poi2', 'poi3', 'poi1'], $result);
     }

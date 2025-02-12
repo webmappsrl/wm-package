@@ -6,12 +6,31 @@ use Exception;
 
 class UpdateCurrentDataTest extends AbstractEcTrackServiceTest
 {
+    const ASCENT_FIELD_LABEL = 'ascent';
+    const DESCENT_FIELD_LABEL = 'descent';
+    const SPEED_FIELD_LABEL = 'speed';
+    const DISTANCE_FIELD_LABEL = 'distance';
+    const OSM_DATA_FIELDS = [
+        self::ASCENT_FIELD_LABEL => 500,
+        self::DESCENT_FIELD_LABEL => 400,
+        self::DISTANCE_FIELD_LABEL => 7000,
+    ];
+    const DIRTY_DATA_FIELDS = [
+        self::ASCENT_FIELD_LABEL => 600,
+        self::DESCENT_FIELD_LABEL => 500,
+        self::DISTANCE_FIELD_LABEL => 10,
+        self::SPEED_FIELD_LABEL => 10,
+    ];
     /** @test */
     public function update_current_data_updates_manual_data_for_non_null_dirty_fields()
     {
         // I dirty fields hanno valori non null e vanno semplicemente copiati in manual_data.
-        $dirtyFields   = ['ascent' => 600, 'descent' => 500, 'speed' => 10];
-        $demDataFields = ['ascent', 'descent']; // 'speed' non è rilevante
+        $dirtyFields   = [
+            self::ASCENT_FIELD_LABEL => self::DIRTY_DATA_FIELDS[self::ASCENT_FIELD_LABEL], 
+            self::DESCENT_FIELD_LABEL => self::DIRTY_DATA_FIELDS[self::DESCENT_FIELD_LABEL], 
+            self::SPEED_FIELD_LABEL => self::DIRTY_DATA_FIELDS[self::SPEED_FIELD_LABEL]
+        ];
+        $demDataFields = [self::ASCENT_FIELD_LABEL, self::DESCENT_FIELD_LABEL]; // 'speed' non è rilevante
         $initialManualData = json_encode(['existing' => 'data']);
 
         // Prepara il track usando il metodo helper della classe astratta.

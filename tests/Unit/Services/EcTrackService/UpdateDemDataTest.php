@@ -24,12 +24,9 @@ class UpdateDemDataTest extends AbstractEcTrackServiceTest
     /** @test */
     public function update_dem_data_updates_track_with_dem_data()
     {
-        // Create mock track (use a partial mock for real attribute handling)
-        $track = Mockery::mock(EcTrack::class)->makePartial();
-        $track->shouldReceive('getGeojson')->once()->andReturn(['type' => 'Feature']);
-        $track->shouldReceive('saveQuietly')->times(2);
+        $track = $this->createMockTrack(1, ['type' => 'Feature']);
+        $track->shouldReceive('saveQuietly')->once();
 
-        // Allow attribute setting
         $track->shouldReceive('setAttribute')
             ->with('dem_data', Mockery::type('array'))
             ->once();
@@ -38,10 +35,8 @@ class UpdateDemDataTest extends AbstractEcTrackServiceTest
             ->with('dem_data')
             ->andReturn(json_encode(self::EXPECTED_DEM_DATA['properties']));
 
-        // Execute the method
         $this->ecTrackService->updateDemData($track);
 
-        // Verify the track was updated with DEM data
         $this->assertEquals(self::EXPECTED_DEM_DATA['properties'], json_decode($track->dem_data, true));
     }
 }
