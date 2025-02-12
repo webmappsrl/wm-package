@@ -337,7 +337,7 @@ class EcTrack extends Linestring
     /**
      * Create a geojson from the ec track
      */
-    public function getGeojson($version = 'v1'): ?array
+    public function getGeojson(): array
     {
         $feature = $this->getEmptyGeojson();
         if (isset($feature['properties'])) {
@@ -346,27 +346,6 @@ class EcTrack extends Linestring
         }
 
         return $feature;
-    }
-
-    /**
-     * Create only the Geometry and track id from the ec track as getGeojsonGeojson
-     */
-    public function getTrackGeometryGeojson(): ?array
-    {
-        $feature = $this->getEmptyGeojson();
-        if (isset($feature['properties'])) {
-            $feature['properties']['id'] = $this->id;
-            $slope = json_decode($this->slope, true);
-            if (isset($slope) && count($slope) === count($feature['geometry']['coordinates'])) {
-                foreach ($slope as $key => $value) {
-                    $feature['geometry']['coordinates'][$key][3] = $value;
-                }
-            }
-
-            return $feature;
-        } else {
-            return null;
-        }
     }
 
     /**

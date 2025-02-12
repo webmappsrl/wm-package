@@ -8,11 +8,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Facades\App;
 use Spatie\Translatable\HasTranslations;
-use Wm\WmPackage\Models\Abstracts\GeometryModel;
+use Wm\WmPackage\Models\Abstracts\Point;
 use Wm\WmPackage\Observers\EcPoiObserver;
 use Wm\WmPackage\Traits\TaxonomyAbleModel;
 
-class EcPoi extends GeometryModel
+class EcPoi extends Point
 {
     use HasFactory, HasTranslations, TaxonomyAbleModel;
     use HasTranslations;
