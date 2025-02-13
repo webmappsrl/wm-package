@@ -2,9 +2,8 @@
 
 namespace Wm\WmPackage\Models;
 
-use Wm\WmPackage\Observers\UgcObserver;
-use Wm\WmPackage\Services\GeoJsonService;
 use Spatie\MediaLibrary\MediaCollections\Models\Media as SpatieMedia;
+use Wm\WmPackage\Services\GeoJsonService;
 
 class Media extends SpatieMedia
 {

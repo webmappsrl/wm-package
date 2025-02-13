@@ -2,9 +2,7 @@
 
 namespace Wm\WmPackage\Models;
 
-use Exception;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Facades\App;
 use Spatie\Translatable\HasTranslations;
@@ -180,7 +178,7 @@ class EcPoi extends Point
     private function addPrefix($array, $prefix)
     {
         return array_map(function ($elem) use ($prefix) {
-            return $prefix . '_' . $elem;
+            return $prefix.'_'.$elem;
         }, $array);
     }
 
@@ -215,7 +213,7 @@ class EcPoi extends Point
     {
         return $relation->get(['identifier', 'name', 'id', 'icon', 'color'])->map(function ($item) use ($slug) {
             unset($item['pivot']);
-            $item['identifier'] = $slug . '_' . $item['identifier'];
+            $item['identifier'] = $slug.'_'.$item['identifier'];
 
             return $item;
         })->toArray();
@@ -248,10 +246,6 @@ class EcPoi extends Point
     //     return $array;
     // }
 
-
-
-
-
     public function getSearchableString($app_id = 0)
     {
 
@@ -263,24 +257,24 @@ class EcPoi extends Point
         }
 
         if (empty($searchables) || (in_array('name', $searchables) && ! empty($this->name))) {
-            $string .= str_replace('"', '', json_encode($this->getTranslations('name'))) . ' ';
+            $string .= str_replace('"', '', json_encode($this->getTranslations('name'))).' ';
         }
         if (empty($searchables) || (in_array('description', $searchables) && ! empty($this->description))) {
             $description = str_replace('"', '', json_encode($this->getTranslations('description')));
             $description = str_replace('\\', '', $description);
-            $string .= strip_tags($description) . ' ';
+            $string .= strip_tags($description).' ';
         }
         if (empty($searchables) || (in_array('excerpt', $searchables) && ! empty($this->excerpt))) {
             $excerpt = str_replace('"', '', json_encode($this->getTranslations('excerpt')));
             $excerpt = str_replace('\\', '', $excerpt);
-            $string .= strip_tags($excerpt) . ' ';
+            $string .= strip_tags($excerpt).' ';
         }
         if (empty($searchables) || (in_array('osmid', $searchables) && ! empty($this->osmid))) {
-            $string .= $this->osmid . ' ';
+            $string .= $this->osmid.' ';
         }
         if (empty($searchables) || (in_array('taxonomyPoiTypes', $searchables) && ! empty($this->taxonomyPoiTypes))) {
             foreach ($this->taxonomyPoiTypes as $tax) {
-                $string .= str_replace('"', '', json_encode($tax->getTranslations('name'))) . ' ';
+                $string .= str_replace('"', '', json_encode($tax->getTranslations('name'))).' ';
             }
         }
 

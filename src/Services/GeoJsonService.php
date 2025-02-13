@@ -3,11 +3,9 @@
 namespace Wm\WmPackage\Services;
 
 use Illuminate\Database\Eloquent\Model;
-use Wm\WmPackage\Models\Abstracts\GeometryModel;
 
 class GeoJsonService extends BaseService
 {
-
     public function getModelAsGeojson(Model $model)
     {
         $properties = $model->properties ?? [];

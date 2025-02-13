@@ -3,8 +3,8 @@
 namespace Wm\WmPackage\Http\Controllers\Api;
 
 use Exception;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Storage;
 use Wm\WmPackage\Http\Controllers\Controller;
 use Wm\WmPackage\Models\Abstracts\GeometryModel;
@@ -38,7 +38,7 @@ class EditorialContentController extends Controller
 
         $model = $modelClass::find($id);
         if (is_null($model)) {
-            throw new Exception("Not found", 404);
+            throw new Exception('Not found', 404);
         }
 
         return $model;
@@ -64,18 +64,17 @@ class EditorialContentController extends Controller
 
             return response()->streamDownload(function () use ($ec) {
                 file_get_contents($ec->url);
-            }, 'name.' . $pathInfo['extension']);
+            }, 'name.'.$pathInfo['extension']);
         } else {
             // Scaricare risorsa locale
             $filename = 'name';
             if (isset($pathInfo['extension'])) {
-                $filename = 'name.' . $pathInfo['extension'];
+                $filename = 'name.'.$pathInfo['extension'];
             }
 
             return Storage::disk('public')->download($ec->url, $filename);
         }
     }
-
 
     /**
      * Return EcTrack JSON.
@@ -124,7 +123,6 @@ class EditorialContentController extends Controller
             return response()->json(['code' => $e->getCode(), 'error' => $e->getMessage()], $e->getCode());
         }
 
-
         $content = $ec->getKml();
         $headers = $this->createDownloadFileName($ec, $headers);
 
@@ -134,7 +132,7 @@ class EditorialContentController extends Controller
     public function downloadEcGeojson(int $id): JsonResponse
     {
         $headers['Content-Type'] = 'application/vnd.api+json';
-        $headers['Content-Disposition'] = 'attachment; filename="' . $id . '.geojson"';
+        $headers['Content-Disposition'] = 'attachment; filename="'.$id.'.geojson"';
 
         return $this->viewEcGeojson($id, $headers);
     }
@@ -145,7 +143,7 @@ class EditorialContentController extends Controller
     public function downloadEcGpx(int $id)
     {
         $headers['Content-Type'] = 'application/xml';
-        $headers['Content-Disposition'] = 'attachment; filename="' . $id . '.gpx"';
+        $headers['Content-Disposition'] = 'attachment; filename="'.$id.'.gpx"';
 
         return $this->viewEcGpx($id, $headers);
     }
@@ -156,7 +154,7 @@ class EditorialContentController extends Controller
     public function downloadEcKml(int $id)
     {
         $headers['Content-Type'] = 'application/xml';
-        $headers['Content-Disposition'] = 'attachment; filename="' . $id . '.kml"';
+        $headers['Content-Disposition'] = 'attachment; filename="'.$id.'.kml"';
 
         return $this->viewEcKml($id, $headers);
     }
@@ -179,7 +177,7 @@ class EditorialContentController extends Controller
             $originalFileName = $headers['Content-Disposition'];
             $extension = trim(pathinfo($originalFileName, PATHINFO_EXTENSION), '"');
 
-            $headers['Content-Disposition'] = 'attachment; filename="' . $fileName . '.' . $extension . '"';
+            $headers['Content-Disposition'] = 'attachment; filename="'.$fileName.'.'.$extension.'"';
         }
 
         return $headers;

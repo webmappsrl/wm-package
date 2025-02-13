@@ -164,8 +164,6 @@ class EcTrackController extends Controller
         return response()->json($list);
     }
 
-
-
     /**
      * Get the feature collection for the given track pdf
      */
