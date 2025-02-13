@@ -21,7 +21,6 @@ class UgcPoiFactory extends Factory
         ]);
 
         return [
-            'user_id' => 1,
             'app_id' => 1,
             'name' => $this->faker->name,
             'osmid' => $this->faker->randomNumber(8),
