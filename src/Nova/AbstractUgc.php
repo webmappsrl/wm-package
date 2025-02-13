@@ -16,7 +16,6 @@ abstract class AbstractUgc extends AbstractGeometryModel
     {
         return [
             ...parent::fields($request),
-            Code::make('Properties', 'properties')->json()->rules('required', 'json'),
             // add here a way to view/edit user_id
         ];
     }

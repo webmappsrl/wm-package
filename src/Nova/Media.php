@@ -7,7 +7,7 @@ use Laravel\Nova\Fields\Number;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
 
-class Media extends AbstractGeometryModel
+class Media extends AbstractPointModel
 {
     public static $model = \Wm\WmPackage\Models\Media::class;
 
