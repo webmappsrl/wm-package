@@ -5,20 +5,13 @@ namespace Wm\WmPackage\Http\Controllers\Api;
 use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Validator;
 use Wm\WmPackage\Http\Controllers\Controller;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
-use Wm\WmPackage\Models\App;
-use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Models\EcTrack;
-use Wm\WmPackage\Models\Media;
 use Wm\WmPackage\Models\User;
 use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Services\Models\EcPoiService;
 use Wm\WmPackage\Services\Models\EcTrackService;
-use Wm\WmPackage\Services\Models\MediaService;
-use Wm\WmPackage\Services\Models\OutSourceFeatureService;
 use Wm\WmPackage\Services\StorageService;
 
 class EcTrackController extends Controller
@@ -26,7 +19,7 @@ class EcTrackController extends Controller
     /**
      * Return EcTrack JSON.
      */
-    public function getGeojson(Request $request, EcTrack $ecTrack, array $headers = []): JsonResponse
+    public function getGeojson(EcTrack $ecTrack, array $headers = []): JsonResponse
     {
 
         $json = StorageService::make()->getTrackGeojson($ecTrack->id);
@@ -40,30 +33,6 @@ class EcTrackController extends Controller
     }
 
     /**
-     * Get a feature collection with the neighbour media
-     */
-    public static function getNeighbourMedia(EcTrack $ecTrack): JsonResponse
-    {
-        return response()->json(GeometryComputationService::make()->getNeighboursGeojson($ecTrack, Media::class));
-    }
-
-    /**
-     * Get a feature collection with the neighbour pois
-     */
-    public static function getNeighbourEcPoi(EcTrack $ecTrack): JsonResponse
-    {
-        return response()->json(GeometryComputationService::make()->getNeighboursGeojson($ecTrack, EcPoi::class));
-    }
-
-    /**
-     * Get a feature collection with the related media
-     */
-    public static function getAssociatedMedia(EcTrack $ecTrack): JsonResponse
-    {
-        return response()->json(MediaService::make()->getAssociatedMedia($ecTrack));
-    }
-
-    /**
      * Get a feature collection with the related pois
      */
     public static function getAssociatedEcPois(EcTrack $ecTrack): JsonResponse
@@ -73,132 +42,7 @@ class EcTrackController extends Controller
 
     public static function getFeatureImage(EcTrack $ecTrack): JsonResponse
     {
-        return response()->json($ecTrack->featureImage()->get());
-    }
-
-    /**
-     * Search the ec tracks using the GET parameters
-     */
-    public function search(Request $request): JsonResponse
-    {
-        $data = $request->all();
-
-        $validator = Validator::make($data, [
-            'bbox' => 'required',
-            'app_id' => 'required|max:255',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['error' => $validator->errors()], 400);
-        }
-
-        $featureCollection = [
-            'type' => 'FeatureCollection',
-            'features' => [],
-        ];
-
-        $bboxParam = $data['bbox'];
-        $sku = $data['app_id'];
-
-        $app = App::where('sku', '=', $sku)->first();
-
-        if (! isset($app->id)) {
-            return response()->json(['error' => 'Unknown reference app'], 400);
-        }
-
-        if (isset($bboxParam)) {
-            try {
-                $bbox = explode(',', $bboxParam);
-                $bbox = array_map('floatval', $bbox);
-            } catch (Exception $e) {
-                Log::warning($e->getMessage());
-            }
-
-            if (isset($bbox) && is_array($bbox)) {
-                $trackRef = $data['reference_id'] ?? null;
-                if (isset($trackRef) && strval(intval($trackRef)) === $trackRef) {
-                    $trackRef = intval($trackRef);
-                } else {
-                    $trackRef = null;
-                }
-
-                $featureCollection = GeometryComputationService::make()->getSearchClustersInsideBBox($app, $bbox, $trackRef, null, 'en');
-            }
-        }
-
-        return response()->json($featureCollection);
-    }
-
-    /**
-     * Get the closest ec track to the given location
-     */
-    public function nearestToLocation(Request $request, string $lon, string $lat): JsonResponse
-    {
-        $data = $request->all();
-
-        // TODO: add app as path parameter
-        //      this validation is wrong ... it should check over db the app_id existence before the App::where below
-        $validator = Validator::make($data, [
-            'app_id' => 'required|max:255',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['error' => $validator->errors()], 400);
-        }
-
-        $sku = $data['app_id'];
-
-        $app = App::where('sku', '=', $sku)->first();
-
-        if (! isset($app->id)) {
-            return response()->json(['error' => 'Unknown reference app'], 400);
-        }
-
-        $featureCollection = [
-            'type' => 'FeatureCollection',
-            'features' => [],
-        ];
-        try {
-
-            if ($lon === strval(floatval($lon)) && $lat === strval(floatval($lat))) {
-                $lon = floatval($lon);
-                $lat = floatval($lat);
-                $featureCollection = GeometryComputationService::make()->getNearestToLonLat($app, $lon, $lat);
-            }
-        } catch (Exception $e) {
-        }
-
-        return response()->json($featureCollection);
-    }
-
-    /**
-     * Get the most viewed ec tracks
-     */
-    public function mostViewed(Request $request): JsonResponse
-    {
-        $data = $request->all();
-
-        // TODO: add app as path parameter
-        //      this validation is wrong ... it should check over db the app_id existence before the App::where below
-        $validator = Validator::make($data, [
-            'app_id' => 'required|max:255',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['error' => $validator->errors()], 400);
-        }
-
-        $sku = $data['app_id'];
-
-        $app = App::where('sku', '=', $sku)->first();
-
-        if (! isset($app->id)) {
-            return response()->json(['error' => 'Unknown reference app'], 400);
-        }
-
-        $featureCollection = EcTrackService::make()->getMostViewed($app);
-
-        return response()->json($featureCollection);
+        return response()->json($ecTrack->getMedia()->first());
     }
 
     /**
@@ -320,58 +164,7 @@ class EcTrackController extends Controller
         return response()->json($list);
     }
 
-    /**
-     * Returns the EcTrack ID associated to an external feature
-     *
-     * @param  string  $endpoint_slug
-     * @param  int  $source_id
-     * @return JsonResponse
-     */
-    public function getEcTrackFromSourceID($endpoint_slug, $source_id)
-    {
-        return OutSourceFeatureService::make()->getModelIdFromOutSourceFeature($endpoint_slug, $source_id, EcTrack::class);
-    }
 
-    /**
-     * Returns the EcTrack GeoJson associated to an external feature
-     *
-     * @param  string  $endpoint_slug
-     * @param  int  $source_id
-     * @return JsonResponse
-     */
-    public function getTrackGeojsonFromSourceID($endpoint_slug, $source_id)
-    {
-        $track_id = OutSourceFeatureService::make()->getModelIdFromOutSourceFeature($endpoint_slug, $source_id, EcTrack::class);
-
-        $track = EcTrack::find($track_id);
-        $headers = [];
-
-        if (is_null($track)) {
-            return response()->json(['code' => 404, 'error' => 'Not Found'], 404);
-        }
-
-        return response()->json($track->getGeojson(), 200, $headers);
-    }
-
-    /**
-     * Returns the EcTrack Webapp URL associated to an external feature
-     *
-     * @param  string  $endpoint_slug
-     * @param  int  $source_id
-     * @return JsonResponse
-     */
-    public function getEcTrackWebappURLFromSourceID($endpoint_slug, $source_id)
-    {
-        $track_id = OutSourceFeatureService::make()->getModelIdFromOutSourceFeature($endpoint_slug, $source_id, EcTrack::class);
-        $track = EcTrack::find($track_id);
-        $app_id = $track->user->apps[0]->id;
-
-        if (is_null($track) || empty($app_id)) {
-            return response()->json(['code' => 404, 'error' => 'Not Found'], 404);
-        }
-
-        return redirect('https://'.$app_id.'.app.webmapp.it/#/map?track='.$track_id);
-    }
 
     /**
      * Get the feature collection for the given track pdf

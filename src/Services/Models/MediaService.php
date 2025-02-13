@@ -50,7 +50,7 @@ class MediaService extends BaseService
             'type' => 'FeatureCollection',
             'features' => [],
         ];
-        foreach ($model->Media as $media) {
+        foreach ($model->getMedia() as $media) {
             $result['features'][] = $media->getGeojson();
         }
 
