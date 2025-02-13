@@ -2,7 +2,7 @@
 
 namespace Wm\WmPackage\Models;
 
-use Wm\WmPackage\Models\Abstracts\Linestring;
+use Wm\WmPackage\Models\Abstracts\MultiLineString;
 use Wm\WmPackage\Observers\UgcObserver;
 use Wm\WmPackage\Traits\OwnedByUserModel;
 
@@ -18,7 +18,7 @@ use Wm\WmPackage\Traits\OwnedByUserModel;
  * @property string description
  * @property string raw_data
  */
-class UgcTrack extends Linestring
+class UgcTrack extends MultiLineString
 {
     use OwnedByUserModel;
 
