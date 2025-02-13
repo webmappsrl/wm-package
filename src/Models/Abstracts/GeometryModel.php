@@ -9,6 +9,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\Media;
 use Wm\WmPackage\Models\User;
+use Wm\WmPackage\Services\GeoJsonService;
 use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Services\ImageService;
 use Wm\WmPackage\Services\StorageService;
@@ -43,16 +44,7 @@ abstract class GeometryModel extends Model implements HasMedia
      */
     public function getGeojson(): array
     {
-        $properties = $this->properties ?? [];
-        $geom = GeometryComputationService::make()->getModelGeometryAsGeojson($this);
-
-        $decodedGeom = isset($geom) ? json_decode($geom, true) : null;
-
-        return [
-            'type' => 'Feature',
-            'properties' => $properties,
-            'geometry' => $decodedGeom,
-        ];
+        return GeoJsonService::make()->getModelAsGeojson($this);
     }
 
     /**

@@ -17,16 +17,16 @@ class MediaService extends BaseService
     public function updateDataChain(Media $model)
     {
 
-        $chain = [
-            new UpdateMedia($model), // it updates: geometry(if available on exif), thumbnails and url
-            new UpdateModelWithGeometryTaxonomyWhere($model), // it relates where taxonomy terms to the Media model based on geometry attribute
-        ];
+        // $chain = [
+        //     new UpdateMedia($model), // it updates: geometry(if available on exif), thumbnails and url
+        //     new UpdateModelWithGeometryTaxonomyWhere($model), // it relates where taxonomy terms to the Media model based on geometry attribute
+        // ];
 
-        Bus::chain($chain)
-            ->catch(function (Throwable $e) {
-                // A job within the chain has failed...
-                Log::error($e->getMessage());
-            })->dispatch();
+        // Bus::chain($chain)
+        //     ->catch(function (Throwable $e) {
+        //         // A job within the chain has failed...
+        //         Log::error($e->getMessage());
+        //     })->dispatch();
     }
 
     public function thumbnail(Media $model, $size): string

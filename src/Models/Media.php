@@ -2,13 +2,17 @@
 
 namespace Wm\WmPackage\Models;
 
-use Spatie\MediaLibrary\MediaCollections\Models\Media as SpatieMedia;
 use Wm\WmPackage\Observers\UgcObserver;
+use Wm\WmPackage\Services\GeoJsonService;
+use Spatie\MediaLibrary\MediaCollections\Models\Media as SpatieMedia;
 
 class Media extends SpatieMedia
 {
-    protected static function booted()
+    /**
+     * Calculate the geojson of a model with only the geometry
+     */
+    public function getGeojson(): array
     {
-        Media::observe(UgcObserver::class);
+        return GeoJsonService::make()->getModelAsGeojson($this);
     }
 }
