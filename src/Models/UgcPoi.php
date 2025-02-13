@@ -2,9 +2,10 @@
 
 namespace Wm\WmPackage\Models;
 
-use Wm\WmPackage\Models\Abstracts\Point;
 use Wm\WmPackage\Observers\UgcObserver;
+use Wm\WmPackage\Models\Abstracts\Point;
 use Wm\WmPackage\Traits\OwnedByUserModel;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * Class UgcPoi
@@ -41,5 +42,10 @@ class UgcPoi extends Point
     protected static function booted()
     {
         UgcPoi::observe(UgcObserver::class);
+    }
+
+    public function author(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id');
     }
 }

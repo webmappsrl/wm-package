@@ -2,9 +2,10 @@
 
 namespace Wm\WmPackage\Models;
 
-use Wm\WmPackage\Models\Abstracts\Linestring;
 use Wm\WmPackage\Observers\UgcObserver;
 use Wm\WmPackage\Traits\OwnedByUserModel;
+use Wm\WmPackage\Models\Abstracts\Linestring;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * Class UgcTrack
@@ -37,5 +38,10 @@ class UgcTrack extends Linestring
     protected static function booted()
     {
         UgcTrack::observe(UgcObserver::class);
+    }
+
+    public function author(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id');
     }
 }
