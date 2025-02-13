@@ -2,11 +2,13 @@
 
 namespace Wm\WmPackage\Nova;
 
-use Laravel\Nova\Fields\ID;
-use Laravel\Nova\Fields\Number;
-use Laravel\Nova\Fields\Text;
-use Laravel\Nova\Http\Requests\NovaRequest;
+use App\Nova\User;
 use Laravel\Nova\Resource;
+use Laravel\Nova\Fields\ID;
+use Laravel\Nova\Fields\Text;
+use Laravel\Nova\Fields\Number;
+use Laravel\Nova\Fields\BelongsTo;
+use Laravel\Nova\Http\Requests\NovaRequest;
 
 abstract class AbstractGeometryModel extends Resource
 {
@@ -36,7 +38,7 @@ abstract class AbstractGeometryModel extends Resource
         return [
             ID::make()->sortable(),
             Text::make('Name', 'name'),
-            Number::make('User ID', 'user_id'), // TODO: change it to a belongsTo field when relationships are setup
+            BelongsTo::make('Author', 'author', User::class),
             Number::make('App ID', 'app_id'), // TODO: change it to a belongsTo field when relationships are setup
             // TODO: implement geometry field
         ];
