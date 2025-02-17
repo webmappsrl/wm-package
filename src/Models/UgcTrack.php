@@ -2,11 +2,10 @@
 
 namespace Wm\WmPackage\Models;
 
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Wm\WmPackage\Models\Abstracts\MultiLineString;
 use Wm\WmPackage\Observers\UgcObserver;
 use Wm\WmPackage\Traits\OwnedByUserModel;
-use Wm\WmPackage\Models\Abstracts\Linestring;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * Class UgcTrack
