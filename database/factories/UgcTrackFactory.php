@@ -13,21 +13,22 @@ class UgcTrackFactory extends Factory
     {
         // Dummy GeoJSON per una LineString
         $geojson = json_encode([
-            'type' => 'LineString',
+            'type' => 'MultiLineString',
             'coordinates' => [
                 [
-                    $this->faker->randomFloat(6, 10, 20),
-                    $this->faker->randomFloat(6, 40, 50),
-                ],
-                [
-                    $this->faker->randomFloat(6, 10, 20),
-                    $this->faker->randomFloat(6, 40, 50),
+                    [
+                        $this->faker->randomFloat(6, 10, 20),
+                        $this->faker->randomFloat(6, 40, 50),
+                    ],
+                    [
+                        $this->faker->randomFloat(6, 10, 20),
+                        $this->faker->randomFloat(6, 40, 50),
+                    ],
                 ],
             ],
         ]);
 
         return [
-            'user_id' => $this->faker->numberBetween(1, 100),
             'app_id' => $this->faker->numberBetween(1, 100),
             'properties' => [
                 'description' => $this->faker->paragraph,

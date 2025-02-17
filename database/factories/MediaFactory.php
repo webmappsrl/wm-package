@@ -74,7 +74,6 @@ class MediaFactory extends Factory
             'order_column' => $this->faker->numberBetween(1, 100),
             'geometry' => \DB::raw("ST_GeomFromGeoJSON('{$geojson}')"),
             'app_id' => 1,
-            'user_id' => 1,
         ];
     }
 }

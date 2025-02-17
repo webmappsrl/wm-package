@@ -2,6 +2,7 @@
 
 namespace Wm\WmPackage\Models;
 
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Spatie\MediaLibrary\MediaCollections\Models\Media as SpatieMedia;
 use Wm\WmPackage\Observers\UgcObserver;
 use Wm\WmPackage\Traits\HasPackageFactory;
@@ -17,12 +18,15 @@ class Media extends SpatieMedia
         'responsive_images' => 'array',
     ];
 
-    // temporary disabled for factories (at the moment we do not have author relationship setup)
+    protected static function booted()
+    {
+        Media::observe(UgcObserver::class);
+    }
 
-    // protected static function booted()
-    // {
-    //     Media::observe(UgcObserver::class);
-    // }
+    public function author(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
 
     /**
      * Calculate the geojson of a model with only the geometry
@@ -30,5 +34,6 @@ class Media extends SpatieMedia
     public function getGeojson(): array
     {
         return GeoJsonService::make()->getModelAsGeojson($this);
+
     }
 }
