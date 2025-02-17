@@ -320,6 +320,7 @@ class EcTrack extends Linestring
     // }
 
     /**
+
      * Create a geojson from the ec track
      */
     public function getGeojson(): array
