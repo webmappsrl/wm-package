@@ -2,8 +2,24 @@
 
 namespace Wm\WmPackage\Services;
 
+use Illuminate\Database\Eloquent\Model;
+
 class GeoJsonService extends BaseService
 {
+    public function getModelAsGeojson(Model $model)
+    {
+        $properties = $model->properties ?? [];
+        $geom = GeometryComputationService::make()->getModelGeometryAsGeojson($model);
+
+        $decodedGeom = isset($geom) ? json_decode($geom, true) : null;
+
+        return [
+            'type' => 'Feature',
+            'properties' => $properties,
+            'geometry' => $decodedGeom,
+        ];
+    }
+
     public function isGeojson($string)
     {
         $gj = json_decode($string);

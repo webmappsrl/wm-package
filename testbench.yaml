@@ -1,0 +1,34 @@
+providers:
+  # - Workbench\App\Providers\WorkbenchServiceProvider
+
+migrations:
+  - workbench/database/migrations
+
+workbench:
+  start: '/'
+  install: true
+  health: false
+  discovers:
+    web: true
+    api: false
+    commands: false
+    components: false
+    views: false
+  build:
+    - asset-publish
+    - create-sqlite-db
+    - db-wipe
+    - migrate-fresh:
+        --seed: true
+        --seeder: Workbench\Database\Seeders\DatabaseSeeder
+  assets:
+    - laravel-assets
+  sync: []
+
+env:
+  DB_CONNECTION: pgsql
+  DB_USERNAME: wm_package
+  DB_USER_PASSWORD: wm_package
+  DB_PASSWORD: wm_package
+  DB_DATABASE: wm_package
+  DB_HOST: db

@@ -12,3 +12,12 @@ services:
     volumes:
       - ".:/var/www/html/wm-package"
     working_dir: "/var/www/html/wm-package"
+  db:
+      image: postgis/postgis:17-3.5-alpine
+      container_name: "postgres_wm_package"
+      restart: always
+      environment:
+        POSTGRES_PASSWORD: wm_package
+        POSTGRES_USER_PASSWORD: wm_package
+        POSTGRES_USER: wm_package
+        POSTGRES_DB: wm_package
