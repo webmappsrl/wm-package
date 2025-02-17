@@ -2,16 +2,16 @@
 
 namespace Wm\WmPackage\Models;
 
-use Laravel\Scout\Searchable;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\App;
-use Spatie\Translatable\HasTranslations;
-use Wm\WmPackage\Traits\TaxonomyAbleModel;
-use Wm\WmPackage\Observers\EcTrackObserver;
-use Symm\Gisconverter\Geometry\MultiLineString;
-use Wm\WmPackage\Services\GeometryComputationService;
 use ChristianKuri\LaravelFavorite\Traits\Favoriteable;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\DB;
+use Laravel\Scout\Searchable;
+use Spatie\Translatable\HasTranslations;
+use Symm\Gisconverter\Geometry\MultiLineString;
+use Wm\WmPackage\Observers\EcTrackObserver;
+use Wm\WmPackage\Services\GeometryComputationService;
+use Wm\WmPackage\Traits\TaxonomyAbleModel;
 
 class EcTrack extends MultiLineString
 {

@@ -2,9 +2,8 @@
 
 namespace Wm\WmPackage\Nova;
 
-use Wm\WmPackage\Traits\UgcTrait;
-use Wm\WmPackage\Nova\AbstractPointModel;
 use Laravel\Nova\Http\Requests\NovaRequest;
+use Wm\WmPackage\Traits\UgcTrait;
 
 class UgcPoi extends AbstractPointModel
 {

@@ -3,7 +3,6 @@
 namespace Wm\WmPackage\Nova;
 
 use Laravel\Nova\Http\Requests\NovaRequest;
-use Wm\WmPackage\Nova\AbstractGeometryModel;
 
 abstract class AbstractPointModel extends AbstractGeometryModel
 {
@@ -11,7 +10,7 @@ abstract class AbstractPointModel extends AbstractGeometryModel
     {
         return [
             ...parent::fields($request),
-            //MapPoint::make('Geometry', 'geometry'), TODO: uncomment when geometry field issue with nova 5 is fixed
+            // MapPoint::make('Geometry', 'geometry'), TODO: uncomment when geometry field issue with nova 5 is fixed
         ];
     }
 }

@@ -24,7 +24,7 @@ class Media extends SpatieMedia
     //     Media::observe(UgcObserver::class);
     // }
 
-/**
+    /**
      * Calculate the geojson of a model with only the geometry
      */
     public function getGeojson(): array

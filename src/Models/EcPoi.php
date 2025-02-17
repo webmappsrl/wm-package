@@ -53,7 +53,6 @@ class EcPoi extends Point
         return $this->belongsToMany(EcTrack::class);
     }
 
-
     // /**
     //  * Return the json version of the ec poi, avoiding the geometry
     //  * TODO: unit TEST
@@ -220,7 +219,6 @@ class EcPoi extends Point
         })->toArray();
     }
 
-
     // private function setOutSourceValue(): array
     // {
     //     $array = $this->toArray();
@@ -247,7 +245,6 @@ class EcPoi extends Point
 
     //     return $array;
     // }
-
 
     public function getSearchableString($app_id = 0)
     {

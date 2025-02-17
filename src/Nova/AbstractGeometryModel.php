@@ -2,13 +2,12 @@
 
 namespace Wm\WmPackage\Nova;
 
-use Wm\MapPoint\MapPoint;
-use Laravel\Nova\Resource;
-use Laravel\Nova\Fields\ID;
 use Laravel\Nova\Fields\Code;
-use Laravel\Nova\Fields\Text;
+use Laravel\Nova\Fields\ID;
 use Laravel\Nova\Fields\Number;
+use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
+use Laravel\Nova\Resource;
 
 abstract class AbstractGeometryModel extends Resource
 {
@@ -86,7 +85,7 @@ abstract class AbstractGeometryModel extends Resource
 
     /**
      * Get the name of the properties column based on model type.
-     * 
+     *
      * @return string The name of the properties column
      */
     protected function getPropertiesColumnName(): string

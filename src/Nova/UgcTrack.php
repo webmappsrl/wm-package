@@ -2,9 +2,8 @@
 
 namespace Wm\WmPackage\Nova;
 
-use Wm\WmPackage\Traits\UgcTrait;
 use Laravel\Nova\Http\Requests\NovaRequest;
-use Wm\WmPackage\Nova\AbstractMultiLineStringModel;
+use Wm\WmPackage\Traits\UgcTrait;
 
 class UgcTrack extends AbstractMultiLineStringModel
 {

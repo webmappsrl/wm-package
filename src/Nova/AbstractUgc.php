@@ -2,7 +2,6 @@
 
 namespace Wm\WmPackage\Nova;
 
-use Laravel\Nova\Fields\Code;
 use Laravel\Nova\Http\Requests\NovaRequest;
 
 abstract class AbstractUgc extends AbstractGeometryModel
