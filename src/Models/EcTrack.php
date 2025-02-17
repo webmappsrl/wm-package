@@ -8,12 +8,12 @@ use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\DB;
 use Laravel\Scout\Searchable;
 use Spatie\Translatable\HasTranslations;
-use Wm\WmPackage\Models\Abstracts\Linestring;
+use Symm\Gisconverter\Geometry\MultiLineString;
 use Wm\WmPackage\Observers\EcTrackObserver;
 use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Traits\TaxonomyAbleModel;
 
-class EcTrack extends Linestring
+class EcTrack extends MultiLineString
 {
     use Favoriteable, HasTranslations, Searchable, TaxonomyAbleModel;
 
