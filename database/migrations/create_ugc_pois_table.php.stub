@@ -13,17 +13,18 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('ec_pois', function (Blueprint $table) {
+        Schema::create('ugc_pois', function (Blueprint $table) {
             $table->id('id');
             $table->jsonb('properties');
-            $table->text('name');
-            $table->point('geometry', 4326);
+            $table->text('name')->default('');
+            $table->geography('geometry', 'point', 4326);
             $table->integer('app_id');
-            $table->bigInteger('osmid')->nullable();
+            $table->integer('user_id');
             $table->timestamps();
 
             $table->index('osmid');
             $table->index('app_id');
+            $table->index('user_id');
             $table->spatialIndex('geometry');
         });
     }
@@ -35,6 +36,6 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('ec_pois');
+        Schema::dropIfExists('ugc_pois');
     }
 };
