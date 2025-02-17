@@ -2,15 +2,14 @@
 
 namespace Tests\Unit\Services\EcTrackService;
 
-use Wm\WmPackage\Http\Clients\DemClient;
-use Wm\WmPackage\Services\Models\EcTrackService;
-use Wm\WmPackage\Tests\TestCase;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Mockery;
-use Wm\WmPackage\Services\GeometryComputationService;
+use Wm\WmPackage\Http\Clients\DemClient;
 use Wm\WmPackage\Http\Clients\OsmClient;
 use Wm\WmPackage\Models\EcTrack;
-use Illuminate\Database\ConnectionInterface;
+use Wm\WmPackage\Services\GeometryComputationService;
+use Wm\WmPackage\Services\Models\EcTrackService;
+use Wm\WmPackage\Tests\TestCase;
 
 class AbstractEcTrackServiceTest extends TestCase
 {
@@ -59,8 +58,8 @@ class AbstractEcTrackServiceTest extends TestCase
     {
         $track = Mockery::mock(EcTrack::class)->makePartial();
         $track->manual_data = $manualData;
-        $track->osm_data    = $osmData;
-        $track->dem_data    = $demData;
+        $track->osm_data = $osmData;
+        $track->dem_data = $demData;
 
         // Simula i metodi getDirty() e getDemDataFields()
         $track->shouldReceive('getDirty')->andReturn($dirtyFields);
@@ -75,11 +74,11 @@ class AbstractEcTrackServiceTest extends TestCase
     public function prepareTrackWithOsmData($track): void
     {
         $track->shouldReceive('setAttribute')
-              ->with('osm_data', Mockery::type('array'))
-              ->once();
+            ->with('osm_data', Mockery::type('array'))
+            ->once();
         $track->shouldReceive('getAttribute')
-              ->with('osm_data')
-              ->andReturn(json_encode([]));
+            ->with('osm_data')
+            ->andReturn(json_encode([]));
         $track->shouldReceive('saveQuietly')->once();
     }
 
@@ -92,29 +91,25 @@ class AbstractEcTrackServiceTest extends TestCase
 
     /**
      * Helper per creare un mock di EcTrack.
-     *
-     * @param int $id
-     * @param array|null $geojson
-     * @return EcTrack
      */
-    protected function createMockTrack(int $id, array $geojson = null): EcTrack
+    protected function createMockTrack(int $id, ?array $geojson = null): EcTrack
     {
         if (is_null($geojson)) {
             $geojson = [
-                'type'       => 'Feature',
+                'type' => 'Feature',
                 'properties' => ['id' => $id],
-                'geometry'   => null,
+                'geometry' => null,
             ];
         }
         $track = Mockery::mock(EcTrack::class);
         $track->shouldReceive('getGeojson')->andReturn($geojson);
+
         return $track;
     }
 
     /**
      * Helper per creare un mock di User.
      *
-     * @param int $id
      * @return \Wm\WmPackage\Models\User
      */
     protected function createMockUser(int $id)
@@ -123,6 +118,7 @@ class AbstractEcTrackServiceTest extends TestCase
         $user = Mockery::mock(\Wm\WmPackage\Models\User::class)->makePartial();
         $user->id = $id;
         $user->shouldIgnoreMissing();
+
         return $user;
     }
 
@@ -152,7 +148,7 @@ class MockDemClient extends DemClient
                 'distance' => 5000,
                 'duration_forward_hiking' => 120,
                 'duration_backward_hiking' => 90,
-            ]
+            ],
         ];
     }
 }
@@ -162,8 +158,10 @@ class MockGeometryComputationService extends GeometryComputationService
     public function getLineLocatePointFloat(string $trackGeoJson, string $poiGeoJson): float
     {
         $poiGeometry = json_decode($poiGeoJson, true);
+
         return $poiGeometry['order'];
     }
+
     public function get3dLineMergeWktFromGeojson($geojson): string
     {
         return 'LINESTRING(10.0 45.0, 10.5 45.5)';
@@ -176,16 +174,16 @@ class MockOsmClient extends OsmClient
     {
         return json_encode([
             'properties' => [
-                'name'              => 'New Track Name',
-                'ref'               => 'T123',
-                'duration:forward'  => '02:30',
+                'name' => 'New Track Name',
+                'ref' => 'T123',
+                'duration:forward' => '02:30',
                 'duration:backward' => '03:00',
-                'ascent'            => 500,
-                'descent'           => 400,
-                'distance'          => 7000,
+                'ascent' => 500,
+                'descent' => 400,
+                'distance' => 7000,
             ],
             'geometry' => [
-                'type'        => 'LineString',
+                'type' => 'LineString',
                 'coordinates' => [[10.0, 45.0], [10.5, 45.5]],
             ],
         ]);
@@ -198,7 +196,7 @@ class MockOsmClientNoProperties extends OsmClient
     {
         return json_encode([
             'geometry' => [
-                'type'        => 'LineString',
+                'type' => 'LineString',
                 'coordinates' => [[10.0, 45.0], [10.5, 45.5]],
             ],
         ]);
@@ -211,13 +209,13 @@ class MockOsmClientNoGeometry extends OsmClient
     {
         return json_encode([
             'properties' => [
-                'name'              => 'New Track Name',
-                'ref'               => 'T123',
-                'duration:forward'  => '02:30',
+                'name' => 'New Track Name',
+                'ref' => 'T123',
+                'duration:forward' => '02:30',
                 'duration:backward' => '03:00',
-                'ascent'            => 500,
-                'descent'           => 400,
-                'distance'          => 7000,
+                'ascent' => 500,
+                'descent' => 400,
+                'distance' => 7000,
             ],
             // "geometry" mancante
         ]);

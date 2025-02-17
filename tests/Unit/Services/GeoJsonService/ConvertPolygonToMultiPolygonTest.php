@@ -1,6 +1,7 @@
 <?php
 
 namespace Tests\Unit\Services\GeoJsonService;
+
 class ConvertPolygonToMultiPolygonTest extends AbstractGeoJsonTest
 {
     /** @test */

@@ -2,30 +2,30 @@
 
 namespace Tests\Unit\Services\EcTrackService;
 
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Mockery;
 use Wm\WmPackage\Models\EcTrack;
-use Wm\WmPackage\Services\Models\EcTrackService;
-use Wm\WmPackage\Http\Clients\OsmClient;
-use Illuminate\Foundation\Testing\DatabaseTransactions;
 
 class UpdateOsmDataTest extends AbstractEcTrackServiceTest
 {
     use DatabaseTransactions;
 
     const OSM_ID = '123456';
+
     const PROPERTIES_TO_CHECK = [
-        'name'              => 'T123 - New Track Name',
-        'ref'               => 'T123',
-        'duration_forward'  => '150',
+        'name' => 'T123 - New Track Name',
+        'ref' => 'T123',
+        'duration_forward' => '150',
         'duration_backward' => '180',
-        'geometry'          => 'SRID=4326;LINESTRING(10.0 45.0, 10.5 45.5)',
-        'ascent'            => 500,
-        'descent'           => 400,
-        'distance'          => 7000,
+        'geometry' => 'SRID=4326;LINESTRING(10.0 45.0, 10.5 45.5)',
+        'ascent' => 500,
+        'descent' => 400,
+        'distance' => 7000,
     ];
+
     const ERROR_MESSAGES = [
         'missing_properties' => 'Undefined array key "properties"',
-        'wrong_osm_id'       => 'Wrong OSM ID',
+        'wrong_osm_id' => 'Wrong OSM ID',
     ];
 
     /** @test */
@@ -89,12 +89,12 @@ class UpdateOsmDataTest extends AbstractEcTrackServiceTest
     {
         $track = Mockery::mock(EcTrack::class)->makePartial();
         $track->osmid = self::OSM_ID;
-        
+
         // Imposta i campi preesistenti
         $track->name = 'Pre-existing Name';
         $track->ref = 'Pre-existing Ref';
         $track->ascent = 100;
-        
+
         // Imposta i campi che sono null e dovrebbero essere aggiornati
         $track->geometry = null;
         $track->descent = null;
@@ -109,16 +109,16 @@ class UpdateOsmDataTest extends AbstractEcTrackServiceTest
 
         // Campi che non devono essere sovrascritti
         $unchangedFields = [
-            'name'   => 'Pre-existing Name',
-            'ref'    => 'Pre-existing Ref',
+            'name' => 'Pre-existing Name',
+            'ref' => 'Pre-existing Ref',
             'ascent' => 100,
         ];
         // Campi che devono essere aggiornati con i valori dai dati OSM
         $updatedFields = [
-            'geometry'          => 'SRID=4326;LINESTRING(10.0 45.0, 10.5 45.5)',
-            'descent'           => 400,
-            'distance'          => 7000,
-            'duration_forward'  => '150',
+            'geometry' => 'SRID=4326;LINESTRING(10.0 45.0, 10.5 45.5)',
+            'descent' => 400,
+            'distance' => 7000,
+            'duration_forward' => '150',
             'duration_backward' => '180',
         ];
 
@@ -129,7 +129,4 @@ class UpdateOsmDataTest extends AbstractEcTrackServiceTest
     /**
      * Helper method per asserire che i campi del track abbiano i valori attesi.
      */
-    
-
-
 }

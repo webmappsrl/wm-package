@@ -7,28 +7,34 @@ use Exception;
 class UpdateCurrentDataTest extends AbstractEcTrackServiceTest
 {
     const ASCENT_FIELD_LABEL = 'ascent';
+
     const DESCENT_FIELD_LABEL = 'descent';
+
     const SPEED_FIELD_LABEL = 'speed';
+
     const DISTANCE_FIELD_LABEL = 'distance';
+
     const OSM_DATA_FIELDS = [
         self::ASCENT_FIELD_LABEL => 500,
         self::DESCENT_FIELD_LABEL => 400,
         self::DISTANCE_FIELD_LABEL => 7000,
     ];
+
     const DIRTY_DATA_FIELDS = [
         self::ASCENT_FIELD_LABEL => 600,
         self::DESCENT_FIELD_LABEL => 500,
         self::DISTANCE_FIELD_LABEL => 10,
         self::SPEED_FIELD_LABEL => 10,
     ];
+
     /** @test */
     public function update_current_data_updates_manual_data_for_non_null_dirty_fields()
     {
         // I dirty fields hanno valori non null e vanno semplicemente copiati in manual_data.
-        $dirtyFields   = [
-            self::ASCENT_FIELD_LABEL => self::DIRTY_DATA_FIELDS[self::ASCENT_FIELD_LABEL], 
-            self::DESCENT_FIELD_LABEL => self::DIRTY_DATA_FIELDS[self::DESCENT_FIELD_LABEL], 
-            self::SPEED_FIELD_LABEL => self::DIRTY_DATA_FIELDS[self::SPEED_FIELD_LABEL]
+        $dirtyFields = [
+            self::ASCENT_FIELD_LABEL => self::DIRTY_DATA_FIELDS[self::ASCENT_FIELD_LABEL],
+            self::DESCENT_FIELD_LABEL => self::DIRTY_DATA_FIELDS[self::DESCENT_FIELD_LABEL],
+            self::SPEED_FIELD_LABEL => self::DIRTY_DATA_FIELDS[self::SPEED_FIELD_LABEL],
         ];
         $demDataFields = [self::ASCENT_FIELD_LABEL, self::DESCENT_FIELD_LABEL]; // 'speed' non è rilevante
         $initialManualData = json_encode(['existing' => 'data']);
@@ -50,7 +56,7 @@ class UpdateCurrentDataTest extends AbstractEcTrackServiceTest
     public function update_current_data_updates_track_field_with_osm_value_when_dirty_field_is_null()
     {
         // Se il dirty field è null e osm_data contiene un valore, quello va usato.
-        $dirtyFields   = ['ascent' => null, 'descent' => null];
+        $dirtyFields = ['ascent' => null, 'descent' => null];
         $demDataFields = ['ascent', 'descent'];
 
         // Simuliamo osm_data e dem_data (in questo caso osm_data ha la precedenza).
@@ -79,7 +85,7 @@ class UpdateCurrentDataTest extends AbstractEcTrackServiceTest
     public function update_current_data_updates_track_field_with_dem_value_when_osm_value_missing()
     {
         // Se il dirty field è null e osm_data manca il valore, si usa quello da dem_data.
-        $dirtyFields   = ['distance' => null];
+        $dirtyFields = ['distance' => null];
         $demDataFields = ['distance'];
         $osmData = json_encode(['distance' => null]); // Valore OSM mancante
         $demData = json_encode(['distance' => 7500]);
@@ -99,7 +105,7 @@ class UpdateCurrentDataTest extends AbstractEcTrackServiceTest
     public function update_current_data_does_not_update_field_when_not_in_dem_data_fields()
     {
         // Se il dirty field non è elencato tra i demDataFields, il campo non viene processato.
-        $dirtyFields   = ['speed' => 15];
+        $dirtyFields = ['speed' => 15];
         $demDataFields = ['ascent', 'descent']; // 'speed' viene ignorato
         $initialManualData = json_encode(['existing' => 'value']);
         $track = $this->prepareTrackWithDirtyFields($dirtyFields, $demDataFields, $initialManualData);
@@ -116,7 +122,7 @@ class UpdateCurrentDataTest extends AbstractEcTrackServiceTest
     public function update_current_data_logs_error_when_exception_occurs()
     {
         // Simuliamo un'eccezione in saveQuietly per verificare che venga catturata internamente.
-        $dirtyFields   = ['ascent' => 600];
+        $dirtyFields = ['ascent' => 600];
         $demDataFields = ['ascent'];
         $track = $this->prepareTrackWithDirtyFields($dirtyFields, $demDataFields, '{}');
 

@@ -2,10 +2,6 @@
 
 namespace Tests\Unit\Services\EcTrackService;
 
-use Mockery;
-use Tests\Unit\Services\EcTrackService\AbstractEcTrackServiceTest;
-use Wm\WmPackage\Models\EcTrack;
-
 class GetRelatedPoisOrderTest extends AbstractEcTrackServiceTest
 {
     /** @test */
@@ -16,8 +12,8 @@ class GetRelatedPoisOrderTest extends AbstractEcTrackServiceTest
                 'properties' => [
                     // 'related_pois' non è presente.
                 ],
-                'geometry' => ['some' => 'track_geometry']
-            ]
+                'geometry' => ['some' => 'track_geometry'],
+            ],
         ];
         $track = $this->createMockTrack(1, $geojson);
 
@@ -34,23 +30,23 @@ class GetRelatedPoisOrderTest extends AbstractEcTrackServiceTest
                     'related_pois' => [
                         [
                             'properties' => ['id' => 'poi1'],
-                            'geometry'   => ['order' => 0.8]
+                            'geometry' => ['order' => 0.8],
                         ],
                         [
                             'properties' => ['id' => 'poi2'],
-                            'geometry'   => ['order' => 0.2]
+                            'geometry' => ['order' => 0.2],
                         ],
                         [
                             'properties' => ['id' => 'poi3'],
-                            'geometry'   => ['order' => 0.5]
+                            'geometry' => ['order' => 0.5],
                         ],
-                    ]
+                    ],
                 ],
-                'geometry' => ['some' => 'track_geometry']
-            ]
+                'geometry' => ['some' => 'track_geometry'],
+            ],
         ];
         $track = $this->createMockTrack(1, $geojson);
-        
+
         $result = $this->ecTrackService->getRelatedPoisOrder($track);
         $this->assertEquals(['poi2', 'poi3', 'poi1'], $result);
     }

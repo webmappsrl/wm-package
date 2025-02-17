@@ -2,18 +2,22 @@
 
 namespace Tests\Unit\Services\EcTrackService;
 
-use Exception;
 use Wm\WmPackage\Models\EcTrack;
+
 class UpdateManualDataTest extends AbstractEcTrackServiceTest
 {
     const ASCENT_FIELD_LABEL = 'ascent';
+
     const DESCENT_FIELD_LABEL = 'descent';
+
     const DISTANCE_FIELD_LABEL = 'distance';
+
     const OSM_DATA_FIELDS = [
         self::ASCENT_FIELD_LABEL => 500,
         self::DESCENT_FIELD_LABEL => 400,
         self::DISTANCE_FIELD_LABEL => 7000,
     ];
+
     const DEM_DATA_FIELDS = [
         self::ASCENT_FIELD_LABEL => 300,
         self::DESCENT_FIELD_LABEL => 200,
@@ -25,14 +29,17 @@ class UpdateManualDataTest extends AbstractEcTrackServiceTest
         self::DESCENT_FIELD_LABEL => 210,
         self::DISTANCE_FIELD_LABEL => 7100,
     ];
+
     private EcTrack $track;
-    public function setUp(): void
+
+    protected function setUp(): void
     {
         parent::setUp();
         $osmData = json_encode(self::OSM_DATA_FIELDS);
         $demData = json_encode(self::DEM_DATA_FIELDS);
         $this->track = $this->prepareTrackWithDirtyFields([], [], '{}', $osmData, $demData);
     }
+
     /** @test */
     public function update_manual_data_updates_field_when_track_value_differs_from_osm_and_dem()
     {
@@ -43,7 +50,7 @@ class UpdateManualDataTest extends AbstractEcTrackServiceTest
         $this->ecTrackService->updateManualData($this->track);
 
         $this->assertEquals([
-            self::ASCENT_FIELD_LABEL => self::DIRTY_FIELDS[self::ASCENT_FIELD_LABEL]
+            self::ASCENT_FIELD_LABEL => self::DIRTY_FIELDS[self::ASCENT_FIELD_LABEL],
         ], $this->getManualData($this->track));
     }
 
@@ -73,7 +80,7 @@ class UpdateManualDataTest extends AbstractEcTrackServiceTest
         $this->assertEquals([
             self::ASCENT_FIELD_LABEL => self::DIRTY_FIELDS[self::ASCENT_FIELD_LABEL],
             self::DESCENT_FIELD_LABEL => self::DIRTY_FIELDS[self::DESCENT_FIELD_LABEL],
-            self::DISTANCE_FIELD_LABEL => self::DIRTY_FIELDS[self::DISTANCE_FIELD_LABEL]
+            self::DISTANCE_FIELD_LABEL => self::DIRTY_FIELDS[self::DISTANCE_FIELD_LABEL],
         ], $this->getManualData($this->track));
     }
 }

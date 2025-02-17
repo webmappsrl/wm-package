@@ -2,8 +2,8 @@
 
 namespace Tests\Unit\Services\EcTrackService;
 
-use Mockery;
 use Illuminate\Support\Collection;
+use Mockery;
 use Wm\WmPackage\Models\EcTrack;
 
 class UpdateTrackAppRelationsInfoTest extends AbstractEcTrackServiceTest
@@ -15,11 +15,12 @@ class UpdateTrackAppRelationsInfoTest extends AbstractEcTrackServiceTest
         parent::setUp();
         $this->track = Mockery::mock(EcTrack::class)->makePartial();
     }
+
     /** @test */
     public function update_track_app_relations_info_does_not_call_update_when_no_layers()
     {
         // Prepara un track senza layers associati.
-        $this->track->associatedLayers = new Collection(); // Collection vuota
+        $this->track->associatedLayers = new Collection; // Collection vuota
 
         // Ci aspettiamo che update non venga chiamato.
         $this->track->shouldNotReceive('update');
@@ -33,8 +34,8 @@ class UpdateTrackAppRelationsInfoTest extends AbstractEcTrackServiceTest
     {
         // Prepara un track con due layers associati.
         // Creiamo due layer fittizi come stdClass con proprietà app_id e id.
-        $layer1 = (object)[ 'app_id' => 'app1', 'id' => 123 ];
-        $layer2 = (object)[ 'app_id' => 'app2', 'id' => 456 ];
+        $layer1 = (object) ['app_id' => 'app1', 'id' => 123];
+        $layer2 = (object) ['app_id' => 'app2', 'id' => 456];
         $this->track->associatedLayers = new Collection([$layer1, $layer2]);
 
         // Imposta le proprietà relative al taxonomy sul track.
