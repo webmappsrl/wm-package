@@ -59,7 +59,7 @@ class EcTrackService extends BaseService
      */
     public function updateDemData(EcTrack $track)
     {
-        $geojson = $track->getTrackGeometryGeojson();
+        $geojson = $track->getGeojson();
 
         // Request was successful, handle the response data here
         $responseData = $this->demClient->getTechData($geojson);
