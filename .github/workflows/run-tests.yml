@@ -36,10 +36,10 @@ jobs:
           php-version: ${{ matrix.php }}
           extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv, imagick, fileinfo
           coverage: none
-          
+
       - name: Add db host to /etc/hosts
         run: |
-          echo "127.0.0.1 db" >> /etc/hosts
+          sudo echo "127.0.0.1 db" >> /etc/hosts
 
       - name: Setup problem matchers
         run: |
