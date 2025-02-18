@@ -1,3 +1,5 @@
+# https://packages.tools/getting-started/configuration.html#workbench-configuration
+
 providers:
   # - Workbench\App\Providers\WorkbenchServiceProvider
 
