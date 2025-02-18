@@ -10,7 +10,9 @@ use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Services\Models\EcTrackService;
 use Wm\WmPackage\Tests\TestCase;
-
+use Illuminate\Support\Collection;
+use Wm\WmPackage\Models\App;
+use Wm\WmPackage\Models\User;
 class AbstractEcTrackServiceTest extends TestCase
 {
     use DatabaseTransactions;
@@ -43,6 +45,12 @@ class AbstractEcTrackServiceTest extends TestCase
         $this->ecTrackService = EcTrackService::make();
     }
 
+    public function rebindEcTrackService(string $ecTrackServiceClass): void
+    {
+        $this->app->bind(EcTrackService::class, $ecTrackServiceClass);
+        $this->ecTrackService = EcTrackService::make();
+    }
+
     public function assertFields($track, array $fields, string $messageSuffix): void
     {
         foreach ($fields as $field => $expected) {
@@ -53,8 +61,7 @@ class AbstractEcTrackServiceTest extends TestCase
             );
         }
     }
-
-    public function createTrackWithFields(array $fields)
+    public function createTrackWithFields(?array $fields = [])
     {
         $track = Mockery::mock(EcTrack::class)->makePartial();
         foreach ($fields as $field => $value) {
@@ -79,6 +86,20 @@ class AbstractEcTrackServiceTest extends TestCase
 
         return $track;
     }
+    public function prepareTrackWithGeojson(int $id, ?array $geojson = null)
+    {
+        if (is_null($geojson)) {
+            $geojson = [
+                'type' => 'Feature',
+                'properties' => ['id' => $id],
+                'geometry' => null,
+            ];
+        }
+        $track = Mockery::mock(EcTrack::class);
+        $track->shouldReceive('getGeojson')->andReturn($geojson);
+
+        return $track;
+    }
 
     public function prepareTrackWithOsmData($track): void
     {
@@ -98,37 +119,41 @@ class AbstractEcTrackServiceTest extends TestCase
             : json_decode($track->manual_data, true);
     }
 
-    /**
-     * Helper per creare un mock di EcTrack.
-     */
-    protected function createMockTrack(int $id, ?array $geojson = null): EcTrack
-    {
-        if (is_null($geojson)) {
-            $geojson = [
-                'type' => 'Feature',
-                'properties' => ['id' => $id],
-                'geometry' => null,
-            ];
-        }
-        $track = Mockery::mock(EcTrack::class);
-        $track->shouldReceive('getGeojson')->andReturn($geojson);
 
-        return $track;
+    public function createMockApp(string $appId, Collection $tracks)
+    {
+        $app = Mockery::mock(App::class);
+        $app->shouldReceive('getAttribute')->with('app_id')->andReturn($appId);
+        $app->shouldReceive('getAttribute')->with('ecTracks')->andReturn($tracks);
+
+        return $app;
     }
 
-    /**
-     * Helper per creare un mock di User.
-     *
-     * @return \Wm\WmPackage\Models\User
-     */
-    protected function createMockUser(int $id)
+    public function createMockUser(int $id)
     {
         // Usiamo makePartial() e shouldIgnoreMissing() per evitare errori su metodi non stubmati
-        $user = Mockery::mock(\Wm\WmPackage\Models\User::class)->makePartial();
+        $user = Mockery::mock(User::class)->makePartial();
         $user->id = $id;
         $user->shouldIgnoreMissing();
 
         return $user;
+    }
+
+    public function createMockEcTrackService()
+    {
+        $ecTrackService = Mockery::mock(EcTrackService::class)->makePartial();
+        $ecTrackService->shouldIgnoreMissing();
+        return $ecTrackService;
+    }
+
+    public function createMockTracks(int $count): Collection
+    {
+        $tracks = new Collection;
+        for ($i = 0; $i < $count; $i++) {
+            $tracks->push($this->prepareTrackWithGeojson($i));
+        }
+
+        return $tracks;
     }
 
     protected function tearDown(): void
@@ -158,6 +183,19 @@ class MockDemClient extends DemClient
                 'duration_forward_hiking' => 120,
                 'duration_backward_hiking' => 90,
             ],
+        ];
+    }
+}
+
+class MockEcTrackService extends EcTrackService
+{
+    public static function getMostViewed(App $app, int $limit = 5): array
+    {
+        return [
+            'type' => 'FeatureCollection',
+            'features' => $app->ecTracks->map(function ($track) {
+                return $track->getGeojson();
+            })->toArray(),
         ];
     }
 }

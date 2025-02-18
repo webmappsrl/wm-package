@@ -23,10 +23,7 @@ class UpdateDataChainTest extends AbstractEcTrackServiceTest
 
     public function test_update_data_chain_dispatches_at_least_one_job()
     {
-        // Eseguiamo la funzione
         $this->ecTrackService->updateDataChain($this->track);
-
-        // Controlliamo che almeno un job sia stato dispatchato
         Bus::assertDispatched(UpdateEcTrackDemJob::class);
     }
 
