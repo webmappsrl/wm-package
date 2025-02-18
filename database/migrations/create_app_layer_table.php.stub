@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
+class CreateAppLayerTable extends Migration
 {
     /**
      * Run the migrations.
@@ -13,13 +13,11 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->string('sku')->nullable();
-            $table->float('balance', 0, 0)->default(0);
-            $table->string('fiscal_code', 16)->nullable()->unique();
-            $table->integer('app_id')->nullable();
-
-            $table->index('app_id');
+        Schema::create('app_layer', function (Blueprint $table) {
+            $table->id();
+            $table->bigInteger('layer_id');
+            $table->morphs('layerable');
+            $table->timestamps();
         });
     }
 
@@ -30,6 +28,6 @@ return new class extends Migration
      */
     public function down()
     {
-        
+        Schema::dropIfExists('app_layer');
     }
-};
+}
