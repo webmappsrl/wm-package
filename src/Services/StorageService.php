@@ -11,27 +11,24 @@ class StorageService extends BaseService
     public function storeTrack(int $trackId, $contents): string|false
     {
         $path = $this->getTrackPath($trackId);
-
-        return $this->getWmFeTracksDisk()->put($path, $contents) ? $path : false;
+        return $this->getRemoteWfeDisk()->put($path, $contents) ? $path : false;
     }
 
     public function getTrackGeojson(int $trackId): ?string
     {
-
-        return $this->getWmFeTracksDisk()->get($this->getTrackPath($trackId));
+        return $this->getRemoteWfeDisk()->get($this->getTrackPath($trackId));
     }
 
     public function storePBF(int $appId, string $z, string $x, string $y, $pbfContent): string|false
     {
-        $path = "{$appId}/{$z}/{$x}/{$y}.pbf";
-
-        return $this->getPbfDisk()->put($path, $pbfContent) ? $path : false;
+        $path = $this->getShardBasePath($appId) . "pbf/{$z}/{$x}/{$y}.pbf";
+        return $this->getRemoteWfeDisk()->put($path, $pbfContent) ? $path : false;
     }
 
     public function storeAppConfig(int $appId, string $contents): string|false
     {
         $path = $this->getAppConfigPath($appId);
-        $a = $this->getRemoteAppConfigDisk()->put($path, $contents);
+        $a = $this->getRemoteWfeDisk()->put($path, $contents);
         $b = $this->getLocalAppConfigDisk()->put($path, $contents);
 
         return $a && $b ? $path : false;
@@ -40,14 +37,13 @@ class StorageService extends BaseService
     public function getAppConfigJson(int $appId): ?string
     {
         $path = $this->getAppConfigPath($appId);
-
-        return $this->getRemoteAppConfigDisk()->get($path) ?? $this->getLocalAppConfigDisk()->get($path);
+        return $this->getRemoteWfeDisk()->get($path) ?? $this->getLocalAppConfigDisk()->get($path);
     }
 
     public function storePois(int $appId, string $contents): string|false
     {
         $path = $this->getPoisPath($appId);
-        $a = $this->getRemotePoisDisk()->put($path, $contents);
+        $a = $this->getRemoteWfeDisk()->put($path, $contents);
         $b = $this->getLocalPoisDisk()->put($path, $contents);
 
         return $a && $b ? $path : false;
@@ -56,14 +52,12 @@ class StorageService extends BaseService
     public function getPoisGeojson(int $appId): ?string
     {
         $path = $this->getPoisPath($appId);
-
-        return $this->getRemotePoisDisk()->get($path) ?? $this->getLocalPoisDisk()->get($path);
+        return $this->getRemoteWfeDisk()->get($path) ?? $this->getLocalPoisDisk()->get($path);
     }
 
     public function storeAppQrCode(int $appId, string $svg): string|false
     {
-        $path = "qrcode/{$appId}/webapp-qrcode.svg";
-
+        $path = $this->getShardBasePath($appId) . "qrcode/webapp-qrcode.svg";
         return $this->getPublicDisk()->put($path, $svg) ? $path : false;
     }
 
@@ -151,20 +145,22 @@ class StorageService extends BaseService
     // PATHS
     // TODO: move all paths here
     //
+
     private function getPoisPath(int $appId): string
     {
-        return "{$appId}.geojson";
+        return $this->getShardBasePath($appId) . "pois.geojson";
     }
 
     private function getTrackPath(int $trackId): string
     {
-        return "{$trackId}.json";
+        return $this->getShardBasePath() . "{$trackId}.json";
     }
 
     private function getAppConfigPath(int $appId): string
     {
-        return "{$appId}.json";
+        return $this->getShardBasePath($appId) . "config.json";
     }
+
     //
     // PUBLIC GETTERS
     //
@@ -174,45 +170,12 @@ class StorageService extends BaseService
         return $this->getPublicDisk()->path($path);
     }
 
-    //
-    // PRIVATE GETTERS
-    //
-    private function getLocalPoisDisk(): Filesystem
-    {
-        return $this->getDisk('pois');
-    }
-
-    private function getRemotePoisDisk(): Filesystem
-    {
-        return $this->getDisk('wmfepois');
-    }
-
-    private function getLocalAppConfigDisk(): Filesystem
-    {
-        return $this->getDisk('conf');
-    }
-
-    private function getRemoteAppConfigDisk(): Filesystem
-    {
-        return $this->getDisk('wmfeconf');
-    }
-
-    private function getPbfDisk(): Filesystem
-    {
-        return $this->getDisk('s3-wmpbf');
-    }
-
-    private function getWmFeTracksDisk(): Filesystem
-    {
-        return $this->getDisk('wmfetracks');
-    }
-
     public function getMediaDisk(): Filesystem
     {
         return $this->getDisk('s3');
     }
 
-    private function getPublicDisk(): Filesystem
+    public function getPublicDisk(): Filesystem
     {
         return $this->getDisk('public');
     }
@@ -222,8 +185,40 @@ class StorageService extends BaseService
         return $this->getDisk('local');
     }
 
+    //
+    // PRIVATE GETTERS
+    //
+
+    private function getLocalPoisDisk(): Filesystem
+    {
+        return $this->getDisk('pois');
+    }
+
+    private function getRemoteWfeDisk(): Filesystem
+    {
+        return $this->getDisk('wmfe');
+    }
+
+    private function getLocalAppConfigDisk(): Filesystem
+    {
+        return $this->getDisk('conf');
+    }
+
     private function getDisk($disk): Filesystem
     {
         return Storage::disk($disk);
+    }
+
+    private function getShardName(): string
+    {
+        return config('wm-package.shard_name', 'webmapp');
+    }
+
+    private function getShardBasePath(int $appId = null)
+    {
+        $basePath = '/' . $this->getShardName() . '/';
+        if (is_int($appId))
+            $basePath .= $appId . "/";
+        return $basePath;
     }
 }
