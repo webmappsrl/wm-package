@@ -54,6 +54,15 @@ class AbstractEcTrackServiceTest extends TestCase
         }
     }
 
+    public function createTrackWithFields(array $fields)
+    {
+        $track = Mockery::mock(EcTrack::class)->makePartial();
+        foreach ($fields as $field => $value) {
+            $track->$field = $value;
+        }
+        return $track;
+    }
+
     public function prepareTrackWithDirtyFields(array $dirtyFields, array $demDataFields, ?string $manualData = '{}', ?string $osmData = '{}', ?string $demData = '{}'): EcTrack
     {
         $track = Mockery::mock(EcTrack::class)->makePartial();
