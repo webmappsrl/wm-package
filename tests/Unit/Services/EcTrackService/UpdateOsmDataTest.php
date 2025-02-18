@@ -3,8 +3,6 @@
 namespace Tests\Unit\Services\EcTrackService;
 
 use Illuminate\Foundation\Testing\DatabaseTransactions;
-use Mockery;
-use Wm\WmPackage\Models\EcTrack;
 
 class UpdateOsmDataTest extends AbstractEcTrackServiceTest
 {
@@ -38,12 +36,12 @@ class UpdateOsmDataTest extends AbstractEcTrackServiceTest
     ];
 
     const UPDATED_FIELDS = [
-            'geometry' => 'SRID=4326;LINESTRING(10.0 45.0, 10.5 45.5)',
-            'descent' => 400,
-            'distance' => 7000,
-            'duration_forward' => '150',
-            'duration_backward' => '180',
-        ];
+        'geometry' => 'SRID=4326;LINESTRING(10.0 45.0, 10.5 45.5)',
+        'descent' => 400,
+        'distance' => 7000,
+        'duration_forward' => '150',
+        'duration_backward' => '180',
+    ];
 
     protected $track;
 
@@ -54,6 +52,7 @@ class UpdateOsmDataTest extends AbstractEcTrackServiceTest
             'osmid' => self::OSM_ID,
         ]);
     }
+
     /** @test */
     public function update_osm_data_updates_track_with_osm_data()
     {
@@ -105,7 +104,6 @@ class UpdateOsmDataTest extends AbstractEcTrackServiceTest
 
         $result = $this->ecTrackService->updateOsmData($this->track);
         $this->assertTrue($result['success']);
-
 
         $this->assertFields($this->track, self::UNCHANGED_FIELDS, self::ERROR_MESSAGES['should_remain_unchanged']);
         $this->assertFields($this->track, self::UPDATED_FIELDS, self::ERROR_MESSAGES['should_be_updated']);

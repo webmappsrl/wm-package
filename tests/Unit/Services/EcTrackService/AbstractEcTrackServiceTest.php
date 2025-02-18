@@ -3,16 +3,17 @@
 namespace Tests\Unit\Services\EcTrackService;
 
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Collection;
 use Mockery;
 use Wm\WmPackage\Http\Clients\DemClient;
 use Wm\WmPackage\Http\Clients\OsmClient;
+use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcTrack;
+use Wm\WmPackage\Models\User;
 use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Services\Models\EcTrackService;
 use Wm\WmPackage\Tests\TestCase;
-use Illuminate\Support\Collection;
-use Wm\WmPackage\Models\App;
-use Wm\WmPackage\Models\User;
+
 class AbstractEcTrackServiceTest extends TestCase
 {
     use DatabaseTransactions;
@@ -61,12 +62,14 @@ class AbstractEcTrackServiceTest extends TestCase
             );
         }
     }
+
     public function createTrackWithFields(?array $fields = [])
     {
         $track = Mockery::mock(EcTrack::class)->makePartial();
         foreach ($fields as $field => $value) {
             $track->$field = $value;
         }
+
         return $track;
     }
 
@@ -86,6 +89,7 @@ class AbstractEcTrackServiceTest extends TestCase
 
         return $track;
     }
+
     public function prepareTrackWithGeojson(int $id, ?array $geojson = null)
     {
         if (is_null($geojson)) {
@@ -119,7 +123,6 @@ class AbstractEcTrackServiceTest extends TestCase
             : json_decode($track->manual_data, true);
     }
 
-
     public function createMockApp(string $appId, Collection $tracks)
     {
         $app = Mockery::mock(App::class);
@@ -143,6 +146,7 @@ class AbstractEcTrackServiceTest extends TestCase
     {
         $ecTrackService = Mockery::mock(EcTrackService::class)->makePartial();
         $ecTrackService->shouldIgnoreMissing();
+
         return $ecTrackService;
     }
 

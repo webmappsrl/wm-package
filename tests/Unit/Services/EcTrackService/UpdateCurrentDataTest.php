@@ -34,9 +34,9 @@ class UpdateCurrentDataTest extends AbstractEcTrackServiceTest
     ];
 
     const EXCEPTION_MESSAGES = [
-        "save_failed" => 'Save failed',
-        "caught_exception" => 'Exception was caught and not rethrown.',
-        "exception_not_caught" => 'Exception was not caught.',
+        'save_failed' => 'Save failed',
+        'caught_exception' => 'Exception was caught and not rethrown.',
+        'exception_not_caught' => 'Exception was not caught.',
     ];
 
     /** @test */

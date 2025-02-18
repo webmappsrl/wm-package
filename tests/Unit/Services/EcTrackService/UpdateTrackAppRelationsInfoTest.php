@@ -7,6 +7,7 @@ use Illuminate\Support\Collection;
 class UpdateTrackAppRelationsInfoTest extends AbstractEcTrackServiceTest
 {
     protected $track;
+
     protected $layers;
 
     const EXPECTED_UPDATES = [
@@ -27,7 +28,6 @@ class UpdateTrackAppRelationsInfoTest extends AbstractEcTrackServiceTest
             'app2' => 'searchable_app2',
         ],
     ];
-
 
     protected function setUp(): void
     {

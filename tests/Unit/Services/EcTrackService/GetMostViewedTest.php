@@ -2,14 +2,10 @@
 
 namespace Tests\Unit\Services\EcTrackService;
 
-use Illuminate\Support\Collection;
-use Wm\WmPackage\Models\App;
-use Wm\WmPackage\Services\Models\EcTrackService;
-use Mockery;
-
 class GetMostViewedTest extends AbstractEcTrackServiceTest
 {
     private $tracks;
+
     const TRACKS_COUNT = 5;
 
     protected function setUp(): void

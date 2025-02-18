@@ -12,7 +12,7 @@
 // class GetUpdatedAtTracksTest extends AbstractEcTrackServiceTest
 // {
 //     use DatabaseTransactions;
-    
+
 //     public function test_get_updated_at_tracks_for_existing_user()
 //     {
 //         $user = $this->createTestUser();

@@ -1,19 +1,20 @@
 <?php
+
 namespace Tests\Unit\Services\EcTrackService;
 
 use Illuminate\Support\Facades\Bus;
+use Mockery;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackDemJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackFromOsmJob;
 use Wm\WmPackage\Jobs\UpdateLayerTracksJob;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\Layer;
-use Mockery;
 
 class UpdateDataChainTest extends AbstractEcTrackServiceTest
 {
     private EcTrack $track;
 
-    public function setUp(): void
+    protected function setUp(): void
     {
         parent::setUp();
         Bus::fake();
