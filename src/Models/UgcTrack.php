@@ -2,7 +2,8 @@
 
 namespace Wm\WmPackage\Models;
 
-use Wm\WmPackage\Models\Abstracts\Linestring;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Wm\WmPackage\Models\Abstracts\MultiLineString;
 use Wm\WmPackage\Observers\UgcObserver;
 use Wm\WmPackage\Traits\OwnedByUserModel;
 
@@ -18,12 +19,29 @@ use Wm\WmPackage\Traits\OwnedByUserModel;
  * @property string description
  * @property string raw_data
  */
-class UgcTrack extends Linestring
+class UgcTrack extends MultiLineString
 {
     use OwnedByUserModel;
+
+    protected $fillable = [
+        'user_id',
+        'app_id',
+        'name',
+        'geometry',
+        'properties',
+    ];
+
+    protected $casts = [
+        'properties' => 'array',
+    ];
 
     protected static function booted()
     {
         UgcTrack::observe(UgcObserver::class);
+    }
+
+    public function author(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id');
     }
 }

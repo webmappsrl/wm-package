@@ -4,4 +4,4 @@ namespace Wm\WmPackage\Exceptions;
 
 use Exception;
 
-class ProcessorClientExcepiton extends Exception {}
+class ProcessorClientException extends Exception {}

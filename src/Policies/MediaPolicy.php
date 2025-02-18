@@ -3,10 +3,10 @@
 namespace Wm\WmPackage\Policies;
 
 use Illuminate\Auth\Access\HandlesAuthorization;
-use Wm\WmPackage\Models\UgcPoi;
+use Wm\WmPackage\Models\Media;
 use Wm\WmPackage\Models\User;
 
-class UgcPoiPolicy
+class MediaPolicy
 {
     use HandlesAuthorization;
 
@@ -45,7 +45,7 @@ class UgcPoiPolicy
      *
      * @return \Illuminate\Auth\Access\Response|bool
      */
-    public function view(User $user, UgcPoi $ugcPoi)
+    public function view(User $user, Media $media)
     {
         if ($user->hasRole('Editor') && $user->hasDashboardShow()) {
             return true;
@@ -67,7 +67,7 @@ class UgcPoiPolicy
      *
      * @return \Illuminate\Auth\Access\Response|bool
      */
-    public function update(User $user, UgcPoi $ugcPoi)
+    public function update(User $user, Media $media)
     {
         //
     }
@@ -77,7 +77,7 @@ class UgcPoiPolicy
      *
      * @return \Illuminate\Auth\Access\Response|bool
      */
-    public function delete(User $user, UgcPoi $ugcPoi)
+    public function delete(User $user, Media $media)
     {
         //
     }
@@ -87,7 +87,7 @@ class UgcPoiPolicy
      *
      * @return \Illuminate\Auth\Access\Response|bool
      */
-    public function restore(User $user, UgcPoi $ugcPoi)
+    public function restore(User $user, Media $media)
     {
         //
     }
@@ -97,7 +97,7 @@ class UgcPoiPolicy
      *
      * @return \Illuminate\Auth\Access\Response|bool
      */
-    public function forceDelete(User $user, UgcPoi $ugcPoi)
+    public function forceDelete(User $user, Media $media)
     {
         //
     }

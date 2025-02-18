@@ -2,7 +2,12 @@
 
 namespace Wm\WmPackage\Nova;
 
+use App\Nova\User;
+use Laravel\Nova\Fields\BelongsTo;
+use Laravel\Nova\Fields\Code;
 use Laravel\Nova\Fields\ID;
+use Laravel\Nova\Fields\Number;
+use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Resource;
 
@@ -33,9 +38,10 @@ abstract class AbstractGeometryModel extends Resource
     {
         return [
             ID::make()->sortable(),
-            // add here a way to edit the geometry
-            // add here a way to edit properties
-            // add here a way to view/edit app_id
+            Text::make('Name', 'name'),
+            BelongsTo::make('Author', 'author', User::class),
+            Number::make('App ID', 'app_id'), // TODO: change it to a belongsTo field when relationships are setup
+            Code::make('Properties', $this->getPropertiesColumnName())->json(),
         ];
     }
 
@@ -77,5 +83,19 @@ abstract class AbstractGeometryModel extends Resource
     public function actions(NovaRequest $request): array
     {
         return [];
+    }
+
+    /**
+     * Get the name of the properties column based on model type.
+     *
+     * @return string The name of the properties column
+     */
+    protected function getPropertiesColumnName(): string
+    {
+        if ($this instanceof Media) {
+            return 'custom_properties';
+        }
+
+        return 'properties';
     }
 }
