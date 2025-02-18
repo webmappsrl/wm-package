@@ -3,8 +3,6 @@
 namespace Tests\Unit\Services\EcTrackService;
 
 use Illuminate\Foundation\Testing\DatabaseTransactions;
-use Mockery;
-use Wm\WmPackage\Models\EcTrack;
 
 class UpdateOsmDataTest extends AbstractEcTrackServiceTest
 {
@@ -24,27 +22,47 @@ class UpdateOsmDataTest extends AbstractEcTrackServiceTest
     ];
 
     const ERROR_MESSAGES = [
+        'should_remain_unchanged' => 'should remain unchanged',
+        'should_be_updated' => 'should be updated',
+        'unmatched_properties' => 'does not match expected value',
         'missing_properties' => 'Undefined array key "properties"',
         'wrong_osm_id' => 'Wrong OSM ID',
     ];
 
+    const UNCHANGED_FIELDS = [
+        'name' => 'Pre-existing Name',
+        'ref' => 'Pre-existing Ref',
+        'ascent' => 100,
+    ];
+
+    const UPDATED_FIELDS = [
+        'geometry' => 'SRID=4326;LINESTRING(10.0 45.0, 10.5 45.5)',
+        'descent' => 400,
+        'distance' => 7000,
+        'duration_forward' => '150',
+        'duration_backward' => '180',
+    ];
+
+    protected $track;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->track = $this->createTrackWithFields([
+            'osmid' => self::OSM_ID,
+        ]);
+    }
+
     /** @test */
     public function update_osm_data_updates_track_with_osm_data()
     {
-        $track = Mockery::mock(EcTrack::class)->makePartial();
-        $track->osmid = self::OSM_ID;
-        $this->prepareTrackWithOsmData($track);
+        $this->prepareTrackWithOsmData($this->track);
 
-        $result = $this->ecTrackService->updateOsmData($track);
+        $result = $this->ecTrackService->updateOsmData($this->track);
 
         $this->assertTrue($result['success']);
-        foreach (self::PROPERTIES_TO_CHECK as $property => $expectedValue) {
-            $this->assertEquals(
-                $expectedValue,
-                $track->$property,
-                "Failed asserting that {$property} matches expected value."
-            );
-        }
+
+        $this->assertFields($this->track, self::PROPERTIES_TO_CHECK, self::ERROR_MESSAGES['unmatched_properties']);
     }
 
     /** @test */
@@ -52,81 +70,42 @@ class UpdateOsmDataTest extends AbstractEcTrackServiceTest
     {
         $this->rebindOsmClient(MockOsmClientNoProperties::class);
 
-        $track = Mockery::mock(EcTrack::class)->makePartial();
-        $track->osmid = self::OSM_ID;
-
-        $result = $this->ecTrackService->updateOsmData($track);
+        $result = $this->ecTrackService->updateOsmData($this->track);
 
         $this->assertFalse($result['success']);
         $this->assertEquals(self::ERROR_MESSAGES['missing_properties'], $result['message']);
     }
 
-    /**
-     * Caso 3: Se manca la geometria.
-     * Aspettativa: Viene lanciato l'errore "Wrong OSM ID".
-     */
     /** @test */
     public function update_osm_data_fails_when_geometry_is_missing()
     {
         $this->rebindOsmClient(MockOsmClientNoGeometry::class);
 
-        $track = Mockery::mock(EcTrack::class)->makePartial();
-        $track->osmid = self::OSM_ID;
-
-        $result = $this->ecTrackService->updateOsmData($track);
+        $result = $this->ecTrackService->updateOsmData($this->track);
 
         $this->assertFalse($result['success']);
         $this->assertEquals(self::ERROR_MESSAGES['wrong_osm_id'], $result['message']);
     }
 
-    /**
-     * Caso 4: I campi vengono aggiornati solo se sono null o non valorizzati.
-     * I campi già impostati (es. name, ref, ascent) non vengono sovrascritti,
-     * mentre quelli null vengono aggiornati con i dati OSM.
-     */
     /** @test */
     public function updates_only_null_fields_are_updated()
     {
-        $track = Mockery::mock(EcTrack::class)->makePartial();
-        $track->osmid = self::OSM_ID;
+        $this->track->name = self::UNCHANGED_FIELDS['name'];
+        $this->track->ref = self::UNCHANGED_FIELDS['ref'];
+        $this->track->ascent = self::UNCHANGED_FIELDS['ascent'];
 
-        // Imposta i campi preesistenti
-        $track->name = 'Pre-existing Name';
-        $track->ref = 'Pre-existing Ref';
-        $track->ascent = 100;
+        $this->track->geometry = null;
+        $this->track->descent = null;
+        $this->track->distance = null;
+        $this->track->duration_forward = null;
+        $this->track->duration_backward = null;
 
-        // Imposta i campi che sono null e dovrebbero essere aggiornati
-        $track->geometry = null;
-        $track->descent = null;
-        $track->distance = null;
-        $track->duration_forward = null;
-        $track->duration_backward = null;
+        $this->prepareTrackWithOsmData($this->track);
 
-        $this->prepareTrackWithOsmData($track);
-
-        $result = $this->ecTrackService->updateOsmData($track);
+        $result = $this->ecTrackService->updateOsmData($this->track);
         $this->assertTrue($result['success']);
 
-        // Campi che non devono essere sovrascritti
-        $unchangedFields = [
-            'name' => 'Pre-existing Name',
-            'ref' => 'Pre-existing Ref',
-            'ascent' => 100,
-        ];
-        // Campi che devono essere aggiornati con i valori dai dati OSM
-        $updatedFields = [
-            'geometry' => 'SRID=4326;LINESTRING(10.0 45.0, 10.5 45.5)',
-            'descent' => 400,
-            'distance' => 7000,
-            'duration_forward' => '150',
-            'duration_backward' => '180',
-        ];
-
-        $this->assertFields($track, $unchangedFields, 'should remain unchanged');
-        $this->assertFields($track, $updatedFields, 'should be updated');
+        $this->assertFields($this->track, self::UNCHANGED_FIELDS, self::ERROR_MESSAGES['should_remain_unchanged']);
+        $this->assertFields($this->track, self::UPDATED_FIELDS, self::ERROR_MESSAGES['should_be_updated']);
     }
-
-    /**
-     * Helper method per asserire che i campi del track abbiano i valori attesi.
-     */
 }
