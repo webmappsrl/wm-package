@@ -65,18 +65,19 @@ These tools are used to test the stand alone instance of wm-package: https://pac
 
 Execute these commands to runs tests:
 
+`./vendor/bin/testbench vendor:publish --tag="wm-package-migrations"`
 `./vendor/bin/testbench migrate`
-It migrates workbench tables on a sqlite database located in a vendor folder. Phpunit will use this database as tests memory support.
+It migrates workbench tables on a postgres database.
 
-`./vendor/bin/pest`
+`composer test`
 To run tests.
 
-If an evaluation of testbench env I suggest to use the `config()` function (eg: `config('database.connections.sqlite')`) with the testbench implementation of tinker `./vendor/bin/testbench tinker`, it is also useful to understand which things are loaded on the testbench env.
+If an evaluation of testbench env I suggest to use the `config()` function (eg: `config('database.connections')`) with the testbench implementation of tinker `./vendor/bin/testbench tinker`, it is also useful to understand which things are loaded on the testbench env.
 
 Testbench reference: https://packages.tools/testbench.html
 Workbench reference: https://packages.tools/workbench.html
 
-Also a simple php docker container is available to run tests, you can start it using `docker compose up -d` and enter inside with `docker compose exec -it php bash` or directly `docker compose exec -it php ./vendor/bin/pest` (check permissions on files before run it, if you have problems use the `-u` param on exec command with the id of the user who owns project files and directories, to check your current user id you can use the command `id`).
+Also a simple php docker container is available to run tests, you can start it using `docker compose up -d` and enter inside with `docker compose exec -it php bash` or directly `docker compose exec -it php composer test` (check permissions on files before run it, if you have problems use the `-u` param on exec command with the id of the user who owns project files and directories, to check your current user id you can use the command `id`).
 
 ## Pushing
 
