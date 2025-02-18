@@ -63,8 +63,6 @@ class UpdateManualDataTest extends AbstractEcTrackServiceTest
         $this->track->distance = null; // null non viene considerato
 
         $this->ecTrackService->updateManualData($this->track);
-
-        // In questo caso nessun campo è diverso, quindi manual_data deve rimanere null.
         $this->assertNull($this->track->manual_data);
     }
 

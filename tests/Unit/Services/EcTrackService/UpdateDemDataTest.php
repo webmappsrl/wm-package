@@ -23,7 +23,7 @@ class UpdateDemDataTest extends AbstractEcTrackServiceTest
     /** @test */
     public function update_dem_data_updates_track_with_dem_data()
     {
-        $track = $this->createMockTrack(1, ['type' => 'Feature']);
+        $track = $this->prepareTrackWithGeojson(1, ['type' => 'Feature']);
         $track->shouldReceive('saveQuietly')->once();
 
         $track->shouldReceive('setAttribute')

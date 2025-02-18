@@ -20,11 +20,23 @@ class UpdateCurrentDataTest extends AbstractEcTrackServiceTest
         self::DISTANCE_FIELD_LABEL => 7000,
     ];
 
+    const DEM_DATA_FIELDS = [
+        self::ASCENT_FIELD_LABEL => 550,
+        self::DESCENT_FIELD_LABEL => 460,
+        self::DISTANCE_FIELD_LABEL => 7500,
+    ];
+
     const DIRTY_DATA_FIELDS = [
         self::ASCENT_FIELD_LABEL => 600,
         self::DESCENT_FIELD_LABEL => 500,
         self::DISTANCE_FIELD_LABEL => 10,
-        self::SPEED_FIELD_LABEL => 10,
+        self::SPEED_FIELD_LABEL => 15,
+    ];
+
+    const EXCEPTION_MESSAGES = [
+        "save_failed" => 'Save failed',
+        "caught_exception" => 'Exception was caught and not rethrown.',
+        "exception_not_caught" => 'Exception was not caught.',
     ];
 
     /** @test */
@@ -47,8 +59,8 @@ class UpdateCurrentDataTest extends AbstractEcTrackServiceTest
         // Otteniamo manual_data come array, indipendentemente dal formato originario.
         $manualData = $this->getManualData($track);
         $this->assertEquals('data', $manualData['existing']);
-        $this->assertEquals(600, $manualData['ascent']);
-        $this->assertEquals(500, $manualData['descent']);
+        $this->assertEquals(self::DIRTY_DATA_FIELDS[self::ASCENT_FIELD_LABEL], $manualData['ascent']);
+        $this->assertEquals(self::DIRTY_DATA_FIELDS[self::DESCENT_FIELD_LABEL], $manualData['descent']);
         $this->assertArrayNotHasKey('speed', $manualData);
     }
 
@@ -56,12 +68,12 @@ class UpdateCurrentDataTest extends AbstractEcTrackServiceTest
     public function update_current_data_updates_track_field_with_osm_value_when_dirty_field_is_null()
     {
         // Se il dirty field è null e osm_data contiene un valore, quello va usato.
-        $dirtyFields = ['ascent' => null, 'descent' => null];
-        $demDataFields = ['ascent', 'descent'];
+        $dirtyFields = [self::ASCENT_FIELD_LABEL => null, self::DESCENT_FIELD_LABEL => null];
+        $demDataFields = [self::ASCENT_FIELD_LABEL, self::DESCENT_FIELD_LABEL];
 
         // Simuliamo osm_data e dem_data (in questo caso osm_data ha la precedenza).
-        $osmData = json_encode(['ascent' => 570, 'descent' => 480]);
-        $demData = json_encode(['ascent' => 550, 'descent' => 460]);
+        $osmData = json_encode([self::ASCENT_FIELD_LABEL => self::OSM_DATA_FIELDS[self::ASCENT_FIELD_LABEL], self::DESCENT_FIELD_LABEL => self::OSM_DATA_FIELDS[self::DESCENT_FIELD_LABEL]]);
+        $demData = json_encode([self::ASCENT_FIELD_LABEL => self::DEM_DATA_FIELDS[self::ASCENT_FIELD_LABEL], self::DESCENT_FIELD_LABEL => self::DEM_DATA_FIELDS[self::DESCENT_FIELD_LABEL]]);
         $track = $this->prepareTrackWithDirtyFields($dirtyFields, $demDataFields, '{}', $osmData, $demData);
 
         // Impostiamo valori iniziali che dovranno essere sovrascritti.
@@ -70,43 +82,43 @@ class UpdateCurrentDataTest extends AbstractEcTrackServiceTest
 
         $this->ecTrackService->updateCurrentData($track);
 
-        $this->assertEquals(570, $track->ascent);
-        $this->assertEquals(480, $track->descent);
+        $this->assertEquals(self::OSM_DATA_FIELDS[self::ASCENT_FIELD_LABEL], $track->ascent);
+        $this->assertEquals(self::OSM_DATA_FIELDS[self::DESCENT_FIELD_LABEL], $track->descent);
 
         $manualData = $this->getManualData($track);
         // I dirty fields vengono copiati in manual_data, anche se il valore viene sostituito sul campo.
-        $this->assertArrayHasKey('ascent', $manualData);
-        $this->assertNull($manualData['ascent']);
-        $this->assertArrayHasKey('descent', $manualData);
-        $this->assertNull($manualData['descent']);
+        $this->assertArrayHasKey(self::ASCENT_FIELD_LABEL, $manualData);
+        $this->assertNull($manualData[self::ASCENT_FIELD_LABEL]);
+        $this->assertArrayHasKey(self::DESCENT_FIELD_LABEL, $manualData);
+        $this->assertNull($manualData[self::DESCENT_FIELD_LABEL]);
     }
 
     /** @test */
     public function update_current_data_updates_track_field_with_dem_value_when_osm_value_missing()
     {
         // Se il dirty field è null e osm_data manca il valore, si usa quello da dem_data.
-        $dirtyFields = ['distance' => null];
-        $demDataFields = ['distance'];
-        $osmData = json_encode(['distance' => null]); // Valore OSM mancante
-        $demData = json_encode(['distance' => 7500]);
+        $dirtyFields = [self::DISTANCE_FIELD_LABEL => null];
+        $demDataFields = [self::DISTANCE_FIELD_LABEL];
+        $osmData = json_encode([self::DISTANCE_FIELD_LABEL => null]); // Valore OSM mancante
+        $demData = json_encode([self::DISTANCE_FIELD_LABEL => self::DEM_DATA_FIELDS[self::DISTANCE_FIELD_LABEL]]);
         $track = $this->prepareTrackWithDirtyFields($dirtyFields, $demDataFields, '{}', $osmData, $demData);
 
         $track->distance = 0;
 
         $this->ecTrackService->updateCurrentData($track);
 
-        $this->assertEquals(7500, $track->distance);
+        $this->assertEquals(self::DEM_DATA_FIELDS[self::DISTANCE_FIELD_LABEL], $track->distance);
         $manualData = $this->getManualData($track);
-        $this->assertArrayHasKey('distance', $manualData);
-        $this->assertNull($manualData['distance']);
+        $this->assertArrayHasKey(self::DISTANCE_FIELD_LABEL, $manualData);
+        $this->assertNull($manualData[self::DISTANCE_FIELD_LABEL]);
     }
 
     /** @test */
     public function update_current_data_does_not_update_field_when_not_in_dem_data_fields()
     {
         // Se il dirty field non è elencato tra i demDataFields, il campo non viene processato.
-        $dirtyFields = ['speed' => 15];
-        $demDataFields = ['ascent', 'descent']; // 'speed' viene ignorato
+        $dirtyFields = [self::SPEED_FIELD_LABEL => self::DIRTY_DATA_FIELDS[self::SPEED_FIELD_LABEL]];
+        $demDataFields = [self::ASCENT_FIELD_LABEL, self::DESCENT_FIELD_LABEL]; // 'speed' viene ignorato
         $initialManualData = json_encode(['existing' => 'value']);
         $track = $this->prepareTrackWithDirtyFields($dirtyFields, $demDataFields, $initialManualData);
 
@@ -115,25 +127,25 @@ class UpdateCurrentDataTest extends AbstractEcTrackServiceTest
 
         $this->assertEquals(5, $track->speed);
         $manualData = $this->getManualData($track);
-        $this->assertArrayNotHasKey('speed', $manualData);
+        $this->assertArrayNotHasKey(self::SPEED_FIELD_LABEL, $manualData);
     }
 
     /** @test */
     public function update_current_data_logs_error_when_exception_occurs()
     {
         // Simuliamo un'eccezione in saveQuietly per verificare che venga catturata internamente.
-        $dirtyFields = ['ascent' => 600];
-        $demDataFields = ['ascent'];
+        $dirtyFields = [self::ASCENT_FIELD_LABEL => self::DIRTY_DATA_FIELDS[self::ASCENT_FIELD_LABEL]];
+        $demDataFields = [self::ASCENT_FIELD_LABEL];
         $track = $this->prepareTrackWithDirtyFields($dirtyFields, $demDataFields, '{}');
 
         // Forza saveQuietly a lanciare un'eccezione.
-        $track->shouldReceive('saveQuietly')->andThrow(new Exception('Save failed'));
+        $track->shouldReceive('saveQuietly')->andThrow(new Exception(self::EXCEPTION_MESSAGES['save_failed']));
 
         try {
             $this->ecTrackService->updateCurrentData($track);
-            $this->assertTrue(true, 'Exception was caught and not rethrown.');
+            $this->assertTrue(true, self::EXCEPTION_MESSAGES['caught_exception']);
         } catch (Exception $e) {
-            $this->fail('Exception was not caught.');
+            $this->fail(self::EXCEPTION_MESSAGES['exception_not_caught']);
         }
     }
 }

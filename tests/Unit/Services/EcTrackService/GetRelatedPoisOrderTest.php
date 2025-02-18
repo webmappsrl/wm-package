@@ -7,6 +7,7 @@ class GetRelatedPoisOrderTest extends AbstractEcTrackServiceTest
     /** @test */
     public function get_related_pois_order_returns_null_when_no_related_pois_exist()
     {
+
         $geojson = [
             'ecTrack' => [
                 'properties' => [
@@ -15,8 +16,7 @@ class GetRelatedPoisOrderTest extends AbstractEcTrackServiceTest
                 'geometry' => ['some' => 'track_geometry'],
             ],
         ];
-        $track = $this->createMockTrack(1, $geojson);
-
+        $track = $this->prepareTrackWithGeojson(1, $geojson);
         $result = $this->ecTrackService->getRelatedPoisOrder($track);
         $this->assertNull($result);
     }
@@ -45,7 +45,7 @@ class GetRelatedPoisOrderTest extends AbstractEcTrackServiceTest
                 'geometry' => ['some' => 'track_geometry'],
             ],
         ];
-        $track = $this->createMockTrack(1, $geojson);
+        $track = $this->prepareTrackWithGeojson(1, $geojson);
 
         $result = $this->ecTrackService->getRelatedPoisOrder($track);
         $this->assertEquals(['poi2', 'poi3', 'poi1'], $result);
