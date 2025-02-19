@@ -46,7 +46,14 @@ class DownloadDbFromAws extends Command
         $localPath = $localDirectory . '/' . basename($mostRecentFile);
         file_put_contents($localPath, $dumpContent);
 
-        $this->info("Dump downloaded successfully: {$localPath}. Preparing to import into local database...");
+        $this->info("Dump downloaded successfully: {$localPath}");
+
+        if (!$this->confirm('Do you want to import the downloaded database dump?')) {
+            $this->info('Database import skipped.');
+            return 0;
+        }
+
+        $this->info("Preparing to import into local database...");
 
         // Droppa il database esistente per evitare conflitti (drop di tutte le tabelle, viste, ecc.)
         $this->info("Wiping current database...");
