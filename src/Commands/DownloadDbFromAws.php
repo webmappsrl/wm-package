@@ -9,6 +9,7 @@ use Wm\WmPackage\Services\StorageService;
 class DownloadDbFromAws extends Command
 {
     protected $signature = 'db:download_from_aws {appName}';
+
     protected $description = 'Download the most recent dump from AWS and import it into the local database. The appName is the name of the application contained in the wmdumps bucket.';
 
     public function handle()
@@ -22,6 +23,7 @@ class DownloadDbFromAws extends Command
 
         if (empty($files)) {
             $this->error("No dumps found in AWS path: wmdumps/{$appName}");
+
             return 1;
         }
 
@@ -32,57 +34,60 @@ class DownloadDbFromAws extends Command
         $mostRecentFile = $files[0];
         $dumpContent = $storageService->getDbDumpFromAws($mostRecentFile);
 
-        if (!$dumpContent) {
+        if (! $dumpContent) {
             $this->error("Unable to read dump: {$mostRecentFile}");
+
             return 1;
         }
 
         $localDirectory = storage_path('app/backups');
-        if (!is_dir($localDirectory)) {
+        if (! is_dir($localDirectory)) {
             mkdir($localDirectory, 0755, true);
         }
 
-        $localPath = $localDirectory . '/' . basename($mostRecentFile);
+        $localPath = $localDirectory.'/'.basename($mostRecentFile);
         file_put_contents($localPath, $dumpContent);
 
         $this->info("Dump downloaded successfully: {$localPath}");
 
-        if (!$this->confirm('Do you want to import the downloaded database dump?')) {
+        if (! $this->confirm('Do you want to import the downloaded database dump?')) {
             $this->info('Database import skipped.');
+
             return 0;
         }
 
-        $this->info("Preparing to import into local database...");
+        $this->info('Preparing to import into local database...');
 
         // Drop the existing database to avoid conflicts (drop all tables, views, etc.)
-        $this->info("Wiping current database...");
+        $this->info('Wiping current database...');
         Artisan::call('db:wipe');
-        $this->info("Database wiped successfully.");
+        $this->info('Database wiped successfully.');
 
         // Import the dump into the local database
         $connectionName = config('database.default');
         $connection = config("database.connections.{$connectionName}");
 
-        $host         = $connection['host'];
-        $port         = $connection['port'] ?? 5432;
-        $username     = $connection['username'];
+        $host = $connection['host'];
+        $port = $connection['port'] ?? 5432;
+        $username = $connection['username'];
         $databaseName = $connection['database'];
-        $password     = $connection['password'];
+        $password = $connection['password'];
 
         // Set the environment variable for psql
         putenv("PGPASSWORD={$password}");
 
         // Command to decompress and import the dump
-        $command = "gunzip -c " . escapeshellarg($localPath) .
-            " | psql -h " . escapeshellarg($host) .
-            " -p " . escapeshellarg($port) .
-            " -U " . escapeshellarg($username) .
-            " " . escapeshellarg($databaseName);
+        $command = 'gunzip -c '.escapeshellarg($localPath).
+            ' | psql -h '.escapeshellarg($host).
+            ' -p '.escapeshellarg($port).
+            ' -U '.escapeshellarg($username).
+            ' '.escapeshellarg($databaseName);
 
         exec($command, $output, $returnVar);
 
         if ($returnVar !== 0) {
             $this->error("Error during database import. Command: {$command}");
+
             return 1;
         }
 

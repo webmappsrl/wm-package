@@ -4,41 +4,41 @@ namespace Tests\Unit;
 
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Storage;
-use Wm\WmPackage\Tests\TestCase;
 use Wm\WmPackage\Services\StorageService;
+use Wm\WmPackage\Tests\TestCase;
 
 class CleanOldDumpsFromAWSTest extends TestCase
 {
-    public function setUp(): void
+    protected function setUp(): void
     {
         parent::setUp();
 
         // Override "wmdumps" disk to use a fake local path
         config(['filesystems.disks.wmdumps' => [
             'driver' => 'local',
-            'root'   => storage_path('app/fake_wmdumps'),
+            'root' => storage_path('app/fake_wmdumps'),
         ]]);
 
         // Create test directory
         Storage::disk('wmdumps')->makeDirectory('test_dir');
     }
 
-    public function tearDown(): void
+    protected function tearDown(): void
     {
         // Clean up test directory after each test
         Storage::disk('wmdumps')->deleteDirectory('test_dir');
     }
 
-    public function testCleanOldDumpsFromAwsRemovesOldFiles()
+    public function test_clean_old_dumps_from_aws_removes_old_files()
     {
         $daysToKeep = 7;
-        $storageService = new StorageService();
+        $storageService = new StorageService;
 
         $disk = Storage::disk('wmdumps');
         $directory = 'test_dir';
 
-        $oldFileName = $directory . '/old_dump.sql.gz';
-        $recentFileName = $directory . '/recent_dump.sql.gz';
+        $oldFileName = $directory.'/old_dump.sql.gz';
+        $recentFileName = $directory.'/recent_dump.sql.gz';
 
         $disk->put($oldFileName, 'Old dump');
         $disk->put($recentFileName, 'Recent dump');

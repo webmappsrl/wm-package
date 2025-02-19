@@ -3,7 +3,6 @@
 namespace Tests\Unit;
 
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use Wm\WmPackage\Tests\TestCase;
@@ -11,6 +10,7 @@ use Wm\WmPackage\Tests\TestCase;
 class DownloadDbFromAWSTest extends TestCase
 {
     protected $wmdumpsRoot;
+
     protected $backupsPath;
 
     protected function setUp(): void
@@ -21,9 +21,9 @@ class DownloadDbFromAWSTest extends TestCase
         config([
             'database.default' => 'testing',
             'database.connections.testing' => [
-                'driver'   => 'pgsql',
+                'driver' => 'pgsql',
                 'database' => 'test',
-                'host'     => '127.0.0.1',
+                'host' => '127.0.0.1',
                 'username' => 'root',
                 'password' => '',
             ],
@@ -33,7 +33,7 @@ class DownloadDbFromAWSTest extends TestCase
         $this->wmdumpsRoot = storage_path('app/fake_wmdumps');
         config(['filesystems.disks.wmdumps' => [
             'driver' => 'local',
-            'root'   => $this->wmdumpsRoot,
+            'root' => $this->wmdumpsRoot,
         ]]);
 
         // Clean up the fake directory if it exists and recreate it
@@ -57,12 +57,12 @@ class DownloadDbFromAWSTest extends TestCase
         File::deleteDirectory($this->backupsPath);
     }
 
-    public function testDownloadAndSkipImport()
+    public function test_download_and_skip_import()
     {
         // Simulate the existence of a dump in the wmdumps/testApp directory
         $appName = 'testApp';
-        $dumpFileName = 'dump_' . Carbon::now()->format('Y_m_d') . '.sql.gz';
-        $fullDumpPath = $appName . '/' . $dumpFileName;
+        $dumpFileName = 'dump_'.Carbon::now()->format('Y_m_d').'.sql.gz';
+        $fullDumpPath = $appName.'/'.$dumpFileName;
 
         // Create the fake directory on the wmdumps disk
         Storage::disk('wmdumps')->makeDirectory($appName);
@@ -74,18 +74,18 @@ class DownloadDbFromAWSTest extends TestCase
         // Execute the command, simulating a "no" response when asked about import
         $this->artisan('db:download_from_aws', ['appName' => $appName])
             ->expectsConfirmation('Do you want to import the downloaded database dump?', 'no')
-            ->expectsOutput("Database import skipped.")
+            ->expectsOutput('Database import skipped.')
             ->assertExitCode(0);
 
         // Verify that the dump file was written to the backups folder
-        $backupFile = $this->backupsPath . '/' . basename($fullDumpPath);
+        $backupFile = $this->backupsPath.'/'.basename($fullDumpPath);
         $this->assertFileExists($backupFile);
 
         // Check that the file content is correct
         $this->assertEquals($dumpContent, file_get_contents($backupFile));
     }
 
-    public function testNoDumpsFound()
+    public function test_no_dumps_found()
     {
         // Simulate the case where no dumps exist for the specified app
         $appName = 'appInesistente';
@@ -93,7 +93,7 @@ class DownloadDbFromAWSTest extends TestCase
         Storage::disk('wmdumps')->deleteDirectory($appName);
 
         $this->artisan('db:download_from_aws', ['appName' => $appName])
-            ->expectsOutput("No dumps found in AWS path: wmdumps/" . $appName)
+            ->expectsOutput('No dumps found in AWS path: wmdumps/'.$appName)
             ->assertExitCode(1);
     }
 }

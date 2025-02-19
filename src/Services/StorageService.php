@@ -2,10 +2,10 @@
 
 namespace Wm\WmPackage\Services;
 
+use Carbon\Carbon;
 use Exception;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Storage;
-use Carbon\Carbon;
 
 class StorageService extends BaseService
 {
@@ -94,7 +94,7 @@ class StorageService extends BaseService
         $threshold = Carbon::now()->subDays($daysToKeep)->getTimestamp();
 
         foreach ($files as $file) {
-            //if the file is older than the threshold, delete it
+            // if the file is older than the threshold, delete it
             if ($disk->lastModified($file) < $threshold) {
                 $disk->delete($file);
             }

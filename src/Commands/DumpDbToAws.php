@@ -3,7 +3,6 @@
 namespace Wm\WmPackage\Commands;
 
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Storage;
 use Spatie\DbDumper\Compressors\GzipCompressor;
 use Spatie\DbDumper\Databases\PostgreSql;
 use Wm\WmPackage\Services\StorageService;
@@ -11,6 +10,7 @@ use Wm\WmPackage\Services\StorageService;
 class DumpDbToAws extends Command
 {
     protected $signature = 'db:dump_to_aws';
+
     protected $description = 'Create a dump of the database and upload it to AWS';
 
     public function handle()
@@ -19,9 +19,9 @@ class DumpDbToAws extends Command
         $connection = config("database.connections.{$connectionName}");
 
         $timestamp = now()->format('Y_m_d');
-        $fileName = config('app.name') . "_dump_{$timestamp}.sql.gz";
+        $fileName = config('app.name')."_dump_{$timestamp}.sql.gz";
         $backupsPath = storage_path('app/backups');
-        if (!file_exists($backupsPath)) {
+        if (! file_exists($backupsPath)) {
             mkdir($backupsPath, 0755, true);
         }
         $localPath = "{$backupsPath}/{$fileName}";
@@ -34,22 +34,24 @@ class DumpDbToAws extends Command
                 ->setPassword($connection['password'])
                 ->setHost($connection['host'])
                 ->setPort($connection['port'] ?? 5432)
-                ->useCompressor(new GzipCompressor())
+                ->useCompressor(new GzipCompressor)
                 ->dumpToFile($localPath);
         } catch (\Exception $e) {
-            $this->error("Error creating the database dump: " . $e->getMessage());
+            $this->error('Error creating the database dump: '.$e->getMessage());
+
             return 1;
         }
 
         $this->info("Dump created locally: {$localPath}");
 
         $dumpFileContent = file_get_contents($localPath);
-        if (!$dumpFileContent) {
-            $this->error("Unable to read the generated dump");
+        if (! $dumpFileContent) {
+            $this->error('Unable to read the generated dump');
+
             return 1;
         }
 
-        $remotePath = config('app.name') . '/' . $fileName;
+        $remotePath = config('app.name').'/'.$fileName;
 
         try {
             $storageService = app(StorageService::class);
@@ -59,7 +61,8 @@ class DumpDbToAws extends Command
                 unlink($localPath);
             }
         } catch (\Exception $e) {
-            $this->error("Error uploading the database dump to AWS: " . $e->getMessage());
+            $this->error('Error uploading the database dump to AWS: '.$e->getMessage());
+
             return 1;
         }
 
@@ -68,7 +71,7 @@ class DumpDbToAws extends Command
         try {
             $storageService->cleanOldDumpsFromAws(config('app.name'));
         } catch (\Exception $e) {
-            $this->error("Error cleaning old dumps from AWS: " . $e->getMessage());
+            $this->error('Error cleaning old dumps from AWS: '.$e->getMessage());
         }
 
         return 0;
