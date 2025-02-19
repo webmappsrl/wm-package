@@ -19,7 +19,7 @@ class DumpDbToAws extends Command
         $connection = config("database.connections.{$connectionName}");
 
         $timestamp = now()->format('Y_m_d');
-        $fileName = "dump_{$timestamp}.sql.gz";
+        $fileName = config('app.name') . "_dump_{$timestamp}.sql.gz";
         $backupsPath = storage_path('app/backups');
         if (!file_exists($backupsPath)) {
             mkdir($backupsPath, 0755, true);
@@ -49,7 +49,7 @@ class DumpDbToAws extends Command
             return 1;
         }
 
-        $remotePath = 'maphub/' . config('app.name', 'wmdumps') . '/' . $fileName;
+        $remotePath = config('app.name') . '/' . $fileName;
 
         try {
             $storageService = app(StorageService::class);
@@ -66,7 +66,7 @@ class DumpDbToAws extends Command
         $this->info("Dump uploaded correctly to AWS: {$remotePath}");
 
         try {
-            $storageService->cleanOldDumpsFromAws('maphub/' . config('app.name', 'camminiditalia'));
+            $storageService->cleanOldDumpsFromAws(config('app.name'));
         } catch (\Exception $e) {
             $this->error("Error cleaning old dumps from AWS: " . $e->getMessage());
         }

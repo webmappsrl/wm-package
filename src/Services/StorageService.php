@@ -78,7 +78,7 @@ class StorageService extends BaseService
         return $this->getWmDumpsDisk()->get($path);
     }
 
-    public function cleanOldDumpsFromAws(string $directory, int $maxFiles = 3, int $daysToKeep = 3): void
+    public function cleanOldDumpsFromAws(string $directory, int $daysToKeep = 7): void
     {
         $disk = $this->getWmDumpsDisk();
         $files = $disk->files($directory);
@@ -92,13 +92,11 @@ class StorageService extends BaseService
         });
 
         $threshold = Carbon::now()->subDays($daysToKeep)->getTimestamp();
-        $count = count($files);
 
         foreach ($files as $file) {
-            // Se il file è più vecchio della soglia e il numero totale dei file è maggiore del massimo consentito, eliminalo
-            if ($disk->lastModified($file) < $threshold && $count > $maxFiles) {
+            //if the file is older than the threshold, delete it
+            if ($disk->lastModified($file) < $threshold) {
                 $disk->delete($file);
-                $count--;
             }
         }
     }

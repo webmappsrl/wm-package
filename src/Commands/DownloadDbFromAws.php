@@ -9,20 +9,19 @@ use Wm\WmPackage\Services\StorageService;
 class DownloadDbFromAws extends Command
 {
     protected $signature = 'db:download_from_aws {appName}';
-    protected $description = 'Download the most recent dump from AWS and import it into the local database. The appName is the name of the application contained in the maphub bucket.';
+    protected $description = 'Download the most recent dump from AWS and import it into the local database. The appName is the name of the application contained in the wmdumps bucket.';
 
     public function handle()
     {
         $appName = $this->argument('appName');
-        $directory = 'maphub/' . $appName;
 
         $storageService = app(StorageService::class);
         $disk = $storageService->getWmDumpsDisk();
 
-        $files = $disk->files($directory);
+        $files = $disk->files($appName);
 
         if (empty($files)) {
-            $this->error("No dumps found in AWS path: {$directory}");
+            $this->error("No dumps found in AWS path: wmdumps/{$appName}");
             return 1;
         }
 
@@ -55,12 +54,12 @@ class DownloadDbFromAws extends Command
 
         $this->info("Preparing to import into local database...");
 
-        // Droppa il database esistente per evitare conflitti (drop di tutte le tabelle, viste, ecc.)
+        // Drop the existing database to avoid conflicts (drop all tables, views, etc.)
         $this->info("Wiping current database...");
         Artisan::call('db:wipe');
         $this->info("Database wiped successfully.");
 
-        // Importa il dump nel database locale
+        // Import the dump into the local database
         $connectionName = config('database.default');
         $connection = config("database.connections.{$connectionName}");
 
@@ -70,10 +69,10 @@ class DownloadDbFromAws extends Command
         $databaseName = $connection['database'];
         $password     = $connection['password'];
 
-        // Imposta la variabile d'ambiente per psql
+        // Set the environment variable for psql
         putenv("PGPASSWORD={$password}");
 
-        // Comando per decomprimere e importare il dump
+        // Command to decompress and import the dump
         $command = "gunzip -c " . escapeshellarg($localPath) .
             " | psql -h " . escapeshellarg($host) .
             " -p " . escapeshellarg($port) .
