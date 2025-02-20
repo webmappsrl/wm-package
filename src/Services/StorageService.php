@@ -2,6 +2,7 @@
 
 namespace Wm\WmPackage\Services;
 
+use Carbon\Carbon;
 use Exception;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Storage;
@@ -59,6 +60,39 @@ class StorageService extends BaseService
     {
         $path = $this->getShardBasePath($appId) . "qrcode/webapp-qrcode.svg";
         return $this->getPublicDisk()->put($path, $svg) ? $path : false;
+    }
+
+    public function storeDbDumpToAws(string $path, string $contents): bool
+    {
+        return $this->getWmDumpsDisk()->put($path, $contents);
+    }
+
+    public function getDbDumpFromAws(string $path): string
+    {
+        return $this->getWmDumpsDisk()->get($path);
+    }
+
+    public function cleanOldDumpsFromAws(string $directory, int $daysToKeep = 7): void
+    {
+        $disk = $this->getWmDumpsDisk();
+        $files = $disk->files($directory);
+
+        if (empty($files)) {
+            return;
+        }
+
+        usort($files, function ($a, $b) use ($disk) {
+            return $disk->lastModified($a) <=> $disk->lastModified($b);
+        });
+
+        $threshold = Carbon::now()->subDays($daysToKeep)->getTimestamp();
+
+        foreach ($files as $file) {
+            // if the file is older than the threshold, delete it
+            if ($disk->lastModified($file) < $threshold) {
+                $disk->delete($file);
+            }
+        }
     }
 
     /**
@@ -178,6 +212,11 @@ class StorageService extends BaseService
     public function getPublicDisk(): Filesystem
     {
         return $this->getDisk('public');
+    }
+
+    public function getWmDumpsDisk(): Filesystem
+    {
+        return $this->getDisk('wmdumps');
     }
 
     public function getLocalDisk(): Filesystem

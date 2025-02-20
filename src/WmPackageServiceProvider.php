@@ -2,15 +2,14 @@
 
 namespace Wm\WmPackage;
 
-use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
 use Laravel\Nova\Nova;
 use Matchish\ScoutElasticSearch\ElasticSearchServiceProvider;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Tymon\JWTAuth\Providers\LaravelServiceProvider;
-use Wm\WmPackage\Commands\DownloadDbCommand;
-use Wm\WmPackage\Commands\UploadDbAWS;
+use Wm\WmPackage\Commands\DownloadDbFromAws;
+use Wm\WmPackage\Commands\DumpDbToAws;
 use Wm\WmPackage\Commands\WmPackageCommand;
 use Wm\WmPackage\Providers\EventServiceProvider;
 
@@ -68,8 +67,8 @@ class WmPackageServiceProvider extends PackageServiceProvider
             ->discoversMigrations()
             ->hasCommands([
                 WmPackageCommand::class,
-                UploadDbAWS::class,
-                DownloadDbCommand::class,
+                DumpDbToAws::class,
+                DownloadDbFromAws::class,
             ])
             ->hasViews();
     }
