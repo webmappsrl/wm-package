@@ -1,11 +1,11 @@
 <?php
 
-namespace Workbench\Database\Factories;
+namespace Wm\WmPackage\Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
-use Workbench\App\Models\User;
+use Wm\WmPackage\Models\User;
 
 /**
  * @template TModel of \Workbench\App\Models\User
