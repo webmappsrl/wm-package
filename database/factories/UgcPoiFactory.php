@@ -2,8 +2,9 @@
 
 namespace Wm\WmPackage\Database\Factories;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
+use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\UgcPoi;
+use Illuminate\Database\Eloquent\Factories\Factory;
 
 class UgcPoiFactory extends Factory
 {
@@ -21,7 +22,7 @@ class UgcPoiFactory extends Factory
         ]);
 
         return [
-            'app_id' => 1,
+            'app_id' => App::first()->id,
             'name' => $this->faker->name,
             'osmid' => $this->faker->randomNumber(8),
             'properties' => [
