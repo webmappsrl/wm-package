@@ -154,7 +154,7 @@ class EcTrackController extends Controller
             $emails = explode(',', $email);
             foreach ($emails as $email) {
                 $user = User::where('email', '=', $email)->first();
-                $ids = EcTrackService::make()->getUpdatedAtTracks($user)->toArray();
+                $ids = EcTrackService::make()->getUpdatedAtTracks($user->id)->toArray();
                 $list = $list + $ids;
             }
         } else {

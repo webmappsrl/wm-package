@@ -8,7 +8,6 @@ use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\Media;
-use Wm\WmPackage\Models\User;
 use Wm\WmPackage\Services\GeoJsonService;
 use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Services\ImageService;
@@ -18,22 +17,15 @@ abstract class GeometryModel extends Model implements HasMedia
 {
     use InteractsWithMedia;
 
+    protected $fillable = [
+        'name',
+        'geometry',
+        'properties',
+    ];
+
     protected $casts = [
         'properties' => 'array',
     ];
-
-    /**
-     * Alias for the user relation
-     */
-    public function author()
-    {
-        return $this->user();
-    }
-
-    public function user()
-    {
-        return $this->belongsTo(User::class);
-    }
 
     //
     // FROM GEOHUB App\Traits\GeometryFeatureTrait

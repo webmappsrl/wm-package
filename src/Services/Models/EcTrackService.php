@@ -24,7 +24,6 @@ use Wm\WmPackage\Jobs\UpdateLayerTracksJob;
 use Wm\WmPackage\Jobs\UpdateModelWithGeometryTaxonomyWhere;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcTrack;
-use Wm\WmPackage\Models\User;
 use Wm\WmPackage\Services\BaseService;
 use Wm\WmPackage\Services\GeometryComputationService;
 
@@ -351,17 +350,16 @@ class EcTrackService extends BaseService
         return $featureCollection;
     }
 
-    // TODO: fix this function and add tests
-    // public function getUpdatedAtTracks(?User $user = null): Collection
-    // {
-    //     if ($user) {
-    //         $arr = EcTrack::where('user_id', $user->id)->pluck('updated_at', 'id');
-    //     } else {
+    public function getUpdatedAtTracks(?int $app_id = null): Collection
+    {
+        if ($app_id) {
+            $arr = EcTrack::where('app_id', $app_id)->pluck('updated_at', 'id');
+        } else {
 
-    //         $arr = DB::select('select id, updated_at from ec_tracks where user_id != 20548 and user_id != 17482');
-    //         $arr = collect($arr)->pluck('updated_at', 'id');
-    //     }
+            $arr = DB::select('select id, updated_at from ec_tracks');
+            $arr = collect($arr)->pluck('updated_at', 'id');
+        }
 
-    //     return $arr;
-    // }
+        return $arr;
+    }
 }

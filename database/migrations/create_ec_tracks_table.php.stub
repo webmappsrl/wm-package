@@ -17,13 +17,13 @@ return new class extends Migration
             $table->id('id');
             $table->jsonb('properties');
             $table->text('name');
+            $table->integer('user_id');
             $table->geography('geometry', 'multiLineString', 4326)->nullable();
-            $table->integer('app_id');
             $table->bigInteger('osmid')->nullable();
             $table->timestamps();
 
             $table->index('osmid');
-            $table->index('app_id');
+            $table->index('user_id');
             $table->spatialIndex('geometry');
         });
     }
