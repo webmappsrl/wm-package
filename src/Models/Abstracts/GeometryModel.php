@@ -2,16 +2,18 @@
 
 namespace Wm\WmPackage\Models\Abstracts;
 
-use Illuminate\Database\Eloquent\Model;
 use Spatie\Image\Enums\Fit;
-use Spatie\MediaLibrary\HasMedia;
-use Spatie\MediaLibrary\InteractsWithMedia;
 use Wm\WmPackage\Models\App;
+use Wm\WmPackage\Models\User;
 use Wm\WmPackage\Models\Media;
-use Wm\WmPackage\Services\GeoJsonService;
-use Wm\WmPackage\Services\GeometryComputationService;
+use Spatie\MediaLibrary\HasMedia;
+use Illuminate\Database\Eloquent\Model;
 use Wm\WmPackage\Services\ImageService;
+use Wm\WmPackage\Services\GeoJsonService;
 use Wm\WmPackage\Services\StorageService;
+use Spatie\MediaLibrary\InteractsWithMedia;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Wm\WmPackage\Services\GeometryComputationService;
 
 abstract class GeometryModel extends Model implements HasMedia
 {
@@ -26,6 +28,24 @@ abstract class GeometryModel extends Model implements HasMedia
     protected $casts = [
         'properties' => 'array',
     ];
+
+    /**
+     * Alias for the user relation
+     */
+    public function author()
+    {
+        return $this->user();
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function app(): BelongsTo
+    {
+        return $this->belongsTo(App::class);
+    }
 
     //
     // FROM GEOHUB App\Traits\GeometryFeatureTrait
@@ -154,7 +174,7 @@ abstract class GeometryModel extends Model implements HasMedia
      */
     public function getMorphClass()
     {
-        return 'App\\Models\\'.class_basename($this);
+        return 'App\\Models\\' . class_basename($this);
     }
 
     //

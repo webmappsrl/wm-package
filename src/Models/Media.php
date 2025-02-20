@@ -2,12 +2,13 @@
 
 namespace Wm\WmPackage\Models;
 
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Spatie\MediaLibrary\MediaCollections\Models\Media as SpatieMedia;
+use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Observers\MediaObserver;
 use Wm\WmPackage\Services\GeoJsonService;
-use Wm\WmPackage\Traits\HasPackageFactory;
 use Wm\WmPackage\Traits\OwnedByUserModel;
+use Wm\WmPackage\Traits\HasPackageFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Spatie\MediaLibrary\MediaCollections\Models\Media as SpatieMedia;
 
 class Media extends SpatieMedia
 {
@@ -28,6 +29,11 @@ class Media extends SpatieMedia
     public function author(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function app(): BelongsTo
+    {
+        return $this->belongsTo(App::class, 'app_id');
     }
 
     /**
