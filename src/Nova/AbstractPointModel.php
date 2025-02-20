@@ -2,8 +2,8 @@
 
 namespace Wm\WmPackage\Nova;
 
-use Wm\MapPoint\MapPoint;
 use Laravel\Nova\Http\Requests\NovaRequest;
+use Wm\MapPoint\MapPoint;
 
 abstract class AbstractPointModel extends AbstractGeometryModel
 {
