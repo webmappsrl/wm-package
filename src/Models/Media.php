@@ -2,14 +2,17 @@
 
 namespace Wm\WmPackage\Models;
 
+use Wm\WmPackage\Observers\UgcObserver;
+use Wm\WmPackage\Services\GeoJsonService;
+use Wm\WmPackage\Traits\OwnedByUserModel;
+use Wm\WmPackage\Traits\HasPackageFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Spatie\MediaLibrary\MediaCollections\Models\Media as SpatieMedia;
-use Wm\WmPackage\Observers\UgcObserver;
-use Wm\WmPackage\Traits\HasPackageFactory;
+use Wm\WmPackage\Observers\MediaObserver;
 
 class Media extends SpatieMedia
 {
-    use HasPackageFactory;
+    use HasPackageFactory, OwnedByUserModel;
 
     protected $casts = [
         'manipulations' => 'array',
@@ -20,7 +23,7 @@ class Media extends SpatieMedia
 
     protected static function booted()
     {
-        Media::observe(UgcObserver::class);
+        Media::observe(MediaObserver::class);
     }
 
     public function author(): BelongsTo
@@ -34,6 +37,5 @@ class Media extends SpatieMedia
     public function getGeojson(): array
     {
         return GeoJsonService::make()->getModelAsGeojson($this);
-
     }
 }

@@ -39,7 +39,11 @@ class EcTrackObserver extends AbstractObserver
      */
     public function saving(EcTrack $ecTrack)
     {
-        $ecTrack->excerpt = substr($ecTrack->excerpt, 0, 255);
+        if (isset($ecTrack->properties['excerpt'])) {
+            $properties = $ecTrack->properties;
+            $properties['excerpt'] = substr($ecTrack->properties['excerpt'], 0, 255);
+            $ecTrack->properties = $properties;
+        }
     }
 
     /**
@@ -63,7 +67,7 @@ class EcTrackObserver extends AbstractObserver
         if ($apps && $bbox && $author_id) {
             GenerateAppPBFJob::dispatch($apps, $bbox);
         } else {
-            Log::info('No apps or bbox or author_id found for track '.$ecTrack->id.' to delete PBFs.');
+            Log::info('No apps or bbox or author_id found for track ' . $ecTrack->id . ' to delete PBFs.');
         }
     }
 }

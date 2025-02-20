@@ -18,22 +18,16 @@ abstract class GeometryModel extends Model implements HasMedia
 {
     use InteractsWithMedia;
 
+    protected $fillable = [
+        'name',
+        'geometry',
+        'properties'
+    ];
+
+
     protected $casts = [
         'properties' => 'array',
     ];
-
-    /**
-     * Alias for the user relation
-     */
-    public function author()
-    {
-        return $this->user();
-    }
-
-    public function user()
-    {
-        return $this->belongsTo(User::class);
-    }
 
     //
     // FROM GEOHUB App\Traits\GeometryFeatureTrait
@@ -162,7 +156,7 @@ abstract class GeometryModel extends Model implements HasMedia
      */
     public function getMorphClass()
     {
-        return 'App\\Models\\'.class_basename($this);
+        return 'App\\Models\\' . class_basename($this);
     }
 
     //

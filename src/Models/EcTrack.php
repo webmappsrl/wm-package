@@ -20,54 +20,12 @@ class EcTrack extends MultiLineString
     protected $fillable = [
         'name',
         'geometry',
-        'distance_comp',
-        'feature_image',
-        'out_source_feature_id',
         'user_id',
-        'distance',
-        'ele_min',
-        'ele_max',
-        'ele_from',
-        'ele_to',
-        'ascent',
-        'descent',
-        'duration_forward',
-        'duration_backward',
-        'skip_geomixer_tech',
-        'from',
-        'to',
-        'layers',
-        'themes',
-        'activities',
-        'searchable',
+        'properties'
     ];
 
-    public $translatable = ['name', 'description', 'excerpt', 'difficulty', 'difficulty_i18n', 'not_accessible_message'];
+    public $translatable = ['name'];
 
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array
-     */
-    protected $casts = [
-        'distance_comp' => 'float',
-        'distance' => 'float',
-        'ascent' => 'float',
-        'descent' => 'float',
-        'ele_from' => 'float',
-        'ele_to' => 'float',
-        'ele_min' => 'float',
-        'ele_max' => 'float',
-        'duration_forward' => 'int',
-        'duration_backward' => 'int',
-        'related_url' => 'array',
-        'layers' => 'array',
-        'themes' => 'array',
-        'activities' => 'array',
-        'searchable' => 'array',
-    ];
-
-    public bool $skip_update = false;
 
     public static string $geometryType = 'LineString';
 
@@ -102,13 +60,6 @@ class EcTrack extends MultiLineString
     //
     // ATTRIBUTE SETTERS
     //
-
-    public function setGeometryAttribute($value)
-    {
-        if (strpos($value, 'SRID=4326;') === false) {
-            $this->attributes['geometry'] = "SRID=4326;$value";
-        }
-    }
 
     public function setColorAttribute($value)
     {
@@ -338,7 +289,7 @@ class EcTrack extends MultiLineString
     {
         $geojson = $this->getGeojson();
         // MAPPING
-        $geojson['properties']['id'] = 'ec_track_'.$this->id;
+        $geojson['properties']['id'] = 'ec_track_' . $this->id;
         $geojson = $this->_mapElbrusGeojsonProperties($geojson);
 
         if ($this->ecPois) {
@@ -373,9 +324,9 @@ class EcTrack extends MultiLineString
 
         $fields = ['kml', 'gpx'];
         foreach ($fields as $field) {
-            if (isset($geojson['properties'][$field.'_url'])) {
-                $geojson['properties'][$field] = $geojson['properties'][$field.'_url'];
-                unset($geojson['properties'][$field.'_url']);
+            if (isset($geojson['properties'][$field . '_url'])) {
+                $geojson['properties'][$field] = $geojson['properties'][$field . '_url'];
+                unset($geojson['properties'][$field . '_url']);
             }
         }
 
@@ -385,13 +336,13 @@ class EcTrack extends MultiLineString
 
                 if ($taxonomy === 'activity') {
                     $geojson['properties']['taxonomy'][$name] = array_map(function ($item) use ($name) {
-                        return $name.'_'.$item;
+                        return $name . '_' . $item;
                     }, array_map(function ($item) {
                         return $item['id'];
                     }, $values));
                 } else {
                     $geojson['properties']['taxonomy'][$name] = array_map(function ($item) use ($name) {
-                        return $name.'_'.$item;
+                        return $name . '_' . $item;
                     }, $values);
                 }
             }
@@ -603,32 +554,32 @@ class EcTrack extends MultiLineString
         }
 
         if (empty($searchables) || (in_array('name', $searchables) && ! empty($this->name))) {
-            $string .= str_replace('"', '', json_encode($this->getTranslations('name'))).' ';
+            $string .= str_replace('"', '', json_encode($this->getTranslations('name'))) . ' ';
         }
         if (empty($searchables) || (in_array('description', $searchables) && ! empty($this->description))) {
             $description = str_replace('"', '', json_encode($this->getTranslations('description')));
             $description = str_replace('\\', '', $description);
-            $string .= strip_tags($description).' ';
+            $string .= strip_tags($description) . ' ';
         }
         if (empty($searchables) || (in_array('excerpt', $searchables) && ! empty($this->excerpt))) {
             $excerpt = str_replace('"', '', json_encode($this->getTranslations('excerpt')));
             $excerpt = str_replace('\\', '', $excerpt);
-            $string .= strip_tags($excerpt).' ';
+            $string .= strip_tags($excerpt) . ' ';
         }
         if (empty($searchables) || (in_array('ref', $searchables) && ! empty($this->ref))) {
-            $string .= $this->ref.' ';
+            $string .= $this->ref . ' ';
         }
         if (empty($searchables) || (in_array('osmid', $searchables) && ! empty($this->osmid))) {
-            $string .= $this->osmid.' ';
+            $string .= $this->osmid . ' ';
         }
         if (empty($searchables) || (in_array('taxonomyThemes', $searchables) && ! empty($this->taxonomyThemes))) {
             foreach ($this->taxonomyThemes as $tax) {
-                $string .= str_replace('"', '', json_encode($tax->getTranslations('name'))).' ';
+                $string .= str_replace('"', '', json_encode($tax->getTranslations('name'))) . ' ';
             }
         }
         if (empty($searchables) || (in_array('taxonomyActivities', $searchables) && ! empty($this->taxonomyActivities))) {
             foreach ($this->taxonomyActivities as $tax) {
-                $string .= str_replace('"', '', json_encode($tax->getTranslations('name'))).' ';
+                $string .= str_replace('"', '', json_encode($tax->getTranslations('name'))) . ' ';
             }
         }
 
