@@ -3,6 +3,7 @@
 namespace Wm\WmPackage\Nova;
 
 use Laravel\Nova\Http\Requests\NovaRequest;
+use Wm\MapMultiLinestring\MapMultiLinestring;
 
 abstract class AbstractMultiLineStringModel extends AbstractGeometryModel
 {
@@ -10,7 +11,7 @@ abstract class AbstractMultiLineStringModel extends AbstractGeometryModel
     {
         return [
             ...parent::fields($request),
-            // MapMultiLinestring::make('Geometry', 'geometry'), TODO: uncomment when geometry field issue with nova 5 is fixed
+            MapMultiLinestring::make('Geometry', 'geometry')->hideFromIndex(),
         ];
     }
 }
