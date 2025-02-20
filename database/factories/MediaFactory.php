@@ -3,6 +3,7 @@
 namespace Wm\WmPackage\Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\Media;
 
 class MediaFactory extends Factory
@@ -73,7 +74,7 @@ class MediaFactory extends Factory
             ],
             'order_column' => $this->faker->numberBetween(1, 100),
             'geometry' => \DB::raw("ST_GeomFromGeoJSON('{$geojson}')"),
-            'app_id' => 1,
+            'app_id' => App::first()->id,
         ];
     }
 }

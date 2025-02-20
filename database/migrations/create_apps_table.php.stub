@@ -17,6 +17,7 @@ return new class extends Migration
             $table->id('id');
             $table->timestamps();
             $table->string('name');
+            $table->unsignedBigInteger('user_id')->nullable();
             $table->string('sku')->unique('apps_app_id_unique');
             $table->string('customer_name');
             $table->integer('map_max_zoom')->default(16);
@@ -349,6 +350,8 @@ return new class extends Migration
             $table->boolean('show_favorites')->default(true);
             $table->jsonb('track_technical_details')->nullable()->default('{"show_ascent": true, "show_ele_to": true, "show_descent": true, "show_ele_max": true, "show_ele_min": true, "show_distance": true, "show_ele_from": true, "show_duration_forward": true, "show_duration_backward": true}');
         });
+
+        $table->index('user_id');
     }
 
     /**

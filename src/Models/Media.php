@@ -30,6 +30,11 @@ class Media extends SpatieMedia
         return $this->belongsTo(User::class, 'user_id');
     }
 
+    public function app(): BelongsTo
+    {
+        return $this->belongsTo(App::class, 'app_id');
+    }
+
     /**
      * Calculate the geojson of a model with only the geometry
      */

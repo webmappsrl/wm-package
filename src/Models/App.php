@@ -4,8 +4,8 @@ namespace Wm\WmPackage\Models;
 
 use chillerlan\QRCode\QRCode;
 use chillerlan\QRCode\QROptions;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Support\Collection;
@@ -15,6 +15,7 @@ use Spatie\Translatable\HasTranslations;
 use Wm\WmPackage\Observers\AppObserver;
 use Wm\WmPackage\Services\Models\App\AppConfigService;
 use Wm\WmPackage\Services\StorageService;
+use Wm\WmPackage\Traits\HasPackageFactory;
 
 /**
  * Class App
@@ -25,7 +26,7 @@ use Wm\WmPackage\Services\StorageService;
  */
 class App extends Model
 {
-    use HasFactory, HasTranslations, Searchable;
+    use HasPackageFactory, HasTranslations, Searchable;
 
     protected $fillable = [
         'welcome',
@@ -57,6 +58,11 @@ class App extends Model
         App::observe(AppObserver::class);
     }
 
+    public function author(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
     public function layers()
     {
         return $this->hasMany(Layer::class);
@@ -74,7 +80,7 @@ class App extends Model
 
     public function ugc_medias()
     {
-        return $this->hasMany(UgcMedia::class);
+        return $this->hasMany(Media::class);
     }
 
     public function ugc_pois()

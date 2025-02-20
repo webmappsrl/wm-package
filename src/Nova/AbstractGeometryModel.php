@@ -6,7 +6,6 @@ use App\Nova\User;
 use Laravel\Nova\Fields\BelongsTo;
 use Laravel\Nova\Fields\Code;
 use Laravel\Nova\Fields\ID;
-use Laravel\Nova\Fields\Number;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Resource;
@@ -40,7 +39,7 @@ abstract class AbstractGeometryModel extends Resource
             ID::make()->sortable(),
             Text::make('Name', 'name'),
             BelongsTo::make('Author', 'author', User::class),
-            Number::make('App ID', 'app_id'), // TODO: change it to a belongsTo field when relationships are setup
+            BelongsTo::make('App', 'app', App::class),
             Code::make('Properties', $this->getPropertiesColumnName())->json(),
         ];
     }
