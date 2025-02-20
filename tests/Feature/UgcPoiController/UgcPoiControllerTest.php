@@ -19,7 +19,6 @@ class UgcPoiControllerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->withoutMiddleware();
 
         $geojson = json_encode([
             'type' => 'Point',

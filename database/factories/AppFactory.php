@@ -29,6 +29,7 @@ class AppFactory extends Factory
         return [
             'name' => fake()->name(),
             'sku' => fake()->unique()->word(),
+            'customer_name' => fake()->name(),
         ];
     }
 }
