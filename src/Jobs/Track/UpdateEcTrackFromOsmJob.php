@@ -3,7 +3,7 @@
 namespace Wm\WmPackage\Jobs\Track;
 
 use Exception;
-use Wm\WmPackage\Services\EcTrackService;
+use Wm\WmPackage\Services\Models\EcTrackService;
 
 class UpdateEcTrackFromOsmJob extends BaseEcTrackJob
 {

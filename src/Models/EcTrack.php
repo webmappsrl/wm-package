@@ -20,54 +20,11 @@ class EcTrack extends MultiLineString
     protected $fillable = [
         'name',
         'geometry',
-        'distance_comp',
-        'feature_image',
-        'out_source_feature_id',
         'user_id',
-        'distance',
-        'ele_min',
-        'ele_max',
-        'ele_from',
-        'ele_to',
-        'ascent',
-        'descent',
-        'duration_forward',
-        'duration_backward',
-        'skip_geomixer_tech',
-        'from',
-        'to',
-        'layers',
-        'themes',
-        'activities',
-        'searchable',
+        'properties',
     ];
 
-    public $translatable = ['name', 'description', 'excerpt', 'difficulty', 'difficulty_i18n', 'not_accessible_message'];
-
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array
-     */
-    protected $casts = [
-        'distance_comp' => 'float',
-        'distance' => 'float',
-        'ascent' => 'float',
-        'descent' => 'float',
-        'ele_from' => 'float',
-        'ele_to' => 'float',
-        'ele_min' => 'float',
-        'ele_max' => 'float',
-        'duration_forward' => 'int',
-        'duration_backward' => 'int',
-        'related_url' => 'array',
-        'layers' => 'array',
-        'themes' => 'array',
-        'activities' => 'array',
-        'searchable' => 'array',
-    ];
-
-    public bool $skip_update = false;
+    public $translatable = ['name'];
 
     public static string $geometryType = 'LineString';
 
@@ -102,13 +59,6 @@ class EcTrack extends MultiLineString
     //
     // ATTRIBUTE SETTERS
     //
-
-    public function setGeometryAttribute($value)
-    {
-        if (strpos($value, 'SRID=4326;') === false) {
-            $this->attributes['geometry'] = "SRID=4326;$value";
-        }
-    }
 
     public function setColorAttribute($value)
     {
