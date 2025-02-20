@@ -66,6 +66,7 @@
         "psr-4": {
             "Wm\\WmPackage\\Tests\\": "tests",
             "Workbench\\App\\": "workbench/app/",
+            "Wm\\WmPackage\\Database\\Factories\\": "workbench/database/factories/",
             "Workbench\\Database\\Factories\\": "workbench/database/factories/",
             "Workbench\\Database\\Seeders\\": "workbench/database/seeders/"
         }
