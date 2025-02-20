@@ -4,8 +4,6 @@ namespace Wm\WmPackage\Models;
 
 use chillerlan\QRCode\QRCode;
 use chillerlan\QRCode\QROptions;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Wm\WmPackage\Traits\HasPackageFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
@@ -16,6 +14,7 @@ use Spatie\Translatable\HasTranslations;
 use Wm\WmPackage\Observers\AppObserver;
 use Wm\WmPackage\Services\Models\App\AppConfigService;
 use Wm\WmPackage\Services\StorageService;
+use Wm\WmPackage\Traits\HasPackageFactory;
 
 /**
  * Class App

@@ -2,20 +2,23 @@
 
 namespace Tests\Unit\Observers;
 
-use Wm\WmPackage\Tests\TestCase;
-use Wm\WmPackage\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Wm\WmPackage\Models\User;
+use Wm\WmPackage\Tests\TestCase;
+
 abstract class AbstractUgcObserverTest extends TestCase
 {
     use DatabaseTransactions;
+
     protected User $authUser;
+
     protected User $webmappUser;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->authUser = $this->createUserWithoutFactory([
             'name' => 'Auth User',
             'email' => 'auth@example.com',
@@ -28,12 +31,12 @@ abstract class AbstractUgcObserverTest extends TestCase
 
     protected function createUserWithoutFactory(array $attributes = []): User
     {
-        $user = new User();
+        $user = new User;
         $user->fill(array_merge($attributes, [
-            'password' => 'password'
+            'password' => 'password',
         ]));
         $user->saveQuietly();
-        
+
         return $user;
     }
 }

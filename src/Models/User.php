@@ -4,7 +4,6 @@ namespace Wm\WmPackage\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use ChristianKuri\LaravelFavorite\Traits\Favoriteability;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
@@ -15,6 +14,7 @@ use Spatie\Permission\Models\Role;
 use Spatie\Permission\Traits\HasRoles;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 use Wm\WmPackage\Traits\HasPackageFactory;
+
 /**
  * Undocumented class
  *

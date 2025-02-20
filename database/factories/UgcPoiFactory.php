@@ -5,6 +5,7 @@ namespace Wm\WmPackage\Database\Factories;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Wm\WmPackage\Models\UgcPoi;
 use Wm\WmPackage\Models\User;
+
 class UgcPoiFactory extends Factory
 {
     protected $model = UgcPoi::class;
