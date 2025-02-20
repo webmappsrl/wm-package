@@ -22,8 +22,8 @@ class AppFactory extends Factory
             'map_def_zoom' => $this->faker->numberBetween(12, 14),
             'font_family_header' => 'Roboto Slab',
             'font_family_content' => 'Roboto',
-            'default_feature_color' => '#' . $this->faker->hexColor(),
-            'primary_color' => '#' . $this->faker->hexColor(),
+            'default_feature_color' => '#'.$this->faker->hexColor(),
+            'primary_color' => '#'.$this->faker->hexColor(),
             'start_url' => '/main/explore',
             'show_edit_link' => $this->faker->boolean(),
             'skip_route_index_download' => $this->faker->boolean(80),
@@ -51,17 +51,17 @@ class AppFactory extends Factory
             'geolocation_record_enable' => $this->faker->boolean(),
             'welcome' => [
                 'it' => $this->faker->paragraph(),
-                'en' => $this->faker->paragraph()
+                'en' => $this->faker->paragraph(),
             ],
             'translations_it' => json_encode([
                 'welcome' => $this->faker->paragraph(),
                 'tiles_label' => 'Mappe',
-                'overlays_label' => 'Livelli'
+                'overlays_label' => 'Livelli',
             ]),
             'translations_en' => json_encode([
                 'welcome' => $this->faker->paragraph(),
                 'tiles_label' => 'Maps',
-                'overlays_label' => 'Layers'
+                'overlays_label' => 'Layers',
             ]),
             'classification_start_date' => $this->faker->dateTimeBetween('-1 year', 'now'),
             'classification_end_date' => $this->faker->dateTimeBetween('now', '+1 year'),
@@ -75,8 +75,8 @@ class AppFactory extends Factory
                 'show_distance' => true,
                 'show_ele_from' => true,
                 'show_duration_forward' => true,
-                'show_duration_backward' => true
-            ])
+                'show_duration_backward' => true,
+            ]),
         ];
     }
 }

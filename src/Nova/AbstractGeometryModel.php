@@ -3,13 +3,12 @@
 namespace Wm\WmPackage\Nova;
 
 use App\Nova\User;
-use Laravel\Nova\Resource;
-use Wm\WmPackage\Nova\App;
-use Laravel\Nova\Fields\ID;
-use Laravel\Nova\Fields\Code;
-use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Fields\BelongsTo;
+use Laravel\Nova\Fields\Code;
+use Laravel\Nova\Fields\ID;
+use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
+use Laravel\Nova\Resource;
 
 abstract class AbstractGeometryModel extends Resource
 {

@@ -2,9 +2,9 @@
 
 namespace Wm\WmPackage\Database\Factories;
 
+use Illuminate\Database\Eloquent\Factories\Factory;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\Media;
-use Illuminate\Database\Eloquent\Factories\Factory;
 
 class MediaFactory extends Factory
 {
@@ -27,7 +27,7 @@ class MediaFactory extends Factory
             'conversions_disk' => $this->faker->randomElement(['public', 's3']),
             'collection_name' => 'default',
             'name' => $this->faker->word,
-            'file_name' => $this->faker->word . '.jpg',
+            'file_name' => $this->faker->word.'.jpg',
             'mime_type' => 'image/jpeg',
             'disk' => 'public',
             'size' => $this->faker->numberBetween(1000, 5000),

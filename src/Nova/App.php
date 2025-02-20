@@ -2,13 +2,10 @@
 
 namespace Wm\WmPackage\Nova;
 
-use Laravel\Nova\Resource;
-use Laravel\Nova\Fields\ID;
-use Wm\WmPackage\Nova\Media;
-use Wm\WmPackage\Nova\UgcPoi;
-use Wm\WmPackage\Nova\UgcTrack;
 use Laravel\Nova\Fields\HasMany;
+use Laravel\Nova\Fields\ID;
 use Laravel\Nova\Http\Requests\NovaRequest;
+use Laravel\Nova\Resource;
 
 class App extends Resource
 {
@@ -28,7 +25,7 @@ class App extends Resource
             HasMany::make('Media', 'ugc_medias', Media::class),
             HasMany::make('UgcPois', 'ugc_pois', UgcPoi::class),
             HasMany::make('UgcTracks', 'ugc_tracks', UgcTrack::class),
-            //TODO: implement fields
+            // TODO: implement fields
         ];
     }
 }
