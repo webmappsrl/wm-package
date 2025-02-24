@@ -3,11 +3,11 @@
 namespace Wm\WmPackage\Providers;
 
 use Illuminate\Auth\Events\Registered;
-use Spatie\Backup\Events\BackupWasSuccessful;
-use Wm\WmPackage\Listeners\UpdateLastLoginAt;
-use Wm\WmPackage\Listeners\BackupCompletedListener;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
+use Spatie\Backup\Events\BackupWasSuccessful;
+use Wm\WmPackage\Listeners\BackupCompletedListener;
+use Wm\WmPackage\Listeners\UpdateLastLoginAt;
 
 class EventServiceProvider extends ServiceProvider
 {

@@ -2,7 +2,6 @@
 
 namespace Wm\WmPackage\Services;
 
-use Carbon\Carbon;
 use Exception;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Storage;
@@ -67,7 +66,6 @@ class StorageService extends BaseService
 
         return $this->getPublicDisk()->put($path, $svg) ? $path : false;
     }
-
 
     /**
      * Upload an existing image to the s3 bucket
