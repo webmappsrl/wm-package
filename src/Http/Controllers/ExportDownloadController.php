@@ -3,7 +3,6 @@
 namespace Wm\WmPackage\Http\Controllers;
 
 use Illuminate\Routing\Controller;
-use Illuminate\Support\Facades\Storage;
 use Wm\WmPackage\Services\StorageService;
 
 class ExportDownloadController extends Controller
@@ -21,7 +20,7 @@ class ExportDownloadController extends Controller
 
         return response()->file($filePath, [
             'Content-Type' => $mimeType,
-            'Content-Disposition' => 'attachment; filename=' . $fileName,
+            'Content-Disposition' => 'attachment; filename='.$fileName,
         ])->deleteFileAfterSend(true);
     }
 }

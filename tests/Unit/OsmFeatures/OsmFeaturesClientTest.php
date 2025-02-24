@@ -4,8 +4,8 @@ namespace Tests\Unit\OsmFeatures;
 
 use Mockery;
 use Mockery\MockInterface;
-use Wm\WmPackage\Tests\TestCase;
 use Wm\WmPackage\Http\Clients\OsmfeaturesClient;
+use Wm\WmPackage\Tests\TestCase;
 
 class OsmfeaturesClientTest extends TestCase
 {
@@ -20,7 +20,7 @@ class OsmfeaturesClientTest extends TestCase
 
     const EXAMPLE_GEOJSON_REQUEST = [
         'type' => 'Point',
-        'coordinates' => [0, 0]
+        'coordinates' => [0, 0],
     ];
 
     protected function setUp(): void
@@ -37,7 +37,7 @@ class OsmfeaturesClientTest extends TestCase
             ->once()
             ->with(self::EXAMPLE_GEOJSON_REQUEST)
             ->andReturn([
-                'features' => []
+                'features' => [],
             ]);
 
         $result = $this->client->getWheresByGeojson(self::EXAMPLE_GEOJSON_REQUEST);
@@ -56,17 +56,17 @@ class OsmfeaturesClientTest extends TestCase
                         'osm_type' => 'way',
                         'osm_id' => '123',
                         'tags' => [
-                            'name' => 'First Place'
-                        ]
+                            'name' => 'First Place',
+                        ],
                     ],
                     [
                         'osm_type' => 'node',
                         'osm_id' => '456',
                         'tags' => [
-                            'name' => 'Second Place'
-                        ]
-                    ]
-                ]
+                            'name' => 'Second Place',
+                        ],
+                    ],
+                ],
             ]);
 
         $result = $this->client->getWheresByGeojson(self::EXAMPLE_GEOJSON_REQUEST);
@@ -74,12 +74,12 @@ class OsmfeaturesClientTest extends TestCase
         $this->assertEquals([
             'way123' => [
                 'it' => 'First Place',
-                'en' => 'First Place'
+                'en' => 'First Place',
             ],
             'node456' => [
                 'it' => 'Second Place',
-                'en' => 'Second Place'
-            ]
+                'en' => 'Second Place',
+            ],
         ], $result);
     }
 
@@ -96,8 +96,8 @@ class OsmfeaturesClientTest extends TestCase
                         'tags' => [
                             'name' => 'First Place',
                             'name:it' => 'Primo Posto',
-                            'name:en' => 'First Place'
-                        ]
+                            'name:en' => 'First Place',
+                        ],
                     ],
                     [
                         'osm_type' => 'node',
@@ -105,10 +105,10 @@ class OsmfeaturesClientTest extends TestCase
                         'tags' => [
                             'name' => 'Second Place',
                             'name:it' => 'Secondo Posto',
-                            'name:en' => 'Second Place'
-                        ]
-                    ]
-                ]
+                            'name:en' => 'Second Place',
+                        ],
+                    ],
+                ],
             ]);
 
         $result = $this->client->getWheresByGeojson(self::EXAMPLE_GEOJSON_REQUEST);
@@ -116,12 +116,12 @@ class OsmfeaturesClientTest extends TestCase
         $this->assertEquals([
             'way123' => [
                 'it' => 'Primo Posto',
-                'en' => 'First Place'
+                'en' => 'First Place',
             ],
             'node456' => [
                 'it' => 'Secondo Posto',
-                'en' => 'Second Place'
-            ]
+                'en' => 'Second Place',
+            ],
         ], $result);
     }
 
