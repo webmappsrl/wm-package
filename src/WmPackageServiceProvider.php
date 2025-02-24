@@ -8,8 +8,6 @@ use Matchish\ScoutElasticSearch\ElasticSearchServiceProvider;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Tymon\JWTAuth\Providers\LaravelServiceProvider;
-use Wm\WmPackage\Commands\DownloadDbFromAws;
-use Wm\WmPackage\Commands\DumpDbToAws;
 use Wm\WmPackage\Commands\WmPackageCommand;
 use Wm\WmPackage\Providers\EventServiceProvider;
 
@@ -31,10 +29,10 @@ class WmPackageServiceProvider extends PackageServiceProvider
         $this->app->call(function () use ($packageDirPath) {
             Route::middleware('api')
                 ->prefix('api')
-                ->group($packageDirPath.'routes/api.php');
+                ->group($packageDirPath . 'routes/api.php');
 
             Route::middleware('web')
-                ->group($packageDirPath.'routes/web.php');
+                ->group($packageDirPath . 'routes/web.php');
         });
 
         // Register policies
@@ -116,8 +114,6 @@ class WmPackageServiceProvider extends PackageServiceProvider
             ])
             ->hasCommands([
                 WmPackageCommand::class,
-                DumpDbToAws::class,
-                DownloadDbFromAws::class,
             ])
             ->hasViews();
     }
@@ -137,6 +133,15 @@ class WmPackageServiceProvider extends PackageServiceProvider
             ...$this->app->config['filesystems.disks'],
             ...config('wm-filesystems.disks'),
         ];
+
+        $this->app->config['backup'] = [
+            ...$this->app->config['backup'],
+            ...config('backup'),
+        ];
+        $this->app->config['backup.backup.destination.disks'] = [
+            'wmdumps',
+        ];
+        $this->app->config['backup.backup.database_dump_compressor'] = \Spatie\DbDumper\Compressors\GzipCompressor::class;
     }
 
     /**
@@ -147,7 +152,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
     protected function resources()
     {
 
-        Nova::resourcesIn($this->getPackageBaseDir().'/Nova');
+        Nova::resourcesIn($this->getPackageBaseDir() . '/Nova');
     }
 
     /**
