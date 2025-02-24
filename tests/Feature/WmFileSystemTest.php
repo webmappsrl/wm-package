@@ -7,6 +7,7 @@ use Wm\WmPackage\Tests\TestCase;
 class WmFileSystemTest extends TestCase
 {
     const DEFAULT_FILESYSTEMS = ['local', 'public'];
+
     const PACKAGE_FILESYSTEMS = [
         'backups',
         'importer',
