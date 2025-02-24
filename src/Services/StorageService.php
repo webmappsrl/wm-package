@@ -11,6 +11,7 @@ class StorageService extends BaseService
     public function storeTrack(int $trackId, $contents): string|false
     {
         $path = $this->getTrackPath($trackId);
+
         return $this->getRemoteWfeDisk()->put($path, $contents) ? $path : false;
     }
 
@@ -21,7 +22,8 @@ class StorageService extends BaseService
 
     public function storePBF(int $appId, string $z, string $x, string $y, $pbfContent): string|false
     {
-        $path = $this->getShardBasePath($appId) . "pbf/{$z}/{$x}/{$y}.pbf";
+        $path = $this->getShardBasePath($appId)."pbf/{$z}/{$x}/{$y}.pbf";
+
         return $this->getRemoteWfeDisk()->put($path, $pbfContent) ? $path : false;
     }
 
@@ -37,6 +39,7 @@ class StorageService extends BaseService
     public function getAppConfigJson(int $appId): ?string
     {
         $path = $this->getAppConfigPath($appId);
+
         return $this->getRemoteWfeDisk()->get($path) ?? $this->getLocalAppConfigDisk()->get($path);
     }
 
@@ -52,12 +55,14 @@ class StorageService extends BaseService
     public function getPoisGeojson(int $appId): ?string
     {
         $path = $this->getPoisPath($appId);
+
         return $this->getRemoteWfeDisk()->get($path) ?? $this->getLocalPoisDisk()->get($path);
     }
 
     public function storeAppQrCode(int $appId, string $svg): string|false
     {
-        $path = $this->getShardBasePath($appId) . "qrcode/webapp-qrcode.svg";
+        $path = $this->getShardBasePath($appId).'qrcode/webapp-qrcode.svg';
+
         return $this->getPublicDisk()->put($path, $svg) ? $path : false;
     }
 
@@ -148,17 +153,17 @@ class StorageService extends BaseService
 
     private function getPoisPath(int $appId): string
     {
-        return $this->getShardBasePath($appId) . "pois.geojson";
+        return $this->getShardBasePath($appId).'pois.geojson';
     }
 
     private function getTrackPath(int $trackId): string
     {
-        return $this->getShardBasePath() . "{$trackId}.json";
+        return $this->getShardBasePath()."{$trackId}.json";
     }
 
     private function getAppConfigPath(int $appId): string
     {
-        return $this->getShardBasePath($appId) . "config.json";
+        return $this->getShardBasePath($appId).'config.json';
     }
 
     //
@@ -214,11 +219,13 @@ class StorageService extends BaseService
         return config('wm-package.shard_name', 'webmapp');
     }
 
-    private function getShardBasePath(int $appId = null)
+    private function getShardBasePath(?int $appId = null)
     {
-        $basePath = '/' . $this->getShardName() . '/';
-        if (is_int($appId))
-            $basePath .= $appId . "/";
+        $basePath = '/'.$this->getShardName().'/';
+        if (is_int($appId)) {
+            $basePath .= $appId.'/';
+        }
+
         return $basePath;
     }
 }
