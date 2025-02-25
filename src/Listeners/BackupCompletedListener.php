@@ -2,24 +2,35 @@
 
 namespace Wm\WmPackage\Listeners;
 
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Spatie\Backup\Events\BackupWasSuccessful;
 
 class BackupCompletedListener
 {
     public function handle(BackupWasSuccessful $event)
     {
-        $lastBackup = $event->backupDestination->newestBackup();
-        $localPath = storage_path('app/backups/last_dump.sql.gz');
 
-        if (! file_exists(dirname($localPath))) {
-            mkdir(dirname($localPath), 0755, true);
+        // get the latest backup
+        $lastBackup = $event->backupDestination->newestBackup();
+        if (!$lastBackup) {
+            return;
         }
 
-        $disk = $event->backupDestination->disk();
-        $backupPath = $event->backupDestination->backupName().'/'.$lastBackup->path();
+        // check if the backup name contains "only_db" means it's a database backup
+        if (!Str::contains($lastBackup->path(), 'only_db')) {
+            return;
+        }
 
-        $stream = $disk->readStream($backupPath);
-        file_put_contents($localPath, $stream);
+        // get the backup disk
+        $disk = $event->backupDestination->disk();
+
+        // path to the last_dump.sql.gz file on the backup disk
+        $lastDumpPath = config('app.name') . '/last_dump.zip';
+
+        $stream = $disk->readStream($lastBackup->path());
+
+        $disk->put($lastDumpPath, $stream);
 
         if (is_resource($stream)) {
             fclose($stream);
