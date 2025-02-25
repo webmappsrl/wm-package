@@ -29,10 +29,10 @@ class WmPackageServiceProvider extends PackageServiceProvider
         $this->app->call(function () use ($packageDirPath) {
             Route::middleware('api')
                 ->prefix('api')
-                ->group($packageDirPath.'routes/api.php');
+                ->group($packageDirPath . 'routes/api.php');
 
             Route::middleware('web')
-                ->group($packageDirPath.'routes/web.php');
+                ->group($packageDirPath . 'routes/web.php');
         });
 
         // Register policies
@@ -60,6 +60,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
             ->hasConfigFile([
                 'wm-package',
                 'wm-filesystems',
+                'wm-backup',
             ])
             // ->hasRoutes(['api', 'web'])// Check the boot method, routes are registered there
             ->hasMigrations([
@@ -134,15 +135,9 @@ class WmPackageServiceProvider extends PackageServiceProvider
             ...config('wm-filesystems.disks'),
         ];
 
-        $this->app->config['backup'] = [
-            ...$this->app->config['backup'],
-            ...config('backup'),
-        ];
-        $this->app->config['backup.backup.destination.disks'] = [
-            'wmdumps',
-        ];
-        $this->app->config['backup.backup.database_dump_compressor'] = \Spatie\DbDumper\Compressors\GzipCompressor::class;
+        $this->app->config['backup'] = $this->setDefaultBackupSettings();
     }
+
 
     /**
      * Register the application's Nova resources.
@@ -152,7 +147,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
     protected function resources()
     {
 
-        Nova::resourcesIn($this->getPackageBaseDir().'/Nova');
+        Nova::resourcesIn($this->getPackageBaseDir() . '/Nova');
     }
 
     /**
@@ -173,5 +168,22 @@ class WmPackageServiceProvider extends PackageServiceProvider
     public function tools()
     {
         return [];
+    }
+
+    /**
+     * Configure default settings for spatie/laravel-backup
+     *
+     * @return array
+     */
+    protected function setDefaultBackupSettings(): array
+    {
+        $packageConfig = config('wm-backup');
+        $appConfig = $this->app->config['backup'];
+
+        $appConfig['backup']['source']['databases'] = $packageConfig['backup']['source']['databases'];
+        $appConfig['backup']['database_dump_compressor'] = $packageConfig['backup']['database_dump_compressor'];
+        $appConfig['backup']['destination']['disks'] = $packageConfig['backup']['destination']['disks'];
+
+        return $appConfig;
     }
 }
