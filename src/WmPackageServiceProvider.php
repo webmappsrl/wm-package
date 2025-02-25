@@ -2,14 +2,16 @@
 
 namespace Wm\WmPackage;
 
-use Illuminate\Support\Facades\Route;
 use Laravel\Nova\Nova;
-use Matchish\ScoutElasticSearch\ElasticSearchServiceProvider;
+use Illuminate\Support\Facades\Route;
 use Spatie\LaravelPackageTools\Package;
-use Spatie\LaravelPackageTools\PackageServiceProvider;
-use Tymon\JWTAuth\Providers\LaravelServiceProvider;
+use Wm\WmPackage\Commands\WmBackupCommand;
 use Wm\WmPackage\Commands\WmPackageCommand;
 use Wm\WmPackage\Providers\EventServiceProvider;
+use Tymon\JWTAuth\Providers\LaravelServiceProvider;
+use Wm\WmPackage\Providers\ScheduleServiceProvider;
+use Spatie\LaravelPackageTools\PackageServiceProvider;
+use Matchish\ScoutElasticSearch\ElasticSearchServiceProvider;
 
 class WmPackageServiceProvider extends PackageServiceProvider
 {
@@ -115,6 +117,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
             ])
             ->hasCommands([
                 WmPackageCommand::class,
+                WmBackupCommand::class,
             ])
             ->hasViews();
     }
@@ -129,6 +132,9 @@ class WmPackageServiceProvider extends PackageServiceProvider
 
         // ElasticSearch
         $this->app->register(ElasticSearchServiceProvider::class);
+
+        // Schedule
+        $this->app->register(ScheduleServiceProvider::class);
 
         $this->app->config['filesystems.disks'] = [
             ...$this->app->config['filesystems.disks'],
@@ -180,6 +186,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
         $appConfig['backup']['source']['databases'] = $packageConfig['backup']['source']['databases'];
         $appConfig['backup']['database_dump_compressor'] = $packageConfig['backup']['database_dump_compressor'];
         $appConfig['backup']['destination']['disks'] = $packageConfig['backup']['destination']['disks'];
+        $appConfig['cleanup'] = $packageConfig['cleanup'];
 
         return $appConfig;
     }
