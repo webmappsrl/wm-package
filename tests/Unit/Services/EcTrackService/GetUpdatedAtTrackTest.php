@@ -6,10 +6,8 @@ use Carbon\Carbon;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcTrack;
-use Wm\WmPackage\Models\User;
 use Wm\WmPackage\Services\Models\EcTrackService;
 
 class GetUpdatedAtTracksTest extends AbstractEcTrackServiceTest
@@ -41,12 +39,10 @@ class GetUpdatedAtTracksTest extends AbstractEcTrackServiceTest
         );
     }
 
-
     public function test_get_updated_at_tracks_without_user()
     {
         $app1 = App::factory()->create();
         $app2 = App::factory()->create();
-
 
         $trackSample = [
             'name' => 'test',

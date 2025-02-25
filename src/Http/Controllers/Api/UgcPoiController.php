@@ -2,10 +2,10 @@
 
 namespace Wm\WmPackage\Http\Controllers\Api;
 
-use Illuminate\Http\Request;
-use Wm\WmPackage\Models\UgcPoi;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Wm\WmPackage\Http\Controllers\Api\Abstracts\UgcController;
+use Wm\WmPackage\Models\UgcPoi;
 
 class UgcPoiController extends UgcController
 {

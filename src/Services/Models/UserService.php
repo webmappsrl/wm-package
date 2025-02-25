@@ -21,14 +21,14 @@ class UserService extends BaseService
     {
         if ($user->appId) {
             return $user;
-        } elseif ($appId)
+        } elseif ($appId) {
             $user->app_id = $appId;
-        elseif ($sku) {
+        } elseif ($sku) {
             $appId = App::where('sku', $sku)->first()->id ?? false;
-            if ($appId)
+            if ($appId) {
                 $user->app_id = $appId;
+            }
         }
-
 
         if ($save && $user->isDirty('app_id')) {
             $user->save();

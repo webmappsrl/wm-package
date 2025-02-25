@@ -3,9 +3,8 @@
 namespace Wm\WmPackage\Http\Controllers\Api\Abstracts;
 
 use Exception;
-use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Wm\WmPackage\Http\Controllers\Controller;
 use Wm\WmPackage\Models\Abstracts\GeometryModel;
@@ -17,8 +16,6 @@ abstract class UgcController extends Controller
 
     /**
      * Display a listing of the resource.
-     *
-     * @return JsonResponse
      */
     public function index(Request $request): JsonResponse
     {
@@ -39,8 +36,6 @@ abstract class UgcController extends Controller
 
     /**
      * Store a newly created resource in storage.
-     * 
-     * @return JsonResponse
      */
     public function store(Request $request): JsonResponse
     {
@@ -66,8 +61,6 @@ abstract class UgcController extends Controller
 
     /**
      * Remove the specified resource from storage.
-     *
-     * @return JsonResponse
      */
     protected function _destroy(GeometryModel $model): JsonResponse
     {
@@ -100,7 +93,7 @@ abstract class UgcController extends Controller
         try {
             $model->save();
         } catch (\Exception $e) {
-            $message = 'Error saving ' . class_basename($this->getModelIstance()::class) . '. ' . $e->getMessage();
+            $message = 'Error saving '.class_basename($this->getModelIstance()::class).'. '.$e->getMessage();
             Log::channel('ugc')->error($message);
             throw new Exception($message, 500);
         }

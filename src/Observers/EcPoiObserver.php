@@ -32,6 +32,6 @@ class EcPoiObserver extends AbstractObserver
             EcPoiService::make()->updateDataChain($ecPoi);
         }
 
-        //UserService::make()->assigUserAppIdIfNeeded(null, null, $ecPoi->app_id);
+        // UserService::make()->assigUserAppIdIfNeeded(null, null, $ecPoi->app_id);
     }
 }

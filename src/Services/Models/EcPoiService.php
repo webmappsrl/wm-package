@@ -11,7 +11,6 @@ use Wm\WmPackage\Jobs\UpdateEcPoiDemJob;
 use Wm\WmPackage\Jobs\UpdateModelWithGeometryTaxonomyWhere;
 use Wm\WmPackage\Models\Abstracts\GeometryModel;
 use Wm\WmPackage\Models\EcPoi;
-use Wm\WmPackage\Models\User;
 use Wm\WmPackage\Services\BaseService;
 
 class EcPoiService extends BaseService

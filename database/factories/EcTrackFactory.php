@@ -4,7 +4,6 @@ namespace Wm\WmPackage\Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Wm\WmPackage\Models\EcTrack;
-use Wm\WmPackage\Models\UgcTrack;
 
 class EcTrackFactory extends Factory
 {
