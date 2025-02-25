@@ -25,7 +25,6 @@ class UgcPoiFactory extends Factory
             'user_id' => User::first()->id,
             'app_id' => 1,
             'name' => $this->faker->name,
-            'osmid' => $this->faker->randomNumber(8),
             'properties' => [
                 'description' => $this->faker->paragraph,
                 'difficulty' => $this->faker->randomElement(['easy', 'medium', 'hard']),

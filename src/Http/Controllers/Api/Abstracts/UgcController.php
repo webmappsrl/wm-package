@@ -86,7 +86,7 @@ abstract class UgcController extends Controller
         $geometry = $validated['geometry'];
         $properties = $validated['properties'];
 
-        $model = ($this->getModelIstance())->fill([
+        $model = $model->fill([
             // validated in the validateProperties method
             'geometry' => GeometryComputationService::make()->get2dGeometryFromGeojsonRAW(json_encode($geometry)),
             'properties' => $properties,
@@ -97,9 +97,9 @@ abstract class UgcController extends Controller
         try {
             $model->save();
         } catch (\Exception $e) {
-            Log::channel('ugc')->info('Errore nel salvataggio dell\'oggetto '.$this->getModelIstance()::class.':'.$e->getMessage());
-
-            return response(['error' => 'Error saving '.class_basename($this->getModelIstance()::class)], 500);
+            $message = 'Error saving ' . class_basename($this->getModelIstance()::class) . '. ' . $e->getMessage();
+            Log::channel('ugc')->error($message);
+            throw new Exception($message, 500);
         }
 
         if ($request->has('images')) {

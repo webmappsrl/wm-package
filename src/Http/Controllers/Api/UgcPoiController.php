@@ -17,16 +17,16 @@ class UgcPoiController extends UgcController
     /**
      * Show the form for editing the specified resource.
      */
-    public function update(Request $request, UgcPoi $ugcPoi): Response
+    public function update(Request $request, UgcPoi $poi): Response
     {
-        return parent::_update($request, $ugcPoi);
+        return parent::_update($request, $poi);
     }
 
     /**
      * Show the form for editing the specified resource.
      */
-    public function destroy(UgcPoi $ugcPoi): Response
+    public function destroy(UgcPoi $poi): Response
     {
-        return parent::_destroy($ugcPoi);
+        return parent::_destroy($poi);
     }
 }

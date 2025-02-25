@@ -17,16 +17,16 @@ class UgcTrackController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function update(Request $request, UgcTrack $ugcTrack): Response
+    public function update(Request $request, UgcTrack $track): Response
     {
-        return parent::_update($request, $ugcTrack);
+        return parent::_update($request, $track);
     }
 
     /**
      * Show the form for editing the specified resource.
      */
-    public function destroy(UgcTrack $ugcTrack): Response
+    public function destroy(UgcTrack $track): Response
     {
-        return parent::_destroy($ugcTrack);
+        return parent::_destroy($track);
     }
 }

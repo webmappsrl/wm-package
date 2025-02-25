@@ -42,7 +42,7 @@ class Controller extends BaseController
 
     protected function validateGeojson(Request $request, $additionalRules = [])
     {
-        return $request->validate($request->get('properties'), [
+        return $request->validate([
             'type' => 'required',
             'properties' => 'required|array',
             'properties.name' => 'required|max:255',
@@ -57,7 +57,7 @@ class Controller extends BaseController
     protected function validateUser(GeometryModel $model)
     {
         // TODO: skip this when there will be better model policies
-        $user = auth('api')->user();
+        $user = auth()->user();
         if ($model->user_id !== $user->id) {
             return response(['error' => 'Forbidden access to another user model'], 403);
         }
