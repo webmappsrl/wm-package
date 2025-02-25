@@ -1,6 +1,5 @@
 <?php
 
-
 // for the full configuration see: https://spatie.be/docs/laravel-backup/v8/installation-and-setup
 return [
 
