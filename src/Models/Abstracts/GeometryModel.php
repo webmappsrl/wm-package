@@ -3,11 +3,13 @@
 namespace Wm\WmPackage\Models\Abstracts;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Spatie\Image\Enums\Fit;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\Media;
+use Wm\WmPackage\Models\User;
 use Wm\WmPackage\Services\GeoJsonService;
 use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Services\ImageService;
@@ -27,8 +29,7 @@ abstract class GeometryModel extends Model implements HasMedia
         'properties' => 'array',
     ];
 
-
-    public function app()
+    public function app(): BelongsTo
     {
         return $this->belongsTo(App::class);
     }

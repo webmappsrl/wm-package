@@ -3,6 +3,7 @@
 namespace Wm\WmPackage\Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\UgcPoi;
 use Wm\WmPackage\Models\User;
 
@@ -23,7 +24,7 @@ class UgcPoiFactory extends Factory
 
         return [
             'user_id' => User::first()->id,
-            'app_id' => 1,
+            'app_id' => App::first()->id,
             'name' => $this->faker->name,
             'properties' => [
                 'description' => $this->faker->paragraph,
