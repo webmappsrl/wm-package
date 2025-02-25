@@ -3,29 +3,33 @@
 namespace Wm\WmPackage\Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Wm\WmPackage\Models\App;
-use Wm\WmPackage\Models\UgcPoi;
-use Wm\WmPackage\Models\User;
+use Wm\WmPackage\Models\EcTrack;
 
-class UgcPoiFactory extends Factory
+class EcTrackFactory extends Factory
 {
-    protected $model = UgcPoi::class;
+    protected $model = EcTrack::class;
 
     public function definition()
     {
-        // Dummy GeoJSON for point
+        // Dummy GeoJSON per una LineString
         $geojson = json_encode([
-            'type' => 'Point',
+            'type' => 'MultiLineString',
             'coordinates' => [
-                $this->faker->randomFloat(6, 10, 20),
-                $this->faker->randomFloat(6, 40, 50),
+                [
+                    [
+                        $this->faker->randomFloat(6, 10, 20),
+                        $this->faker->randomFloat(6, 40, 50),
+                    ],
+                    [
+                        $this->faker->randomFloat(6, 10, 20),
+                        $this->faker->randomFloat(6, 40, 50),
+                    ],
+                ],
             ],
         ]);
 
         return [
-            'user_id' => User::first()->id,
-            'app_id' => App::first()->id,
-            'name' => $this->faker->name,
+            'app_id' => $this->faker->numberBetween(1, 100),
             'properties' => [
                 'description' => $this->faker->paragraph,
                 'difficulty' => $this->faker->randomElement(['easy', 'medium', 'hard']),
@@ -45,6 +49,7 @@ class UgcPoiFactory extends Factory
                 ],
                 'created_at' => $this->faker->dateTimeThisYear->format('Y-m-d H:i:s'),
             ],
+            'name' => $this->faker->name,
             'geometry' => \DB::raw("ST_GeomFromGeoJSON('{$geojson}')"),
         ];
     }

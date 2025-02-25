@@ -2,6 +2,7 @@
 
 namespace Wm\WmPackage\Services\Models;
 
+use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\User;
 use Wm\WmPackage\Services\BaseService;
 
@@ -16,17 +17,20 @@ class UserService extends BaseService
      * @param  bool  $save  - If the model should be saved
      * @return \Wm\WmPackage\Models\User - the eventually updated User model
      */
-    public function assigUserSkuAndAppIdIfNeeded($user, $sku = null, $appId = null, $save = true): User
+    public function assigUserAppIdIfNeeded($user, $sku = null, $appId = null, $save = true): User
     {
-        if (is_null($user->sku) && ! is_null($sku)) {
-            $user->sku = $sku;
-        }
-
-        if (is_null($user->appId) && ! is_null($appId)) {
+        if ($user->appId) {
+            return $user;
+        } elseif ($appId) {
             $user->app_id = $appId;
+        } elseif ($sku) {
+            $appId = App::where('sku', $sku)->first()->id ?? false;
+            if ($appId) {
+                $user->app_id = $appId;
+            }
         }
 
-        if ($save && $user->isDirty()) {
+        if ($save && $user->isDirty('app_id')) {
             $user->save();
         }
 

@@ -20,7 +20,7 @@ class EcTrack extends MultiLineString
     protected $fillable = [
         'name',
         'geometry',
-        'user_id',
+        'app_id',
         'properties',
     ];
 

@@ -17,7 +17,7 @@ class EcPoi extends Point
 
     protected $fillable = [
         'name',
-        'user_id',
+        'app_id',
         'geometry',
         'out_source_feature_id',
         'description',

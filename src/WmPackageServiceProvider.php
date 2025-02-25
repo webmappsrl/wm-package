@@ -63,6 +63,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
             ->hasConfigFile([
                 'wm-package',
                 'wm-filesystems',
+                'wm-media-library',
             ])
             // ->hasRoutes(['api', 'web'])// Check the boot method, routes are registered there
             ->discoversMigrations()
@@ -85,10 +86,19 @@ class WmPackageServiceProvider extends PackageServiceProvider
         // ElasticSearch
         $this->app->register(ElasticSearchServiceProvider::class);
 
+        // #######
+        // ####### CONFIGURATIONS OVERRIDE
+        // #######
+
         $this->app->config['filesystems.disks'] = [
             ...$this->app->config['filesystems.disks'],
             ...config('wm-filesystems.disks', []),
         ];
+
+        $this->app->config['media-library'] = array_merge(
+            $this->app->config['media-library'] ?? [],
+            config('wm-media-library', []),
+        );
     }
 
     /**

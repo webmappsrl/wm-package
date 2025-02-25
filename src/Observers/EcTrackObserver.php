@@ -29,7 +29,9 @@ class EcTrackObserver extends AbstractObserver
     {
         $this->ecTrackService->updateDataChain($ecTrack);
 
-        UserService::make()->assigUserSkuAndAppIdIfNeeded($ecTrack->user, $ecTrack->sku, $ecTrack->app_id);
+        if ($user = auth()->user()) {
+            UserService::make()->assigUserAppIdIfNeeded($user, null, $ecTrack->app_id);
+        }
     }
 
     /**

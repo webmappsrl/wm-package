@@ -22,7 +22,7 @@ class OverlayLayer extends GeometryModel
     protected static function boot()
     {
         parent::boot();
-        App::observe(OverlayLayerObserver::class);
+        OverlayLayer::observe(OverlayLayerObserver::class);
     }
 
     /**

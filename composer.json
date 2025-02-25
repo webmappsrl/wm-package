@@ -56,6 +56,7 @@
         ],
         "psr-4": {
             "Wm\\WmPackage\\": "src",
+            "Wm\\WmPackage\\Database\\Factories\\": "database/factories/",
             "Wm\\WmPackage\\Http\\Controllers\\": "src/Http/Controllers"
         },
         "classmap": [
