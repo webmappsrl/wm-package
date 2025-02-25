@@ -32,13 +32,13 @@ class EcPoiService extends BaseService
             })->dispatch();
     }
 
-    public function getUpdatedAtPois(?User $user = null): Collection
+    public function getUpdatedAtPois(?int $app_id = null): Collection
     {
-        if ($user) {
-            $arr = EcPoi::where('user_id', $user->id)->pluck('updated_at', 'id');
+        if ($app_id) {
+            $arr = EcPoi::where('app_id', $app_id)->pluck('updated_at', 'id');
         } else {
 
-            $arr = DB::select('select id, updated_at from ec_pois where user_id != 20548 and user_id != 17482');
+            $arr = DB::select('select id, updated_at from ec_pois');
             $arr = collect($arr)->pluck('updated_at', 'id');
         }
 

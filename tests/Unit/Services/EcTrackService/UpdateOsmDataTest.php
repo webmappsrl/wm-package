@@ -15,7 +15,7 @@ class UpdateOsmDataTest extends AbstractEcTrackServiceTest
         'ref' => 'T123',
         'duration_forward' => '150',
         'duration_backward' => '180',
-        'geometry' => 'SRID=4326;LINESTRING(10.0 45.0, 10.5 45.5)',
+        'geometry' => 'LINESTRING(10.0 45.0, 10.5 45.5)',
         'ascent' => 500,
         'descent' => 400,
         'distance' => 7000,
@@ -36,7 +36,7 @@ class UpdateOsmDataTest extends AbstractEcTrackServiceTest
     ];
 
     const UPDATED_FIELDS = [
-        'geometry' => 'SRID=4326;LINESTRING(10.0 45.0, 10.5 45.5)',
+        'geometry' => 'LINESTRING(10.0 45.0, 10.5 45.5)',
         'descent' => 400,
         'distance' => 7000,
         'duration_forward' => '150',

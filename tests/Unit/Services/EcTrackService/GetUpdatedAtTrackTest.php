@@ -7,6 +7,7 @@ use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\User;
 use Wm\WmPackage\Services\Models\EcTrackService;
@@ -17,15 +18,15 @@ class GetUpdatedAtTracksTest extends AbstractEcTrackServiceTest
 
     public function test_get_updated_at_tracks_for_existing_user()
     {
-        $user = $this->createTestUser();
+        $app = App::factory()->create();
 
-        $track1 = $this->createTrackWithFields([
-            'user_id' => $user->id,
+        $track1 = EcTrack::factory()->create([
+            'app_id' => $app->id,
         ]);
-        $track2 = $this->createTrackWithFields([
-            'user_id' => $user->id,
+        $track2 = EcTrack::factory()->create([
+            'app_id' => $app->id,
         ]);
-        $updatedAtTracks = $this->ecTrackService->getUpdatedAtTracks($user);
+        $updatedAtTracks = $this->ecTrackService->getUpdatedAtTracks($app->id);
         $this->assertTrue($updatedAtTracks->has($track1->id), 'Il track1 non è stato trovato nella collection.');
         $this->assertTrue($updatedAtTracks->has($track2->id), 'Il track2 non è stato trovato nella collection.');
         $this->assertEquals(
@@ -40,21 +41,12 @@ class GetUpdatedAtTracksTest extends AbstractEcTrackServiceTest
         );
     }
 
-    protected function createTestUser(): User
-    {
-        return User::create([
-            'name' => 'Test User',
-            'email' => 'testuser'.Str::random(4).'@example.com',
-            'password' => bcrypt('secret'),
-            'app_id' => 1,
-        ]);
-    }
 
     public function test_get_updated_at_tracks_without_user()
     {
-        $user1 = $this->createTestUser();
-        $user2 = $this->createTestUser();
-        $this->createTestUser();
+        $app1 = App::factory()->create();
+        $app2 = App::factory()->create();
+
 
         $trackSample = [
             'name' => 'test',
@@ -63,8 +55,8 @@ class GetUpdatedAtTracksTest extends AbstractEcTrackServiceTest
             'geometry' => 'LINESTRING (0 0, 1 1)',
         ];
         $dbResult = [
-            (object) ['id' => 1, 'user_id' => $user1->id,  ...$trackSample],
-            (object) ['id' => 2, 'user_id' => $user2->id, ...$trackSample],
+            (object) ['id' => 1, 'app_id' => $app1->id,  ...$trackSample],
+            (object) ['id' => 2, 'app_id' => $app2->id, ...$trackSample],
         ];
 
         foreach ($dbResult as $row) {

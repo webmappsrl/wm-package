@@ -12,15 +12,9 @@ use Wm\WmPackage\Services\Models\UserService;
 
 class AuthController extends Controller
 {
-    /**
-     * @var \Wm\WmPackage\Services\UserService
-     */
-    protected $userService;
 
-    public function __construct(UserService $userService)
-    {
-        $this->userService = $userService;
-    }
+
+    public function __construct(protected UserService $userService) {}
 
     /** * Signup and get a JWT
      *
@@ -118,7 +112,7 @@ class AuthController extends Controller
         }
 
         if ($request->input('referrer') != null) {
-            $this->userService->assigUserSkuAndAppIdIfNeeded($user, $request->input('referrer'));
+            $this->userService->assigUserAppIdIfNeeded($user, $request->input('referrer'));
         }
 
         $token = auth('api')->attempt($credentials);
@@ -172,11 +166,11 @@ class AuthController extends Controller
         $user = auth('api')->user();
         $roles = array_map('strtolower', $user->roles->pluck('name')->toArray());
 
-        $user = $this->userService->assigUserSkuAndAppIdIfNeeded($user, $request->input('referrer'), null);
+        $user = $this->userService->assigUserAppIdIfNeeded($user, $request->input('referrer'), null);
 
         $result = array_merge($user->toArray(), [
             'roles' => $roles,
-            'referrer' => $user->sku,
+            'referrer' => $user->app,
         ]);
 
         unset($result['password']);
@@ -241,7 +235,7 @@ class AuthController extends Controller
             'email_verified_at' => now(),
         ]);
 
-        $user = $this->userService->assigUserSkuAndAppIdIfNeeded($user, $request->input('referrer'), null, false);
+        $user = $this->userService->assigUserAppIdIfNeeded($user, $request->input('referrer'), null, false);
 
         try {
             $user->save();
@@ -250,8 +244,6 @@ class AuthController extends Controller
         }
 
         $this->assignRole($user);
-
-        $user->referrer = $user->sku;
 
         return $user;
     }

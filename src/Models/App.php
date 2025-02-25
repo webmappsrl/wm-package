@@ -144,69 +144,6 @@ class App extends Model
         }
     }
 
-    public function getUGCPoiGeojson($sku)
-    {
-        $pois = UgcPoi::where('sku', $sku)->get();
-
-        if ($pois->count() > 0) {
-            $geoJson = ['type' => 'FeatureCollection'];
-            $features = [];
-            foreach ($pois as $count => $poi) {
-                $feature = $poi->getEmptyGeojson();
-                if (isset($feature['properties'])) {
-                    $feature['properties']['view'] = '/resources/ugc-pois/'.$poi->id;
-                }
-
-                $features[] = $feature;
-            }
-            $geoJson['features'] = $features;
-
-            return json_encode($geoJson);
-        }
-    }
-
-    public function getUGCMediaGeojson($sku)
-    {
-        $medias = UgcMedia::where('sku', $sku)->get();
-
-        if ($medias->count() > 0) {
-            $geoJson = ['type' => 'FeatureCollection'];
-            $features = [];
-            foreach ($medias as $count => $media) {
-                $feature = $media->getEmptyGeojson();
-                if (isset($feature['properties'])) {
-                    $feature['properties']['view'] = '/resources/ugc-medias/'.$media->id;
-                }
-
-                $features[] = $feature;
-            }
-            $geoJson['features'] = $features;
-
-            return json_encode($geoJson);
-        }
-    }
-
-    public function getiUGCTrackGeojson($sku)
-    {
-        $tracks = UgcTrack::where('sku', $sku)->get();
-
-        if ($tracks->count() > 0) {
-            $geoJson = ['type' => 'FeatureCollection'];
-            $features = [];
-            foreach ($tracks as $count => $track) {
-                $feature = $track->getEmptyGeojson();
-                if (isset($feature['properties'])) {
-                    $feature['properties']['view'] = '/resources/ugc-tracks/'.$track->id;
-                }
-
-                $features[] = $feature;
-            }
-            $geoJson['features'] = $features;
-
-            return json_encode($geoJson);
-        }
-    }
-
     public function getAllPoisGeojson()
     {
         $themes = $this->taxonomyThemes()->get();
@@ -279,7 +216,7 @@ class App extends Model
                             $new_array[$key] = json_decode($val, true);
                         }
                         if ($key == 'identifier') {
-                            $new_array[$key] = 'poi_type_'.$val;
+                            $new_array[$key] = 'poi_type_' . $val;
                         }
                         if (! empty($val) && $key != 'name' && $key != 'identifier') {
                             $new_array[$key] = $val;
@@ -303,7 +240,7 @@ class App extends Model
                             $new_array[$key] = json_decode($val, true);
                         }
                         if ($key == 'identifier') {
-                            $new_array[$key] = 'poi_type_'.$val;
+                            $new_array[$key] = 'poi_type_' . $val;
                         }
                         if (! empty($val) && $key != 'name' && $key != 'identifier') {
                             $new_array[$key] = $val;
@@ -368,7 +305,7 @@ class App extends Model
                     });
                 break;
             default:
-                throw new \Exception('Wrong taxonomy name: '.$taxonomy_name);
+                throw new \Exception('Wrong taxonomy name: ' . $taxonomy_name);
         }
 
         $tracks = $query->orderBy('name')->get();
@@ -506,7 +443,7 @@ class App extends Model
         if (isset($customUrl) && $customUrl != null) {
             $url = $customUrl;
         } else {
-            $url = 'https://'.$this->id.'.app.webmapp.it';
+            $url = 'https://' . $this->id . '.app.webmapp.it';
         }
         // create the svg code for the QR code
 
@@ -548,6 +485,6 @@ class App extends Model
      */
     public function getMorphClass()
     {
-        return 'App\\Models\\'.class_basename($this);
+        return 'App\\Models\\' . class_basename($this);
     }
 }
