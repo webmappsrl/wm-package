@@ -2,61 +2,65 @@
 
 namespace Wm\WmPackage\Tests\Feature;
 
-use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Wm\WmPackage\Models\App;
-use Wm\WmPackage\Models\UgcPoi;
 use Wm\WmPackage\Models\User;
+use Wm\WmPackage\Models\UgcPoi;
 use Wm\WmPackage\Tests\TestCase;
+use Orchestra\Testbench\Attributes\WithMigration;
+use Wm\WmPackage\Services\GeometryComputationService;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 
+#[WithMigration]
 class UgcPoiControllerTest extends TestCase
 {
     use DatabaseTransactions;
 
     protected $poi;
 
-    protected $app;
+    protected $appModel;
 
     protected $user;
 
     protected function setUp(): void
     {
         parent::setUp();
+        $this->withoutMiddleware('auth.jwt');
+        $this->artisan('jwt:secret --always-no');
+        // Registra il servizio di autenticazione
 
-        $geojson = json_encode([
-            'type' => 'Point',
-            'coordinates' => [
-                12.4533, 41.9033,
-            ],
-        ]);
-
-        $this->app = App::factory()->create();
+        $this->appModel = App::factory()->create();
         $this->user = User::factory()->create();
+
         $this->actingAs($this->user);
         $this->poi = UgcPoi::factory()->create([
-            'app_id' => $this->app->id,
+            'app_id' => $this->appModel->id
         ]);
-
     }
 
     public function test_update()
     {
+        $this->actingAs($this->user);
+        $poiJsonGeometry = json_decode(GeometryComputationService::make()->getModelGeometryAsGeojson($this->poi), true);
+
         $data = [
-            'name' => 'Nome Aggiornato',
+            'type' => 'Feature',
+            'properties' => [
+                'name' => 'Updated name',
+                'app_id' => $this->poi->app_id,
+            ],
+            'geometry' => $poiJsonGeometry,
         ];
-        $response = $this->json('PUT', 'api/ugc/pois/'.$this->poi->id, $data);
+        $response = $this->json('PUT', 'api/ugc/pois/' . $this->poi->id, $data);
         $response->assertStatus(200);
 
-        $this->assertDatabaseHas('ugc_pois', [
-            'id' => $this->poi->id,
-            'name' => 'Nome Aggiornato',
-        ]);
+        $this->assertEquals(UgcPoi::find($this->poi->id)->name, $data['properties']['name']);
     }
 
     public function test_destroy()
     {
 
         // Effettua la chiamata DELETE all'endpoint destroy
-        $response = $this->json('DELETE', '/ugc/pois/'.$this->poi->id);
+        $response = $this->json('DELETE', 'api/ugc/pois/' . $this->poi->id);
         $response->assertStatus(200);
 
         // Verifica che il record sia stato rimosso dal database

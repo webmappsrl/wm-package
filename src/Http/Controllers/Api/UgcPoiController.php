@@ -3,9 +3,9 @@
 namespace Wm\WmPackage\Http\Controllers\Api;
 
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
-use Wm\WmPackage\Http\Controllers\Api\Abstracts\UgcController;
 use Wm\WmPackage\Models\UgcPoi;
+use Illuminate\Http\JsonResponse;
+use Wm\WmPackage\Http\Controllers\Api\Abstracts\UgcController;
 
 class UgcPoiController extends UgcController
 {
@@ -17,7 +17,7 @@ class UgcPoiController extends UgcController
     /**
      * Show the form for editing the specified resource.
      */
-    public function update(Request $request, UgcPoi $poi): Response
+    public function update(Request $request, UgcPoi $poi): JsonResponse
     {
         return parent::_update($request, $poi);
     }
@@ -25,7 +25,7 @@ class UgcPoiController extends UgcController
     /**
      * Show the form for editing the specified resource.
      */
-    public function destroy(UgcPoi $poi): Response
+    public function destroy(UgcPoi $poi): JsonResponse
     {
         return parent::_destroy($poi);
     }

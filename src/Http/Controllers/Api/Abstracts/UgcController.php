@@ -5,6 +5,7 @@ namespace Wm\WmPackage\Http\Controllers\Api\Abstracts;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
 use Wm\WmPackage\Http\Controllers\Controller;
 use Wm\WmPackage\Models\Abstracts\GeometryModel;
@@ -17,9 +18,9 @@ abstract class UgcController extends Controller
     /**
      * Display a listing of the resource.
      *
-     * @return Response
+     * @return JsonResponse
      */
-    public function index(Request $request)
+    public function index(Request $request): JsonResponse
     {
         $user = auth('api')->user();
 
@@ -38,35 +39,37 @@ abstract class UgcController extends Controller
 
     /**
      * Store a newly created resource in storage.
+     * 
+     * @return JsonResponse
      */
-    public function store(Request $request): Response
+    public function store(Request $request): JsonResponse
     {
         $validated = $this->validateGeojson($request);
 
         $model = $this->fillModelWithRequest($this->getModelIstance(), $request, $validated);
 
-        return response(['id' => $model->id, 'message' => 'Created successfully'], 201);
+        return response()->json(['id' => $model->id, 'message' => 'Created successfully'], 201);
     }
 
     /**
      * Show the form for editing the specified resource.
      */
-    protected function _update(Request $request, GeometryModel $model): Response
+    protected function _update(Request $request, GeometryModel $model): JsonResponse
     {
         $this->validateUser($model);
         $validated = $this->validateGeojson($request);
 
         $model = $this->fillModelWithRequest($model, $request, $validated);
 
-        return response(['id' => $model->id, 'message' => 'Updated successfully'], 200);
+        return response()->json(['id' => $model->id, 'message' => 'Updated successfully'], 200);
     }
 
     /**
      * Remove the specified resource from storage.
      *
-     * @return Response
+     * @return JsonResponse
      */
-    protected function _destroy(GeometryModel $model)
+    protected function _destroy(GeometryModel $model): JsonResponse
     {
         $this->validateUser($model);
         try {
@@ -112,7 +115,7 @@ abstract class UgcController extends Controller
         return $model;
     }
 
-    protected function getFeatureCollection($features)
+    protected function getFeatureCollection($features): JsonResponse
     {
         $featureCollection = [
             'type' => 'FeatureCollection',
