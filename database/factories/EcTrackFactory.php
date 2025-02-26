@@ -2,8 +2,11 @@
 
 namespace Wm\WmPackage\Database\Factories;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
+use DB;
+use Wm\WmPackage\Models\App;
+use Wm\WmPackage\Models\User;
 use Wm\WmPackage\Models\EcTrack;
+use Illuminate\Database\Eloquent\Factories\Factory;
 
 class EcTrackFactory extends Factory
 {
@@ -11,11 +14,15 @@ class EcTrackFactory extends Factory
 
     public function definition()
     {
-        // Dummy GeoJSON per una LineString
+        // Dummy GeoJSON for a MultiLineString
         $geojson = json_encode([
             'type' => 'MultiLineString',
             'coordinates' => [
                 [
+                    [
+                        $this->faker->randomFloat(6, 10, 20),
+                        $this->faker->randomFloat(6, 40, 50),
+                    ],
                     [
                         $this->faker->randomFloat(6, 10, 20),
                         $this->faker->randomFloat(6, 40, 50),
@@ -29,28 +36,30 @@ class EcTrackFactory extends Factory
         ]);
 
         return [
-            'app_id' => $this->faker->numberBetween(1, 100),
-            'properties' => [
-                'description' => $this->faker->paragraph,
-                'difficulty' => $this->faker->randomElement(['easy', 'medium', 'hard']),
-                'rating' => $this->faker->numberBetween(1, 5),
-                'tags' => $this->faker->words(3),
-                'contact' => [
-                    'phone' => $this->faker->phoneNumber,
-                    'email' => $this->faker->email,
-                    'website' => $this->faker->url,
-                ],
-                'opening_hours' => [
-                    'monday' => '9:00-18:00',
-                    'tuesday' => '9:00-18:00',
-                    'wednesday' => '9:00-18:00',
-                    'thursday' => '9:00-18:00',
-                    'friday' => '9:00-18:00',
-                ],
-                'created_at' => $this->faker->dateTimeThisYear->format('Y-m-d H:i:s'),
+            'name' => [
+                'it' => $this->faker->sentence(3),
+                'en' => $this->faker->sentence(3)
             ],
-            'name' => $this->faker->name,
-            'geometry' => \DB::raw("ST_GeomFromGeoJSON('{$geojson}')"),
+            'app_id' => App::first()->id,
+            'geometry' => DB::raw("ST_GeomFromGeoJSON('{$geojson}')"),
+            'osmid' => $this->faker->optional(0.7)->numberBetween(1000000, 9999999),
+            'properties' => [
+                'description' => $this->faker->paragraph(),
+                'excerpt' => $this->faker->sentence(),
+                'difficulty' => $this->faker->randomElement(['facile', 'media', 'difficile']),
+                'rating' => $this->faker->numberBetween(1, 5),
+                'distance' => $this->faker->randomFloat(2, 1, 30),
+                'ascent' => $this->faker->numberBetween(100, 2000),
+                'descent' => $this->faker->numberBetween(100, 2000),
+                'duration_forward' => $this->faker->randomFloat(2, 1, 10),
+                'duration_backward' => $this->faker->randomFloat(2, 1, 10),
+                'cai_scale' => $this->faker->randomElement(['T', 'E', 'EE', 'EEA']),
+                'from' => $this->faker->city(),
+                'to' => $this->faker->city(),
+                'ref' => $this->faker->bothify('??-###'),
+                'color' => '#' . $this->faker->hexColor(),
+                'created_at' => $this->faker->dateTimeThisYear->format('Y-m-d H:i:s'),
+            ]
         ];
     }
 }
