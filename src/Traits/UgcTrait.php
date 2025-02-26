@@ -2,6 +2,8 @@
 
 namespace Wm\WmPackage\Traits;
 
+use App\Nova\User;
+use Laravel\Nova\Fields\BelongsTo;
 use Laravel\Nova\Http\Requests\NovaRequest;
 
 trait UgcTrait
@@ -9,7 +11,7 @@ trait UgcTrait
     protected function ugcNovaFields(NovaRequest $request): array
     {
         return [
-            // add here specific Nova fields for UGCs
+            BelongsTo::make('Author', 'author', User::class),
         ];
     }
 }

@@ -2,7 +2,6 @@
 
 namespace Wm\WmPackage\Nova;
 
-use App\Nova\User;
 use Laravel\Nova\Fields\BelongsTo;
 use Laravel\Nova\Fields\Code;
 use Laravel\Nova\Fields\ID;
@@ -38,7 +37,6 @@ abstract class AbstractGeometryModel extends Resource
         return [
             ID::make()->sortable(),
             Text::make('Name', 'name'),
-            BelongsTo::make('Author', 'author', User::class),
             BelongsTo::make('App', 'app', App::class),
             Code::make('Properties', $this->getPropertiesColumnName())->json(),
         ];
