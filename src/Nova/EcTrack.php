@@ -3,10 +3,11 @@
 namespace Wm\WmPackage\Nova;
 
 use Laravel\Nova\Http\Requests\NovaRequest;
-use Wm\WmPackage\Traits\UgcTrait;
+use Wm\WmPackage\Traits\EcTrait;
 
 class EcTrack extends AbstractMultiLineStringModel
 {
+    use EcTrait;
 
     public static $model = \Wm\WmPackage\Models\EcTrack::class;
 
@@ -14,6 +15,7 @@ class EcTrack extends AbstractMultiLineStringModel
     {
         return [
             ...parent::fields($request),
+            ...$this->ecNovaFields($request),
         ];
     }
 }
