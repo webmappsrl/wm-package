@@ -24,7 +24,7 @@ class EcPoiFactory extends Factory
         return [
             'name' => [
                 'it' => $this->faker->sentence(3),
-                'en' => $this->faker->sentence(3)
+                'en' => $this->faker->sentence(3),
             ],
             'app_id' => App::first()->id,
             'geometry' => \DB::raw("ST_GeomFromGeoJSON('{$geojson}')"),
@@ -51,7 +51,7 @@ class EcPoiFactory extends Factory
                     'venerdì' => '9:00-18:00',
                 ],
                 'created_at' => $this->faker->dateTimeThisYear->format('Y-m-d H:i:s'),
-            ])
+            ]),
         ];
     }
 }

@@ -2,10 +2,8 @@
 
 namespace Wm\WmPackage\Traits;
 
-use App\Nova\User;
-use Laravel\Nova\Fields\Number;
-use Laravel\Nova\Fields\BelongsTo;
 use Laravel\Nova\Fields\BelongsToMany;
+use Laravel\Nova\Fields\Number;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Wm\WmPackage\Models\EcTrack;
 
@@ -29,9 +27,6 @@ trait EcTrait
 
     /**
      * Determine if the current resource is an EcTrack
-     *
-     * @param NovaRequest $request
-     * @return bool
      */
     private function isTrackResource(NovaRequest $request): bool
     {

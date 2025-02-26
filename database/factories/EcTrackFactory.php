@@ -3,10 +3,9 @@
 namespace Wm\WmPackage\Database\Factories;
 
 use DB;
-use Wm\WmPackage\Models\App;
-use Wm\WmPackage\Models\User;
-use Wm\WmPackage\Models\EcTrack;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Wm\WmPackage\Models\App;
+use Wm\WmPackage\Models\EcTrack;
 
 class EcTrackFactory extends Factory
 {
@@ -38,7 +37,7 @@ class EcTrackFactory extends Factory
         return [
             'name' => [
                 'it' => $this->faker->sentence(3),
-                'en' => $this->faker->sentence(3)
+                'en' => $this->faker->sentence(3),
             ],
             'app_id' => App::first()->id,
             'geometry' => DB::raw("ST_GeomFromGeoJSON('{$geojson}')"),
@@ -57,9 +56,9 @@ class EcTrackFactory extends Factory
                 'from' => $this->faker->city(),
                 'to' => $this->faker->city(),
                 'ref' => $this->faker->bothify('??-###'),
-                'color' => '#' . $this->faker->hexColor(),
+                'color' => '#'.$this->faker->hexColor(),
                 'created_at' => $this->faker->dateTimeThisYear->format('Y-m-d H:i:s'),
-            ]
+            ],
         ];
     }
 }
