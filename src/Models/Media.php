@@ -20,6 +20,14 @@ class Media extends SpatieMedia
         'responsive_images' => 'array',
     ];
 
+
+    protected $fillable = [
+        'app_id',
+        'model_id',
+        'model_type',
+        'geometry',
+    ];
+
     protected static function booted()
     {
         Media::observe(MediaObserver::class);
