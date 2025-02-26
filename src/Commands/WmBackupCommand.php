@@ -2,6 +2,7 @@
 
 namespace Wm\WmPackage\Commands;
 
+use Spatie\Backup\Config\Config;
 use Spatie\Backup\Commands\BackupCommand;
 
 class WmBackupCommand extends BackupCommand
@@ -19,6 +20,12 @@ class WmBackupCommand extends BackupCommand
      * @var string
      */
     protected $description = 'Custom backup command extended from spatie/laravel-backup which add a prefix to the backup file name based on the type of backup';
+
+    public function __construct(Config $config)
+    {
+        parent::__construct($config);
+    }
+
 
     /**
      * Execute the console command.

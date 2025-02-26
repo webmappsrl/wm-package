@@ -12,6 +12,7 @@ use Tymon\JWTAuth\Providers\LaravelServiceProvider;
 use Wm\WmPackage\Providers\ScheduleServiceProvider;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Matchish\ScoutElasticSearch\ElasticSearchServiceProvider;
+use Spatie\Backup\Config\Config as BackupConfig;
 
 class WmPackageServiceProvider extends PackageServiceProvider
 {
@@ -31,10 +32,10 @@ class WmPackageServiceProvider extends PackageServiceProvider
         $this->app->call(function () use ($packageDirPath) {
             Route::middleware('api')
                 ->prefix('api')
-                ->group($packageDirPath.'routes/api.php');
+                ->group($packageDirPath . 'routes/api.php');
 
             Route::middleware('web')
-                ->group($packageDirPath.'routes/web.php');
+                ->group($packageDirPath . 'routes/web.php');
         });
 
         // Register policies
@@ -142,6 +143,15 @@ class WmPackageServiceProvider extends PackageServiceProvider
         ];
 
         $this->app->config['backup'] = $this->setDefaultBackupSettings();
+
+        // Bind BackupConfig to the container to solve the instantiation error in WmBackupCommand
+        $this->app->scoped(
+            BackupConfig::class,
+            function () {
+                $backupConfig = config('backup');
+                return BackupConfig::fromArray($backupConfig);
+            }
+        );
     }
 
     /**
@@ -152,7 +162,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
     protected function resources()
     {
 
-        Nova::resourcesIn($this->getPackageBaseDir().'/Nova');
+        Nova::resourcesIn($this->getPackageBaseDir() . '/Nova');
     }
 
     /**
