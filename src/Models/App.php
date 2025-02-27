@@ -43,6 +43,7 @@ class App extends Model
         'classification_start_date' => 'datetime',
         'classification_end_date' => 'datetime',
         'track_technical_details' => 'array',
+        'sku' => 'array'
     ];
 
     /**

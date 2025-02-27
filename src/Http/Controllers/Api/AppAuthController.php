@@ -3,11 +3,13 @@
 namespace Wm\WmPackage\Http\Controllers\Api;
 
 use Exception;
-use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Str;
 use Illuminate\Http\Request;
+use Wm\WmPackage\Models\User;
+use Illuminate\Http\JsonResponse;
+use Jenssegers\Agent\Facades\Agent;
 use Illuminate\Support\Facades\Validator;
 use Wm\WmPackage\Http\Controllers\Controller;
-use Wm\WmPackage\Models\User;
 
 class AppAuthController extends Controller
 {
@@ -101,11 +103,15 @@ class AppAuthController extends Controller
             ], 401);
         }
 
-        $referrer = $request->input('referrer');
-        if ($referrer && ! $user->app->sku->contains($referrer)) {
-            // TODO: check if referrer is a valid SKU and the device OS
-            // $user->app->sku = $request->input('referrer');
-            // $user->app->save();
+        $referrer = Str::substr($request->input('referrer'), 0, 30);
+        $isMobileRequest = Agent::isMobile();
+        if ($referrer && $isMobileRequest && ! $user->app->sku->contains($referrer)) {
+            // TODO: mv to service and validate os!
+            $os = Str::substr(Str::trim(Str::lower(Agent::platform())), 0, 30);
+            if (! $user->app->sku->has($os)) {
+                $user->app->sku->put($os, $referrer);
+                $user->app->save();
+            }
         }
 
         $token = auth('api')->attempt($credentials);

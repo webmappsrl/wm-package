@@ -12,7 +12,7 @@ use Wm\WmPackage\Traits\OwnedByUserModel;
  *
  *
  * @property int    id
- * @property string sku
+ * @property array sku
  * @property string relative_url
  * @property string geometry
  * @property string name
