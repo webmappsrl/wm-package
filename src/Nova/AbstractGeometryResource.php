@@ -9,7 +9,7 @@ use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Resource;
 
-abstract class AbstractGeometryModel extends Resource
+abstract class AbstractGeometryResource extends Resource
 {
     /**
      * The single value that should be used to represent the resource when being displayed.

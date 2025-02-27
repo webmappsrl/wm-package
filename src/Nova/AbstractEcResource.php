@@ -3,8 +3,13 @@
 namespace Wm\WmPackage\Nova;
 
 use Laravel\Nova\Http\Requests\NovaRequest;
+use Laravel\Nova\Fields\BelongsToMany;
+use Laravel\Nova\Fields\Number;
+use Laravel\Nova\Fields\BelongsTo;
+use App\Models\User;
+use Wm\WmPackage\Models\EcTrack;
 
-abstract class AbstractUgc extends AbstractGeometryModel
+abstract class AbstractEcResource extends AbstractGeometryResource
 {
     /**
      * Get the fields displayed by the resource.
@@ -15,7 +20,6 @@ abstract class AbstractUgc extends AbstractGeometryModel
     {
         return [
             ...parent::fields($request),
-            // add here a way to view/edit user_id
         ];
     }
 }
