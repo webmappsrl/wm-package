@@ -185,6 +185,11 @@ class StorageService extends BaseService
         return $this->getDisk('public');
     }
 
+    public function getWmDumpsDisk(): Filesystem
+    {
+        return $this->getDisk('wmdumps');
+    }
+
     public function getLocalDisk(): Filesystem
     {
         return $this->getDisk('local');

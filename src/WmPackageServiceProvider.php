@@ -2,17 +2,17 @@
 
 namespace Wm\WmPackage;
 
-use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
 use Laravel\Nova\Nova;
 use Matchish\ScoutElasticSearch\ElasticSearchServiceProvider;
+use Spatie\Backup\Config\Config as BackupConfig;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Tymon\JWTAuth\Providers\LaravelServiceProvider;
-use Wm\WmPackage\Commands\DownloadDbCommand;
-use Wm\WmPackage\Commands\UploadDbAWS;
+use Wm\WmPackage\Commands\WmBackupCommand;
 use Wm\WmPackage\Commands\WmPackageCommand;
 use Wm\WmPackage\Providers\EventServiceProvider;
+use Wm\WmPackage\Providers\ScheduleServiceProvider;
 
 class WmPackageServiceProvider extends PackageServiceProvider
 {
@@ -69,14 +69,14 @@ class WmPackageServiceProvider extends PackageServiceProvider
             ->hasConfigFile([
                 'wm-package',
                 'wm-filesystems',
+                'wm-backup',
                 'wm-media-library',
             ])
             // ->hasRoutes(['api', 'web'])// Check the boot method, routes are registered there
             ->discoversMigrations()
             ->hasCommands([
                 WmPackageCommand::class,
-                UploadDbAWS::class,
-                DownloadDbCommand::class,
+                WmBackupCommand::class,
             ])
             ->hasViews();
     }
@@ -92,6 +92,8 @@ class WmPackageServiceProvider extends PackageServiceProvider
         // ElasticSearch
         $this->app->register(ElasticSearchServiceProvider::class);
 
+        // Schedule
+        $this->app->register(ScheduleServiceProvider::class);
         // #######
         // ####### CONFIGURATIONS OVERRIDE
         // #######
@@ -100,6 +102,18 @@ class WmPackageServiceProvider extends PackageServiceProvider
             ...$this->app->config['filesystems.disks'],
             ...config('wm-filesystems.disks', []),
         ];
+
+        $this->app->config['backup'] = $this->setDefaultBackupSettings();
+
+        // Bind BackupConfig to the container to solve the instantiation error in WmBackupCommand
+        $this->app->scoped(
+            BackupConfig::class,
+            function () {
+                $backupConfig = config('backup');
+
+                return BackupConfig::fromArray($backupConfig);
+            }
+        );
 
         $this->app->config['media-library'] = array_merge(
             $this->app->config['media-library'] ?? [],
@@ -136,5 +150,21 @@ class WmPackageServiceProvider extends PackageServiceProvider
     public function tools()
     {
         return [];
+    }
+
+    /**
+     * Configure default settings for spatie/laravel-backup
+     */
+    protected function setDefaultBackupSettings(): array
+    {
+        $packageConfig = config('wm-backup');
+        $appConfig = $this->app->config['backup'];
+
+        $appConfig['backup']['source']['databases'] = $packageConfig['backup']['source']['databases'];
+        $appConfig['backup']['database_dump_compressor'] = $packageConfig['backup']['database_dump_compressor'];
+        $appConfig['backup']['destination']['disks'] = $packageConfig['backup']['destination']['disks'];
+        $appConfig['cleanup'] = $packageConfig['cleanup'];
+
+        return $appConfig;
     }
 }
