@@ -2,8 +2,8 @@
 
 namespace Wm\WmPackage\Commands;
 
-use Spatie\Backup\Config\Config;
 use Spatie\Backup\Commands\BackupCommand;
+use Spatie\Backup\Config\Config;
 
 class WmBackupCommand extends BackupCommand
 {
@@ -26,11 +26,8 @@ class WmBackupCommand extends BackupCommand
         parent::__construct($config);
     }
 
-
     /**
      * Execute the console command.
-     *
-     * @return int
      */
     public function handle(): int
     {
@@ -49,7 +46,7 @@ class WmBackupCommand extends BackupCommand
 
         // Modify the filename prefix in the backup config
         if (property_exists($this->config, 'backup')) {
-            if (!isset($this->config->backup->destination->filenamePrefix) || empty($this->config->backup->destination->filenamePrefix)) {
+            if (! isset($this->config->backup->destination->filenamePrefix) || empty($this->config->backup->destination->filenamePrefix)) {
                 $this->config->backup->destination->filenamePrefix = $filenamePrefix;
             }
         }

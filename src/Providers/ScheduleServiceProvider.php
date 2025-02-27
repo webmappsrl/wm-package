@@ -2,9 +2,9 @@
 
 namespace Wm\WmPackage\Providers;
 
-use Illuminate\Support\ServiceProvider;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Facades\App;
+use Illuminate\Support\ServiceProvider;
 
 class ScheduleServiceProvider extends ServiceProvider
 {
@@ -22,7 +22,6 @@ class ScheduleServiceProvider extends ServiceProvider
                 $schedule->command('wm-backup:run --only-files')
                     ->fridays()
                     ->at('18:00');
-
 
                 $schedule->command('backup:clean')
                     ->sundays()

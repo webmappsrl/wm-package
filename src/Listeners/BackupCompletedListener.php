@@ -2,7 +2,6 @@
 
 namespace Wm\WmPackage\Listeners;
 
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Spatie\Backup\Events\BackupWasSuccessful;
 
@@ -13,12 +12,12 @@ class BackupCompletedListener
 
         // get the latest backup
         $lastBackup = $event->backupDestination->newestBackup();
-        if (!$lastBackup) {
+        if (! $lastBackup) {
             return;
         }
 
         // check if the backup name contains "only_db" means it's a database backup
-        if (!Str::contains($lastBackup->path(), 'only_db')) {
+        if (! Str::contains($lastBackup->path(), 'only_db')) {
             return;
         }
 
@@ -26,7 +25,7 @@ class BackupCompletedListener
         $disk = $event->backupDestination->disk();
 
         // path to the last_dump.sql.gz file on the backup disk
-        $lastDumpPath = config('app.name') . '/last_dump.zip';
+        $lastDumpPath = config('app.name').'/last_dump.zip';
 
         $stream = $disk->readStream($lastBackup->path());
 
