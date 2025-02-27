@@ -7,8 +7,6 @@ use Laravel\Nova\Fields\MorphTo;
 use Laravel\Nova\Fields\Number;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
-use Wm\WmPackage\Nova\UgcPoi;
-use Wm\WmPackage\Nova\UgcTrack;
 
 class Media extends AbstractPointModel
 {

@@ -28,7 +28,6 @@ class Media extends SpatieMedia
         'geometry',
     ];
 
-
     protected static function booted()
     {
         Media::observe(MediaObserver::class);

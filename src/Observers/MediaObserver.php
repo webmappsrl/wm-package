@@ -5,8 +5,6 @@ namespace Wm\WmPackage\Observers;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
 use Wm\WmPackage\Models\Media;
-use Wm\WmPackage\Models\UgcPoi;
-use Wm\WmPackage\Models\UgcTrack;
 use Wm\WmPackage\Services\GeometryComputationService;
 
 class MediaObserver extends AbstractAuthorableObserver
@@ -43,8 +41,9 @@ class MediaObserver extends AbstractAuthorableObserver
                 $model = $media->model;
 
                 if (! $model) {
-                    Log::warning("MediaObserver-creating: Related model not found");
+                    Log::warning('MediaObserver-creating: Related model not found');
                     $this->setDefaultValues($media);
+
                     return;
                 }
 
@@ -102,7 +101,7 @@ class MediaObserver extends AbstractAuthorableObserver
     {
         try {
             // Utilizziamo il servizio GeometryComputationService per gestire qualsiasi tipo di geometria
-            $geometryService = new GeometryComputationService();
+            $geometryService = new GeometryComputationService;
 
             if ($model->geometry) {
                 $media->geometry = $geometryService->convertToPoint($model);
@@ -122,7 +121,7 @@ class MediaObserver extends AbstractAuthorableObserver
      */
     private function handleException(\Exception $e, Media $media)
     {
-        Log::error('Error in MediaObserver-creating: ' . $e->getMessage());
+        Log::error('Error in MediaObserver-creating: '.$e->getMessage());
         Log::error($e->getTraceAsString());
         // In case of error, set default values to avoid crashes
         $this->setDefaultValues($media);
@@ -143,7 +142,7 @@ class MediaObserver extends AbstractAuthorableObserver
 
             $this->setDefaultGeometry($media);
         } catch (\Exception $e) {
-            Log::error('Error setting default values: ' . $e->getMessage());
+            Log::error('Error setting default values: '.$e->getMessage());
             // Last resort fallback
             $media->app_id = 1;
             $media->geometry = 'POINT(10.4018624 43.7159395)';
@@ -161,7 +160,7 @@ class MediaObserver extends AbstractAuthorableObserver
             // Default point (Pisa, Italy)
             $media->geometry = 'POINT(10.4018624 43.7159395)';
         } catch (\Exception $e) {
-            Log::error('Error setting default geometry: ' . $e->getMessage());
+            Log::error('Error setting default geometry: '.$e->getMessage());
         }
     }
 }
