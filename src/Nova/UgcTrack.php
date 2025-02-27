@@ -2,20 +2,11 @@
 
 namespace Wm\WmPackage\Nova;
 
-use Laravel\Nova\Http\Requests\NovaRequest;
-use Wm\WmPackage\Traits\UgcTrait;
+use Wm\WmPackage\Nova\Traits\MultiLinestringResourceTrait;
 
-class UgcTrack extends AbstractMultiLineStringModel
+class UgcTrack extends AbstractUgcResource
 {
-    use UgcTrait;
+    use MultiLinestringResourceTrait;
 
     public static $model = \Wm\WmPackage\Models\UgcTrack::class;
-
-    public function fields(NovaRequest $request): array
-    {
-        return [
-            ...parent::fields($request),
-            ...$this->ugcNovaFields($request),
-        ];
-    }
 }

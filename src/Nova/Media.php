@@ -3,18 +3,24 @@
 namespace Wm\WmPackage\Nova;
 
 use Laravel\Nova\Fields\Code;
-use Laravel\Nova\Fields\Number;
 use Laravel\Nova\Fields\Text;
+use Laravel\Nova\Fields\Number;
 use Laravel\Nova\Http\Requests\NovaRequest;
+use Wm\WmPackage\Nova\Traits\PointResourceTrait;
 
-class Media extends AbstractPointModel
+class Media extends AbstractGeometryResource
 {
+    use PointResourceTrait {
+        fields as protected fieldsFromTrait;
+    }
+
     public static $model = \Wm\WmPackage\Models\Media::class;
 
     public function fields(NovaRequest $request): array
     {
+
         return [
-            ...parent::fields($request),
+            ...$this->fieldsFromTrait($request),
             Text::make('Model Type', 'model_type'),
             Text::make('Model ID', 'model_id'),
             Text::make('UUID', 'uuid'),
@@ -26,7 +32,6 @@ class Media extends AbstractPointModel
             Text::make('Conversions Disk', 'conversions_disk'),
             Number::make('Size', 'size'),
             Code::make('Manipulations', 'manipulations')->json()->rules('required', 'json'),
-            Code::make('Custom Properties', 'custom_properties')->json()->rules('required', 'json'),
             Code::make('Generated Conversions', 'generated_conversions')->json()->rules('required', 'json'),
             Code::make('Responsive Images', 'responsive_images')->json()->rules('required', 'json'),
             Number::make('Order Column', 'order_column'),

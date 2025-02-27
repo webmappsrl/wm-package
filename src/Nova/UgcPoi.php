@@ -3,19 +3,11 @@
 namespace Wm\WmPackage\Nova;
 
 use Laravel\Nova\Http\Requests\NovaRequest;
-use Wm\WmPackage\Traits\UgcTrait;
+use Wm\WmPackage\Nova\Traits\PointResourceTrait;
 
-class UgcPoi extends AbstractPointModel
+class UgcPoi extends AbstractUgcResource
 {
-    use UgcTrait;
+    use PointResourceTrait;
 
     public static $model = \Wm\WmPackage\Models\UgcPoi::class;
-
-    public function fields(NovaRequest $request): array
-    {
-        return [
-            ...parent::fields($request),
-            ...$this->ugcNovaFields($request),
-        ];
-    }
 }
