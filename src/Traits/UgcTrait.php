@@ -11,7 +11,7 @@ trait UgcTrait
     {
         return [
             // add here specific Nova fields for UGCs
-            Images::make('Images', 'media')
+            Images::make('Images', 'default')
                 ->hideFromIndex(),
         ];
     }
