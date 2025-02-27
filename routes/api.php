@@ -20,19 +20,17 @@ use Wm\WmPackage\Http\Controllers\Api\WebmappAppController;
 Route::post('/auth/login', [AppAuthController::class, 'login'])->name('auth.login');
 Route::middleware('throttle:100,1')->post('/auth/signup', [AppAuthController::class, 'signup'])->name('auth.signup');
 
-Route::group([
-    'prefix' => 'auth',
-], function () {
+Route::prefix('auth')->middleware('auth:api')->group(function () {
     Route::post('logout', [AppAuthController::class, 'logout'])->name('auth.logout');
     Route::post('refresh', [AppAuthController::class, 'refresh'])->name('auth.refresh');
     Route::post('me', [AppAuthController::class, 'me'])->name('auth.me');
     Route::post('delete', [AppAuthController::class, 'delete'])->name('auth.delete');
 });
 
-Route::post('/wallet/buy', [WalletController::class, 'buy'])->name('wallet.buy');
+Route::middleware('auth:api')->post('/wallet/buy', [WalletController::class, 'buy'])->name('wallet.buy');
 
 
-Route::name('ugc.')->prefix('ugc')->group(function () {
+Route::name('ugc.')->prefix('ugc')->middleware('auth:api')->group(function () {
 
     Route::apiResource('poi', UgcPoiController::class)->except('show');
     Route::apiResource('track', UgcTrackController::class)->except('show');

@@ -19,13 +19,13 @@ abstract class UgcController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $user = auth('api')->user();
+        $user = auth()->user();
 
         $query = $this->getModelIstance()->getQuery()->where('user_id', $user->id);
 
         // TODO: is it regular on header?
         if (! empty($request->header('app-id'))) {
-            $validated = $this->validateAppId($request->headers(), 'app-id');
+            $validated = $this->validateAppId(['app-id' => $request->header('app-id')], 'app-id');
             $query = $query->where('app_id', $validated['app-id']);
         }
 
@@ -93,7 +93,7 @@ abstract class UgcController extends Controller
         try {
             $model->save();
         } catch (\Exception $e) {
-            $message = 'Error saving '.class_basename($this->getModelIstance()::class).'. '.$e->getMessage();
+            $message = 'Error saving ' . class_basename($this->getModelIstance()::class) . '. ' . $e->getMessage();
             Log::channel('ugc')->error($message);
             throw new Exception($message, 500);
         }

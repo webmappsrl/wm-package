@@ -4,10 +4,11 @@ namespace Wm\WmPackage\Http\Controllers\Api;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Wm\WmPackage\Http\Controllers\Api\Abstracts\UgcController;
 use Wm\WmPackage\Http\Controllers\Controller;
 use Wm\WmPackage\Models\UgcTrack;
 
-class UgcTrackController extends Controller
+class UgcTrackController extends UgcController
 {
     protected function getModelIstance(): UgcTrack
     {
