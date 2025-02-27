@@ -6,6 +6,7 @@ use Exception;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Facades\Log;
 use Spatie\Translatable\HasTranslations;
 use Wm\WmPackage\Observers\LayerObserver;
@@ -39,17 +40,17 @@ class Layer extends Model
 
     public function associatedApps()
     {
-        return $this->morphedByMany(App::class, 'layerable', 'app_layer', 'layer_id', 'layerable_id');
+        return $this->belongsToMany(App::class, 'layer_associated_app');
     }
 
     public function overlayLayers()
     {
-        return $this->morphToMany(OverlayLayer::class, 'layerable');
+        return $this->morphMany(OverlayLayer::class, 'layerable', (new OverlayLayer())->getMorphClass());
     }
 
-    public function ecTracks(): BelongsToMany
+    public function ecTracks(): MorphMany
     {
-        return $this->belongsToMany(EcTrack::class, 'ec_track_layer');
+        return $this->morphMany(EcTrack::class, 'layerable', (new EcTrack)->getMorphClass());
     }
 
     /**
@@ -66,7 +67,7 @@ class Layer extends Model
             $this->bbox = $bbox ?? $defaultBBOX;
             $this->save();
         } catch (Exception $e) {
-            Log::channel('layer')->error('computeBB of layer with id: '.$this->id);
+            Log::channel('layer')->error('computeBB of layer with id: ' . $this->id);
         }
     }
 
