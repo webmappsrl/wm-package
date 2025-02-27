@@ -20,7 +20,6 @@ class Media extends SpatieMedia
         'responsive_images' => 'array',
     ];
 
-
     protected $fillable = [
         'app_id',
         'model_id',

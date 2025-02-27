@@ -14,7 +14,6 @@ class MediaObserver extends AbstractAuthorableObserver
     /**
      * Handles the "creating" event of the Media model
      *
-     * @param Model $media
      * @return void
      */
     public function creating(Model $media)
@@ -33,21 +32,20 @@ class MediaObserver extends AbstractAuthorableObserver
     /**
      * Sets app_id and geometry for the media
      *
-     * @param Media $media
      * @return void
      */
     private function setAppIdAndGeometry(Media $media)
     {
         // If app_id is missing but we have model_id and model_type
-        if (!$media->app_id && $media->model_id && $media->model_type) {
+        if (! $media->app_id && $media->model_id && $media->model_type) {
             try {
                 $model = $this->findRelatedModel($media);
 
-                if (!$model) {
+                if (! $model) {
                     return;
                 }
 
-                if (!$this->validateModelHasAppId($model)) {
+                if (! $this->validateModelHasAppId($model)) {
                     return;
                 }
 
@@ -59,7 +57,7 @@ class MediaObserver extends AbstractAuthorableObserver
             } catch (\Exception $e) {
                 $this->handleException($e, $media);
             }
-        } elseif (!$media->geometry) {
+        } elseif (! $media->geometry) {
             try {
                 // If only geometry is missing, set default value
                 $this->setDefaultGeometry($media);
@@ -72,7 +70,6 @@ class MediaObserver extends AbstractAuthorableObserver
     /**
      * Finds the model related to the media
      *
-     * @param Media $media
      * @return Model|null
      */
     private function findRelatedModel(Media $media)
@@ -85,12 +82,12 @@ class MediaObserver extends AbstractAuthorableObserver
             // Checks if the model is UgcTrack (from package or app)
             if ($modelClass === 'App\\Models\\UgcTrack' || $modelClass === UgcTrack::class) {
                 $model = UgcTrack::find($modelId);
-                Log::info("MediaObserver-creating: Found UgcTrack from package");
+                Log::info('MediaObserver-creating: Found UgcTrack from package');
             }
             // Checks if the model is UgcPoi (from package or app)
             elseif ($modelClass === 'App\\Models\\UgcPoi' || $modelClass === UgcPoi::class) {
                 $model = UgcPoi::find($modelId);
-                Log::info("MediaObserver-creating: Found UgcPoi from package");
+                Log::info('MediaObserver-creating: Found UgcPoi from package');
             } else {
                 // Tries to load the original model
                 if (class_exists($modelClass)) {
@@ -99,19 +96,22 @@ class MediaObserver extends AbstractAuthorableObserver
                 } else {
                     Log::warning("MediaObserver-creating: Class {$modelClass} does not exist");
                     $this->setDefaultValues($media);
+
                     return null;
                 }
             }
 
-            if (!$model) {
+            if (! $model) {
                 Log::warning("MediaObserver-creating: Model with ID {$modelId} not found");
                 $this->setDefaultValues($media);
+
                 return null;
             }
 
             return $model;
         } catch (\Exception $e) {
             $this->handleException($e, $media);
+
             return null;
         }
     }
@@ -119,21 +119,22 @@ class MediaObserver extends AbstractAuthorableObserver
     /**
      * Verifies that the model has app_id
      *
-     * @param Model $model
      * @return bool
      */
     private function validateModelHasAppId(Model $model)
     {
         try {
-            if (!isset($model->app_id)) {
-                Log::warning("MediaObserver-creating: app_id missing in parent model");
+            if (! isset($model->app_id)) {
+                Log::warning('MediaObserver-creating: app_id missing in parent model');
                 $this->setDefaultValues($model);
+
                 return false;
             }
 
             return true;
         } catch (\Exception $e) {
             $this->handleException($e, $model);
+
             return false;
         }
     }
@@ -141,8 +142,6 @@ class MediaObserver extends AbstractAuthorableObserver
     /**
      * Sets geometry based on related model
      *
-     * @param Media $media
-     * @param Model $model
      * @return void
      */
     private function setGeometryFromModel(Media $media, Model $model)
@@ -167,8 +166,6 @@ class MediaObserver extends AbstractAuthorableObserver
     /**
      * Sets geometry from a UgcTrack model
      *
-     * @param Media $media
-     * @param UgcTrack $track
      * @return void
      */
     private function setGeometryFromTrack(Media $media, UgcTrack $track)
@@ -176,7 +173,7 @@ class MediaObserver extends AbstractAuthorableObserver
         try {
             // For UgcTrack, calculate the centroid of the multilinestring
             $centroid = DB::selectOne(
-                "SELECT ST_AsText(ST_Centroid(geometry)) as centroid FROM ugc_tracks WHERE id = ?",
+                'SELECT ST_AsText(ST_Centroid(geometry)) as centroid FROM ugc_tracks WHERE id = ?',
                 [$track->id]
             );
 
@@ -196,13 +193,11 @@ class MediaObserver extends AbstractAuthorableObserver
     /**
      * Handles exceptions during media creation
      *
-     * @param \Exception $e
-     * @param Media $media
      * @return void
      */
     private function handleException(\Exception $e, Media $media)
     {
-        Log::error("Error in MediaObserver-creating: " . $e->getMessage());
+        Log::error('Error in MediaObserver-creating: '.$e->getMessage());
         Log::error($e->getTraceAsString());
         // In case of error, set default values to avoid crashes
         $this->setDefaultValues($media);
@@ -210,21 +205,20 @@ class MediaObserver extends AbstractAuthorableObserver
 
     /**
      * Sets default values for app_id and geometry
-     * 
-     * @param Media $media
+     *
      * @return void
      */
     private function setDefaultValues(Media $media)
     {
         try {
             // Set default app_id (1 is usually the main app ID)
-            if (!$media->app_id) {
+            if (! $media->app_id) {
                 $media->app_id = 1;
             }
 
             $this->setDefaultGeometry($media);
         } catch (\Exception $e) {
-            Log::error("Error setting default values: " . $e->getMessage());
+            Log::error('Error setting default values: '.$e->getMessage());
             // Last resort fallback
             $media->app_id = 1;
             $media->geometry = 'POINT(10.4018624 43.7159395)';
@@ -233,8 +227,7 @@ class MediaObserver extends AbstractAuthorableObserver
 
     /**
      * Sets a default geometry (a point in Pisa)
-     * 
-     * @param Media $media
+     *
      * @return void
      */
     private function setDefaultGeometry(Media $media)
@@ -243,7 +236,7 @@ class MediaObserver extends AbstractAuthorableObserver
             // Default point (Pisa, Italy)
             $media->geometry = 'POINT(10.4018624 43.7159395)';
         } catch (\Exception $e) {
-            Log::error("Error setting default geometry: " . $e->getMessage());
+            Log::error('Error setting default geometry: '.$e->getMessage());
         }
     }
 }
