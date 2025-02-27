@@ -101,10 +101,12 @@ class AppAuthController extends Controller
             ], 401);
         }
 
-        // if (($request->input('referrer') != null) && ($request->input('referrer') != $user->app->sku)) {
-        //     $user->app->sku = $request->input('referrer');
-        //     $user->app->save();
-        // }
+        $referrer = $request->input('referrer');
+        if ($referrer && ! $user->app->sku->contains($referrer)) {
+            // TODO: check if referrer is a valid SKU and the device OS
+            // $user->app->sku = $request->input('referrer');
+            // $user->app->save();
+        }
 
         $token = auth('api')->attempt($credentials);
 

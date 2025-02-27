@@ -97,16 +97,9 @@ abstract class GeometryModel extends Model implements HasMedia
 
     public function populatePropertyForm($acqisitionForm): void
     {
-        if (is_numeric($this->app_id)) {
-            $app = App::where('id', $this->app_id)->first();
-        } else {
-            $sku = $this->app_id;
-            if ($sku === 'it.net7.parcoforestecasentinesi') {
-                $sku = 'it.netseven.forestecasentinesi';
-            }
-            $app = App::where('sku', $this->app_id)->first();
-        }
-        if ($app && $app->$acqisitionForm) {
+        $app = App::find($this->app_id);
+
+        if ($app->$acqisitionForm) {
             $formSchema = json_decode($app->$acqisitionForm, true);
             $properties = $this->properties;
             // Trova lo schema corretto basato sull'ID, se esiste in `raw_data`
