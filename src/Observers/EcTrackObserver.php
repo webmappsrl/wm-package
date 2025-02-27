@@ -29,7 +29,9 @@ class EcTrackObserver extends AbstractObserver
     {
         $this->ecTrackService->updateDataChain($ecTrack);
 
-        UserService::make()->assigUserSkuAndAppIdIfNeeded($ecTrack->user, $ecTrack->sku, $ecTrack->app_id);
+        if ($user = auth()->user()) {
+            UserService::make()->assigUserAppIdIfNeeded($user, null, $ecTrack->app_id);
+        }
     }
 
     /**
@@ -39,7 +41,11 @@ class EcTrackObserver extends AbstractObserver
      */
     public function saving(EcTrack $ecTrack)
     {
-        $ecTrack->excerpt = substr($ecTrack->excerpt, 0, 255);
+        if (isset($ecTrack->properties['excerpt'])) {
+            $properties = $ecTrack->properties;
+            $properties['excerpt'] = substr($ecTrack->properties['excerpt'], 0, 255);
+            $ecTrack->properties = $properties;
+        }
     }
 
     /**

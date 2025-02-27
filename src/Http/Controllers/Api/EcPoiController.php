@@ -31,7 +31,7 @@ class EcPoiController extends Controller
             $emails = explode(',', $email);
             foreach ($emails as $email) {
                 $user = User::where('email', '=', $email)->first();
-                $ids = $ecPoiService->getUpdatedAtPois($user)->toArray();
+                $ids = $ecPoiService->getUpdatedAtPois($user->app_id)->toArray();
                 $list = $list + $ids;
             }
 

@@ -2,7 +2,7 @@
 
 namespace Wm\WmPackage\Jobs\Track;
 
-use Wm\WmPackage\Services\EcTrackService;
+use Wm\WmPackage\Services\Models\EcTrackService;
 
 class UpdateEcTrackManualDataJob extends BaseEcTrackJob
 {

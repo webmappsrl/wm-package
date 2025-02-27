@@ -101,10 +101,10 @@ class AppAuthController extends Controller
             ], 401);
         }
 
-        if (($request->input('referrer') != null) && ($request->input('referrer') != $user->sku)) {
-            $user->sku = $request->input('referrer');
-            $user->save();
-        }
+        // if (($request->input('referrer') != null) && ($request->input('referrer') != $user->app->sku)) {
+        //     $user->app->sku = $request->input('referrer');
+        //     $user->app->save();
+        // }
 
         $token = auth('api')->attempt($credentials);
 

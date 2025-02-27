@@ -67,7 +67,7 @@ class AppController extends Controller
         } else {
             // Scaricare risorsa locale
             //            if (Storage::disk('public')->exists($app->$type . '.' . $pathInfo['extension']))
-            return Storage::disk('public')->download($app->$type, $type.'.'.$pathInfo['extension']);
+            return StorageService::make()->getPublicDisk()->download($app->$type, $type.'.'.$pathInfo['extension']);
             //            else return response()->json(['error' => 'File not found'], 404);
         }
     }

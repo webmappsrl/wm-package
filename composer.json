@@ -35,7 +35,9 @@
         "spatie/laravel-package-tools": ">1.16",
         "spatie/laravel-permission": "*",
         "spatie/laravel-translatable": "^6.9",
-        "tymon/jwt-auth": ">2.0"
+        "tymon/jwt-auth": ">2.0",
+        "wm/map-multi-linestring": "^1.0",
+        "wm/map-point": "^1.0"
     },
     "require-dev": {
         "guzzlehttp/guzzle": "^7.9",
@@ -56,6 +58,7 @@
         ],
         "psr-4": {
             "Wm\\WmPackage\\": "src",
+            "Wm\\WmPackage\\Database\\Factories\\": "database/factories/",
             "Wm\\WmPackage\\Http\\Controllers\\": "src/Http/Controllers"
         },
         "classmap": [
