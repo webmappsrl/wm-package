@@ -13,7 +13,7 @@ class MediaService extends BaseService
      * Return a mapped array with all the useful exif of the image
      * Copied (and updated) from geomixer
      *
-     * @param  Media $mediaModel  the path of the image
+     * @param  Media  $mediaModel  the path of the image
      * @return array|false the array in geojson format or empty or false if coordinates aren't present
      *
      * @throws Exception
@@ -67,7 +67,7 @@ class MediaService extends BaseService
                     'coordinates' => $coordinates,
                 ];
             } catch (Exception $e) {
-                Log::error('getMediaExifCoordinatesAsGeojson on media id ' . $mediaModel->id . ': invalid Coordinates present');
+                Log::error('getMediaExifCoordinatesAsGeojson on media id '.$mediaModel->id.': invalid Coordinates present');
             }
         }
 

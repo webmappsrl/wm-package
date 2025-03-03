@@ -93,7 +93,7 @@ abstract class UgcController extends Controller
         try {
             $model->save();
         } catch (\Exception $e) {
-            $message = 'Error saving ' . class_basename($this->getModelIstance()::class) . '. ' . $e->getMessage();
+            $message = 'Error saving '.class_basename($this->getModelIstance()::class).'. '.$e->getMessage();
             Log::channel('ugc')->error($message);
             throw new Exception($message, 500);
         }
