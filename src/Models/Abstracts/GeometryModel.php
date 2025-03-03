@@ -11,7 +11,7 @@ use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\Media;
 use Wm\WmPackage\Services\GeoJsonService;
 use Wm\WmPackage\Services\GeometryComputationService;
-use Wm\WmPackage\Services\ImageService;
+use Wm\WmPackage\Services\MediaService;
 use Wm\WmPackage\Services\StorageService;
 
 abstract class GeometryModel extends Model implements HasMedia
@@ -97,16 +97,9 @@ abstract class GeometryModel extends Model implements HasMedia
 
     public function populatePropertyForm($acqisitionForm): void
     {
-        if (is_numeric($this->app_id)) {
-            $app = App::where('id', $this->app_id)->first();
-        } else {
-            $sku = $this->app_id;
-            if ($sku === 'it.net7.parcoforestecasentinesi') {
-                $sku = 'it.netseven.forestecasentinesi';
-            }
-            $app = App::where('sku', $this->app_id)->first();
-        }
-        if ($app && $app->$acqisitionForm) {
+        $app = App::find($this->app_id);
+
+        if ($app->$acqisitionForm) {
             $formSchema = json_decode($app->$acqisitionForm, true);
             $properties = $this->properties;
             // Trova lo schema corretto basato sull'ID, se esiste in `raw_data`
@@ -169,7 +162,7 @@ abstract class GeometryModel extends Model implements HasMedia
 
     public function registerMediaConversions($media = null): void
     {
-        foreach (ImageService::make()->getThumbnailSizes() as $size) {
+        foreach (MediaService::make()->getThumbnailSizes() as $size) {
             $this
                 ->addMediaConversion('thumbnail')
                 ->fit(Fit::Contain, $size['width'], $size['height'])

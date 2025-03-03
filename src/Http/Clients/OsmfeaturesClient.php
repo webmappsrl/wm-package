@@ -14,9 +14,7 @@ class OsmfeaturesClient extends JsonClient
         // {"name": "Scalepranu/Escalaplano", "type": "boundary", "name:it": "Escalaplano", "name:sc": "Scalepranu", "website": "https://www.comune.escalaplano.ca.it/", "alt_name": "Iscalepranu", "boundary": "administrative", "wikidata": "Q179092", "ref:ISTAT": "111018", "wikipedia": "it:Escalaplano", "admin_level": "8", "postal_code": "08043", "ref:catasto": "D430", "wikipedia:sc": "Scalepranu"}
         $wheres = [];
         foreach ($wheresGeojson['features'] as $feature) {
-            $osmType = $feature['osm_type'];
-            $osmId = $feature['osm_id'];
-            $whereId = $osmType.$osmId;
+            $whereId = $feature['osmfeatures_id'];
             $featureTags = $feature['tags'];
             $name = null;
             foreach ($featureTags as $tagName => $tagValue) {

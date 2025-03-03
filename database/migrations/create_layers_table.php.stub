@@ -20,7 +20,7 @@ return new class extends Migration
             $table->timestamps();
             $table->string('name');
 
-            $table->geography('geometry')->nullable();
+            $table->geography('geometry','polygon')->comment('The bbox of the layer');
 
             $table->spatialIndex('geometry');
             $table->index('app_id');

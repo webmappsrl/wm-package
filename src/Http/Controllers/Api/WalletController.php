@@ -10,7 +10,7 @@ class WalletController extends Controller
 {
     public function buy(Request $request): JsonResponse
     {
-        $user = auth('api')->user();
+        $user = auth()->user();
         $amount = 1; // the amount should be calculated from the product id
 
         if ($this->_validatePurchase()) {

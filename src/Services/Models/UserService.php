@@ -12,7 +12,7 @@ class UserService extends BaseService
      * Undocumented function
      *
      * @param  \Wm\WmPackage\Models\User  $user
-     * @param  string|null  $sku
+     * @param  array  $sku
      * @param  string|null  $appId
      * @param  bool  $save  - If the model should be saved
      * @return \Wm\WmPackage\Models\User - the eventually updated User model
@@ -24,7 +24,7 @@ class UserService extends BaseService
         } elseif ($appId) {
             $user->app_id = $appId;
         } elseif ($sku) {
-            $appId = App::where('sku', $sku)->first()->id ?? false;
+            $appId = App::where('sku', 'LIKE', "%$sku%")->first()->id ?? false;
             if ($appId) {
                 $user->app_id = $appId;
             }

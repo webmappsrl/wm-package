@@ -13,10 +13,10 @@ class CreateAppLayerTable extends Migration
      */
     public function up()
     {
-        Schema::create('app_layer', function (Blueprint $table) {
+        Schema::create('layer_associated_app', function (Blueprint $table) {
             $table->id();
             $table->bigInteger('layer_id');
-            $table->morphs('layerable');
+            $table->bigInteger('app_id');
             $table->timestamps();
         });
     }
@@ -28,6 +28,6 @@ class CreateAppLayerTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('app_layer');
+        Schema::dropIfExists('layer_associated_app');
     }
 }

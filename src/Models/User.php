@@ -20,7 +20,7 @@ use Wm\WmPackage\Traits\HasPackageFactory;
  *
  * @property string $name
  * @property string $email
- * @property string $sku
+ * @property array $sku
  * @property \Illuminate\Support\Carbon $last_login_at
  */
 class User extends Authenticatable implements JWTSubject

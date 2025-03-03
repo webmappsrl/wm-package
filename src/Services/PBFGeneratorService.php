@@ -74,7 +74,7 @@ class PBFGeneratorService extends BaseService
         $sql = <<<SQL
             SELECT COUNT(DISTINCT ec.id) AS total_tracks
             FROM ec_tracks ec
-            JOIN ec_track_layer etl ON ec.id = etl.ec_track_id
+            JOIN layerable etl ON ec.id = etl.layerable_id AND etl.layerable_type LIKE '%EcTrack'
             WHERE etl.layer_id = ANY(:layer_ids) -- Usa un parametro per i layer
             AND ST_Intersects(
                 ST_Transform(ec.geometry, 3857),
@@ -86,7 +86,7 @@ class PBFGeneratorService extends BaseService
         SQL;
 
         $result = DB::select($sql, [
-            'layer_ids' => '{'.implode(',', $layerIds).'}', // Converti in array PostgreSQL
+            'layer_ids' => '{' . implode(',', $layerIds) . '}', // Converti in array PostgreSQL
         ]);
 
         return $result[0]->total_tracks ?? 0;
@@ -178,7 +178,7 @@ class PBFGeneratorService extends BaseService
             ec.searchable -> '{$this->app_id}' AS searchable, -- Usa $this->app_id per searchable
             ec.color as stroke_color
         FROM ec_tracks ec
-        JOIN ec_track_layer etl ON ec.id = etl.ec_track_id
+        JOIN layerable etl ON ec.id = etl.layerable_id AND etl.layerable_type LIKE '%EcTrack'
         JOIN layers l ON etl.layer_id = l.id
         WHERE l.id IN ({$layerIdsSQL}) -- Filtra per i layer associati all'app
         GROUP BY ec.id, ec.geometry

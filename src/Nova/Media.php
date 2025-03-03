@@ -3,6 +3,8 @@
 namespace Wm\WmPackage\Nova;
 
 use Laravel\Nova\Fields\Code;
+use Laravel\Nova\Fields\MorphTo;
+use Laravel\Nova\Fields\Number;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Fields\Number;
 use Laravel\Nova\Http\Requests\NovaRequest;
@@ -21,8 +23,12 @@ class Media extends AbstractGeometryResource
 
         return [
             ...$this->fieldsFromTrait($request),
-            Text::make('Model Type', 'model_type'),
-            Text::make('Model ID', 'model_id'),
+            MorphTo::make(__('Model'))
+                ->types([
+                    UgcPoi::class,
+                    UgcTrack::class,
+                ])
+                ->searchable(),
             Text::make('UUID', 'uuid'),
             Text::make('Collection Name', 'collection_name'),
             Text::make('Name', 'name'),

@@ -15,32 +15,32 @@ use Wm\WmPackage\Http\Controllers\Api\V1\AppAPIController;
 use Wm\WmPackage\Http\Controllers\Api\WalletController;
 use Wm\WmPackage\Http\Controllers\Api\WebmappAppController;
 
-Route::middleware('api')->group(function () {
+Route::post('/auth/login', [AppAuthController::class, 'login'])->name('auth.login');
+Route::middleware('throttle:100,1')->post('/auth/signup', [AppAuthController::class, 'signup'])->name('auth.signup');
 
-    Route::post('/auth/login', [AppAuthController::class, 'login'])->name('auth.login');
-    Route::middleware('throttle:100,1')->post('/auth/signup', [AppAuthController::class, 'signup'])->name('auth.signup');
-
-    Route::group([
-        'middleware' => 'auth.jwt',
-        'prefix' => 'auth',
-    ], function () {
-        Route::post('logout', [AppAuthController::class, 'logout'])->name('auth.logout');
-        Route::post('refresh', [AppAuthController::class, 'refresh'])->name('auth.refresh');
-        Route::post('me', [AppAuthController::class, 'me'])->name('auth.me');
-        Route::post('delete', [AppAuthController::class, 'delete'])->name('auth.delete');
-    });
-
-    Route::group([
-        'middleware' => 'auth.jwt',
-    ], function () {
-        Route::post('/wallet/buy', [WalletController::class, 'buy'])->name('wallet.buy');
-    });
-
-    Route::name('.ugc')->prefix('ugc')->middleware('auth.jwt')->group(function () {
-        Route::apiResource('pois', UgcPoiController::class)->except('show');
-        Route::apiResource('tracks', UgcTrackController::class)->except('show');
-    });
+Route::prefix('auth')->middleware('auth:api')->group(function () {
+    Route::post('logout', [AppAuthController::class, 'logout'])->name('auth.logout');
+    Route::post('refresh', [AppAuthController::class, 'refresh'])->name('auth.refresh');
+    Route::post('me', [AppAuthController::class, 'me'])->name('auth.me');
+    Route::post('delete', [AppAuthController::class, 'delete'])->name('auth.delete');
 });
+
+Route::middleware('auth:api')->post('/wallet/buy', [WalletController::class, 'buy'])->name('wallet.buy');
+
+Route::name('ugc.')->prefix('ugc')->middleware('auth:api')->group(function () {
+
+    Route::apiResource('poi', UgcPoiController::class)->except('show');
+    Route::apiResource('track', UgcTrackController::class)->except('show');
+
+    // # LEGACY
+    Route::get('poi/index', [UgcPoiController::class, 'index'])->name('poi.index.legacy');
+    Route::get('track/index', [UgcTrackController::class, 'index'])->name('track.index.legacy');
+});
+
+// ####################  ###########################
+// ####################  ###########################
+// ####################  ###########################
+// ####################  ###########################
 
 Route::name('api.')->group(function () {
 
