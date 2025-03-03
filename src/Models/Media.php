@@ -3,6 +3,7 @@
 namespace Wm\WmPackage\Models;
 
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Spatie\MediaLibrary\MediaCollections\Models\Media as SpatieMedia;
 use Wm\WmPackage\Observers\MediaObserver;
 use Wm\WmPackage\Services\GeoJsonService;
@@ -40,6 +41,14 @@ class Media extends SpatieMedia
     public function app(): BelongsTo
     {
         return $this->belongsTo(App::class, 'app_id');
+    }
+
+    /**
+     * Get the parent model (polymorphic relation).
+     */
+    public function model(): MorphTo
+    {
+        return $this->morphTo();
     }
 
     /**

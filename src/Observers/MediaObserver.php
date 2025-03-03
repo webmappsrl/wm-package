@@ -3,11 +3,9 @@
 namespace Wm\WmPackage\Observers;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Wm\WmPackage\Models\Media;
-use Wm\WmPackage\Models\UgcPoi;
-use Wm\WmPackage\Models\UgcTrack;
+use Wm\WmPackage\Services\GeometryComputationService;
 
 class MediaObserver extends AbstractAuthorableObserver
 {
@@ -36,12 +34,16 @@ class MediaObserver extends AbstractAuthorableObserver
      */
     private function setAppIdAndGeometry(Media $media)
     {
-        // If app_id is missing but we have model_id and model_type
-        if (! $media->app_id && $media->model_id && $media->model_type) {
+        // If app_id is missing, we need to find the related model
+        if (! $media->app_id) {
             try {
-                $model = $this->findRelatedModel($media);
+
+                $model = $media->model;
 
                 if (! $model) {
+                    Log::warning('MediaObserver-creating: Related model not found');
+                    $this->setDefaultValues($media);
+
                     return;
                 }
 
@@ -52,7 +54,7 @@ class MediaObserver extends AbstractAuthorableObserver
                 // Sets app_id from parent model
                 $media->app_id = $model->app_id;
 
-                // Sets geometry based on model type
+                // Sets geometry based on model geometry
                 $this->setGeometryFromModel($media, $model);
             } catch (\Exception $e) {
                 $this->handleException($e, $media);
@@ -64,55 +66,6 @@ class MediaObserver extends AbstractAuthorableObserver
             } catch (\Exception $e) {
                 $this->handleException($e, $media);
             }
-        }
-    }
-
-    /**
-     * Finds the model related to the media
-     *
-     * @return Model|null
-     */
-    private function findRelatedModel(Media $media)
-    {
-        try {
-            $modelId = $media->model_id;
-            $modelClass = $media->model_type;
-            $model = null;
-
-            // Checks if the model is UgcTrack (from package or app)
-            if ($modelClass === 'App\\Models\\UgcTrack' || $modelClass === UgcTrack::class) {
-                $model = UgcTrack::find($modelId);
-                Log::info('MediaObserver-creating: Found UgcTrack from package');
-            }
-            // Checks if the model is UgcPoi (from package or app)
-            elseif ($modelClass === 'App\\Models\\UgcPoi' || $modelClass === UgcPoi::class) {
-                $model = UgcPoi::find($modelId);
-                Log::info('MediaObserver-creating: Found UgcPoi from package');
-            } else {
-                // Tries to load the original model
-                if (class_exists($modelClass)) {
-                    $model = $modelClass::find($modelId);
-                    Log::info("MediaObserver-creating: Using original class {$modelClass}");
-                } else {
-                    Log::warning("MediaObserver-creating: Class {$modelClass} does not exist");
-                    $this->setDefaultValues($media);
-
-                    return null;
-                }
-            }
-
-            if (! $model) {
-                Log::warning("MediaObserver-creating: Model with ID {$modelId} not found");
-                $this->setDefaultValues($media);
-
-                return null;
-            }
-
-            return $model;
-        } catch (\Exception $e) {
-            $this->handleException($e, $media);
-
-            return null;
         }
     }
 
@@ -147,41 +100,12 @@ class MediaObserver extends AbstractAuthorableObserver
     private function setGeometryFromModel(Media $media, Model $model)
     {
         try {
-            if ($model instanceof UgcPoi && $model->geometry) {
-                // For UgcPoi, directly copy the geometry
-                $media->geometry = $model->geometry;
-                Log::info("Media: geometry copied from UgcPoi {$model->id}");
-            } elseif ($model instanceof UgcTrack) {
-                $this->setGeometryFromTrack($media, $model);
-            } else {
-                // For other models, set default value
-                $this->setDefaultGeometry($media);
-            }
-        } catch (\Exception $e) {
-            $this->handleException($e, $media);
-            $this->setDefaultGeometry($media);
-        }
-    }
+            // Utilizziamo il servizio GeometryComputationService per gestire qualsiasi tipo di geometria
+            $geometryService = new GeometryComputationService;
 
-    /**
-     * Sets geometry from a UgcTrack model
-     *
-     * @return void
-     */
-    private function setGeometryFromTrack(Media $media, UgcTrack $track)
-    {
-        try {
-            // For UgcTrack, calculate the centroid of the multilinestring
-            $centroid = DB::selectOne(
-                'SELECT ST_AsText(ST_Centroid(geometry)) as centroid FROM ugc_tracks WHERE id = ?',
-                [$track->id]
-            );
-
-            if ($centroid && $centroid->centroid) {
-                $media->geometry = $centroid->centroid;
-                Log::info("Media: geometry calculated from UgcTrack {$track->id}");
+            if ($model->geometry) {
+                $media->geometry = $geometryService->convertToPoint($model);
             } else {
-                // If centroid calculation is not possible, set default value
                 $this->setDefaultGeometry($media);
             }
         } catch (\Exception $e) {

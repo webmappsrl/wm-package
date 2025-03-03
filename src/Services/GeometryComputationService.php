@@ -14,6 +14,7 @@ use Wm\WmPackage\Models\Abstracts\GeometryModel;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\Layer;
+use Wm\WmPackage\Models\Media;
 use Wm\WmPackage\Services\Models\MediaService;
 
 class GeometryComputationService extends BaseService
@@ -258,7 +259,7 @@ class GeometryComputationService extends BaseService
      *
      * @return array [lon, lat] of the point
      */
-    public function getCentroid(GeometryModel $model): array
+    public function getCentroid(GeometryModel|Media $model): array
     {
         $rawResult = $model::where('id', $model->id)
             ->selectRaw(
@@ -662,5 +663,39 @@ GROUP BY
         }
 
         return $featureCollection;
+    }
+
+    /**
+     * Converts any geometry to a POINT.
+     * If the geometry is already a POINT, it returns it unchanged.
+     * If it's another type (LINESTRING, POLYGON, etc.) it calculates the centroid.
+     *
+     * @param  GeometryModel|Media  $model  The model to convert
+     * @return string The geometry in WKT format of type POINT
+     */
+    public function convertToPoint(GeometryModel|Media $model): string
+    {
+        // Verify that the model has a geometry
+        if (! isset($model->geometry) || empty($model->geometry)) {
+            throw new \InvalidArgumentException('The model must have a non-empty geometry property');
+        }
+
+        // Get the geometry type directly from PostGIS
+        $geometryType = DB::selectOne('SELECT ST_GeometryType(?) as type', [$model->geometry])->type;
+
+        // If it's already a point, return the geometry as is
+        if (strpos($geometryType, 'ST_Point') === 0) {
+            return $model->geometry;
+        }
+
+        // Otherwise calculate the centroid
+        $centroid = DB::selectOne('SELECT ST_AsText(ST_Centroid(?)) as point', [$model->geometry]);
+
+        // Check if it's necessary to force the SRID (4326)
+        if (strpos($model->geometry, 'SRID=') === 0) {
+            return 'SRID=4326;'.$centroid->point;
+        }
+
+        return $centroid->point;
     }
 }
