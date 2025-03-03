@@ -14,7 +14,7 @@ return new class extends Migration
     public function up()
     {
         Schema::create('apps', function (Blueprint $table) {
-            $table->id('id');
+            $table->id('id'); 
             $table->timestamps();
             $table->string('name');
             $table->unsignedBigInteger('user_id')->nullable();
@@ -27,9 +27,6 @@ return new class extends Migration
             $table->string('font_family_content')->default('Roboto');
             $table->string('default_feature_color')->default('#de1b0d');
             $table->string('primary_color')->default('#de1b0d');
-            $table->string('start_url')->default('/main/explore');
-            $table->boolean('show_edit_link')->default(false);
-            $table->boolean('skip_route_index_download')->default(true);
             $table->float('poi_min_radius', 0, 0)->default(0.5);
             $table->float('poi_max_radius', 0, 0)->default(1.2);
             $table->float('poi_icon_zoom', 0, 0)->default(16);
@@ -37,42 +34,17 @@ return new class extends Migration
             $table->float('poi_min_zoom', 0, 0)->default(13);
             $table->float('poi_label_min_zoom', 0, 0)->default(10.5);
             $table->boolean('show_track_ref_label')->default(false);
-            $table->boolean('table_details_show_gpx_download')->default(false);
-            $table->boolean('table_details_show_kml_download')->default(false);
-            $table->boolean('table_details_show_related_poi')->default(false);
-            $table->boolean('enable_routing')->default(false);
             $table->text('external_overlays')->nullable();
             $table->string('icon')->nullable();
             $table->string('splash')->nullable();
             $table->string('icon_small')->nullable();
-            $table->string('feature_image')->nullable();
             $table->string('default_language', 2)->default('it');
             $table->json('available_languages')->nullable();
             $table->boolean('auth_show_at_startup')->default(false);
-            $table->boolean('offline_enable')->default(false);
-            $table->boolean('offline_force_auth')->default(false);
             $table->boolean('geolocation_record_enable')->default(false);
-            $table->boolean('table_details_show_duration_forward')->default(true);
-            $table->boolean('table_details_show_duration_backward')->default(false);
-            $table->boolean('table_details_show_distance')->default(true);
-            $table->boolean('table_details_show_ascent')->default(true);
-            $table->boolean('table_details_show_descent')->default(true);
-            $table->boolean('table_details_show_ele_max')->default(true);
-            $table->boolean('table_details_show_ele_min')->default(true);
-            $table->boolean('table_details_show_ele_from')->default(false);
-            $table->boolean('table_details_show_ele_to')->default(false);
-            $table->boolean('table_details_show_scale')->default(true);
-            $table->boolean('table_details_show_cai_scale')->default(false);
-            $table->boolean('table_details_show_mtb_scale')->default(false);
-            $table->boolean('table_details_show_ref')->default(true);
-            $table->boolean('table_details_show_surface')->default(false);
-            $table->boolean('table_details_show_geojson_download')->default(false);
-            $table->boolean('table_details_show_shapefile_download')->default(false);
             $table->string('api')->nullable()->default('elbrus');
-            $table->string('icon_notify')->nullable();
             $table->string('logo_homepage')->nullable();
             $table->string('map_bbox')->nullable();
-            $table->boolean('tracks_on_payment')->default(false);
             $table->text('ios_store_link')->nullable();
             $table->text('android_store_link')->nullable();
             $table->text('config_home')->nullable();
@@ -93,8 +65,8 @@ return new class extends Migration
             $table->boolean('flow_line_quote_show')->default(false);
             $table->integer('flow_line_quote_orange')->default(800);
             $table->integer('flow_line_quote_red')->default(1500);
-            $table->integer('map_max_stroke_width')->default(6);
-            $table->integer('map_min_stroke_width')->default(3);
+            $table->integer('map_max_stre_width')->default(6);
+            $table->integer('map_min_stre_width')->default(3);
             $table->boolean('download_track_enable')->default(true);
             $table->boolean('dashboard_show')->default(false);
             $table->boolean('print_track_enable')->default(false);
@@ -347,7 +319,6 @@ return new class extends Migration
             $table->boolean('splash_screen_show')->default(false);
             $table->timestamp('classification_start_date')->nullable();
             $table->timestamp('classification_end_date')->nullable();
-            $table->boolean('show_favorites')->default(true);
             $table->jsonb('track_technical_details')->nullable()->default('{"show_ascent": true, "show_ele_to": true, "show_descent": true, "show_ele_max": true, "show_ele_min": true, "show_distance": true, "show_ele_from": true, "show_duration_forward": true, "show_duration_backward": true}');
             
 
