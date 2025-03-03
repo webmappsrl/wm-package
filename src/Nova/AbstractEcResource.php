@@ -4,7 +4,7 @@ namespace Wm\WmPackage\Nova;
 
 use Laravel\Nova\Http\Requests\NovaRequest;
 
-abstract class AbstractUgc extends AbstractGeometryModel
+abstract class AbstractEcResource extends AbstractGeometryResource
 {
     /**
      * Get the fields displayed by the resource.
@@ -15,7 +15,6 @@ abstract class AbstractUgc extends AbstractGeometryModel
     {
         return [
             ...parent::fields($request),
-            // add here a way to view/edit user_id
         ];
     }
 }

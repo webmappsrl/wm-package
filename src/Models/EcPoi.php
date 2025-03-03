@@ -2,7 +2,6 @@
 
 namespace Wm\WmPackage\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Facades\App;
 use Spatie\Translatable\HasTranslations;
@@ -12,15 +11,14 @@ use Wm\WmPackage\Traits\TaxonomyAbleModel;
 
 class EcPoi extends Point
 {
-    use HasFactory, HasTranslations, TaxonomyAbleModel;
     use HasTranslations;
+    use HasTranslations, TaxonomyAbleModel;
 
     protected $fillable = [
         'name',
         'app_id',
         'geometry',
         'out_source_feature_id',
-        'description',
         'addr_complete',
         'capacity',
         'contact_phone',
@@ -40,6 +38,7 @@ class EcPoi extends Point
     protected $casts = [
         'related_url' => 'array',
         'accessibility_validity_date' => 'datetime',
+        'properties' => 'array',
     ];
 
     protected static function boot()

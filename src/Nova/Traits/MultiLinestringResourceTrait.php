@@ -1,11 +1,11 @@
 <?php
 
-namespace Wm\WmPackage\Nova;
+namespace Wm\WmPackage\Nova\Traits;
 
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Wm\MapMultiLinestring\MapMultiLinestring;
 
-abstract class AbstractMultiLineStringModel extends AbstractGeometryModel
+trait MultiLinestringResourceTrait
 {
     public function fields(NovaRequest $request): array
     {

@@ -5,7 +5,6 @@ namespace Wm\WmPackage\Models;
 use Exception;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Facades\Log;
 use Spatie\Translatable\HasTranslations;
@@ -45,7 +44,7 @@ class Layer extends Model
 
     public function overlayLayers()
     {
-        return $this->morphMany(OverlayLayer::class, 'layerable', (new OverlayLayer())->getMorphClass());
+        return $this->morphMany(OverlayLayer::class, 'layerable', (new OverlayLayer)->getMorphClass());
     }
 
     public function ecTracks(): MorphMany
@@ -67,7 +66,7 @@ class Layer extends Model
             $this->bbox = $bbox ?? $defaultBBOX;
             $this->save();
         } catch (Exception $e) {
-            Log::channel('layer')->error('computeBB of layer with id: ' . $this->id);
+            Log::channel('layer')->error('computeBB of layer with id: '.$this->id);
         }
     }
 

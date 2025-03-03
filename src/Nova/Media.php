@@ -5,40 +5,42 @@ namespace Wm\WmPackage\Nova;
 use Laravel\Nova\Fields\Code;
 use Laravel\Nova\Fields\MorphTo;
 use Laravel\Nova\Fields\Number;
+use Laravel\Nova\Fields\Number;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
+use Wm\WmPackage\Nova\Traits\PointResourceTrait;
 
-class Media extends AbstractPointModel
+class Media extends AbstractGeometryResource
 {
+    use PointResourceTrait {
+        fields as protected fieldsFromTrait;
+    }
+
     public static $model = \Wm\WmPackage\Models\Media::class;
 
     public function fields(NovaRequest $request): array
     {
-        return [
-            ...parent::fields($request),
 
+        return [
+            ...$this->fieldsFromTrait($request),
             MorphTo::make(__('Model'))
                 ->types([
                     UgcPoi::class,
                     UgcTrack::class,
                 ])
                 ->searchable(),
-
-            Text::make('Model Type', 'model_type')->readonly(),
-            Number::make('Model ID', 'model_id')->readonly(),
-            Text::make('UUID', 'uuid')->readonly(),
-            Text::make('Collection Name', 'collection_name')->readonly(),
-            Text::make('Name', 'name')->readonly(),
-            Text::make('File Name', 'file_name')->readonly(),
-            Text::make('MIME Type', 'mime_type')->readonly(),
-            Text::make('Disk', 'disk')->readonly(),
-            Text::make('Conversions Disk', 'conversions_disk')->readonly(),
-            Number::make('Size', 'size')->readonly(),
-            Code::make('Manipulations', 'manipulations')->json()->readonly(),
-            Code::make('Custom Properties', 'custom_properties')->json()->readonly(),
-            Code::make('Generated Conversions', 'generated_conversions')->json()->readonly(),
-            Code::make('Responsive Images', 'responsive_images')->json()->readonly(),
-            Number::make('Order Column', 'order_column')->readonly(),
+            Text::make('UUID', 'uuid'),
+            Text::make('Collection Name', 'collection_name'),
+            Text::make('Name', 'name'),
+            Text::make('File Name', 'file_name'),
+            Text::make('MIME Type', 'mime_type'),
+            Text::make('Disk', 'disk'),
+            Text::make('Conversions Disk', 'conversions_disk'),
+            Number::make('Size', 'size'),
+            Code::make('Manipulations', 'manipulations')->json()->rules('required', 'json'),
+            Code::make('Generated Conversions', 'generated_conversions')->json()->rules('required', 'json'),
+            Code::make('Responsive Images', 'responsive_images')->json()->rules('required', 'json'),
+            Number::make('Order Column', 'order_column'),
         ];
     }
 }

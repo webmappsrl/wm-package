@@ -13,7 +13,7 @@ use Spatie\Permission\Models\Permission;
 use Vyuldashev\NovaPermission\PermissionBooleanGroup;
 use Vyuldashev\NovaPermission\RoleBooleanGroup;
 
-abstract class AbstractUser extends Resource
+abstract class AbstractUserResource extends Resource
 {
     /**
      * The single value that should be used to represent the resource when being displayed.

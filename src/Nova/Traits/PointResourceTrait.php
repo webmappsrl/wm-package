@@ -1,11 +1,11 @@
 <?php
 
-namespace Wm\WmPackage\Nova;
+namespace Wm\WmPackage\Nova\Traits;
 
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Wm\MapPoint\MapPoint;
 
-abstract class AbstractPointModel extends AbstractGeometryModel
+trait PointResourceTrait
 {
     public function fields(NovaRequest $request): array
     {
