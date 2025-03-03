@@ -2,8 +2,8 @@
 
 namespace Wm\WmPackage\Nova\Traits;
 
-use Wm\MapMultiLinestring\MapMultiLinestring;
 use Laravel\Nova\Http\Requests\NovaRequest;
+use Wm\MapMultiLinestring\MapMultiLinestring;
 
 trait MultiLinestringResourceTrait
 {

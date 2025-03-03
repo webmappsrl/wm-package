@@ -3,13 +3,13 @@
 namespace Wm\WmPackage\Http\Controllers\Api;
 
 use Exception;
-use Illuminate\Support\Str;
-use Illuminate\Http\Request;
-use Wm\WmPackage\Models\User;
 use Illuminate\Http\JsonResponse;
-use Jenssegers\Agent\Facades\Agent;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
+use Jenssegers\Agent\Facades\Agent;
 use Wm\WmPackage\Http\Controllers\Controller;
+use Wm\WmPackage\Models\User;
 
 class AppAuthController extends Controller
 {

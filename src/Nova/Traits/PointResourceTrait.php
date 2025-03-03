@@ -2,8 +2,8 @@
 
 namespace Wm\WmPackage\Nova\Traits;
 
-use Wm\MapPoint\MapPoint;
 use Laravel\Nova\Http\Requests\NovaRequest;
+use Wm\MapPoint\MapPoint;
 
 trait PointResourceTrait
 {

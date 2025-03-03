@@ -2,9 +2,7 @@
 
 namespace Wm\WmPackage\Nova;
 
-use Wm\WmPackage\Nova\EcPoi;
 use Laravel\Nova\Fields\BelongsToMany;
-use Wm\WmPackage\Nova\AbstractEcResource;
 use Laravel\Nova\Http\Requests\NovaRequest;
 
 class AbstractEcTrackResource extends AbstractEcResource
@@ -15,7 +13,7 @@ class AbstractEcTrackResource extends AbstractEcResource
     {
         return [
             ...parent::fields($request),
-            BelongsToMany::make('EcPois', 'ecPois', EcPoi::class)
+            BelongsToMany::make('EcPois', 'ecPois', EcPoi::class),
         ];
     }
 }
