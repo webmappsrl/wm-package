@@ -23,7 +23,7 @@ class WmLogger extends Facade
 
     /**
      * Convenience method for the geohub-import channel
-     * 
+     *
      * @return \Illuminate\Log\Logger
      */
     public static function geohubImport()
@@ -33,7 +33,7 @@ class WmLogger extends Facade
 
     /**
      * Convenience method for the package_exceptions channel
-     * 
+     *
      * @return \Illuminate\Log\Logger
      */
     public static function exceptions()

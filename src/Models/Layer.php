@@ -47,7 +47,6 @@ class Layer extends Model
         return $this->belongsToMany(App::class, 'layer_associated_app');
     }
 
-
     public function ecTracks(): MorphMany
     {
         return $this->morphMany(EcTrack::class, 'layerable', (new EcTrack)->getMorphClass());
@@ -67,7 +66,7 @@ class Layer extends Model
             $this->bbox = $bbox ?? $defaultBBOX;
             $this->save();
         } catch (Exception $e) {
-            Log::channel('layer')->error('computeBB of layer with id: ' . $this->id);
+            Log::channel('layer')->error('computeBB of layer with id: '.$this->id);
         }
     }
 
