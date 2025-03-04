@@ -2,6 +2,7 @@
 
 namespace Wm\WmPackage;
 
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\Route;
 use Laravel\Nova\Nova;
 use Matchish\ScoutElasticSearch\ElasticSearchServiceProvider;
@@ -94,6 +95,13 @@ class WmPackageServiceProvider extends PackageServiceProvider
 
         // Schedule
         $this->app->register(ScheduleServiceProvider::class);
+        
+        // Register the morphMap for polymorphic relationships
+        Relation::morphMap([
+            'App\Models\UgcPoi' => \Wm\WmPackage\Models\UgcPoi::class,
+            'App\Models\UgcTrack' => \Wm\WmPackage\Models\UgcTrack::class,
+        ]);
+        
         // #######
         // ####### CONFIGURATIONS OVERRIDE
         // #######
