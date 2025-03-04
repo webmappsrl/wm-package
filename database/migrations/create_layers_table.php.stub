@@ -14,16 +14,19 @@ return new class extends Migration
     public function up()
     {
         Schema::create('layers', function (Blueprint $table) {
-            $table->bigIncrements('id');
-            $table->integer('app_id');
-            $table->jsonb('properties');
-            $table->timestamps();
+            $table->id('id');
             $table->string('name');
+            $table->geography('geometry', 'polygon')->comment('The bbox of the layer');
+            $table->jsonb('properties');
+            $table->string('feature_collection')->nullable();
+            $table->jsonb('configuration');
+            $table->integer('app_id');
+            $table->integer('rank')->default(0);
 
-            $table->geography('geometry','polygon')->comment('The bbox of the layer');
+            $table->timestamps();
 
-            $table->spatialIndex('geometry');
             $table->index('app_id');
+            $table->spatialIndex('geometry');
         });
     }
 

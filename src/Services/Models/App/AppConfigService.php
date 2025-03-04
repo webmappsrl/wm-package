@@ -50,7 +50,7 @@ class AppConfigService extends AppBaseService
     // TODO: is jido stuff used anymore?
     public function config_update_jido_time()
     {
-        $confUri = $this->app->id.'.json';
+        $confUri = $this->app->id . '.json';
         if (Storage::disk('conf')->exists($confUri)) {
             $json = json_decode(Storage::disk('conf')->get($confUri));
             $json->JIDO_UPDATE_TIME = floor(microtime(true) * 1000);
@@ -60,7 +60,7 @@ class AppConfigService extends AppBaseService
 
     public function config_get_jido_time()
     {
-        $confUri = $this->app->id.'.json';
+        $confUri = $this->app->id . '.json';
         if (Storage::disk('conf')->exists($confUri)) {
             $json = json_decode(Storage::disk('conf')->get($confUri));
             if (isset($json->JIDO_UPDATE_TIME)) {
@@ -269,7 +269,7 @@ class AppConfigService extends AppBaseService
             try {
                 $data['MAP']['overlays'] = json_decode($this->app->external_overlays);
             } catch (\Exception $e) {
-                Log::warning('The overlays in the app '.$this->app->id.' are not correctly mapped. Error: '.$e->getMessage());
+                Log::warning('The overlays in the app ' . $this->app->id . ' are not correctly mapped. Error: ' . $e->getMessage());
             }
         }
 
@@ -283,7 +283,7 @@ class AppConfigService extends AppBaseService
                         $item['bbox'] = array_map('floatval', json_decode(strval($item['bbox']), true));
                     }
                 } catch (\Exception  $e) {
-                    Log::warning('The bbox value '.$layer->id.' are not correct. Error: '.$e->getMessage());
+                    Log::warning('The bbox value ' . $layer->id . ' are not correct. Error: ' . $e->getMessage());
                 }
                 // style
                 foreach (['color', 'fill_color', 'fill_opacity', 'stroke_width', 'stroke_opacity', 'zindex', 'line_dash'] as $field) {
@@ -428,51 +428,52 @@ class AppConfigService extends AppBaseService
         }
 
         // Overlays
-        if ($this->app->overlayLayers->count() > 0) {
-            $data['MAP']['controls']['overlays'][] = ['label' => $this->app->getTranslations('overlays_label'), 'type' => 'title'];
-            $overlays = array_map(function ($overlay) {
-                $array = [];
-                $overlay = OverlayLayer::find($overlay['id']);
-                $array['label'] = $overlay->getTranslations('label');
-                if ($overlay['default']) {
-                    $array['default'] = $overlay['default'];
-                }
-                if (isset($overlay['icon'])) {
-                    $array['icon'] = $overlay['icon'];
-                }
-                if (isset($overlay['fill_color'])) {
-                    $array['fillColor'] = hexToRgba($overlay['fill_color']);
-                } else {
-                    $array['fillColor'] = hexToRgba($overlay->app->primary_color);
-                }
-                if (isset($overlay['stroke_color'])) {
-                    $array['strokeColor'] = hexToRgba($overlay['stroke_color']);
-                } else {
-                    $array['strokeColor'] = hexToRgba($overlay->app->primary_color);
-                }
-                if (isset($overlay['stroke_width'])) {
-                    $array['strokeWidth'] = $overlay['stroke_width'];
-                }
-                if (isset($overlay['feature_collection'])) {
-                    // if the feature collection is an external geojson URL then put it in the conf file
-                    if (strpos($overlay['feature_collection'], 'http') === 0 || strpos($overlay['feature_collection'], 'https') === 0) {
-                        $array['url'] = $overlay['feature_collection'];
-                    } else {
-                        $array['url'] = route('api.export.taxonomy.getOverlaysPath', explode('/', $overlay['feature_collection']));
-                    }
-                }
-                if (isset($overlay['configuration'])) {
-                    $configuration = json_decode($overlay['configuration'], true);
-                    if (is_array($configuration)) {
-                        $array = array_merge($array, $configuration);
-                    }
-                }
-                $array['type'] = 'button';
+        //TODO: refactor as layers
+        // if ($this->app->overlayLayers->count() > 0) {
+        //     $data['MAP']['controls']['overlays'][] = ['label' => $this->app->getTranslations('overlays_label'), 'type' => 'title'];
+        //     $overlays = array_map(function ($overlay) {
+        //         $array = [];
+        //         $overlay = OverlayLayer::find($overlay['id']);
+        //         $array['label'] = $overlay->getTranslations('label');
+        //         if ($overlay['default']) {
+        //             $array['default'] = $overlay['default'];
+        //         }
+        //         if (isset($overlay['icon'])) {
+        //             $array['icon'] = $overlay['icon'];
+        //         }
+        //         if (isset($overlay['fill_color'])) {
+        //             $array['fillColor'] = hexToRgba($overlay['fill_color']);
+        //         } else {
+        //             $array['fillColor'] = hexToRgba($overlay->app->primary_color);
+        //         }
+        //         if (isset($overlay['stroke_color'])) {
+        //             $array['strokeColor'] = hexToRgba($overlay['stroke_color']);
+        //         } else {
+        //             $array['strokeColor'] = hexToRgba($overlay->app->primary_color);
+        //         }
+        //         if (isset($overlay['stroke_width'])) {
+        //             $array['strokeWidth'] = $overlay['stroke_width'];
+        //         }
+        //         if (isset($overlay['feature_collection'])) {
+        //             // if the feature collection is an external geojson URL then put it in the conf file
+        //             if (strpos($overlay['feature_collection'], 'http') === 0 || strpos($overlay['feature_collection'], 'https') === 0) {
+        //                 $array['url'] = $overlay['feature_collection'];
+        //             } else {
+        //                 $array['url'] = route('api.export.taxonomy.getOverlaysPath', explode('/', $overlay['feature_collection']));
+        //             }
+        //         }
+        //         if (isset($overlay['configuration'])) {
+        //             $configuration = json_decode($overlay['configuration'], true);
+        //             if (is_array($configuration)) {
+        //                 $array = array_merge($array, $configuration);
+        //             }
+        //         }
+        //         $array['type'] = 'button';
 
-                return $array;
-            }, json_decode($this->app->overlayLayers, true));
-            array_push($data['MAP']['controls']['overlays'], ...$overlays);
-        }
+        //         return $array;
+        //     }, json_decode($this->app->overlayLayers, true));
+        //     array_push($data['MAP']['controls']['overlays'], ...$overlays);
+        // }
 
         // data => turn the layers (pois,tracks) off an on
         if ($this->app->app_pois_api_layer || $this->app->layers->count() > 0) {
@@ -530,7 +531,7 @@ class AppConfigService extends AppBaseService
 
             foreach ($poi_types as $poi_type) {
                 $a = [
-                    'identifier' => 'poi_type_'.$poi_type->identifier,
+                    'identifier' => 'poi_type_' . $poi_type->identifier,
                     'name' => json_decode($poi_type->name, true),
                     'id' => $poi_type->id,
                     'icon' => $poi_type->icon,
@@ -632,7 +633,7 @@ class AppConfigService extends AppBaseService
         $data = [];
         if (in_array($this->app->api, ['elbrus'])) {
             // OPTIONS section
-            $data['OPTIONS']['baseUrl'] = 'https://geohub.webmapp.it/api/app/elbrus/'.$this->app->id.'/';
+            $data['OPTIONS']['baseUrl'] = 'https://geohub.webmapp.it/api/app/elbrus/' . $this->app->id . '/';
         }
 
         $data['OPTIONS']['startUrl'] = $this->app->start_url;
