@@ -25,6 +25,11 @@ class Layer extends Model
 
     public array $translatable = ['title', 'subtitle', 'description', 'track_type'];
 
+    public $casts = [
+        'properties' => 'array',
+        'configuration' => 'array',
+    ];
+
     /**
      * The accessors to append to the model's array form.
      *
