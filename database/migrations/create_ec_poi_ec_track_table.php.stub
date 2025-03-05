@@ -14,7 +14,7 @@ return new class extends Migration
     public function up()
     {
         Schema::create('ec_poi_ec_track', function (Blueprint $table) {
-            $table->bigIncrements('id');
+            $table->id();
             $table->integer('ec_poi_id');
             $table->integer('ec_track_id');
             $table->integer('order')->default(0);
