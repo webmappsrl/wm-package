@@ -40,4 +40,14 @@ class WmLogger extends Facade
     {
         return Log::channel('package_exceptions');
     }
+
+    /**
+     * Convenience method for the failed_jobs channel
+     * 
+     * @return \Illuminate\Log\Logger
+     */
+    public static function failedJobs()
+    {
+        return Log::channel('failed_jobs');
+    }
 }
