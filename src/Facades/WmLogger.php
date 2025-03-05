@@ -43,7 +43,7 @@ class WmLogger extends Facade
 
     /**
      * Convenience method for the failed_jobs channel
-     * 
+     *
      * @return \Illuminate\Log\Logger
      */
     public static function failedJobs()
