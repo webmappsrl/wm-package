@@ -13,26 +13,13 @@ return [
     |
     */
     'connections' => [
-        'geohub-production' => [
+        'geohub' => [
             'driver' => 'pgsql',
             'host' => env('GEOHUB_DB_HOST'),
             'port' => env('GEOHUB_DB_PORT', '5432'),
             'database' => env('GEOHUB_DB_DATABASE'),
             'username' => env('GEOHUB_DB_USERNAME'),
             'password' => env('GEOHUB_DB_PASSWORD'),
-            'charset' => 'utf8',
-            'prefix' => '',
-            'schema' => 'public',
-            'sslmode' => 'prefer',
-        ],
-
-        'geohub-testing' => [
-            'driver' => 'pgsql',
-            'host' => env('TESTING_GEOHUB_DB_HOST', '127.0.0.1'),
-            'port' => env('TESTING_GEOHUB_DB_PORT', '5432'),
-            'database' => env('TESTING_GEOHUB_DB_DATABASE'),
-            'username' => env('TESTING_GEOHUB_DB_USERNAME'),
-            'password' => env('TESTING_GEOHUB_DB_PASSWORD'),
             'charset' => 'utf8',
             'prefix' => '',
             'schema' => 'public',
