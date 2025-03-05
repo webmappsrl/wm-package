@@ -2,24 +2,20 @@
 
 namespace Wm\WmPackage;
 
-use Event;
-use Illuminate\Queue\Events\JobFailed as QueueJobFailed;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Route;
-use Laravel\Horizon\Events\JobFailed as HorizonJobFailed;
 use Laravel\Nova\Nova;
-use Matchish\ScoutElasticSearch\ElasticSearchServiceProvider;
-use Spatie\Backup\Config\Config as BackupConfig;
+use Illuminate\Support\Facades\Route;
 use Spatie\LaravelPackageTools\Package;
-use Spatie\LaravelPackageTools\PackageServiceProvider;
-use Tymon\JWTAuth\Providers\LaravelServiceProvider;
 use Wm\WmPackage\Commands\WmBackupCommand;
-use Wm\WmPackage\Commands\WmCheckGeohubImportCommand;
-use Wm\WmPackage\Commands\WmImportFromGeohubCommand;
 use Wm\WmPackage\Commands\WmPackageCommand;
-use Wm\WmPackage\Exceptions\Handler as WmExceptionHandler;
+use Spatie\Backup\Config\Config as BackupConfig;
 use Wm\WmPackage\Providers\EventServiceProvider;
+use Tymon\JWTAuth\Providers\LaravelServiceProvider;
 use Wm\WmPackage\Providers\ScheduleServiceProvider;
+use Wm\WmPackage\Commands\WmImportFromGeohubCommand;
+use Wm\WmPackage\Commands\WmCheckGeohubImportCommand;
+use Spatie\LaravelPackageTools\PackageServiceProvider;
+use Wm\WmPackage\Commands\TestFailedJobLoggingCommand;
+use Matchish\ScoutElasticSearch\ElasticSearchServiceProvider;
 
 class WmPackageServiceProvider extends PackageServiceProvider
 {
@@ -32,15 +28,6 @@ class WmPackageServiceProvider extends PackageServiceProvider
     {
         parent::boot();
 
-        // Log failed jobs for both queue and horizon
-        Event::listen(QueueJobFailed::class, function (QueueJobFailed $event) {
-            WmLogger::failedJobs()->error($event->exception->getMessage(), ['exception' => $event->exception]);
-        });
-
-        Event::listen(HorizonJobFailed::class, function (HorizonJobFailed $event) {
-            WmLogger::failedJobs()->error($event->exception->getMessage(), ['exception' => $event->exception]);
-        });
-
         $packageDirPath = $this->package->basePath('/../');
 
         // Register routes as Laravel does with RouteServiceProvider
@@ -49,15 +36,15 @@ class WmPackageServiceProvider extends PackageServiceProvider
             Route::name('v2.')
                 ->middleware('api')
                 ->prefix('api/v2')
-                ->group($packageDirPath.'routes/api.php');
+                ->group($packageDirPath . 'routes/api.php');
 
             Route::name('default.')
                 ->middleware('api')
                 ->prefix('api')
-                ->group($packageDirPath.'routes/api.php');
+                ->group($packageDirPath . 'routes/api.php');
 
             Route::middleware('web')
-                ->group($packageDirPath.'routes/web.php');
+                ->group($packageDirPath . 'routes/web.php');
         });
 
         // Register policies
@@ -97,6 +84,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
                 WmBackupCommand::class,
                 WmImportFromGeohubCommand::class,
                 WmCheckGeohubImportCommand::class,
+                TestFailedJobLoggingCommand::class,
             ])
             ->hasViews();
     }
@@ -114,11 +102,6 @@ class WmPackageServiceProvider extends PackageServiceProvider
 
         // Schedule
         $this->app->register(ScheduleServiceProvider::class);
-
-        // Exception handler
-        $this->app->singleton(WmExceptionHandler::class, function ($app) {
-            return new WmExceptionHandler($app);
-        });
 
         // #######
         // ####### CONFIGURATIONS OVERRIDE
@@ -159,11 +142,6 @@ class WmPackageServiceProvider extends PackageServiceProvider
                 config('wm-logging.channels', []),
             );
         }
-
-        // Register WmLogger facade accessor
-        $this->app->bind('wm.logger', function ($app) {
-            return $app->make(Log::class);
-        });
     }
 
     /**
@@ -174,7 +152,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
     protected function resources()
     {
 
-        Nova::resourcesIn($this->getPackageBaseDir().'/Nova');
+        Nova::resourcesIn($this->getPackageBaseDir() . '/Nova');
     }
 
     /**
