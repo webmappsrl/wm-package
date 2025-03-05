@@ -11,7 +11,6 @@ class Handler extends ExceptionHandler
 {
     public function report(Throwable $exception)
     {
-        // if failed job, log to geohub-import channel
         if ($this->isPackageException($exception)) {
             WmLogger::exceptions()->error($exception->getMessage(), ['exception' => $exception]);
         }
