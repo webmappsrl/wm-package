@@ -116,7 +116,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
         $this->app->register(ScheduleServiceProvider::class);
 
         // Exception handler
-        $this->app->bind(WmExceptionHandler::class, function ($app) {
+        $this->app->singleton(WmExceptionHandler::class, function ($app) {
             return new WmExceptionHandler($app);
         });
 
