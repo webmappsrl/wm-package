@@ -72,6 +72,8 @@ class WmPackageServiceProvider extends PackageServiceProvider
                 'wm-filesystems',
                 'wm-backup',
                 'wm-media-library',
+                'wm-database',
+                'wm-logging',
             ])
             // ->hasRoutes(['api', 'web'])// Check the boot method, routes are registered there
             ->discoversMigrations()
@@ -84,6 +86,17 @@ class WmPackageServiceProvider extends PackageServiceProvider
 
     public function packageRegistered()
     {
+
+        // Register the morphMap for polymorphic relationships
+        Relation::morphMap([
+            'App\Models\UgcPoi' => \Wm\WmPackage\Models\UgcPoi::class,
+            'App\Models\UgcTrack' => \Wm\WmPackage\Models\UgcTrack::class,
+        ]);
+
+        // #######
+        // ####### REGISTER PROVIDERS
+        // #######
+
         // This package events
         $this->app->register(EventServiceProvider::class);
 
@@ -95,12 +108,6 @@ class WmPackageServiceProvider extends PackageServiceProvider
 
         // Schedule
         $this->app->register(ScheduleServiceProvider::class);
-
-        // Register the morphMap for polymorphic relationships
-        Relation::morphMap([
-            'App\Models\UgcPoi' => \Wm\WmPackage\Models\UgcPoi::class,
-            'App\Models\UgcTrack' => \Wm\WmPackage\Models\UgcTrack::class,
-        ]);
 
         // #######
         // ####### CONFIGURATIONS OVERRIDE
@@ -127,6 +134,20 @@ class WmPackageServiceProvider extends PackageServiceProvider
             $this->app->config['media-library'] ?? [],
             config('wm-media-library', []),
         );
+
+        // merge geohub database config
+        $this->app->config['database.connections'] = array_merge(
+            $this->app->config['database.connections'],
+            config('wm-database.connections', []),
+        );
+
+        // Configure logging channels
+        if (isset($this->app->config['logging.channels'])) {
+            $this->app->config['logging.channels'] = array_merge(
+                $this->app->config['logging.channels'],
+                config('wm-logging.channels', []),
+            );
+        }
     }
 
     /**

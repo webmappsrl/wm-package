@@ -5,8 +5,10 @@ namespace Wm\WmPackage\Providers;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
+use Illuminate\Queue\Events\JobFailed;
 use Spatie\Backup\Events\BackupWasSuccessful;
 use Wm\WmPackage\Listeners\BackupCompletedListener;
+use Wm\WmPackage\Listeners\FailedJobsListener;
 use Wm\WmPackage\Listeners\UpdateLastLoginAt;
 
 class EventServiceProvider extends ServiceProvider
@@ -26,7 +28,9 @@ class EventServiceProvider extends ServiceProvider
         BackupWasSuccessful::class => [
             BackupCompletedListener::class,
         ],
-
+        JobFailed::class => [
+            FailedJobsListener::class,
+        ],
     ];
 
     /**
