@@ -100,6 +100,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
             ->hasCommands([
                 WmPackageCommand::class,
                 WmBackupCommand::class,
+                WmImportFromGeohubCommand::class,
             ])
             ->hasViews();
     }
