@@ -15,7 +15,7 @@ class FailedJobsListener
         $attempts = $job->attempts();
         $exception = $event->exception;
 
-        Log::channel('failed_jobs')->error("Failed Job: {$event->job->resolveName()}", [
+        Log::channel('wm-package-failed-jobs')->error("Failed Job: {$event->job->resolveName()}", [
             'job_id' => $job->getJobId(),
             'queue' => $job->getQueue(),
             'attempts' => $attempts,

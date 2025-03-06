@@ -3,17 +3,16 @@
 namespace Wm\WmPackage;
 
 use Laravel\Nova\Nova;
-use Sentry\Laravel\Integration;
 use Illuminate\Support\Facades\Route;
 use Spatie\LaravelPackageTools\Package;
 use Wm\WmPackage\Commands\WmBackupCommand;
 use Wm\WmPackage\Commands\WmPackageCommand;
 use Spatie\Backup\Config\Config as BackupConfig;
 use Wm\WmPackage\Providers\EventServiceProvider;
-use Illuminate\Foundation\Configuration\Exceptions;
 use Tymon\JWTAuth\Providers\LaravelServiceProvider;
 use Wm\WmPackage\Providers\ScheduleServiceProvider;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Wm\WmPackage\Commands\WmImportFromGeohubCommand;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Matchish\ScoutElasticSearch\ElasticSearchServiceProvider;
 
@@ -94,8 +93,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
                 'wm-filesystems',
                 'wm-backup',
                 'wm-media-library',
-                'wm-database',
-                'wm-logging',
+                'wm-geohub-import',
             ])
             // ->hasRoutes(['api', 'web'])// Check the boot method, routes are registered there
             ->discoversMigrations()
@@ -124,7 +122,6 @@ class WmPackageServiceProvider extends PackageServiceProvider
 
         // Schedule
         $this->app->register(ScheduleServiceProvider::class);
-
 
 
         // Register the morphMap for polymorphic relationships
@@ -162,15 +159,39 @@ class WmPackageServiceProvider extends PackageServiceProvider
         // merge geohub database config
         $this->app->config['database.connections'] = array_merge(
             $this->app->config['database.connections'],
-            config('wm-database.connections', []),
+            config('wm-geohub-import.connections', []),
         );
 
         // Configure logging channels
         if (isset($this->app->config['logging.channels'])) {
             $this->app->config['logging.channels'] = array_merge(
                 $this->app->config['logging.channels'],
-                config('wm-logging.channels', []),
+                config('wm-geohub-import.logging.channels', []),
             );
+        }
+
+        // Configure Horizon for geohub import
+        if (isset($this->app->config['horizon']) && is_array($this->app->config['horizon'])) {
+            // Get current Horizon config and import config
+            $appHorizon = $this->app->config['horizon'];
+            $importHorizon = config('wm-geohub-import.horizon', []);
+
+            // Merge environments
+            if (isset($importHorizon['environments']) && isset($appHorizon['environments'])) {
+                foreach ($importHorizon['environments'] as $env => $supervisors) {
+                    if (isset($appHorizon['environments'][$env])) {
+                        $appHorizon['environments'][$env] = array_merge(
+                            $appHorizon['environments'][$env],
+                            $supervisors
+                        );
+                    } else {
+                        $appHorizon['environments'][$env] = $supervisors;
+                    }
+                }
+            }
+
+            // Update the config
+            $this->app->config['horizon'] = $appHorizon;
         }
     }
 
