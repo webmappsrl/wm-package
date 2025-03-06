@@ -2,8 +2,8 @@
 
 namespace Wm\WmPackage\Listeners;
 
-use Illuminate\Support\Facades\Log;
 use Illuminate\Queue\Events\JobFailed as QueueJobFailed;
+use Illuminate\Support\Facades\Log;
 use Laravel\Horizon\Events\JobFailed as HorizonJobFailed;
 
 class FailedJobsListener
