@@ -2,8 +2,9 @@
 
 namespace Wm\WmPackage;
 
-use Laravel\Nova\Nova;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\Route;
+use Laravel\Nova\Nova;
 use Spatie\LaravelPackageTools\Package;
 use Wm\WmPackage\Commands\WmBackupCommand;
 use Wm\WmPackage\Commands\WmPackageCommand;
@@ -88,6 +89,17 @@ class WmPackageServiceProvider extends PackageServiceProvider
 
     public function packageRegistered()
     {
+
+ // Register the morphMap for polymorphic relationships
+        Relation::morphMap([
+            'App\Models\UgcPoi' => \Wm\WmPackage\Models\UgcPoi::class,
+            'App\Models\UgcTrack' => \Wm\WmPackage\Models\UgcTrack::class,
+        ]);
+
+     // #######
+        // ####### REGISTER PROVIDERS
+        // #######
+
         // This package events
         $this->app->register(EventServiceProvider::class);
 

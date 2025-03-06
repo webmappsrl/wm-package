@@ -5,7 +5,6 @@ namespace Wm\WmPackage\Nova;
 use Laravel\Nova\Fields\Code;
 use Laravel\Nova\Fields\MorphTo;
 use Laravel\Nova\Fields\Number;
-use Laravel\Nova\Fields\Number;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Wm\WmPackage\Nova\Traits\PointResourceTrait;
