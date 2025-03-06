@@ -2,21 +2,34 @@
 
 namespace Wm\WmPackage;
 
-use Illuminate\Database\Eloquent\Relations\Relation;
-use Illuminate\Support\Facades\Route;
 use Laravel\Nova\Nova;
-use Matchish\ScoutElasticSearch\ElasticSearchServiceProvider;
-use Spatie\Backup\Config\Config as BackupConfig;
+use Sentry\Laravel\Integration;
+use Illuminate\Support\Facades\Route;
 use Spatie\LaravelPackageTools\Package;
-use Spatie\LaravelPackageTools\PackageServiceProvider;
-use Tymon\JWTAuth\Providers\LaravelServiceProvider;
 use Wm\WmPackage\Commands\WmBackupCommand;
 use Wm\WmPackage\Commands\WmPackageCommand;
+use Spatie\Backup\Config\Config as BackupConfig;
 use Wm\WmPackage\Providers\EventServiceProvider;
+use Illuminate\Foundation\Configuration\Exceptions;
+use Tymon\JWTAuth\Providers\LaravelServiceProvider;
 use Wm\WmPackage\Providers\ScheduleServiceProvider;
+use Illuminate\Database\Eloquent\Relations\Relation;
+use Spatie\LaravelPackageTools\PackageServiceProvider;
+use Matchish\ScoutElasticSearch\ElasticSearchServiceProvider;
 
 class WmPackageServiceProvider extends PackageServiceProvider
 {
+
+    public function register()
+    {
+        //Error handler
+        $this->app->singleton(
+            \Illuminate\Contracts\Debug\ExceptionHandler::class,
+            \Wm\WmPackage\Exceptions\Handler::class,
+
+        );
+        parent::register();
+    }
     /**
      * Define your route model bindings, pattern filters, and other route configuration.
      *
@@ -26,6 +39,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
     {
         parent::boot();
 
+
         $packageDirPath = $this->package->basePath('/../');
 
         // Register routes as Laravel does with RouteServiceProvider
@@ -34,15 +48,15 @@ class WmPackageServiceProvider extends PackageServiceProvider
             Route::name('v2.')
                 ->middleware('api')
                 ->prefix('api/v2')
-                ->group($packageDirPath.'routes/api.php');
+                ->group($packageDirPath . 'routes/api.php');
 
             Route::name('default.')
                 ->middleware('api')
                 ->prefix('api')
-                ->group($packageDirPath.'routes/api.php');
+                ->group($packageDirPath . 'routes/api.php');
 
             Route::middleware('web')
-                ->group($packageDirPath.'routes/web.php');
+                ->group($packageDirPath . 'routes/web.php');
         });
 
         // Register policies
@@ -56,6 +70,14 @@ class WmPackageServiceProvider extends PackageServiceProvider
         //     return $t;
         // });
 
+        // SENTRY
+        $this->app->booted(function () {
+            if (app()->bound('sentry')) {
+                \Sentry\configureScope(function (\Sentry\State\Scope $scope) {
+                    $scope->setTag('app_name', config('app.name'));
+                });
+            }
+        });
     }
 
     public function configurePackage(Package $package): void
@@ -87,12 +109,6 @@ class WmPackageServiceProvider extends PackageServiceProvider
     public function packageRegistered()
     {
 
-        // Register the morphMap for polymorphic relationships
-        Relation::morphMap([
-            'App\Models\UgcPoi' => \Wm\WmPackage\Models\UgcPoi::class,
-            'App\Models\UgcTrack' => \Wm\WmPackage\Models\UgcTrack::class,
-        ]);
-
         // #######
         // ####### REGISTER PROVIDERS
         // #######
@@ -108,6 +124,14 @@ class WmPackageServiceProvider extends PackageServiceProvider
 
         // Schedule
         $this->app->register(ScheduleServiceProvider::class);
+
+
+
+        // Register the morphMap for polymorphic relationships
+        Relation::morphMap([
+            'App\Models\UgcPoi' => \Wm\WmPackage\Models\UgcPoi::class,
+            'App\Models\UgcTrack' => \Wm\WmPackage\Models\UgcTrack::class,
+        ]);
 
         // #######
         // ####### CONFIGURATIONS OVERRIDE
@@ -158,7 +182,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
     protected function resources()
     {
 
-        Nova::resourcesIn($this->getPackageBaseDir().'/Nova');
+        Nova::resourcesIn($this->getPackageBaseDir() . '/Nova');
     }
 
     /**
