@@ -159,10 +159,7 @@ return [
                 'name' => 'name',
                 'description' => 'description',
                 'user_id' => 'user_id',
-                'sku' => [
-                    'field' => 'sku',
-                    'transformer' => ['Wm\\WmPackage\\Services\\Import\\DataTransformer', 'jsonToArray'],
-                ],
+                'sku' => 'sku',
                 'created_at' => 'created_at',
                 'updated_at' => 'updated_at',
             ],
