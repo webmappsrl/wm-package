@@ -154,7 +154,7 @@ return [
     'import_mapping' => [
         // App mapping
         'app' => [
-            'identifiers' => ['properties->geohub_id'],
+            'identifiers' => ['name', 'customer_name', 'sku'],
             'fields' => [
                 'name' => 'name',
                 'description' => 'description',
