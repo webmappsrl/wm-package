@@ -52,14 +52,15 @@ class WmImportFromGeohubCommand extends Command
                 $logger->info($message);
             }
         } catch (\Exception $e) {
-            $errorMessage = 'Import failed: ' . $e->getMessage();
+            $errorMessage = 'Import failed: '.$e->getMessage();
             $this->error($errorMessage);
             $this->error($e->getTraceAsString());
             $logger->error($errorMessage, [
                 'exception' => $e,
                 'model' => $model,
-                'id' => $id
+                'id' => $id,
             ]);
+
             return 1;
         }
 

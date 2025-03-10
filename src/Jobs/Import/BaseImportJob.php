@@ -2,15 +2,14 @@
 
 namespace Wm\WmPackage\Jobs\Import;
 
-use Illuminate\Log\Logger;
 use Illuminate\Bus\Batchable;
 use Illuminate\Bus\Queueable;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 abstract class BaseImportJob implements ShouldQueue
 {
@@ -34,7 +33,6 @@ abstract class BaseImportJob implements ShouldQueue
      * The mapping configuration for this entity type
      */
     protected array $mapping;
-
 
     /**
      * Create a new job instance.
@@ -63,6 +61,7 @@ abstract class BaseImportJob implements ShouldQueue
 
             if (empty($data)) {
                 $logger->warning("{$modelName} with ID {$this->entityId} not found in geohub");
+
                 return;
             }
 
@@ -77,7 +76,7 @@ abstract class BaseImportJob implements ShouldQueue
             // Process dependencies if needed
             $this->processDependencies($data);
         } catch (\Exception $e) {
-            $logger->error("Error importing {$modelName} with ID {$this->entityId}: " . $e->getMessage());
+            $logger->error("Error importing {$modelName} with ID {$this->entityId}: ".$e->getMessage());
             $logger->error($e->getTraceAsString());
 
             // Re-throw the exception to trigger job failure
@@ -99,7 +98,6 @@ abstract class BaseImportJob implements ShouldQueue
      * Get the mapping configuration for this entity type.
      */
     abstract protected function getMapping(): array;
-
 
     /**
      * Transform data according to mapping.
@@ -126,7 +124,7 @@ abstract class BaseImportJob implements ShouldQueue
             ->where('id', $this->entityId)
             ->first();
 
-        if (!$element) {
+        if (! $element) {
             return null;
         }
 
@@ -138,20 +136,20 @@ abstract class BaseImportJob implements ShouldQueue
      */
     protected function applyTransformer(mixed $value, array $transformer): mixed
     {
-        if (empty($transformer) || !isset($transformer[0]) || !isset($transformer[1])) {
+        if (empty($transformer) || ! isset($transformer[0]) || ! isset($transformer[1])) {
             return $value;
         }
 
         $className = $transformer[0];
         $methodName = $transformer[1];
 
-        if (!class_exists($className)) {
+        if (! class_exists($className)) {
             throw new \RuntimeException("Transformer class {$className} not found");
         }
 
-        $instance = new $className();
+        $instance = new $className;
 
-        if (!method_exists($instance, $methodName)) {
+        if (! method_exists($instance, $methodName)) {
             throw new \RuntimeException("Method {$methodName} not found in transformer class {$className}");
         }
 

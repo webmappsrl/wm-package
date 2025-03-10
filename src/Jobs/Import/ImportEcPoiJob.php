@@ -34,7 +34,6 @@ class ImportEcPoiJob extends BaseImportJob
         return config('wm-geohub-import.import_mapping.ec_poi', []);
     }
 
-
     protected function transformData(array $data): array
     {
         $result = [];
@@ -56,7 +55,7 @@ class ImportEcPoiJob extends BaseImportJob
             $properties = [];
 
             foreach ($this->mapping['properties'] as $target => $source) {
-                //check if it has a transformer
+                // check if it has a transformer
                 if (is_array($source) && isset($source['field']) && isset($source['transformer'])) {
                     // Apply transformer
                     $value = $data[$source['field']] ?? null;
@@ -77,7 +76,6 @@ class ImportEcPoiJob extends BaseImportJob
         // Handle app_id
         $result['app_id'] = $this->appId;
 
-
         return $result;
     }
 
@@ -89,7 +87,7 @@ class ImportEcPoiJob extends BaseImportJob
             // Use updateOrCreate to create or update the poi
             $model = config('wm-geohub-import.import_models.ec_poi.namespace', 'EcPoi');
 
-            if (!$model || !class_exists($model)) {
+            if (! $model || ! class_exists($model)) {
                 throw new \RuntimeException("POI model class {$model} not found or not configured");
             }
 
@@ -104,7 +102,7 @@ class ImportEcPoiJob extends BaseImportJob
             if (empty($identifiers)) {
                 // If no identifiers are found, use custom properties with geohub_id
                 $identifiers = [
-                    'properties->geohub_id' => $this->entityId
+                    'properties->geohub_id' => $this->entityId,
                 ];
             }
 
@@ -115,14 +113,14 @@ class ImportEcPoiJob extends BaseImportJob
 
             return $poi;
         } catch (\Exception $e) {
-            $logger->error("Error importing POI with ID {$this->entityId}: " . $e->getMessage());
+            $logger->error("Error importing POI with ID {$this->entityId}: ".$e->getMessage());
             throw $e;
         }
     }
 
     protected function processDependencies(array $data): void
     {
-        //no dependencies
+        // no dependencies
     }
 
     /**
@@ -141,7 +139,8 @@ class ImportEcPoiJob extends BaseImportJob
             return $app ? $app->id : null;
         } catch (\Exception $e) {
             Log::channel('wm-package-failed-jobs')
-                ->error("Error finding app ID for SKU {$sku}: " . $e->getMessage());
+                ->error("Error finding app ID for SKU {$sku}: ".$e->getMessage());
+
             return null;
         }
     }

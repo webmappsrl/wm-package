@@ -2,10 +2,10 @@
 
 namespace Wm\WmPackage\Services\Import;
 
-use Illuminate\Log\Logger;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Connection;
+use Illuminate\Log\Logger;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class GeohubImportService
@@ -18,8 +18,11 @@ class GeohubImportService
     ];
 
     protected Connection $dbConnection;
+
     protected Logger $logger;
+
     protected array $importModels;
+
     protected string $dbConnectionName;
 
     public function __construct()
@@ -44,7 +47,7 @@ class GeohubImportService
 
     public function importAllByModel(string $model): void
     {
-        if (!array_key_exists($model, $this->importModels)) {
+        if (! array_key_exists($model, $this->importModels)) {
             throw new \InvalidArgumentException("Unsupported model: {$model}");
         }
 
@@ -63,12 +66,12 @@ class GeohubImportService
             ->allowFailures()
             ->dispatch();
 
-        $this->logger->info("Dispatched batch {$batch->id} with " . count($jobs) . " jobs for {$model}s");
+        $this->logger->info("Dispatched batch {$batch->id} with ".count($jobs)." jobs for {$model}s");
     }
 
     public function importSingle(string $model, int $id): void
     {
-        if (!array_key_exists($model, $this->importModels)) {
+        if (! array_key_exists($model, $this->importModels)) {
             throw new \InvalidArgumentException("Unsupported model: {$model}");
         }
 
@@ -96,7 +99,7 @@ class GeohubImportService
             case 'ec_track':
             case 'ec_poi':
                 // get all entities related to apps by user_id
-                $table = str_replace('_', '_', $model) . 's'; // Convert to table name
+                $table = str_replace('_', '_', $model).'s'; // Convert to table name
                 $userIds = $this->dbConnection
                     ->table('apps')
                     ->pluck('user_id')

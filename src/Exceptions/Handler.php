@@ -2,12 +2,11 @@
 
 namespace Wm\WmPackage\Exceptions;
 
-use Throwable;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Throwable;
 
 class Handler extends ExceptionHandler
 {
-
     public function register(): void
     {
         parent::register();

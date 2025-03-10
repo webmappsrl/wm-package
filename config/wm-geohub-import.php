@@ -1,8 +1,8 @@
 <?php
 
 use Wm\WmPackage\Jobs\Import\ImportAppJob;
-use Wm\WmPackage\Jobs\Import\ImportEcPoiJob;
 use Wm\WmPackage\Jobs\Import\ImportEcMediaJob;
+use Wm\WmPackage\Jobs\Import\ImportEcPoiJob;
 use Wm\WmPackage\Jobs\Import\ImportEcTrackJob;
 use Wm\WmPackage\Jobs\Import\ImportLayerJob;
 use Wm\WmPackage\Services\Import\DataTransformer;
@@ -165,7 +165,7 @@ return [
                 'sku' => 'sku',
                 'created_at' => 'created_at',
                 'updated_at' => 'updated_at',
-            ]
+            ],
         ],
         'layer' => [
             'identifiers' => ['properties->geohub_id'],
@@ -337,7 +337,7 @@ return [
                 'noDetails' => 'noDetails',
                 'code' => 'code',
                 'icon' => 'icon',
-                'color' => 'color'
+                'color' => 'color',
             ],
         ],
     ],
