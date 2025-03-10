@@ -6,10 +6,8 @@ use Illuminate\Log\Logger;
 use Illuminate\Bus\Batchable;
 use Illuminate\Bus\Queueable;
 use Illuminate\Support\Facades\DB;
-use Wm\WmPackage\Facades\WmLogger;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Queue\SerializesModels;
-use Wm\WmPackage\Jobs\Abstract\BaseJob;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -93,14 +91,15 @@ abstract class BaseImportJob implements ShouldQueue
     abstract protected function getModelName(): string;
 
     /**
+     * Get the table name for this job.
+     */
+    abstract protected function getTableName(): string;
+
+    /**
      * Get the mapping configuration for this entity type.
      */
     abstract protected function getMapping(): array;
 
-    /**
-     * Fetch data from geohub.
-     */
-    abstract protected function fetchData(): ?array;
 
     /**
      * Transform data according to mapping.
@@ -116,6 +115,23 @@ abstract class BaseImportJob implements ShouldQueue
      * Process dependencies if needed.
      */
     abstract protected function processDependencies(array $transformedData): void;
+
+    /**
+     * Fetch data from geohub.
+     */
+    protected function fetchData(): ?array
+    {
+        $element = DB::connection($this->dbConnection)
+            ->table($this->getTableName())
+            ->where('id', $this->entityId)
+            ->first();
+
+        if (!$element) {
+            return null;
+        }
+
+        return (array) $element;
+    }
 
     /**
      * Helper method to apply a transformer to a value.
