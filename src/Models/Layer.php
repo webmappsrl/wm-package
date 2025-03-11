@@ -51,7 +51,7 @@ class Layer extends Model
 
     public function ecTracks(): MorphToMany
     {
-        return $this->morphToMany(EcTrack::class, 'layerable');
+        return $this->morphedByMany(EcTrack::class, 'layerable');
     }
 
     /**

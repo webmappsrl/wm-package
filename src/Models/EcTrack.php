@@ -2,19 +2,20 @@
 
 namespace Wm\WmPackage\Models;
 
-use ChristianKuri\LaravelFavorite\Traits\Favoriteable;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\MorphMany;
-use Illuminate\Database\Eloquent\Relations\MorphTo;
-use Illuminate\Database\Eloquent\Relations\MorphToMany;
-use Illuminate\Support\Facades\App;
-use Illuminate\Support\Facades\DB;
+use Wm\WmPackage\Models\App;
 use Laravel\Scout\Searchable;
+use Illuminate\Support\Facades\DB;
 use Spatie\Translatable\HasTranslations;
-use Wm\WmPackage\Models\Abstracts\MultiLineString;
-use Wm\WmPackage\Observers\EcTrackObserver;
-use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Traits\TaxonomyAbleModel;
+use Wm\WmPackage\Observers\EcTrackObserver;
+use Wm\WmPackage\Services\Models\EcTrackService;
+use Wm\WmPackage\Models\Abstracts\MultiLineString;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Wm\WmPackage\Services\GeometryComputationService;
+use ChristianKuri\LaravelFavorite\Traits\Favoriteable;
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class EcTrack extends MultiLineString
 {
@@ -45,7 +46,7 @@ class EcTrack extends MultiLineString
     //
     public function associatedLayers(): MorphToMany
     {
-        return $this->morphedByMany(Layer::class, 'layerable');
+        return $this->morphToMany(Layer::class, 'layerable');
     }
 
     public function updateManualDataField($field, $value)
@@ -511,13 +512,15 @@ class EcTrack extends MultiLineString
 
     public function toSearchableArray()
     {
-        $geom = $this->getGeometry();
-        $taxonomy_activities = $this->getTaxonomyArray($this->taxonomyActivities);
-        $taxonomy_wheres = $this->getTaxonomyWheres();
-        $taxonomy_themes = $this->getTaxonomyArray($this->taxonomyThemes);
-        $feature_image = $this->getFeatureImage();
 
-        [$start, $end] = $this->getStartEndCoordinates($geom);
+        $ecTrackService = EcTrackService::make();
+
+        $taxonomy_activities = $ecTrackService->getTaxonomyArray($this->taxonomyActivities);
+        $taxonomy_wheres = $ecTrackService->getTaxonomyWheres($this);
+        $taxonomy_themes = $ecTrackService->getTaxonomyArray($this->taxonomyThemes);
+        $feature_image = $this->getMedia()->first();
+
+        [$start, $end] = GeometryComputationService::make()->getStartEndCoordinates($this);
 
         return [
             'id' => $this->id,
@@ -525,8 +528,8 @@ class EcTrack extends MultiLineString
             'start' => $start,
             'end' => $end,
             'cai_scale' => $this->cai_scale,
-            'from' => $this->getActualOrOSFValue('from'),
-            'to' => $this->getActualOrOSFValue('to'),
+            // 'from' => $this->getActualOrOSFValue('from'),
+            // 'to' => $this->getActualOrOSFValue('to'),
             'name' => $this->name,
             'taxonomyActivities' => $taxonomy_activities,
             'taxonomyWheres' => $taxonomy_wheres,
@@ -556,22 +559,23 @@ class EcTrack extends MultiLineString
         }
         if ($app_id) {
             $app = App::find($app_id);
-            $searchables = json_decode($app->track_searchables);
+            if ($app->track_searchables)
+                $searchables = json_decode($app->track_searchables);
         }
 
         if (empty($searchables) || (in_array('name', $searchables) && ! empty($this->name))) {
             $string .= str_replace('"', '', json_encode($this->getTranslations('name'))) . ' ';
         }
-        if (empty($searchables) || (in_array('description', $searchables) && ! empty($this->description))) {
-            $description = str_replace('"', '', json_encode($this->getTranslations('description')));
-            $description = str_replace('\\', '', $description);
-            $string .= strip_tags($description) . ' ';
-        }
-        if (empty($searchables) || (in_array('excerpt', $searchables) && ! empty($this->excerpt))) {
-            $excerpt = str_replace('"', '', json_encode($this->getTranslations('excerpt')));
-            $excerpt = str_replace('\\', '', $excerpt);
-            $string .= strip_tags($excerpt) . ' ';
-        }
+        // if (empty($searchables) || (in_array('description', $searchables) && ! empty($this->description))) {
+        //     $description = str_replace('"', '', json_encode($this->getTranslations('description')));
+        //     $description = str_replace('\\', '', $description);
+        //     $string .= strip_tags($description) . ' ';
+        // }
+        // if (empty($searchables) || (in_array('excerpt', $searchables) && ! empty($this->excerpt))) {
+        //     $excerpt = str_replace('"', '', json_encode($this->getTranslations('excerpt')));
+        //     $excerpt = str_replace('\\', '', $excerpt);
+        //     $string .= strip_tags($excerpt) . ' ';
+        // }
         if (empty($searchables) || (in_array('ref', $searchables) && ! empty($this->ref))) {
             $string .= $this->ref . ' ';
         }
