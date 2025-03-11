@@ -18,14 +18,6 @@ return [
     |
     */
 
-    // Database connection for geohub
-    'db_connection' => env('GEOHUB_DB_CONNECTION', 'geohub'),
-
-    // Queue for import jobs
-    'import_queue' => env('GEOHUB_IMPORT_QUEUE', 'geohub-import'),
-
-    // Log channel for import
-    'import_log_channel' => env('GEOHUB_IMPORT_LOG_CHANNEL', 'wm-package-failed-jobs'),
 
     /*
     |--------------------------------------------------------------------------
@@ -84,9 +76,9 @@ return [
     */
     'queue' => [
         'geohub-import' => [
-            'connection' => env('GEOHUB_IMPORT_CONNECTION', 'redis'),
-            'queue' => env('GEOHUB_IMPORT_QUEUE', 'geohub-import'),
-            'retry_after' => (int) env('GEOHUB_IMPORT_RETRY_AFTER', 90),
+            'connection' => 'redis',
+            'queue' => 'geohub-import',
+            'retry_after' => 90,
             'block_for' => null,
             'after_commit' => true,
         ],
@@ -118,7 +110,7 @@ return [
                     'nice' => 0,
                 ],
             ],
-            'local' => [
+            'default' => [
                 'geohub-import-supervisor' => [
                     'connection' => 'redis',
                     'queue' => ['geohub-import'],
@@ -147,10 +139,10 @@ return [
 
     // Media import configuration
     'import_media' => [
-        'source_disk' => env('GEOHUB_IMPORT_MEDIA_SOURCE_DISK', 'geohub_media'),
-        'target_disk' => env('GEOHUB_IMPORT_MEDIA_TARGET_DISK', 'public'),
-        'target_path' => env('GEOHUB_IMPORT_MEDIA_TARGET_PATH', 'media'),
-        'collection' => env('GEOHUB_IMPORT_MEDIA_COLLECTION', 'default'),
+        'source_disk' => env('geohub_media'),
+        'target_disk' => env('public'),
+        'target_path' => env('media'),
+        'collection' => env('default'),
     ],
 
     // Import mapping configuration
