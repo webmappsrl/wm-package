@@ -110,7 +110,7 @@ return [
                     'nice' => 0,
                 ],
             ],
-            'default' => [
+            'local' => [
                 'geohub-import-supervisor' => [
                     'connection' => 'redis',
                     'queue' => ['geohub-import'],
@@ -149,7 +149,7 @@ return [
     'import_mapping' => [
         // App mapping
         'app' => [
-            'identifiers' => ['customer_name'],
+            'identifiers' => ['properties->geohub_id'],
             'fields' => [
                 'name' => 'name',
                 'description' => 'description',
