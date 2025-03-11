@@ -361,6 +361,9 @@ return new class extends Migration
             
             // ==================== OTHERS ====================
             $table->boolean('generate_layers_edges')->default(false);
+            
+            // Adding properties jsonb column to store additional data including geohub_id
+            $table->jsonb('properties')->nullable();
 
             $table->index('user_id');    
         });
