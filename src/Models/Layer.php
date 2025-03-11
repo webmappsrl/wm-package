@@ -3,18 +3,20 @@
 namespace Wm\WmPackage\Models;
 
 use Exception;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Database\Eloquent\Model;
 use Spatie\Translatable\HasTranslations;
 use Wm\WmPackage\Observers\LayerObserver;
-use Wm\WmPackage\Services\GeometryComputationService;
+use Wm\WmPackage\Traits\HasPackageFactory;
 use Wm\WmPackage\Traits\TaxonomyAbleModel;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Wm\WmPackage\Services\GeometryComputationService;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
 
 class Layer extends Model
 {
-    use HasFactory, HasTranslations, TaxonomyAbleModel;
+    use HasTranslations, TaxonomyAbleModel, HasPackageFactory;
     // protected $fillable = ['rank'];
 
     protected static function boot()
@@ -23,19 +25,19 @@ class Layer extends Model
         Layer::observe(LayerObserver::class);
     }
 
-    public array $translatable = ['title', 'subtitle', 'description', 'track_type'];
-
-    public $casts = [
+    public array $translatable = ['name'];
+    protected $casts = [
         'properties' => 'array',
-        'configuration' => 'array',
+        'configuration' => 'array'
     ];
+
 
     /**
      * The accessors to append to the model's array form.
      *
      * @var array
      */
-    protected $appends = ['query_string'];
+    //protected $appends = ['query_string'];
 
     public function app()
     {
@@ -47,9 +49,9 @@ class Layer extends Model
         return $this->belongsToMany(App::class, 'layer_associated_app');
     }
 
-    public function ecTracks(): MorphMany
+    public function ecTracks(): MorphToMany
     {
-        return $this->morphMany(EcTrack::class, 'layerable', (new EcTrack)->getMorphClass());
+        return $this->morphToMany(EcTrack::class, 'layerable');
     }
 
     /**
@@ -66,7 +68,7 @@ class Layer extends Model
             $this->bbox = $bbox ?? $defaultBBOX;
             $this->save();
         } catch (Exception $e) {
-            Log::channel('layer')->error('computeBB of layer with id: '.$this->id);
+            Log::channel('layer')->error('computeBB of layer with id: ' . $this->id);
         }
     }
 

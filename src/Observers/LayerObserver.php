@@ -5,7 +5,7 @@ namespace Wm\WmPackage\Observers;
 use Illuminate\Database\Eloquent\Model;
 use Wm\WmPackage\Jobs\UpdateLayerTracksJob;
 use Wm\WmPackage\Models\Layer;
-use Wm\WmPackage\Services\LayerService;
+use Wm\WmPackage\Services\Models\LayerService;
 
 class LayerObserver extends AbstractObserver
 {
@@ -16,7 +16,7 @@ class LayerObserver extends AbstractObserver
      */
     public function creating(Model $layer)
     {
-        $layer->rank = LayerService::make()->getLayerMaxRank($layer) + 1;
+        $layer->rank = LayerService::make()->getLayerMaxRank() + 1;
     }
 
     /**

@@ -5,6 +5,8 @@ namespace Wm\WmPackage\Models;
 use ChristianKuri\LaravelFavorite\Traits\Favoriteable;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\DB;
 use Laravel\Scout\Searchable;
@@ -41,9 +43,9 @@ class EcTrack extends MultiLineString
     //
     // RELATIONS
     //
-    public function associatedLayers(): MorphMany
+    public function associatedLayers(): MorphToMany
     {
-        return $this->morphMany(Layer::class, 'layerable');
+        return $this->morphedByMany(Layer::class, 'layerable');
     }
 
     public function updateManualDataField($field, $value)
@@ -293,7 +295,7 @@ class EcTrack extends MultiLineString
     {
         $geojson = $this->getGeojson();
         // MAPPING
-        $geojson['properties']['id'] = 'ec_track_'.$this->id;
+        $geojson['properties']['id'] = 'ec_track_' . $this->id;
         $geojson = $this->_mapElbrusGeojsonProperties($geojson);
 
         if ($this->ecPois) {
@@ -328,9 +330,9 @@ class EcTrack extends MultiLineString
 
         $fields = ['kml', 'gpx'];
         foreach ($fields as $field) {
-            if (isset($geojson['properties'][$field.'_url'])) {
-                $geojson['properties'][$field] = $geojson['properties'][$field.'_url'];
-                unset($geojson['properties'][$field.'_url']);
+            if (isset($geojson['properties'][$field . '_url'])) {
+                $geojson['properties'][$field] = $geojson['properties'][$field . '_url'];
+                unset($geojson['properties'][$field . '_url']);
             }
         }
 
@@ -340,13 +342,13 @@ class EcTrack extends MultiLineString
 
                 if ($taxonomy === 'activity') {
                     $geojson['properties']['taxonomy'][$name] = array_map(function ($item) use ($name) {
-                        return $name.'_'.$item;
+                        return $name . '_' . $item;
                     }, array_map(function ($item) {
                         return $item['id'];
                     }, $values));
                 } else {
                     $geojson['properties']['taxonomy'][$name] = array_map(function ($item) use ($name) {
-                        return $name.'_'.$item;
+                        return $name . '_' . $item;
                     }, $values);
                 }
             }
@@ -558,32 +560,32 @@ class EcTrack extends MultiLineString
         }
 
         if (empty($searchables) || (in_array('name', $searchables) && ! empty($this->name))) {
-            $string .= str_replace('"', '', json_encode($this->getTranslations('name'))).' ';
+            $string .= str_replace('"', '', json_encode($this->getTranslations('name'))) . ' ';
         }
         if (empty($searchables) || (in_array('description', $searchables) && ! empty($this->description))) {
             $description = str_replace('"', '', json_encode($this->getTranslations('description')));
             $description = str_replace('\\', '', $description);
-            $string .= strip_tags($description).' ';
+            $string .= strip_tags($description) . ' ';
         }
         if (empty($searchables) || (in_array('excerpt', $searchables) && ! empty($this->excerpt))) {
             $excerpt = str_replace('"', '', json_encode($this->getTranslations('excerpt')));
             $excerpt = str_replace('\\', '', $excerpt);
-            $string .= strip_tags($excerpt).' ';
+            $string .= strip_tags($excerpt) . ' ';
         }
         if (empty($searchables) || (in_array('ref', $searchables) && ! empty($this->ref))) {
-            $string .= $this->ref.' ';
+            $string .= $this->ref . ' ';
         }
         if (empty($searchables) || (in_array('osmid', $searchables) && ! empty($this->osmid))) {
-            $string .= $this->osmid.' ';
+            $string .= $this->osmid . ' ';
         }
         if (empty($searchables) || (in_array('taxonomyThemes', $searchables) && ! empty($this->taxonomyThemes))) {
             foreach ($this->taxonomyThemes as $tax) {
-                $string .= str_replace('"', '', json_encode($tax->getTranslations('name'))).' ';
+                $string .= str_replace('"', '', json_encode($tax->getTranslations('name'))) . ' ';
             }
         }
         if (empty($searchables) || (in_array('taxonomyActivities', $searchables) && ! empty($this->taxonomyActivities))) {
             foreach ($this->taxonomyActivities as $tax) {
-                $string .= str_replace('"', '', json_encode($tax->getTranslations('name'))).' ';
+                $string .= str_replace('"', '', json_encode($tax->getTranslations('name'))) . ' ';
             }
         }
 
