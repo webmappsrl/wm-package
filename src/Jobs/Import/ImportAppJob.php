@@ -52,7 +52,7 @@ class ImportAppJob extends BaseImportJob
         }
 
         // Queue imports for associated entities
-        //$this->queueEntityImport('layer', null, $this->entityId);
+        // $this->queueEntityImport('layer', null, $this->entityId);
         // $this->queueEntityImport('ec_poi', $userId, $this->entityId);
         // $this->queueEntityImport('ec_track', $userId, $this->entityId);
         // $this->queueEntityImport('ec_media', $userId, $this->entityId);
@@ -69,7 +69,7 @@ class ImportAppJob extends BaseImportJob
             $tableName = str_replace('_', '_', $entityType);
 
             if ($tableName != 'ec_media') {
-                $tableName = $tableName . 's';
+                $tableName = $tableName.'s';
             }
 
             $table = DB::connection(self::GEOHUB_CONNECTION)->table($tableName);
@@ -87,10 +87,10 @@ class ImportAppJob extends BaseImportJob
             }
 
             if (count($ids) > 0) {
-                $logger->info('Found ' . count($ids) . " {$entityType}s");
+                $logger->info('Found '.count($ids)." {$entityType}s");
 
                 // Get the job class for this entity type
-                $jobClass = config('wm-geohub-import.import_models.' . $entityType . '.job');
+                $jobClass = config('wm-geohub-import.import_models.'.$entityType.'.job');
 
                 // Queue jobs for each entity
                 $jobs = [];
@@ -105,7 +105,7 @@ class ImportAppJob extends BaseImportJob
                 $logger->info("No {$entityType}s found for app {$appId}");
             }
         } catch (\Exception $e) {
-            $logger->error("Error queuing {$entityType} imports for app {$appId}: " . $e->getMessage());
+            $logger->error("Error queuing {$entityType} imports for app {$appId}: ".$e->getMessage());
             throw $e;
         }
     }

@@ -2,17 +2,17 @@
 
 namespace Wm\WmPackage\Services\Import;
 
-use Illuminate\Log\Logger;
-use Wm\WmPackage\Models\User;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Connection;
+use Illuminate\Log\Logger;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Wm\WmPackage\Models\User;
 
 /**
  * Service for importing data from Geohub to the local database
- * 
+ *
  * This service handles the import process for various entity types
  * from the Geohub database to the local application database.
  */
@@ -54,9 +54,9 @@ class GeohubImportService
         $this->importModels = config('wm-geohub-import.import_models', []);
     }
 
-    //------------------------------------------------------------------
+    // ------------------------------------------------------------------
     // Public Import Methods
-    //------------------------------------------------------------------
+    // ------------------------------------------------------------------
 
     /**
      * Import all entities from Geohub
@@ -75,8 +75,8 @@ class GeohubImportService
 
     /**
      * Import all entities of a specific model type
-     * 
-     * @param string $model The model type to import
+     *
+     * @param  string  $model  The model type to import
      */
     public function importAllByModel(string $model): void
     {
@@ -97,14 +97,14 @@ class GeohubImportService
             ->allowFailures()
             ->dispatch();
 
-        $this->logger->info("Dispatched batch {$batch->id} with " . count($jobs) . " jobs for {$model}s");
+        $this->logger->info("Dispatched batch {$batch->id} with ".count($jobs)." jobs for {$model}s");
     }
 
     /**
      * Import a single entity from Geohub
-     * 
-     * @param string $model The model type to import
-     * @param int $id The ID of the entity to import
+     *
+     * @param  string  $model  The model type to import
+     * @param  int  $id  The ID of the entity to import
      */
     public function importSingle(string $model, int $id): void
     {
@@ -120,16 +120,17 @@ class GeohubImportService
         $this->logger->info("Dispatched job for {$model} with ID {$id}");
     }
 
-    //------------------------------------------------------------------
+    // ------------------------------------------------------------------
     // Data Fetching and Processing Methods
-    //------------------------------------------------------------------
+    // ------------------------------------------------------------------
 
     /**
      * Fetch data from Geohub for a specific entity
-     * 
-     * @param int $entityId The ID of the entity to fetch
-     * @param string $tableName The table name to fetch from
+     *
+     * @param  int  $entityId  The ID of the entity to fetch
+     * @param  string  $tableName  The table name to fetch from
      * @return array|null The fetched data as an array
+     *
      * @throws \Exception If the entity is not found
      */
     public function fetchData(int $entityId, string $tableName): ?array
@@ -149,10 +150,11 @@ class GeohubImportService
 
     /**
      * Import the transformed data into the database
-     * 
-     * @param array $transformedData The data to import
-     * @param string $modelName The model class name
-     * @param int $entityId The ID of the entity to import
+     *
+     * @param  array  $transformedData  The data to import
+     * @param  string  $modelName  The model class name
+     * @param  int  $entityId  The ID of the entity to import
+     *
      * @throws \Exception If import fails
      */
     public function importData(array $transformedData, string $modelName, int $entityId): void
@@ -169,19 +171,20 @@ class GeohubImportService
 
             $this->logger->info("{$modelName} with ID {$entityId} imported successfully. Local ID: {$app->id}");
         } catch (\Exception $e) {
-            $this->logger->error("Error importing {$modelName} with ID {$entityId}: " . $e->getMessage());
+            $this->logger->error("Error importing {$modelName} with ID {$entityId}: ".$e->getMessage());
             throw $e;
         }
     }
 
-    //------------------------------------------------------------------
+    // ------------------------------------------------------------------
     // Helper Methods
-    //------------------------------------------------------------------
+    // ------------------------------------------------------------------
 
     /**
      * Validate that the given model exists in the import models configuration
-     * 
-     * @param string $model The model to validate
+     *
+     * @param  string  $model  The model to validate
+     *
      * @throws \InvalidArgumentException If the model is not supported
      */
     protected function validateModelExists(string $model): void
@@ -193,9 +196,10 @@ class GeohubImportService
 
     /**
      * Get the IDs of entities to import for a specific model
-     * 
-     * @param string $model The model type
+     *
+     * @param  string  $model  The model type
      * @return array The IDs to import
+     *
      * @throws \InvalidArgumentException If the model is not supported
      */
     protected function getIdsToImport(string $model): array
@@ -212,7 +216,7 @@ class GeohubImportService
             case 'ec_track':
             case 'ec_poi':
                 // get all entities related to apps by user_id
-                $table = str_replace('_', '_', $model) . 's'; // Convert to table name
+                $table = str_replace('_', '_', $model).'s'; // Convert to table name
                 $userIds = $this->dbConnection
                     ->table('apps')
                     ->pluck('user_id')
@@ -231,9 +235,9 @@ class GeohubImportService
 
     /**
      * Get the identifiers for the updateOrCreate method.
-     * 
-     * @param array $data The data to extract identifiers from
-     * @param int $entityId The ID of the entity to import
+     *
+     * @param  array  $data  The data to extract identifiers from
+     * @param  int  $entityId  The ID of the entity to import
      * @return array The identifiers
      */
     protected function getIdentifiers(array $data, int $entityId): array
@@ -258,10 +262,11 @@ class GeohubImportService
 
     /**
      * Helper method to apply a transformer to a value.
-     * 
-     * @param mixed $value The value to transform
-     * @param array $transformer The transformer configuration
+     *
+     * @param  mixed  $value  The value to transform
+     * @param  array  $transformer  The transformer configuration
      * @return mixed The transformed value
+     *
      * @throws \RuntimeException If the transformer class or method is not found
      */
     protected function applyTransformer(mixed $value, array $transformer): mixed

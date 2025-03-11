@@ -14,7 +14,6 @@ class WmImportFromGeohubCommand extends Command
 
     protected $description = 'Import data from geohub to shard instance';
 
-
     public function __construct(protected GeohubImportService $importService)
     {
         parent::__construct();
@@ -39,8 +38,9 @@ class WmImportFromGeohubCommand extends Command
                 $this->logAndOutput('Import of all data completed');
             }
         } catch (\Exception $e) {
-            $errorMessage = 'Import failed: ' . $e->getMessage();
+            $errorMessage = 'Import failed: '.$e->getMessage();
             $this->logAndOutput($errorMessage, 'error');
+
             return 1;
         }
 
