@@ -13,7 +13,7 @@ class ImportAppJob extends BaseImportJob
 {
     protected function getModelName(): string
     {
-        return config('wm-geohub-import.import_models.app.namespace');
+        return 'Wm\\WmPackage\\Models\\App';
     }
 
     protected function getTableName(): string
@@ -23,7 +23,7 @@ class ImportAppJob extends BaseImportJob
 
     protected function getMapping(): array
     {
-        return config('wm-geohub-import.import_mapping.app', []);
+        return config('wm-geohub-import.import_mapping.app');
     }
 
     protected function transformData(array $data): array
@@ -32,64 +32,11 @@ class ImportAppJob extends BaseImportJob
         $diff = array_diff(array_keys($data), Schema::getColumnListing('apps'));
         $transformedData = array_diff_key($data, array_flip($diff));
 
+        // we need to check if the user related exists in db. If not, we need to create it.
+        $user = $this->geohubImportService->checkUserExistence($transformedData['user_id']);
+        $transformedData['user_id'] = $user->id;
+
         return $transformedData;
-    }
-
-    protected function importData(array $transformedData): mixed
-    {
-        $logger = Log::channel('wm-package-failed-jobs');
-
-        try {
-            // Use updateOrCreate to create or update the app
-            $model = config('wm-geohub-import.import_models.app.namespace');
-
-            if (! $model || ! class_exists($model)) {
-                throw new \RuntimeException("App model class {$model} not found or not configured");
-            }
-
-            // Extract identifier fields for updateOrCreate
-            $identifiers = [];
-            foreach ($this->mapping['identifiers'] ?? ['sku'] as $field) {
-                if (isset($transformedData[$field])) {
-                    $identifiers[$field] = $transformedData[$field];
-                }
-            }
-
-            if (empty($identifiers)) {
-                // If no identifiers are found, use id (synced from geohub)
-                $identifiers = [
-                    'id' => $this->entityId,
-                ];
-            }
-
-            // before updateOrCreate, we need to check if the user related exists in db. If not, we need to create it.
-            $user = $this->checkUserExistence($transformedData['user_id']);
-            $transformedData['user_id'] = $user->id;
-            // Create or update the app
-            $app = $model::updateOrCreate($identifiers, $transformedData);
-
-            $logger->info("App with ID {$this->entityId} imported successfully. Local ID: {$app->id}");
-
-            return $app;
-        } catch (\Exception $e) {
-            $logger->error("Error importing app with ID {$this->entityId}: ".$e->getMessage());
-            throw $e;
-        }
-    }
-
-    protected function checkUserExistence(int $userId): User
-    {
-
-        $geohubUser = DB::connection($this->dbConnection)->table('users')->where('id', $userId)->first();
-        $shardUser = User::where('email', $geohubUser->email)->first();
-        if (! $shardUser) {
-            // make a diff between geohubUser and User model
-            $diff = array_diff(array_keys((array) $geohubUser), Schema::getColumnListing('users'));
-            $transformedData = array_diff_key((array) $geohubUser, array_flip($diff));
-            $shardUser = User::create($transformedData);
-        }
-
-        return $shardUser;
     }
 
     protected function processDependencies(array $data): void
@@ -105,10 +52,10 @@ class ImportAppJob extends BaseImportJob
         }
 
         // Queue imports for associated entities
-        $this->queueEntityImport('layer', null, $this->entityId);
-        $this->queueEntityImport('ec_poi', $userId, $this->entityId);
-        $this->queueEntityImport('ec_track', $userId, $this->entityId);
-        $this->queueEntityImport('ec_media', $userId, $this->entityId);
+        //$this->queueEntityImport('layer', null, $this->entityId);
+        // $this->queueEntityImport('ec_poi', $userId, $this->entityId);
+        // $this->queueEntityImport('ec_track', $userId, $this->entityId);
+        // $this->queueEntityImport('ec_media', $userId, $this->entityId);
     }
 
     /**
@@ -122,10 +69,10 @@ class ImportAppJob extends BaseImportJob
             $tableName = str_replace('_', '_', $entityType);
 
             if ($tableName != 'ec_media') {
-                $tableName = $tableName.'s';
+                $tableName = $tableName . 's';
             }
 
-            $table = DB::connection($this->dbConnection)->table($tableName);
+            $table = DB::connection(self::GEOHUB_CONNECTION)->table($tableName);
 
             // layer has app_id relation while ec_poi, ec_track and ec_media have user_id relation
             if ($entityType == 'layer') {
@@ -140,15 +87,15 @@ class ImportAppJob extends BaseImportJob
             }
 
             if (count($ids) > 0) {
-                $logger->info('Found '.count($ids)." {$entityType}s");
+                $logger->info('Found ' . count($ids) . " {$entityType}s");
 
                 // Get the job class for this entity type
-                $jobClass = config('wm-geohub-import.import_models.'.$entityType.'.job');
+                $jobClass = config('wm-geohub-import.import_models.' . $entityType . '.job');
 
                 // Queue jobs for each entity
                 $jobs = [];
                 foreach ($ids as $id) {
-                    $jobs[] = new $jobClass($id, $this->dbConnection, $appId);
+                    $jobs[] = new $jobClass($id, self::GEOHUB_CONNECTION, $appId);
                 }
 
                 // create a batch and add the jobs to it
@@ -158,7 +105,7 @@ class ImportAppJob extends BaseImportJob
                 $logger->info("No {$entityType}s found for app {$appId}");
             }
         } catch (\Exception $e) {
-            $logger->error("Error queuing {$entityType} imports for app {$appId}: ".$e->getMessage());
+            $logger->error("Error queuing {$entityType} imports for app {$appId}: " . $e->getMessage());
             throw $e;
         }
     }
