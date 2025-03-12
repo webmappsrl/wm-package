@@ -21,24 +21,24 @@ class WmImportFromGeohubCommand extends Command
 
     public function handle()
     {
-        $model = $this->argument('model');
+        $modelKey = $this->argument('model');
         $id = $this->argument('id');
 
         $this->info('Starting import from geohub...');
 
         try {
-            if ($model && $id) {
-                $this->importService->importSingle($model, $id);
-                $this->logAndOutput("Imported {$model} with ID {$id}");
-            } elseif ($model) {
-                $this->importService->importAllByModel($model);
-                $this->logAndOutput("Imported all {$model}s");
+            if ($modelKey && $id) {
+                $this->importService->importSingle($modelKey, $id);
+                $this->logAndOutput("Job dispatched for {$modelKey} with ID {$id}");
+            } elseif ($modelKey) {
+                $this->importService->importAllByModel($modelKey);
+                $this->logAndOutput("Jobs dispatched for all {$modelKey}s");
             } else {
                 $this->importService->importAll();
-                $this->logAndOutput('Import of all data completed');
+                $this->logAndOutput('Jobs dispatched for all data');
             }
         } catch (\Exception $e) {
-            $errorMessage = 'Import failed: '.$e->getMessage();
+            $errorMessage = 'Import failed: ' . $e->getMessage();
             $this->logAndOutput($errorMessage, 'error');
 
             return 1;
@@ -51,12 +51,7 @@ class WmImportFromGeohubCommand extends Command
     {
         $logger = Log::channel('wm-package-failed-jobs');
 
-        if ($level === 'error') {
-            $this->error($message);
-            $logger->error($message);
-        } else {
-            $this->info($message);
-            $logger->info($message);
-        }
+        $this->$level($message);
+        $logger->$level($message);
     }
 }
