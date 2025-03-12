@@ -3,6 +3,8 @@
 namespace Wm\WmPackage\Http\Controllers\Api;
 
 use Wm\WmPackage\Http\Controllers\Controller;
+use Wm\WmPackage\Models\EcPoi;
+use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Services\Models\LayerService;
 
@@ -17,8 +19,8 @@ class LayerAPIController extends Controller
             unset($layer['taxonomy_wheres']);
             unset($layer['taxonomy_activities']);
             //TODO: check performances then evaluate a count method into the service witha a cache
-            $layers['ec_poi'] = $this->layerService->getRelatedEcPois($layer, true);
-            $layers['ec_tracks'] = $this->layerService->getRelatedEcTracks($layer, true);
+            $layers['ec_poi'] = $this->layerService->getRelatedModels($layer, EcPoi::class, true);
+            $layers['ec_tracks'] = $this->layerService->getRelatedModels($layer, EcTrack::class, true);
         }
 
         return $layers;

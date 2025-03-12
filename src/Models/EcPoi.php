@@ -7,10 +7,11 @@ use Spatie\Translatable\HasTranslations;
 use Wm\WmPackage\Models\Abstracts\Point;
 use Wm\WmPackage\Observers\EcPoiObserver;
 use Wm\WmPackage\Traits\TaxonomyAbleModel;
+use Wm\WmPackage\Models\Interfaces\LayerRelatedModel;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
-class EcPoi extends Point
+class EcPoi extends Point implements LayerRelatedModel
 {
     use HasTranslations;
     use HasTranslations, TaxonomyAbleModel;
@@ -212,7 +213,7 @@ class EcPoi extends Point
         ];
     }
 
-    public function getLayerRelationName()
+    public function getLayerRelationName(): string
     {
         return 'ecPois';
     }

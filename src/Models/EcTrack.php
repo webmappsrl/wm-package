@@ -12,12 +12,13 @@ use Wm\WmPackage\Services\Models\EcTrackService;
 use Wm\WmPackage\Models\Abstracts\MultiLineString;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Wm\WmPackage\Models\Interfaces\LayerRelatedModel;
 use Wm\WmPackage\Services\GeometryComputationService;
 use ChristianKuri\LaravelFavorite\Traits\Favoriteable;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
-class EcTrack extends MultiLineString
+class EcTrack extends MultiLineString implements LayerRelatedModel
 {
     use Favoriteable, HasTranslations, Searchable, TaxonomyAbleModel;
 
@@ -88,7 +89,7 @@ class EcTrack extends MultiLineString
         return $associatedLayers;
     }
 
-    public function getLayerRelationName()
+    public function getLayerRelationName(): string
     {
         return 'ecTracks';
     }

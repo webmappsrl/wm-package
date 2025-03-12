@@ -18,8 +18,6 @@ class LayerService extends BaseService
         return DB::table('layers')->selectRaw('max(rank)')->value('max') ?? 0;
     }
 
-
-
     public function hasRelatedManualModels(Layer $layer, string $model): bool
     {
         return $layer->{(new $model)->getLayerRelationName()}->first() !== null;
