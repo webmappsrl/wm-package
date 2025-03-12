@@ -57,14 +57,14 @@ class ImportAppJob extends BaseImportJob
             if (count($ids) > 0) {
                 $jobs = [];
                 foreach ($ids as $id) {
-                    $jobs[] = $this->geohubImportService->importSingle($entityModelKey, $id, ['app_id' => $appId]);
+                    $jobs[] = $this->geohubImportService->createJob($entityModelKey, $id, ['app_id' => $appId]);
                 }
                 // create a batch and add the jobs to it
                 $batch = Bus::batch($jobs)->name("app-dependencies-{$entityModelKey}-import-batch")->onQueue(config('geohub-import.queue', 'geohub-import'));
                 $batch->dispatch();
             }
         } catch (\Exception $e) {
-            $logger->error("Error queuing {$entityModelKey} imports for app {$this->entityId}: ".$e->getMessage());
+            $logger->error("Error queuing {$entityModelKey} imports for app {$this->entityId}: " . $e->getMessage());
             throw $e;
         }
     }

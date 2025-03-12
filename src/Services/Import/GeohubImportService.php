@@ -2,15 +2,16 @@
 
 namespace Wm\WmPackage\Services\Import;
 
-use Illuminate\Database\Connection;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Log\Logger;
+use Wm\WmPackage\Models\User;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Connection;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
-use Wm\WmPackage\Models\User;
+use Illuminate\Database\Eloquent\Model;
+use Wm\WmPackage\Jobs\Import\BaseImportJob;
 
 /**
  * Service for importing data from Geohub to the local database
@@ -102,7 +103,7 @@ class GeohubImportService
             ->allowFailures()
             ->dispatch();
 
-        $this->logger->info("Dispatched batch {$batch->id} with ".count($jobs)." jobs for {$model}s");
+        $this->logger->info("Dispatched batch {$batch->id} with " . count($jobs) . " jobs for {$model}s");
     }
 
     /**
@@ -118,8 +119,7 @@ class GeohubImportService
 
         $this->logger->info("Starting import of {$modelKey} with ID {$id}");
 
-        $jobClass = $this->importMapping[$modelKey]['job'];
-        $job = new $jobClass($id, $data);
+        $job = $this->createJob($modelKey, $id, $data);
 
         dispatch($job);
 
@@ -180,7 +180,7 @@ class GeohubImportService
 
             return $model;
         } catch (\Exception $e) {
-            $this->logger->error("Error importing {$modelName} with ID {$entityId}: ".$e->getMessage());
+            $this->logger->error("Error importing {$modelName} with ID {$entityId}: " . $e->getMessage());
             throw $e;
         }
     }
@@ -189,6 +189,14 @@ class GeohubImportService
     // Helper Methods
     // ------------------------------------------------------------------
 
+
+    public function createJob(string $modelKey, int $id, array $data = []): BaseImportJob
+    {
+        $jobClass = $this->importMapping[$modelKey]['job'];
+        $job = new $jobClass($id, $data);
+
+        return $job;
+    }
     /**
      * Validate that the given model exists in the import models configuration
      *
