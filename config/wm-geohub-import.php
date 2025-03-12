@@ -127,28 +127,37 @@ return [
         ],
     ],
 
-    // Models to use for import
-    'import_models' => [
-        'app' => ['namespace' => 'Wm\\WmPackage\\Models\\App', 'job' => ImportAppJob::class],
-        'ec_media' => ['namespace' => 'Wm\\WmPackage\\Models\\EcMedia', 'job' => ImportEcMediaJob::class],
-        'ec_track' => ['namespace' => 'Wm\\WmPackage\\Models\\EcTrack', 'job' => ImportEcTrackJob::class],
-        'ec_poi' => ['namespace' => 'Wm\\WmPackage\\Models\\EcPoi', 'job' => ImportEcPoiJob::class],
-        'layer' => ['namespace' => 'Wm\\WmPackage\\Models\\Layer', 'job' => ImportLayerJob::class],
-    ],
-
-    // Media import configuration
-    'import_media' => [
-        'source_disk' => env('geohub_media'),
-        'target_disk' => env('public'),
-        'target_path' => env('media'),
-        'collection' => env('default'),
-    ],
-
-    // Import mapping configuration
+    /*
+    |--------------------------------------------------------------------------
+    | Import Mapping Configuration
+    |--------------------------------------------------------------------------
+    |
+    | This section defines how entities from Geohub are mapped to local models.
+    | Each entity type has its own configuration including namespace, job class,
+    | source table, and field mappings.
+    |
+    */
     'import_mapping' => [
-        // App mapping
+        // App entity mapping
         'app' => [
+            'namespace' => 'Wm\\WmPackage\\Models\\App',
+            'job' => ImportAppJob::class,
+            'geohub_table' => 'apps',
             'identifiers' => ['properties->geohub_id'],
+            'relations' => [
+                'layer' => [
+                    'foreign_key' => 'app_id',
+                ],
+                'ec_pois' => [
+                    'foreign_key' => 'user_id',
+                ],
+                'ec_tracks' => [
+                    'foreign_key' => 'user_id',
+                ],
+                'ec_media' => [
+                    'foreign_key' => 'user_id',
+                ],
+            ],
             'fields' => [
                 'name' => 'name',
                 'description' => 'description',
@@ -158,7 +167,12 @@ return [
                 'updated_at' => 'updated_at',
             ],
         ],
+
+        // Layer entity mapping
         'layer' => [
+            'namespace' => 'Wm\\WmPackage\\Models\\Layer',
+            'job' => ImportLayerJob::class,
+            'geohub_table' => 'layers',
             'identifiers' => ['properties->geohub_id'],
             'fields' => [
                 'name' => 'name',
@@ -179,8 +193,11 @@ return [
             ],
         ],
 
-        // EcMedia mapping
+        // Media entity mapping
         'ec_media' => [
+            'namespace' => 'Wm\\WmPackage\\Models\\EcMedia',
+            'job' => ImportEcMediaJob::class,
+            'geohub_table' => 'ec_media',
             'identifiers' => ['properties->geohub_id'],
             'fields' => [
                 'name' => ['field' => 'name', 'transformer' => [DataTransformer::class, 'jsonToArray']],
@@ -197,12 +214,14 @@ return [
             ],
         ],
 
-        // EcTrack mapping
+        // Track entity mapping
         'ec_track' => [
+            'namespace' => 'Wm\\WmPackage\\Models\\EcTrack',
+            'job' => ImportEcTrackJob::class,
+            'geohub_table' => 'ec_tracks',
             'identifiers' => ['properties->geohub_id'],
             'fields' => [
                 'name' => ['field' => 'name', 'transformer' => [DataTransformer::class, 'jsonToArray']],
-                'app_id' => 'app_id',
                 'geometry' => 'geometry',
                 'osmid' => 'osmid',
                 'created_at' => 'created_at',
@@ -252,12 +271,14 @@ return [
             ],
         ],
 
-        // EcPoi mapping
+        // POI entity mapping
         'ec_poi' => [
+            'namespace' => 'Wm\\WmPackage\\Models\\EcPoi',
+            'job' => ImportEcPoiJob::class,
+            'geohub_table' => 'ec_pois',
             'identifiers' => ['properties->geohub_id'],
             'fields' => [
                 'name' => ['field' => 'name', 'transformer' => [DataTransformer::class, 'jsonToArray']],
-                'app_id' => 'app_id',
                 'created_at' => 'created_at',
                 'updated_at' => 'updated_at',
                 'geometry' => 'geometry',
