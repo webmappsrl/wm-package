@@ -39,7 +39,7 @@ class Layer extends Model
      */
     //protected $appends = ['query_string'];
 
-    public function app()
+    public function appOwner()
     {
         return $this->belongsTo(App::class);
     }
@@ -49,9 +49,14 @@ class Layer extends Model
         return $this->belongsToMany(App::class, 'layer_associated_app');
     }
 
-    public function ecTracks(): MorphToMany
+    public function manualEcTracks(): MorphToMany
     {
         return $this->morphedByMany(EcTrack::class, 'layerable');
+    }
+
+    public function manualEcPois(): MorphToMany
+    {
+        return $this->morphedByMany(EcPoi::class, 'layerable');
     }
 
     /**

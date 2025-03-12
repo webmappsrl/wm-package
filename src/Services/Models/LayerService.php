@@ -3,10 +3,12 @@
 namespace Wm\WmPackage\Services\Models;
 
 use Exception;
+use Illuminate\Database\Eloquent\Collection;
 use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Models\EcTrack;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Services\BaseService;
 
 class LayerService extends BaseService
@@ -16,102 +18,82 @@ class LayerService extends BaseService
         return DB::table('layers')->selectRaw('max(rank)')->value('max') ?? 0;
     }
 
-    public function getTracks(Layer $layer, $collection = false)
+
+
+    public function hasRelatedManualModels(Layer $layer, string $model): bool
     {
-        $taxonomies = ['Themes', 'Activities', 'Wheres'];
+        return $layer->{(new $model)->getLayerRelationName()}->first() !== null;
+    }
 
-        // Estrazione dei dati che possono essere elaborati fuori dal foreach
-        $user_id = $layer->getLayerUserID();
-        $associated_app_users = $layer->associatedApps()->pluck('user_id')->toArray();
+    public function getRelatedModels(Layer $layer, string $model, $count = false): Collection|int
+    {
+        $relationName = (new $model)->getLayerRelationName();
 
-        // Aggiungi l'utente corrente all'array degli utenti associati
-        array_push($associated_app_users, $user_id);
-
-        // Logga gli utenti associati
-        Log::channel('layer')->info('*************getTracks*****************');
-        Log::channel('layer')->info('id: ' . $layer->id);
-        Log::channel('layer')->info('layer: ' . $layer->name);
-        Log::channel('layer')->info('Utenti associati per il layer: ', ['associated_users' => $associated_app_users]);
-
-        // Partiamo recuperando tutte le tracce
-        $allEcTracks = collect();
-
-        // Utilizza il metodo chunk per processare i dati in blocchi più piccoli
-        EcTrack::whereIn('user_id', $associated_app_users)
-            ->whereNotNull('geometry')  // Controlla che la geometria non sia null
-            ->whereRaw('ST_Dimension(geometry) = 1')  // Assicura che la geometria sia di dimensione 1 (linea)
-            ->orderBy('id')
-            ->orderBy('name')
-            ->chunk(1000, function ($chunk) use (&$allEcTracks) {
-                $allEcTracks = $allEcTracks->merge($chunk);
-                unset($chunk);  // Libera la memoria usata dal chunk attuale
-                gc_collect_cycles();  // Forza la garbage collection
-            });
-
-        // Logga il numero di tracce iniziali
-        Log::channel('layer')->info('Numero iniziale di tracce: ' . $allEcTracks->count());
-
-        // Per ogni tassonomia, applichiamo un filtro sulle tracce
-        foreach ($taxonomies as $taxonomy) {
-            $taxonomyField = 'taxonomy' . $taxonomy;
-
-            Log::channel('layer')->info("Inizio processamento tassonomia: $taxonomyField");
-
-            if ($layer->$taxonomyField->count() > 0) {
-                // Variabile per accumulare i termini della tassonomia corrente
-                $taxonomyTerms = $layer->$taxonomyField;
-
-                // Filtra le tracce per mantenere solo quelle che sono associate ai termini della tassonomia corrente
-                $allEcTracks = $allEcTracks->filter(function ($track) use ($taxonomyTerms, $taxonomyField) {
-                    try {
-
-                        // Verifica se la traccia ha la tassonomia corrente; se non ha tassonomia, la scarta
-                        if ($track->$taxonomyField->isEmpty()) {
-                            return false;
-                        }
-
-                        // Controlla se la traccia ha almeno un termine della tassonomia corrente
-                        return $track->$taxonomyField->intersect($taxonomyTerms)->isNotEmpty();
-                    } catch (Exception $e) {
-                        Log::channel('layer')->error("Errore durante il filtraggio delle tracce per la tassonomia $taxonomyField: " . $e->getMessage());
-
-                        return false;
-                    }
-                });
-
-                // Logga il numero di tracce rimanenti dopo il filtro per questa tassonomia
-                Log::channel('layer')->info("Tracce rimanenti dopo il filtro di $taxonomyField: " . $allEcTracks->count());
-
-                // Se non ci sono più tracce comuni, restituisci subito un array vuoto
-                if ($allEcTracks->isEmpty()) {
-                    Log::channel('layer')->info("Nessuna traccia comune trovata dopo l'applicazione di $taxonomyField. Restituzione array vuoto.");
-
-                    return [];
-                }
-            } else {
-                Log::channel('layer')->info("Nessun termine disponibile per la tassonomia $taxonomyField.");
-            }
-
-            unset($taxonomyTerms);  // Libera la memoria usata per i termini della tassonomia
-            gc_collect_cycles();  // Forza la garbage collection
+        if ($this->hasRelatedManualModels($layer, $model)) {
+            return $count ? $layer->$relationName->count() : $layer->$relationName;
         }
+
+        return $this->getAllVisibleModels($model, $layer, false, $count);
+    }
+
+
+    /**
+     * Get all visible models for a given layer.
+     * A visible model has:
+     *  - the same taxonomies of the layer
+     *  - a geometry
+     *  - an app_id column that matches the layer's app_id or one of the associated apps
+     *
+     * @param string $geometryModelClass - The class name of the geometry model
+     * @param Layer $layer
+     * @param boolean $collection - If true, returns a collection of models. Otherwise, returns an array of IDs.
+     * @param boolean $count - If true, returns the count of the models. Otherwise, returns the models themselves.
+     * @return array|Collection|int
+     */
+    public function getAllVisibleModels(
+        string $geometryModelClass,
+        Layer $layer,
+        $collection = false,
+        $count = false
+    ): array|Collection {
+        $allEcTracks = $geometryModelClass::getQuery()->whereIn('app_id', [
+            $layer->app_id,
+            ...$layer->associatedApps->pluck('id')->toArray(),
+        ])
+            ->whereNotNull('geometry')  // Controlla che la geometria non sia null
+            # https://postgis.net/docs/ST_Dimension.html
+            ->where(function ($query) use ($layer) {
+
+                ### TAXONOMY WHERE - strings inside properties
+                $layerWhere = $layer->properties['taxonomy_where'] ?? [];
+                if (count($layerWhere) > 0) {
+                    $layerWhereIdentifiers = collect($layerWhere)->keys();
+                    foreach ($layerWhereIdentifiers as $key => $value) {
+                        $query->orWhereRaw("properties->'taxonomy_where' ? '$value'");
+                    }
+                }
+
+                ### TAXONOMY ACTIVITY - relation
+                $query->orHas('taxonomyActivity', function ($query) use ($layer) {
+                    $query->whereIn('id', $layer->taxonomyActivity->pluck('id')->toArray());
+                });
+            })
+            ->orderBy('id')
+            ->orderBy('name');
+
+        if ($count) {
+            return $allEcTracks->count();
+        }
+
+        $allEcTracks = $allEcTracks->get();
 
         // Se collection è true, ritorna direttamente tutte le tracce raccolte
         if ($collection) {
-            Log::channel('layer')->info('Ritorno tutte le tracce come collezione. Totale tracce: ' . $allEcTracks->count());
-
             return $allEcTracks;
         }
 
-        // Popola l'array dei track IDs fuori dal loop
+        // Popola l'array dei track IDs
         $trackIds = $allEcTracks->pluck('id')->toArray();
-
-        // Logga il numero finale di track IDs raccolti
-        Log::channel('layer')->info('Numero totale di track IDs raccolti: ' . count($trackIds));
-
-        // Libera la memoria utilizzata dalla collezione di tracce
-        unset($allEcTracks);
-        gc_collect_cycles();  // Forza la garbage collection
 
         return $trackIds;
     }

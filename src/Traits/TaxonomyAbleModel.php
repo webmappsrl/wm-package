@@ -21,11 +21,6 @@ trait TaxonomyAbleModel
         return $this->morphToMany(TaxonomyTarget::class, 'taxonomy_targetable');
     }
 
-    public function taxonomyThemes(): MorphToMany
-    {
-        return $this->morphToMany(TaxonomyTheme::class, 'taxonomy_themeable');
-    }
-
     public function taxonomyActivities(): MorphToMany
     {
         return $this->morphToMany(TaxonomyActivity::class, 'taxonomy_activityable')

@@ -88,6 +88,12 @@ class EcTrack extends MultiLineString
         return $associatedLayers;
     }
 
+    public function getLayerRelationName()
+    {
+        return 'ecTracks';
+    }
+
+
     /**
      * Return the json version of the ec track, avoiding the geometry
      */
