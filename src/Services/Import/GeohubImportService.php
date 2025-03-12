@@ -2,13 +2,15 @@
 
 namespace Wm\WmPackage\Services\Import;
 
-use Illuminate\Database\Connection;
 use Illuminate\Log\Logger;
-use Illuminate\Support\Facades\Bus;
+use Wm\WmPackage\Models\User;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Connection;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
-use Wm\WmPackage\Models\User;
+use Illuminate\Database\Eloquent\Model;
 
 /**
  * Service for importing data from Geohub to the local database
@@ -42,7 +44,7 @@ class GeohubImportService
     /**
      * Configuration for import models
      */
-    protected array $importModels;
+    protected array $importMapping;
 
     /**
      * Initialize the import service
@@ -51,7 +53,7 @@ class GeohubImportService
     {
         $this->dbConnection = DB::connection('geohub');
         $this->logger = Log::channel('wm-package-failed-jobs');
-        $this->importModels = config('wm-geohub-import.import_models', []);
+        $this->importMapping = config('wm-geohub-import.import_mapping', []);
     }
 
     // ------------------------------------------------------------------
@@ -78,46 +80,50 @@ class GeohubImportService
      *
      * @param  string  $model  The model type to import
      */
-    public function importAllByModel(string $model): void
+    public function importAllByModel(string $modelKey): void
     {
-        $this->validateModelExists($model);
+        $this->validateModelExists($modelKey);
 
-        $this->logger->info("Starting import of all {$model}s");
+        $this->logger->info("Starting import of all {$modelKey}s");
 
-        $ids = $this->getIdsToImport($model);
+        $ids = $this->dbConnection
+            ->table($this->importMapping[$modelKey]['geohub_table'])
+            ->pluck('id')
+            ->toArray();
 
         $jobs = [];
         foreach ($ids as $id) {
-            $jobClass = $this->importModels[$model]['job'];
+            $jobClass = $this->importMapping[$modelKey]['job'];
             $jobs[] = new $jobClass($id);
         }
 
         $batch = Bus::batch($jobs)
-            ->name("Import {$model}s from geohub")
+            ->name("Import {$modelKey}s from geohub")
             ->allowFailures()
             ->dispatch();
 
-        $this->logger->info("Dispatched batch {$batch->id} with ".count($jobs)." jobs for {$model}s");
+        $this->logger->info("Dispatched batch {$batch->id} with " . count($jobs) . " jobs for {$model}s");
     }
 
     /**
      * Import a single entity from Geohub
      *
-     * @param  string  $model  The model type to import
+     * @param  string  $modelKey  The model type to import
      * @param  int  $id  The ID of the entity to import
+     * @param  array  $data  Additional data to pass to the job
      */
-    public function importSingle(string $model, int $id): void
+    public function importSingle(string $modelKey, int $id, array $data = []): void
     {
-        $this->validateModelExists($model);
+        $this->validateModelExists($modelKey);
 
-        $this->logger->info("Starting import of {$model} with ID {$id}");
+        $this->logger->info("Starting import of {$modelKey} with ID {$id}");
 
-        $jobClass = $this->importModels[$model]['job'];
-        $job = new $jobClass($id);
+        $jobClass = $this->importMapping[$modelKey]['job'];
+        $job = new $jobClass($id, $data);
 
         dispatch($job);
 
-        $this->logger->info("Dispatched job for {$model} with ID {$id}");
+        $this->logger->info("Dispatched job for {$modelKey} with ID {$id}");
     }
 
     // ------------------------------------------------------------------
@@ -155,9 +161,10 @@ class GeohubImportService
      * @param  string  $modelName  The model class name
      * @param  int  $entityId  The ID of the entity to import
      *
+     * @return Model The imported model
      * @throws \Exception If import fails
      */
-    public function importData(array $transformedData, string $modelName, int $entityId): void
+    public function importData(array $transformedData, string $modelName, int $entityId): Model
     {
         try {
             if (! class_exists($modelName)) {
@@ -167,11 +174,12 @@ class GeohubImportService
             $identifiers = $this->getIdentifiers($transformedData, $entityId);
 
             // Create or update the app
-            $app = $modelName::updateOrCreate($identifiers, $transformedData);
+            $model = $modelName::updateOrCreate($identifiers, $transformedData);
 
-            $this->logger->info("{$modelName} with ID {$entityId} imported successfully. Local ID: {$app->id}");
+            $this->logger->info("{$modelName} with ID {$entityId} imported successfully. Local ID: {$model->id}");
+            return $model;
         } catch (\Exception $e) {
-            $this->logger->error("Error importing {$modelName} with ID {$entityId}: ".$e->getMessage());
+            $this->logger->error("Error importing {$modelName} with ID {$entityId}: " . $e->getMessage());
             throw $e;
         }
     }
@@ -189,7 +197,7 @@ class GeohubImportService
      */
     protected function validateModelExists(string $model): void
     {
-        if (! array_key_exists($model, $this->importModels)) {
+        if (! array_key_exists($model, $this->importMapping)) {
             throw new \InvalidArgumentException("Unsupported model: {$model}");
         }
     }
@@ -202,35 +210,18 @@ class GeohubImportService
      *
      * @throws \InvalidArgumentException If the model is not supported
      */
-    protected function getIdsToImport(string $model): array
+    public function getGeohubIdsToImport(string $modelKey, array $wheres = []): array
     {
-        switch ($model) {
-            case 'app':
-                // Get all app IDs
-                return $this->dbConnection
-                    ->table('apps')
-                    ->pluck('id')
-                    ->toArray();
 
-            case 'ec_media':
-            case 'ec_track':
-            case 'ec_poi':
-                // get all entities related to apps by user_id
-                $table = str_replace('_', '_', $model).'s'; // Convert to table name
-                $userIds = $this->dbConnection
-                    ->table('apps')
-                    ->pluck('user_id')
-                    ->unique()
-                    ->toArray();
 
-                return $this->dbConnection
-                    ->table($table)
-                    ->whereIn('user_id', $userIds)
-                    ->pluck('id')
-                    ->toArray();
-            default:
-                throw new \InvalidArgumentException("Unsupported model: {$model}");
+
+        $connection = $this->dbConnection->table($this->importMapping[$modelKey]['geohub_table']);
+
+        foreach ($wheres as $column => $value) {
+            $connection->where($column, $value);
         }
+
+        return $connection->pluck('id')->toArray();
     }
 
     /**
@@ -291,6 +282,12 @@ class GeohubImportService
         return $instance->$methodName($value);
     }
 
+    /**
+     * Check if a user exists in the local database and create it if it doesn't
+     *
+     * @param  int  $userId  The ID of the user to check
+     * @return User The user object
+     */
     public function checkUserExistence(int $userId): User
     {
 
@@ -304,5 +301,56 @@ class GeohubImportService
         }
 
         return $shardUser;
+    }
+
+    /**
+     * Transform the fields of the data using mapping configuration
+     *
+     * @param  array  $data  The data to transform
+     * @return array The transformed data
+     */
+    public function transformFields(array $data, string $modelKey): array
+    {
+        $transformedData = [];
+        foreach ($this->importMapping[$modelKey]['fields'] ?? [] as $target => $source) {
+            if (is_array($source) && isset($source['field']) && isset($source['transformer'])) {
+                $value = $data[$source['field']] ?? null;
+                $transformedData[$target] = $this->applyTransformer($value, $source['transformer']);
+            } elseif (is_string($source)) {
+                $transformedData[$target] = $data[$source] ?? null;
+            }
+        }
+
+        return $transformedData;
+    }
+
+    /**
+     * Transform the properties of the data
+     *
+     * @param  array  $data  The data to transform
+     * @return array The transformed data
+     */
+    public function transformProperties(array $data, string $modelKey): array
+    {
+        $transformedProperties = [];
+        if (isset($this->importMapping[$modelKey]['properties'])) {
+            $properties = [];
+
+            foreach ($this->importMapping[$modelKey]['properties'] as $target => $source) {
+                if (is_array($source) && isset($source['field']) && isset($source['transformer'])) {
+                    $value = $data[$source['field']] ?? null;
+                    $properties[$target] = $this->applyTransformer($value, $source['transformer']);
+                } elseif (is_string($source)) {
+                    $properties[$target] = $data[$source] ?? null;
+                }
+            }
+
+            $properties['geohub_id'] = $data['id'] ?? null;
+            $properties['geohub_synced_at'] = Carbon::now()->toIso8601String();
+
+            $transformedProperties = $properties;
+        }
+
+        return $transformedProperties;
     }
 }
