@@ -2,15 +2,15 @@
 
 namespace Wm\WmPackage\Services\Import;
 
-use Illuminate\Log\Logger;
-use Wm\WmPackage\Models\User;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Connection;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Log\Logger;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Database\Eloquent\Model;
+use Wm\WmPackage\Models\User;
 
 /**
  * Service for importing data from Geohub to the local database
@@ -102,7 +102,7 @@ class GeohubImportService
             ->allowFailures()
             ->dispatch();
 
-        $this->logger->info("Dispatched batch {$batch->id} with " . count($jobs) . " jobs for {$model}s");
+        $this->logger->info("Dispatched batch {$batch->id} with ".count($jobs)." jobs for {$model}s");
     }
 
     /**
@@ -160,8 +160,8 @@ class GeohubImportService
      * @param  array  $transformedData  The data to import
      * @param  string  $modelName  The model class name
      * @param  int  $entityId  The ID of the entity to import
-     *
      * @return Model The imported model
+     *
      * @throws \Exception If import fails
      */
     public function importData(array $transformedData, string $modelName, int $entityId): Model
@@ -177,9 +177,10 @@ class GeohubImportService
             $model = $modelName::updateOrCreate($identifiers, $transformedData);
 
             $this->logger->info("{$modelName} with ID {$entityId} imported successfully. Local ID: {$model->id}");
+
             return $model;
         } catch (\Exception $e) {
-            $this->logger->error("Error importing {$modelName} with ID {$entityId}: " . $e->getMessage());
+            $this->logger->error("Error importing {$modelName} with ID {$entityId}: ".$e->getMessage());
             throw $e;
         }
     }
@@ -212,8 +213,6 @@ class GeohubImportService
      */
     public function getGeohubIdsToImport(string $modelKey, array $wheres = []): array
     {
-
-
 
         $connection = $this->dbConnection->table($this->importMapping[$modelKey]['geohub_table']);
 

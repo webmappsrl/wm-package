@@ -4,12 +4,12 @@ namespace Wm\WmPackage\Jobs\Import;
 
 use Illuminate\Bus\Batchable;
 use Illuminate\Bus\Queueable;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
 use Wm\WmPackage\Services\Import\GeohubImportService;
 
 abstract class BaseImportJob implements ShouldQueue
@@ -53,7 +53,7 @@ abstract class BaseImportJob implements ShouldQueue
 
             $model = $this->geohubImportService->importData($transformedData, $modelName, $this->entityId);
 
-            //using $data instead of $transformedData for referenced keys in geohub database
+            // using $data instead of $transformedData for referenced keys in geohub database
             $this->processDependencies($data, $model);
 
             $logger->info("Completed import of {$modelName} with ID {$this->entityId}");
@@ -70,7 +70,7 @@ abstract class BaseImportJob implements ShouldQueue
      */
     protected function getModelName(): string
     {
-        return config('wm-geohub-import.import_mapping.' . $this->getModelKey() . '.namespace');
+        return config('wm-geohub-import.import_mapping.'.$this->getModelKey().'.namespace');
     }
 
     /**
@@ -86,7 +86,7 @@ abstract class BaseImportJob implements ShouldQueue
      */
     protected function getMapping(): array
     {
-        return config('wm-geohub-import.mappings.' . $this->getModelKey());
+        return config('wm-geohub-import.mappings.'.$this->getModelKey());
     }
 
     /**
@@ -94,7 +94,7 @@ abstract class BaseImportJob implements ShouldQueue
      */
     protected function getRelations(): array
     {
-        return config('wm-geohub-import.import_mapping.' . $this->getModelKey() . '.relations');
+        return config('wm-geohub-import.import_mapping.'.$this->getModelKey().'.relations');
     }
 
     /**

@@ -2,19 +2,14 @@
 
 namespace Wm\WmPackage\Jobs\Import;
 
-use Carbon\Carbon;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Database\Eloquent\Model;
 
 class ImportEcPoiJob extends BaseImportJob
 {
-
     protected function getModelKey(): string
     {
         return 'ec_poi';
     }
-
 
     protected function transformData(array $data): array
     {

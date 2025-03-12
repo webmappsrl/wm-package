@@ -38,7 +38,7 @@ class WmImportFromGeohubCommand extends Command
                 $this->logAndOutput('Jobs dispatched for all data');
             }
         } catch (\Exception $e) {
-            $errorMessage = 'Import failed: ' . $e->getMessage();
+            $errorMessage = 'Import failed: '.$e->getMessage();
             $this->logAndOutput($errorMessage, 'error');
 
             return 1;
