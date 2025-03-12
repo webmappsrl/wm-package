@@ -26,6 +26,8 @@ use Wm\WmPackage\Traits\HasPackageFactory;
  */
 class App extends Model
 {
+
+
     use HasPackageFactory, HasTranslations, Searchable;
 
     protected $guarded = [];
@@ -43,12 +45,6 @@ class App extends Model
         'properties' => 'array',
     ];
 
-    /**
-     * The accessors to append to the model's array form.
-     *
-     * @var array
-     */
-    protected $appends = ['user_email'];
 
     protected static function boot()
     {
@@ -71,10 +67,6 @@ class App extends Model
         return $this->belongsToMany(Layer::class, 'layer_associated_app');
     }
 
-    public function ugc_medias()
-    {
-        return $this->hasMany(Media::class);
-    }
 
     public function ugc_pois()
     {
@@ -89,13 +81,6 @@ class App extends Model
     public function taxonomyThemes(): MorphToMany
     {
         return $this->morphToMany(TaxonomyTheme::class, 'taxonomy_themeable');
-    }
-
-    public function getUserEmailById($user_id)
-    {
-        $user = User::find($user_id);
-
-        return $user->email;
     }
 
     public function ecTracks(): HasMany
@@ -161,6 +146,23 @@ class App extends Model
         return $pois;
     }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     public function BuildPoisGeojson()
     {
         $json = [
@@ -215,7 +217,7 @@ class App extends Model
                             $new_array[$key] = json_decode($val, true);
                         }
                         if ($key == 'identifier') {
-                            $new_array[$key] = 'poi_type_'.$val;
+                            $new_array[$key] = 'poi_type_' . $val;
                         }
                         if (! empty($val) && $key != 'name' && $key != 'identifier') {
                             $new_array[$key] = $val;
@@ -239,7 +241,7 @@ class App extends Model
                             $new_array[$key] = json_decode($val, true);
                         }
                         if ($key == 'identifier') {
-                            $new_array[$key] = 'poi_type_'.$val;
+                            $new_array[$key] = 'poi_type_' . $val;
                         }
                         if (! empty($val) && $key != 'name' && $key != 'identifier') {
                             $new_array[$key] = $val;
@@ -304,7 +306,7 @@ class App extends Model
                     });
                 break;
             default:
-                throw new \Exception('Wrong taxonomy name: '.$taxonomy_name);
+                throw new \Exception('Wrong taxonomy name: ' . $taxonomy_name);
         }
 
         $tracks = $query->orderBy('name')->get();
@@ -418,18 +420,18 @@ class App extends Model
         return $pois;
     }
 
-    /**
-     * Determine if the user is an administrator.
-     * TODO: refactor
-     *
-     * @return bool
-     */
-    public function getUserEmailAttribute()
-    {
-        $user = User::find($this->user_id);
+    // /**
+    //  * Determine if the user is an administrator.
+    //  * TODO: refactor
+    //  *
+    //  * @return bool
+    //  */
+    // public function getUserEmailAttribute()
+    // {
+    //     $user = User::find($this->user_id);
 
-        return $this->attributes['user_email'] = $user->email;
-    }
+    //     return $this->attributes['user_email'] = $user->email;
+    // }
 
     /**
      * generate a QR code for the app
@@ -442,7 +444,7 @@ class App extends Model
         if (isset($customUrl) && $customUrl != null) {
             $url = $customUrl;
         } else {
-            $url = 'https://'.$this->id.'.app.webmapp.it';
+            $url = 'https://' . $this->id . '.app.webmapp.it';
         }
         // create the svg code for the QR code
 
@@ -484,6 +486,6 @@ class App extends Model
      */
     public function getMorphClass()
     {
-        return 'App\\Models\\'.class_basename($this);
+        return 'App\\Models\\' . class_basename($this);
     }
 }

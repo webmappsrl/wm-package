@@ -2,10 +2,11 @@
 
 namespace Wm\WmPackage\Nova;
 
-use Laravel\Nova\Fields\HasMany;
-use Laravel\Nova\Fields\ID;
-use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Resource;
+use Laravel\Nova\Fields\ID;
+use Laravel\Nova\Fields\Text;
+use Laravel\Nova\Fields\HasMany;
+use Laravel\Nova\Http\Requests\NovaRequest;
 
 class App extends Resource
 {
@@ -22,7 +23,7 @@ class App extends Resource
     {
         return [
             ID::make()->sortable(),
-            HasMany::make('Media', 'ugc_medias', Media::class),
+            Text::make('Name')->sortable(),
             HasMany::make('UgcPois', 'ugc_pois', UgcPoi::class),
             HasMany::make('UgcTracks', 'ugc_tracks', UgcTrack::class),
             // TODO: implement fields
