@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Eloquent\Model;
 use Wm\WmPackage\Jobs\Import\BaseImportJob;
+use Wm\WmPackage\Models\EcPoi;
 
 /**
  * Service for importing data from Geohub to the local database
@@ -359,5 +360,23 @@ class GeohubImportService
         }
 
         return $transformedProperties;
+    }
+
+    /**
+     * Associate ec_pois with the given model
+     *
+     * @param  string  $modelKey  The model key
+     * @param  int  $modelId  The ID of the model
+     * @return array The IDs of the associated ec_pois
+     */
+    public function getAssociatedEcPoisIDs(string $modelKey, int $modelId): array
+    {
+        $ecPoiRelation = $this->importMapping[$modelKey]['relations']['ec_pois'];
+        $ecPoiGeohubIds = $this->dbConnection->table($ecPoiRelation['pivot_table'])->where($ecPoiRelation['foreign_key'], $modelId)->pluck('ec_poi_id')->toArray();
+
+        //query current DB looking the match in properties->geohub_id
+        $ecPoiIds = EcPoi::whereIn('properties->geohub_id', $ecPoiGeohubIds)->pluck('id')->toArray();
+
+        return $ecPoiIds;
     }
 }
