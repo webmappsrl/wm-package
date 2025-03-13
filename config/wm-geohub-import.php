@@ -275,8 +275,6 @@ return [
                 'allow_print_pdf' => 'allow_print_pdf',
                 'color' => 'color',
                 'difficulty_i18n' => 'difficulty_i18n',
-                'layers' => 'layers',
-                'themes' => 'themes',
                 'activities' => 'activities',
                 'searchable' => 'searchable',
                 'dem_data' => 'dem_data',
