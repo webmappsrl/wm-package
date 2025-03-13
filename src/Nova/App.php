@@ -2,11 +2,11 @@
 
 namespace Wm\WmPackage\Nova;
 
-use Laravel\Nova\Resource;
+use Laravel\Nova\Fields\HasMany;
 use Laravel\Nova\Fields\ID;
 use Laravel\Nova\Fields\Text;
-use Laravel\Nova\Fields\HasMany;
 use Laravel\Nova\Http\Requests\NovaRequest;
+use Laravel\Nova\Resource;
 
 class App extends Resource
 {

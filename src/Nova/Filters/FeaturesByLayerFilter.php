@@ -43,6 +43,6 @@ class FeaturesByLayerFilter extends Filter
      */
     public function key(): string
     {
-        return 'features_by_layer_' . class_basename($this->featureClass);
+        return 'features_by_layer_'.class_basename($this->featureClass);
     }
 }

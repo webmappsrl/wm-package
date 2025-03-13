@@ -65,7 +65,7 @@ class ImportAppJob extends BaseImportJob
                 $batch->dispatch();
             }
         } catch (\Exception $e) {
-            $logger->error("Error queuing {$entityModelKey} imports for app {$this->entityId}: " . $e->getMessage());
+            $logger->error("Error queuing {$entityModelKey} imports for app {$this->entityId}: ".$e->getMessage());
             throw $e;
         }
     }

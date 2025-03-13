@@ -1,16 +1,13 @@
 <?php
 
-
 namespace Wm\WmPackage\Traits;
 
-use Wm\WmPackage\Models\Layer;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
-
+use Wm\WmPackage\Models\Layer;
 
 trait EcFeatureTrait
 {
-
     public function associatedLayers(): MorphToMany
     {
         return $this->morphToMany(Layer::class, 'layerable');
@@ -28,11 +25,11 @@ trait EcFeatureTrait
             ])
             ->whereNotNull('geometry');  // Controlla che la geometria non sia null
 
-        ### TAXONOMY WHERE - strings inside properties
+        // ## TAXONOMY WHERE - strings inside properties
         $layerWhere = $layer->properties['taxonomy_where'] ?? [];
-        if (count($layerWhere) > 0)
+        if (count($layerWhere) > 0) {
             $query
-                ->where(function ($query) use ($layerWhere) { //LOGIC OPERATOR AND
+                ->where(function ($query) use ($layerWhere) { // LOGIC OPERATOR AND
                     $layerWhereIdentifiers = collect($layerWhere)->keys();
                     $query->orWhere(function (Builder $query) use ($layerWhereIdentifiers) { // LOGIC OPERATOR OR
                         foreach ($layerWhereIdentifiers as $key => $value) {
@@ -40,13 +37,15 @@ trait EcFeatureTrait
                         }
                     });
                 });
+        }
 
-        ### TAXONOMY ACTIVITY - relation
+        // ## TAXONOMY ACTIVITY - relation
         $ids = $layer->taxonomyActivities->pluck('id')->toArray() ?? [];
-        if (count($ids) > 0)
+        if (count($ids) > 0) {
             $query
                 ->has('taxonomyActivities', function ($query) use ($ids) {
-                    $query->whereIn('id', $ids); //whereIn = LOGIC OPERATOR OR
+                    $query->whereIn('id', $ids); // whereIn = LOGIC OPERATOR OR
                 });
+        }
     }
 }

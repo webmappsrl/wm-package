@@ -2,17 +2,17 @@
 
 namespace Wm\WmPackage\Services\Import;
 
-use Illuminate\Log\Logger;
-use Wm\WmPackage\Models\User;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Connection;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Log\Logger;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Database\Eloquent\Model;
 use Wm\WmPackage\Jobs\Import\BaseImportJob;
 use Wm\WmPackage\Models\EcPoi;
+use Wm\WmPackage\Models\User;
 
 /**
  * Service for importing data from Geohub to the local database
@@ -104,7 +104,7 @@ class GeohubImportService
             ->allowFailures()
             ->dispatch();
 
-        $this->logger->info("Dispatched batch {$batch->id} with " . count($jobs) . " jobs for {$model}s");
+        $this->logger->info("Dispatched batch {$batch->id} with ".count($jobs)." jobs for {$model}s");
     }
 
     /**
@@ -181,7 +181,7 @@ class GeohubImportService
 
             return $model;
         } catch (\Exception $e) {
-            $this->logger->error("Error importing {$modelName} with ID {$entityId}: " . $e->getMessage());
+            $this->logger->error("Error importing {$modelName} with ID {$entityId}: ".$e->getMessage());
             throw $e;
         }
     }
@@ -190,7 +190,6 @@ class GeohubImportService
     // Helper Methods
     // ------------------------------------------------------------------
 
-
     public function createJob(string $modelKey, int $id, array $data = []): BaseImportJob
     {
         $jobClass = $this->importMapping[$modelKey]['job'];
@@ -198,6 +197,7 @@ class GeohubImportService
 
         return $job;
     }
+
     /**
      * Validate that the given model exists in the import models configuration
      *
@@ -374,7 +374,7 @@ class GeohubImportService
         $ecPoiRelation = $this->importMapping[$modelKey]['relations']['ec_pois'];
         $ecPoiGeohubIds = $this->dbConnection->table($ecPoiRelation['pivot_table'])->where($ecPoiRelation['foreign_key'], $modelId)->pluck('ec_poi_id')->toArray();
 
-        //query current DB looking the match in properties->geohub_id
+        // query current DB looking the match in properties->geohub_id
         $ecPoiIds = EcPoi::whereIn('properties->geohub_id', $ecPoiGeohubIds)->pluck('id')->toArray();
 
         return $ecPoiIds;

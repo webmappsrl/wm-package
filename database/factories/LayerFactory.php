@@ -2,9 +2,9 @@
 
 namespace Wm\WmPackage\Database\Factories;
 
+use Illuminate\Database\Eloquent\Factories\Factory;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\Layer;
-use Illuminate\Database\Eloquent\Factories\Factory;
 
 class LayerFactory extends Factory
 {
@@ -24,7 +24,7 @@ class LayerFactory extends Factory
                 [$a, $b],
                 [$b, $c],
                 [$c, $d],
-                [$d, $a]
+                [$d, $a],
             ]],
         ]);
 
@@ -40,7 +40,7 @@ class LayerFactory extends Factory
                 'test_property' => $this->faker->sentence(3),
             ],
             'app_id' => App::first()->id,
-            'geometry' => \DB::raw("ST_GeomFromGeoJSON('{$geojson}')")
+            'geometry' => \DB::raw("ST_GeomFromGeoJSON('{$geojson}')"),
         ];
     }
 }
