@@ -10,11 +10,11 @@ use Wm\WmPackage\Traits\TaxonomyAbleModel;
 use Wm\WmPackage\Models\Interfaces\LayerRelatedModel;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Wm\WmPackage\Traits\EcFeatureTrait;
 
 class EcPoi extends Point implements LayerRelatedModel
 {
-    use HasTranslations;
-    use HasTranslations, TaxonomyAbleModel;
+    use HasTranslations, TaxonomyAbleModel, EcFeatureTrait;
 
     protected $fillable = [
         'name',
@@ -55,10 +55,6 @@ class EcPoi extends Point implements LayerRelatedModel
         return $this->belongsToMany(EcTrack::class);
     }
 
-    public function associatedLayers(): MorphToMany
-    {
-        return $this->morphToMany(Layer::class, 'layerable');
-    }
 
     // /**
     //  * Return the json version of the ec poi, avoiding the geometry

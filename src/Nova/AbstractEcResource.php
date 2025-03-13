@@ -3,18 +3,17 @@
 namespace Wm\WmPackage\Nova;
 
 use Laravel\Nova\Http\Requests\NovaRequest;
+use Wm\WmPackage\Nova\Filters\FeaturesByLayerFilter;
 
 abstract class AbstractEcResource extends AbstractGeometryResource
 {
-    /**
-     * Get the fields displayed by the resource.
-     *
-     * @return array<int, \Laravel\Nova\Fields\Field>
-     */
-    public function fields(NovaRequest $request): array
+
+
+    public function filters(NovaRequest $request): array
     {
         return [
-            ...parent::fields($request),
+            ...parent::filters($request),
+            new FeaturesByLayerFilter($this->model()::class),
         ];
     }
 }

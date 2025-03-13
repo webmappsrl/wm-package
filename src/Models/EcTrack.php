@@ -17,10 +17,11 @@ use Wm\WmPackage\Services\GeometryComputationService;
 use ChristianKuri\LaravelFavorite\Traits\Favoriteable;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Wm\WmPackage\Traits\EcFeatureTrait;
 
 class EcTrack extends MultiLineString implements LayerRelatedModel
 {
-    use Favoriteable, HasTranslations, Searchable, TaxonomyAbleModel;
+    use Favoriteable, HasTranslations, Searchable, TaxonomyAbleModel, EcFeatureTrait;
 
     protected $fillable = [
         'name',
@@ -45,10 +46,6 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
     //
     // RELATIONS
     //
-    public function associatedLayers(): MorphToMany
-    {
-        return $this->morphToMany(Layer::class, 'layerable');
-    }
 
     public function updateManualDataField($field, $value)
     {

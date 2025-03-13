@@ -54,28 +54,8 @@ class LayerService extends BaseService
         $collection = false,
         $count = false
     ): array|Collection {
-        $allEcTracks = $geometryModelClass::getQuery()->whereIn('app_id', [
-            $layer->app_id,
-            ...$layer->associatedApps->pluck('id')->toArray(),
-        ])
-            ->whereNotNull('geometry')  // Controlla che la geometria non sia null
-            # https://postgis.net/docs/ST_Dimension.html
-            ->where(function ($query) use ($layer) {
-
-                ### TAXONOMY WHERE - strings inside properties
-                $layerWhere = $layer->properties['taxonomy_where'] ?? [];
-                if (count($layerWhere) > 0) {
-                    $layerWhereIdentifiers = collect($layerWhere)->keys();
-                    foreach ($layerWhereIdentifiers as $key => $value) {
-                        $query->orWhereRaw("properties->'taxonomy_where' ? '$value'");
-                    }
-                }
-
-                ### TAXONOMY ACTIVITY - relation
-                $query->orHas('taxonomyActivity', function ($query) use ($layer) {
-                    $query->whereIn('id', $layer->taxonomyActivity->pluck('id')->toArray());
-                });
-            })
+        $allEcTracks = $geometryModelClass::getQuery()
+            ->whereLayer($layer) // Local scope in EcFeatureTrait
             ->orderBy('id')
             ->orderBy('name');
 
