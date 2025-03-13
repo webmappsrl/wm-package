@@ -70,7 +70,7 @@ abstract class BaseImportJob implements ShouldQueue
      */
     protected function getModelName(): string
     {
-        return config('wm-geohub-import.import_mapping.'.$this->getModelKey().'.namespace');
+        return config('wm-geohub-import.import_mapping.' . $this->getModelKey() . '.namespace');
     }
 
     /**
@@ -86,7 +86,7 @@ abstract class BaseImportJob implements ShouldQueue
      */
     protected function getMapping(): array
     {
-        return config('wm-geohub-import.mappings.'.$this->getModelKey());
+        return config('wm-geohub-import.mappings.' . $this->getModelKey());
     }
 
     /**
@@ -94,18 +94,26 @@ abstract class BaseImportJob implements ShouldQueue
      */
     protected function getRelations(): array
     {
-        return config('wm-geohub-import.import_mapping.'.$this->getModelKey().'.relations');
+        return config('wm-geohub-import.import_mapping.' . $this->getModelKey() . '.relations');
+    }
+
+
+    /**
+     * Transform the data.
+     */
+    protected function transformData(array $data): array
+    {
+        $transformedData = $this->geohubImportService->transformFields($data, $this->getModelKey());
+        $transformedData['properties'] = $this->geohubImportService->transformProperties($data, $this->getModelKey());
+        $this->data['app_id'] ?  $transformedData['app_id'] = $this->data['app_id'] : null;
+
+        return $transformedData;
     }
 
     /**
      * Get the model key for this job.
      */
     abstract protected function getModelKey(): string;
-
-    /**
-     * Transform the data.
-     */
-    abstract protected function transformData(array $data): array;
 
     /**
      * Process dependencies if needed.
