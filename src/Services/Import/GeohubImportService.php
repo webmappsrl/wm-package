@@ -104,7 +104,7 @@ class GeohubImportService
             ->allowFailures()
             ->dispatch();
 
-        $this->logger->info("Dispatched batch {$batch->id} with " . count($jobs) . " jobs for {$model}s");
+        $this->logger->info("Dispatched batch {$batch->id} with ".count($jobs)." jobs for {$model}s");
     }
 
     /**
@@ -181,7 +181,7 @@ class GeohubImportService
 
             return $model;
         } catch (\Exception $e) {
-            $this->logger->error("Error importing {$modelName} with ID {$entityId}: " . $e->getMessage());
+            $this->logger->error("Error importing {$modelName} with ID {$entityId}: ".$e->getMessage());
             throw $e;
         }
     }
