@@ -17,7 +17,7 @@ return new class extends Migration
             $table->id('id');
             $table->jsonb('properties');
             $table->text('name')->default('');
-            $table->geography('geometry', 'point');
+            $table->geography('geometry', 'pointz');
             $table->integer('app_id');
             $table->integer('user_id');
             $table->timestamps();

@@ -145,12 +145,12 @@ return new class extends Migration
             $table->jsonb('track_technical_details')->nullable()->default('{"show_ascent": true, "show_ele_to": true, "show_descent": true, "show_ele_max": true, "show_ele_min": true, "show_distance": true, "show_ele_from": true, "show_duration_forward": true, "show_duration_backward": true}');
             
             // ==================== POIS TAB ====================
-            $table->decimal('poi_min_radius', 0, 0)->default(0.5);
-            $table->decimal('poi_max_radius', 0, 0)->default(1.2);
-            $table->decimal('poi_icon_zoom', 0, 0)->default(16);
-            $table->decimal('poi_icon_radius', 0, 0)->default(1);
-            $table->decimal('poi_min_zoom', 0, 0)->default(13);
-            $table->decimal('poi_label_min_zoom', 0, 0)->default(10.5);
+            $table->decimal('poi_min_radius', 8,2)->default(0.5);
+            $table->decimal('poi_max_radius', 8,2)->default(1.2);
+            $table->decimal('poi_icon_zoom', 8,2)->default(16);
+            $table->decimal('poi_icon_radius', 8,2)->default(1);
+            $table->decimal('poi_min_zoom', 8,2)->default(13);
+            $table->decimal('poi_label_min_zoom', 8,2)->default(10.5);
             $table->string('poi_interaction')->default('popup');
             
             // ==================== THEME TAB ====================
