@@ -16,12 +16,11 @@ class ImportEcTrackJob extends BaseImportJob
     {
         $transformedData = parent::transformData($data);
 
-        // if geometry is null set a default geometry
+        // if geometry is null set a default 3D geometry
         if (empty($transformedData['geometry'])) {
-            $transformedData['geometry'] = DB::raw("ST_GeomFromText('LINESTRING(12.4964 41.9028, 12.5033 41.9019, 12.5092 41.9101, 12.4964 41.9028)')");
+            $transformedData['geometry'] = DB::raw("ST_GeomFromText('LINESTRING Z(12.4964 41.9028 0, 12.5033 41.9019 0, 12.5092 41.9101 0, 12.4964 41.9028 0)')");
         } else {
-            // transform geometry to 2D https://orchestrator.maphub.it/resources/developer-stories/5129
-            $transformedData['geometry'] = DB::selectOne('SELECT ST_Force2D(?) as geometry', [$transformedData['geometry']])->geometry;
+            $transformedData['geometry'] = $this->forceTo3DGeometry($transformedData['geometry']);
         }
 
         return $transformedData;

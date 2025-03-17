@@ -70,7 +70,7 @@ abstract class BaseImportJob implements ShouldQueue
      */
     protected function getModelName(): string
     {
-        return config('wm-geohub-import.import_mapping.'.$this->getModelKey().'.namespace');
+        return config('wm-geohub-import.import_mapping.' . $this->getModelKey() . '.namespace');
     }
 
     /**
@@ -86,7 +86,7 @@ abstract class BaseImportJob implements ShouldQueue
      */
     protected function getMapping(): array
     {
-        return config('wm-geohub-import.mappings.'.$this->getModelKey());
+        return config('wm-geohub-import.mappings.' . $this->getModelKey());
     }
 
     /**
@@ -94,7 +94,7 @@ abstract class BaseImportJob implements ShouldQueue
      */
     protected function getRelations(): array
     {
-        return config('wm-geohub-import.import_mapping.'.$this->getModelKey().'.relations');
+        return config('wm-geohub-import.import_mapping.' . $this->getModelKey() . '.relations');
     }
 
     /**
@@ -105,6 +105,25 @@ abstract class BaseImportJob implements ShouldQueue
         $transformedData = $this->geohubImportService->transformFields($data, $this->getModelKey());
         $transformedData['properties'] = $this->geohubImportService->transformProperties($data, $this->getModelKey());
         $this->data['app_id'] ? $transformedData['app_id'] = $this->data['app_id'] : null;
+
+        return $transformedData;
+    }
+
+    /**
+     * Force the geometry to 3D.
+     */
+    protected function forceTo3DGeometry(array $transformedData): array
+    {
+        // force geometry to 3D 
+        if (is_string($transformedData['geometry']) && preg_match('/^[0-9A-Fa-f]+$/', $transformedData['geometry'])) {
+            // Properly format WKB hex string for PostgreSQL
+            $transformedData['geometry'] = DB::raw("ST_Force3D(ST_GeomFromEWKB('\\x{$transformedData['geometry']}'))");
+        } elseif (!is_string($transformedData['geometry'])) {
+            // Handle DB::raw objects directly
+            $transformedData['geometry'] = DB::raw("ST_Force3D({$transformedData['geometry']})");
+        } else {
+            $transformedData['geometry'] = DB::raw("ST_Force3D({$transformedData['geometry']})");
+        }
 
         return $transformedData;
     }
