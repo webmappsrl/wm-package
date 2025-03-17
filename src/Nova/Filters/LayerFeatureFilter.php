@@ -23,7 +23,7 @@ abstract class LayerFeatureFilter extends Filter
     /**
      * Apply the filter to the given query.
      */
-    abstract public function apply(NovaRequest $request, Builder $query, mixed $value): Builder
+    abstract public function apply(NovaRequest $request, Builder $query, mixed $value): Builder;
 
 
     /**
@@ -31,7 +31,7 @@ abstract class LayerFeatureFilter extends Filter
      *
      * @return array<string, string>
      */
-    abstract public function options(NovaRequest $request): array
+    abstract public function options(NovaRequest $request): array;
 
     /**
      * Get the key for the filter.
