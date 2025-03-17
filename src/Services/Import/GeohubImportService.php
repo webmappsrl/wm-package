@@ -371,9 +371,6 @@ class GeohubImportService
      */
     public function getAssociatedEcPoisIDs(string $modelKey, int $modelId): array
     {
-        if ($modelId == 83047) {
-            $break = 'here';
-        }
         $ecPoiRelation = $this->importMapping[$modelKey]['relations']['ec_pois'];
         $pivotData = $this->dbConnection->table($ecPoiRelation['pivot_table'])
             ->where($ecPoiRelation['foreign_key'], $modelId)
