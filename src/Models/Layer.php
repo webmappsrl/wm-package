@@ -3,20 +3,18 @@
 namespace Wm\WmPackage\Models;
 
 use Exception;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
+use Illuminate\Support\Facades\Log;
 use Spatie\Translatable\HasTranslations;
 use Wm\WmPackage\Observers\LayerObserver;
+use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Traits\HasPackageFactory;
 use Wm\WmPackage\Traits\TaxonomyAbleModel;
-use Illuminate\Database\Eloquent\Relations\MorphMany;
-use Wm\WmPackage\Services\GeometryComputationService;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\MorphToMany;
 
 class Layer extends Model
 {
-    use HasTranslations, TaxonomyAbleModel, HasPackageFactory;
+    use HasPackageFactory, HasTranslations, TaxonomyAbleModel;
     // protected $fillable = ['rank'];
 
     protected static function boot()
@@ -26,18 +24,18 @@ class Layer extends Model
     }
 
     public array $translatable = ['name'];
+
     protected $casts = [
         'properties' => 'array',
-        'configuration' => 'array'
+        'configuration' => 'array',
     ];
-
 
     /**
      * The accessors to append to the model's array form.
      *
      * @var array
      */
-    //protected $appends = ['query_string'];
+    // protected $appends = ['query_string'];
 
     public function appOwner()
     {
@@ -73,7 +71,7 @@ class Layer extends Model
             $this->bbox = $bbox ?? $defaultBBOX;
             $this->save();
         } catch (Exception $e) {
-            Log::channel('layer')->error('computeBB of layer with id: ' . $this->id);
+            Log::channel('layer')->error('computeBB of layer with id: '.$this->id);
         }
     }
 

@@ -2,13 +2,10 @@
 
 namespace Wm\WmPackage\Services\Models;
 
-use Exception;
 use Illuminate\Database\Eloquent\Collection;
-use Wm\WmPackage\Models\Layer;
-use Wm\WmPackage\Models\EcTrack;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Wm\WmPackage\Models\EcPoi;
+use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Services\BaseService;
 
 class LayerService extends BaseService
@@ -34,7 +31,6 @@ class LayerService extends BaseService
         return $this->getAllVisibleModels($model, $layer, false, $count);
     }
 
-
     /**
      * Get all visible models for a given layer.
      * A visible model has:
@@ -42,10 +38,9 @@ class LayerService extends BaseService
      *  - a geometry
      *  - an app_id column that matches the layer's app_id or one of the associated apps
      *
-     * @param string $geometryModelClass - The class name of the geometry model
-     * @param Layer $layer
-     * @param boolean $collection - If true, returns a collection of models. Otherwise, returns an array of IDs.
-     * @param boolean $count - If true, returns the count of the models. Otherwise, returns the models themselves.
+     * @param  string  $geometryModelClass  - The class name of the geometry model
+     * @param  bool  $collection  - If true, returns a collection of models. Otherwise, returns an array of IDs.
+     * @param  bool  $count  - If true, returns the count of the models. Otherwise, returns the models themselves.
      * @return array|Collection|int
      */
     public function getAllVisibleModels(
@@ -89,7 +84,7 @@ class LayerService extends BaseService
         }
 
         // Logga il numero di tracce filtrate dalla geometria e dalle tassonomie
-        Log::channel('layer')->info('Numero di tracce finali filtrate da getTracks: ' . $allEcTracks->count());
+        Log::channel('layer')->info('Numero di tracce finali filtrate da getTracks: '.$allEcTracks->count());
 
         // Restituisci tracce uniche in base all'ID
         return $allEcTracks->unique('id');

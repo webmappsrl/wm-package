@@ -220,6 +220,20 @@ return [
             'job' => ImportEcTrackJob::class,
             'geohub_table' => 'ec_tracks',
             'identifiers' => ['properties->geohub_id'],
+            'relations' => [
+                'ec_pois' => [
+                    'pivot_table' => 'ec_poi_ec_track',
+                    'foreign_key' => 'ec_track_id',
+                ],
+                'ec_media' => [
+                    'pivot_table' => 'ec_media_ec_track',
+                    'foreign_key' => 'ec_track_id',
+                ],
+                'layer' => [
+                    'pivot_table' => 'ec_track_layer',
+                    'foreign_key' => 'ec_track_id',
+                ],
+            ],
             'fields' => [
                 'name' => ['field' => 'name', 'transformer' => [DataTransformer::class, 'jsonToArray']],
                 'geometry' => 'geometry',
@@ -261,8 +275,6 @@ return [
                 'allow_print_pdf' => 'allow_print_pdf',
                 'color' => 'color',
                 'difficulty_i18n' => 'difficulty_i18n',
-                'layers' => 'layers',
-                'themes' => 'themes',
                 'activities' => 'activities',
                 'searchable' => 'searchable',
                 'dem_data' => 'dem_data',

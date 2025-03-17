@@ -17,8 +17,9 @@ class UgcPoiFactory extends Factory
         $geojson = json_encode([
             'type' => 'Point',
             'coordinates' => [
-                $this->faker->randomFloat(6, 10, 20),
-                $this->faker->randomFloat(6, 40, 50),
+                $this->faker->latitude(),
+                $this->faker->longitude(),
+                $this->faker->randomFloat(6, 10, 20)
             ],
         ]);
 

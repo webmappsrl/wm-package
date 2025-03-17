@@ -2,16 +2,17 @@
 
 namespace Wm\WmPackage\Services\Import;
 
-use Illuminate\Log\Logger;
-use Wm\WmPackage\Models\User;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Connection;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Log\Logger;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Database\Eloquent\Model;
 use Wm\WmPackage\Jobs\Import\BaseImportJob;
+use Wm\WmPackage\Models\EcPoi;
+use Wm\WmPackage\Models\User;
 
 /**
  * Service for importing data from Geohub to the local database
@@ -103,7 +104,7 @@ class GeohubImportService
             ->allowFailures()
             ->dispatch();
 
-        $this->logger->info("Dispatched batch {$batch->id} with " . count($jobs) . " jobs for {$model}s");
+        $this->logger->info("Dispatched batch {$batch->id} with ".count($jobs)." jobs for {$model}s");
     }
 
     /**
@@ -180,7 +181,7 @@ class GeohubImportService
 
             return $model;
         } catch (\Exception $e) {
-            $this->logger->error("Error importing {$modelName} with ID {$entityId}: " . $e->getMessage());
+            $this->logger->error("Error importing {$modelName} with ID {$entityId}: ".$e->getMessage());
             throw $e;
         }
     }
@@ -189,7 +190,6 @@ class GeohubImportService
     // Helper Methods
     // ------------------------------------------------------------------
 
-
     public function createJob(string $modelKey, int $id, array $data = []): BaseImportJob
     {
         $jobClass = $this->importMapping[$modelKey]['job'];
@@ -197,6 +197,7 @@ class GeohubImportService
 
         return $job;
     }
+
     /**
      * Validate that the given model exists in the import models configuration
      *
@@ -359,5 +360,39 @@ class GeohubImportService
         }
 
         return $transformedProperties;
+    }
+
+    /**
+     * Associate ec_pois with the given model
+     *
+     * @param  string  $modelKey  The model key
+     * @param  int  $modelId  The ID of the model
+     * @return array The IDs of the associated ec_pois
+     */
+    public function getAssociatedEcPoisIDs(string $modelKey, int $modelId): array
+    {
+        $ecPoiRelation = $this->importMapping[$modelKey]['relations']['ec_pois'];
+        $pivotData = $this->dbConnection->table($ecPoiRelation['pivot_table'])
+            ->where($ecPoiRelation['foreign_key'], $modelId)
+            ->select('ec_poi_id', 'order')
+            ->get();
+
+        $ecPoiGeohubIds = $pivotData->pluck('ec_poi_id')->toArray();
+
+        // Create a mapping of geohub_id to order
+        $orderMapping = $pivotData->pluck('order', 'ec_poi_id')->toArray();
+
+        // Query current DB looking for matches in properties->geohub_id
+        $ecPois = EcPoi::whereIn('properties->geohub_id', $ecPoiGeohubIds)
+            ->get();
+
+        // Create an associative array with id as key and order as value
+        $result = [];
+        foreach ($ecPois as $ecPoi) {
+            $geohubId = $ecPoi->properties['geohub_id'];
+            $result[$ecPoi->id] = $orderMapping[$geohubId] ?? 0;
+        }
+
+        return $result;
     }
 }

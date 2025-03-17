@@ -7,8 +7,6 @@ use Wm\WmPackage\Nova\Filters\FeaturesByLayerFilter;
 
 abstract class AbstractEcResource extends AbstractGeometryResource
 {
-
-
     public function filters(NovaRequest $request): array
     {
         return [
