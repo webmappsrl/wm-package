@@ -21,14 +21,17 @@ class EcTrackFactory extends Factory
                     [
                         $this->faker->randomFloat(6, 10, 20),
                         $this->faker->randomFloat(6, 40, 50),
+                        $this->faker->randomFloat(2, 0, 1000),
                     ],
                     [
                         $this->faker->randomFloat(6, 10, 20),
                         $this->faker->randomFloat(6, 40, 50),
+                        $this->faker->randomFloat(2, 0, 1000),
                     ],
                     [
                         $this->faker->randomFloat(6, 10, 20),
                         $this->faker->randomFloat(6, 40, 50),
+                        $this->faker->randomFloat(2, 0, 1000),
                     ],
                 ],
             ],
@@ -56,7 +59,7 @@ class EcTrackFactory extends Factory
                 'from' => $this->faker->city(),
                 'to' => $this->faker->city(),
                 'ref' => $this->faker->bothify('??-###'),
-                'color' => '#'.$this->faker->hexColor(),
+                'color' => '#' . $this->faker->hexColor(),
                 'created_at' => $this->faker->dateTimeThisYear->format('Y-m-d H:i:s'),
             ],
         ];

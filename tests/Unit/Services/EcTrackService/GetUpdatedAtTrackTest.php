@@ -48,7 +48,7 @@ class GetUpdatedAtTracksTest extends AbstractEcTrackServiceTest
             'name' => 'test',
             'properties' => ['excerpt' => 'test'],
             'updated_at' => Carbon::now(),
-            'geometry' => 'LINESTRING (0 0, 1 1)',
+            'geometry' => 'LINESTRINGZ (0 0 0, 1 1 0)',
         ];
         $dbResult = [
             (object) ['id' => 1, 'app_id' => $app1->id,  ...$trackSample],

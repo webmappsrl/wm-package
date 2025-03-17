@@ -54,6 +54,7 @@ class OsmfeaturesClientTest extends TestCase
                 'features' => [
                     [
                         'osm_type' => 'way',
+                        'osmfeatures_id' => 'way123',
                         'osm_id' => '123',
                         'tags' => [
                             'name' => 'First Place',
@@ -61,6 +62,7 @@ class OsmfeaturesClientTest extends TestCase
                     ],
                     [
                         'osm_type' => 'node',
+                        'osmfeatures_id' => 'node456',
                         'osm_id' => '456',
                         'tags' => [
                             'name' => 'Second Place',
@@ -93,6 +95,7 @@ class OsmfeaturesClientTest extends TestCase
                     [
                         'osm_type' => 'way',
                         'osm_id' => '123',
+                        'osmfeatures_id' => 'way123',
                         'tags' => [
                             'name' => 'First Place',
                             'name:it' => 'Primo Posto',
@@ -100,6 +103,7 @@ class OsmfeaturesClientTest extends TestCase
                         ],
                     ],
                     [
+                        'osmfeatures_id' => 'node456',
                         'osm_type' => 'node',
                         'osm_id' => '456',
                         'tags' => [
