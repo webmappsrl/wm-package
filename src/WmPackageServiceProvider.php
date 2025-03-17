@@ -140,6 +140,16 @@ class WmPackageServiceProvider extends PackageServiceProvider
 
         $this->app->config['backup'] = $this->setDefaultBackupSettings();
 
+        // Bind BackupConfig to the container to solve the instantiation error in WmBackupCommand
+        $this->app->scoped(
+            BackupConfig::class,
+            function () {
+                $backupConfig = config('backup');
+
+                return BackupConfig::fromArray($backupConfig);
+            }
+        );
+
 
         $this->app->config['media-library'] = array_merge(
             $this->app->config['media-library'] ?? [],
