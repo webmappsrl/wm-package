@@ -22,6 +22,8 @@ return new class extends Migration
             
             $table->text('identifier')->nullable()->unique();
             $table->timestamps();
+            $table->jsonb('properties')->nullable();
+
         });
     }
 
