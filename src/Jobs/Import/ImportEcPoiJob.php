@@ -2,8 +2,8 @@
 
 namespace Wm\WmPackage\Jobs\Import;
 
-use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 
 class ImportEcPoiJob extends BaseImportJob
 {
