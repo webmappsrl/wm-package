@@ -21,9 +21,17 @@ abstract class Taxonomy extends Polygon
         'name',
         'import_method',
         'identifier',
+        'properties',
+        'description',
+        'excerpt',
     ];
 
-    protected $casts = ['name' => 'array'];
+    protected $casts = [
+        'name' => 'array',
+        'description' => 'array',
+        'excerpt' => 'array',
+        'properties' => 'array',
+    ];
 
     abstract protected function getRelationKey(): string;
 
@@ -35,16 +43,16 @@ abstract class Taxonomy extends Polygon
 
     public function ecTracks(): MorphToMany
     {
-        return $this->morphedByMany(EcTrack::class, 'taxonomy_'.$this->getRelationKey());
+        return $this->morphedByMany(EcTrack::class, 'taxonomy_' . $this->getRelationKey());
     }
 
     public function layers(): MorphToMany
     {
-        return $this->morphedByMany(Layer::class, 'taxonomy_'.$this->getRelationKey());
+        return $this->morphedByMany(Layer::class, 'taxonomy_' . $this->getRelationKey());
     }
 
     public function ecPois(): MorphToMany
     {
-        return $this->morphedByMany(EcPoi::class, 'taxonomy_'.$this->getRelationKey());
+        return $this->morphedByMany(EcPoi::class, 'taxonomy_' . $this->getRelationKey());
     }
 }
