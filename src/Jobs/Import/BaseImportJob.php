@@ -6,9 +6,11 @@ use Illuminate\Bus\Batchable;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Query\Expression;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Wm\WmPackage\Services\Import\GeohubImportService;
 
@@ -98,14 +100,40 @@ abstract class BaseImportJob implements ShouldQueue
     }
 
     /**
+     * Transform the data.
+     */
+    protected function transformData(array $data): array
+    {
+        $transformedData = $this->geohubImportService->transformFields($data, $this->getModelKey());
+        $transformedData['properties'] = $this->geohubImportService->transformProperties($data, $this->getModelKey());
+        $this->data['app_id'] ? $transformedData['app_id'] = $this->data['app_id'] : null;
+
+        return $transformedData;
+    }
+
+    /**
+     * Force the geometry to 3D.
+     */
+    protected function forceTo3DGeometry(string $geometry): Expression
+    {
+        // force geometry to 3D
+        if (is_string($geometry) && preg_match('/^[0-9A-Fa-f]+$/', $geometry)) {
+            // Properly format WKB hex string for PostgreSQL
+            $geometry = DB::raw("ST_Force3D(ST_GeomFromEWKB('\\x{$geometry}'))");
+        } elseif (! is_string($geometry)) {
+            // Handle DB::raw objects directlyå
+            $geometry = DB::raw("ST_Force3D({$geometry})");
+        } else {
+            $geometry = DB::raw("ST_Force3D({$geometry})");
+        }
+
+        return $geometry;
+    }
+
+    /**
      * Get the model key for this job.
      */
     abstract protected function getModelKey(): string;
-
-    /**
-     * Transform the data.
-     */
-    abstract protected function transformData(array $data): array;
 
     /**
      * Process dependencies if needed.

@@ -5,20 +5,20 @@ namespace Wm\WmPackage\Jobs\Import;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 
-class ImportEcPoiJob extends BaseImportJob
+class ImportEcTrackJob extends BaseImportJob
 {
     protected function getModelKey(): string
     {
-        return 'ec_poi';
+        return 'ec_track';
     }
 
     protected function transformData(array $data): array
     {
         $transformedData = parent::transformData($data);
 
-        // if geometry is null set a default geometry
+        // if geometry is null set a default 3D geometry
         if (empty($transformedData['geometry'])) {
-            $transformedData['geometry'] = DB::raw("ST_GeomFromText('POINT Z(12.4964 41.9028 0)')");
+            $transformedData['geometry'] = DB::raw("ST_GeomFromText('LINESTRING Z(12.4964 41.9028 0, 12.5033 41.9019 0, 12.5092 41.9101 0, 12.4964 41.9028 0)')");
         } else {
             $transformedData['geometry'] = $this->forceTo3DGeometry($transformedData['geometry']);
         }
@@ -28,6 +28,13 @@ class ImportEcPoiJob extends BaseImportJob
 
     protected function processDependencies(array $data, Model $model): void
     {
-        // no dependencies handled in ec poi job
+        $ecPoiIdsWithOrder = $this->geohubImportService->getAssociatedEcPoisIDs($this->getModelKey(), $data['id']);
+
+        $syncData = [];
+        foreach ($ecPoiIdsWithOrder as $poiId => $order) {
+            $syncData[$poiId] = ['order' => $order];
+        }
+
+        $model->ecPois()->sync($syncData);
     }
 }

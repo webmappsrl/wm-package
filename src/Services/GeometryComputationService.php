@@ -38,9 +38,9 @@ class GeometryComputationService extends BaseService
         return DB::select("SELECT ST_GeomFromGeoJSON('" . $geojson . "') As wkt")[0]->wkt;
     }
 
-    public function get3dGeometryFromGeojsonRAW(string $geojson): Expression
+    public function getGeometryFromGeojsonRAW(string $geojson): Expression
     {
-        return DB::raw("(ST_Force3D(ST_GeomFromGeoJSON('" . $geojson . "')))");
+        return DB::raw("ST_GeomFromGeoJSON('" . $geojson . "')");
     }
 
     public function get2dGeometryFromGeojsonRAW(string $geojson): Expression
@@ -407,7 +407,7 @@ class GeometryComputationService extends BaseService
                 // }
             }
             $contentGeometry = $content->geometry;
-            $geometry = $this->get2dGeometryFromGeojsonRAW(json_encode($contentGeometry));
+            $geometry = $this->getGeometryFromGeojsonRAW(json_encode($contentGeometry));
         }
 
         return $geometry;

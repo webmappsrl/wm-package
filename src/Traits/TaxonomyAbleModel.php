@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Wm\WmPackage\Models\TaxonomyActivity;
 use Wm\WmPackage\Models\TaxonomyPoiType;
 use Wm\WmPackage\Models\TaxonomyTarget;
-use Wm\WmPackage\Models\TaxonomyTheme;
 use Wm\WmPackage\Models\TaxonomyWhen;
 
 trait TaxonomyAbleModel

@@ -11,14 +11,15 @@ use Wm\WmPackage\Services\Models\LayerService;
 class LayerAPIController extends Controller
 {
     public function __construct(private LayerService $layerService) {}
+
     public function index()
     {
         foreach (Layer::all()->toArray() as $layer) {
-            //TODO: move to a resource
+            // TODO: move to a resource
             unset($layer['taxonomy_themes']);
             unset($layer['taxonomy_wheres']);
             unset($layer['taxonomy_activities']);
-            //TODO: check performances then evaluate a count method into the service witha a cache
+            // TODO: check performances then evaluate a count method into the service witha a cache
             $layers['ec_poi'] = $this->layerService->getRelatedModels($layer, EcPoi::class, true);
             $layers['ec_tracks'] = $this->layerService->getRelatedModels($layer, EcTrack::class, true);
         }
