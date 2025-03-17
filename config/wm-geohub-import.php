@@ -1,11 +1,12 @@
 <?php
 
 use Wm\WmPackage\Jobs\Import\ImportAppJob;
-use Wm\WmPackage\Jobs\Import\ImportEcMediaJob;
 use Wm\WmPackage\Jobs\Import\ImportEcPoiJob;
-use Wm\WmPackage\Jobs\Import\ImportEcTrackJob;
 use Wm\WmPackage\Jobs\Import\ImportLayerJob;
+use Wm\WmPackage\Jobs\Import\ImportEcMediaJob;
+use Wm\WmPackage\Jobs\Import\ImportEcTrackJob;
 use Wm\WmPackage\Services\Import\DataTransformer;
+use Wm\WmPackage\Jobs\Import\ImportTaxonomyActivityJob;
 
 return [
     /*
@@ -361,18 +362,20 @@ return [
                 'updated_at' => 'updated_at',
             ],
             'relations' => [
-                'ec_tracks' => [
-                    'pivot_table' => 'taxonomy_activityables',
-                    'foreign_key' => 'taxonomy_activity_id',
+                'morphable_table' => 'taxonomy_activityables',
+                'foreign_key' => 'taxonomy_activity_id',
+                'morphable_id' => 'taxonomy_activityable_id',
+                'morphable_type' => 'taxonomy_activityable_type',
+                'morphable_models' => [
+                    'ec_poi' => 'Wm\\WmPackage\\Models\\EcPoi',
+                    'ec_track' => 'Wm\\WmPackage\\Models\\EcTrack',
+                    'ec_media' => 'Wm\\WmPackage\\Models\\EcMedia',
+                    'layer' => 'Wm\\WmPackage\\Models\\Layer',
                 ],
-                'ec_pois' => [
-                    'pivot_table' => 'taxonomy_activityables',
-                    'foreign_key' => 'taxonomy_activity_id',
-                ],
-                'layers' => [
-                    'pivot_table' => 'taxonomy_activityables',
-                    'foreign_key' => 'taxonomy_activity_id',
-                ],
+                'pivot_columns' => [
+                    'duration_forward',
+                    'duration_backward'
+                ]
             ],
         ],
         //Taxonomy poi type entity mapping
@@ -390,17 +393,15 @@ return [
                 'updated_at' => 'updated_at',
             ],
             'relations' => [
-                'ec_tracks' => [
-                    'pivot_table' => 'taxonomy_poi_typeables',
-                    'foreign_key' => 'taxonomy_poi_type_id',
-                ],
-                'ec_pois' => [
-                    'pivot_table' => 'taxonomy_poi_typeables',
-                    'foreign_key' => 'taxonomy_poi_type_id',
-                ],
-                'layers' => [
-                    'pivot_table' => 'taxonomy_poi_typeables',
-                    'foreign_key' => 'taxonomy_poi_type_id',
+                'morphable_table' => 'taxonomy_poi_typeables',
+                'foreign_key' => 'taxonomy_poi_type_id',
+                'morphable_id' => 'taxonomy_poi_typeable_id',
+                'morphable_type' => 'taxonomy_poi_typeable_type',
+                'morphable_models' => [
+                    'ec_poi' => 'Wm\\WmPackage\\Models\\EcPoi',
+                    'ec_track' => 'Wm\\WmPackage\\Models\\EcTrack',
+                    'ec_media' => 'Wm\\WmPackage\\Models\\EcMedia',
+                    'layer' => 'Wm\\WmPackage\\Models\\Layer',
                 ],
             ],
         ],
@@ -419,17 +420,15 @@ return [
                 'updated_at' => 'updated_at',
             ],
             'relations' => [
-                'ec_tracks' => [
-                    'pivot_table' => 'taxonomy_targetables',
-                    'foreign_key' => 'taxonomy_target_id',
-                ],
-                'ec_pois' => [
-                    'pivot_table' => 'taxonomy_targetables',
-                    'foreign_key' => 'taxonomy_target_id',
-                ],
-                'layers' => [
-                    'pivot_table' => 'taxonomy_targetables',
-                    'foreign_key' => 'taxonomy_target_id',
+                'morphable_table' => 'taxonomy_targetables',
+                'foreign_key' => 'taxonomy_target_id',
+                'morphable_id' => 'taxonomy_targetable_id',
+                'morphable_type' => 'taxonomy_targetable_type',
+                'morphable_models' => [
+                    'ec_poi' => 'Wm\\WmPackage\\Models\\EcPoi',
+                    'ec_track' => 'Wm\\WmPackage\\Models\\EcTrack',
+                    'ec_media' => 'Wm\\WmPackage\\Models\\EcMedia',
+                    'layer' => 'Wm\\WmPackage\\Models\\Layer',
                 ],
             ],
         ],
@@ -449,20 +448,17 @@ return [
                 'updated_at' => 'updated_at',
             ],
             'relations' => [
-                'ec_tracks' => [
-                    'pivot_table' => 'taxonomy_whenables',
-                    'foreign_key' => 'taxonomy_when_id',
-                ],
-                'ec_pois' => [
-                    'pivot_table' => 'taxonomy_whenables',
-                    'foreign_key' => 'taxonomy_when_id',
-                ],
-                'layers' => [
-                    'pivot_table' => 'taxonomy_whenables',
-                    'foreign_key' => 'taxonomy_when_id',
+                'morphable_table' => 'taxonomy_whenables',
+                'foreign_key' => 'taxonomy_when_id',
+                'morphable_id' => 'taxonomy_whenable_id',
+                'morphable_type' => 'taxonomy_whenable_type',
+                'morphable_models' => [
+                    'ec_poi' => 'Wm\\WmPackage\\Models\\EcPoi',
+                    'ec_track' => 'Wm\\WmPackage\\Models\\EcTrack',
+                    'ec_media' => 'Wm\\WmPackage\\Models\\EcMedia',
+                    'layer' => 'Wm\\WmPackage\\Models\\Layer',
                 ],
             ],
         ],
-
     ],
 ];
