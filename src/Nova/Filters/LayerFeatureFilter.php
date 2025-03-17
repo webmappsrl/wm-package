@@ -27,13 +27,6 @@ abstract class LayerFeatureFilter extends Filter
 
 
     /**
-     * Get the filter's available options.
-     *
-     * @return array<string, string>
-     */
-    abstract public function options(NovaRequest $request): array;
-
-    /**
      * Get the key for the filter.
      */
     public function key(): string
