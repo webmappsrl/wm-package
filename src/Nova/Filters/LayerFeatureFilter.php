@@ -7,32 +7,37 @@ use Laravel\Nova\Filters\Filter;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Wm\WmPackage\Models\Layer;
 
-class FeaturesByLayerFilter extends LayerFeatureFilter
+abstract class LayerFeatureFilter extends Filter
 {
+    /**
+     * The filter's component.
+     *
+     * @var string
+     */
+    public $component = 'select-filter';
+
+    public function __construct(
+        protected string $layerRelation
+    ) {}
 
     /**
      * Apply the filter to the given query.
      */
-    public function apply(NovaRequest $request, Builder $query, mixed $value): Builder
-    {
-        return $query->whereLayer(Layer::find($value));
-    }
+    abstract public function apply(NovaRequest $request, Builder $query, mixed $value): Builder
+
 
     /**
      * Get the filter's available options.
      *
      * @return array<string, string>
      */
-    public function options(NovaRequest $request): array
-    {
-        return Layer::all()->pluck('id', 'name')->toArray();
-    }
+    abstract public function options(NovaRequest $request): array
 
     /**
      * Get the key for the filter.
      */
     public function key(): string
     {
-        return 'features_by_layer_' . parent::key();
+        return $this->layerRelation;
     }
 }
