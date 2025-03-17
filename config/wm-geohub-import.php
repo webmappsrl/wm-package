@@ -345,5 +345,124 @@ return [
                 'color' => 'color',
             ],
         ],
+
+        //Taxonomy activity entity mapping
+        'taxonomy_activity' => [
+            'namespace' => 'Wm\\WmPackage\\Models\\TaxonomyActivity',
+            'job' => ImportTaxonomyActivityJob::class,
+            'geohub_table' => 'taxonomy_activities',
+            'identifiers' => ['identifier'],
+            'fields' => [
+                'name' => ['field' => 'name', 'transformer' => [DataTransformer::class, 'jsonToArray']],
+                'description' => ['field' => 'description', 'transformer' => [DataTransformer::class, 'jsonToArray']],
+                'excerpt' => ['field' => 'excerpt', 'transformer' => [DataTransformer::class, 'jsonToArray']],
+                'identifier' => 'identifier',
+                'created_at' => 'created_at',
+                'updated_at' => 'updated_at',
+            ],
+            'relations' => [
+                'ec_tracks' => [
+                    'pivot_table' => 'taxonomy_activityables',
+                    'foreign_key' => 'taxonomy_activity_id',
+                ],
+                'ec_pois' => [
+                    'pivot_table' => 'taxonomy_activityables',
+                    'foreign_key' => 'taxonomy_activity_id',
+                ],
+                'layers' => [
+                    'pivot_table' => 'taxonomy_activityables',
+                    'foreign_key' => 'taxonomy_activity_id',
+                ],
+            ],
+        ],
+        //Taxonomy poi type entity mapping
+        'taxonomy_poi_type' => [
+            'namespace' => 'Wm\\WmPackage\\Models\\TaxonomyPoiType',
+            'job' => ImportTaxonomyPoiTypeJob::class,
+            'geohub_table' => 'taxonomy_poi_types',
+            'identifiers' => ['identifier'],
+            'fields' => [
+                'name' => ['field' => 'name', 'transformer' => [DataTransformer::class, 'jsonToArray']],
+                'description' => ['field' => 'description', 'transformer' => [DataTransformer::class, 'jsonToArray']],
+                'excerpt' => ['field' => 'excerpt', 'transformer' => [DataTransformer::class, 'jsonToArray']],
+                'identifier' => 'identifier',
+                'created_at' => 'created_at',
+                'updated_at' => 'updated_at',
+            ],
+            'relations' => [
+                'ec_tracks' => [
+                    'pivot_table' => 'taxonomy_poi_typeables',
+                    'foreign_key' => 'taxonomy_poi_type_id',
+                ],
+                'ec_pois' => [
+                    'pivot_table' => 'taxonomy_poi_typeables',
+                    'foreign_key' => 'taxonomy_poi_type_id',
+                ],
+                'layers' => [
+                    'pivot_table' => 'taxonomy_poi_typeables',
+                    'foreign_key' => 'taxonomy_poi_type_id',
+                ],
+            ],
+        ],
+        //Taxonomy target entity mapping
+        'taxonomy_target' => [
+            'namespace' => 'Wm\\WmPackage\\Models\\TaxonomyTarget',
+            'job' => ImportTaxonomyTargetJob::class,
+            'geohub_table' => 'taxonomy_targets',
+            'identifiers' => ['identifier'],
+            'fields' => [
+                'name' => ['field' => 'name', 'transformer' => [DataTransformer::class, 'jsonToArray']],
+                'description' => ['field' => 'description', 'transformer' => [DataTransformer::class, 'jsonToArray']],
+                'excerpt' => ['field' => 'excerpt', 'transformer' => [DataTransformer::class, 'jsonToArray']],
+                'identifier' => 'identifier',
+                'created_at' => 'created_at',
+                'updated_at' => 'updated_at',
+            ],
+            'relations' => [
+                'ec_tracks' => [
+                    'pivot_table' => 'taxonomy_targetables',
+                    'foreign_key' => 'taxonomy_target_id',
+                ],
+                'ec_pois' => [
+                    'pivot_table' => 'taxonomy_targetables',
+                    'foreign_key' => 'taxonomy_target_id',
+                ],
+                'layers' => [
+                    'pivot_table' => 'taxonomy_targetables',
+                    'foreign_key' => 'taxonomy_target_id',
+                ],
+            ],
+        ],
+
+        //Taxonomy when entity mapping
+        'taxonomy_when' => [
+            'namespace' => 'Wm\\WmPackage\\Models\\TaxonomyWhen',
+            'job' => ImportTaxonomyWhenJob::class,
+            'geohub_table' => 'taxonomy_whens',
+            'identifiers' => ['identifier'],
+            'fields' => [
+                'name' => ['field' => 'name', 'transformer' => [DataTransformer::class, 'jsonToArray']],
+                'description' => ['field' => 'description', 'transformer' => [DataTransformer::class, 'jsonToArray']],
+                'excerpt' => ['field' => 'excerpt', 'transformer' => [DataTransformer::class, 'jsonToArray']],
+                'identifier' => 'identifier',
+                'created_at' => 'created_at',
+                'updated_at' => 'updated_at',
+            ],
+            'relations' => [
+                'ec_tracks' => [
+                    'pivot_table' => 'taxonomy_whenables',
+                    'foreign_key' => 'taxonomy_when_id',
+                ],
+                'ec_pois' => [
+                    'pivot_table' => 'taxonomy_whenables',
+                    'foreign_key' => 'taxonomy_when_id',
+                ],
+                'layers' => [
+                    'pivot_table' => 'taxonomy_whenables',
+                    'foreign_key' => 'taxonomy_when_id',
+                ],
+            ],
+        ],
+
     ],
 ];
