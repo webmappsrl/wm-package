@@ -57,6 +57,11 @@ class Layer extends Model
         return $this->morphedByMany(EcPoi::class, 'layerable');
     }
 
+    public function taxonomyActivity(): MorphToMany
+    {
+        return $this->morphToMany(TaxonomyActivity::class, 'taxonomy_activityable');
+    }
+
     /**
      * Move to a model mutator
      * https://laravel.com/docs/11.x/eloquent-mutators#defining-a-mutator
@@ -71,7 +76,7 @@ class Layer extends Model
             $this->bbox = $bbox ?? $defaultBBOX;
             $this->save();
         } catch (Exception $e) {
-            Log::channel('layer')->error('computeBB of layer with id: '.$this->id);
+            Log::channel('layer')->error('computeBB of layer with id: ' . $this->id);
         }
     }
 
