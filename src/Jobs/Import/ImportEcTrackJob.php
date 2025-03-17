@@ -28,7 +28,13 @@ class ImportEcTrackJob extends BaseImportJob
 
     protected function processDependencies(array $data, Model $model): void
     {
-        $ecPoiIds = $this->geohubImportService->getAssociatedEcPoisIDs($this->getModelKey(), $data['id']);
-        $model->ecPois()->sync($ecPoiIds);
+        $ecPoiIdsWithOrder = $this->geohubImportService->getAssociatedEcPoisIDs($this->getModelKey(), $data['id']);
+
+        $syncData = [];
+        foreach ($ecPoiIdsWithOrder as $poiId => $order) {
+            $syncData[$poiId] = ['order' => $order];
+        }
+
+        $model->ecPois()->sync($syncData);
     }
 }

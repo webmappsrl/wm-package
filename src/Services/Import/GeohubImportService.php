@@ -104,7 +104,7 @@ class GeohubImportService
             ->allowFailures()
             ->dispatch();
 
-        $this->logger->info("Dispatched batch {$batch->id} with ".count($jobs)." jobs for {$model}s");
+        $this->logger->info("Dispatched batch {$batch->id} with " . count($jobs) . " jobs for {$model}s");
     }
 
     /**
@@ -181,7 +181,7 @@ class GeohubImportService
 
             return $model;
         } catch (\Exception $e) {
-            $this->logger->error("Error importing {$modelName} with ID {$entityId}: ".$e->getMessage());
+            $this->logger->error("Error importing {$modelName} with ID {$entityId}: " . $e->getMessage());
             throw $e;
         }
     }
@@ -371,12 +371,31 @@ class GeohubImportService
      */
     public function getAssociatedEcPoisIDs(string $modelKey, int $modelId): array
     {
+        if ($modelId == 83047) {
+            $break = 'here';
+        }
         $ecPoiRelation = $this->importMapping[$modelKey]['relations']['ec_pois'];
-        $ecPoiGeohubIds = $this->dbConnection->table($ecPoiRelation['pivot_table'])->where($ecPoiRelation['foreign_key'], $modelId)->pluck('ec_poi_id')->toArray();
+        $pivotData = $this->dbConnection->table($ecPoiRelation['pivot_table'])
+            ->where($ecPoiRelation['foreign_key'], $modelId)
+            ->select('ec_poi_id', 'order')
+            ->get();
 
-        // query current DB looking the match in properties->geohub_id
-        $ecPoiIds = EcPoi::whereIn('properties->geohub_id', $ecPoiGeohubIds)->pluck('id')->toArray();
+        $ecPoiGeohubIds = $pivotData->pluck('ec_poi_id')->toArray();
 
-        return $ecPoiIds;
+        // Create a mapping of geohub_id to order
+        $orderMapping = $pivotData->pluck('order', 'ec_poi_id')->toArray();
+
+        // Query current DB looking for matches in properties->geohub_id
+        $ecPois = EcPoi::whereIn('properties->geohub_id', $ecPoiGeohubIds)
+            ->get();
+
+        // Create an associative array with id as key and order as value
+        $result = [];
+        foreach ($ecPois as $ecPoi) {
+            $geohubId = $ecPoi->properties['geohub_id'];
+            $result[$ecPoi->id] = $orderMapping[$geohubId] ?? 0;
+        }
+
+        return $result;
     }
 }
