@@ -19,7 +19,7 @@ class UgcPoiFactory extends Factory
             'coordinates' => [
                 $this->faker->latitude(),
                 $this->faker->longitude(),
-                $this->faker->randomFloat(6, 10, 20)
+                $this->faker->randomFloat(6, 10, 20),
             ],
         ]);
 

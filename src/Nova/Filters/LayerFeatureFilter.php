@@ -5,7 +5,6 @@ namespace Wm\WmPackage\Nova\Filters;
 use Illuminate\Contracts\Database\Eloquent\Builder;
 use Laravel\Nova\Filters\Filter;
 use Laravel\Nova\Http\Requests\NovaRequest;
-use Wm\WmPackage\Models\Layer;
 
 abstract class LayerFeatureFilter extends Filter
 {
@@ -24,7 +23,6 @@ abstract class LayerFeatureFilter extends Filter
      * Apply the filter to the given query.
      */
     abstract public function apply(NovaRequest $request, Builder $query, mixed $value): Builder;
-
 
     /**
      * Get the key for the filter.

@@ -2,14 +2,14 @@
 
 namespace Wm\WmPackage\Models;
 
-use Wm\WmPackage\Observers\MediaObserver;
-use Wm\WmPackage\Services\GeoJsonService;
-use Wm\WmPackage\Traits\OwnedByUserModel;
-use Wm\WmPackage\Traits\HasPackageFactory;
-use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Spatie\MediaLibrary\MediaCollections\Models\Media as SpatieMedia;
+use Wm\WmPackage\Observers\MediaObserver;
+use Wm\WmPackage\Services\GeoJsonService;
+use Wm\WmPackage\Traits\HasPackageFactory;
+use Wm\WmPackage\Traits\OwnedByUserModel;
 
 class Media extends SpatieMedia
 {

@@ -2,19 +2,19 @@
 
 namespace Wm\WmPackage\Services\Import;
 
-use Illuminate\Log\Logger;
-use Illuminate\Support\Str;
-use Wm\WmPackage\Models\User;
-use Illuminate\Support\Carbon;
-use Wm\WmPackage\Models\EcPoi;
-use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Connection;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Log\Logger;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 use Wm\WmPackage\Jobs\Import\BaseImportJob;
+use Wm\WmPackage\Models\EcPoi;
+use Wm\WmPackage\Models\User;
 
 /**
  * Service for importing data from Geohub to the local database
@@ -106,7 +106,7 @@ class GeohubImportService
             ->allowFailures()
             ->dispatch();
 
-        $this->logger->info("Dispatched batch {$batch->id} with " . count($jobs) . " jobs for {$model}s");
+        $this->logger->info("Dispatched batch {$batch->id} with ".count($jobs)." jobs for {$model}s");
     }
 
     /**
@@ -183,7 +183,7 @@ class GeohubImportService
 
             return $model;
         } catch (\Exception $e) {
-            $this->logger->error("Error importing {$modelName} with ID {$entityId}: " . $e->getMessage());
+            $this->logger->error("Error importing {$modelName} with ID {$entityId}: ".$e->getMessage());
             throw $e;
         }
     }
@@ -425,7 +425,7 @@ class GeohubImportService
         $result = $morphableRecords->map(function ($record) use ($morphableModels, $morphableTypeKey, $morphableIdKey, $pivotColumns) {
             $modelName = Str::snake(class_basename($record->{$morphableTypeKey}));
 
-            if (!isset($morphableModels[$modelName])) {
+            if (! isset($morphableModels[$modelName])) {
                 return null;
             }
 
@@ -436,7 +436,7 @@ class GeohubImportService
 
             $model = $modelClass::where($whereCondition)->first();
 
-            if ($model && !empty($pivotColumns)) {
+            if ($model && ! empty($pivotColumns)) {
                 // Add pivot data to the model
                 $pivotData = [];
                 foreach ($pivotColumns as $column) {

@@ -3,7 +3,6 @@
 namespace Wm\WmPackage\Jobs\Import;
 
 use Illuminate\Database\Eloquent\Model;
-use Wm\WmPackage\Jobs\Import\BaseImportJob;
 
 abstract class ImportTaxonomyJob extends BaseImportJob
 {
@@ -18,7 +17,7 @@ abstract class ImportTaxonomyJob extends BaseImportJob
 
         foreach ($recordsToImport as $record) {
             // Check if the relationship already exists before attaching
-            if (!$record->{$this->getRelationshipName()}()->where($this->getForeignKey(), $model->id)->exists()) {
+            if (! $record->{$this->getRelationshipName()}()->where($this->getForeignKey(), $model->id)->exists()) {
                 $record->{$this->getRelationshipName()}()->attach($model->id, $record->pivot_data);
             } else {
                 // Update pivot data if relationship exists

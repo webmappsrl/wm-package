@@ -1,12 +1,12 @@
 <?php
 
 use Wm\WmPackage\Jobs\Import\ImportAppJob;
-use Wm\WmPackage\Jobs\Import\ImportEcPoiJob;
-use Wm\WmPackage\Jobs\Import\ImportLayerJob;
 use Wm\WmPackage\Jobs\Import\ImportEcMediaJob;
+use Wm\WmPackage\Jobs\Import\ImportEcPoiJob;
 use Wm\WmPackage\Jobs\Import\ImportEcTrackJob;
-use Wm\WmPackage\Services\Import\DataTransformer;
+use Wm\WmPackage\Jobs\Import\ImportLayerJob;
 use Wm\WmPackage\Jobs\Import\ImportTaxonomyActivityJob;
+use Wm\WmPackage\Services\Import\DataTransformer;
 
 return [
     /*
@@ -347,7 +347,7 @@ return [
             ],
         ],
 
-        //Taxonomy activity entity mapping
+        // Taxonomy activity entity mapping
         'taxonomy_activity' => [
             'namespace' => 'Wm\\WmPackage\\Models\\TaxonomyActivity',
             'job' => ImportTaxonomyActivityJob::class,
@@ -374,11 +374,11 @@ return [
                 ],
                 'pivot_columns' => [
                     'duration_forward',
-                    'duration_backward'
-                ]
+                    'duration_backward',
+                ],
             ],
         ],
-        //Taxonomy poi type entity mapping
+        // Taxonomy poi type entity mapping
         'taxonomy_poi_type' => [
             'namespace' => 'Wm\\WmPackage\\Models\\TaxonomyPoiType',
             'job' => ImportTaxonomyPoiTypeJob::class,
@@ -405,7 +405,7 @@ return [
                 ],
             ],
         ],
-        //Taxonomy target entity mapping
+        // Taxonomy target entity mapping
         'taxonomy_target' => [
             'namespace' => 'Wm\\WmPackage\\Models\\TaxonomyTarget',
             'job' => ImportTaxonomyTargetJob::class,
@@ -433,7 +433,7 @@ return [
             ],
         ],
 
-        //Taxonomy when entity mapping
+        // Taxonomy when entity mapping
         'taxonomy_when' => [
             'namespace' => 'Wm\\WmPackage\\Models\\TaxonomyWhen',
             'job' => ImportTaxonomyWhenJob::class,

@@ -21,7 +21,6 @@ class WmBackupCommand extends BackupCommand
      */
     protected $description = 'Custom backup command extended from spatie/laravel-backup which add a prefix to the backup file name based on the type of backup';
 
-
     /**
      * Execute the console command.
      */

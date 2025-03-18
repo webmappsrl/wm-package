@@ -72,7 +72,7 @@ abstract class BaseImportJob implements ShouldQueue
      */
     protected function getModelName(): string
     {
-        return config('wm-geohub-import.import_mapping.' . $this->getModelKey() . '.namespace');
+        return config('wm-geohub-import.import_mapping.'.$this->getModelKey().'.namespace');
     }
 
     /**
@@ -88,7 +88,7 @@ abstract class BaseImportJob implements ShouldQueue
      */
     protected function getMapping(): array
     {
-        return config('wm-geohub-import.mappings.' . $this->getModelKey());
+        return config('wm-geohub-import.mappings.'.$this->getModelKey());
     }
 
     /**
@@ -96,7 +96,7 @@ abstract class BaseImportJob implements ShouldQueue
      */
     protected function getRelations(): array
     {
-        return config('wm-geohub-import.import_mapping.' . $this->getModelKey() . '.relations');
+        return config('wm-geohub-import.import_mapping.'.$this->getModelKey().'.relations');
     }
 
     /**

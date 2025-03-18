@@ -30,7 +30,7 @@ class ImportController extends Controller
         $features = json_decode($request->features);
         foreach ($features->features as $feature) {
             $geometryTracks = json_encode($feature->geometry);
-            $name = 'ecTrack_' . date('Y-m-d');
+            $name = 'ecTrack_'.date('Y-m-d');
             if (isset($feature->properties->name)) {
                 $name = $feature->properties->name;
             }

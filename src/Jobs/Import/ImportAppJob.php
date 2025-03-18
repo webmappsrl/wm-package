@@ -54,7 +54,7 @@ class ImportAppJob extends BaseImportJob
                     $whereCondition = [$entityForeignKey => $this->entityId];
                     $data = ['app_id' => $appId];
                     break;
-                case strpos($entityModelKey, 'taxonomy') !== false: //import all taxonomy entities
+                case strpos($entityModelKey, 'taxonomy') !== false: // import all taxonomy entities
                     $whereCondition = null;
                     break;
                 default:
@@ -74,7 +74,7 @@ class ImportAppJob extends BaseImportJob
                 $batch->dispatch();
             }
         } catch (\Exception $e) {
-            $logger->error("Error queuing {$entityModelKey} imports for app {$this->entityId}: " . $e->getMessage());
+            $logger->error("Error queuing {$entityModelKey} imports for app {$this->entityId}: ".$e->getMessage());
             throw $e;
         }
     }
