@@ -7,14 +7,14 @@ use Laravel\Nova\Filters\Filter;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Wm\WmPackage\Models\Layer;
 
-class FeaturesInludeByIds extends LayerFeatureFilter
+class FeaturesIncludeByIds extends LayerFeatureFilter
 {
     /**
      * Apply the filter to the given query.
      */
     public function apply(NovaRequest $request, Builder $query, mixed $value): Builder
     {
-        return $query->whereIn('id',$value);
+        return $query->whereIn('id', $value);
     }
 
     /**
@@ -24,7 +24,7 @@ class FeaturesInludeByIds extends LayerFeatureFilter
      */
     public function options(NovaRequest $request): array
     {
-        return [];//To maximize performance
+        return []; //To maximize performance
     }
 
     /**
