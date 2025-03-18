@@ -33,8 +33,8 @@ class ImportAppJob extends BaseImportJob
         // foreach ($this->getRelations() as $modelKey => $relationData) {
         //     $this->queueEntityImport($modelKey, $userId, $relationData['foreign_key']);
         // }
-        //$this->queueEntityImport('ec_poi', $data['user_id'], 'user_id', $model->id);
-        // $this->queueEntityImport('ec_track', $data['user_id'], 'user_id', $model->id);
+        $this->queueEntityImport('ec_poi', $data['user_id'], 'user_id', $model->id);
+        $this->queueEntityImport('ec_track', $data['user_id'], 'user_id', $model->id);
         $this->queueEntityImport('taxonomy_activity', $data['user_id'], 'user_id', $model->id);
     }
 
