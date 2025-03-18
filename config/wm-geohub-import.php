@@ -369,7 +369,7 @@ return [
                 'morphable_models' => [
                     'ec_poi' => 'Wm\\WmPackage\\Models\\EcPoi',
                     'ec_track' => 'Wm\\WmPackage\\Models\\EcTrack',
-                    'ec_media' => 'Wm\\WmPackage\\Models\\EcMedia',
+                    'media' => 'Wm\\WmPackage\\Models\\Media',
                     'layer' => 'Wm\\WmPackage\\Models\\Layer',
                 ],
                 'pivot_columns' => [
