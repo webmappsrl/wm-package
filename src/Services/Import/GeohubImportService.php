@@ -7,6 +7,7 @@ use Illuminate\Support\Str;
 use Wm\WmPackage\Models\User;
 use Illuminate\Support\Carbon;
 use Wm\WmPackage\Models\EcPoi;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Connection;
 use Illuminate\Support\Facades\Bus;
@@ -406,7 +407,7 @@ class GeohubImportService
      * @param  int  $modelId  The ID of the model
      * @return array The records to import
      */
-    public function getTaxonomyMorphableRecords(string $modelKey, int $modelId): array
+    public function getTaxonomyMorphableRecords(string $modelKey, int $modelId): Collection
     {
         $relations = $this->importMapping[$modelKey]['relations'];
         $morphableTable = $relations['morphable_table'];
@@ -414,18 +415,16 @@ class GeohubImportService
         $morphableIdKey = $relations['morphable_id'];
         $morphableTypeKey = $relations['morphable_type'];
         $morphableModels = $relations['morphable_models'];
+        $pivotColumns = $relations['pivot_columns'] ?? [];
 
-        // Get all morphable records from the database
         $morphableRecords = $this->dbConnection->table($morphableTable)
             ->where($foreignKey, $modelId)
             ->get();
 
         // Transform records to their corresponding model instances
-        $result = $morphableRecords->map(function ($record) use ($morphableModels, $morphableTypeKey, $morphableIdKey) {
-            // Extract model name from the record's morphable type
+        $result = $morphableRecords->map(function ($record) use ($morphableModels, $morphableTypeKey, $morphableIdKey, $pivotColumns) {
             $modelName = Str::snake(class_basename($record->{$morphableTypeKey}));
 
-            // Skip if model mapping doesn't exist
             if (!isset($morphableModels[$modelName])) {
                 return null;
             }
@@ -433,12 +432,26 @@ class GeohubImportService
             $modelClass = $morphableModels[$modelName];
             $morphableId = $record->{$morphableIdKey};
 
-            // Find the corresponding model by geohub_id
-            return $modelClass::where('properties->geohub_id', $morphableId)->first();
+            $whereCondition = str_contains($modelName, 'media') ? ['custom_properties->geohub_id' => $morphableId] : ['properties->geohub_id' => $morphableId];
+
+            $model = $modelClass::where($whereCondition)->first();
+
+            if ($model && !empty($pivotColumns)) {
+                // Add pivot data to the model
+                $pivotData = [];
+                foreach ($pivotColumns as $column) {
+                    if (property_exists($record, $column)) {
+                        $pivotData[$column] = $record->{$column};
+                    }
+                }
+                $model->pivot_data = $pivotData;
+            }
+
+            return $model;
         })
             ->filter() // Remove null values
             ->values(); // Reset array keys
 
-        return $result->toArray();
+        return $result;
     }
 }

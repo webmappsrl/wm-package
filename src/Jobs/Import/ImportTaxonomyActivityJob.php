@@ -2,22 +2,24 @@
 
 namespace Wm\WmPackage\Jobs\Import;
 
+use Wm\WmPackage\Jobs\Import\ImportTaxonomyJob;
 use Illuminate\Database\Eloquent\Model;
-use Wm\WmPackage\Jobs\Import\BaseImportJob;
 
-class ImportTaxonomyActivityJob extends BaseImportJob
+
+class ImportTaxonomyActivityJob extends ImportTaxonomyJob
 {
     public function getModelKey(): string
     {
-        return 'taxonomy_activity';
+        return parent::getModelKey() . 'activity';
     }
 
-    protected function processDependencies(array $transformedData, Model $model): void
+    protected function getForeignKey(): string
     {
-        $recordsToImport = $this->geohubImportService->getTaxonomyMorphableRecords($this->getModelKey(), $model->id);
+        return 'taxonomy_activity_id';
+    }
 
-        foreach ($recordsToImport as $record) {
-            $record->taxonomyActivity()->sync($model->id);
-        }
+    protected function getRelationshipName(): string
+    {
+        return 'taxonomyActivity';
     }
 }
