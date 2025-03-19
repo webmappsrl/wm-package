@@ -18,10 +18,6 @@ use Wm\WmPackage\Providers\ScheduleServiceProvider;
 
 class WmPackageServiceProvider extends PackageServiceProvider
 {
-    // Priorità bassa per assicurare che venga caricato dopo
-    public $defer = true;
-
-
     public function register()
     {
         // Error handler
@@ -80,6 +76,15 @@ class WmPackageServiceProvider extends PackageServiceProvider
                 });
             }
         });
+
+        // BACKUP
+        // Questo verrà eseguito dopo che tutti i provider sono stati registrati e avviati
+        $this->app->booted(function () {
+            if (class_exists(\Spatie\Backup\Config\Config::class)) {
+                $this->app->config['backup'] = $this->setDefaultBackupSettings();
+                $this->commands([WmBackupCommand::class]);
+            }
+        });
     }
 
     public function configurePackage(Package $package): void
@@ -102,7 +107,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
             ->discoversMigrations()
             ->hasCommands([
                 WmPackageCommand::class,
-                WmBackupCommand::class,
+                //WmBackupCommand::class,//See in the boot() method
                 WmImportFromGeohubCommand::class,
             ])
             ->hasViews();
@@ -143,17 +148,17 @@ class WmPackageServiceProvider extends PackageServiceProvider
         ];
 
 
-        $this->app->config['backup'] = $this->setDefaultBackupSettings();
 
-        // Bind BackupConfig to the container to solve the instantiation error in WmBackupCommand
-        $this->app->scoped(
-            BackupConfig::class,
-            function () {
-                $backupConfig = config('backup');
 
-                return BackupConfig::fromArray($backupConfig);
-            }
-        );
+        // // Bind BackupConfig to the container to solve the instantiation error in WmBackupCommand
+        // $this->app->scoped(
+        //     BackupConfig::class,
+        //     function () {
+        //         $backupConfig = config('backup');
+
+        //         return BackupConfig::fromArray($backupConfig);
+        //     }
+        // );
 
 
         $this->app->config['media-library'] = array_merge(
