@@ -18,6 +18,10 @@ use Wm\WmPackage\Providers\ScheduleServiceProvider;
 
 class WmPackageServiceProvider extends PackageServiceProvider
 {
+    // Priorità bassa per assicurare che venga caricato dopo
+    public $defer = true;
+
+
     public function register()
     {
         // Error handler
@@ -141,19 +145,19 @@ class WmPackageServiceProvider extends PackageServiceProvider
         ];
 
 
-        if (! $this->app->runningUnitTests()) {
-            $this->app->config['backup'] = $this->setDefaultBackupSettings();
 
-            // Bind BackupConfig to the container to solve the instantiation error in WmBackupCommand
-            $this->app->scoped(
-                BackupConfig::class,
-                function () {
-                    $backupConfig = config('backup');
+        $this->app->config['backup'] = $this->setDefaultBackupSettings();
 
-                    return BackupConfig::fromArray($backupConfig);
-                }
-            );
-        }
+        // Bind BackupConfig to the container to solve the instantiation error in WmBackupCommand
+        $this->app->scoped(
+            BackupConfig::class,
+            function () {
+                $backupConfig = config('backup');
+
+                return BackupConfig::fromArray($backupConfig);
+            }
+        );
+
 
         $this->app->config['media-library'] = array_merge(
             $this->app->config['media-library'] ?? [],
