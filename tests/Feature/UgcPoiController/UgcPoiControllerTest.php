@@ -56,7 +56,7 @@ class UgcPoiControllerTest extends TestCase
             'geometry' => $poiJsonGeometry,
         ];
 
-        $response = $this->json('PUT', 'api/ugc/poi/'.$this->poi->id, $data);
+        $response = $this->json('PUT', 'api/ugc/poi/' . $this->poi->id, $data);
 
 
         $response->assertStatus(200);
@@ -68,8 +68,7 @@ class UgcPoiControllerTest extends TestCase
     {
         $this->actingAs($this->user, 'api');
         // Effettua la chiamata DELETE all'endpoint destroy
-        $response = $this->json('DELETE', 'api/ugc/poi/'.$this->poi->id);
-=
+        $response = $this->json('DELETE', 'api/ugc/poi/' . $this->poi->id);
         $response->assertStatus(200);
 
         // Verifica che il record sia stato rimosso dal database
