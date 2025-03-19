@@ -16,9 +16,13 @@ class ImportAppJob extends BaseImportJob
 
     protected function transformData(array $data): array
     {
-        // make a diff between data keys and apps columns in db
+        // make a diff between data keys and apps columns in database
         $diff = array_diff(array_keys($data), Schema::getColumnListing('apps'));
         $transformedData = array_diff_key($data, array_flip($diff));
+
+        //add geohub_id and geohub_synced_at to the transformed data
+        $transformedData['properties']['geohub_id'] = $data['id'];
+        $transformedData['properties']['geohub_synced_at'] = now();
 
         // we need to check if the user related exists in db. If not, we need to create it.
         $user = $this->geohubImportService->checkUserExistence($transformedData['user_id']);
@@ -33,9 +37,10 @@ class ImportAppJob extends BaseImportJob
         // foreach ($this->getRelations() as $modelKey => $relationData) {
         //     $this->queueEntityImport($modelKey, $userId, $relationData['foreign_key']);
         // }
-        $this->queueEntityImport('ec_poi', $data['user_id'], 'user_id', $model->id);
-        $this->queueEntityImport('ec_track', $data['user_id'], 'user_id', $model->id);
-        $this->queueEntityImport('taxonomy_activity', $data['user_id'], 'user_id', $model->id);
+        // $this->queueEntityImport('ec_poi', $data['user_id'], 'user_id', $model->id);
+        // $this->queueEntityImport('ec_track', $data['user_id'], 'user_id', $model->id);
+        // $this->queueEntityImport('taxonomy_activity', $data['user_id'], 'user_id', $model->id);
+        // $this->queueEntityImport('layer', $data['user_id'], 'app_id', $model->id);
     }
 
     /**
@@ -74,7 +79,7 @@ class ImportAppJob extends BaseImportJob
                 $batch->dispatch();
             }
         } catch (\Exception $e) {
-            $logger->error("Error queuing {$entityModelKey} imports for app {$this->entityId}: ".$e->getMessage());
+            $logger->error("Error queuing {$entityModelKey} imports for app {$this->entityId}: " . $e->getMessage());
             throw $e;
         }
     }
