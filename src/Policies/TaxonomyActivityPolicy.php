@@ -10,21 +10,6 @@ class TaxonomyActivityPolicy
 {
     use HandlesAuthorization;
 
-    /**
-     * Perform pre-authorization checks.
-     *
-     * @param  string  $ability
-     * @return void|bool
-     */
-    public function before(User $user, $ability)
-    {
-        if ($user->hasRole('Admin')) {
-            return true;
-        }
-        if ($user->hasRole('Author') || $user->hasRole('Contributor')) {
-            return false;
-        }
-    }
 
     /**
      * Determine whether the user can view any models.
@@ -33,9 +18,7 @@ class TaxonomyActivityPolicy
      */
     public function viewAny(User $user)
     {
-        if ($user->hasRole('Editor')) {
-            return true;
-        }
+        return true;
     }
 
     /**
@@ -45,9 +28,7 @@ class TaxonomyActivityPolicy
      */
     public function view(User $user, TaxonomyActivity $taxonomyActivity)
     {
-        if ($user->hasRole('Editor')) {
-            return true;
-        }
+        return true;
     }
 
     /**
