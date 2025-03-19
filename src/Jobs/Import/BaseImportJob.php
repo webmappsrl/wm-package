@@ -106,7 +106,7 @@ abstract class BaseImportJob implements ShouldQueue
     {
         $transformedData = $this->geohubImportService->transformFields($data, $this->getModelKey());
         $transformedData['properties'] = $this->geohubImportService->transformProperties($data, $this->getModelKey());
-        $this->data['app_id'] ? $transformedData['app_id'] = $this->data['app_id'] : null;
+        isset($this->data['app_id']) ? $transformedData['app_id'] = $this->data['app_id'] : null;
 
         return $transformedData;
     }

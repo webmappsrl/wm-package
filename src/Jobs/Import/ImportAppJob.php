@@ -35,6 +35,7 @@ class ImportAppJob extends BaseImportJob
         // }
         $this->queueEntityImport('ec_poi', $data['user_id'], 'user_id', $model->id);
         $this->queueEntityImport('ec_track', $data['user_id'], 'user_id', $model->id);
+        $this->queueEntityImport('taxonomy_activity', $data['user_id'], 'user_id', $model->id);
     }
 
     /**
@@ -45,23 +46,31 @@ class ImportAppJob extends BaseImportJob
         $logger = Log::channel('wm-package-failed-jobs');
 
         try {
-            if ($entityModelKey == 'layer') {
-                $ids = $this->geohubImportService->getGeohubIdsToImport($entityModelKey, [$entityForeignKey => $this->entityId]);
-            } else {
-                if (! $userId) {
-                    $logger->error("No user id found for app {$this->entityId}");
-                    throw new \Exception("No user id found for app {$this->entityId}");
-                }
-                $ids = $this->geohubImportService->getGeohubIdsToImport($entityModelKey, [$entityForeignKey => $userId]);
+            $whereCondition = null;
+            $data = [];
+
+            switch ($entityModelKey) {
+                case 'layer':
+                    $whereCondition = [$entityForeignKey => $this->entityId];
+                    $data = ['app_id' => $appId];
+                    break;
+                case strpos($entityModelKey, 'taxonomy') !== false: // import all taxonomy entities
+                    $whereCondition = null;
+                    break;
+                default:
+                    $whereCondition = [$entityForeignKey => $userId];
+                    $data = ['app_id' => $appId];
+                    break;
             }
+            $ids = $this->geohubImportService->getGeohubIdsToImport($entityModelKey, $whereCondition);
 
             if (count($ids) > 0) {
                 $jobs = [];
                 foreach ($ids as $id) {
-                    $jobs[] = $this->geohubImportService->createJob($entityModelKey, $id, ['app_id' => $appId]);
+                    $jobs[] = $this->geohubImportService->createJob($entityModelKey, $id, $data);
                 }
                 // create a batch and add the jobs to it
-                $batch = Bus::batch($jobs)->name("app-dependencies-{$entityModelKey}-import-batch")->onQueue(config('geohub-import.queue', 'geohub-import'));
+                $batch = Bus::batch($jobs)->name("app-dependencies-{$entityModelKey}-import-batch")->onQueue(config('wm-geohub-import.queue.queue', 'geohub-import'));
                 $batch->dispatch();
             }
         } catch (\Exception $e) {

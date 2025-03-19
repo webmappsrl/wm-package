@@ -20,12 +20,12 @@ class UgcTrackFactory extends Factory
                     [
                         $this->faker->randomFloat(6, 10, 20),
                         $this->faker->randomFloat(6, 40, 50),
-                        $this->faker->randomFloat(6, 10, 20)
+                        $this->faker->randomFloat(6, 10, 20),
                     ],
                     [
                         $this->faker->randomFloat(6, 10, 20),
                         $this->faker->randomFloat(6, 40, 50),
-                        $this->faker->randomFloat(6, 10, 20)
+                        $this->faker->randomFloat(6, 10, 20),
                     ],
                 ],
             ],

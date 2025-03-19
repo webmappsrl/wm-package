@@ -6,10 +6,12 @@ use Illuminate\Database\Connection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Log\Logger;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Wm\WmPackage\Jobs\Import\BaseImportJob;
 use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Models\User;
@@ -216,14 +218,18 @@ class GeohubImportService
      * Get the IDs of entities to import for a specific model
      *
      * @param  string  $model  The model type
+     * @param  ?array  $wheres  The where conditions to apply
      * @return array The IDs to import
      *
      * @throws \InvalidArgumentException If the model is not supported
      */
-    public function getGeohubIdsToImport(string $modelKey, array $wheres = []): array
+    public function getGeohubIdsToImport(string $modelKey, ?array $wheres): array
     {
-
         $connection = $this->dbConnection->table($this->importMapping[$modelKey]['geohub_table']);
+
+        if (! $wheres) {
+            return $connection->pluck('id')->toArray();
+        }
 
         foreach ($wheres as $column => $value) {
             $connection->where($column, $value);
@@ -352,12 +358,10 @@ class GeohubImportService
                     $properties[$target] = $data[$source] ?? null;
                 }
             }
-
-            $properties['geohub_id'] = $data['id'] ?? null;
-            $properties['geohub_synced_at'] = Carbon::now()->toIso8601String();
-
             $transformedProperties = $properties;
         }
+        $transformedProperties['geohub_id'] = $data['id'] ?? null;
+        $transformedProperties['geohub_synced_at'] = Carbon::now()->toIso8601String();
 
         return $transformedProperties;
     }
@@ -392,6 +396,61 @@ class GeohubImportService
             $geohubId = $ecPoi->properties['geohub_id'];
             $result[$ecPoi->id] = $orderMapping[$geohubId] ?? 0;
         }
+
+        return $result;
+    }
+
+    /**
+     * Get the records to import for a taxonomy morphable model
+     *
+     * @param  string  $modelKey  The model key
+     * @param  int  $modelId  The ID of the model
+     * @return array The records to import
+     */
+    public function getTaxonomyMorphableRecords(string $modelKey, int $modelId): Collection
+    {
+        $relations = $this->importMapping[$modelKey]['relations'];
+        $morphableTable = $relations['morphable_table'];
+        $foreignKey = $relations['foreign_key'];
+        $morphableIdKey = $relations['morphable_id'];
+        $morphableTypeKey = $relations['morphable_type'];
+        $morphableModels = $relations['morphable_models'];
+        $pivotColumns = $relations['pivot_columns'] ?? [];
+
+        $morphableRecords = $this->dbConnection->table($morphableTable)
+            ->where($foreignKey, $modelId)
+            ->get();
+
+        // Transform records to their corresponding model instances
+        $result = $morphableRecords->map(function ($record) use ($morphableModels, $morphableTypeKey, $morphableIdKey, $pivotColumns) {
+            $modelName = Str::snake(class_basename($record->{$morphableTypeKey}));
+
+            if (! isset($morphableModels[$modelName])) {
+                return null;
+            }
+
+            $modelClass = $morphableModels[$modelName];
+            $morphableId = $record->{$morphableIdKey};
+
+            $whereCondition = str_contains($modelName, 'media') ? ['custom_properties->geohub_id' => $morphableId] : ['properties->geohub_id' => $morphableId];
+
+            $model = $modelClass::where($whereCondition)->first();
+
+            if ($model && ! empty($pivotColumns)) {
+                // Add pivot data to the model
+                $pivotData = [];
+                foreach ($pivotColumns as $column) {
+                    if (property_exists($record, $column)) {
+                        $pivotData[$column] = $record->{$column};
+                    }
+                }
+                $model->pivot_data = $pivotData;
+            }
+
+            return $model;
+        })
+            ->filter() // Remove null values
+            ->values(); // Reset array keys
 
         return $result;
     }

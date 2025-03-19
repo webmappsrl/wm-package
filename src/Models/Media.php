@@ -4,6 +4,7 @@ namespace Wm\WmPackage\Models;
 
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Spatie\MediaLibrary\MediaCollections\Models\Media as SpatieMedia;
 use Wm\WmPackage\Observers\MediaObserver;
 use Wm\WmPackage\Services\GeoJsonService;
@@ -49,6 +50,11 @@ class Media extends SpatieMedia
     public function model(): MorphTo
     {
         return $this->morphTo();
+    }
+
+    public function taxonomyActivity(): MorphToMany
+    {
+        return $this->morphToMany(TaxonomyActivity::class, 'taxonomy_activityable');
     }
 
     /**

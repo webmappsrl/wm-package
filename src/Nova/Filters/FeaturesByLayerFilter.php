@@ -9,7 +9,6 @@ use Wm\WmPackage\Models\Layer;
 
 class FeaturesByLayerFilter extends LayerFeatureFilter
 {
-
     /**
      * Apply the filter to the given query.
      */
@@ -33,6 +32,6 @@ class FeaturesByLayerFilter extends LayerFeatureFilter
      */
     public function key(): string
     {
-        return 'features_by_layer_' . parent::key();
+        return 'features_by_layer_'.parent::key();
     }
 }

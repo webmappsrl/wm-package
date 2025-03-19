@@ -5,6 +5,7 @@ use Wm\WmPackage\Jobs\Import\ImportEcMediaJob;
 use Wm\WmPackage\Jobs\Import\ImportEcPoiJob;
 use Wm\WmPackage\Jobs\Import\ImportEcTrackJob;
 use Wm\WmPackage\Jobs\Import\ImportLayerJob;
+use Wm\WmPackage\Jobs\Import\ImportTaxonomyActivityJob;
 use Wm\WmPackage\Services\Import\DataTransformer;
 
 return [
@@ -343,6 +344,120 @@ return [
                 'code' => 'code',
                 'icon' => 'icon',
                 'color' => 'color',
+            ],
+        ],
+
+        // Taxonomy activity entity mapping
+        'taxonomy_activity' => [
+            'namespace' => 'Wm\\WmPackage\\Models\\TaxonomyActivity',
+            'job' => ImportTaxonomyActivityJob::class,
+            'geohub_table' => 'taxonomy_activities',
+            'identifiers' => ['identifier'],
+            'fields' => [
+                'name' => ['field' => 'name', 'transformer' => [DataTransformer::class, 'jsonToArray']],
+                'description' => ['field' => 'description', 'transformer' => [DataTransformer::class, 'jsonToArray']],
+                'excerpt' => ['field' => 'excerpt', 'transformer' => [DataTransformer::class, 'jsonToArray']],
+                'identifier' => 'identifier',
+                'created_at' => 'created_at',
+                'updated_at' => 'updated_at',
+            ],
+            'relations' => [
+                'morphable_table' => 'taxonomy_activityables',
+                'foreign_key' => 'taxonomy_activity_id',
+                'morphable_id' => 'taxonomy_activityable_id',
+                'morphable_type' => 'taxonomy_activityable_type',
+                'morphable_models' => [
+                    'ec_poi' => 'Wm\\WmPackage\\Models\\EcPoi',
+                    'ec_track' => 'Wm\\WmPackage\\Models\\EcTrack',
+                    'media' => 'Wm\\WmPackage\\Models\\Media',
+                    'layer' => 'Wm\\WmPackage\\Models\\Layer',
+                ],
+                'pivot_columns' => [
+                    'duration_forward',
+                    'duration_backward',
+                ],
+            ],
+        ],
+        // Taxonomy poi type entity mapping
+        'taxonomy_poi_type' => [
+            'namespace' => 'Wm\\WmPackage\\Models\\TaxonomyPoiType',
+            'job' => ImportTaxonomyPoiTypeJob::class,
+            'geohub_table' => 'taxonomy_poi_types',
+            'identifiers' => ['identifier'],
+            'fields' => [
+                'name' => ['field' => 'name', 'transformer' => [DataTransformer::class, 'jsonToArray']],
+                'description' => ['field' => 'description', 'transformer' => [DataTransformer::class, 'jsonToArray']],
+                'excerpt' => ['field' => 'excerpt', 'transformer' => [DataTransformer::class, 'jsonToArray']],
+                'identifier' => 'identifier',
+                'created_at' => 'created_at',
+                'updated_at' => 'updated_at',
+            ],
+            'relations' => [
+                'morphable_table' => 'taxonomy_poi_typeables',
+                'foreign_key' => 'taxonomy_poi_type_id',
+                'morphable_id' => 'taxonomy_poi_typeable_id',
+                'morphable_type' => 'taxonomy_poi_typeable_type',
+                'morphable_models' => [
+                    'ec_poi' => 'Wm\\WmPackage\\Models\\EcPoi',
+                    'ec_track' => 'Wm\\WmPackage\\Models\\EcTrack',
+                    'ec_media' => 'Wm\\WmPackage\\Models\\EcMedia',
+                    'layer' => 'Wm\\WmPackage\\Models\\Layer',
+                ],
+            ],
+        ],
+        // Taxonomy target entity mapping
+        'taxonomy_target' => [
+            'namespace' => 'Wm\\WmPackage\\Models\\TaxonomyTarget',
+            'job' => ImportTaxonomyTargetJob::class,
+            'geohub_table' => 'taxonomy_targets',
+            'identifiers' => ['identifier'],
+            'fields' => [
+                'name' => ['field' => 'name', 'transformer' => [DataTransformer::class, 'jsonToArray']],
+                'description' => ['field' => 'description', 'transformer' => [DataTransformer::class, 'jsonToArray']],
+                'excerpt' => ['field' => 'excerpt', 'transformer' => [DataTransformer::class, 'jsonToArray']],
+                'identifier' => 'identifier',
+                'created_at' => 'created_at',
+                'updated_at' => 'updated_at',
+            ],
+            'relations' => [
+                'morphable_table' => 'taxonomy_targetables',
+                'foreign_key' => 'taxonomy_target_id',
+                'morphable_id' => 'taxonomy_targetable_id',
+                'morphable_type' => 'taxonomy_targetable_type',
+                'morphable_models' => [
+                    'ec_poi' => 'Wm\\WmPackage\\Models\\EcPoi',
+                    'ec_track' => 'Wm\\WmPackage\\Models\\EcTrack',
+                    'ec_media' => 'Wm\\WmPackage\\Models\\EcMedia',
+                    'layer' => 'Wm\\WmPackage\\Models\\Layer',
+                ],
+            ],
+        ],
+
+        // Taxonomy when entity mapping
+        'taxonomy_when' => [
+            'namespace' => 'Wm\\WmPackage\\Models\\TaxonomyWhen',
+            'job' => ImportTaxonomyWhenJob::class,
+            'geohub_table' => 'taxonomy_whens',
+            'identifiers' => ['identifier'],
+            'fields' => [
+                'name' => ['field' => 'name', 'transformer' => [DataTransformer::class, 'jsonToArray']],
+                'description' => ['field' => 'description', 'transformer' => [DataTransformer::class, 'jsonToArray']],
+                'excerpt' => ['field' => 'excerpt', 'transformer' => [DataTransformer::class, 'jsonToArray']],
+                'identifier' => 'identifier',
+                'created_at' => 'created_at',
+                'updated_at' => 'updated_at',
+            ],
+            'relations' => [
+                'morphable_table' => 'taxonomy_whenables',
+                'foreign_key' => 'taxonomy_when_id',
+                'morphable_id' => 'taxonomy_whenable_id',
+                'morphable_type' => 'taxonomy_whenable_type',
+                'morphable_models' => [
+                    'ec_poi' => 'Wm\\WmPackage\\Models\\EcPoi',
+                    'ec_track' => 'Wm\\WmPackage\\Models\\EcTrack',
+                    'ec_media' => 'Wm\\WmPackage\\Models\\EcMedia',
+                    'layer' => 'Wm\\WmPackage\\Models\\Layer',
+                ],
             ],
         ],
     ],

@@ -5,7 +5,6 @@ namespace Wm\WmPackage\Nova\Filters;
 use Illuminate\Contracts\Database\Eloquent\Builder;
 use Laravel\Nova\Filters\Filter;
 use Laravel\Nova\Http\Requests\NovaRequest;
-use Wm\WmPackage\Models\Layer;
 
 class FeaturesIncludeByIds extends LayerFeatureFilter
 {
@@ -24,7 +23,7 @@ class FeaturesIncludeByIds extends LayerFeatureFilter
      */
     public function options(NovaRequest $request): array
     {
-        return []; //To maximize performance
+        return []; // To maximize performance
     }
 
     /**
@@ -32,6 +31,6 @@ class FeaturesIncludeByIds extends LayerFeatureFilter
      */
     public function key(): string
     {
-        return 'features_include_ids_' . parent::key();
+        return 'features_include_ids_'.parent::key();
     }
 }

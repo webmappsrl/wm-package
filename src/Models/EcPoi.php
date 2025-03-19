@@ -3,6 +3,7 @@
 namespace Wm\WmPackage\Models;
 
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Support\Facades\App;
 use Spatie\Translatable\HasTranslations;
 use Wm\WmPackage\Models\Abstracts\Point;
@@ -52,6 +53,11 @@ class EcPoi extends Point implements LayerRelatedModel
     public function ecTracks(): BelongsToMany
     {
         return $this->belongsToMany(EcTrack::class);
+    }
+
+    public function taxonomyActivity(): MorphToMany
+    {
+        return $this->morphToMany(TaxonomyActivity::class, 'taxonomy_activityable');
     }
 
     // /**

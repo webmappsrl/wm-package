@@ -21,9 +21,17 @@ abstract class Taxonomy extends Polygon
         'name',
         'import_method',
         'identifier',
+        'properties',
+        'description',
+        'excerpt',
     ];
 
-    protected $casts = ['name' => 'array'];
+    protected $casts = [
+        'name' => 'array',
+        'description' => 'array',
+        'excerpt' => 'array',
+        'properties' => 'array',
+    ];
 
     abstract protected function getRelationKey(): string;
 
