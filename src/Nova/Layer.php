@@ -8,15 +8,13 @@ use Laravel\Nova\Fields\ID;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
 
-
 class Layer extends AbstractGeometryResource
 {
-
     public static $model = \Wm\WmPackage\Models\Layer::class;
 
     public function fields(NovaRequest $request): array
     {
-        return  [
+        return [
             ID::make()->sortable(),
             Text::make('Name', 'name'),
             BelongsTo::make('App', 'appOwner', App::class),

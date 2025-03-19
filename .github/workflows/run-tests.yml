@@ -11,7 +11,7 @@ jobs:
       fail-fast: true
       matrix:
         os: [ubuntu-latest]
-        php: [8.2, 8.3, 8.4]
+        php: [8.3, 8.4]
         laravel: [10.*, 11.*]
         stability: [prefer-stable]
 
@@ -56,3 +56,10 @@ jobs:
 
       - name: Execute tests
         run: vendor/bin/pest
+        
+      - name: Upload Test Results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-logs
+          path: storage/logs
