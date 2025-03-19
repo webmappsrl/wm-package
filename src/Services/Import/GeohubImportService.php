@@ -2,6 +2,7 @@
 
 namespace Wm\WmPackage\Services\Import;
 
+use stdClass;
 use Illuminate\Log\Logger;
 use Illuminate\Support\Str;
 use Wm\WmPackage\Models\User;
@@ -16,6 +17,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Eloquent\Model;
 use Wm\WmPackage\Models\TaxonomyActivity;
+use Wm\WmPackage\Services\StorageService;
 use Wm\WmPackage\Jobs\Import\BaseImportJob;
 
 /**
@@ -36,6 +38,8 @@ class GeohubImportService
         'taxonomy_activity',
         'layer',
     ];
+
+    protected const GEOHUB_URL = 'https://geohub.webmapp.it/';
 
     /**
      * The database connection to Geohub
@@ -546,14 +550,114 @@ class GeohubImportService
 
             foreach ($trackTaxonomyRelations as $relation) {
                 $ecTrack = EcTrack::where('properties->geohub_id', $relation->{$foreignKey})->first();
-                if ($ecTrack && !$model->manualEcTracks()->where('layerable_type', 'Wm\\WmPackage\\Models\\EcTrack')->where('layerable_id', $ecTrack->id)->exists()) {
-                    $model->manualEcTracks()->attach($ecTrack->id, ['created_at' => now(), 'updated_at' => now()]);
+                if ($ecTrack && !$model->ecTracks()->where('layerable_type', 'Wm\\WmPackage\\Models\\EcTrack')->where('layerable_id', $ecTrack->id)->exists()) {
+                    $model->ecTracks()->attach($ecTrack->id, ['created_at' => now(), 'updated_at' => now()]);
                 }
             }
         }
     }
 
+    public function handleOverlayLayers(Model $model): void
+    {
+        $config = $this->getRelationConfig('layer', 'overlay_layers');
 
+        // Get all overlay layers from the database connection
+        $overlayLayers = $this->dbConnection
+            ->table('overlay_layers')
+            ->select('*')
+            ->get();
+
+        foreach ($overlayLayers as $overlayLayer) {
+            $association = $this->dbConnection
+                ->table($config['pivot_table'])
+                ->where($config['key'], $model->properties['geohub_id'])
+                ->where($config['foreign_key'], $overlayLayer->id)
+                ->where($config['morphable_type']['key'], $config['morphable_type']['value'])
+                ->first();
+
+            if ($association) {
+                $this->mergeLayerWithOverlayLayer($model, $overlayLayer);
+            } else {
+                // TODO: If no association is found, create a new layer from the overlay layer. !IMPORTANT: handle the missing geometry in overlay_layers
+                //$this->createNewLayerFromOverlayLayer($model, $overlayLayer);
+            }
+        }
+    }
+
+    protected function mergeLayerWithOverlayLayer(Model $model, stdClass $overlayLayer): void
+    {
+        $updateData = [];
+
+        if (!empty($overlayLayer->feature_collection)) {
+            $featureCollection = $overlayLayer->feature_collection;
+
+            // If the path is an external url, keep it as is
+            if (filter_var($featureCollection, FILTER_VALIDATE_URL)) {
+                $updateData['feature_collection'] = $featureCollection;
+            }
+            // Otherwise we need to download and upload to AWS
+            else {
+                $fileUrl = self::GEOHUB_URL . 'storage/' . $featureCollection;
+                $fileContent = $this->downloadFileFromGeohub($fileUrl);
+
+                if ($fileContent !== false) {
+                    $this->storeFeatureCollectionOnAws($model, $fileContent);
+                }
+            }
+        }
+
+        if (!empty($overlayLayer->configuration)) {
+            $updateData['configuration'] = $overlayLayer->configuration;
+        }
+
+        // Update the layer with the merged data if there's anything to update
+        if (!empty($updateData)) {
+            $model->update($updateData);
+            \Log::info("Layer {$model->id} updated with overlay layer {$overlayLayer->id} data");
+        }
+    }
+
+    /**
+     * Download a file from Geohub
+     * 
+     * @param string $url The URL of the file to download
+     * @return string|false The file content or false if the file doesn't exist
+     */
+    protected function downloadFileFromGeohub(string $url): string|false
+    {
+        $contents = @file_get_contents($url);
+
+        return $contents !== false ? $contents : false;
+    }
+
+    /**
+     * Store a feature collection on AWS
+     * 
+     * @param Model $model The model to store the feature collection for
+     * @param string $fileContent The file content to store
+     * @return void
+     */
+    protected function storeFeatureCollectionOnAws(Model $model, string $fileContent): void
+    {
+        $appId = $model->app_id ?? null;
+
+        $storageService = StorageService::make();
+
+        try {
+            $path = $storageService->storeLayerFeatureCollection(
+                $appId,
+                $model->id,
+                $fileContent
+            );
+        } catch (\Exception $e) {
+            $this->logger->error("Error storing layer feature collection: " . $e->getMessage());
+        }
+
+        if ($path) {
+            $model->feature_collection = $path;
+            $model->save();
+        }
+    }
 
     /**
      * Extract pivot data from a relation object
