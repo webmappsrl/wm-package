@@ -6,7 +6,7 @@ use Illuminate\Contracts\Database\Eloquent\Builder;
 use Laravel\Nova\Filters\Filter;
 use Laravel\Nova\Http\Requests\NovaRequest;
 
-class FeaturesInludeByIds extends LayerFeatureFilter
+class FeaturesIncludeByIds extends LayerFeatureFilter
 {
     /**
      * Apply the filter to the given query.
