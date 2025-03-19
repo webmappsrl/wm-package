@@ -149,7 +149,6 @@ class WmPackageServiceProvider extends PackageServiceProvider
 
 
 
-
         // // Bind BackupConfig to the container to solve the instantiation error in WmBackupCommand
         // $this->app->scoped(
         //     BackupConfig::class,
@@ -159,7 +158,6 @@ class WmPackageServiceProvider extends PackageServiceProvider
         //         return BackupConfig::fromArray($backupConfig);
         //     }
         // );
-
 
         $this->app->config['media-library'] = array_merge(
             $this->app->config['media-library'] ?? [],
