@@ -36,6 +36,7 @@ class Layer extends Model
         'configuration',
         'app_id',
         'geometry',
+        'feature_collection',
     ];
 
     /**
