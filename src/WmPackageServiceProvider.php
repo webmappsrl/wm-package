@@ -46,15 +46,15 @@ class WmPackageServiceProvider extends PackageServiceProvider
             Route::name('v2.')
                 ->middleware('api')
                 ->prefix('api/v2')
-                ->group($packageDirPath.'routes/api.php');
+                ->group($packageDirPath . 'routes/api.php');
 
             Route::name('default.')
                 ->middleware('api')
                 ->prefix('api')
-                ->group($packageDirPath.'routes/api.php');
+                ->group($packageDirPath . 'routes/api.php');
 
             Route::middleware('web')
-                ->group($packageDirPath.'routes/web.php');
+                ->group($packageDirPath . 'routes/web.php');
         });
 
         // Register policies
@@ -133,22 +133,27 @@ class WmPackageServiceProvider extends PackageServiceProvider
         // ####### CONFIGURATIONS OVERRIDE
         // #######
 
+
+
         $this->app->config['filesystems.disks'] = [
             ...$this->app->config['filesystems.disks'],
             ...config('wm-filesystems.disks', []),
         ];
 
-        $this->app->config['backup'] = $this->setDefaultBackupSettings();
 
-        // Bind BackupConfig to the container to solve the instantiation error in WmBackupCommand
-        $this->app->scoped(
-            BackupConfig::class,
-            function () {
-                $backupConfig = config('backup');
+        if (! $this->app->runningUnitTests()) {
+            $this->app->config['backup'] = $this->setDefaultBackupSettings();
 
-                return BackupConfig::fromArray($backupConfig);
-            }
-        );
+            // Bind BackupConfig to the container to solve the instantiation error in WmBackupCommand
+            $this->app->scoped(
+                BackupConfig::class,
+                function () {
+                    $backupConfig = config('backup');
+
+                    return BackupConfig::fromArray($backupConfig);
+                }
+            );
+        }
 
         $this->app->config['media-library'] = array_merge(
             $this->app->config['media-library'] ?? [],
@@ -202,7 +207,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
     protected function resources()
     {
 
-        Nova::resourcesIn($this->getPackageBaseDir().'/Nova');
+        Nova::resourcesIn($this->getPackageBaseDir() . '/Nova');
     }
 
     /**
