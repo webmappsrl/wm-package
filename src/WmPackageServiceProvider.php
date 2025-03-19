@@ -46,15 +46,15 @@ class WmPackageServiceProvider extends PackageServiceProvider
             Route::name('v2.')
                 ->middleware('api')
                 ->prefix('api/v2')
-                ->group($packageDirPath . 'routes/api.php');
+                ->group($packageDirPath.'routes/api.php');
 
             Route::name('default.')
                 ->middleware('api')
                 ->prefix('api')
-                ->group($packageDirPath . 'routes/api.php');
+                ->group($packageDirPath.'routes/api.php');
 
             Route::middleware('web')
-                ->group($packageDirPath . 'routes/web.php');
+                ->group($packageDirPath.'routes/web.php');
         });
 
         // Register policies
@@ -107,7 +107,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
             ->discoversMigrations()
             ->hasCommands([
                 WmPackageCommand::class,
-                //WmBackupCommand::class,//See in the boot() method
+                // WmBackupCommand::class,//See in the boot() method
                 WmImportFromGeohubCommand::class,
             ])
             ->hasViews();
@@ -146,8 +146,6 @@ class WmPackageServiceProvider extends PackageServiceProvider
             ...$this->app->config['filesystems.disks'],
             ...config('wm-filesystems.disks', []),
         ];
-
-
 
         // // Bind BackupConfig to the container to solve the instantiation error in WmBackupCommand
         // $this->app->scoped(
@@ -211,7 +209,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
     protected function resources()
     {
 
-        Nova::resourcesIn($this->getPackageBaseDir() . '/Nova');
+        Nova::resourcesIn($this->getPackageBaseDir().'/Nova');
     }
 
     /**
