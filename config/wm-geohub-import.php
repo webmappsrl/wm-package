@@ -208,6 +208,12 @@ return [
                         'duration_backward',
                     ],
                 ],
+                'overlay_layers' => [
+                    'pivot_table' => 'layerables',
+                    'key' => 'layer_id',
+                    'foreign_key' => 'layerable_id',
+                    'morphable_type' => ['key' => 'layerable_type', 'value' => 'App\\Models\\OverlayLayer'],
+                ],
             ],
         ],
 
