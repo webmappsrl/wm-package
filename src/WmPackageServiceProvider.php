@@ -137,13 +137,10 @@ class WmPackageServiceProvider extends PackageServiceProvider
         // ####### CONFIGURATIONS OVERRIDE
         // #######
 
-
-
         $this->app->config['filesystems.disks'] = [
             ...$this->app->config['filesystems.disks'],
             ...config('wm-filesystems.disks', []),
         ];
-
 
 
         $this->app->config['backup'] = $this->setDefaultBackupSettings();
