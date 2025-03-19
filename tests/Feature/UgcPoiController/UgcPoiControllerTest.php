@@ -2,13 +2,14 @@
 
 namespace Wm\WmPackage\Tests\Feature;
 
-use Illuminate\Foundation\Testing\DatabaseTransactions;
-use Orchestra\Testbench\Attributes\WithMigration;
 use Wm\WmPackage\Models\App;
-use Wm\WmPackage\Models\UgcPoi;
 use Wm\WmPackage\Models\User;
-use Wm\WmPackage\Services\GeometryComputationService;
+use Wm\WmPackage\Models\UgcPoi;
 use Wm\WmPackage\Tests\TestCase;
+use Illuminate\Support\Facades\Http;
+use Orchestra\Testbench\Attributes\WithMigration;
+use Wm\WmPackage\Services\GeometryComputationService;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 
 #[WithMigration]
 class UgcPoiControllerTest extends TestCase
@@ -37,7 +38,7 @@ class UgcPoiControllerTest extends TestCase
 
         $this->actingAs($this->user);
         $this->poi = UgcPoi::factory()->create([
-            'app_id' => $this->appModel->id,
+            'app_id' => $this->appModel->id
         ]);
     }
 
@@ -57,6 +58,7 @@ class UgcPoiControllerTest extends TestCase
 
         $response = $this->json('PUT', 'api/ugc/poi/'.$this->poi->id, $data);
 
+
         $response->assertStatus(200);
 
         $this->assertEquals(UgcPoi::find($this->poi->id)->name, $data['properties']['name']);
@@ -67,6 +69,7 @@ class UgcPoiControllerTest extends TestCase
         $this->actingAs($this->user, 'api');
         // Effettua la chiamata DELETE all'endpoint destroy
         $response = $this->json('DELETE', 'api/ugc/poi/'.$this->poi->id);
+=
         $response->assertStatus(200);
 
         // Verifica che il record sia stato rimosso dal database

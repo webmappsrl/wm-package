@@ -59,7 +59,7 @@ class EcTrackFactory extends Factory
                 'from' => $this->faker->city(),
                 'to' => $this->faker->city(),
                 'ref' => $this->faker->bothify('??-###'),
-                'color' => '#'.$this->faker->hexColor(),
+                'color' => '#' . $this->faker->hexColor(),
                 'created_at' => $this->faker->dateTimeThisYear->format('Y-m-d H:i:s'),
             ],
         ];
