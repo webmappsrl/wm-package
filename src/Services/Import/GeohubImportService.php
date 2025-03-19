@@ -2,19 +2,21 @@
 
 namespace Wm\WmPackage\Services\Import;
 
-use Illuminate\Database\Connection;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Log\Logger;
+use Illuminate\Support\Str;
+use Wm\WmPackage\Models\User;
 use Illuminate\Support\Carbon;
+use Wm\WmPackage\Models\EcPoi;
+use Wm\WmPackage\Models\EcTrack;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Connection;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Str;
+use Illuminate\Database\Eloquent\Model;
+use Wm\WmPackage\Models\TaxonomyActivity;
 use Wm\WmPackage\Jobs\Import\BaseImportJob;
-use Wm\WmPackage\Models\EcPoi;
-use Wm\WmPackage\Models\User;
 
 /**
  * Service for importing data from Geohub to the local database
@@ -29,10 +31,10 @@ class GeohubImportService
      */
     protected const MODEL_IMPORT_ORDER = [
         'app',
-        'layer',
         'ec_poi',
         'ec_track',
-        'ec_media',
+        'taxonomy_activity',
+        'layer',
     ];
 
     /**
@@ -90,23 +92,16 @@ class GeohubImportService
 
         $this->logger->info("Starting import of all {$modelKey}s");
 
-        $ids = $this->dbConnection
-            ->table($this->importMapping[$modelKey]['geohub_table'])
-            ->pluck('id')
-            ->toArray();
+        $ids = $this->getGeohubIdsToImport($modelKey, null);
 
-        $jobs = [];
-        foreach ($ids as $id) {
-            $jobClass = $this->importMapping[$modelKey]['job'];
-            $jobs[] = new $jobClass($id);
-        }
+        $jobs = $this->createJobsForIds($modelKey, $ids);
 
         $batch = Bus::batch($jobs)
             ->name("Import {$modelKey}s from geohub")
             ->allowFailures()
             ->dispatch();
 
-        $this->logger->info("Dispatched batch {$batch->id} with ".count($jobs)." jobs for {$model}s");
+        $this->logger->info("Dispatched batch {$batch->id} with " . count($jobs) . " jobs for {$modelKey}s");
     }
 
     /**
@@ -144,7 +139,7 @@ class GeohubImportService
      */
     public function fetchData(int $entityId, string $tableName): ?array
     {
-        $element = DB::connection('geohub')
+        $element = $this->dbConnection
             ->table($tableName)
             ->where('id', $entityId)
             ->first();
@@ -183,7 +178,7 @@ class GeohubImportService
 
             return $model;
         } catch (\Exception $e) {
-            $this->logger->error("Error importing {$modelName} with ID {$entityId}: ".$e->getMessage());
+            $this->logger->error("Error importing {$modelName} with ID {$entityId}: " . $e->getMessage());
             throw $e;
         }
     }
@@ -192,12 +187,35 @@ class GeohubImportService
     // Helper Methods
     // ------------------------------------------------------------------
 
+    /**
+     * Create a job instance for the given model and ID
+     * 
+     * @param  string  $modelKey  The model key
+     * @param  int  $id  The ID of the entity
+     * @param  array  $data  Additional data to pass to the job
+     * @return BaseImportJob The job instance
+     */
     public function createJob(string $modelKey, int $id, array $data = []): BaseImportJob
     {
         $jobClass = $this->importMapping[$modelKey]['job'];
-        $job = new $jobClass($id, $data);
+        return new $jobClass($id, $data);
+    }
 
-        return $job;
+    /**
+     * Create multiple jobs for a list of IDs
+     * 
+     * @param  string  $modelKey  The model key
+     * @param  array  $ids  The IDs to create jobs for
+     * @param  array  $data  Additional data to pass to the jobs
+     * @return array Array of job instances
+     */
+    protected function createJobsForIds(string $modelKey, array $ids, array $data = []): array
+    {
+        $jobs = [];
+        foreach ($ids as $id) {
+            $jobs[] = $this->createJob($modelKey, $id, $data);
+        }
+        return $jobs;
     }
 
     /**
@@ -304,9 +322,9 @@ class GeohubImportService
      */
     public function checkUserExistence(int $userId): User
     {
-
         $geohubUser = $this->dbConnection->table('users')->where('id', $userId)->first();
         $shardUser = User::where('email', $geohubUser->email)->first();
+
         if (! $shardUser) {
             // make a diff between geohubUser and User model
             $diff = array_diff(array_keys((array) $geohubUser), Schema::getColumnListing('users'));
@@ -318,48 +336,62 @@ class GeohubImportService
     }
 
     /**
+     * Transform data fields using mapping configuration
+     * 
+     * @param  array  $data  The data to transform
+     * @param  array  $fieldMapping  The field mapping configuration
+     * @return array The transformed data
+     */
+    protected function transformMappedFields(array $data, array $fieldMapping): array
+    {
+        $transformed = [];
+
+        foreach ($fieldMapping as $target => $source) {
+            if (is_array($source) && isset($source['field']) && isset($source['transformer'])) {
+                $value = $data[$source['field']] ?? null;
+                $transformed[$target] = $this->applyTransformer($value, $source['transformer']);
+            } elseif (is_string($source)) {
+                $transformed[$target] = $data[$source] ?? null;
+            }
+        }
+
+        return $transformed;
+    }
+
+    /**
      * Transform the fields of the data using mapping configuration
      *
      * @param  array  $data  The data to transform
+     * @param  string  $modelKey  The model key
      * @return array The transformed data
      */
     public function transformFields(array $data, string $modelKey): array
     {
-        $transformedData = [];
-        foreach ($this->importMapping[$modelKey]['fields'] ?? [] as $target => $source) {
-            if (is_array($source) && isset($source['field']) && isset($source['transformer'])) {
-                $value = $data[$source['field']] ?? null;
-                $transformedData[$target] = $this->applyTransformer($value, $source['transformer']);
-            } elseif (is_string($source)) {
-                $transformedData[$target] = $data[$source] ?? null;
-            }
-        }
-
-        return $transformedData;
+        return $this->transformMappedFields(
+            $data,
+            $this->importMapping[$modelKey]['fields'] ?? []
+        );
     }
 
     /**
      * Transform the properties of the data
      *
      * @param  array  $data  The data to transform
+     * @param  string  $modelKey  The model key
      * @return array The transformed data
      */
     public function transformProperties(array $data, string $modelKey): array
     {
         $transformedProperties = [];
-        if (isset($this->importMapping[$modelKey]['properties'])) {
-            $properties = [];
 
-            foreach ($this->importMapping[$modelKey]['properties'] as $target => $source) {
-                if (is_array($source) && isset($source['field']) && isset($source['transformer'])) {
-                    $value = $data[$source['field']] ?? null;
-                    $properties[$target] = $this->applyTransformer($value, $source['transformer']);
-                } elseif (is_string($source)) {
-                    $properties[$target] = $data[$source] ?? null;
-                }
-            }
-            $transformedProperties = $properties;
+        if (isset($this->importMapping[$modelKey]['properties'])) {
+            $transformedProperties = $this->transformMappedFields(
+                $data,
+                $this->importMapping[$modelKey]['properties']
+            );
         }
+
+        // Add standard properties
         $transformedProperties['geohub_id'] = $data['id'] ?? null;
         $transformedProperties['geohub_synced_at'] = Carbon::now()->toIso8601String();
 
@@ -373,6 +405,13 @@ class GeohubImportService
      * @param  int  $modelId  The ID of the model
      * @return array The IDs of the associated ec_pois
      */
+    /**
+     * Get associated EcPoi IDs with order information
+     *
+     * @param  string  $modelKey  The model key
+     * @param  int  $modelId  The ID of the model
+     * @return array The IDs of the associated ec_pois with order values
+     */
     public function getAssociatedEcPoisIDs(string $modelKey, int $modelId): array
     {
         $ecPoiRelation = $this->importMapping[$modelKey]['relations']['ec_pois'];
@@ -382,15 +421,10 @@ class GeohubImportService
             ->get();
 
         $ecPoiGeohubIds = $pivotData->pluck('ec_poi_id')->toArray();
-
-        // Create a mapping of geohub_id to order
         $orderMapping = $pivotData->pluck('order', 'ec_poi_id')->toArray();
 
-        // Query current DB looking for matches in properties->geohub_id
-        $ecPois = EcPoi::whereIn('properties->geohub_id', $ecPoiGeohubIds)
-            ->get();
+        $ecPois = EcPoi::whereIn('properties->geohub_id', $ecPoiGeohubIds)->get();
 
-        // Create an associative array with id as key and order as value
         $result = [];
         foreach ($ecPois as $ecPoi) {
             $geohubId = $ecPoi->properties['geohub_id'];
@@ -405,7 +439,7 @@ class GeohubImportService
      *
      * @param  string  $modelKey  The model key
      * @param  int  $modelId  The ID of the model
-     * @return array The records to import
+     * @return Collection The records to import
      */
     public function getTaxonomyMorphableRecords(string $modelKey, int $modelId): Collection
     {
@@ -421,37 +455,133 @@ class GeohubImportService
             ->where($foreignKey, $modelId)
             ->get();
 
-        // Transform records to their corresponding model instances
-        $result = $morphableRecords->map(function ($record) use ($morphableModels, $morphableTypeKey, $morphableIdKey, $pivotColumns) {
+        return $morphableRecords->map(function ($record) use ($morphableModels, $morphableTypeKey, $morphableIdKey, $pivotColumns) {
             $modelName = Str::snake(class_basename($record->{$morphableTypeKey}));
 
-            if (! isset($morphableModels[$modelName])) {
+            if (!isset($morphableModels[$modelName])) {
                 return null;
             }
 
             $modelClass = $morphableModels[$modelName];
             $morphableId = $record->{$morphableIdKey};
-
-            $whereCondition = str_contains($modelName, 'media') ? ['custom_properties->geohub_id' => $morphableId] : ['properties->geohub_id' => $morphableId];
+            $whereCondition = str_contains($modelName, 'media')
+                ? ['custom_properties->geohub_id' => $morphableId]
+                : ['properties->geohub_id' => $morphableId];
 
             $model = $modelClass::where($whereCondition)->first();
 
-            if ($model && ! empty($pivotColumns)) {
-                // Add pivot data to the model
-                $pivotData = [];
-                foreach ($pivotColumns as $column) {
-                    if (property_exists($record, $column)) {
-                        $pivotData[$column] = $record->{$column};
-                    }
-                }
-                $model->pivot_data = $pivotData;
+            if ($model && !empty($pivotColumns)) {
+                $model->pivot_data = $this->extractPivotData($record, $pivotColumns);
             }
 
             return $model;
         })
-            ->filter() // Remove null values
-            ->values(); // Reset array keys
+            ->filter()
+            ->values();
+    }
 
-        return $result;
+    /**
+     * Associate layers with taxonomy activities based on relationships in the Geohub database
+     * 
+     * @param string $taxonomyKey The taxonomy key (e.g. 'taxonomy_activity')
+     * @param Model $model The layer model to associate taxonomies with
+     * @return void
+     */
+    public function associateLayersWithTaxonomy(string $taxonomyKey, Model $model): void
+    {
+        $config = $this->getRelationConfig('layer', $taxonomyKey);
+        $relationTable = $config['pivot_table'];
+        $foreignKey = $config['foreign_key'];
+        $morphableTypeKey = $config['morphable_type']['key'];
+        $morphableTypeValue = $config['morphable_type']['value'];
+        $pivotColumns = $config['pivot_columns'] ?? [];
+
+        $taxonomyRelations = $this->dbConnection->table($relationTable)
+            ->where($foreignKey, $model->properties['geohub_id'])
+            ->where($morphableTypeKey, $morphableTypeValue)
+            ->get();
+
+        foreach ($taxonomyRelations as $relation) {
+            $pivotData = $this->extractPivotData($relation, $pivotColumns);
+            $relationExists = $model->taxonomyActivity()
+                ->where('properties->geohub_id', $relation->taxonomy_activity_id)
+                ->exists();
+
+            if (!$relationExists) {
+                $taxonomyActivity = TaxonomyActivity::where('properties->geohub_id', $relation->taxonomy_activity_id)->first();
+                if ($taxonomyActivity) {
+                    $model->taxonomyActivity()->attach($taxonomyActivity->id, $pivotData);
+                }
+            } else {
+                $model->taxonomyActivity()->updateExistingPivot($model->id, $pivotData);
+            }
+        }
+    }
+
+    /**
+     * Associate layers with ec_track through taxonomy
+     * 
+     * @param string $taxonomyKey The taxonomy key (e.g. 'taxonomy_theme')
+     * @param Model $model The layer model to associate with ec_track
+     * @return void
+     */
+    public function associateLayersWithEcTrack(string $taxonomyKey, Model $model): void
+    {
+        $config = $this->getRelationConfig('layer', $taxonomyKey);
+        $relationTable = $config['pivot_table'];
+        $key = $config['key'];
+        $foreignKey = $config['foreign_key'];
+        $morphableTypeKey = $config['morphable_type']['key'];
+        $morphableTypeValue = $config['morphable_type']['value'];
+        $layerTaxonomyRelations = $this->dbConnection->table($relationTable)
+            ->where($foreignKey, $model->properties['geohub_id'])
+            ->where($morphableTypeKey, $morphableTypeValue)
+            ->get();
+
+        foreach ($layerTaxonomyRelations as $relation) {
+            $trackTaxonomyRelations = $this->dbConnection->table($relationTable)
+                ->where($key, $relation->{$key})
+                ->where($morphableTypeKey, 'App\\Models\\EcTrack')
+                ->get();
+
+            foreach ($trackTaxonomyRelations as $relation) {
+                $ecTrack = EcTrack::where('properties->geohub_id', $relation->{$foreignKey})->first();
+                if ($ecTrack && !$model->manualEcTracks()->where('layerable_type', 'Wm\\WmPackage\\Models\\EcTrack')->where('layerable_id', $ecTrack->id)->exists()) {
+                    $model->manualEcTracks()->attach($ecTrack->id, ['created_at' => now(), 'updated_at' => now()]);
+                }
+            }
+        }
+    }
+
+
+
+    /**
+     * Extract pivot data from a relation object
+     * 
+     * @param object $relation The relation object
+     * @param array $pivotColumns The pivot columns to extract
+     * @return array The extracted pivot data
+     */
+    protected function extractPivotData(object $relation, array $pivotColumns): array
+    {
+        $pivotData = [];
+        foreach ($pivotColumns as $column) {
+            if (property_exists($relation, $column)) {
+                $pivotData[$column] = $relation->{$column};
+            }
+        }
+        return $pivotData;
+    }
+
+    /**
+     * Get configuration for a relation from import mapping
+     * 
+     * @param string $modelKey The model key
+     * @param string $relationKey The relation key
+     * @return array The relation configuration
+     */
+    protected function getRelationConfig(string $modelKey, string $relationKey): array
+    {
+        return $this->importMapping[$modelKey]['relations'][$relationKey];
     }
 }
