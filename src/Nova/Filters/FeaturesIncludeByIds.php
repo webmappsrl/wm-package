@@ -6,7 +6,7 @@ use Illuminate\Contracts\Database\Eloquent\Builder;
 use Laravel\Nova\Filters\Filter;
 use Laravel\Nova\Http\Requests\NovaRequest;
 
-class FeaturesInludeByIds extends LayerFeatureFilter
+class FeaturesIncludeByIds extends LayerFeatureFilter
 {
     /**
      * Apply the filter to the given query.
@@ -24,6 +24,7 @@ class FeaturesInludeByIds extends LayerFeatureFilter
     public function options(NovaRequest $request): array
     {
         return []; // To maximize performance
+
     }
 
     /**
@@ -31,6 +32,6 @@ class FeaturesInludeByIds extends LayerFeatureFilter
      */
     public function key(): string
     {
-        return 'features_include_ids_'.parent::key();
+        return 'features_include_ids_' . parent::key();
     }
 }
