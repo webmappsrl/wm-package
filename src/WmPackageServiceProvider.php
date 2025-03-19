@@ -46,15 +46,15 @@ class WmPackageServiceProvider extends PackageServiceProvider
             Route::name('v2.')
                 ->middleware('api')
                 ->prefix('api/v2')
-                ->group($packageDirPath . 'routes/api.php');
+                ->group($packageDirPath.'routes/api.php');
 
             Route::name('default.')
                 ->middleware('api')
                 ->prefix('api')
-                ->group($packageDirPath . 'routes/api.php');
+                ->group($packageDirPath.'routes/api.php');
 
             Route::middleware('web')
-                ->group($packageDirPath . 'routes/web.php');
+                ->group($packageDirPath.'routes/web.php');
         });
 
         // Register policies
@@ -133,13 +133,10 @@ class WmPackageServiceProvider extends PackageServiceProvider
         // ####### CONFIGURATIONS OVERRIDE
         // #######
 
-
-
         $this->app->config['filesystems.disks'] = [
             ...$this->app->config['filesystems.disks'],
             ...config('wm-filesystems.disks', []),
         ];
-
 
         if (! $this->app->runningUnitTests()) {
             $this->app->config['backup'] = $this->setDefaultBackupSettings();
@@ -207,7 +204,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
     protected function resources()
     {
 
-        Nova::resourcesIn($this->getPackageBaseDir() . '/Nova');
+        Nova::resourcesIn($this->getPackageBaseDir().'/Nova');
     }
 
     /**
