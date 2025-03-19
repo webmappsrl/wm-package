@@ -37,9 +37,9 @@ class Layer extends Model
      */
     // protected $appends = ['query_string'];
 
-    public function app()
+    public function appOwner()
     {
-        return $this->belongsTo(App::class);
+        return $this->belongsTo(App::class, 'app_id');
     }
 
     public function associatedApps()
@@ -76,7 +76,7 @@ class Layer extends Model
             $this->bbox = $bbox ?? $defaultBBOX;
             $this->save();
         } catch (Exception $e) {
-            Log::channel('layer')->error('computeBB of layer with id: '.$this->id);
+            Log::channel('layer')->error('computeBB of layer with id: ' . $this->id);
         }
     }
 
