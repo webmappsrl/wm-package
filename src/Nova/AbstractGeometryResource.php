@@ -37,7 +37,7 @@ abstract class AbstractGeometryResource extends Resource
         return [
             ID::make()->sortable(),
             Text::make('Name', 'name'),
-            BelongsTo::make('App', 'app', App::class),
+            BelongsTo::make('App', 'appOwner', App::class),
             Code::make('Properties', $this->getPropertiesColumnName())->json(),
         ];
     }
