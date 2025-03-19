@@ -4,10 +4,10 @@ namespace Wm\WmPackage\Tests;
 
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+
 use Illuminate\Support\Facades\DB;
 use function Orchestra\Testbench\artisan;
 use Wm\WmPackage\WmPackageServiceProvider;
-
 use Maatwebsite\Excel\ExcelServiceProvider;
 use Orchestra\Testbench\Attributes\WithMigration;
 use Orchestra\Testbench\TestCase as Orchestra;
