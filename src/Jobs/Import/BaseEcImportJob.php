@@ -1,0 +1,52 @@
+<?php
+
+namespace Wm\WmPackage\Jobs\Import;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Query\Expression;
+use Illuminate\Support\Facades\DB;
+
+abstract class BaseEcImportJob extends BaseImportJob
+{
+    protected function getModelKey(): string
+    {
+        return 'ec_';
+    }
+
+    protected function transformData(array $data): array
+    {
+        $transformedData = parent::transformData($data);
+
+        // if geometry is null set a default 3D geometry
+        if (empty($transformedData['geometry'])) {
+            $transformedData['geometry'] = DB::raw("ST_GeomFromText('{$this->getGeometryType()} Z(12.4964 41.9028 0, 12.5033 41.9019 0, 12.5092 41.9101 0, 12.4964 41.9028 0)')");
+        } else {
+            $transformedData['geometry'] = $this->forceTo3DGeometry($transformedData['geometry']);
+        }
+
+        return $transformedData;
+    }
+
+    protected function processDependencies(array $data, Model $model): void {}
+
+    /**
+     * Force the geometry to 3D.
+     */
+    protected function forceTo3DGeometry(string $geometry): Expression
+    {
+        // force geometry to 3D
+        if (is_string($geometry) && preg_match('/^[0-9A-Fa-f]+$/', $geometry)) {
+            // Properly format WKB hex string for PostgreSQL
+            $geometry = DB::raw("ST_Force3D(ST_GeomFromEWKB('\\x{$geometry}'))");
+        } elseif (! is_string($geometry)) {
+            // Handle DB::raw objects directlyå
+            $geometry = DB::raw("ST_Force3D({$geometry})");
+        } else {
+            $geometry = DB::raw("ST_Force3D({$geometry})");
+        }
+
+        return $geometry;
+    }
+
+    abstract protected function getGeometryType(): string;
+}
