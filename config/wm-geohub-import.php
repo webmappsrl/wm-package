@@ -139,12 +139,25 @@ return [
     |
     */
     'import_mapping' => [
-        // App entity mapping
+        /*
+        |----------------------------------------------------------------------
+        | App Entity Mapping
+        |----------------------------------------------------------------------
+        */
         'app' => [
             'namespace' => 'Wm\\WmPackage\\Models\\App',
             'job' => ImportAppJob::class,
             'geohub_table' => 'apps',
             'identifiers' => ['properties->geohub_id'],
+            'fields' => [
+                'name' => 'name',
+                'description' => 'description',
+                'user_id' => 'user_id',
+                'sku' => 'sku',
+                'created_at' => 'created_at',
+                'updated_at' => 'updated_at',
+            ],
+            'properties' => [],
             'relations' => [
                 'layer' => [
                     'foreign_key' => 'app_id',
@@ -159,17 +172,13 @@ return [
                     'foreign_key' => 'user_id',
                 ],
             ],
-            'fields' => [
-                'name' => 'name',
-                'description' => 'description',
-                'user_id' => 'user_id',
-                'sku' => 'sku',
-                'created_at' => 'created_at',
-                'updated_at' => 'updated_at',
-            ],
         ],
 
-        // Layer entity mapping
+        /*
+        |----------------------------------------------------------------------
+        | Layer Entity Mapping
+        |----------------------------------------------------------------------
+        */
         'layer' => [
             'namespace' => 'Wm\\WmPackage\\Models\\Layer',
             'job' => ImportLayerJob::class,
@@ -184,12 +193,15 @@ return [
                 'updated_at' => 'updated_at',
             ],
             'properties' => [
-                'title' => ['field' => 'title', 'transformer' => [DataTransformer::class, 'jsonToArray']],
-                'subtitle' => ['field' => 'subtitle', 'transformer' => [DataTransformer::class, 'jsonToArray']],
-                'description' => ['field' => 'description', 'transformer' => [DataTransformer::class, 'jsonToArray']],
-                'color' => 'color',
-                'rank' => 'rank',
-                'generate_edges' => 'generate_edges',
+                'column_name' => 'properties',
+                'mapping' => [
+                    'title' => ['field' => 'title', 'transformer' => [DataTransformer::class, 'jsonToArray']],
+                    'subtitle' => ['field' => 'subtitle', 'transformer' => [DataTransformer::class, 'jsonToArray']],
+                    'description' => ['field' => 'description', 'transformer' => [DataTransformer::class, 'jsonToArray']],
+                    'color' => 'color',
+                    'rank' => 'rank',
+                    'generate_edges' => 'generate_edges',
+                ],
             ],
             'relations' => [
                 'taxonomy_theme' => [
@@ -217,9 +229,13 @@ return [
             ],
         ],
 
-        // Media entity mapping
+        /*
+        |----------------------------------------------------------------------
+        | Media Entity Mapping
+        |----------------------------------------------------------------------
+        */
         'ec_media' => [
-            'namespace' => 'Wm\\WmPackage\\Models\\EcMedia',
+            'namespace' => 'Wm\\WmPackage\\Models\\Media',
             'job' => ImportEcMediaJob::class,
             'geohub_table' => 'ec_media',
             'identifiers' => ['properties->geohub_id'],
@@ -230,20 +246,78 @@ return [
                 'updated_at' => 'updated_at',
             ],
             'properties' => [
-                'description' => ['field' => 'description', 'transformer' => [DataTransformer::class, 'jsonToArray']],
-                'excerpt' => ['field' => 'excerpt', 'transformer' => [DataTransformer::class, 'jsonToArray']],
-                'source' => 'source',
-                'out_source_feature_id' => 'out_source_feature_id',
-                'rank' => 'rank',
+                'column_name' => 'custom_properties',
+                'mapping' => [
+                    'description' => ['field' => 'description', 'transformer' => [DataTransformer::class, 'jsonToArray']],
+                    'excerpt' => ['field' => 'excerpt', 'transformer' => [DataTransformer::class, 'jsonToArray']],
+                    'source' => 'source',
+                    'out_source_feature_id' => 'out_source_feature_id',
+                    'rank' => 'rank',
+                ],
             ],
+            'relations' => [],
         ],
 
-        // Track entity mapping
+        /*
+        |----------------------------------------------------------------------
+        | Track Entity Mapping
+        |----------------------------------------------------------------------
+        */
         'ec_track' => [
             'namespace' => 'Wm\\WmPackage\\Models\\EcTrack',
             'job' => ImportEcTrackJob::class,
             'geohub_table' => 'ec_tracks',
             'identifiers' => ['properties->geohub_id'],
+            'fields' => [
+                'name' => ['field' => 'name', 'transformer' => [DataTransformer::class, 'jsonToArray']],
+                'geometry' => 'geometry',
+                'osmid' => 'osmid',
+                'created_at' => 'created_at',
+                'updated_at' => 'updated_at',
+            ],
+            'properties' => [
+                'column_name' => 'properties',
+                'mapping' => [
+                    'description' => ['field' => 'description', 'transformer' => [DataTransformer::class, 'jsonToArray']],
+                    'excerpt' => ['field' => 'excerpt', 'transformer' => [DataTransformer::class, 'jsonToArray']],
+                    'audio' => ['field' => 'audio', 'transformer' => [DataTransformer::class, 'jsonToArray']],
+                    'source_id' => 'source_id',
+                    'import_method' => 'import_method',
+                    'source' => 'source',
+                    'distance_comp' => 'distance_comp',
+                    'ele_from' => 'ele_from',
+                    'ele_to' => 'ele_to',
+                    'ele_min' => 'ele_min',
+                    'ele_max' => 'ele_max',
+                    'distance' => 'distance',
+                    'duration_forward' => 'duration_forward',
+                    'duration_backward' => 'duration_backward',
+                    'ascent' => 'ascent',
+                    'descent' => 'descent',
+                    'difficulty' => ['field' => 'difficulty', 'transformer' => [DataTransformer::class, 'jsonToArray']],
+                    'slope' => 'slope',
+                    'mbtiles' => 'mbtiles',
+                    'elevation_chart_image' => 'elevation_chart_image',
+                    'out_source_feature_id' => 'out_source_feature_id',
+                    'from' => 'from',
+                    'ref' => 'ref',
+                    'to' => 'to',
+                    'cai_scale' => 'cai_scale',
+                    'related_url' => 'related_url',
+                    'not_accessible' => 'not_accessible',
+                    'not_accessible_message' => 'not_accessible_message',
+                    'skip_geomixer_tech' => 'skip_geomixer_tech',
+                    'taxonomy_wheres_show_first' => 'taxonomy_wheres_show_first',
+                    'allow_print_pdf' => 'allow_print_pdf',
+                    'color' => 'color',
+                    'difficulty_i18n' => 'difficulty_i18n',
+                    'activities' => 'activities',
+                    'searchable' => 'searchable',
+                    'dem_data' => 'dem_data',
+                    'osm_data' => 'osm_data',
+                    'manual_data' => 'manual_data',
+                ],
+            ],
             'relations' => [
                 'ec_pois' => [
                     'pivot_table' => 'ec_poi_ec_track',
@@ -258,56 +332,13 @@ return [
                     'foreign_key' => 'ec_track_id',
                 ],
             ],
-            'fields' => [
-                'name' => ['field' => 'name', 'transformer' => [DataTransformer::class, 'jsonToArray']],
-                'geometry' => 'geometry',
-                'osmid' => 'osmid',
-                'created_at' => 'created_at',
-                'updated_at' => 'updated_at',
-            ],
-            'properties' => [
-                'description' => ['field' => 'description', 'transformer' => [DataTransformer::class, 'jsonToArray']],
-                'excerpt' => ['field' => 'excerpt', 'transformer' => [DataTransformer::class, 'jsonToArray']],
-                'audio' => ['field' => 'audio', 'transformer' => [DataTransformer::class, 'jsonToArray']],
-                'source_id' => 'source_id',
-                'import_method' => 'import_method',
-                'source' => 'source',
-                'distance_comp' => 'distance_comp',
-                'ele_from' => 'ele_from',
-                'ele_to' => 'ele_to',
-                'ele_min' => 'ele_min',
-                'ele_max' => 'ele_max',
-                'distance' => 'distance',
-                'duration_forward' => 'duration_forward',
-                'duration_backward' => 'duration_backward',
-                'ascent' => 'ascent',
-                'descent' => 'descent',
-                'difficulty' => ['field' => 'difficulty', 'transformer' => [DataTransformer::class, 'jsonToArray']],
-                'slope' => 'slope',
-                'mbtiles' => 'mbtiles',
-                'elevation_chart_image' => 'elevation_chart_image',
-                'out_source_feature_id' => 'out_source_feature_id',
-                'from' => 'from',
-                'ref' => 'ref',
-                'to' => 'to',
-                'cai_scale' => 'cai_scale',
-                'related_url' => 'related_url',
-                'not_accessible' => 'not_accessible',
-                'not_accessible_message' => 'not_accessible_message',
-                'skip_geomixer_tech' => 'skip_geomixer_tech',
-                'taxonomy_wheres_show_first' => 'taxonomy_wheres_show_first',
-                'allow_print_pdf' => 'allow_print_pdf',
-                'color' => 'color',
-                'difficulty_i18n' => 'difficulty_i18n',
-                'activities' => 'activities',
-                'searchable' => 'searchable',
-                'dem_data' => 'dem_data',
-                'osm_data' => 'osm_data',
-                'manual_data' => 'manual_data',
-            ],
         ],
 
-        // POI entity mapping
+        /*
+        |----------------------------------------------------------------------
+        | POI Entity Mapping
+        |----------------------------------------------------------------------
+        */
         'ec_poi' => [
             'namespace' => 'Wm\\WmPackage\\Models\\EcPoi',
             'job' => ImportEcPoiJob::class,
@@ -321,56 +352,64 @@ return [
                 'osmid' => 'osmid',
             ],
             'properties' => [
-                'description' => ['field' => 'description', 'transformer' => [DataTransformer::class, 'jsonToArray']],
-                'excerpt' => ['field' => 'excerpt', 'transformer' => [DataTransformer::class, 'jsonToArray']],
-                'audio' => ['field' => 'audio', 'transformer' => [DataTransformer::class, 'jsonToArray']],
-                'related_url' => 'related_url',
-                'ele' => 'ele',
-                'addr_complete' => 'addr_complete',
-                'addr_street' => 'addr_street',
-                'addr_housenumber' => 'addr_housenumber',
-                'addr_postcode' => 'addr_postcode',
-                'addr_locality' => 'addr_locality',
-                'out_source_feature_id' => 'out_source_feature_id',
-                'contact_phone' => 'contact_phone',
-                'contact_email' => 'contact_email',
-                'opening_hours' => 'opening_hours',
-                'capacity' => 'capacity',
-                'stars' => 'stars',
-                'type' => 'type',
-                'reachability_by_public_transportation_description' => 'reachability_by_public_transportation_description',
-                'reachability_by_public_transportation_check' => 'reachability_by_public_transportation_check',
-                'reachability_by_car_description' => 'reachability_by_car_description',
-                'reachability_by_car_check' => 'reachability_by_car_check',
-                'reachability_on_foot_description' => 'reachability_on_foot_description',
-                'reachability_on_foot_check' => 'reachability_on_foot_check',
-                'reachability_by_bike_description' => 'reachability_by_bicycle_description',
-                'reachability_by_bike_check' => 'reachability_by_bicycle_check',
-                'access_food_description' => 'access_food_description',
-                'access_food_check' => 'access_food_check',
-                'access_cognitive_description' => 'access_cognitive_description',
-                'access_cognitive_check' => 'access_cognitive_check',
-                'access_cognitive_level' => 'access_cognitive_level',
-                'access_vision_description' => 'access_vision_description',
-                'access_vision_check' => 'access_vision_check',
-                'access_vision_level' => 'access_vision_level',
-                'access_hearing_description' => 'access_hearing_description',
-                'access_hearing_check' => 'access_hearing_check',
-                'access_hearing_level' => 'access_hearing_level',
-                'access_mobility_description' => 'access_mobility_description',
-                'access_mobility_check' => 'access_mobility_check',
-                'access_mobility_level' => 'access_mobility_level',
-                'accessibility_pdf' => 'accessibility_pdf',
-                'accessibility_validity_date' => 'accessibility_validity_date',
-                'noInteraction' => 'noInteraction',
-                'noDetails' => 'noDetails',
-                'code' => 'code',
-                'icon' => 'icon',
-                'color' => 'color',
+                'column_name' => 'properties',
+                'mapping' => [
+                    'description' => ['field' => 'description', 'transformer' => [DataTransformer::class, 'jsonToArray']],
+                    'excerpt' => ['field' => 'excerpt', 'transformer' => [DataTransformer::class, 'jsonToArray']],
+                    'audio' => ['field' => 'audio', 'transformer' => [DataTransformer::class, 'jsonToArray']],
+                    'related_url' => 'related_url',
+                    'ele' => 'ele',
+                    'addr_complete' => 'addr_complete',
+                    'addr_street' => 'addr_street',
+                    'addr_housenumber' => 'addr_housenumber',
+                    'addr_postcode' => 'addr_postcode',
+                    'addr_locality' => 'addr_locality',
+                    'out_source_feature_id' => 'out_source_feature_id',
+                    'contact_phone' => 'contact_phone',
+                    'contact_email' => 'contact_email',
+                    'opening_hours' => 'opening_hours',
+                    'capacity' => 'capacity',
+                    'stars' => 'stars',
+                    'type' => 'type',
+                    'reachability_by_public_transportation_description' => 'reachability_by_public_transportation_description',
+                    'reachability_by_public_transportation_check' => 'reachability_by_public_transportation_check',
+                    'reachability_by_car_description' => 'reachability_by_car_description',
+                    'reachability_by_car_check' => 'reachability_by_car_check',
+                    'reachability_on_foot_description' => 'reachability_on_foot_description',
+                    'reachability_on_foot_check' => 'reachability_on_foot_check',
+                    'reachability_by_bike_description' => 'reachability_by_bicycle_description',
+                    'reachability_by_bike_check' => 'reachability_by_bicycle_check',
+                    'access_food_description' => 'access_food_description',
+                    'access_food_check' => 'access_food_check',
+                    'access_cognitive_description' => 'access_cognitive_description',
+                    'access_cognitive_check' => 'access_cognitive_check',
+                    'access_cognitive_level' => 'access_cognitive_level',
+                    'access_vision_description' => 'access_vision_description',
+                    'access_vision_check' => 'access_vision_check',
+                    'access_vision_level' => 'access_vision_level',
+                    'access_hearing_description' => 'access_hearing_description',
+                    'access_hearing_check' => 'access_hearing_check',
+                    'access_hearing_level' => 'access_hearing_level',
+                    'access_mobility_description' => 'access_mobility_description',
+                    'access_mobility_check' => 'access_mobility_check',
+                    'access_mobility_level' => 'access_mobility_level',
+                    'accessibility_pdf' => 'accessibility_pdf',
+                    'accessibility_validity_date' => 'accessibility_validity_date',
+                    'noInteraction' => 'noInteraction',
+                    'noDetails' => 'noDetails',
+                    'code' => 'code',
+                    'icon' => 'icon',
+                    'color' => 'color',
+                ],
             ],
+            'relations' => [],
         ],
 
-        // Taxonomy activity entity mapping
+        /*
+        |----------------------------------------------------------------------
+        | Taxonomy Activity Entity Mapping
+        |----------------------------------------------------------------------
+        */
         'taxonomy_activity' => [
             'namespace' => 'Wm\\WmPackage\\Models\\TaxonomyActivity',
             'job' => ImportTaxonomyActivityJob::class,
@@ -383,6 +422,10 @@ return [
                 'identifier' => 'identifier',
                 'created_at' => 'created_at',
                 'updated_at' => 'updated_at',
+            ],
+            'properties' => [
+                'column_name' => 'properties',
+                'mapping' => [],
             ],
             'relations' => [
                 'morphable_table' => 'taxonomy_activityables',
@@ -401,7 +444,12 @@ return [
                 ],
             ],
         ],
-        // Taxonomy poi type entity mapping
+
+        /*
+        |----------------------------------------------------------------------
+        | Taxonomy POI Type Entity Mapping
+        |----------------------------------------------------------------------
+        */
         'taxonomy_poi_type' => [
             'namespace' => 'Wm\\WmPackage\\Models\\TaxonomyPoiType',
             'job' => ImportTaxonomyPoiTypeJob::class,
@@ -415,6 +463,7 @@ return [
                 'created_at' => 'created_at',
                 'updated_at' => 'updated_at',
             ],
+            'properties' => [],
             'relations' => [
                 'morphable_table' => 'taxonomy_poi_typeables',
                 'foreign_key' => 'taxonomy_poi_type_id',
@@ -428,10 +477,15 @@ return [
                 ],
             ],
         ],
-        // Taxonomy target entity mapping
+
+        /*
+        |----------------------------------------------------------------------
+        | Taxonomy Target Entity Mapping
+        |----------------------------------------------------------------------
+        */
         'taxonomy_target' => [
             'namespace' => 'Wm\\WmPackage\\Models\\TaxonomyTarget',
-            'job' => ImportTaxonomyTargetJob::class,
+            'job' => '',
             'geohub_table' => 'taxonomy_targets',
             'identifiers' => ['properties->geohub_id'],
             'fields' => [
@@ -442,6 +496,7 @@ return [
                 'created_at' => 'created_at',
                 'updated_at' => 'updated_at',
             ],
+            'properties' => [],
             'relations' => [
                 'morphable_table' => 'taxonomy_targetables',
                 'foreign_key' => 'taxonomy_target_id',
@@ -456,10 +511,14 @@ return [
             ],
         ],
 
-        // Taxonomy when entity mapping
+        /*
+        |----------------------------------------------------------------------
+        | Taxonomy When Entity Mapping
+        |----------------------------------------------------------------------
+        */
         'taxonomy_when' => [
             'namespace' => 'Wm\\WmPackage\\Models\\TaxonomyWhen',
-            'job' => ImportTaxonomyWhenJob::class,
+            'job' => '',
             'geohub_table' => 'taxonomy_whens',
             'identifiers' => ['properties->geohub_id'],
             'fields' => [
@@ -470,6 +529,7 @@ return [
                 'created_at' => 'created_at',
                 'updated_at' => 'updated_at',
             ],
+            'properties' => [],
             'relations' => [
                 'morphable_table' => 'taxonomy_whenables',
                 'foreign_key' => 'taxonomy_when_id',
@@ -484,12 +544,18 @@ return [
             ],
         ],
 
-        // Taxonomy theme entity mapping
+        /*
+        |----------------------------------------------------------------------
+        | Taxonomy Theme Entity Mapping
+        |----------------------------------------------------------------------
+        */
         'taxonomy_theme' => [
             'namespace' => 'Wm\\WmPackage\\Models\\TaxonomyTheme',
             'job' => '',
             'geohub_table' => 'taxonomy_themes',
             'identifiers' => ['properties->geohub_id'],
+            'fields' => [],
+            'properties' => [],
             'relations' => [
                 'morphable_table' => 'taxonomy_themeables',
                 'foreign_key' => 'taxonomy_theme_id',
