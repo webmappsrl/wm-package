@@ -587,7 +587,9 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
             $string .= $this->ref . ' ';
         }
         if (empty($searchables) || (in_array('osmid', $searchables) && ! empty($this->osmid))) {
+
             $string .= $this->osmid . ' ';
+
         }
 
         if (empty($searchables) || (in_array('taxonomyActivities', $searchables) && ! empty($this->taxonomyActivities))) {
