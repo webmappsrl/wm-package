@@ -3,8 +3,8 @@
 namespace Wm\WmPackage\Services\Import;
 
 use Carbon\Carbon;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class DataTransformer
 {
@@ -28,12 +28,11 @@ class DataTransformer
             return null;
         }
 
-        $query = DB::select('SELECT ST_AsText(ST_MakeEnvelope(' . $bbox[0] . ', ' . $bbox[1] . ', ' . $bbox[2] . ', ' . $bbox[3] . ', 4326)) as geometry');
+        $query = DB::select('SELECT ST_AsText(ST_MakeEnvelope('.$bbox[0].', '.$bbox[1].', '.$bbox[2].', '.$bbox[3].', 4326)) as geometry');
         $geometry = $query[0]->geometry;
 
         return $geometry;
     }
-
 
     /**
      * Convert a string to a boolean.

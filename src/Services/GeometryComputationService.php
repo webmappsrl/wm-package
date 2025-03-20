@@ -41,7 +41,7 @@ class GeometryComputationService extends BaseService
     public function getGeometryFromGeojsonRAW(string $geojson): Expression
     {
 
-        return DB::raw("ST_GeomFromGeoJSON('" . $geojson . "')");
+        return DB::raw("ST_GeomFromGeoJSON('".$geojson."')");
     }
 
     public function get2dGeometryFromGeojsonRAW(string $geojson): Expression

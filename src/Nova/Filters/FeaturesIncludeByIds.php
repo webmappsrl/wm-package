@@ -32,6 +32,6 @@ class FeaturesIncludeByIds extends LayerFeatureFilter
      */
     public function key(): string
     {
-        return 'features_include_ids_' . parent::key();
+        return 'features_include_ids_'.parent::key();
     }
 }

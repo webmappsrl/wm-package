@@ -2,23 +2,23 @@
 
 namespace Wm\WmPackage\Services\Import;
 
-use stdClass;
-use Illuminate\Log\Logger;
-use Illuminate\Support\Str;
-use Wm\WmPackage\Models\User;
-use Illuminate\Support\Carbon;
-use Wm\WmPackage\Models\EcPoi;
-use Wm\WmPackage\Models\EcTrack;
-use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Connection;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Log\Logger;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Database\Eloquent\Model;
-use Wm\WmPackage\Models\TaxonomyActivity;
-use Wm\WmPackage\Services\StorageService;
+use Illuminate\Support\Str;
+use stdClass;
 use Wm\WmPackage\Jobs\Import\BaseImportJob;
+use Wm\WmPackage\Models\EcPoi;
+use Wm\WmPackage\Models\EcTrack;
+use Wm\WmPackage\Models\TaxonomyActivity;
+use Wm\WmPackage\Models\User;
+use Wm\WmPackage\Services\StorageService;
 
 /**
  * Service for importing data from Geohub to the local database
@@ -105,7 +105,7 @@ class GeohubImportService
             ->allowFailures()
             ->dispatch();
 
-        $this->logger->info("Dispatched batch {$batch->id} with " . count($jobs) . " jobs for {$modelKey}s");
+        $this->logger->info("Dispatched batch {$batch->id} with ".count($jobs)." jobs for {$modelKey}s");
     }
 
     /**
@@ -182,7 +182,7 @@ class GeohubImportService
 
             return $model;
         } catch (\Exception $e) {
-            $this->logger->error("Error importing {$modelName} with ID {$entityId}: " . $e->getMessage());
+            $this->logger->error("Error importing {$modelName} with ID {$entityId}: ".$e->getMessage());
             throw $e;
         }
     }
@@ -193,7 +193,7 @@ class GeohubImportService
 
     /**
      * Create a job instance for the given model and ID
-     * 
+     *
      * @param  string  $modelKey  The model key
      * @param  int  $id  The ID of the entity
      * @param  array  $data  Additional data to pass to the job
@@ -202,12 +202,13 @@ class GeohubImportService
     public function createJob(string $modelKey, int $id, array $data = []): BaseImportJob
     {
         $jobClass = $this->importMapping[$modelKey]['job'];
+
         return new $jobClass($id, $data);
     }
 
     /**
      * Create multiple jobs for a list of IDs
-     * 
+     *
      * @param  string  $modelKey  The model key
      * @param  array  $ids  The IDs to create jobs for
      * @param  array  $data  Additional data to pass to the jobs
@@ -219,6 +220,7 @@ class GeohubImportService
         foreach ($ids as $id) {
             $jobs[] = $this->createJob($modelKey, $id, $data);
         }
+
         return $jobs;
     }
 
@@ -341,7 +343,7 @@ class GeohubImportService
 
     /**
      * Transform data fields using mapping configuration
-     * 
+     *
      * @param  array  $data  The data to transform
      * @param  array  $fieldMapping  The field mapping configuration
      * @return array The transformed data
@@ -462,7 +464,7 @@ class GeohubImportService
         return $morphableRecords->map(function ($record) use ($morphableModels, $morphableTypeKey, $morphableIdKey, $pivotColumns) {
             $modelName = Str::snake(class_basename($record->{$morphableTypeKey}));
 
-            if (!isset($morphableModels[$modelName])) {
+            if (! isset($morphableModels[$modelName])) {
                 return null;
             }
 
@@ -474,7 +476,7 @@ class GeohubImportService
 
             $model = $modelClass::where($whereCondition)->first();
 
-            if ($model && !empty($pivotColumns)) {
+            if ($model && ! empty($pivotColumns)) {
                 $model->pivot_data = $this->extractPivotData($record, $pivotColumns);
             }
 
@@ -486,10 +488,9 @@ class GeohubImportService
 
     /**
      * Associate layers with taxonomy activities based on relationships in the Geohub database
-     * 
-     * @param string $taxonomyKey The taxonomy key (e.g. 'taxonomy_activity')
-     * @param Model $model The layer model to associate taxonomies with
-     * @return void
+     *
+     * @param  string  $taxonomyKey  The taxonomy key (e.g. 'taxonomy_activity')
+     * @param  Model  $model  The layer model to associate taxonomies with
      */
     public function associateLayersWithTaxonomy(string $taxonomyKey, Model $model): void
     {
@@ -511,7 +512,7 @@ class GeohubImportService
                 ->where('properties->geohub_id', $relation->taxonomy_activity_id)
                 ->exists();
 
-            if (!$relationExists) {
+            if (! $relationExists) {
                 $taxonomyActivity = TaxonomyActivity::where('properties->geohub_id', $relation->taxonomy_activity_id)->first();
                 if ($taxonomyActivity) {
                     $model->taxonomyActivity()->attach($taxonomyActivity->id, $pivotData);
@@ -524,10 +525,9 @@ class GeohubImportService
 
     /**
      * Associate layers with ec_track through taxonomy
-     * 
-     * @param string $taxonomyKey The taxonomy key (e.g. 'taxonomy_theme')
-     * @param Model $model The layer model to associate with ec_track
-     * @return void
+     *
+     * @param  string  $taxonomyKey  The taxonomy key (e.g. 'taxonomy_theme')
+     * @param  Model  $model  The layer model to associate with ec_track
      */
     public function associateLayersWithEcTrack(string $taxonomyKey, Model $model): void
     {
@@ -550,7 +550,7 @@ class GeohubImportService
 
             foreach ($trackTaxonomyRelations as $relation) {
                 $ecTrack = EcTrack::where('properties->geohub_id', $relation->{$foreignKey})->first();
-                if ($ecTrack && !$model->ecTracks()->where('layerable_type', 'Wm\\WmPackage\\Models\\EcTrack')->where('layerable_id', $ecTrack->id)->exists()) {
+                if ($ecTrack && ! $model->ecTracks()->where('layerable_type', 'Wm\\WmPackage\\Models\\EcTrack')->where('layerable_id', $ecTrack->id)->exists()) {
                     $model->ecTracks()->attach($ecTrack->id, ['created_at' => now(), 'updated_at' => now()]);
                 }
             }
@@ -579,7 +579,7 @@ class GeohubImportService
                 $this->mergeLayerWithOverlayLayer($model, $overlayLayer);
             } else {
                 // TODO: If no association is found, create a new layer from the overlay layer. !IMPORTANT: handle the missing geometry in overlay_layers
-                //$this->createNewLayerFromOverlayLayer($model, $overlayLayer);
+                // $this->createNewLayerFromOverlayLayer($model, $overlayLayer);
             }
         }
     }
@@ -588,7 +588,7 @@ class GeohubImportService
     {
         $updateData = [];
 
-        if (!empty($overlayLayer->feature_collection)) {
+        if (! empty($overlayLayer->feature_collection)) {
             $featureCollection = $overlayLayer->feature_collection;
 
             // If the path is an external url, keep it as is
@@ -597,7 +597,7 @@ class GeohubImportService
             }
             // Otherwise we need to download and upload to AWS
             else {
-                $fileUrl = self::GEOHUB_URL . 'storage/' . $featureCollection;
+                $fileUrl = self::GEOHUB_URL.'storage/'.$featureCollection;
                 $fileContent = $this->downloadFileFromGeohub($fileUrl);
 
                 if ($fileContent !== false) {
@@ -606,12 +606,12 @@ class GeohubImportService
             }
         }
 
-        if (!empty($overlayLayer->configuration)) {
+        if (! empty($overlayLayer->configuration)) {
             $updateData['configuration'] = $overlayLayer->configuration;
         }
 
         // Update the layer with the merged data if there's anything to update
-        if (!empty($updateData)) {
+        if (! empty($updateData)) {
             $model->update($updateData);
             \Log::info("Layer {$model->id} updated with overlay layer {$overlayLayer->id} data");
         }
@@ -619,8 +619,8 @@ class GeohubImportService
 
     /**
      * Download a file from Geohub
-     * 
-     * @param string $url The URL of the file to download
+     *
+     * @param  string  $url  The URL of the file to download
      * @return string|false The file content or false if the file doesn't exist
      */
     protected function downloadFileFromGeohub(string $url): string|false
@@ -632,10 +632,9 @@ class GeohubImportService
 
     /**
      * Store a feature collection on AWS
-     * 
-     * @param Model $model The model to store the feature collection for
-     * @param string $fileContent The file content to store
-     * @return void
+     *
+     * @param  Model  $model  The model to store the feature collection for
+     * @param  string  $fileContent  The file content to store
      */
     protected function storeFeatureCollectionOnAws(Model $model, string $fileContent): void
     {
@@ -650,7 +649,7 @@ class GeohubImportService
                 $fileContent
             );
         } catch (\Exception $e) {
-            $this->logger->error("Error storing layer feature collection: " . $e->getMessage());
+            $this->logger->error('Error storing layer feature collection: '.$e->getMessage());
         }
 
         if ($path) {
@@ -661,9 +660,9 @@ class GeohubImportService
 
     /**
      * Extract pivot data from a relation object
-     * 
-     * @param object $relation The relation object
-     * @param array $pivotColumns The pivot columns to extract
+     *
+     * @param  object  $relation  The relation object
+     * @param  array  $pivotColumns  The pivot columns to extract
      * @return array The extracted pivot data
      */
     protected function extractPivotData(object $relation, array $pivotColumns): array
@@ -674,14 +673,15 @@ class GeohubImportService
                 $pivotData[$column] = $relation->{$column};
             }
         }
+
         return $pivotData;
     }
 
     /**
      * Get configuration for a relation from import mapping
-     * 
-     * @param string $modelKey The model key
-     * @param string $relationKey The relation key
+     *
+     * @param  string  $modelKey  The model key
+     * @param  string  $relationKey  The relation key
      * @return array The relation configuration
      */
     protected function getRelationConfig(string $modelKey, string $relationKey): array

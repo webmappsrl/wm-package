@@ -22,7 +22,7 @@ class StorageService extends BaseService
 
     public function storePBF(int $appId, string $z, string $x, string $y, $pbfContent): string|false
     {
-        $path = $this->getShardBasePath($appId) . "pbf/{$z}/{$x}/{$y}.pbf";
+        $path = $this->getShardBasePath($appId)."pbf/{$z}/{$x}/{$y}.pbf";
 
         return $this->getRemoteWfeDisk()->put($path, $pbfContent) ? $path : false;
     }
@@ -61,7 +61,7 @@ class StorageService extends BaseService
 
     public function storeAppQrCode(int $appId, string $svg): string|false
     {
-        $path = $this->getShardBasePath($appId) . 'qrcode/webapp-qrcode.svg';
+        $path = $this->getShardBasePath($appId).'qrcode/webapp-qrcode.svg';
 
         return $this->getPublicDisk()->put($path, $svg) ? $path : false;
     }
@@ -148,16 +148,16 @@ class StorageService extends BaseService
 
     /**
      * Store layer feature collection in AWS
-     * 
-     * @param int|null $appId The app ID
-     * @param int $layerId The layer ID
-     * @param string $contents The feature collection contents
+     *
+     * @param  int|null  $appId  The app ID
+     * @param  int  $layerId  The layer ID
+     * @param  string  $contents  The feature collection contents
      * @return string|false The stored path or false on failure
      */
     public function storeLayerFeatureCollection(?int $appId, int $layerId, string $contents): string|false
     {
         try {
-            $path = $this->getShardBasePath($appId) . "layers/{$layerId}.geojson";
+            $path = $this->getShardBasePath($appId)."layers/{$layerId}.geojson";
 
             $success = $this->getRemoteWfeDisk()->put($path, $contents);
 
@@ -167,7 +167,7 @@ class StorageService extends BaseService
 
             return false;
         } catch (\Exception $e) {
-            \Log::error("Failed to store layer feature collection: " . $e->getMessage());
+            \Log::error('Failed to store layer feature collection: '.$e->getMessage());
             throw $e;
         }
     }
@@ -179,17 +179,17 @@ class StorageService extends BaseService
 
     private function getPoisPath(int $appId): string
     {
-        return $this->getShardBasePath($appId) . 'pois.geojson';
+        return $this->getShardBasePath($appId).'pois.geojson';
     }
 
     private function getTrackPath(int $trackId): string
     {
-        return $this->getShardBasePath() . "{$trackId}.json";
+        return $this->getShardBasePath()."{$trackId}.json";
     }
 
     private function getAppConfigPath(int $appId): string
     {
-        return $this->getShardBasePath($appId) . 'config.json';
+        return $this->getShardBasePath($appId).'config.json';
     }
 
     //
@@ -245,7 +245,7 @@ class StorageService extends BaseService
         try {
             return Storage::disk($disk);
         } catch (Exception $e) {
-            \Log::error("Failed to get disk {$disk}: " . $e->getMessage());
+            \Log::error("Failed to get disk {$disk}: ".$e->getMessage());
             throw $e;
         }
     }
@@ -257,9 +257,9 @@ class StorageService extends BaseService
 
     private function getShardBasePath(?int $appId = null)
     {
-        $basePath = '/' . $this->getShardName() . '/';
+        $basePath = '/'.$this->getShardName().'/';
         if (is_int($appId)) {
-            $basePath .= $appId . '/';
+            $basePath .= $appId.'/';
         }
 
         return $basePath;

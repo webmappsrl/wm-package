@@ -2,13 +2,12 @@
 
 namespace Wm\WmPackage\Nova;
 
-use Laravel\Nova\Resource;
-use Laravel\Nova\Fields\ID;
 use Laravel\Nova\Fields\Code;
+use Laravel\Nova\Fields\ID;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Fields\Textarea;
 use Laravel\Nova\Http\Requests\NovaRequest;
-
+use Laravel\Nova\Resource;
 
 abstract class AbstractTaxonomyResource extends Resource
 {
@@ -26,7 +25,7 @@ abstract class AbstractTaxonomyResource extends Resource
      */
     public static $search = [
         'id',
-        'name'
+        'name',
     ];
 
     /**

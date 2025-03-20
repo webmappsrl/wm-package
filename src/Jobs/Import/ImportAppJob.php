@@ -20,7 +20,7 @@ class ImportAppJob extends BaseImportJob
         $diff = array_diff(array_keys($data), Schema::getColumnListing('apps'));
         $transformedData = array_diff_key($data, array_flip($diff));
 
-        //add geohub_id and geohub_synced_at to the transformed data
+        // add geohub_id and geohub_synced_at to the transformed data
         $transformedData['properties']['geohub_id'] = $data['id'];
         $transformedData['properties']['geohub_synced_at'] = now();
 
@@ -79,7 +79,7 @@ class ImportAppJob extends BaseImportJob
                 $batch->dispatch();
             }
         } catch (\Exception $e) {
-            $logger->error("Error queuing {$entityModelKey} imports for app {$this->entityId}: " . $e->getMessage());
+            $logger->error("Error queuing {$entityModelKey} imports for app {$this->entityId}: ".$e->getMessage());
             throw $e;
         }
     }

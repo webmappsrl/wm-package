@@ -484,7 +484,7 @@ return [
             ],
         ],
 
-        //Taxonomy theme entity mapping
+        // Taxonomy theme entity mapping
         'taxonomy_theme' => [
             'namespace' => 'Wm\\WmPackage\\Models\\TaxonomyTheme',
             'job' => '',
