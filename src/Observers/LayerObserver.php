@@ -26,6 +26,13 @@ class LayerObserver extends AbstractObserver
      */
     public function saved(Layer $layer) {}
 
+    public function saving(Layer $layer)
+    {
+        if (is_null($layer->properties)) {
+            $layer->properties = [];
+        }
+    }
+
     public function morphToManyAttached($relation, $parent, $ids, $attributes)
     {
         UpdateLayerGeometryJob::dispatch($parent);

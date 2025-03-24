@@ -6,7 +6,7 @@ class ImportTaxonomyActivityJob extends ImportTaxonomyJob
 {
     public function getModelKey(): string
     {
-        return parent::getModelKey().'activity';
+        return parent::getModelKey() . 'activity';
     }
 
     protected function getForeignKey(): string
@@ -16,6 +16,6 @@ class ImportTaxonomyActivityJob extends ImportTaxonomyJob
 
     protected function getRelationshipName(): string
     {
-        return 'taxonomyActivity';
+        return 'taxonomyActivities';
     }
 }

@@ -14,7 +14,7 @@ class FeaturesByLayerFilter extends LayerFeatureFilter
      */
     public function apply(NovaRequest $request, Builder $query, mixed $value): Builder
     {
-        return $query->whereLayer(Layer::find($value));
+        return $query->onLayer(Layer::find($value));
     }
 
     /**
@@ -32,6 +32,6 @@ class FeaturesByLayerFilter extends LayerFeatureFilter
      */
     public function key(): string
     {
-        return 'features_by_layer_'.parent::key();
+        return 'features_by_layer_' . parent::key();
     }
 }

@@ -6,7 +6,7 @@ use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Models\EcTrack;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Database\Query\Builder;
+use Illuminate\Database\Eloquent\Builder;
 use Wm\WmPackage\Services\BaseService;
 use Illuminate\Database\Eloquent\Collection;
 use Wm\WmPackage\Services\GeometryComputationService;
@@ -49,8 +49,8 @@ class LayerService extends BaseService
 
     private function getAllVisibleModelsQuery(string $geometryModelClass, Layer $layer): Builder
     {
-        return $geometryModelClass::getQuery()
-            ->whereLayer($layer) // Local scope in EcFeatureTrait
+        return (new $geometryModelClass)
+            ->onLayer($layer) // Local scope in EcFeatureTrait
             ->orderBy('id')
             ->orderBy('name');
     }
