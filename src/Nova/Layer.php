@@ -24,7 +24,7 @@ class Layer extends AbstractGeometryResource
             ID::make()->sortable(),
             Text::make('Name', 'name'),
             BelongsTo::make('App', 'appOwner', App::class),
-            MorphToMany::make('Ec Tracks', 'ecTracks', EcTrack::class),
+            MorphToMany::make('Activities', 'taxonomyActivity', TaxonomyActivity::class),
             Code::make('Properties', $this->getPropertiesColumnName())->json(),
             ...$this->fieldsTrait($request),
         ];
