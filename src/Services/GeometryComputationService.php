@@ -2,21 +2,22 @@
 
 namespace Wm\WmPackage\Services;
 
-use Exception;
-use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Database\Query\Builder;
-use Illuminate\Database\Query\Expression;
-use Illuminate\Support\Collection as SupportCollection;
-use Illuminate\Support\Facades\DB;
 use stdClass;
-use Symm\Gisconverter\Exceptions\InvalidText;
-use Symm\Gisconverter\Gisconverter;
-use Wm\WmPackage\Models\Abstracts\GeometryModel;
+use Exception;
 use Wm\WmPackage\Models\App;
-use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Models\Media;
+use Wm\WmPackage\Models\EcTrack;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Symm\Gisconverter\Gisconverter;
+use Illuminate\Database\Query\Builder;
+use Illuminate\Database\Query\Expression;
+use Illuminate\Database\Eloquent\Collection;
+use Symm\Gisconverter\Exceptions\InvalidText;
 use Wm\WmPackage\Services\Models\MediaService;
+use Wm\WmPackage\Models\Abstracts\GeometryModel;
+use Illuminate\Support\Collection as SupportCollection;
 
 class GeometryComputationService extends BaseService
 {
@@ -731,9 +732,10 @@ GROUP BY
         return $bbox;
     }
 
-    public function geometryModelsToBbox(Builder $query)
+    public function geometryModelsToBbox($query)
     {
-        return $query->selectRaw('ST_Extent(geometry::geometry) AS bbox')->value('bbox');
+        $table = $query->getModel()->getTable();
+        return $query->selectRaw('ST_Envelope(' . $table . '.geometry::geometry) AS bbox')->value('bbox');
     }
 
     public function bboxToPolygon(?string $bbox): ?string

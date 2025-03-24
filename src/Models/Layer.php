@@ -3,18 +3,20 @@
 namespace Wm\WmPackage\Models;
 
 use Exception;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Database\Eloquent\Model;
 use Spatie\Translatable\HasTranslations;
 use Wm\WmPackage\Observers\LayerObserver;
-use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Traits\HasPackageFactory;
 use Wm\WmPackage\Traits\TaxonomyAbleModel;
+use Wm\WmPackage\Services\GeometryComputationService;
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
+use Chelout\RelationshipEvents\Concerns\HasMorphToManyEvents;
+use Chelout\RelationshipEvents\Traits\HasRelationshipObservables;
 
 class Layer extends Model
 {
-    use HasPackageFactory, HasTranslations, TaxonomyAbleModel;
+    use HasPackageFactory, HasTranslations, TaxonomyAbleModel, HasRelationshipObservables, HasMorphToManyEvents;
     // protected $fillable = ['rank'];
 
     protected static function boot()
