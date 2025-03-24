@@ -17,6 +17,9 @@ class LayerObserver extends AbstractObserver
     public function creating(Model $layer)
     {
         $layer->rank = LayerService::make()->getLayerMaxRank() + 1;
+        if (is_null($layer->geometry)) {
+            LayerService::make()->updateLayerGeometry($layer, false);
+        }
     }
 
     /**

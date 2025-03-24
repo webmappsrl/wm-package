@@ -38,17 +38,9 @@ class UpdateLayerGeometryJob implements ShouldQueue, ShouldBeUnique
      *
      * @return void
      */
-    public function handle(GeometryComputationService $geometryComputationService, LayerService $layerService)
+    public function handle(LayerService $layerService)
     {
-        $relatedFeaturesQuery = $layerService->getRelatedModelsQuery(EcTrack::class, $this->layer);
-        $geometry = $geometryComputationService->geometryModelsToBbox($relatedFeaturesQuery);
-
-        $saved = false;
-        if ($geometry !== $this->layer->geometry) {
-            $this->layer->geometry = $geometry;
-            $saved = $this->layer->save();
-        }
-
+        $saved = $layerService->updateLayerGeometry($this->layer);
         return ['saved' => $saved];
     }
 }

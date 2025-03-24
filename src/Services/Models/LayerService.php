@@ -2,13 +2,15 @@
 
 namespace Wm\WmPackage\Services\Models;
 
-use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Database\Eloquent\Relations\MorphToMany;
-use Illuminate\Database\Query\Builder;
+use Wm\WmPackage\Models\Layer;
+use Wm\WmPackage\Models\EcTrack;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Wm\WmPackage\Models\Layer;
+use Illuminate\Database\Query\Builder;
 use Wm\WmPackage\Services\BaseService;
+use Illuminate\Database\Eloquent\Collection;
+use Wm\WmPackage\Services\GeometryComputationService;
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
 
 class LayerService extends BaseService
 {
@@ -33,7 +35,7 @@ class LayerService extends BaseService
         return $this->getAllVisibleModels($model, $layer, false, $count);
     }
 
-    public function getRelatedModelsQuery(string $geometryModelClass, Layer $layer): MorphToMany|Builder
+    private function getRelatedModelsQuery(string $geometryModelClass, Layer $layer): MorphToMany|Builder
     {
 
         $relationName = (new $geometryModelClass)->getLayerRelationName();
@@ -102,7 +104,7 @@ class LayerService extends BaseService
         }
 
         // Logga il numero di tracce filtrate dalla geometria e dalle tassonomie
-        Log::channel('layer')->info('Numero di tracce finali filtrate da getTracks: '.$allEcTracks->count());
+        Log::channel('layer')->info('Numero di tracce finali filtrate da getTracks: ' . $allEcTracks->count());
 
         // Restituisci tracce uniche in base all'ID
         return $allEcTracks->unique('id');
@@ -133,5 +135,20 @@ class LayerService extends BaseService
         }
 
         return $ids;
+    }
+
+    public function updateLayerGeometry(Layer $layer, $save = true): bool
+    {
+        $relatedFeaturesQuery = $this->getRelatedModelsQuery(EcTrack::class, $layer);
+        $geometry = GeometryComputationService::make()->geometryModelsToBbox($relatedFeaturesQuery);
+
+        $saved = false;
+        if ($geometry !== $layer->geometry) {
+            $layer->geometry = $geometry;
+            if ($save)
+                $saved = $layer->save();
+        }
+
+        return $saved;
     }
 }
