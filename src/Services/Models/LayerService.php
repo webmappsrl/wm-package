@@ -2,11 +2,13 @@
 
 namespace Wm\WmPackage\Services\Models;
 
-use Illuminate\Database\Eloquent\Collection;
+use Wm\WmPackage\Models\Layer;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Services\BaseService;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Query\Builder;
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
 
 class LayerService extends BaseService
 {
@@ -31,6 +33,26 @@ class LayerService extends BaseService
         return $this->getAllVisibleModels($model, $layer, false, $count);
     }
 
+    public function getRelatedModelsQuery(string $geometryModelClass, Layer $layer): MorphToMany | Builder
+    {
+
+        $relationName = (new $geometryModelClass)->getLayerRelationName();
+
+        if ($this->hasRelatedManualModels($layer, $geometryModelClass)) {
+            return $layer->$relationName();
+        }
+
+        return $this->getAllVisibleModelsQuery($geometryModelClass, $layer);
+    }
+
+    private function getAllVisibleModelsQuery(string $geometryModelClass, Layer $layer): Builder
+    {
+        return $geometryModelClass::getQuery()
+            ->whereLayer($layer) // Local scope in EcFeatureTrait
+            ->orderBy('id')
+            ->orderBy('name');
+    }
+
     /**
      * Get all visible models for a given layer.
      * A visible model has:
@@ -48,25 +70,22 @@ class LayerService extends BaseService
         Layer $layer,
         $collection = false,
         $count = false
-    ): array|Collection {
-        $allEcTracks = $geometryModelClass::getQuery()
-            ->whereLayer($layer) // Local scope in EcFeatureTrait
-            ->orderBy('id')
-            ->orderBy('name');
+    ): array|Collection|int {
+        $features = $this->getAllVisibleModelsQuery($geometryModelClass, $layer);
 
         if ($count) {
-            return $allEcTracks->count();
+            return $features->count();
         }
 
-        $allEcTracks = $allEcTracks->get();
+        $features = $features->get();
 
         // Se collection è true, ritorna direttamente tutte le tracce raccolte
         if ($collection) {
-            return $allEcTracks;
+            return $features;
         }
 
         // Popola l'array dei track IDs
-        $trackIds = $allEcTracks->pluck('id')->toArray();
+        $trackIds = $features->pluck('id')->toArray();
 
         return $trackIds;
     }
@@ -84,7 +103,7 @@ class LayerService extends BaseService
         }
 
         // Logga il numero di tracce filtrate dalla geometria e dalle tassonomie
-        Log::channel('layer')->info('Numero di tracce finali filtrate da getTracks: '.$allEcTracks->count());
+        Log::channel('layer')->info('Numero di tracce finali filtrate da getTracks: ' . $allEcTracks->count());
 
         // Restituisci tracce uniche in base all'ID
         return $allEcTracks->unique('id');
