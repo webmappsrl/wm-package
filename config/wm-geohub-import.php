@@ -6,6 +6,7 @@ use Wm\WmPackage\Jobs\Import\ImportEcPoiJob;
 use Wm\WmPackage\Jobs\Import\ImportEcTrackJob;
 use Wm\WmPackage\Jobs\Import\ImportLayerJob;
 use Wm\WmPackage\Jobs\Import\ImportTaxonomyActivityJob;
+use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Services\Import\DataTransformer;
 
 return [
@@ -177,7 +178,7 @@ return [
             'identifiers' => ['properties->geohub_id'],
             'fields' => [
                 'name' => 'name',
-                'geometry' => 'geometry',
+                'geometry' => ['field' => 'bbox', 'transformer' => [GeometryComputationService::class, 'bboxToPolygon']],
                 'app_id' => 'app_id',
                 'rank' => 'rank',
                 'created_at' => 'created_at',
@@ -189,8 +190,31 @@ return [
                 'description' => ['field' => 'description', 'transformer' => [DataTransformer::class, 'jsonToArray']],
                 'color' => 'color',
                 'rank' => 'rank',
-                'bbox' => 'bbox',
                 'generate_edges' => 'generate_edges',
+            ],
+            'relations' => [
+                'taxonomy_theme' => [
+                    'pivot_table' => 'taxonomy_themeables',
+                    'key' => 'taxonomy_theme_id',
+                    'foreign_key' => 'taxonomy_themeable_id',
+                    'morphable_type' => ['key' => 'taxonomy_themeable_type', 'value' => 'App\\Models\\Layer'],
+                ],
+                'taxonomy_activity' => [
+                    'pivot_table' => 'taxonomy_activityables',
+                    'key' => 'taxonomy_activity_id',
+                    'foreign_key' => 'taxonomy_activityable_id',
+                    'morphable_type' => ['key' => 'taxonomy_activityable_type', 'value' => 'App\\Models\\Layer'],
+                    'pivot_columns' => [
+                        'duration_forward',
+                        'duration_backward',
+                    ],
+                ],
+                'overlay_layers' => [
+                    'pivot_table' => 'layerables',
+                    'key' => 'layer_id',
+                    'foreign_key' => 'layerable_id',
+                    'morphable_type' => ['key' => 'layerable_type', 'value' => 'App\\Models\\OverlayLayer'],
+                ],
             ],
         ],
 
@@ -352,7 +376,7 @@ return [
             'namespace' => 'Wm\\WmPackage\\Models\\TaxonomyActivity',
             'job' => ImportTaxonomyActivityJob::class,
             'geohub_table' => 'taxonomy_activities',
-            'identifiers' => ['identifier'],
+            'identifiers' => ['properties->geohub_id'],
             'fields' => [
                 'name' => ['field' => 'name', 'transformer' => [DataTransformer::class, 'jsonToArray']],
                 'description' => ['field' => 'description', 'transformer' => [DataTransformer::class, 'jsonToArray']],
@@ -383,7 +407,7 @@ return [
             'namespace' => 'Wm\\WmPackage\\Models\\TaxonomyPoiType',
             'job' => ImportTaxonomyPoiTypeJob::class,
             'geohub_table' => 'taxonomy_poi_types',
-            'identifiers' => ['identifier'],
+            'identifiers' => ['properties->geohub_id'],
             'fields' => [
                 'name' => ['field' => 'name', 'transformer' => [DataTransformer::class, 'jsonToArray']],
                 'description' => ['field' => 'description', 'transformer' => [DataTransformer::class, 'jsonToArray']],
@@ -410,7 +434,7 @@ return [
             'namespace' => 'Wm\\WmPackage\\Models\\TaxonomyTarget',
             'job' => ImportTaxonomyTargetJob::class,
             'geohub_table' => 'taxonomy_targets',
-            'identifiers' => ['identifier'],
+            'identifiers' => ['properties->geohub_id'],
             'fields' => [
                 'name' => ['field' => 'name', 'transformer' => [DataTransformer::class, 'jsonToArray']],
                 'description' => ['field' => 'description', 'transformer' => [DataTransformer::class, 'jsonToArray']],
@@ -438,7 +462,7 @@ return [
             'namespace' => 'Wm\\WmPackage\\Models\\TaxonomyWhen',
             'job' => ImportTaxonomyWhenJob::class,
             'geohub_table' => 'taxonomy_whens',
-            'identifiers' => ['identifier'],
+            'identifiers' => ['properties->geohub_id'],
             'fields' => [
                 'name' => ['field' => 'name', 'transformer' => [DataTransformer::class, 'jsonToArray']],
                 'description' => ['field' => 'description', 'transformer' => [DataTransformer::class, 'jsonToArray']],
@@ -456,6 +480,26 @@ return [
                     'ec_poi' => 'Wm\\WmPackage\\Models\\EcPoi',
                     'ec_track' => 'Wm\\WmPackage\\Models\\EcTrack',
                     'ec_media' => 'Wm\\WmPackage\\Models\\EcMedia',
+                    'layer' => 'Wm\\WmPackage\\Models\\Layer',
+                ],
+            ],
+        ],
+
+        // Taxonomy theme entity mapping
+        'taxonomy_theme' => [
+            'namespace' => 'Wm\\WmPackage\\Models\\TaxonomyTheme',
+            'job' => '',
+            'geohub_table' => 'taxonomy_themes',
+            'identifiers' => ['properties->geohub_id'],
+            'relations' => [
+                'morphable_table' => 'taxonomy_themeables',
+                'foreign_key' => 'taxonomy_theme_id',
+                'morphable_id' => 'taxonomy_themeable_id',
+                'morphable_type' => 'taxonomy_themeable_type',
+                'morphable_models' => [
+                    'ec_poi' => 'Wm\\WmPackage\\Models\\EcPoi',
+                    'ec_track' => 'Wm\\WmPackage\\Models\\EcTrack',
+                    'media' => 'Wm\\WmPackage\\Models\\Media',
                     'layer' => 'Wm\\WmPackage\\Models\\Layer',
                 ],
             ],

@@ -146,6 +146,32 @@ class StorageService extends BaseService
     //     return $this->getEcMediaDisk()->url($cloudPath);
     // }
 
+    /**
+     * Store layer feature collection in AWS
+     *
+     * @param  int|null  $appId  The app ID
+     * @param  int  $layerId  The layer ID
+     * @param  string  $contents  The feature collection contents
+     * @return string|false The stored path or false on failure
+     */
+    public function storeLayerFeatureCollection(?int $appId, int $layerId, string $contents): string|false
+    {
+        try {
+            $path = $this->getShardBasePath($appId)."layers/{$layerId}.geojson";
+
+            $success = $this->getRemoteWfeDisk()->put($path, $contents);
+
+            if ($success) {
+                return $this->getRemoteWfeDisk()->url($path);
+            }
+
+            return false;
+        } catch (\Exception $e) {
+            \Log::error('Failed to store layer feature collection: '.$e->getMessage());
+            throw $e;
+        }
+    }
+
     //
     // PATHS
     // TODO: move all paths here
@@ -216,7 +242,12 @@ class StorageService extends BaseService
 
     private function getDisk($disk): Filesystem
     {
-        return Storage::disk($disk);
+        try {
+            return Storage::disk($disk);
+        } catch (Exception $e) {
+            \Log::error("Failed to get disk {$disk}: ".$e->getMessage());
+            throw $e;
+        }
     }
 
     private function getShardName(): string

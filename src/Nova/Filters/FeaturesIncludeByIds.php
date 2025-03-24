@@ -24,6 +24,7 @@ class FeaturesIncludeByIds extends LayerFeatureFilter
     public function options(NovaRequest $request): array
     {
         return []; // To maximize performance
+
     }
 
     /**

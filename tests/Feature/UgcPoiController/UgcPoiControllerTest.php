@@ -66,7 +66,6 @@ class UgcPoiControllerTest extends TestCase
     {
         $this->actingAs($this->user, 'api');
         // Effettua la chiamata DELETE all'endpoint destroy
-
         $response = $this->json('DELETE', 'api/ugc/poi/'.$this->poi->id);
 
         $response->assertStatus(200);

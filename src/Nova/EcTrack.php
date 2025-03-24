@@ -3,6 +3,7 @@
 namespace Wm\WmPackage\Nova;
 
 use Laravel\Nova\Fields\BelongsToMany;
+use Laravel\Nova\Fields\MorphMany;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Wm\WmPackage\Nova\Filters\FeaturesByLayerFilter;
 use Wm\WmPackage\Nova\Filters\FeaturesExcludeByIds;
@@ -22,6 +23,7 @@ class EcTrack extends AbstractEcResource
         return [
             ...$this->fieldsTrait($request),
             BelongsToMany::make('EcPois', 'ecPois', EcPoi::class),
+            MorphMany::make('Layers', 'layers', Layer::class),
         ];
     }
 

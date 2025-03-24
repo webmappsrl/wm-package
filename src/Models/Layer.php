@@ -30,6 +30,15 @@ class Layer extends Model
         'configuration' => 'array',
     ];
 
+    protected $fillable = [
+        'name',
+        'properties',
+        'configuration',
+        'app_id',
+        'geometry',
+        'feature_collection',
+    ];
+
     /**
      * The accessors to append to the model's array form.
      *

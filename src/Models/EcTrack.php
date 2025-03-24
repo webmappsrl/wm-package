@@ -10,7 +10,6 @@ use Laravel\Scout\Searchable;
 use Spatie\Translatable\HasTranslations;
 use Wm\WmPackage\Models\Abstracts\MultiLineString;
 use Wm\WmPackage\Models\Interfaces\LayerRelatedModel;
-use Wm\WmPackage\Observers\EcTrackObserver;
 use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Services\Models\EcTrackService;
 use Wm\WmPackage\Traits\EcFeatureTrait;
@@ -43,6 +42,11 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
     //
     // RELATIONS
     //
+
+    public function layers(): MorphToMany
+    {
+        return $this->morphToMany(Layer::class, 'layerable');
+    }
 
     public function updateManualDataField($field, $value)
     {
@@ -583,7 +587,9 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
             $string .= $this->ref.' ';
         }
         if (empty($searchables) || (in_array('osmid', $searchables) && ! empty($this->osmid))) {
+
             $string .= $this->osmid.' ';
+
         }
 
         if (empty($searchables) || (in_array('taxonomyActivities', $searchables) && ! empty($this->taxonomyActivities))) {
