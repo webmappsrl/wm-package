@@ -20,19 +20,6 @@ class DataTransformer
         return json_decode($json, true);
     }
 
-    public function bboxToPolygon(?string $bbox): ?string
-    {
-        $bbox = $this->sanitizeBbox($bbox);
-
-        if (! $bbox) {
-            return null;
-        }
-
-        $query = DB::select('SELECT ST_AsText(ST_MakeEnvelope('.$bbox[0].', '.$bbox[1].', '.$bbox[2].', '.$bbox[3].', 4326)) as geometry');
-        $geometry = $query[0]->geometry;
-
-        return $geometry;
-    }
 
     /**
      * Convert a string to a boolean.
@@ -176,19 +163,5 @@ class DataTransformer
         }
 
         return json_encode($properties);
-    }
-
-    private function sanitizeBbox(?string $bbox): ?array
-    {
-        $bbox = str_replace(['[', ']', '"'], '', $bbox);
-        $bbox = explode(',', $bbox);
-
-        if (count($bbox) !== 4) {
-            return null;
-        }
-
-        $bbox = array_map('trim', $bbox);
-
-        return $bbox;
     }
 }
