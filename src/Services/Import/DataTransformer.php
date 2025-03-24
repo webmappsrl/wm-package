@@ -3,7 +3,6 @@
 namespace Wm\WmPackage\Services\Import;
 
 use Carbon\Carbon;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class DataTransformer
@@ -19,7 +18,6 @@ class DataTransformer
 
         return json_decode($json, true);
     }
-
 
     /**
      * Convert a string to a boolean.
