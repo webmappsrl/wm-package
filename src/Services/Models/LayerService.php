@@ -2,13 +2,13 @@
 
 namespace Wm\WmPackage\Services\Models;
 
-use Wm\WmPackage\Models\Layer;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Services\BaseService;
-use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Database\Query\Builder;
-use Illuminate\Database\Eloquent\Relations\MorphToMany;
 
 class LayerService extends BaseService
 {
@@ -33,7 +33,7 @@ class LayerService extends BaseService
         return $this->getAllVisibleModels($model, $layer, false, $count);
     }
 
-    public function getRelatedModelsQuery(string $geometryModelClass, Layer $layer): MorphToMany | Builder
+    public function getRelatedModelsQuery(string $geometryModelClass, Layer $layer): MorphToMany|Builder
     {
 
         $relationName = (new $geometryModelClass)->getLayerRelationName();
@@ -63,7 +63,6 @@ class LayerService extends BaseService
      * @param  string  $geometryModelClass  - The class name of the geometry model
      * @param  bool  $collection  - If true, returns a collection of models. Otherwise, returns an array of IDs.
      * @param  bool  $count  - If true, returns the count of the models. Otherwise, returns the models themselves.
-     * @return array|Collection|int
      */
     public function getAllVisibleModels(
         string $geometryModelClass,
@@ -103,7 +102,7 @@ class LayerService extends BaseService
         }
 
         // Logga il numero di tracce filtrate dalla geometria e dalle tassonomie
-        Log::channel('layer')->info('Numero di tracce finali filtrate da getTracks: ' . $allEcTracks->count());
+        Log::channel('layer')->info('Numero di tracce finali filtrate da getTracks: '.$allEcTracks->count());
 
         // Restituisci tracce uniche in base all'ID
         return $allEcTracks->unique('id');
