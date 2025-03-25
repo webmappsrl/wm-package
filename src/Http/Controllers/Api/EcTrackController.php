@@ -22,7 +22,7 @@ class EcTrackController extends Controller
     public function getGeojson(EcTrack $ecTrack, array $headers = []): JsonResponse
     {
 
-        $json = StorageService::make()->getTrackGeojson($ecTrack->id);
+        $json = StorageService::make()->getTrackGeojson($ecTrack->id, $ecTrack->app_id);
         if ($json) {
             return response()->json(json_decode($json));
         }
