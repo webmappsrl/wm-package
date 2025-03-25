@@ -53,7 +53,7 @@ abstract class BaseImportJob implements ShouldQueue
             $data = $this->geohubImportService->fetchData($this->entityId, $this->getTableName());
             $transformedData = $this->transformData($data);
 
-            $model = $this->geohubImportService->importData($transformedData, $modelName, $this->entityId);
+            $model = $this->geohubImportService->importData($transformedData, $this->getModelKey(), $modelName, $this->entityId);
 
             // using $data instead of $transformedData for referenced keys in geohub database
             $this->processDependencies($data, $model);
@@ -105,7 +105,11 @@ abstract class BaseImportJob implements ShouldQueue
     protected function transformData(array $data): array
     {
         $transformedData = $this->geohubImportService->transformFields($data, $this->getModelKey());
-        $transformedData['properties'] = $this->geohubImportService->transformProperties($data, $this->getModelKey());
+
+        $propertiesColumnName = config('wm-geohub-import.import_mapping.' . $this->getModelKey() . '.properties.column_name', 'properties');
+
+        $transformedData[$propertiesColumnName] = $this->geohubImportService->transformProperties($data, $this->getModelKey());
+
         isset($this->data['app_id']) ? $transformedData['app_id'] = $this->data['app_id'] : null;
 
         return $transformedData;

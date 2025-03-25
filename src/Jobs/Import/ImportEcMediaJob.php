@@ -17,5 +17,18 @@ class ImportEcMediaJob extends BaseEcImportJob
         return 'POINT Z';
     }
 
-    protected function processDependencies(array $data, Model $model): void {}
+    protected function transformData(array $data): array
+    {
+        // First use the parent's basic transformation
+        $transformedData = parent::transformData($data);
+
+        // Then apply the media-specific logic
+        return $this->geohubImportService->transformEcMediaData($data, $transformedData);
+    }
+
+    protected function processDependencies(array $data, Model $model): void
+    {
+        // Delegate all dependency processing logic to the service
+        $this->geohubImportService->processEcMediaDependencies($data, $model);
+    }
 }

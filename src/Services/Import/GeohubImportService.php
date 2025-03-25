@@ -143,6 +143,11 @@ class GeohubImportService
      */
     public function fetchData(int $entityId, string $tableName): ?array
     {
+        //handle media table
+        if ($tableName === 'media') {
+            $tableName = 'ec_media';
+        }
+
         $element = $this->dbConnection
             ->table($tableName)
             ->where('id', $entityId)
@@ -160,23 +165,24 @@ class GeohubImportService
      * Import the transformed data into the database
      *
      * @param  array  $transformedData  The data to import
+     * @param  string  $modelKey  The model key
      * @param  string  $modelName  The model class name
      * @param  int  $entityId  The ID of the entity to import
      * @return Model The imported model
      *
      * @throws \Exception If import fails
      */
-    public function importData(array $transformedData, string $modelName, int $entityId): Model
+    public function importData(array $transformedData, string $modelKey, string $modelName, int $entityId): Model
     {
         try {
             if (! class_exists($modelName)) {
                 throw new \RuntimeException("App model class {$modelName} not found or not configured");
             }
 
-            $identifiers = $this->getIdentifiers($transformedData, $entityId);
+            $identifier = $this->getIdentifier($modelKey, $entityId);
 
             // Create or update the app
-            $model = $modelName::updateOrCreate($identifiers, $transformedData);
+            $model = $modelName::updateOrCreate($identifier, $transformedData);
 
             $this->logger->info("{$modelName} with ID {$entityId} imported successfully. Local ID: {$model->id}");
 
@@ -263,30 +269,17 @@ class GeohubImportService
     }
 
     /**
-     * Get the identifiers for the updateOrCreate method.
+     * Get the identifier for the updateOrCreate method.
      *
-     * @param  array  $data  The data to extract identifiers from
+     * @param  string  $modelKey  The model key
      * @param  int  $entityId  The ID of the entity to import
-     * @return array The identifiers
+     * @return array The identifier
      */
-    protected function getIdentifiers(array $data, int $entityId): array
+    protected function getIdentifier(string $modelKey, int $entityId): array
     {
-        // Extract identifier fields for updateOrCreate
-        $identifiers = [];
-        foreach ($this->mapping['identifiers'] ?? [] as $field) {
-            if (isset($data[$field])) {
-                $identifiers[$field] = $data[$field];
-            }
-        }
-
-        if (empty($identifiers)) {
-            // If no identifiers are found, use custom properties with geohub_id
-            $identifiers = [
-                'properties->geohub_id' => $entityId,
-            ];
-        }
-
-        return $identifiers;
+        return [
+            $this->importMapping[$modelKey]['identifier'] ?? 'properties->geohub_id' => $entityId,
+        ];
     }
 
     /**
@@ -390,10 +383,10 @@ class GeohubImportService
     {
         $transformedProperties = [];
 
-        if (isset($this->importMapping[$modelKey]['properties'])) {
+        if (isset($this->importMapping[$modelKey]['properties']['mapping'])) {
             $transformedProperties = $this->transformMappedFields(
                 $data,
-                $this->importMapping[$modelKey]['properties']
+                $this->importMapping[$modelKey]['properties']['mapping']
             );
         }
 
@@ -687,5 +680,268 @@ class GeohubImportService
     protected function getRelationConfig(string $modelKey, string $relationKey): array
     {
         return $this->importMapping[$modelKey]['relations'][$relationKey];
+    }
+
+    /**
+     * Find the related model for an EC Media before importing it
+     * 
+     * @param array $data The original data from Geohub
+     * @return array|null Array with model_type and model_id if a relation is found, null otherwise
+     */
+    public function findEcMediaRelatedModel(array $data): ?array
+    {
+        $mediaId = $data['id'];
+
+        // Check for EcPoi relations
+        $poiAssociation = $this->dbConnection
+            ->table('ec_media_ec_poi')
+            ->where('ec_media_id', $mediaId)
+            ->first();
+
+        if ($poiAssociation) {
+            $ecPoi = \Wm\WmPackage\Models\EcPoi::where('properties->geohub_id', $poiAssociation->ec_poi_id)->first();
+            if ($ecPoi) {
+                return [
+                    'model_type' => get_class($ecPoi),
+                    'model_id' => $ecPoi->id
+                ];
+            }
+        }
+
+        // Check for EcTrack relations
+        $trackAssociation = $this->dbConnection
+            ->table('ec_media_ec_track')
+            ->where('ec_media_id', $mediaId)
+            ->first();
+
+        if ($trackAssociation) {
+            $ecTrack = \Wm\WmPackage\Models\EcTrack::where('properties->geohub_id', $trackAssociation->ec_track_id)->first();
+            if ($ecTrack) {
+                return [
+                    'model_type' => get_class($ecTrack),
+                    'model_id' => $ecTrack->id
+                ];
+            }
+        }
+
+        // Check for Layer relations
+        $layerAssociation = $this->dbConnection
+            ->table('ec_media_layer')
+            ->where('ec_media_id', $mediaId)
+            ->first();
+
+        if ($layerAssociation) {
+            $layer = \Wm\WmPackage\Models\Layer::where('properties->geohub_id', $layerAssociation->layer_id)->first();
+            if ($layer) {
+                return [
+                    'model_type' => get_class($layer),
+                    'model_id' => $layer->id
+                ];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Transform media data with specific logic for handling URLs
+     *
+     * @param array $data The media data to transform
+     * @return array The transformed data
+     */
+    public function transformEcMediaData(array $data, array $transformedData): array
+    {
+        // Find related model to set model_type and model_id before creating the media
+        $relatedModel = $this->findEcMediaRelatedModel($data);
+        if ($relatedModel) {
+            $transformedData['model_type'] = $relatedModel['model_type'];
+            $transformedData['model_id'] = $relatedModel['model_id'];
+        }
+
+        // Handling media URLs
+        if (isset($data['url']) && !empty($data['url'])) {
+            // If the URL is already an AWS URL, use it directly
+            if (str_starts_with($data['url'], 'http') || str_starts_with($data['url'], '@http')) {
+                $transformedData['url'] = ltrim($data['url'], '@');
+            }
+            // Otherwise it's a local file on Geohub that needs to be downloaded and uploaded to AWS
+            else {
+                $fileUrl = self::GEOHUB_URL . 'storage/' . $data['url'];
+                $fileContent = @file_get_contents($fileUrl);
+
+                if ($fileContent !== false) {
+                    // Create a temporary directory to save the file
+                    $tempPath = storage_path('app/temp/' . uniqid());
+                    if (!is_dir(dirname($tempPath))) {
+                        mkdir(dirname($tempPath), 0755, true);
+                    }
+
+                    file_put_contents($tempPath, $fileContent);
+
+                    // The AWS file URL will be set after associating the media with the model
+                    $transformedData['temp_file_path'] = $tempPath;
+                } else {
+                    $this->logger->error("Failed to download media file from Geohub: {$fileUrl}");
+                }
+            }
+        }
+
+        return $transformedData;
+    }
+
+    /**
+     * Process EC Media associations with EC Pois
+     *
+     * @param array $data The original data from Geohub
+     * @param Model $model The imported media model
+     */
+    public function processEcMediaPoiAssociations(array $data, Model $model): void
+    {
+        $mediaId = $data['id'];
+
+        $associations = $this->dbConnection
+            ->table('ec_media_ec_poi')
+            ->where('ec_media_id', $mediaId)
+            ->get();
+
+        foreach ($associations as $association) {
+            $ecPoi = \Wm\WmPackage\Models\EcPoi::where('properties->geohub_id', $association->ec_poi_id)->first();
+
+            if ($ecPoi) {
+                // Association through Spatie Media Library
+                $this->associateMediaToModel($model, $ecPoi);
+            }
+        }
+    }
+
+    /**
+     * Process EC Media associations with EC Tracks
+     *
+     * @param array $data The original data from Geohub
+     * @param Model $model The imported media model
+     */
+    public function processEcMediaTrackAssociations(array $data, Model $model): void
+    {
+        $mediaId = $data['id'];
+
+        $associations = $this->dbConnection
+            ->table('ec_media_ec_track')
+            ->where('ec_media_id', $mediaId)
+            ->get();
+
+        foreach ($associations as $association) {
+            $ecTrack = \Wm\WmPackage\Models\EcTrack::where('properties->geohub_id', $association->ec_track_id)->first();
+
+            if ($ecTrack) {
+                // Association through Spatie Media Library
+                $this->associateMediaToModel($model, $ecTrack);
+            }
+        }
+    }
+
+    /**
+     * Process EC Media associations with Layers
+     *
+     * @param array $data The original data from Geohub
+     * @param Model $model The imported media model
+     */
+    public function processEcMediaLayerAssociations(array $data, Model $model): void
+    {
+        $mediaId = $data['id'];
+
+        $associations = $this->dbConnection
+            ->table('ec_media_layer')
+            ->where('ec_media_id', $mediaId)
+            ->get();
+
+        foreach ($associations as $association) {
+            $layer = \Wm\WmPackage\Models\Layer::where('properties->geohub_id', $association->layer_id)->first();
+
+            if ($layer) {
+                // Association through Spatie Media Library
+                $this->associateMediaToModel($model, $layer);
+            }
+        }
+    }
+
+    /**
+     * Process all EC Media dependencies
+     *
+     * @param array $data The original data from Geohub
+     * @param Model $model The imported media model
+     */
+    public function processEcMediaDependencies(array $data, Model $model): void
+    {
+        // Associations with ec_pois
+        $this->processEcMediaPoiAssociations($data, $model);
+
+        // Associations with ec_tracks
+        // Associazioni con ec_tracks
+        $this->processEcMediaTrackAssociations($data, $model);
+
+        // Associazioni con layers
+        $this->processEcMediaLayerAssociations($data, $model);
+
+        // Se abbiamo un file temporaneo da caricare su AWS e abbiamo associato il modello
+        if (isset($model->temp_file_path) && file_exists($model->temp_file_path) && $model->model_type && $model->model_id) {
+            $this->uploadMediaToAws($model);
+        }
+    }
+
+    /**
+     * Associate media to model using Spatie Media Library
+     *
+     * @param Model $media The media model
+     * @param Model $model The model to associate with
+     */
+    protected function associateMediaToModel(Model $media, Model $model): void
+    {
+        if (method_exists($model, 'addMedia')) {
+            if (isset($media->temp_file_path) && file_exists($media->temp_file_path)) {
+                // Se abbiamo un file temporaneo, lo aggiungiamo tramite il file locale
+                $model->addMedia($media->temp_file_path)
+                    ->withCustomProperties($media->custom_properties)
+                    ->toMediaCollection();
+            } else if (isset($media->url) && !empty($media->url)) {
+                // Se abbiamo solo l'URL, lo aggiungiamo come URL remoto
+                $model->addMediaFromUrl($media->url)
+                    ->withCustomProperties($media->custom_properties)
+                    ->toMediaCollection();
+            }
+        }
+    }
+
+    /**
+     * Upload media file to AWS
+     *
+     * @param Model $model The media model with temp_file_path
+     */
+    protected function uploadMediaToAws(Model $model): void
+    {
+        if (!file_exists($model->temp_file_path)) {
+            return;
+        }
+
+        try {
+            $fileName = basename($model->temp_file_path);
+            $storageService = \Wm\WmPackage\Services\StorageService::make();
+
+            // Utilizziamo il metodo storeEcMediaFile per caricare il file su AWS
+            $url = $storageService->storeEcMediaFile(
+                $model->temp_file_path,
+                "{$model->id}_{$fileName}"
+            );
+
+            if ($url) {
+                $model->url = $url;
+                $model->save();
+
+                // Rimuovi il file temporaneo
+                @unlink($model->temp_file_path);
+                unset($model->temp_file_path);
+            }
+        } catch (\Exception $e) {
+            $this->logger->error('Failed to upload media to AWS: ' . $e->getMessage());
+        }
     }
 }

@@ -37,10 +37,11 @@ class ImportAppJob extends BaseImportJob
         // foreach ($this->getRelations() as $modelKey => $relationData) {
         //     $this->queueEntityImport($modelKey, $userId, $relationData['foreign_key']);
         // }
-        $this->queueEntityImport('ec_poi', $data['user_id'], 'user_id', $model->id);
-        $this->queueEntityImport('ec_track', $data['user_id'], 'user_id', $model->id);
-        $this->queueEntityImport('taxonomy_activity', $data['user_id'], 'user_id', $model->id);
-        $this->queueEntityImport('layer', $data['user_id'], 'app_id', $model->id);
+        //$this->queueEntityImport('ec_poi', $data['user_id'], 'user_id', $model->id);
+        //$this->queueEntityImport('ec_track', $data['user_id'], 'user_id', $model->id);
+        //$this->queueEntityImport('taxonomy_activity', $data['user_id'], 'user_id', $model->id);
+        //$this->queueEntityImport('layer', $data['user_id'], 'app_id', $model->id);
+        $this->queueEntityImport('ec_media', $data['user_id'], 'user_id', $model->id);
     }
 
     /**
@@ -79,7 +80,7 @@ class ImportAppJob extends BaseImportJob
                 $batch->dispatch();
             }
         } catch (\Exception $e) {
-            $logger->error("Error queuing {$entityModelKey} imports for app {$this->entityId}: ".$e->getMessage());
+            $logger->error("Error queuing {$entityModelKey} imports for app {$this->entityId}: " . $e->getMessage());
             throw $e;
         }
     }
