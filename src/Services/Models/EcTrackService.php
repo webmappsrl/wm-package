@@ -20,7 +20,6 @@ use Wm\WmPackage\Jobs\Track\UpdateEcTrackGenerateElevationChartImage;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackManualDataJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackOrderRelatedPoi;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackSlopeValues;
-use Wm\WmPackage\Jobs\UpdateLayerTracksJob;
 use Wm\WmPackage\Jobs\UpdateModelWithGeometryTaxonomyWhere;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcTrack;
@@ -253,13 +252,13 @@ class EcTrackService extends BaseService
         if ($track->osmid) {
             $chain[] = new UpdateEcTrackFromOsmJob($track);
         }
-        $layers = $track->associatedLayers;
-        // Verifica se ci sono layers associati
-        if ($layers && $layers->count() > 0) {
-            foreach ($layers as $layer) {
-                $chain[] = new UpdateLayerTracksJob($layer);
-            }
-        }
+        // $layers = $track->associatedLayers;
+        // // Verifica se ci sono layers associati
+        // if ($layers && $layers->count() > 0) {
+        //     foreach ($layers as $layer) {
+        //         $chain[] = new UpdateLayerTracksJob($layer);
+        //     }
+        // }
         $chain[] = new UpdateEcTrackDemJob($track);
         $chain[] = new UpdateEcTrackManualDataJob($track);
         $chain[] = new UpdateEcTrackCurrentDataJob($track);

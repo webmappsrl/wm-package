@@ -52,7 +52,7 @@ class Media extends SpatieMedia
         return $this->morphTo();
     }
 
-    public function taxonomyActivity(): MorphToMany
+    public function taxonomyActivities(): MorphToMany
     {
         return $this->morphToMany(TaxonomyActivity::class, 'taxonomy_activityable');
     }

@@ -37,7 +37,7 @@ class TaxonomyActivityPolicy
      */
     public function create(User $user)
     {
-        //
+        return true;
     }
 
     /**
@@ -47,7 +47,7 @@ class TaxonomyActivityPolicy
      */
     public function update(User $user, TaxonomyActivity $taxonomyActivity)
     {
-        //
+        return true;
     }
 
     /**
@@ -57,7 +57,7 @@ class TaxonomyActivityPolicy
      */
     public function delete(User $user, TaxonomyActivity $taxonomyActivity)
     {
-        //
+        return true;
     }
 
     /**

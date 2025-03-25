@@ -2,9 +2,10 @@
 
 namespace Wm\WmPackage\Observers;
 
-use Illuminate\Database\Eloquent\Model;
-use Wm\WmPackage\Jobs\UpdateLayerTracksJob;
 use Wm\WmPackage\Models\Layer;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Database\Eloquent\Model;
+use Wm\WmPackage\Jobs\UpdateLayerGeometryJob;
 use Wm\WmPackage\Services\Models\LayerService;
 
 class LayerObserver extends AbstractObserver
@@ -24,8 +25,22 @@ class LayerObserver extends AbstractObserver
      *
      * @return void
      */
-    public function saved(Layer $layer)
+    public function saved(Layer $layer) {}
+
+    public function saving(Layer $layer)
     {
-        dispatch(new UpdateLayerTracksJob($layer))->onQueue('layers');
+        if (is_null($layer->properties)) {
+            $layer->properties = [];
+        }
+    }
+
+    public function morphToManyAttached($relation, $parent, $ids, $attributes)
+    {
+        UpdateLayerGeometryJob::dispatch($parent);
+    }
+
+    public function morphToManyDetached($relation, $parent, $ids)
+    {
+        UpdateLayerGeometryJob::dispatch($parent);
     }
 }

@@ -6,6 +6,7 @@ use Wm\WmPackage\Jobs\Import\ImportEcPoiJob;
 use Wm\WmPackage\Jobs\Import\ImportEcTrackJob;
 use Wm\WmPackage\Jobs\Import\ImportLayerJob;
 use Wm\WmPackage\Jobs\Import\ImportTaxonomyActivityJob;
+use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Services\Import\DataTransformer;
 
 return [
@@ -186,7 +187,7 @@ return [
             'identifiers' => ['properties->geohub_id'],
             'fields' => [
                 'name' => 'name',
-                'geometry' => ['field' => 'bbox', 'transformer' => [DataTransformer::class, 'bboxToPolygon']],
+                'geometry' => ['field' => 'bbox', 'transformer' => [GeometryComputationService::class, 'bboxToPolygon']],
                 'app_id' => 'app_id',
                 'rank' => 'rank',
                 'created_at' => 'created_at',

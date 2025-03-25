@@ -16,7 +16,7 @@ trait EcFeatureTrait
     /**
      * Scope a query to only a specific layer.
      */
-    public function scopeWhereLayer(Builder $query, Layer $layer): void
+    public function scopeOnLayer(Builder $query, Layer $layer): void
     {
         $query
             ->whereIn('app_id', [
@@ -43,7 +43,7 @@ trait EcFeatureTrait
         $ids = $layer->taxonomyActivities->pluck('id')->toArray() ?? [];
         if (count($ids) > 0) {
             $query
-                ->has('taxonomyActivities', function ($query) use ($ids) {
+                ->whereHas('taxonomyActivities', function ($query) use ($ids) {
                     $query->whereIn('id', $ids); // whereIn = LOGIC OPERATOR OR
                 });
         }

@@ -2,27 +2,29 @@
 
 namespace Wm\WmPackage\Services;
 
-use Exception;
-use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Database\Query\Expression;
-use Illuminate\Support\Collection as SupportCollection;
-use Illuminate\Support\Facades\DB;
 use stdClass;
-use Symm\Gisconverter\Exceptions\InvalidText;
-use Symm\Gisconverter\Gisconverter;
-use Wm\WmPackage\Models\Abstracts\GeometryModel;
+use Exception;
 use Wm\WmPackage\Models\App;
-use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Models\Media;
+use Wm\WmPackage\Models\EcTrack;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Symm\Gisconverter\Gisconverter;
+use Illuminate\Database\Query\Builder;
+use Illuminate\Database\Query\Expression;
+use Illuminate\Database\Eloquent\Collection;
+use Symm\Gisconverter\Exceptions\InvalidText;
 use Wm\WmPackage\Services\Models\MediaService;
+use Wm\WmPackage\Models\Abstracts\GeometryModel;
+use Illuminate\Support\Collection as SupportCollection;
 
 class GeometryComputationService extends BaseService
 {
     public function get3dLineMergeWktFromGeojson(string $geojson): string
     {
         return DB::select(
-            "SELECT ST_AsText(ST_Force3D(ST_LineMerge(ST_GeomFromGeoJSON('".$geojson."')))) As wkt"
+            "SELECT ST_AsText(ST_Force3D(ST_LineMerge(ST_GeomFromGeoJSON('" . $geojson . "')))) As wkt"
         )[0]->wkt;
     }
 
@@ -35,25 +37,25 @@ class GeometryComputationService extends BaseService
 
     public function getWktFromGeojson(string $geojson): string
     {
-        return DB::select("SELECT ST_GeomFromGeoJSON('".$geojson."') As wkt")[0]->wkt;
+        return DB::select("SELECT ST_GeomFromGeoJSON('" . $geojson . "') As wkt")[0]->wkt;
     }
 
     public function getGeometryFromGeojsonRAW(string $geojson): Expression
     {
 
-        return DB::raw("ST_GeomFromGeoJSON('".$geojson."')");
+        return DB::raw("ST_GeomFromGeoJSON('" . $geojson . "')");
     }
 
     public function get2dGeometryFromGeojsonRAW(string $geojson): Expression
     {
-        return DB::raw("(ST_Force2D(ST_GeomFromGeoJSON('".$geojson."')))");
+        return DB::raw("(ST_Force2D(ST_GeomFromGeoJSON('" . $geojson . "')))");
     }
 
     protected function getNeighoursByGeometryAndTable($geometry, $table): array
     {
         return DB::select(
             "SELECT id, St_Distance(geometry,?) as dist FROM {$table}
-                WHERE St_DWithin(geometry, ?, ".config('wm-package.services.neighbours_distance').')
+                WHERE St_DWithin(geometry, ?, " . config('wm-package.services.neighbours_distance') . ')
                 order by St_Linelocatepoint(St_Geomfromgeojson(St_Asgeojson(?)),St_Geomfromgeojson(St_Asgeojson(geometry)));',
             [
                 $geometry,
@@ -66,8 +68,8 @@ class GeometryComputationService extends BaseService
     public function getLineLocatePointFloat(string $trackGeojson, string $poiGeojson): float
     {
         // POI VAL along track https://postgis.net/docs/ST_LineLocatePoint.html
-        $line = "ST_GeomFromGeoJSON('".$trackGeojson."')";
-        $point = "ST_GeomFromGeoJSON('".$poiGeojson."')";
+        $line = "ST_GeomFromGeoJSON('" . $trackGeojson . "')";
+        $point = "ST_GeomFromGeoJSON('" . $poiGeojson . "')";
         $sql = DB::raw("SELECT ST_LineLocatePoint($line,$point) as val;");
         $result = DB::select($sql);
 
@@ -90,9 +92,9 @@ class GeometryComputationService extends BaseService
         if (isset($geom)) {
             $formattedGeometry = Gisconverter::geojsonToKml($geom);
 
-            $name = '<name>'.($this->name ?? '').'</name>';
+            $name = '<name>' . ($this->name ?? '') . '</name>';
 
-            return $name.$formattedGeometry;
+            return $name . $formattedGeometry;
         } else {
             return '{}';
         }
@@ -120,7 +122,7 @@ class GeometryComputationService extends BaseService
         return [[$start[0], $start[1]], [$end[0], $end[1]]];
     }
 
-    public function getModelGeometryAsGpx(GeometryModel $model): string
+    public function getModelGeometryAsGpx(GeometryModel $model): ?string
     {
         $geom = $this->getModelGeometryAsGeojson($model);
 
@@ -151,7 +153,7 @@ class GeometryComputationService extends BaseService
         $tracksIds = $tracks->pluck('id')->toArray();
 
         $res = DB::select('select ST_Extent(geometry::geometry)
-             as bbox from ec_tracks where id IN ('.implode(',', $tracksIds).');');
+             as bbox from ec_tracks where id IN (' . implode(',', $tracksIds) . ');');
 
         if (count($res) > 0) {
             if (! is_null($res[0]->bbox)) {
@@ -329,12 +331,12 @@ class GeometryComputationService extends BaseService
         foreach ($classes as $class => $table) {
             $result = DB::select(
                 'SELECT id FROM '
-                    .$table
-                    .' WHERE user_id = ?'
-                    ." AND ABS(EXTRACT(EPOCH FROM created_at) - EXTRACT(EPOCH FROM TIMESTAMP '"
-                    .$model->created_at
-                    ."')) < 5400"
-                    .' AND St_DWithin(geometry, ?, 400);',
+                    . $table
+                    . ' WHERE user_id = ?'
+                    . " AND ABS(EXTRACT(EPOCH FROM created_at) - EXTRACT(EPOCH FROM TIMESTAMP '"
+                    . $model->created_at
+                    . "')) < 5400"
+                    . ' AND St_DWithin(geometry, ?, 400);',
                 [
                     $model->user_id,
                     $model->geometry,
@@ -450,10 +452,10 @@ class GeometryComputationService extends BaseService
     {
         return $targetModelClass::whereRaw(
             'public.ST_Intersects('
-                .'public.ST_Force2D('
-                ."(SELECT geometry from {$model->getTable()} where id = {$model->id})"
-                .'::geometry)'
-                .', geometry)'
+                . 'public.ST_Force2D('
+                . "(SELECT geometry from {$model->getTable()} where id = {$model->id})"
+                . '::geometry)'
+                . ', geometry)'
         )->get();
     }
 
@@ -521,7 +523,7 @@ class GeometryComputationService extends BaseService
      */
     public function getDistanceComp(array $geometry): float
     {
-        $distanceQuery = "SELECT ST_Length(ST_GeomFromGeoJSON('".json_encode($geometry)."')::geography)/1000 as length";
+        $distanceQuery = "SELECT ST_Length(ST_GeomFromGeoJSON('" . json_encode($geometry) . "')::geography)/1000 as length";
         $distance = DB::select(DB::raw($distanceQuery));
 
         return $distance[0]->length;
@@ -551,7 +553,7 @@ class GeometryComputationService extends BaseService
         }
 
         if (! is_null($validTrackIds)) {
-            $where .= 'ec_tracks.id IN ('.implode(',', $validTrackIds).') AND ';
+            $where .= 'ec_tracks.id IN (' . implode(',', $validTrackIds) . ') AND ';
         }
 
         if (
@@ -710,9 +712,43 @@ GROUP BY
 
         // Check if it's necessary to force the SRID (4326)
         if (strpos($model->geometry, 'SRID=') === 0) {
-            return 'SRID=4326;'.$centroid->point;
+            return 'SRID=4326;' . $centroid->point;
         }
 
         return $centroid->point;
+    }
+
+    private function sanitizeBbox(?string $bbox): ?array
+    {
+        $bbox = str_replace(['[', ']', '"'], '', $bbox);
+        $bbox = explode(',', $bbox);
+
+        if (count($bbox) !== 4) {
+            return null;
+        }
+
+        $bbox = array_map('trim', $bbox);
+
+        return $bbox;
+    }
+
+    public function geometryModelsToBbox($query)
+    {
+        $table = $query->getModel()->getTable();
+        return $query->selectRaw('ST_Envelope(' . $table . '.geometry::geometry) AS bbox')->value('bbox');
+    }
+
+    public function bboxToPolygon(?string $bbox): ?string
+    {
+        $bbox = $this->sanitizeBbox($bbox);
+
+        if (! $bbox) {
+            return null;
+        }
+
+        $query = DB::select('SELECT ST_AsText(ST_MakeEnvelope(' . $bbox[0] . ', ' . $bbox[1] . ', ' . $bbox[2] . ', ' . $bbox[3] . ', 4326)) as geometry');
+        $geometry = $query[0]->geometry;
+
+        return $geometry;
     }
 }
