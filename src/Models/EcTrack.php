@@ -2,18 +2,19 @@
 
 namespace Wm\WmPackage\Models;
 
-use ChristianKuri\LaravelFavorite\Traits\Favoriteable;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\MorphToMany;
-use Illuminate\Support\Facades\DB;
 use Laravel\Scout\Searchable;
+use Illuminate\Support\Facades\DB;
+use Wm\WmPackage\Traits\EcFeatureTrait;
 use Spatie\Translatable\HasTranslations;
+use Wm\WmPackage\Traits\TaxonomyAbleModel;
+use Wm\WmPackage\Services\Models\EcTrackService;
 use Wm\WmPackage\Models\Abstracts\MultiLineString;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Wm\WmPackage\Models\Interfaces\LayerRelatedModel;
 use Wm\WmPackage\Services\GeometryComputationService;
-use Wm\WmPackage\Services\Models\EcTrackService;
-use Wm\WmPackage\Traits\EcFeatureTrait;
-use Wm\WmPackage\Traits\TaxonomyAbleModel;
+use ChristianKuri\LaravelFavorite\Traits\Favoriteable;
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class EcTrack extends MultiLineString implements LayerRelatedModel
 {
@@ -68,6 +69,11 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
     public function usersCanDownload(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'downloadable_ec_track_user');
+    }
+
+    public function app(): BelongsTo
+    {
+        return $this->belongsTo(App::class);
     }
 
     //
@@ -431,16 +437,7 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
      */
     public function trackHasApps()
     {
-        if (empty($this->user_id)) {
-            return null;
-        }
-
-        $user = User::find($this->user_id);
-        if ($user->apps->count() == 0) {
-            return null;
-        }
-
-        return $user->apps;
+        return collect([$this->app]);
     }
 
     /**

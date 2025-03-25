@@ -4,6 +4,7 @@ namespace Wm\WmPackage\Services;
 
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcTrack;
 
@@ -17,34 +18,27 @@ class PBFGeneratorService extends BaseService
 
     protected $zoomTreshold = 6;
 
-    public function __construct(protected StorageService $cloudStorageService) {}
+    public function __construct(protected StorageService $cloudStorageService, protected GeometryComputationService $geometryComputationService) {}
 
     public function generate($app_id, $z, $x, $y)
     {
-        $boundingBox = $this->tileToBoundingBox(['zoom' => $z, 'x' => $x, 'y' => $y]);
+        $boundingBox = $this->geometryComputationService->tileToBoundingBox(['zoom' => $z, 'x' => $x, 'y' => $y]);
+
         $sql = $this->generateSQL($boundingBox, $app_id, $z);
         $pbf = DB::select($sql);
         $path = false;
         $pbfContent = stream_get_contents($pbf[0]->st_asmvt) ?? null;
+
         if (! empty($pbfContent)) {
             $path = $this->cloudStorageService->storePBF($app_id, $z, $x, $y, $pbfContent);
         } else {
-            $this->markTileAsEmpty($z, $x, $y);
+            $this->geometryComputationService->markTileAsEmpty($z, $x, $y, $app_id);
         }
 
         return $path;
     }
 
-    // Funzione per calcolare il fattore di semplificazione in base al livello di zoom
-    private function getSimplificationFactor($zoom)
-    {
-        if ($zoom <= $this->zoomTreshold) {
-            // Maggiore semplificazione per zoom <= 8
-            return 4;  // Puoi regolare questo valore in base alle tue esigenze
-        }
 
-        return 0.1 / ($zoom + 1);  // Semplificazione inversamente proporzionale per altri zoom
-    }
 
     // ///////////////////////////// TRACKPBFJOB
 
@@ -63,7 +57,7 @@ class PBFGeneratorService extends BaseService
             return 0;
         }
         $boundingBoxSQL = sprintf(
-            'ST_MakeEnvelope(%f, %f, %f, %f, 3857)',
+            'ST_MakeEnvelope(%f, %f, %f, %f,4326)',
             $boundingBox['xmin'],
             $boundingBox['ymin'],
             $boundingBox['xmax'],
@@ -77,7 +71,7 @@ class PBFGeneratorService extends BaseService
             JOIN layerable etl ON ec.id = etl.layerable_id AND etl.layerable_type LIKE '%EcTrack'
             WHERE etl.layer_id = ANY(:layer_ids) -- Usa un parametro per i layer
             AND ST_Intersects(
-                ST_Transform(ec.geometry, 3857),
+                ec.geometry,
                 {$boundingBoxSQL}
             )
             AND ST_Dimension(ec.geometry) = 1
@@ -86,28 +80,13 @@ class PBFGeneratorService extends BaseService
         SQL;
 
         $result = DB::select($sql, [
-            'layer_ids' => '{'.implode(',', $layerIds).'}', // Converti in array PostgreSQL
+            'layer_ids' => '{' . implode(',', $layerIds) . '}', // Converti in array PostgreSQL
         ]);
 
         return $result[0]->total_tracks ?? 0;
     }
 
-    public function tileToBoundingBox($tileCoordinates): array
-    {
-        $worldMercMax = 20037508.3427892;
-        $worldMercMin = -$worldMercMax;
-        $worldMercSize = $worldMercMax - $worldMercMin;
-        $worldTileSize = 2 ** $tileCoordinates['zoom'];
-        $tileMercSize = $worldMercSize / $worldTileSize;
 
-        $env = [];
-        $env['xmin'] = $worldMercMin + $tileMercSize * $tileCoordinates['x'];
-        $env['xmax'] = $worldMercMin + $tileMercSize * ($tileCoordinates['x'] + 1);
-        $env['ymin'] = $worldMercMax - $tileMercSize * ($tileCoordinates['y'] + 1);
-        $env['ymax'] = $worldMercMax - $tileMercSize * $tileCoordinates['y'];
-
-        return $env;
-    }
 
     protected function getAssociatedLayerMap(): array
     {
@@ -142,12 +121,13 @@ class PBFGeneratorService extends BaseService
         if (! $app) {
             throw new \Exception("App not found: {$app_id}");
         }
-        $layerIds = $app->layers->pluck('id')->toArray();
-        if (empty($layerIds)) {
+        // $layerIds = $app->layers->pluck('id')->toArray();
+        if ($app->layers->count() === 0) {
             throw new \Exception("No layers associated with app: {$app_id}");
         }
 
-        $simplificationFactor = $this->getSimplificationFactor($z);
+        // simplifies geometry by a factor of 4 for zoom levels <= 8
+        $simplificationFactor = $this->geometryComputationService->getSimplificationFactor($z, $this->zoomTreshold);
 
         $boundingBoxSQL = sprintf(
             'ST_MakeEnvelope(%f, %f, %f, %f, 3857)',
@@ -156,38 +136,37 @@ class PBFGeneratorService extends BaseService
             $boundingBox['xmax'],
             $boundingBox['ymax']
         );
-        // Interpola gli ID dei layer
-        $layerIdsSQL = implode(', ', $layerIds);
+        // // Interpola gli ID dei layer
+        // $layerIdsSQL = implode(', ', $layerIds);
 
-        // Genera la query SQL con gli ID dei layer incorporati
-        return <<<SQL
+        //TODO: add activities and wheres to match layers of the tracks
+        $sql = <<<SQL
     WITH 
     bounds AS (
         SELECT {$boundingBoxSQL} AS geom, {$boundingBoxSQL}::box2d AS b2d
     ),
     track_layers AS (
         SELECT 
-            ST_Force2D(ec.geometry) AS geometry, -- Forza la geometria a 2D
+            ST_Transform(ec.geometry::geometry,3857) as geometry, -- Forza la geometria a 2D
             ec.id,
             ec.name,
-            ec.ref,
-            ec.cai_scale,
+            ec.properties ->> 'ref' as ref,
+            ec.properties ->> 'cai_scale' as cai_scale,
+            ec.properties ->> 'distance' as distance,
+            ec.properties ->> 'duration_forward' as duration_forward,
             JSON_AGG(DISTINCT etl.layer_id) AS layers,
-            ec.activities -> '{$this->app_id}' AS activities, -- Usa $this->app_id per searchable
-            ec.themes -> '{$this->app_id}' AS themes, -- Usa $this->app_id per themes
-            ec.searchable -> '{$this->app_id}' AS searchable, -- Usa $this->app_id per searchable
-            ec.color as stroke_color
+            ec.properties ->> 'color' as stroke_color
         FROM ec_tracks ec
-        JOIN layerable etl ON ec.id = etl.layerable_id AND etl.layerable_type LIKE '%EcTrack'
+        JOIN layerables etl ON ec.id = etl.layerable_id AND etl.layerable_type LIKE '%EcTrack'
         JOIN layers l ON etl.layer_id = l.id
-        WHERE l.id IN ({$layerIdsSQL}) -- Filtra per i layer associati all'app
+        WHERE l.app_id = $app_id -- Filtra per i layer associati all'app
         GROUP BY ec.id, ec.geometry
     ),
     mvtgeom AS (
         SELECT 
             ST_AsMVTGeom(
                 ST_SimplifyPreserveTopology(
-                    ST_Transform(track_layers.geometry, 3857), 
+                    track_layers.geometry, 
                     $simplificationFactor
                 ), 
                 bounds.b2d
@@ -197,15 +176,12 @@ class PBFGeneratorService extends BaseService
             track_layers.ref,
             track_layers.cai_scale,
             track_layers.layers,
-            track_layers.themes,
-            track_layers.activities,
-            track_layers.searchable,
             track_layers.stroke_color
         FROM track_layers
         CROSS JOIN bounds
         WHERE 
             ST_Intersects(
-                ST_Transform(track_layers.geometry, 3857),
+                track_layers.geometry,
                 bounds.geom
             )
             AND ST_Dimension(track_layers.geometry) = 1
@@ -214,18 +190,8 @@ class PBFGeneratorService extends BaseService
     )
     SELECT ST_AsMVT(mvtgeom.*, 'ec_tracks') FROM mvtgeom;
     SQL;
-    }
 
-    public function markTileAsEmpty($zoom, $x, $y)
-    {
-        $cacheKey = "empty_tile_{$this->app_id}_{$zoom}_{$x}_{$y}";
-        Cache::put($cacheKey, true, now()->addHours(2));
-
-        // Aggiorna la lista delle chiavi tracciate
-        $trackedKeys = Cache::get('tiles_keys', []);
-        if (! in_array($cacheKey, $trackedKeys)) {
-            $trackedKeys[] = $cacheKey;
-            Cache::put('tiles_keys', $trackedKeys, 3600); // Salva la lista aggiornata
-        }
+        //Log::info($sql);
+        return $sql;
     }
 }
