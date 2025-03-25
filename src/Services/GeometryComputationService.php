@@ -11,6 +11,7 @@ use Wm\WmPackage\Models\EcTrack;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Symm\Gisconverter\Gisconverter;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Database\Query\Expression;
 use Illuminate\Database\Eloquent\Collection;
@@ -169,7 +170,7 @@ class GeometryComputationService extends BaseService
     public function getEcTracksBboxByUserId(int $userId)
     {
         $query = '
-            SELECT ST_Extent(geometry) as bbox
+            SELECT ST_Extent(geometry::geometry) as bbox
             FROM ec_tracks
             WHERE user_id = ?
         ';
@@ -198,7 +199,7 @@ class GeometryComputationService extends BaseService
             }
         } else {
             $modelId = $model->id;
-            $rawResult = $model::where('id', $modelId)->selectRaw('ST_Extent(geometry) as bbox')->first();
+            $rawResult = $model::where('id', $modelId)->selectRaw('ST_Extent(geometry::geometry) as bbox')->first();
             $bboxString = $rawResult['bbox'];
         }
 
@@ -438,7 +439,7 @@ class GeometryComputationService extends BaseService
      * @param [type] $zoom
      * @return void
      */
-    private function deg2num($lat_deg, $lon_deg, $zoom)
+    public function deg2num($lat_deg, $lon_deg, $zoom)
     {
         $lat_rad = deg2rad($lat_deg);
         $n = pow(2, $zoom);
@@ -459,7 +460,7 @@ class GeometryComputationService extends BaseService
         )->get();
     }
 
-    public function generateTiles($bbox, $zoom)
+    public function generateTiles($bbox, $zoom, $zoomTreshold, $app_id)
     {
         [$minLon, $minLat, $maxLon, $maxLat] = $bbox;
         [$minTileX, $minTileY] = $this->deg2num($maxLat, $minLon, $zoom);
@@ -468,11 +469,97 @@ class GeometryComputationService extends BaseService
         $tiles = [];
         for ($x = $minTileX; $x <= $maxTileX; $x++) {
             for ($y = $minTileY; $y <= $maxTileY; $y++) {
-                $tiles[] = [$x, $y, $zoom];
+                // Controlla se il tile corrente è in un quadrante vuoto a un livello di zoom inferiore
+                if ($this->isTileInEmptyParent($zoom, $x, $y, $zoomTreshold, $app_id)) {
+                    Log::info($app_id . '/' . $zoom . '/' . $x . '/' . $y . '.pbf -> JUMP PARENT EMPTY');
+                } else {
+                    $tiles[] = [$x, $y, $zoom];
+                }
             }
         }
 
         return $tiles;
+    }
+
+    private function isTileInEmptyParent($zoom, $x, $y, $zoomTreshold, $app_id)
+    {
+        // Controlla i quadranti vuoti a livelli inferiori
+        for ($z = $zoom - 1; $z >= $zoomTreshold; $z--) {
+            $factor = 2 ** ($zoom - $z);
+            $parentX = intdiv($x, $factor);
+            $parentY = intdiv($y, $factor);
+
+            // Chiave della cache per il quadrante vuoto
+            $cacheKey = "empty_tile_{$app_id}_{$z}_{$parentX}_{$parentY}";
+
+            if (Cache::has($cacheKey)) {
+                return true; // Il tile è in un quadrante vuoto
+            }
+        }
+
+        return false; // Il tile non è in un quadrante vuoto
+    }
+
+    // Funzione per calcolare il fattore di semplificazione in base al livello di zoom
+    public function getSimplificationFactor($zoom, $zoomTreshold)
+    {
+        if ($zoom <= $zoomTreshold) {
+            // Maggiore semplificazione per zoom <= 8
+            return 4;  // Puoi regolare questo valore in base alle tue esigenze
+        }
+
+        return 0.1 / ($zoom + 1);  // Semplificazione inversamente proporzionale per altri zoom
+    }
+
+    public function tileToBoundingBox($tileCoordinates): array
+    {
+        $worldMercMax = 20037508.3427892;
+        $worldMercMin = -$worldMercMax;
+        $worldMercSize = $worldMercMax - $worldMercMin;
+        $worldTileSize = 2 ** $tileCoordinates['zoom'];
+        $tileMercSize = $worldMercSize / $worldTileSize;
+
+        $env = [];
+        $env['xmin'] = $worldMercMin + $tileMercSize * $tileCoordinates['x'];
+        $env['xmax'] = $worldMercMin + $tileMercSize * ($tileCoordinates['x'] + 1);
+        $env['ymin'] = $worldMercMax - $tileMercSize * ($tileCoordinates['y'] + 1);
+        $env['ymax'] = $worldMercMax - $tileMercSize * $tileCoordinates['y'];
+
+        return $env;
+    }
+
+    public function markTileAsEmpty($zoom, $x, $y, $app_id)
+    {
+        $cacheKey = "empty_tile_{$app_id}_{$zoom}_{$x}_{$y}";
+        Cache::put($cacheKey, true, now()->addHours(2));
+
+        // Aggiorna la lista delle chiavi tracciate
+        $trackedKeys = Cache::get('tiles_keys', []);
+        if (! in_array($cacheKey, $trackedKeys)) {
+            $trackedKeys[] = $cacheKey;
+            Cache::put('tiles_keys', $trackedKeys, 3600); // Salva la lista aggiornata
+        }
+    }
+
+    public function clearEmptyTileKeys($app_id, $zoom)
+    {
+        // Recupera tutte le chiavi tracciate
+        $trackedKeys = Cache::get('tiles_keys', []);
+
+        // Filtra le chiavi da cancellare
+        $keysToDelete = array_filter($trackedKeys, function ($key) use ($app_id, $zoom) {
+            return strpos($key, "empty_tile_{$app_id}_{$zoom}_") === 0;
+        });
+
+        // Elimina le chiavi dalla cache
+        foreach ($keysToDelete as $key) {
+            Cache::forget($key);
+        }
+
+        // Aggiorna la lista delle chiavi tracciate
+        $remainingKeys = array_diff($trackedKeys, $keysToDelete);
+        Cache::put('tiles_keys', $remainingKeys, 3600);
+        // Log::channel('pbf')->info($this->app_id . '/' . $zoom . '/' . " pbf -> DELETE " . count($keysToDelete) . " keys");
     }
 
     /**
@@ -732,7 +819,7 @@ GROUP BY
         return $bbox;
     }
 
-    public function geometryModelsToBbox($query)
+    public function geometryModelToBbox($query)
     {
         $table = $query->getModel()->getTable();
         return $query->selectRaw('ST_Envelope(' . $table . '.geometry::geometry) AS bbox')->value('bbox');

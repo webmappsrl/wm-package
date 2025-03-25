@@ -11,6 +11,7 @@ use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Tymon\JWTAuth\Providers\LaravelServiceProvider;
 use Wm\WmPackage\Commands\WmBackupCommand;
+use Wm\WmPackage\Commands\WmGeneratePBFCommand;
 use Wm\WmPackage\Commands\WmImportFromGeohubCommand;
 use Wm\WmPackage\Commands\WmPackageCommand;
 use Wm\WmPackage\Providers\EventServiceProvider;
@@ -103,6 +104,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
                 'wm-media-library',
                 'wm-geohub-import',
                 'wm-elasticsearch',
+                'wm-horizon'
             ])
             // ->hasRoutes(['api', 'web'])// Check the boot method, routes are registered there
             ->discoversMigrations()
@@ -110,6 +112,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
                 WmPackageCommand::class,
                 // WmBackupCommand::class,//See in the boot() method
                 WmImportFromGeohubCommand::class,
+                WmGeneratePBFCommand::class
             ])
             ->hasViews();
     }
@@ -182,8 +185,13 @@ class WmPackageServiceProvider extends PackageServiceProvider
             );
         }
 
-        // Configure Horizon for geohub import
+        // Configure Horizon
         if (isset($this->app->config['horizon']) && is_array($this->app->config['horizon'])) {
+
+            //override the horizon config file
+            $this->app->config['horizon.environments'] = config('wm-horizon.environments', []);
+            $this->app->config['horizon.defaults'] = config('wm-horizon.defaults', []);
+
             // Get current Horizon config and import config
             $appHorizon = $this->app->config['horizon'];
             $importHorizon = config('wm-geohub-import.horizon', []);

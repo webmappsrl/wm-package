@@ -140,7 +140,7 @@ class LayerService extends BaseService
     public function updateLayerGeometry(Layer $layer, $save = true): bool
     {
         $relatedFeaturesQuery = $this->getRelatedModelsQuery(EcTrack::class, $layer);
-        $geometry = GeometryComputationService::make()->geometryModelsToBbox($relatedFeaturesQuery);
+        $geometry = GeometryComputationService::make()->geometryModelToBbox($relatedFeaturesQuery);
 
         $saved = false;
         if ($geometry !== $layer->geometry) {

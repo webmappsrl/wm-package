@@ -27,6 +27,10 @@ return [
                 ['width' => 250, 'height' => 150],
             ],
         ],
+        'pbf' => [
+            'min_zoom' => env('PBF_MIN_ZOOM', 5),
+            'max_zoom' => env('PBF_MAX_ZOOM', 13),
+        ]
     ],
     'clients' => [
         'dem' => [

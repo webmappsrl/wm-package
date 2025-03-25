@@ -81,7 +81,6 @@ return [
             'bucket' => 'wmfe',
             'url' => env('AWS_URL'),
             'endpoint' => env('AWS_ENDPOINT'),
-            'root' => 'geohub/conf',
             'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
         ],
         's3-osfmedia' => [
