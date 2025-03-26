@@ -2,9 +2,10 @@
 
 namespace Wm\WmPackage\Support\PathGenerator;
 
+use Illuminate\Support\Facades\Storage;
+use Wm\WmPackage\Services\StorageService;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Spatie\MediaLibrary\Support\PathGenerator\PathGenerator;
-use Wm\WmPackage\Services\StorageService;
 
 class WmfePathGenerator implements PathGenerator
 {
@@ -14,10 +15,10 @@ class WmfePathGenerator implements PathGenerator
     public function getPath(Media $media): string
     {
         $storageService = StorageService::make();
-        $appId = $media->model->app_id ?? null;
+        $appId = $this->getAppIdFromMedia($media);
+        $basePath = $storageService->getShardBasePath($appId);
 
-        // Build the path following the StorageService convention
-        return $storageService->getShardBasePath($appId) . 'media/' . $media->id;
+        return 'geohub/conf/' . $basePath . 'media/' . $media->id;
     }
 
     /**
@@ -34,5 +35,25 @@ class WmfePathGenerator implements PathGenerator
     public function getPathForResponsiveImages(Media $media): string
     {
         return $this->getPath($media) . '/responsive-images';
+    }
+
+    /**
+     * Try to extract the app_id from the media item or its related model
+     * 
+     * @param Media $media
+     * @return int|null
+     */
+    protected function getAppIdFromMedia(Media $media): ?int
+    {
+        if (!empty($media->app_id)) {
+            return $media->app_id;
+        }
+
+        // Try to get app_id as a property of the model
+        if ($media->model && isset($media->model->app_id)) {
+            return $media->model->app_id;
+        }
+
+        return null;
     }
 }
