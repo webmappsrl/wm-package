@@ -172,36 +172,6 @@ class StorageService extends BaseService
         }
     }
 
-    /**
-     * Store an ec_media file on AWS
-     *
-     * @param string $filePath The path of the file to upload
-     * @param string $fileName The name to give to the file
-     * @param int|null $appId The app ID
-     * @return string|false The stored path or false on failure
-     */
-    public function storeEcMediaFile(string $filePath, string $fileName, ?int $appId = null): string|false
-    {
-        try {
-            if (!file_exists($filePath)) {
-                throw new Exception("File not found: {$filePath}");
-            }
-
-            $contents = file_get_contents($filePath);
-            $path = $this->getShardBasePath($appId) . "media/{$fileName}";
-
-            $success = $this->getMediaDisk()->put($path, $contents);
-
-            if ($success) {
-                return $this->getMediaDisk()->url($path);
-            }
-
-            return false;
-        } catch (Exception $e) {
-            \Log::error('Failed to store ec_media file: ' . $e->getMessage());
-            return false;
-        }
-    }
 
     //
     // PATHS
