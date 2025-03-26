@@ -18,8 +18,8 @@ use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\TaxonomyActivity;
 use Wm\WmPackage\Models\User;
-use Wm\WmPackage\Services\StorageService;
 use Wm\WmPackage\Services\Import\Traits\HandlesEcMediaImport;
+use Wm\WmPackage\Services\StorageService;
 
 /**
  * Service for importing data from Geohub to the local database
@@ -109,7 +109,7 @@ class GeohubImportService
             ->allowFailures()
             ->dispatch();
 
-        $this->logger->info("Dispatched batch {$batch->id} with " . count($jobs) . " jobs for {$modelKey}s");
+        $this->logger->info("Dispatched batch {$batch->id} with ".count($jobs)." jobs for {$modelKey}s");
     }
 
     /**
@@ -147,7 +147,7 @@ class GeohubImportService
      */
     public function fetchData(int $entityId, string $tableName): ?array
     {
-        //handle media table
+        // handle media table
         if ($tableName === 'media') {
             $tableName = 'ec_media';
         }
@@ -192,7 +192,7 @@ class GeohubImportService
 
             return $model;
         } catch (\Exception $e) {
-            $this->logger->error("Error importing {$modelName} with ID {$entityId}: " . $e->getMessage());
+            $this->logger->error("Error importing {$modelName} with ID {$entityId}: ".$e->getMessage());
             throw $e;
         }
     }
@@ -594,7 +594,7 @@ class GeohubImportService
             }
             // Otherwise we need to download and upload to AWS
             else {
-                $fileUrl = self::GEOHUB_URL . 'storage/' . $featureCollection;
+                $fileUrl = self::GEOHUB_URL.'storage/'.$featureCollection;
                 $fileContent = $this->downloadFileContent($fileUrl);
 
                 if ($fileContent !== false) {
@@ -646,7 +646,7 @@ class GeohubImportService
                 $fileContent
             );
         } catch (\Exception $e) {
-            $this->logger->error('Error storing layer feature collection: ' . $e->getMessage());
+            $this->logger->error('Error storing layer feature collection: '.$e->getMessage());
         }
 
         if ($path) {

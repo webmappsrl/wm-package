@@ -2,15 +2,15 @@
 
 namespace Wm\WmPackage\Services\Models;
 
-use Wm\WmPackage\Models\Layer;
-use Wm\WmPackage\Models\EcTrack;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Database\Eloquent\Builder;
+use Wm\WmPackage\Models\EcTrack;
+use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Services\BaseService;
-use Illuminate\Database\Eloquent\Collection;
 use Wm\WmPackage\Services\GeometryComputationService;
-use Illuminate\Database\Eloquent\Relations\MorphToMany;
 
 class LayerService extends BaseService
 {
@@ -104,7 +104,7 @@ class LayerService extends BaseService
         }
 
         // Logga il numero di tracce filtrate dalla geometria e dalle tassonomie
-        Log::channel('layer')->info('Numero di tracce finali filtrate da getTracks: ' . $allEcTracks->count());
+        Log::channel('layer')->info('Numero di tracce finali filtrate da getTracks: '.$allEcTracks->count());
 
         // Restituisci tracce uniche in base all'ID
         return $allEcTracks->unique('id');
@@ -145,8 +145,9 @@ class LayerService extends BaseService
         $saved = false;
         if ($geometry !== $layer->geometry) {
             $layer->geometry = $geometry;
-            if ($save)
+            if ($save) {
                 $saved = $layer->save();
+            }
         }
 
         return $saved;

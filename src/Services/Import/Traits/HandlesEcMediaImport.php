@@ -3,16 +3,14 @@
 namespace Wm\WmPackage\Services\Import\Traits;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Query\Expression;
-use Wm\WmPackage\Services\StorageService;
 
 trait HandlesEcMediaImport
 {
     /**
      * Process the entire EC Media import
      *
-     * @param array $data The original data from Geohub
-     * @param string $geometry The geometry of the related model
+     * @param  array  $data  The original data from Geohub
+     * @param  string  $geometry  The geometry of the related model
      */
     public function processEcMediaImport(array $data, string $geometry): void
     {
@@ -21,16 +19,16 @@ trait HandlesEcMediaImport
 
         $relatedModel = $transformedData['model_type']::find($transformedData['model_id']);
 
-        if (!$relatedModel) {
+        if (! $relatedModel) {
             throw new \Exception("Related model not found: {$transformedData['model_type']} with ID {$transformedData['model_id']}");
         }
 
         // Get the URL and prepare it
         $url = $transformedData['url'];
-        if (!filter_var($url, FILTER_VALIDATE_URL)) {
-            $url = 'https://geohub.webmapp.it/storage/' . ltrim($url, '/');
+        if (! filter_var($url, FILTER_VALIDATE_URL)) {
+            $url = 'https://geohub.webmapp.it/storage/'.ltrim($url, '/');
 
-            //validate if the url returns an image content type
+            // validate if the url returns an image content type
             $contentType = get_headers($url, 1)[0];
             if (strpos($contentType, 'image') === false) {
                 throw new \Exception("The URL {$url} does not return an image content type. Skipping media import.");
@@ -54,7 +52,7 @@ trait HandlesEcMediaImport
 
         $fileName = preg_replace('/[^a-zA-Z0-9_-]/', '_', $fileName);
         $extension = pathinfo(parse_url($url, PHP_URL_PATH), PATHINFO_EXTENSION);
-        $fileName = $fileName . '.' . ($extension ?: 'jpg');
+        $fileName = $fileName.'.'.($extension ?: 'jpg');
 
         $mediaItem = $relatedModel->addMediaFromUrl($url)
             ->usingName($fileName)
@@ -66,14 +64,14 @@ trait HandlesEcMediaImport
     /**
      * Transform media data with specific logic for handling URLs
      *
-     * @param array $data The media data to transform
+     * @param  array  $data  The media data to transform
      */
     public function transformEcMediaData(array $data): array
     {
         // Find the related model (EcPoi, EcTrack, Layer)
         $relatedModel = $this->findAndValidateRelatedModel($data);
 
-        if (!isset($data['url']) || empty($data['url'])) {
+        if (! isset($data['url']) || empty($data['url'])) {
             throw new \Exception("No URL found for EC Media: {$data['id']}. Skipping media import.");
         }
 
@@ -90,22 +88,23 @@ trait HandlesEcMediaImport
             'model_type' => $relatedModel['model_type'],
             'model_id' => $relatedModel['model_id'],
             'url' => $data['url'],
-            'custom_properties' => $customProperties
+            'custom_properties' => $customProperties,
         ];
     }
 
     /**
      * Find and validate the related model for the media
      *
-     * @param array $data Original media data
+     * @param  array  $data  Original media data
      * @return array Related model data
+     *
      * @throws \Exception If no related model is found
      */
     private function findAndValidateRelatedModel(array $data): array
     {
         $relatedModel = $this->findEcMediaRelatedModel($data);
 
-        if (!$relatedModel) {
+        if (! $relatedModel) {
             throw new \Exception("No related model found for EC Media: {$data['id']}. Skipping media import.");
         }
 
@@ -114,8 +113,8 @@ trait HandlesEcMediaImport
 
     /**
      * Find the related model for an EC Media before importing it
-     * 
-     * @param array $data The original data from Geohub
+     *
+     * @param  array  $data  The original data from Geohub
      * @return array|null Array with model_type and model_id if a relation is found, null otherwise
      */
     public function findEcMediaRelatedModel(array $data): ?array
@@ -139,7 +138,7 @@ trait HandlesEcMediaImport
                     return [
                         'model_type' => get_class($model),
                         'model_id' => $model->id,
-                        'model_app_id' => $model->app_id
+                        'model_app_id' => $model->app_id,
                     ];
                 }
             }

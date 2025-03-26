@@ -2,13 +2,11 @@
 
 namespace Wm\WmPackage\Jobs\Import;
 
-use Wm\WmPackage\Jobs\Import\BaseEcImportJob;
-
 class ImportEcPoiJob extends BaseEcImportJob
 {
     protected function getModelKey(): string
     {
-        return parent::getModelKey() . 'poi';
+        return parent::getModelKey().'poi';
     }
 
     protected function getGeometryType(): string

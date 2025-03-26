@@ -12,7 +12,7 @@ use Wm\WmPackage\Services\PBFGeneratorService;
 
 class GeneratePBFJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels, Batchable;
+    use Batchable, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     // Numero massimo di tentativi
     public $tries = 5;

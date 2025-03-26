@@ -32,6 +32,6 @@ class FeaturesByLayerFilter extends LayerFeatureFilter
      */
     public function key(): string
     {
-        return 'features_by_layer_' . parent::key();
+        return 'features_by_layer_'.parent::key();
     }
 }

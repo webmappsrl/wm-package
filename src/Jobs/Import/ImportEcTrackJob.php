@@ -3,13 +3,12 @@
 namespace Wm\WmPackage\Jobs\Import;
 
 use Illuminate\Database\Eloquent\Model;
-use Wm\WmPackage\Jobs\Import\BaseEcImportJob;
 
 class ImportEcTrackJob extends BaseEcImportJob
 {
     protected function getModelKey(): string
     {
-        return parent::getModelKey() . 'track';
+        return parent::getModelKey().'track';
     }
 
     protected function getGeometryType(): string

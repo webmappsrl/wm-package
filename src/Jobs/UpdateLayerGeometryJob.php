@@ -3,17 +3,15 @@
 namespace Wm\WmPackage\Jobs;
 
 use Illuminate\Bus\Queueable;
-use Wm\WmPackage\Models\Layer;
-use Wm\WmPackage\Models\EcTrack;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Contracts\Queue\ShouldBeUnique;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
+use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Services\Models\LayerService;
-use Wm\WmPackage\Services\GeometryComputationService;
 
-class UpdateLayerGeometryJob implements ShouldQueue, ShouldBeUnique
+class UpdateLayerGeometryJob implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
@@ -23,7 +21,6 @@ class UpdateLayerGeometryJob implements ShouldQueue, ShouldBeUnique
      * @return void
      */
     public function __construct(protected Layer $layer) {}
-
 
     /**
      * Get the unique ID for the job.
@@ -41,6 +38,7 @@ class UpdateLayerGeometryJob implements ShouldQueue, ShouldBeUnique
     public function handle(LayerService $layerService)
     {
         $saved = $layerService->updateLayerGeometry($this->layer);
+
         return ['saved' => $saved];
     }
 }

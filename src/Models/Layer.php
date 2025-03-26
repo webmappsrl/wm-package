@@ -2,21 +2,21 @@
 
 namespace Wm\WmPackage\Models;
 
-use Exception;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Database\Eloquent\Model;
-use Spatie\Translatable\HasTranslations;
-use Wm\WmPackage\Observers\LayerObserver;
-use Wm\WmPackage\Traits\HasPackageFactory;
-use Wm\WmPackage\Traits\TaxonomyAbleModel;
-use Wm\WmPackage\Services\GeometryComputationService;
-use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Chelout\RelationshipEvents\Concerns\HasMorphToManyEvents;
 use Chelout\RelationshipEvents\Traits\HasRelationshipObservables;
+use Exception;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
+use Illuminate\Support\Facades\Log;
+use Spatie\Translatable\HasTranslations;
+use Wm\WmPackage\Observers\LayerObserver;
+use Wm\WmPackage\Services\GeometryComputationService;
+use Wm\WmPackage\Traits\HasPackageFactory;
+use Wm\WmPackage\Traits\TaxonomyAbleModel;
 
 class Layer extends Model
 {
-    use HasPackageFactory, HasTranslations, TaxonomyAbleModel, HasRelationshipObservables, HasMorphToManyEvents;
+    use HasMorphToManyEvents, HasPackageFactory, HasRelationshipObservables, HasTranslations, TaxonomyAbleModel;
     // protected $fillable = ['rank'];
 
     protected static function boot()
@@ -87,7 +87,7 @@ class Layer extends Model
             $this->bbox = $bbox ?? $defaultBBOX;
             $this->save();
         } catch (Exception $e) {
-            Log::channel('layer')->error('computeBB of layer with id: ' . $this->id);
+            Log::channel('layer')->error('computeBB of layer with id: '.$this->id);
         }
     }
 

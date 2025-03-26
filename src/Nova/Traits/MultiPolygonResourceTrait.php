@@ -10,7 +10,7 @@ trait MultiPolygonResourceTrait
     public function fields(NovaRequest $request): array
     {
         return [
-            //MapMultiPolygon::make('Geometry', 'geometry')->hideFromIndex()->readonly(),
+            // MapMultiPolygon::make('Geometry', 'geometry')->hideFromIndex()->readonly(),
         ];
     }
 }

@@ -6,11 +6,9 @@ use Illuminate\Bus\Batchable;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Query\Expression;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Wm\WmPackage\Services\Import\GeohubImportService;
 
@@ -72,7 +70,7 @@ abstract class BaseImportJob implements ShouldQueue
      */
     protected function getModelName(): string
     {
-        return config('wm-geohub-import.import_mapping.' . $this->getModelKey() . '.namespace');
+        return config('wm-geohub-import.import_mapping.'.$this->getModelKey().'.namespace');
     }
 
     /**
@@ -88,7 +86,7 @@ abstract class BaseImportJob implements ShouldQueue
      */
     protected function getMapping(): array
     {
-        return config('wm-geohub-import.mappings.' . $this->getModelKey());
+        return config('wm-geohub-import.mappings.'.$this->getModelKey());
     }
 
     /**
@@ -96,7 +94,7 @@ abstract class BaseImportJob implements ShouldQueue
      */
     protected function getRelations(): array
     {
-        return config('wm-geohub-import.import_mapping.' . $this->getModelKey() . '.relations');
+        return config('wm-geohub-import.import_mapping.'.$this->getModelKey().'.relations');
     }
 
     /**
@@ -106,7 +104,7 @@ abstract class BaseImportJob implements ShouldQueue
     {
         $transformedData = $this->geohubImportService->transformFields($data, $this->getModelKey());
 
-        $propertiesColumnName = config('wm-geohub-import.import_mapping.' . $this->getModelKey() . '.properties.column_name', 'properties');
+        $propertiesColumnName = config('wm-geohub-import.import_mapping.'.$this->getModelKey().'.properties.column_name', 'properties');
 
         $transformedData[$propertiesColumnName] = $this->geohubImportService->transformProperties($data, $this->getModelKey());
 
