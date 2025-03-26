@@ -9,6 +9,7 @@ use Wm\WmPackage\Http\Controllers\Api\ClassificationController;
 use Wm\WmPackage\Http\Controllers\Api\EcPoiController;
 use Wm\WmPackage\Http\Controllers\Api\EcTrackController;
 use Wm\WmPackage\Http\Controllers\Api\EditorialContentController;
+use Wm\WmPackage\Http\Controllers\Api\ElasticsearchController;
 use Wm\WmPackage\Http\Controllers\Api\UgcPoiController;
 use Wm\WmPackage\Http\Controllers\Api\UgcTrackController;
 use Wm\WmPackage\Http\Controllers\Api\V1\AppAPIController;
@@ -119,6 +120,7 @@ Route::name('api.')->group(function () {
     });
 
     Route::post('search', [WebmappAppController::class, 'search'])->name('search');
+    Route::get('elasticsearch', [ElasticsearchController::class, 'index'])->name('elasticsearch');
 
     /**
      * APP API (/app/*)
@@ -144,7 +146,7 @@ Route::name('api.')->group(function () {
             ])->name('track.taxonomies');
             Route::get('/{app}/taxonomies/{taxonomy_name}.json', [AppElbrusTaxonomyController::class, 'getTerms'])->name('taxonomies');
             Route::get('/{app_id}/tiles/map.mbtiles', function ($app_id) {
-                return redirect('https://k.webmapp.it/elbrus/'.$app_id.'.mbtiles');
+                return redirect('https://k.webmapp.it/elbrus/' . $app_id . '.mbtiles');
             });
         });
         Route::prefix('webmapp')->name('webmapp.')->group(function () {
