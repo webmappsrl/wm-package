@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\DB;
 
 abstract class BaseEcImportJob extends BaseImportJob
 {
+    const DEFAULT_LON_LAT = ['POINT Z' => '12.4964 41.9028 0', 'LINESTRING Z' => '12.4964 41.9028 0, 12.5033 41.9019 0, 12.5092 41.9101 0, 12.4964 41.9028 0'];
+
     protected function getModelKey(): string
     {
         return 'ec_';
@@ -19,7 +21,7 @@ abstract class BaseEcImportJob extends BaseImportJob
 
         // if geometry is null set a default 3D geometry
         if (empty($transformedData['geometry'])) {
-            $transformedData['geometry'] = DB::raw("ST_GeomFromText('{$this->getGeometryType()} Z(12.4964 41.9028 0, 12.5033 41.9019 0, 12.5092 41.9101 0, 12.4964 41.9028 0)')");
+            $transformedData['geometry'] = DB::raw("ST_GeomFromText('{$this->getGeometryType()} ({$this::DEFAULT_LON_LAT[$this->getGeometryType()]})')");
         } else {
             $transformedData['geometry'] = $this->forceTo3DGeometry($transformedData['geometry']);
         }
@@ -38,9 +40,6 @@ abstract class BaseEcImportJob extends BaseImportJob
         if (is_string($geometry) && preg_match('/^[0-9A-Fa-f]+$/', $geometry)) {
             // Properly format WKB hex string for PostgreSQL
             $geometry = DB::raw("ST_Force3D(ST_GeomFromEWKB('\\x{$geometry}'))");
-        } elseif (! is_string($geometry)) {
-            // Handle DB::raw objects directlyå
-            $geometry = DB::raw("ST_Force3D({$geometry})");
         } else {
             $geometry = DB::raw("ST_Force3D({$geometry})");
         }

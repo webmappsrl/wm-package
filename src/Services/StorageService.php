@@ -177,9 +177,10 @@ class StorageService extends BaseService
      *
      * @param string $filePath The path of the file to upload
      * @param string $fileName The name to give to the file
+     * @param int|null $appId The app ID
      * @return string|false The stored path or false on failure
      */
-    public function storeEcMediaFile(string $filePath, string $fileName): string|false
+    public function storeEcMediaFile(string $filePath, string $fileName, ?int $appId = null): string|false
     {
         try {
             if (!file_exists($filePath)) {
@@ -187,7 +188,7 @@ class StorageService extends BaseService
             }
 
             $contents = file_get_contents($filePath);
-            $path = "ecmedia/{$fileName}";
+            $path = $this->getShardBasePath($appId) . "media/{$fileName}";
 
             $success = $this->getMediaDisk()->put($path, $contents);
 
@@ -233,7 +234,7 @@ class StorageService extends BaseService
 
     public function getMediaDisk(): Filesystem
     {
-        return $this->getDisk('s3');
+        return $this->getDisk('wmfe');
     }
 
     public function getPublicDisk(): Filesystem
@@ -285,7 +286,7 @@ class StorageService extends BaseService
         return config('wm-package.shard_name', 'webmapp');
     }
 
-    private function getShardBasePath(?int $appId = null)
+    public function getShardBasePath(?int $appId = null)
     {
         $basePath = '/' . $this->getShardName() . '/';
         if (is_int($appId)) {
