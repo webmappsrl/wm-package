@@ -24,8 +24,6 @@ class App extends Resource
         return [
             ID::make()->sortable(),
             Text::make('Name')->sortable(),
-            HasMany::make('UgcPois', 'ugc_pois', UgcPoi::class),
-            HasMany::make('UgcTracks', 'ugc_tracks', UgcTrack::class),
             // TODO: implement fields
         ];
     }
