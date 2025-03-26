@@ -31,8 +31,9 @@ class ImportEcMediaJob extends BaseEcImportJob
             // Fetch the data from Geohub
             $data = $this->geohubImportService->fetchData($this->entityId, $this->getTableName());
 
+            $transformedData = parent::transformData($data);
             // Process the media import
-            $this->geohubImportService->processEcMediaImport($data);
+            $this->geohubImportService->processEcMediaImport($data, $transformedData['geometry']);
 
             $logger->info("Completed import of media with ID {$this->entityId}");
         } catch (\Exception $e) {
