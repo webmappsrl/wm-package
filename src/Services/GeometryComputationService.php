@@ -794,8 +794,8 @@ GROUP BY
             return $model->geometry;
         }
 
-        // Otherwise calculate the centroid
-        $centroid = DB::selectOne('SELECT ST_AsText(ST_Centroid(?)) as point', [$model->geometry]);
+        // Otherwise calculate the centroid and make it 3D
+        $centroid = DB::selectOne('SELECT ST_AsText(ST_Force3D(ST_Centroid(?))) as point', [$model->geometry]);
 
         // Check if it's necessary to force the SRID (4326)
         if (strpos($model->geometry, 'SRID=') === 0) {
