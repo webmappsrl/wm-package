@@ -12,6 +12,11 @@ class EcPoi extends AbstractEcResource
         fields as protected fieldsTrait;
     }
 
+    public static function label(): string
+    {
+        return __('Poi');
+    }
+
     public static $model = \Wm\WmPackage\Models\EcPoi::class;
 
     public function fields(NovaRequest $request): array
