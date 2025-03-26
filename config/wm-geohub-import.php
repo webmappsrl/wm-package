@@ -162,15 +162,19 @@ return [
             'relations' => [
                 'layer' => [
                     'foreign_key' => 'app_id',
+                    'model' => 'Wm\\WmPackage\\Models\\Layer',
                 ],
                 'ec_pois' => [
                     'foreign_key' => 'user_id',
+                    'model' => 'Wm\\WmPackage\\Models\\EcPoi',
                 ],
                 'ec_tracks' => [
                     'foreign_key' => 'user_id',
+                    'model' => 'Wm\\WmPackage\\Models\\EcTrack',
                 ],
                 'ec_media' => [
                     'foreign_key' => 'user_id',
+                    'model' => 'Wm\\WmPackage\\Models\\EcMedia',
                 ],
             ],
         ],
@@ -215,6 +219,7 @@ return [
                     'pivot_table' => 'taxonomy_activityables',
                     'key' => 'taxonomy_activity_id',
                     'foreign_key' => 'taxonomy_activityable_id',
+                    'model' => 'Wm\\WmPackage\\Models\\TaxonomyActivity',
                     'morphable_type' => ['key' => 'taxonomy_activityable_type', 'value' => 'App\\Models\\Layer'],
                     'pivot_columns' => [
                         'duration_forward',
@@ -262,16 +267,19 @@ return [
                     'pivot_table' => 'ec_media_ec_poi',
                     'foreign_key' => 'ec_media_id',
                     'key' => 'ec_poi_id',
+                    'model' => 'Wm\\WmPackage\\Models\\EcPoi',
                 ],
                 'ec_tracks' => [
                     'pivot_table' => 'ec_media_ec_track',
                     'foreign_key' => 'ec_media_id',
                     'key' => 'ec_track_id',
+                    'model' => 'Wm\\WmPackage\\Models\\EcTrack',
                 ],
                 'layers' => [
                     'pivot_table' => 'ec_media_layer',
                     'foreign_key' => 'ec_media_id',
                     'key' => 'layer_id',
+                    'model' => 'Wm\\WmPackage\\Models\\Layer',
                 ],
             ],
         ],
@@ -339,15 +347,21 @@ return [
             'relations' => [
                 'ec_pois' => [
                     'pivot_table' => 'ec_poi_ec_track',
+                    'key' => 'ec_poi_id',
                     'foreign_key' => 'ec_track_id',
+                    'model' => 'Wm\\WmPackage\\Models\\EcPoi',
                 ],
                 'ec_media' => [
                     'pivot_table' => 'ec_media_ec_track',
-                    'foreign_key' => 'ec_track_id',
+                    'key' => 'ec_track_id',
+                    'foreign_key' => 'ec_media_id',
+                    'model' => 'Wm\\WmPackage\\Models\\EcMedia',
                 ],
                 'layer' => [
                     'pivot_table' => 'ec_track_layer',
-                    'foreign_key' => 'ec_track_id',
+                    'key' => 'ec_track_id',
+                    'foreign_key' => 'layer_id',
+                    'model' => 'Wm\\WmPackage\\Models\\Layer',
                 ],
             ],
         ],
@@ -420,7 +434,20 @@ return [
                     'color' => 'color',
                 ],
             ],
-            'relations' => [],
+            'relations' => [
+                'ec_tracks' => [
+                    'pivot_table' => 'ec_poi_ec_track',
+                    'key' => 'ec_track_id',
+                    'foreign_key' => 'ec_poi_id',
+                    'model' => 'Wm\\WmPackage\\Models\\EcTrack',
+                ],
+                'ec_media' => [
+                    'pivot_table' => 'ec_media_ec_poi',
+                    'key' => 'ec_poi_id',
+                    'foreign_key' => 'ec_media_id',
+                    'model' => 'Wm\\WmPackage\\Models\\EcMedia',
+                ],
+            ],
         ],
 
         /*

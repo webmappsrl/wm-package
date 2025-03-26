@@ -19,6 +19,8 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
 {
     use EcFeatureTrait, Favoriteable, HasTranslations, Searchable, TaxonomyAbleModel;
 
+    const MEDIA_COLLECTION_NAME = 'feature_image';
+
     protected $fillable = [
         'name',
         'geometry',

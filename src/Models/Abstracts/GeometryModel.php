@@ -18,6 +18,8 @@ abstract class GeometryModel extends Model implements HasMedia
 {
     use InteractsWithMedia;
 
+    const MEDIA_COLLECTION_NAME = 'default';
+
     protected $fillable = [
         'name',
         'geometry',
@@ -153,7 +155,7 @@ abstract class GeometryModel extends Model implements HasMedia
      */
     public function getMorphClass()
     {
-        return 'App\\Models\\'.class_basename($this);
+        return 'App\\Models\\' . class_basename($this);
     }
 
     //
@@ -174,6 +176,11 @@ abstract class GeometryModel extends Model implements HasMedia
     {
         // add options
         // you can define as many collections as needed
-        $this->addMediaCollection('default');
+        $this->addMediaCollection(self::MEDIA_COLLECTION_NAME);
+    }
+
+    public static function getMediaCollection(): string
+    {
+        return self::MEDIA_COLLECTION_NAME;
     }
 }

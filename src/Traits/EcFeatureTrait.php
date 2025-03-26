@@ -48,4 +48,9 @@ trait EcFeatureTrait
                 });
         }
     }
+
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection(self::MEDIA_COLLECTION_NAME)->singleFile();
+    }
 }
