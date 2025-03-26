@@ -140,6 +140,8 @@ class WmPackageServiceProvider extends PackageServiceProvider
         Relation::morphMap([
             'App\Models\UgcPoi' => \Wm\WmPackage\Models\UgcPoi::class,
             'App\Models\UgcTrack' => \Wm\WmPackage\Models\UgcTrack::class,
+            'App\Models\EcPoi' => \Wm\WmPackage\Models\EcPoi::class,
+            'App\Models\EcTrack' => \Wm\WmPackage\Models\EcTrack::class,
         ]);
 
         // #######
