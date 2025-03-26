@@ -8,7 +8,6 @@ use Spatie\Image\Enums\Fit;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Wm\WmPackage\Models\App;
-use Wm\WmPackage\Models\Media;
 use Wm\WmPackage\Services\GeoJsonService;
 use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Services\MediaService;
@@ -17,8 +16,6 @@ use Wm\WmPackage\Services\StorageService;
 abstract class GeometryModel extends Model implements HasMedia
 {
     use InteractsWithMedia;
-
-    const MEDIA_COLLECTION_NAME = 'default';
 
     protected $fillable = [
         'name',
@@ -176,11 +173,11 @@ abstract class GeometryModel extends Model implements HasMedia
     {
         // add options
         // you can define as many collections as needed
-        $this->addMediaCollection(self::MEDIA_COLLECTION_NAME);
+        $this->addMediaCollection('default');
     }
 
     public static function getMediaCollection(): string
     {
-        return self::MEDIA_COLLECTION_NAME;
+        return 'default';
     }
 }
