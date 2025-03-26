@@ -17,6 +17,11 @@ class EcTrack extends AbstractEcResource
         fields as protected fieldsTrait;
     }
 
+    public static function label(): string
+    {
+        return __('Tracks');
+    }
+
     public static $model = \Wm\WmPackage\Models\EcTrack::class;
 
     public function fields(NovaRequest $request): array
