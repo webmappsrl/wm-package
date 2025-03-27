@@ -168,7 +168,7 @@ abstract class GeometryModel extends Model implements HasMedia
                     'thumbnail_'.implode('_', $size)
                 )
                 ->fit(Fit::Contain, $size['width'], $size['height'])
-                ->queued();
+                ->nonQueued();
         }
     }
 
@@ -176,13 +176,6 @@ abstract class GeometryModel extends Model implements HasMedia
     {
         // add options
         // you can define as many collections as needed
-        $this->addMediaCollection('default')
-            ->useDisk('wmfe')
-            ->storeConversionsOnDisk('wmfe');
-    }
-
-    public static function getMediaCollection(): string
-    {
-        return 'default';
+        $this->addMediaCollection('default');
     }
 }
