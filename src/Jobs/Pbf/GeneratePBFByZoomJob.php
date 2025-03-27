@@ -9,13 +9,8 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Bus;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
-use Symm\Gisconverter\Geometry\Geometry;
 use Throwable;
-use Wm\WmPackage\Jobs\Pbf\GenerateEcTrackPBFBatch;
-use Wm\WmPackage\Jobs\Pbf\GenerateLayerPBFJob;
-use Wm\WmPackage\Jobs\Pbf\GeneratePBFJob;
 use Wm\WmPackage\Services\GeometryComputationService;
 
 class GeneratePBFByZoomJob implements ShouldQueue
@@ -79,7 +74,7 @@ class GeneratePBFByZoomJob implements ShouldQueue
                 Log::error("Impossibile avviare il batch per il livello di zoom {$this->zoom}");
             }
         } catch (Throwable $e) {
-            Log::error("Errore nel Job PBF per il livello di zoom {$this->zoom}: " . $e->getMessage());
+            Log::error("Errore nel Job PBF per il livello di zoom {$this->zoom}: ".$e->getMessage());
             throw $e;
         }
     }

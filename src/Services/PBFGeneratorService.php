@@ -2,7 +2,6 @@
 
 namespace Wm\WmPackage\Services;
 
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Wm\WmPackage\Models\App;
@@ -37,8 +36,6 @@ class PBFGeneratorService extends BaseService
 
         return $path;
     }
-
-
 
     // ///////////////////////////// TRACKPBFJOB
 
@@ -80,13 +77,11 @@ class PBFGeneratorService extends BaseService
         SQL;
 
         $result = DB::select($sql, [
-            'layer_ids' => '{' . implode(',', $layerIds) . '}', // Converti in array PostgreSQL
+            'layer_ids' => '{'.implode(',', $layerIds).'}', // Converti in array PostgreSQL
         ]);
 
         return $result[0]->total_tracks ?? 0;
     }
-
-
 
     protected function getAssociatedLayerMap(): array
     {
@@ -139,7 +134,7 @@ class PBFGeneratorService extends BaseService
         // // Interpola gli ID dei layer
         // $layerIdsSQL = implode(', ', $layerIds);
 
-        //TODO: add activities and wheres to match layers of the tracks
+        // TODO: add activities and wheres to match layers of the tracks
         $sql = <<<SQL
     WITH 
     bounds AS (
@@ -191,7 +186,7 @@ class PBFGeneratorService extends BaseService
     SELECT ST_AsMVT(mvtgeom.*, 'ec_tracks') FROM mvtgeom;
     SQL;
 
-        //Log::info($sql);
+        // Log::info($sql);
         return $sql;
     }
 }

@@ -5,6 +5,7 @@ namespace Wm\WmPackage;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\Route;
 use Laravel\Nova\Nova;
+use Matchish\ScoutElasticSearch\ElasticSearch\HitsIteratorAggregate;
 use Matchish\ScoutElasticSearch\ElasticSearchServiceProvider;
 use Spatie\Backup\Config\Config as BackupConfig;
 use Spatie\LaravelPackageTools\Package;
@@ -14,6 +15,7 @@ use Wm\WmPackage\Commands\WmBackupCommand;
 use Wm\WmPackage\Commands\WmGeneratePBFCommand;
 use Wm\WmPackage\Commands\WmImportFromGeohubCommand;
 use Wm\WmPackage\Commands\WmPackageCommand;
+use Wm\WmPackage\ElasticSearch\HitsIteratorAggregate as ElasticSearchHitsIteratorAggregate;
 use Wm\WmPackage\Providers\EventServiceProvider;
 use Wm\WmPackage\Providers\ScheduleServiceProvider;
 
@@ -27,7 +29,10 @@ class WmPackageServiceProvider extends PackageServiceProvider
             \Wm\WmPackage\Exceptions\Handler::class,
 
         );
+
         parent::register();
+
+        $this->app->bind(HitsIteratorAggregate::class, ElasticSearchHitsIteratorAggregate::class);
     }
 
     /**
@@ -47,15 +52,15 @@ class WmPackageServiceProvider extends PackageServiceProvider
             Route::name('v2.')
                 ->middleware('api')
                 ->prefix('api/v2')
-                ->group($packageDirPath . 'routes/api.php');
+                ->group($packageDirPath.'routes/api.php');
 
             Route::name('default.')
                 ->middleware('api')
                 ->prefix('api')
-                ->group($packageDirPath . 'routes/api.php');
+                ->group($packageDirPath.'routes/api.php');
 
             Route::middleware('web')
-                ->group($packageDirPath . 'routes/web.php');
+                ->group($packageDirPath.'routes/web.php');
         });
 
         // Register policies
@@ -104,7 +109,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
                 'wm-media-library',
                 'wm-geohub-import',
                 'wm-elasticsearch',
-                'wm-horizon'
+                'wm-horizon',
             ])
             // ->hasRoutes(['api', 'web'])// Check the boot method, routes are registered there
             ->discoversMigrations()
@@ -112,7 +117,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
                 WmPackageCommand::class,
                 // WmBackupCommand::class,//See in the boot() method
                 WmImportFromGeohubCommand::class,
-                WmGeneratePBFCommand::class
+                WmGeneratePBFCommand::class,
             ])
             ->hasViews();
     }
@@ -151,8 +156,6 @@ class WmPackageServiceProvider extends PackageServiceProvider
             ...config('wm-filesystems.disks', []),
         ];
 
-
-
         $this->app->config['elasticsearch.indices'] =
             config('wm-elasticsearch.indices', []);
 
@@ -188,7 +191,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
         // Configure Horizon
         if (isset($this->app->config['horizon']) && is_array($this->app->config['horizon'])) {
 
-            //override the horizon config file
+            // override the horizon config file
             $this->app->config['horizon.environments'] = config('wm-horizon.environments', []);
             $this->app->config['horizon.defaults'] = config('wm-horizon.defaults', []);
 
@@ -223,7 +226,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
     protected function resources()
     {
 
-        Nova::resourcesIn($this->getPackageBaseDir() . '/Nova');
+        Nova::resourcesIn($this->getPackageBaseDir().'/Nova');
     }
 
     /**
