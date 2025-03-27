@@ -13,4 +13,6 @@ return [
      * The path generator to use for media storage.
      */
     'path_generator' => \Wm\WmPackage\Support\PathGenerator\WmfePathGenerator::class,
+
+    'queue_conversions_after_database_commit' => false,
 ];

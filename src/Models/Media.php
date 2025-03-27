@@ -31,6 +31,7 @@ class Media extends SpatieMedia
         'name',
         'file_name',
         'disk',
+        'custom_properties',
     ];
 
     protected static function booted()

@@ -2,16 +2,17 @@
 
 namespace Wm\WmPackage\Models\Abstracts;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Spatie\Image\Enums\Fit;
-use Spatie\MediaLibrary\HasMedia;
-use Spatie\MediaLibrary\InteractsWithMedia;
 use Wm\WmPackage\Models\App;
-use Wm\WmPackage\Services\GeoJsonService;
-use Wm\WmPackage\Services\GeometryComputationService;
+use Wm\WmPackage\Models\Media;
+use Spatie\MediaLibrary\HasMedia;
+use Illuminate\Database\Eloquent\Model;
 use Wm\WmPackage\Services\MediaService;
+use Wm\WmPackage\Services\GeoJsonService;
 use Wm\WmPackage\Services\StorageService;
+use Spatie\MediaLibrary\InteractsWithMedia;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Wm\WmPackage\Services\GeometryComputationService;
 
 abstract class GeometryModel extends Model implements HasMedia
 {
@@ -152,7 +153,7 @@ abstract class GeometryModel extends Model implements HasMedia
      */
     public function getMorphClass()
     {
-        return 'App\\Models\\'.class_basename($this);
+        return 'App\\Models\\' . class_basename($this);
     }
 
     //
@@ -163,9 +164,11 @@ abstract class GeometryModel extends Model implements HasMedia
     {
         foreach (MediaService::make()->getThumbnailSizes() as $size) {
             $this
-                ->addMediaConversion('thumbnail')
+                ->addMediaConversion(
+                    'thumbnail_' . implode('_', $size)
+                )
                 ->fit(Fit::Contain, $size['width'], $size['height'])
-                ->nonQueued();
+                ->queued();
         }
     }
 
@@ -173,7 +176,9 @@ abstract class GeometryModel extends Model implements HasMedia
     {
         // add options
         // you can define as many collections as needed
-        $this->addMediaCollection('default');
+        $this->addMediaCollection('default')
+            ->useDisk('wmfe')
+            ->storeConversionsOnDisk('wmfe');
     }
 
     public static function getMediaCollection(): string

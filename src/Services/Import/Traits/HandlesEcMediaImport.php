@@ -26,7 +26,7 @@ trait HandlesEcMediaImport
         // Get the URL and prepare it
         $url = $transformedData['url'];
         if (! filter_var($url, FILTER_VALIDATE_URL)) {
-            $url = 'https://geohub.webmapp.it/storage/'.ltrim($url, '/');
+            $url = 'https://geohub.webmapp.it/storage/' . ltrim($url, '/');
 
             // validate if the url returns an image content type
             $contentType = get_headers($url, 1)[0];
@@ -36,11 +36,9 @@ trait HandlesEcMediaImport
         }
 
         // Check if media with the same geohub_id already exists in the collection
-        $existingMedia = $relatedModel->getMedia('feature_image')
-            ->first(function ($media) use ($transformedData) {
-                return isset($media->custom_properties['geohub_id']) &&
-                    $media->custom_properties['geohub_id'] === $transformedData['custom_properties']['geohub_id'];
-            });
+        $existingMedia = $relatedModel->getMedia('default')
+            ->where('custom_properties->geohub_id', $transformedData['custom_properties']['geohub_id'])
+            ->first();
 
         // If media exists, delete it before adding the new one
         if ($existingMedia) {
@@ -52,13 +50,13 @@ trait HandlesEcMediaImport
 
         $fileName = preg_replace('/[^a-zA-Z0-9_-]/', '_', $fileName);
         $extension = pathinfo(parse_url($url, PHP_URL_PATH), PATHINFO_EXTENSION);
-        $fileName = $fileName.'.'.($extension ?: 'jpg');
+        $fileName = $fileName . '.' . ($extension ?: 'jpg');
 
         $mediaItem = $relatedModel->addMediaFromUrl($url)
             ->usingName($fileName)
             ->usingFileName($fileName)
-            ->toMediaCollection('default', config('wm-media-library.disk_name'))
-            ->withCustomProperties($transformedData['custom_properties']);
+            ->withCustomProperties($transformedData['custom_properties'])
+            ->toMediaCollection('default', config('wm-media-library.disk_name'));
     }
 
     /**
@@ -82,6 +80,7 @@ trait HandlesEcMediaImport
             'name' => json_decode($data['name'], true),
             'description' => json_decode($data['description'] ?? '{}', true),
             'url' => $data['url'],
+            'rank' => $data['rank']
         ];
 
         return [

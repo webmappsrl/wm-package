@@ -34,17 +34,18 @@ abstract class BaseEcImportJob extends BaseImportJob
     /**
      * Force the geometry to 3D.
      */
-    protected function forceTo3DGeometry(string $geometry): Expression
+    protected function forceTo3DGeometry(string $geometry): string
     {
         // force geometry to 3D
         if (is_string($geometry) && preg_match('/^[0-9A-Fa-f]+$/', $geometry)) {
             // Properly format WKB hex string for PostgreSQL
-            $geometry = DB::raw("ST_Force3D(ST_GeomFromEWKB('\\x{$geometry}'))");
+            $sql = "SELECT ST_AsText(ST_Force3D(ST_GeomFromEWKB('\\x{$geometry}'))) as geom";
         } else {
-            $geometry = DB::raw("ST_Force3D({$geometry})");
+            $sql = "SELECT ST_AsText(ST_Force3D({$geometry})) as geom";
         }
 
-        return $geometry;
+        $result = DB::selectOne($sql);
+        return $result->geom;
     }
 
     abstract protected function getGeometryType(): string;
