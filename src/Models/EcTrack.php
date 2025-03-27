@@ -2,19 +2,19 @@
 
 namespace Wm\WmPackage\Models;
 
-use Laravel\Scout\Searchable;
-use Illuminate\Support\Facades\DB;
-use Wm\WmPackage\Traits\EcFeatureTrait;
-use Spatie\Translatable\HasTranslations;
-use Wm\WmPackage\Traits\TaxonomyAbleModel;
-use Wm\WmPackage\Services\Models\EcTrackService;
-use Wm\WmPackage\Models\Abstracts\MultiLineString;
+use ChristianKuri\LaravelFavorite\Traits\Favoriteable;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
+use Illuminate\Support\Facades\DB;
+use Laravel\Scout\Searchable;
+use Spatie\Translatable\HasTranslations;
+use Wm\WmPackage\Models\Abstracts\MultiLineString;
 use Wm\WmPackage\Models\Interfaces\LayerRelatedModel;
 use Wm\WmPackage\Services\GeometryComputationService;
-use ChristianKuri\LaravelFavorite\Traits\Favoriteable;
-use Illuminate\Database\Eloquent\Relations\MorphToMany;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Wm\WmPackage\Services\Models\EcTrackService;
+use Wm\WmPackage\Traits\EcFeatureTrait;
+use Wm\WmPackage\Traits\TaxonomyAbleModel;
 
 class EcTrack extends MultiLineString implements LayerRelatedModel
 {
@@ -311,7 +311,7 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
     {
         $geojson = $this->getGeojson();
         // MAPPING
-        $geojson['properties']['id'] = 'ec_track_' . $this->id;
+        $geojson['properties']['id'] = 'ec_track_'.$this->id;
         $geojson = $this->_mapElbrusGeojsonProperties($geojson);
 
         if ($this->ecPois) {
@@ -346,9 +346,9 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
 
         $fields = ['kml', 'gpx'];
         foreach ($fields as $field) {
-            if (isset($geojson['properties'][$field . '_url'])) {
-                $geojson['properties'][$field] = $geojson['properties'][$field . '_url'];
-                unset($geojson['properties'][$field . '_url']);
+            if (isset($geojson['properties'][$field.'_url'])) {
+                $geojson['properties'][$field] = $geojson['properties'][$field.'_url'];
+                unset($geojson['properties'][$field.'_url']);
             }
         }
 
@@ -358,13 +358,13 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
 
                 if ($taxonomy === 'activity') {
                     $geojson['properties']['taxonomy'][$name] = array_map(function ($item) use ($name) {
-                        return $name . '_' . $item;
+                        return $name.'_'.$item;
                     }, array_map(function ($item) {
                         return $item['id'];
                     }, $values));
                 } else {
                     $geojson['properties']['taxonomy'][$name] = array_map(function ($item) use ($name) {
-                        return $name . '_' . $item;
+                        return $name.'_'.$item;
                     }, $values);
                 }
             }
@@ -541,7 +541,7 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
             'ascent' => isset($this->properties['ascent']) ? $this->setEmptyValueToZero($this->properties['ascent']) : 0,
             'taxonomyActivities' => $ecTrackService->getTaxonomyArray($this->taxonomyActivities),
             'layers' => $this->properties['layers'] ?? [],
-            //'searchable' => json_encode($this->getSearchableString()),
+            // 'searchable' => json_encode($this->getSearchableString()),
         ];
     }
 
@@ -564,7 +564,7 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
         }
 
         if (empty($searchables) || (in_array('name', $searchables) && ! empty($this->name))) {
-            $string .= str_replace('"', '', json_encode($this->getTranslations('name'))) . ' ';
+            $string .= str_replace('"', '', json_encode($this->getTranslations('name'))).' ';
         }
         // if (empty($searchables) || (in_array('description', $searchables) && ! empty($this->description))) {
         //     $description = str_replace('"', '', json_encode($this->getTranslations('description')));
@@ -577,16 +577,16 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
         //     $string .= strip_tags($excerpt) . ' ';
         // }
         if (empty($searchables) || (in_array('ref', $searchables) && ! empty($this->ref))) {
-            $string .= $this->ref . ' ';
+            $string .= $this->ref.' ';
         }
         if (empty($searchables) || (in_array('osmid', $searchables) && ! empty($this->osmid))) {
 
-            $string .= $this->osmid . ' ';
+            $string .= $this->osmid.' ';
         }
 
         if (empty($searchables) || (in_array('taxonomyActivities', $searchables) && ! empty($this->taxonomyActivities))) {
             foreach ($this->taxonomyActivities as $tax) {
-                $string .= str_replace('"', '', json_encode($tax->getTranslations('name'))) . ' ';
+                $string .= str_replace('"', '', json_encode($tax->getTranslations('name'))).' ';
             }
         }
 

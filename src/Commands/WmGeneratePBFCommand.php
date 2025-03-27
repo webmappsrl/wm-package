@@ -2,10 +2,10 @@
 
 namespace Wm\WmPackage\Commands;
 
-use Wm\WmPackage\Models\App;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Bus;
 use Wm\WmPackage\Jobs\Pbf\GeneratePBFByZoomJob;
+use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Services\GeometryComputationService;
 
 /**
@@ -67,7 +67,7 @@ class WmGeneratePBFCommand extends Command
     {
         $app = App::where('id', $this->argument('app_id'))->first();
         if (! $app) {
-            $this->error('App with id ' . $this->argument('app_id') . ' not found!');
+            $this->error('App with id '.$this->argument('app_id').' not found!');
 
             return;
         }

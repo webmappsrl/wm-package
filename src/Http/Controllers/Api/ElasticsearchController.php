@@ -3,14 +3,13 @@
 namespace Wm\WmPackage\Http\Controllers\Api;
 
 use Illuminate\Http\Request;
-use Wm\WmPackage\Models\EcTrack;
-use Wm\WmPackage\Http\Controllers\Controller;
-use ONGR\ElasticsearchDSL\Query\TermLevel\RangeQuery;
 use ONGR\ElasticsearchDSL\Aggregation\Bucketing\TermsAggregation;
+use ONGR\ElasticsearchDSL\Query\TermLevel\RangeQuery;
+use Wm\WmPackage\Http\Controllers\Controller;
+use Wm\WmPackage\Models\EcTrack;
 
 class ElasticsearchController extends Controller
 {
-
     public function index(Request $request)
     {
 
@@ -32,11 +31,11 @@ class ElasticsearchController extends Controller
         $app = $validated['app'] ?? false;
 
         $appId = (int) last(explode('_', $app));
-        $search = str_replace("%20", " ", $query);
+        $search = str_replace('%20', ' ', $query);
 
-        # https://github.com/matchish/laravel-scout-elasticsearch?tab=readme-ov-file#conditions
+        // https://github.com/matchish/laravel-scout-elasticsearch?tab=readme-ov-file#conditions
 
-        //base query
+        // base query
         $query = EcTrack::search($search, function (\Elastic\Elasticsearch\Client $client, $body) {
 
             $themesAggregation = new TermsAggregation('taxonomyWheres');
@@ -51,24 +50,26 @@ class ElasticsearchController extends Controller
             return $client->search(['index' => 'ec_tracks', 'body' => $body->toArray()])->asArray();
         })->where('app_id', $appId);
 
-        //handle layer
-        if ($layer)
+        // handle layer
+        if ($layer) {
             $query->whereIn('layers', $layer);
+        }
 
-        //handle filters    
+        // handle filters
         if (count($filters) > 0) {
             foreach ($filters as $filter) {
 
-                if (! key_exists('identifier', $filter))
-                    continue; //skip filters without identifier
+                if (! array_key_exists('identifier', $filter)) {
+                    continue;
+                } // skip filters without identifier
 
                 $identifier = $filter['identifier'];
-                //handle taxonomy filter
-                if (key_exists('taxonomy', $filter) && isset($taxonomiesMapping[$filter['taxonomy']])) {
+                // handle taxonomy filter
+                if (array_key_exists('taxonomy', $filter) && isset($taxonomiesMapping[$filter['taxonomy']])) {
                     $query->where($taxonomiesMapping[$filter['taxonomy']], $identifier);
                 }
-                //handle range filter
-                elseif (key_exists('min', $filter) && key_exists('max', $filter)) {
+                // handle range filter
+                elseif (array_key_exists('min', $filter) && array_key_exists('max', $filter)) {
                     $query->where($identifier, new RangeQuery($identifier, [
                         RangeQuery::GTE => $filter['min'],
                         RangeQuery::LTE => $filter['max'],
@@ -77,8 +78,7 @@ class ElasticsearchController extends Controller
             }
         }
 
-
-        //results are formatted in wm-package/src/ElasticSearch/HitsIteratorAggregate.php
+        // results are formatted in wm-package/src/ElasticSearch/HitsIteratorAggregate.php
         return $query->get();
     }
 }

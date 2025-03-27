@@ -18,10 +18,10 @@ return [
                         'analyzer' => 'standard',
                     ],
                     'start' => [
-                        'type' => 'geo_point'
+                        'type' => 'geo_point',
                     ],
                     'end' => [
-                        'type' => 'geo_point'
+                        'type' => 'geo_point',
                     ],
                     'activities' => [
                         'type' => 'keyword',

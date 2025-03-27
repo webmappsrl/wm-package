@@ -4,7 +4,6 @@ namespace Wm\WmPackage\ElasticSearch;
 
 use IteratorAggregate;
 use Traversable;
-use Matchish\ScoutElasticSearch\ElasticSearch\HitsIteratorAggregate as HitsIteratorAggregateInterface;
 
 class HitsIteratorAggregate implements IteratorAggregate
 {
@@ -16,7 +15,7 @@ class HitsIteratorAggregate implements IteratorAggregate
 
     public function getIterator(): Traversable
     {
-        $this->results['hits'] = collect($this->results['hits']['hits'])->map(fn($item) => $item['_source'])->toArray();
+        $this->results['hits'] = collect($this->results['hits']['hits'])->map(fn ($item) => $item['_source'])->toArray();
 
         return new \ArrayIterator($this->results);
     }
