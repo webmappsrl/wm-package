@@ -17,7 +17,6 @@ use Wm\WmPackage\Traits\TaxonomyAbleModel;
 class Layer extends Model
 {
     use HasMorphToManyEvents, HasPackageFactory, HasRelationshipObservables, HasTranslations, TaxonomyAbleModel;
-    // protected $fillable = ['rank'];
 
     protected static function boot()
     {
@@ -25,7 +24,7 @@ class Layer extends Model
         Layer::observe(LayerObserver::class);
     }
 
-    public array $translatable = ['name'];
+    public array $translatable = ['name', 'properties->title', 'properties->subtitle', 'properties->description'];
 
     protected $casts = [
         'properties' => 'array',

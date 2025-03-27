@@ -110,6 +110,8 @@ class WmPackageServiceProvider extends PackageServiceProvider
                 'wm-geohub-import',
                 'wm-elasticsearch',
                 'wm-horizon',
+                'wm-form-schema',
+                'wm-tab-translatable',
             ])
             // ->hasRoutes(['api', 'web'])// Check the boot method, routes are registered there
             ->discoversMigrations()
@@ -145,6 +147,8 @@ class WmPackageServiceProvider extends PackageServiceProvider
         Relation::morphMap([
             'App\Models\UgcPoi' => \Wm\WmPackage\Models\UgcPoi::class,
             'App\Models\UgcTrack' => \Wm\WmPackage\Models\UgcTrack::class,
+            'App\Models\EcPoi' => \Wm\WmPackage\Models\EcPoi::class,
+            'App\Models\EcTrack' => \Wm\WmPackage\Models\EcTrack::class,
         ]);
 
         // #######
@@ -155,6 +159,8 @@ class WmPackageServiceProvider extends PackageServiceProvider
             ...$this->app->config['filesystems.disks'],
             ...config('wm-filesystems.disks', []),
         ];
+
+        $this->app->config['tab-translatable'] = config('wm-tab-translatable', []);
 
         $this->app->config['elasticsearch.indices'] =
             config('wm-elasticsearch.indices', []);
