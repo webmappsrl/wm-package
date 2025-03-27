@@ -56,6 +56,7 @@ class MediaObserver extends AbstractAuthorableObserver
 
                 if (isset($media->custom_properties['geometry']) && $media->custom_properties['geometry'] !== null) {
                     $media->geometry = $media->custom_properties['geometry'];
+
                     return;
                 }
                 // Sets geometry based on model geometry

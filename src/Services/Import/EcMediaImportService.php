@@ -29,7 +29,7 @@ class EcMediaImportService extends GeohubImportService
         // Get the URL and prepare it
         $url = $transformedData['url'];
         if (! filter_var($url, FILTER_VALIDATE_URL)) {
-            $url = 'https://geohub.webmapp.it/storage/' . ltrim($url, '/');
+            $url = 'https://geohub.webmapp.it/storage/'.ltrim($url, '/');
 
             // validate if the url returns an image content type
             $contentType = get_headers($url, 1)[0];
@@ -86,7 +86,7 @@ class EcMediaImportService extends GeohubImportService
             'geohub_synced_at' => now()->toIso8601String(),
             'name' => json_decode($data['name'], true),
             'description' => json_decode($data['description'] ?? '{}', true),
-            'rank' => $data['rank']
+            'rank' => $data['rank'],
         ];
 
         return [
