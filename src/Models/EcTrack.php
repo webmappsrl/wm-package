@@ -31,7 +31,7 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
         'properties' => 'array',
     ];
 
-    public $translatable = ['name'];
+    public $translatable = ['name', 'properties->description', 'properties->excerpt', 'properties->difficulty'];
 
     public static string $geometryType = 'LineString';
 
