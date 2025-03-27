@@ -23,7 +23,13 @@ return [
                     'end' => [
                         'type' => 'geo_point',
                     ],
-                    'activities' => [
+                    'taxonomyActivities' => [
+                        'type' => 'keyword',
+                    ],
+                    'taxonomyWheres' => [
+                        'type' => 'keyword',
+                    ],
+                    'layers' => [
                         'type' => 'keyword',
                     ],
                 ],
