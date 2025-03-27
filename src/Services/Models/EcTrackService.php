@@ -363,7 +363,7 @@ class EcTrackService extends BaseService
 
     public function getTaxonomyArray($taxonomyCollection)
     {
-        return $taxonomyCollection->count() > 0 ? array_values(array_unique($taxonomyCollection->pluck('properties.identifier')->toArray())) : [];
+        return $taxonomyCollection->count() > 0 ? $taxonomyCollection->pluck('identifier')->toArray() : [];
     }
 
     public function getTaxonomyWheres(EcTrack $track)

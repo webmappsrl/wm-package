@@ -521,31 +521,27 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
 
         $ecTrackService = EcTrackService::make();
 
-        $taxonomy_activities = $ecTrackService->getTaxonomyArray($this->taxonomyActivities);
-        $taxonomy_wheres = $ecTrackService->getTaxonomyWheres($this);
-        $feature_image = $this->getMedia()->first();
-
         [$start, $end] = GeometryComputationService::make()->getStartEndCoordinates($this);
 
         return [
             'id' => $this->id,
-            'ref' => $this->ref,
+            'ref' => $this->properties['ref'] ?? '',
             'start' => $start,
             'end' => $end,
-            'cai_scale' => $this->cai_scale,
+            'cai_scale' => $this->properties['cai_scale'] ?? '',
+            'app_id' => $this->app_id,
             // 'from' => $this->getActualOrOSFValue('from'),
             // 'to' => $this->getActualOrOSFValue('to'),
             'name' => $this->name,
-            'taxonomyActivities' => $taxonomy_activities,
-            'taxonomyWheres' => $taxonomy_wheres,
-            'feature_image' => $feature_image,
-            'strokeColor' => hexToRgba($this->color),
-            'distance' => $this->setEmptyValueToZero($this->distance),
-            'duration_forward' => $this->setEmptyValueToZero($this->duration_forward),
-            'ascent' => $this->setEmptyValueToZero($this->ascent),
-            'activities' => $this->taxonomyActivities->pluck('identifier')->toArray(),
-            'layers' => $this->layer_ids,
-            'searchable' => json_encode($this->getSearchableString()),
+            'taxonomyWheres' => $ecTrackService->getTaxonomyWheres($this),
+            'feature_image' => $this->getMedia()->first(),
+            'strokeColor' => isset($this->properties['color']) ? hexToRgba($this->properties['color']) : '',
+            'distance' => isset($this->properties['distance']) ? $this->setEmptyValueToZero($this->properties['distance']) : 0,
+            'duration_forward' => isset($this->properties['duration_forward']) ? $this->setEmptyValueToZero($this->properties['duration_forward']) : 0,
+            'ascent' => isset($this->properties['ascent']) ? $this->setEmptyValueToZero($this->properties['ascent']) : 0,
+            'taxonomyActivities' => $ecTrackService->getTaxonomyArray($this->taxonomyActivities),
+            'layers' => $this->properties['layers'] ?? [],
+            // 'searchable' => json_encode($this->getSearchableString()),
         ];
     }
 

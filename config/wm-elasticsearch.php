@@ -17,6 +17,21 @@ return [
                         ],
                         'analyzer' => 'standard',
                     ],
+                    'start' => [
+                        'type' => 'geo_point',
+                    ],
+                    'end' => [
+                        'type' => 'geo_point',
+                    ],
+                    'taxonomyActivities' => [
+                        'type' => 'keyword',
+                    ],
+                    'taxonomyWheres' => [
+                        'type' => 'keyword',
+                    ],
+                    'layers' => [
+                        'type' => 'keyword',
+                    ],
                 ],
             ],
         ],

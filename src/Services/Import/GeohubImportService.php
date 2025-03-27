@@ -597,6 +597,7 @@ class GeohubImportService
                 $fileUrl = self::GEOHUB_URL.'storage/'.$featureCollection;
                 $fileContent = $this->downloadFileContent($fileUrl);
 
+
                 if ($fileContent !== false) {
                     $this->storeFeatureCollectionOnAws($model, $fileContent);
                 }

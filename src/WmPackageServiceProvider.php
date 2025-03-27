@@ -5,6 +5,7 @@ namespace Wm\WmPackage;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\Route;
 use Laravel\Nova\Nova;
+use Matchish\ScoutElasticSearch\ElasticSearch\HitsIteratorAggregate;
 use Matchish\ScoutElasticSearch\ElasticSearchServiceProvider;
 use Spatie\Backup\Config\Config as BackupConfig;
 use Spatie\LaravelPackageTools\Package;
@@ -14,6 +15,7 @@ use Wm\WmPackage\Commands\WmBackupCommand;
 use Wm\WmPackage\Commands\WmGeneratePBFCommand;
 use Wm\WmPackage\Commands\WmImportFromGeohubCommand;
 use Wm\WmPackage\Commands\WmPackageCommand;
+use Wm\WmPackage\ElasticSearch\HitsIteratorAggregate as ElasticSearchHitsIteratorAggregate;
 use Wm\WmPackage\Providers\EventServiceProvider;
 use Wm\WmPackage\Providers\ScheduleServiceProvider;
 
@@ -27,7 +29,10 @@ class WmPackageServiceProvider extends PackageServiceProvider
             \Wm\WmPackage\Exceptions\Handler::class,
 
         );
+
         parent::register();
+
+        $this->app->bind(HitsIteratorAggregate::class, ElasticSearchHitsIteratorAggregate::class);
     }
 
     /**
