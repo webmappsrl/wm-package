@@ -2,10 +2,14 @@
 
 namespace Wm\WmPackage\Nova;
 
+use Wm\WmPackage\Nova\EcPoi;
 use Laravel\Nova\Fields\Code;
-use Laravel\Nova\Fields\MorphTo;
-use Laravel\Nova\Fields\Number;
 use Laravel\Nova\Fields\Text;
+use Wm\WmPackage\Nova\UgcPoi;
+use Wm\WmPackage\Nova\EcTrack;
+use Laravel\Nova\Fields\Number;
+use Wm\WmPackage\Nova\UgcTrack;
+use Laravel\Nova\Fields\MorphTo;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Wm\WmPackage\Nova\Traits\PointResourceTrait;
 
@@ -26,6 +30,8 @@ class Media extends AbstractGeometryResource
                 ->types([
                     UgcPoi::class,
                     UgcTrack::class,
+                    EcPoi::class,
+                    EcTrack::class,
                 ])
                 ->searchable(),
             Text::make('UUID', 'uuid'),
