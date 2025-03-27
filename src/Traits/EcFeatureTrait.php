@@ -15,6 +15,9 @@ trait EcFeatureTrait
 
     /**
      * Scope a query to only a specific layer.
+     * Get all features "visible" by a specific layer
+     * These arent the features associated to the layer!
+     * These are all possible features that can be associated to the layer ;)
      */
     public function scopeOnLayer(Builder $query, Layer $layer): void
     {
