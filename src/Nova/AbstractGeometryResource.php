@@ -2,12 +2,13 @@
 
 namespace Wm\WmPackage\Nova;
 
-use Laravel\Nova\Fields\BelongsTo;
-use Laravel\Nova\Fields\Code;
-use Laravel\Nova\Fields\ID;
-use Laravel\Nova\Fields\Text;
-use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Resource;
+use Laravel\Nova\Fields\ID;
+use Laravel\Nova\Fields\Code;
+use Laravel\Nova\Fields\Text;
+use Laravel\Nova\Fields\BelongsTo;
+use Laravel\Nova\Http\Requests\NovaRequest;
+use Wm\WmPackage\Nova\Fields\PropertiesPanel;
 
 abstract class AbstractGeometryResource extends Resource
 {
@@ -38,8 +39,20 @@ abstract class AbstractGeometryResource extends Resource
             ID::make()->sortable(),
             Text::make('Name', 'name'),
             BelongsTo::make('App', 'app', App::class),
-            Code::make('Properties', $this->getPropertiesColumnName())->json(),
+            PropertiesPanel::make(ucwords($this->getPropertiesColumnName()), $this->getPropertiesModelKey())->collapsible(),
         ];
+    }
+
+    /**
+     * Get the model key for properties configuration based on the concrete class name.
+     */
+    protected function getPropertiesModelKey(): string
+    {
+        // Get the class basename (e.g., "EcPoi" from "Wm\WmPackage\Nova\EcPoi")
+        $className = class_basename(get_class($this));
+
+        // Convert to snake case (e.g., "EcPoi" to "ec_poi")
+        return strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $className));
     }
 
     /**
