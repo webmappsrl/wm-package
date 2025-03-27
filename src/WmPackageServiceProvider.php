@@ -2,22 +2,25 @@
 
 namespace Wm\WmPackage;
 
-use Illuminate\Database\Eloquent\Relations\Relation;
-use Illuminate\Support\Facades\Route;
 use Laravel\Nova\Nova;
-use Matchish\ScoutElasticSearch\ElasticSearch\HitsIteratorAggregate;
-use Matchish\ScoutElasticSearch\ElasticSearchServiceProvider;
-use Spatie\Backup\Config\Config as BackupConfig;
+use Illuminate\Support\Facades\Route;
 use Spatie\LaravelPackageTools\Package;
-use Spatie\LaravelPackageTools\PackageServiceProvider;
-use Tymon\JWTAuth\Providers\LaravelServiceProvider;
 use Wm\WmPackage\Commands\WmBackupCommand;
-use Wm\WmPackage\Commands\WmGeneratePBFCommand;
-use Wm\WmPackage\Commands\WmImportFromGeohubCommand;
 use Wm\WmPackage\Commands\WmPackageCommand;
-use Wm\WmPackage\ElasticSearch\HitsIteratorAggregate as ElasticSearchHitsIteratorAggregate;
+use Wm\WmPackage\Jobs\Import\ImportEcMediaJob;
+use Wm\WmPackage\Commands\WmGeneratePBFCommand;
+use Spatie\Backup\Config\Config as BackupConfig;
 use Wm\WmPackage\Providers\EventServiceProvider;
+use Tymon\JWTAuth\Providers\LaravelServiceProvider;
 use Wm\WmPackage\Providers\ScheduleServiceProvider;
+use Illuminate\Database\Eloquent\Relations\Relation;
+use Wm\WmPackage\Commands\WmImportFromGeohubCommand;
+use Wm\WmPackage\Services\Import\GeohubImportService;
+use Spatie\LaravelPackageTools\PackageServiceProvider;
+use Wm\WmPackage\Services\Import\EcMediaImportService;
+use Matchish\ScoutElasticSearch\ElasticSearchServiceProvider;
+use Matchish\ScoutElasticSearch\ElasticSearch\HitsIteratorAggregate;
+use Wm\WmPackage\ElasticSearch\HitsIteratorAggregate as ElasticSearchHitsIteratorAggregate;
 
 class WmPackageServiceProvider extends PackageServiceProvider
 {
@@ -52,15 +55,15 @@ class WmPackageServiceProvider extends PackageServiceProvider
             Route::name('v2.')
                 ->middleware('api')
                 ->prefix('api/v2')
-                ->group($packageDirPath.'routes/api.php');
+                ->group($packageDirPath . 'routes/api.php');
 
             Route::name('default.')
                 ->middleware('api')
                 ->prefix('api')
-                ->group($packageDirPath.'routes/api.php');
+                ->group($packageDirPath . 'routes/api.php');
 
             Route::middleware('web')
-                ->group($packageDirPath.'routes/web.php');
+                ->group($packageDirPath . 'routes/web.php');
         });
 
         // Register policies
@@ -140,6 +143,11 @@ class WmPackageServiceProvider extends PackageServiceProvider
 
         // Schedule
         $this->app->register(ScheduleServiceProvider::class);
+
+        // Register the correct import service for the ImportEcMediaJob
+        $this->app->when(ImportEcMediaJob::class)
+            ->needs(GeohubImportService::class)
+            ->give(EcMediaImportService::class);
 
         // Register the morphMap for polymorphic relationships
         Relation::morphMap([
@@ -228,7 +236,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
     protected function resources()
     {
 
-        Nova::resourcesIn($this->getPackageBaseDir().'/Nova');
+        Nova::resourcesIn($this->getPackageBaseDir() . '/Nova');
     }
 
     /**

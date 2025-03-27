@@ -5,12 +5,13 @@ namespace Wm\WmPackage\Jobs\Import;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
 use Wm\WmPackage\Services\Import\GeohubImportService;
+use Wm\WmPackage\Services\Import\EcMediaImportService;
 
 class ImportEcMediaJob extends BaseEcImportJob
 {
     protected function getModelKey(): string
     {
-        return parent::getModelKey().'media';
+        return parent::getModelKey() . 'media';
     }
 
     protected function getGeometryType(): string

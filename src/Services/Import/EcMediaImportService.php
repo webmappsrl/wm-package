@@ -1,11 +1,16 @@
 <?php
 
-namespace Wm\WmPackage\Services\Import\Traits;
+namespace Wm\WmPackage\Services\Import;
 
-use Illuminate\Database\Eloquent\Model;
 
-trait HandlesEcMediaImport
+class EcMediaImportService extends GeohubImportService
 {
+
+    public function __construct()
+    {
+        parent::__construct();
+    }
+
     /**
      * Process the entire EC Media import
      *
@@ -40,9 +45,11 @@ trait HandlesEcMediaImport
             ->where('custom_properties->geohub_id', $transformedData['custom_properties']['geohub_id'])
             ->first();
 
-        // If media exists, delete it before adding the new one
         if ($existingMedia) {
-            $existingMedia->delete();
+            $existingMedia->update([
+                'custom_properties' => $transformedData['custom_properties']
+            ]);
+            return; // Skip adding new media since we updated the existing one
         }
 
         $nameJson = json_decode($data['name'], true);
