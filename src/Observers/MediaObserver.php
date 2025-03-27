@@ -54,6 +54,10 @@ class MediaObserver extends AbstractAuthorableObserver
                 // Sets app_id from parent model
                 $media->app_id = $model->app_id;
 
+                if (isset($media->custom_properties['geometry']) && $media->custom_properties['geometry'] !== null) {
+                    $media->geometry = $media->custom_properties['geometry'];
+                    return;
+                }
                 // Sets geometry based on model geometry
                 $this->setGeometryFromModel($media, $model);
             } catch (\Exception $e) {
@@ -99,13 +103,6 @@ class MediaObserver extends AbstractAuthorableObserver
      */
     private function setGeometryFromModel(Media $media, Model $model)
     {
-        if (isset($media->custom_properties['geometry']) && $media->custom_properties['geometry'] !== null) {
-            $media->geometry = $media->custom_properties['geometry'];
-            unset($media->custom_properties['geometry']);
-            $media->saveQuietly();
-
-            return;
-        }
         try {
             // Utilizziamo il servizio GeometryComputationService per gestire qualsiasi tipo di geometria
             $geometryService = new GeometryComputationService;
