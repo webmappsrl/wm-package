@@ -2,25 +2,26 @@
 
 namespace Wm\WmPackage\Nova\Fields;
 
-use Laravel\Nova\Panel;
-use Laravel\Nova\Fields\Field;
-use Laravel\Nova\Fields\Text;
-use Laravel\Nova\Fields\Number;
-use Laravel\Nova\Fields\Boolean;
-use Laravel\Nova\Fields\Textarea;
-use Laravel\Nova\Fields\Code;
 use Kongulov\NovaTabTranslatable\NovaTabTranslatable;
+use Laravel\Nova\Fields\Boolean;
+use Laravel\Nova\Fields\Code;
+use Laravel\Nova\Fields\Field;
+use Laravel\Nova\Fields\Number;
+use Laravel\Nova\Fields\Text;
+use Laravel\Nova\Fields\Textarea;
+use Laravel\Nova\Panel;
 
 class PropertiesPanel extends Panel
 {
     protected array $formSchema;
+
     protected ?string $modelKey;
 
     /**
      * Create a new properties panel instance.
      *
-     * @param string $name The panel name
-     * @param string|null $modelKey The model key for schema lookup
+     * @param  string  $name  The panel name
+     * @param  string|null  $modelKey  The model key for schema lookup
      */
     public function __construct(string $name = 'Properties', ?string $modelKey = null)
     {
@@ -34,6 +35,7 @@ class PropertiesPanel extends Panel
      * Build the fields array for the panel
      *
      * @return array The array of field objects
+     *
      * @throws \Exception If Nova is not installed
      */
     protected function buildFields(): array
@@ -44,7 +46,7 @@ class PropertiesPanel extends Panel
 
         $fields = $regularFields;
 
-        if (!empty($translatableFields)) {
+        if (! empty($translatableFields)) {
             $fields[] = $this->createTranslatableFieldGroup($translatableFields);
         }
 
@@ -77,7 +79,7 @@ class PropertiesPanel extends Panel
     /**
      * Create a translatable field group
      *
-     * @param array $translatableFields The translatable fields
+     * @param  array  $translatableFields  The translatable fields
      * @return NovaTabTranslatable The translatable field group
      */
     protected function createTranslatableFieldGroup(array $translatableFields): NovaTabTranslatable
@@ -100,13 +102,12 @@ class PropertiesPanel extends Panel
         }
     }
 
-
     /**
      * Build Nova fields from configuration schema
      *
-     * @param string $key The field key
-     * @param array $fieldSchema The field schema configuration
-     * @param string $columnName The column name
+     * @param  string  $key  The field key
+     * @param  array  $fieldSchema  The field schema configuration
+     * @param  string  $columnName  The column name
      * @return Field The created Nova field
      */
     protected function createBaseField(string $key, array $fieldSchema, string $columnName): Field
@@ -124,9 +125,9 @@ class PropertiesPanel extends Panel
     /**
      * Create a field based on its type
      *
-     * @param string $fieldType The field type
-     * @param string $label The field label
-     * @param string $fieldPath The field path
+     * @param  string  $fieldType  The field type
+     * @param  string  $label  The field label
+     * @param  string  $fieldPath  The field path
      * @return Field The created field
      */
     protected function createFieldByType(string $fieldType, string $label, string $fieldPath): Field
@@ -143,9 +144,9 @@ class PropertiesPanel extends Panel
     /**
      * Apply common field attributes
      *
-     * @param Field $field The field to modify
-     * @param array $fieldSchema The field schema
-     * @param array $rules The validation rules
+     * @param  Field  $field  The field to modify
+     * @param  array  $fieldSchema  The field schema
+     * @param  array  $rules  The validation rules
      * @return Field The modified field
      */
     protected function applyFieldAttributes(Field $field, array $fieldSchema, array $rules): Field
@@ -174,7 +175,7 @@ class PropertiesPanel extends Panel
      */
     protected function ensureNovaIsInstalled(): void
     {
-        if (!class_exists('Laravel\Nova\Fields\Field')) {
+        if (! class_exists('Laravel\Nova\Fields\Field')) {
             throw new \Exception('Laravel Nova is not installed. Please install Laravel Nova to use this feature.');
         }
     }

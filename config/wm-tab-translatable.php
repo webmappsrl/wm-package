@@ -16,7 +16,7 @@ return [
         'en',
         'fr',
         'es',
-        'de'
+        'de',
     ],
 
     /*
@@ -27,7 +27,7 @@ return [
         'model' => 'App\\Model\\Language',
         'code_field' => 'lang',
         'sort_by' => 'id',
-        'sort_direction' => 'asc'
+        'sort_direction' => 'asc',
     ],
 
     /*
