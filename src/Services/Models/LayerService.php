@@ -2,15 +2,20 @@
 
 namespace Wm\WmPackage\Services\Models;
 
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Database\Eloquent\Relations\MorphToMany;
+use Illuminate\Support\Carbon;
+use Wm\WmPackage\Models\EcPoi;
+use Wm\WmPackage\Models\Layer;
+use Wm\WmPackage\Models\EcTrack;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Wm\WmPackage\Models\EcTrack;
-use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Services\BaseService;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
+use Wm\WmPackage\Jobs\UpdateLayerGeometryJob;
+use Wm\WmPackage\Jobs\UpdateLayeredFeaturesJob;
+use Wm\WmPackage\Models\Abstracts\GeometryModel;
 use Wm\WmPackage\Services\GeometryComputationService;
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
 
 class LayerService extends BaseService
 {
@@ -32,7 +37,7 @@ class LayerService extends BaseService
             return $count ? $layer->$relationName->count() : $layer->$relationName;
         }
 
-        return $this->getAllVisibleModels($model, $layer, false, $count);
+        return $this->getAllVisibleModels($model, $layer, $count);
     }
 
     private function getRelatedModelsQuery(string $geometryModelClass, Layer $layer): MorphToMany|Builder
@@ -63,15 +68,13 @@ class LayerService extends BaseService
      *  - an app_id column that matches the layer's app_id or one of the associated apps
      *
      * @param  string  $geometryModelClass  - The class name of the geometry model
-     * @param  bool  $collection  - If true, returns a collection of models. Otherwise, returns an array of IDs.
      * @param  bool  $count  - If true, returns the count of the models. Otherwise, returns the models themselves.
      */
     public function getAllVisibleModels(
         string $geometryModelClass,
         Layer $layer,
-        $collection = false,
         $count = false
-    ): array|Collection|int {
+    ): Collection|int {
         $features = $this->getAllVisibleModelsQuery($geometryModelClass, $layer);
 
         if ($count) {
@@ -80,15 +83,8 @@ class LayerService extends BaseService
 
         $features = $features->get();
 
-        // Se collection è true, ritorna direttamente tutte le tracce raccolte
-        if ($collection) {
-            return $features;
-        }
 
-        // Popola l'array dei track IDs
-        $trackIds = $features->pluck('id')->toArray();
-
-        return $trackIds;
+        return $features;
     }
 
     public function getPbfTracks(Layer $layer)
@@ -104,7 +100,7 @@ class LayerService extends BaseService
         }
 
         // Logga il numero di tracce filtrate dalla geometria e dalle tassonomie
-        Log::channel('layer')->info('Numero di tracce finali filtrate da getTracks: '.$allEcTracks->count());
+        Log::channel('layer')->info('Numero di tracce finali filtrate da getTracks: ' . $allEcTracks->count());
 
         // Restituisci tracce uniche in base all'ID
         return $allEcTracks->unique('id');
@@ -151,5 +147,115 @@ class LayerService extends BaseService
         }
 
         return $saved;
+    }
+
+    public function updateLayersPropertyOnAllLayeredFeaturesWithJobs(Layer $layer)
+    {
+        //update all ecpoi and ectrack related to the layer
+        foreach ($this->getModelsWithLayersInProperties() as $modelClass) {
+            $this->updateLayersPropertyOnLayeredFeatureWithJob($layer, $modelClass);
+        }
+    }
+
+    public function updateLayersPropertyOnLayeredFeatureWithJob(Layer $layer, string $ecModelClass)
+    {
+        UpdateLayeredFeaturesJob::dispatch($layer, $ecModelClass)
+            ->delay($this->getUniqueJobDelay());
+    }
+
+    public function updateLayerGeometryWithJob(Layer $layer)
+    {
+        UpdateLayerGeometryJob::dispatch($layer)
+            ->delay($this->getUniqueJobDelay());
+    }
+
+    /**
+     * Update the layers property on the features related to a specific layer
+     *
+     * @param Layer $layer
+     * @param string $ecModelClass - the class string related to the layer
+     * @return array - ids of feature saved
+     * 
+     * @throws Exception
+     */
+    public function updateLayersPropertyOnLayeredFeature(Layer $layer, string $ecModelClass): array
+    {
+        // https://neon.tech/postgresql/postgresql-json-functions/postgresql-jsonb-operators
+
+
+        // Features where add the layer
+        $newLayerFeatures = $this->getRelatedModelsQuery($ecModelClass, $layer)
+            ->whereRaw(
+                "(
+                    NOT \"properties\"->'layers' @> '[{$layer->id}]'::jsonb
+                    OR \"properties\"->'layers' is null
+                )" //where the feature doesn't have the layer
+            );
+
+        Log::info($newLayerFeatures->toSql());
+        $newLayerFeatures = $newLayerFeatures->get();
+
+        // Features where remove the layer
+        $layerFeaturesIds = $this->getRelatedModels($layer, $ecModelClass)->pluck('id')->toArray();
+        $oldLayerFeatures = $ecModelClass
+            ::whereNotIn('id', $layerFeaturesIds)
+            ->whereRaw(
+                "\"properties\"->'layers' @> '[{$layer->id}]'::jsonb" //where the feature has the layer
+            );
+
+        Log::info($oldLayerFeatures->toSql());
+        $oldLayerFeatures = $oldLayerFeatures->get();
+
+        $added = [];
+        $deleted = [];
+
+        DB::beginTransaction();
+        try {
+            // useful if in the past the feature was associated to the layer and now it's not
+            foreach ($oldLayerFeatures as $feature) {
+                $properties = $feature->properties;
+                //remove the layer from the properties
+                $properties['layers'] = array_diff($properties['layers'], [$layer->id]);
+                $feature->properties = $properties;
+                $feature->saveQuietly();
+                $deleted[] = $feature->id;
+            }
+            $oldLayerFeatures = null;
+
+            // Add the layer to the features that don't have it
+            foreach ($newLayerFeatures as $feature) {
+                // Save only features that don't have the layer
+                $properties = $feature->properties;
+                $properties['layers'][] = $layer->id;
+                $feature->properties = $properties;
+                $feature->saveQuietly();
+                $added[] = $feature->id;
+            }
+
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            throw $e;
+        }
+
+        return [
+            'added' => $added,
+            'deleted' => $deleted,
+        ];
+    }
+
+    private function getUniqueJobDelay(): Carbon
+    {
+        return now()->addSeconds(
+            app()->isLocal() ? 5 : 60 * 15
+        );
+    }
+
+    public function getModelsWithLayersInProperties(): array
+    {
+        return [
+            EcPoi::class,
+            EcTrack::class,
+        ];
     }
 }

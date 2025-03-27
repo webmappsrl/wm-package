@@ -113,6 +113,8 @@ class WmPackageServiceProvider extends PackageServiceProvider
                 'wm-geohub-import',
                 'wm-elasticsearch',
                 'wm-horizon',
+                'wm-form-schema',
+                'wm-tab-translatable',
             ])
             // ->hasRoutes(['api', 'web'])// Check the boot method, routes are registered there
             ->discoversMigrations()
@@ -165,6 +167,8 @@ class WmPackageServiceProvider extends PackageServiceProvider
             ...$this->app->config['filesystems.disks'],
             ...config('wm-filesystems.disks', []),
         ];
+
+        $this->app->config['tab-translatable'] = config('wm-tab-translatable', []);
 
         $this->app->config['elasticsearch.indices'] =
             config('wm-elasticsearch.indices', []);

@@ -185,7 +185,7 @@ return [
             'queue' => ['default'],
             'balance' => 'auto',
             'autoScalingStrategy' => 'time',
-            'maxProcesses' => 10,
+            'maxProcesses' => 3,
             'maxTime' => 3600,
             'maxJobs' => 1000,
             'memory' => 256,
@@ -198,8 +198,8 @@ return [
             'queue' => ['pbf'],
             'balance' => 'auto', // Usa il bilanciamento automatico
             'autoScalingStrategy' => 'time',
-            'maxProcesses' => 15, // Massimo 10 processi disponibili
-            'minProcesses' => 5, // Assicurati di avere almeno 1 processo sempre attivo
+            'maxProcesses' => 3, // Massimo 10 processi disponibili
+            'minProcesses' => 1, // Assicurati di avere almeno 1 processo sempre attivo
             'balanceMaxShift' => 10, // Massimo incremento o riduzione di processi
             'balanceCooldown' => 3, // Tempo di raffreddamento prima di cambiare processi
             'maxTime' => 3600,
@@ -213,7 +213,7 @@ return [
             'connection' => 'redis',
             'queue' => ['layers'],
             'balance' => 'simple',
-            'maxProcesses' => 5,
+            'maxProcesses' => 3,
             'maxTime' => 3600,
             'maxJobs' => 500,
             'memory' => 256,
@@ -226,18 +226,18 @@ return [
     'environments' => [
         'production' => [
             'supervisor-default' => [
-                'maxProcesses' => 20,
+                'maxProcesses' => 3,
                 'balanceMaxShift' => 3,
                 'balanceCooldown' => 3,
             ],
             'supervisor-pbf' => [
-                'maxProcesses' => 15, // Massimo 10 processi disponibili
-                'minProcesses' => 5, // Assicurati di avere almeno 1 processo sempre attivo
+                'maxProcesses' => 3, // Massimo 10 processi disponibili
+                'minProcesses' => 1, // Assicurati di avere almeno 1 processo sempre attivo
                 'balanceMaxShift' => 10, // Massimo incremento o riduzione di processi
                 'balanceCooldown' => 3, // Tempo di raffreddamento prima di cambiare processi
             ],
             'supervisor-layers' => [
-                'maxProcesses' => 5,
+                'maxProcesses' => 3,
             ],
         ],
         'local' => [

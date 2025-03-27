@@ -26,6 +26,8 @@ class Media extends AbstractGeometryResource
                 ->types([
                     UgcPoi::class,
                     UgcTrack::class,
+                    EcPoi::class,
+                    EcTrack::class,
                 ])
                 ->searchable(),
             Text::make('UUID', 'uuid'),
