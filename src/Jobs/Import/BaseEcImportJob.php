@@ -2,9 +2,11 @@
 
 namespace Wm\WmPackage\Jobs\Import;
 
+use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Query\Expression;
-use Illuminate\Support\Facades\DB;
+use Wm\WmPackage\Services\Import\GeohubImportService;
+use Wm\WmPackage\Services\Import\EcMediaImportService;
 
 abstract class BaseEcImportJob extends BaseImportJob
 {
@@ -23,7 +25,7 @@ abstract class BaseEcImportJob extends BaseImportJob
         if (empty($transformedData['geometry'])) {
             $transformedData['geometry'] = DB::raw("ST_GeomFromText('{$this->getGeometryType()} ({$this::DEFAULT_LON_LAT[$this->getGeometryType()]})')");
         } else {
-            $transformedData['geometry'] = $this->forceTo3DGeometry($transformedData['geometry']);
+            $transformedData['geometry'] = $this->convertTo3DGeometry($transformedData['geometry']);
         }
 
         return $transformedData;
@@ -32,9 +34,9 @@ abstract class BaseEcImportJob extends BaseImportJob
     protected function processDependencies(array $data, Model $model): void {}
 
     /**
-     * Force the geometry to 3D.
+     * Convert the geometry to 3D.
      */
-    protected function forceTo3DGeometry(string $geometry): string
+    private function convertTo3DGeometry(string $geometry): string
     {
         // force geometry to 3D
         if (is_string($geometry) && preg_match('/^[0-9A-Fa-f]+$/', $geometry)) {
