@@ -2,10 +2,8 @@
 
 namespace Wm\WmPackage\Services\Import;
 
-
 class EcMediaImportService extends GeohubImportService
 {
-
     public function __construct()
     {
         parent::__construct();
@@ -31,7 +29,7 @@ class EcMediaImportService extends GeohubImportService
         // Get the URL and prepare it
         $url = $transformedData['url'];
         if (! filter_var($url, FILTER_VALIDATE_URL)) {
-            $url = 'https://geohub.webmapp.it/storage/' . ltrim($url, '/');
+            $url = 'https://geohub.webmapp.it/storage/'.ltrim($url, '/');
 
             // validate if the url returns an image content type
             $contentType = get_headers($url, 1)[0];
@@ -47,8 +45,9 @@ class EcMediaImportService extends GeohubImportService
 
         if ($existingMedia) {
             $existingMedia->update([
-                'custom_properties' => $transformedData['custom_properties']
+                'custom_properties' => $transformedData['custom_properties'],
             ]);
+
             return; // Skip adding new media since we updated the existing one
         }
 
@@ -57,7 +56,7 @@ class EcMediaImportService extends GeohubImportService
 
         $fileName = preg_replace('/[^a-zA-Z0-9_-]/', '_', $fileName);
         $extension = pathinfo(parse_url($url, PHP_URL_PATH), PATHINFO_EXTENSION);
-        $fileName = $fileName . '.' . ($extension ?: 'jpg');
+        $fileName = $fileName.'.'.($extension ?: 'jpg');
 
         $mediaItem = $relatedModel->addMediaFromUrl($url)
             ->usingName($fileName)
@@ -87,7 +86,7 @@ class EcMediaImportService extends GeohubImportService
             'name' => json_decode($data['name'], true),
             'description' => json_decode($data['description'] ?? '{}', true),
             'url' => $data['url'],
-            'rank' => $data['rank']
+            'rank' => $data['rank'],
         ];
 
         return [

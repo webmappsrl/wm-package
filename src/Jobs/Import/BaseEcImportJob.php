@@ -2,11 +2,8 @@
 
 namespace Wm\WmPackage\Jobs\Import;
 
-use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Query\Expression;
-use Wm\WmPackage\Services\Import\GeohubImportService;
-use Wm\WmPackage\Services\Import\EcMediaImportService;
+use Illuminate\Support\Facades\DB;
 
 abstract class BaseEcImportJob extends BaseImportJob
 {
@@ -47,6 +44,7 @@ abstract class BaseEcImportJob extends BaseImportJob
         }
 
         $result = DB::selectOne($sql);
+
         return $result->geom;
     }
 

@@ -70,8 +70,8 @@ class Layer extends Model
     public function taxonomyActivities(): MorphToMany
     {
         return $this->morphToMany(TaxonomyActivity::class, 'taxonomy_activityable')
-            ->using(TaxonomyActivityable::class); //this is necessary to make events on pivot working
-        //https://github.com/chelout/laravel-relationship-events/issues/16;
+            ->using(TaxonomyActivityable::class); // this is necessary to make events on pivot working
+        // https://github.com/chelout/laravel-relationship-events/issues/16;
     }
 
     /**
@@ -88,7 +88,7 @@ class Layer extends Model
             $this->bbox = $bbox ?? $defaultBBOX;
             $this->save();
         } catch (Exception $e) {
-            Log::channel('layer')->error('computeBB of layer with id: ' . $this->id);
+            Log::channel('layer')->error('computeBB of layer with id: '.$this->id);
         }
     }
 

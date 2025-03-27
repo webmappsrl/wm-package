@@ -3,13 +3,13 @@
 namespace Wm\WmPackage\Jobs;
 
 use Illuminate\Bus\Queueable;
-use Wm\WmPackage\Models\Layer;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Contracts\Queue\ShouldBeUnique;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
+use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Services\Models\LayerService;
 
 class UpdateLayeredFeaturesJob implements ShouldBeUnique, ShouldQueue
@@ -28,7 +28,7 @@ class UpdateLayeredFeaturesJob implements ShouldBeUnique, ShouldQueue
      */
     public function uniqueId(): string
     {
-        return 'update_layered_' . $this->ecModelClass . '_' . $this->layer->id;
+        return 'update_layered_'.$this->ecModelClass.'_'.$this->layer->id;
     }
 
     /**
@@ -42,6 +42,7 @@ class UpdateLayeredFeaturesJob implements ShouldBeUnique, ShouldQueue
 
         $savedModelsString = print_r($savedModels, true);
         Log::info("SUCCESS: Saved {$savedModelsString} {$this->ecModelClass} on layer with ID {$this->layer->id} ");
+
         return $savedModels;
     }
 }
