@@ -8,16 +8,16 @@ use Illuminate\Support\Facades\Storage;
 
 class StorageService extends BaseService
 {
-    public function storeTrack(int $trackId, $contents, $appId): string|false
+    public function storeTrack(int $trackId, $contents): string|false
     {
-        $path = $this->getTrackPath($trackId, $appId);
+        $path = $this->getTrackPath($trackId);
 
         return $this->getRemoteWfeDisk()->put($path, $contents) ? $path : false;
     }
 
     public function getTrackGeojson(int $trackId, int $appId): ?string
     {
-        return $this->getRemoteWfeDisk()->get($this->getTrackPath($trackId, $appId));
+        return $this->getRemoteWfeDisk()->get($this->getTrackPath($trackId));
     }
 
     public function storePBF(int $appId, string $z, string $x, string $y, $pbfContent): string|false
@@ -182,9 +182,9 @@ class StorageService extends BaseService
         return $this->getShardBasePath($appId).'pois.geojson';
     }
 
-    private function getTrackPath(int $trackId, int $appId): string
+    private function getTrackPath(int $trackId): string
     {
-        return $this->getShardBasePath($appId)."tracks/{$trackId}.json";
+        return $this->getShardBasePath()."tracks/{$trackId}.json";
     }
 
     private function getAppConfigPath(int $appId): string
