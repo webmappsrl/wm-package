@@ -165,12 +165,12 @@ class PBFGeneratorService extends BaseService
                 ST_Transform(ec.geometry::geometry,3857), --indexed
                 bounds.geom
             )
-            AND ST_Dimension(ec.geometry) = 1
-    ),
+            AND ST_Dimension(ST_Transform(ec.geometry::geometry,3857)) = 1
+    )
     SELECT ST_AsMVT(ecTracks.*, 'ec_tracks') FROM ecTracks;
     SQL;
 
-        Log::info($sql);
+        //Log::info($sql);
         return $sql;
     }
 }
