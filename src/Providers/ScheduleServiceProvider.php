@@ -21,6 +21,9 @@ class ScheduleServiceProvider extends ServiceProvider
                 $schedule->command('wm:import-from-geohub app 11')
                     ->dailyAt('00:00');
 
+                $schedule->command('horizon:forget --all')
+                    ->dailyAt('01:00');
+
                 $schedule->command('wm-backup:run --only-db')
                     ->daily()
                     ->at('20:00');
