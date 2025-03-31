@@ -105,7 +105,7 @@ class GeohubImportService
             ->allowFailures()
             ->dispatch();
 
-        $this->logger->info("Dispatched batch {$batch->id} with " . count($jobs) . " jobs for {$modelKey}s");
+        $this->logger->info("Dispatched batch {$batch->id} with ".count($jobs)." jobs for {$modelKey}s");
     }
 
     /**
@@ -182,7 +182,7 @@ class GeohubImportService
 
             return $model;
         } catch (\Exception $e) {
-            $this->logger->error("Error importing {$modelName} with ID {$entityId}: " . $e->getMessage());
+            $this->logger->error("Error importing {$modelName} with ID {$entityId}: ".$e->getMessage());
             throw $e;
         }
     }
@@ -597,7 +597,7 @@ class GeohubImportService
             }
             // Otherwise we need to download and upload to AWS
             else {
-                $fileUrl = self::GEOHUB_URL . 'storage/' . $featureCollection;
+                $fileUrl = self::GEOHUB_URL.'storage/'.$featureCollection;
                 $fileContent = $this->downloadFileFromGeohub($fileUrl);
 
                 if ($fileContent !== false) {
@@ -649,7 +649,7 @@ class GeohubImportService
                 $fileContent
             );
         } catch (\Exception $e) {
-            $this->logger->error('Error storing layer feature collection: ' . $e->getMessage());
+            $this->logger->error('Error storing layer feature collection: '.$e->getMessage());
         }
 
         if ($path) {
