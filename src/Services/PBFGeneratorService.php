@@ -77,7 +77,7 @@ class PBFGeneratorService extends BaseService
         SQL;
 
         $result = DB::select($sql, [
-            'layer_ids' => '{' . implode(',', $layerIds) . '}', // Converti in array PostgreSQL
+            'layer_ids' => '{'.implode(',', $layerIds).'}', // Converti in array PostgreSQL
         ]);
 
         return $result[0]->total_tracks ?? 0;
@@ -170,7 +170,7 @@ class PBFGeneratorService extends BaseService
     SELECT ST_AsMVT(ecTracks.*, 'ec_tracks') FROM ecTracks;
     SQL;
 
-        //Log::info($sql);
+        // Log::info($sql);
         return $sql;
     }
 }
