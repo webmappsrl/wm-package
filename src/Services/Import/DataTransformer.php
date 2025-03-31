@@ -10,10 +10,10 @@ class DataTransformer
     /**
      * Convert a JSON string to an array.
      */
-    public function jsonToArray(?string $json): ?array
+    public function jsonToArray(?string $json): array
     {
         if (! $json) {
-            return null;
+            return [];
         }
 
         return json_decode($json, true);

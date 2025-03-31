@@ -43,7 +43,19 @@ class EcTrackObserver extends AbstractObserver
     {
         if (isset($ecTrack->properties['excerpt'])) {
             $properties = $ecTrack->properties;
-            $properties['excerpt'] = substr($ecTrack->properties['excerpt'], 0, 255);
+
+            if (is_array($properties['excerpt'])) {
+                foreach ($properties['excerpt'] as $locale => $text) {
+                    if (is_string($text)) {
+                        $properties['excerpt'][$locale] = substr($text, 0, 255);
+                    }
+                }
+            } elseif (is_string($properties['excerpt'])) {
+                $properties['excerpt'] = substr($properties['excerpt'], 0, 255);
+            } elseif ($properties['excerpt'] === null) {
+                $properties['excerpt'] = [];
+            }
+
             $ecTrack->properties = $properties;
         }
     }

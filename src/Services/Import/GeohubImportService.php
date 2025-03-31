@@ -550,7 +550,7 @@ class GeohubImportService
 
             foreach ($trackTaxonomyRelations as $relation) {
                 $ecTrack = EcTrack::where('properties->geohub_id', $relation->{$foreignKey})->first();
-                if ($ecTrack && ! $model->ecTracks()->where('layerable_type', 'Wm\\WmPackage\\Models\\EcTrack')->where('layerable_id', $ecTrack->id)->exists()) {
+                if ($ecTrack && ! $model->ecTracks()->where('layerable_type', 'App\\Models\\EcTrack')->where('layerable_id', $ecTrack->id)->exists()) {
                     $model->ecTracks()->attach($ecTrack->id, ['created_at' => now(), 'updated_at' => now()]);
                 }
             }

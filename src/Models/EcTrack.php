@@ -11,6 +11,7 @@ use Laravel\Scout\Searchable;
 use Spatie\Translatable\HasTranslations;
 use Wm\WmPackage\Models\Abstracts\MultiLineString;
 use Wm\WmPackage\Models\Interfaces\LayerRelatedModel;
+use Wm\WmPackage\Observers\EcTrackObserver;
 use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Services\Models\EcTrackService;
 use Wm\WmPackage\Traits\EcFeatureTrait;
@@ -35,10 +36,10 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
 
     public static string $geometryType = 'LineString';
 
-    // protected static function booted()
-    // {
-    //     EcTrack::observe(EcTrackObserver::class);
-    // }
+    protected static function booted()
+    {
+        EcTrack::observe(EcTrackObserver::class);
+    }
 
     //
     // RELATIONS
