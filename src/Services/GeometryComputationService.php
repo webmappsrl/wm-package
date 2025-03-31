@@ -416,7 +416,6 @@ class GeometryComputationService extends BaseService
         return $geometry;
     }
 
-
     public function isRoundtrip(array $coords): bool
     {
         $treshold = 0.001; // diff < 300 metri ref trackid:1592
@@ -439,16 +438,16 @@ class GeometryComputationService extends BaseService
         $lastCoord = $coordinates[count($coordinates) - 1];
 
         if (
-            !is_array($firstCoord) || !is_array($lastCoord) ||
+            ! is_array($firstCoord) || ! is_array($lastCoord) ||
             count($firstCoord) < 2 || count($lastCoord) < 2
         ) {
             return false;
         }
 
-        $firstX = (float)$firstCoord[0];
-        $firstY = (float)$firstCoord[1];
-        $lastX = (float)$lastCoord[0];
-        $lastY = (float)$lastCoord[1];
+        $firstX = (float) $firstCoord[0];
+        $firstY = (float) $firstCoord[1];
+        $lastX = (float) $lastCoord[0];
+        $lastY = (float) $lastCoord[1];
 
         return (abs($lastX - $firstX) < $treshold) && (abs($lastY - $firstY) < $treshold);
     }
