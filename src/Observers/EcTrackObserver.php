@@ -43,7 +43,19 @@ class EcTrackObserver extends AbstractObserver
     {
         if (isset($ecTrack->properties['excerpt'])) {
             $properties = $ecTrack->properties;
-            $properties['excerpt'] = substr($ecTrack->properties['excerpt'], 0, 255);
+
+            if (is_array($properties['excerpt'])) {
+                foreach ($properties['excerpt'] as $locale => $text) {
+                    if (is_string($text)) {
+                        $properties['excerpt'][$locale] = substr($text, 0, 255);
+                    }
+                }
+            } else if (is_string($properties['excerpt'])) {
+                $properties['excerpt'] = substr($properties['excerpt'], 0, 255);
+            } else if ($properties['excerpt'] === null) {
+                $properties['excerpt'] = [];
+            }
+
             $ecTrack->properties = $properties;
         }
     }
@@ -69,7 +81,7 @@ class EcTrackObserver extends AbstractObserver
         if ($apps && $bbox && $author_id) {
             GenerateAppPBFJob::dispatch($apps, $bbox);
         } else {
-            Log::info('No apps or bbox or author_id found for track '.$ecTrack->id.' to delete PBFs.');
+            Log::info('No apps or bbox or author_id found for track ' . $ecTrack->id . ' to delete PBFs.');
         }
     }
 }
