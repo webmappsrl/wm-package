@@ -28,7 +28,7 @@ class UpdateLayerGeometryJob implements ShouldBeUnique, ShouldQueue
     public function uniqueId(): string
     {
 
-        return 'update_layer_geometry_' . $this->layer->id;
+        return 'update_layer_geometry_'.$this->layer->id;
     }
 
     /**

@@ -2,20 +2,19 @@
 
 namespace Wm\WmPackage\Services\Models;
 
-use Illuminate\Support\Carbon;
-use Wm\WmPackage\Models\EcPoi;
-use Wm\WmPackage\Models\Layer;
-use Wm\WmPackage\Models\EcTrack;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Wm\WmPackage\Services\BaseService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
-use Wm\WmPackage\Jobs\UpdateLayerGeometryJob;
-use Wm\WmPackage\Jobs\UpdateLayeredFeaturesJob;
-use Wm\WmPackage\Models\Abstracts\GeometryModel;
-use Wm\WmPackage\Services\GeometryComputationService;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Wm\WmPackage\Jobs\UpdateLayeredFeaturesJob;
+use Wm\WmPackage\Jobs\UpdateLayerGeometryJob;
+use Wm\WmPackage\Models\EcPoi;
+use Wm\WmPackage\Models\EcTrack;
+use Wm\WmPackage\Models\Layer;
+use Wm\WmPackage\Services\BaseService;
+use Wm\WmPackage\Services\GeometryComputationService;
 
 class LayerService extends BaseService
 {
@@ -83,7 +82,6 @@ class LayerService extends BaseService
 
         $features = $features->get();
 
-
         return $features;
     }
 
@@ -100,7 +98,7 @@ class LayerService extends BaseService
         }
 
         // Logga il numero di tracce filtrate dalla geometria e dalle tassonomie
-        Log::channel('layer')->info('Numero di tracce finali filtrate da getTracks: ' . $allEcTracks->count());
+        Log::channel('layer')->info('Numero di tracce finali filtrate da getTracks: '.$allEcTracks->count());
 
         // Restituisci tracce uniche in base all'ID
         return $allEcTracks->unique('id');
@@ -151,7 +149,7 @@ class LayerService extends BaseService
 
     public function updateLayersPropertyOnAllLayeredFeaturesWithJobs(Layer $layer)
     {
-        //update all ecpoi and ectrack related to the layer
+        // update all ecpoi and ectrack related to the layer
         foreach ($this->getModelsWithLayersInProperties() as $modelClass) {
             $this->updateLayersPropertyOnLayeredFeatureWithJob($layer, $modelClass);
         }
@@ -172,16 +170,14 @@ class LayerService extends BaseService
     /**
      * Update the layers property on the features related to a specific layer
      *
-     * @param Layer $layer
-     * @param string $ecModelClass - the class string related to the layer
+     * @param  string  $ecModelClass  - the class string related to the layer
      * @return array - ids of feature saved
-     * 
+     *
      * @throws Exception
      */
     public function updateLayersPropertyOnLayeredFeature(Layer $layer, string $ecModelClass): array
     {
         // https://neon.tech/postgresql/postgresql-json-functions/postgresql-jsonb-operators
-
 
         // Features where add the layer
         $newLayerFeatures = $this->getRelatedModelsQuery($ecModelClass, $layer)
@@ -189,7 +185,7 @@ class LayerService extends BaseService
                 "(
                     NOT \"properties\"->'layers' @> '[{$layer->id}]'::jsonb
                     OR \"properties\"->'layers' is null
-                )" //where the feature doesn't have the layer
+                )" // where the feature doesn't have the layer
             );
 
         Log::info($newLayerFeatures->toSql());
@@ -197,10 +193,9 @@ class LayerService extends BaseService
 
         // Features where remove the layer
         $layerFeaturesIds = $this->getRelatedModels($layer, $ecModelClass)->pluck('id')->toArray();
-        $oldLayerFeatures = $ecModelClass
-            ::whereNotIn('id', $layerFeaturesIds)
+        $oldLayerFeatures = $ecModelClass::whereNotIn('id', $layerFeaturesIds)
             ->whereRaw(
-                "\"properties\"->'layers' @> '[{$layer->id}]'::jsonb" //where the feature has the layer
+                "\"properties\"->'layers' @> '[{$layer->id}]'::jsonb" // where the feature has the layer
             );
 
         Log::info($oldLayerFeatures->toSql());
@@ -214,7 +209,7 @@ class LayerService extends BaseService
             // useful if in the past the feature was associated to the layer and now it's not
             foreach ($oldLayerFeatures as $feature) {
                 $properties = $feature->properties;
-                //remove the layer from the properties
+                // remove the layer from the properties
                 $properties['layers'] = array_diff($properties['layers'], [$layer->id]);
                 $feature->properties = $properties;
                 $feature->saveQuietly();
