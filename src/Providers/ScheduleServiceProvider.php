@@ -15,7 +15,7 @@ class ScheduleServiceProvider extends ServiceProvider
 
             if (App::environment('production')) {
 
-                $schedule->command('migrate:fresh --force')
+                $schedule->command('migrate:fresh --seed --force')
                     ->dailyAt('23:55');
 
                 $schedule->command('wm:import-from-geohub app 11')
