@@ -65,7 +65,7 @@ class WmGeneratePBFCommand extends Command
     {
         $app = App::where('id', $this->argument('app_id'))->first();
         if (! $app) {
-            $this->error('App with id ' . $this->argument('app_id') . ' not found!');
+            $this->error('App with id '.$this->argument('app_id').' not found!');
 
             return;
         }
