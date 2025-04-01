@@ -5,6 +5,7 @@ namespace Wm\WmPackage\Traits;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Wm\WmPackage\Models\Layer;
+use Wm\WmPackage\Services\TaxonomyWhereService;
 
 trait EcFeatureTrait
 {
@@ -30,18 +31,9 @@ trait EcFeatureTrait
             ->whereNotNull('geometry');  // Controlla che la geometria non sia null
 
         // ## TAXONOMY WHERE - strings inside properties
-        $layerWhere = $layer->properties['taxonomy_where'] ?? [];
-        if (count($layerWhere) > 0) {
-            $query
-                ->where(function ($query) use ($layerWhere) { // LOGIC OPERATOR AND
-                    $layerWhereIdentifiers = collect($layerWhere)->keys();
-                    $query->orWhere(function (Builder $query) use ($layerWhereIdentifiers) { // LOGIC OPERATOR OR
-                        foreach ($layerWhereIdentifiers as $key => $value) {
-                            $query->whereRaw("properties->'taxonomy_where' ? '$value'");
-                        }
-                    });
-                });
-        }
+        // check the local scope here wm-package/src/Traits/TaxonomyWhereAbleModel.php
+        $query->byWhereProperty($layer->properties);
+
 
         // ## TAXONOMY ACTIVITY - relation
         $ids = $layer->taxonomyActivities->pluck('id')->toArray() ?? [];

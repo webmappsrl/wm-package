@@ -26,8 +26,9 @@ class EcPoiObserver extends AbstractEcObserver
      *
      * @return void
      */
-    public function saved(EcPoi $ecPoi)
+    public function saved($ecPoi)
     {
+        parent::saved($ecPoi);
         if (! $ecPoi->skip_geomixer_tech && ! empty($ecPoi->geometry)) {
             EcPoiService::make()->updateDataChain($ecPoi);
         }
