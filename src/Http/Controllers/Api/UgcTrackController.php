@@ -22,11 +22,18 @@ class UgcTrackController extends UgcController
         return parent::_update($request, $track);
     }
 
+    public function legacyEdit(Request $request): JsonResponse
+    {
+        $validated = $this->validate($request, ['properties.id' => 'required|exists:ugc_tracks,id']);
+        $track = UgcTrack::find($validated['properties']['id']);
+        return parent::_update($request, $track);
+    }
+
     /**
      * Show the form for editing the specified resource.
      */
-    public function destroy(UgcTrack $track): JsonResponse
+    public function destroy(int $id): JsonResponse
     {
-        return parent::_destroy($track);
+        return parent::_destroy($id);
     }
 }
