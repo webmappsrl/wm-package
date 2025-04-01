@@ -22,11 +22,15 @@ return [
                                 'type' => 'text',
                                 'analyzer' => 'phrase_analyzer'
                             ],
+                            'edge' => [
+                                'type' => 'text',
+                                'analyzer' => 'edge_ngram_analyzer',
+                                'search_analyzer' => 'standard'
+                            ],
                             'completion' => [
                                 'type' => 'completion'
                             ]
                         ],
-                        'analyzer' => 'my',
                     ],
                     'start' => [
                         'type' => 'geo_point',
@@ -52,8 +56,10 @@ return [
                 'number_of_replicas' => 0,
                 'analysis' => [
                     'analyzer' => [
-                        'my' => [
-                            'tokenizer' => 'split-into-3-chars'
+                        'edge_ngram_analyzer' => [
+                            'type' => 'custom',
+                            'tokenizer' => 'standard',
+                            'filter' => ['lowercase', 'edge_ngram_filter']
                         ],
                         'phrase_analyzer' => [
                             'type' => 'custom',
@@ -61,15 +67,11 @@ return [
                             'filter' => ['lowercase']
                         ]
                     ],
-                    'tokenizer' => [
-                        'split-into-3-chars' => [
-                            'type' => 'ngram',
+                    'filter' => [
+                        'edge_ngram_filter' => [
+                            'type' => 'edge_ngram',
                             'min_gram' => 3,
-                            'max_gram' => 3,
-                            'token_chars' => [
-                                'letter',
-                                'digit'
-                            ]
+                            'max_gram' => 5
                         ]
                     ]
                 ]

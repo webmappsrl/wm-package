@@ -64,6 +64,12 @@ class ElasticsearchController extends Controller
             $boolQuery->add(new MatchQuery('name.exact', $search, [
                 'boost' => 5
             ]), BoolQuery::SHOULD); ##OR
+            $boolQuery->add(new MatchQuery('name.edge', $search, [
+                'boost' => 4
+            ]), BoolQuery::SHOULD); ##OR
+            $boolQuery->add(new MatchQuery('name', $search, [
+                'boost' => 3
+            ]), BoolQuery::SHOULD); ##OR
 
 
 
