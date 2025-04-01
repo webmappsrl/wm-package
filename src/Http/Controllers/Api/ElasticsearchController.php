@@ -4,7 +4,11 @@ namespace Wm\WmPackage\Http\Controllers\Api;
 
 use Illuminate\Http\Request;
 use ONGR\ElasticsearchDSL\Aggregation\Bucketing\TermsAggregation;
+use ONGR\ElasticsearchDSL\Query\Compound\BoolQuery;
+use ONGR\ElasticsearchDSL\Query\FullText\MatchPhraseQuery;
+use ONGR\ElasticsearchDSL\Query\FullText\MatchQuery;
 use ONGR\ElasticsearchDSL\Query\TermLevel\RangeQuery;
+use ONGR\ElasticsearchDSL\Search;
 use Wm\WmPackage\Http\Controllers\Controller;
 use Wm\WmPackage\Models\EcTrack;
 
@@ -36,7 +40,57 @@ class ElasticsearchController extends Controller
         // https://github.com/matchish/laravel-scout-elasticsearch?tab=readme-ov-file#conditions
 
         // base query
-        $query = EcTrack::search($search, function (\Elastic\Elasticsearch\Client $client, $body) {
+        $query = EcTrack::search($search, function (\Elastic\Elasticsearch\Client $client, Search $body) use ($search) {
+
+            ## The es driver for Laravel Scout
+            ## https://github.com/matchish/laravel-scout-elasticsearch?tab=readme-ov-file#search
+
+            ## The package to build es request body with PHP
+            ## https://github.com/handcraftedinthealps/ElasticsearchDSL/blob/7.x/docs/index.md
+            ## https://github.com/handcraftedinthealps/ElasticsearchDSL/blob/7.x/docs/HowTo/HowToSearch.md
+
+            ## The es query sintax
+            ## https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-bool-query.html
+
+            ## The es indices mappings and settings
+            ## wm-package/config/wm-elasticsearch.php
+
+            // Customize search to prioritize exact matches in name field
+
+            $boolQuery = new BoolQuery();
+            $boolQuery->add(new MatchPhraseQuery('name.phrase', $search, [
+                'boost' => 10
+            ]), BoolQuery::SHOULD); ##OR
+            $boolQuery->add(new MatchQuery('name.exact', $search, [
+                'boost' => 5
+            ]), BoolQuery::SHOULD); ##OR
+
+
+
+
+            // Replace the original query with our custom one
+            $body->addQuery($boolQuery);
+
+            ## Dump the es query body as array
+            //dd($body->toArray());
+
+
+            // // Create a custom query that prioritizes exact matches
+            // $customQuery = [
+            //     'bool' => [
+            //         'should' => [
+            //             // Highest priority: exact matches using phrase match on the name.phrase field
+            //             ['match_phrase' => ['name.phrase' => ['query' => $search, 'boost' => 10]]],
+            //             // Medium priority: exact matches on name.exact
+            //             ['match' => ['name.exact' => ['query' => $search, 'boost' => 5]]],
+            //             // Original query with default boosting
+            //             $existingQuery
+            //         ]
+            //     ]
+            // ];
+
+
+
 
             $themesAggregation = new TermsAggregation('taxonomyWheres');
             $themesAggregation->setField('taxonomyWheres');
@@ -79,6 +133,6 @@ class ElasticsearchController extends Controller
         }
 
         // results are formatted in wm-package/src/ElasticSearch/HitsIteratorAggregate.php
-        return $query->get();
+        return $query->take(10000)->get();
     }
 }
