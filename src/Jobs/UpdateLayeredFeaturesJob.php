@@ -29,7 +29,7 @@ class UpdateLayeredFeaturesJob implements ShouldQueue
      */
     public function uniqueId(): string
     {
-        return 'update_layered_'.class_basename($this->ecModelClass).'_'.$this->layer->id;
+        return 'update_layered_' . class_basename($this->ecModelClass) . '_' . $this->layer->id;
     }
 
     /**
@@ -51,8 +51,8 @@ class UpdateLayeredFeaturesJob implements ShouldQueue
     {
         $savedModels = $layerService->updateLayersPropertyOnLayeredFeature($this->layer, $this->ecModelClass);
 
-        $savedModelsString = print_r($savedModels, true);
-        Log::info("SUCCESS: Saved {$savedModelsString} {$this->ecModelClass} on layer with ID {$this->layer->id} ");
+        //$savedModelsString = print_r($savedModels, true);
+        //Log::info("SUCCESS: Saved {$savedModelsString} {$this->ecModelClass} on layer with ID {$this->layer->id} ");
 
         return $savedModels;
     }

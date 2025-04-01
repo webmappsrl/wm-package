@@ -2,20 +2,21 @@
 
 namespace Wm\WmPackage\Services\Models;
 
+use Illuminate\Support\Carbon;
+use Wm\WmPackage\Models\EcPoi;
+use Wm\WmPackage\Models\Layer;
+use Wm\WmPackage\Models\EcTrack;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Log;
+use Wm\WmPackage\Services\BaseService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Database\Eloquent\Relations\MorphToMany;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Bus;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Wm\WmPackage\Jobs\UpdateLayeredFeaturesJob;
 use Wm\WmPackage\Jobs\UpdateLayerGeometryJob;
-use Wm\WmPackage\Models\EcPoi;
-use Wm\WmPackage\Models\EcTrack;
-use Wm\WmPackage\Models\Layer;
-use Wm\WmPackage\Services\BaseService;
+use Wm\WmPackage\Jobs\UpdateLayeredFeaturesJob;
+use Wm\WmPackage\Models\Abstracts\GeometryModel;
 use Wm\WmPackage\Services\GeometryComputationService;
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
 
 class LayerService extends BaseService
 {
@@ -152,9 +153,34 @@ class LayerService extends BaseService
         return $saved;
     }
 
+    // public function chainLayersFeaturedPropertiesUpdate($layers)
+    // {
+    //     $jobs = [];
+    //     foreach ($layers as $layer) {
+    //         foreach ($this->getModelsWithLayersInProperties() as $modelClass) {
+    //             $jobs[] = new UpdateLayeredFeaturesJob($layer, $modelClass);
+    //         }
+    //     }
+    //     Bus::chain($jobs)->delay($this->getUniqueJobDelay())->dispatch();
+    // }
+
+    public function updateLayerIdsPropertyOnLayeredFeature(GeometryModel $geometryModel, array $layerIds, bool $add)
+    {
+        $properties = $geometryModel->properties;
+        if ($add) {
+            $properties['layers'] = array_merge($properties['layers'], $layerIds);
+        } else {
+            $properties['layers'] = array_diff($properties['layers'], $layerIds);
+        }
+
+        $properties['layers'] = array_values($properties['layers']);
+
+        $geometryModel->properties = $properties;
+        $geometryModel->saveQuietly();
+    }
+
     public function updateLayersPropertyOnAllLayeredFeaturesWithJobs(Layer $layer)
     {
-        $jobs = [];
         // update all ecpoi and ectrack related to the layer
         foreach ($this->getModelsWithLayersInProperties() as $modelClass) {
             $this->updateLayersPropertyOnLayeredFeatureWithJob($layer, $modelClass);
@@ -218,6 +244,7 @@ class LayerService extends BaseService
                 $properties = $feature->properties;
                 // remove the layer from the properties
                 $properties['layers'] = array_diff($properties['layers'], [$layer->id]);
+                $properties['layers'] = array_values($properties['layers']);
                 $feature->properties = $properties;
                 $feature->saveQuietly();
                 $deleted[] = $feature->id;

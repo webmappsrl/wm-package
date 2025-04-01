@@ -12,15 +12,15 @@ class TaxonomyActivityablesObserver
 
     public function created(TaxonomyActivityable $taxonomyActivityable)
     {
-        $this->handleRelatedFeaturesUpdate($taxonomyActivityable);
+        $this->handleRelatedFeaturesUpdate($taxonomyActivityable, true);
     }
 
     public function deleted(TaxonomyActivityable $taxonomyActivityable)
     {
-        $this->handleRelatedFeaturesUpdate($taxonomyActivityable);
+        $this->handleRelatedFeaturesUpdate($taxonomyActivityable, false);
     }
 
-    private function handleRelatedFeaturesUpdate(TaxonomyActivityable $taxonomyActivityable)
+    private function handleRelatedFeaturesUpdate(TaxonomyActivityable $taxonomyActivityable, $add)
     {
         $relatedTypeClass = $taxonomyActivityable->taxonomy_activityable_type;
         if (
@@ -35,10 +35,12 @@ class TaxonomyActivityablesObserver
             str_contains($relatedTypeClass, '\EcTrack')
             || str_contains($relatedTypeClass, '\EcPoi')
         ) {
-            // TODO: here probably is better to find a way to get layers from ec feature
-            Layer::all()->each(function ($layer) {
-                $this->layerService->updateLayersPropertyOnAllLayeredFeaturesWithJobs($layer);
-            });
+
+            $layers = Layer::whereHas('taxonomyActivities', function ($query) use ($taxonomyActivityable) {
+                $query->where('taxonomy_activities.id', $taxonomyActivityable->taxonomy_activity_id);
+            })->get()->pluck('id');
+
+            $this->layerService->updateLayerIdsPropertyOnLayeredFeature($taxonomyActivityable->model, $layers->toArray(), $add);
         }
     }
 }

@@ -2,8 +2,22 @@
 
 namespace Wm\WmPackage\Observers;
 
+use Wm\WmPackage\Models\Layer;
+use Wm\WmPackage\Services\Models\LayerService;
+
 class AbstractEcObserver extends AbstractObserver
 {
+    public function saved($model)
+    {
+        // update layers properties on ec models if there are some taxonomy_where properties on layer
+
+        // ## TAXONOMY WHERE - strings inside properties
+        // check the local scope here wm-package/src/Traits/TaxonomyWhereAbleModel.php
+        $layers = Layer::byWhereProperty($model->properties)->get();
+        if ($layers->count() > 0)
+            LayerService::make()->updateLayerIdsPropertyOnLayeredFeature($model, $layers->pluck('id')->toArray(), true);
+    }
+
     public function morphToManyAttached($relation, $parent, $ids, $attributes)
     {
         $this->morphToManyEvent($relation, $parent, $ids, true);
@@ -24,15 +38,7 @@ class AbstractEcObserver extends AbstractObserver
         if (
             str_contains($relatedModel::class, '\Layer')
         ) {
-            $properties = $parent->properties;
-            if ($add) {
-                $properties['layers'] = array_merge($properties['layers'], $ids);
-            } else {
-                $properties['layers'] = array_diff($properties['layers'], $ids);
-            }
-
-            $parent->properties = $properties;
-            $parent->saveQuietly();
+            LayerService::make()->updateLayerIdsPropertyOnLayeredFeature($parent, $ids, $add);
         }
     }
 }
