@@ -25,7 +25,7 @@ return [
                             'edge' => [
                                 'type' => 'text',
                                 'analyzer' => 'edge_ngram_analyzer',
-                                'search_analyzer' => 'standard'
+                                'search_analyzer' => 'standard',
                             ],
                             'completion' => [
                                 'type' => 'completion',
@@ -59,7 +59,7 @@ return [
                         'edge_ngram_analyzer' => [
                             'type' => 'custom',
                             'tokenizer' => 'standard',
-                            'filter' => ['lowercase', 'edge_ngram_filter']
+                            'filter' => ['lowercase', 'edge_ngram_filter'],
                         ],
                         'phrase_analyzer' => [
                             'type' => 'custom',
@@ -71,11 +71,11 @@ return [
                         'edge_ngram_filter' => [
                             'type' => 'edge_ngram',
                             'min_gram' => 3,
-                            'max_gram' => 5
-                        ]
-                    ]
-                ]
-            ]
+                            'max_gram' => 5,
+                        ],
+                    ],
+                ],
+            ],
         ],
     ],
 ];
