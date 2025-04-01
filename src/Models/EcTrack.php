@@ -94,14 +94,14 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
     // ATTRIBUTE GETTERS
     //
 
-    public function getLayersAttribute()
-    {
-        // Recupera i layer associati tramite la relazione
-        $associatedLayers = $this->associatedLayers->pluck('id')->toArray();
+    // public function getLayersAttribute()
+    // {
+    //     // Recupera i layer associati tramite la relazione
+    //     $associatedLayers = $this->associatedLayers->pluck('id')->toArray();
 
-        // Ritorna l'elenco dei layer associati come array
-        return $associatedLayers;
-    }
+    //     // Ritorna l'elenco dei layer associati come array
+    //     return $associatedLayers;
+    // }
 
     public function getLayerRelationName(): string
     {
@@ -316,7 +316,7 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
     {
         $geojson = $this->getGeojson();
         // MAPPING
-        $geojson['properties']['id'] = 'ec_track_'.$this->id;
+        $geojson['properties']['id'] = 'ec_track_' . $this->id;
         $geojson = $this->_mapElbrusGeojsonProperties($geojson);
 
         if ($this->ecPois) {
@@ -351,9 +351,9 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
 
         $fields = ['kml', 'gpx'];
         foreach ($fields as $field) {
-            if (isset($geojson['properties'][$field.'_url'])) {
-                $geojson['properties'][$field] = $geojson['properties'][$field.'_url'];
-                unset($geojson['properties'][$field.'_url']);
+            if (isset($geojson['properties'][$field . '_url'])) {
+                $geojson['properties'][$field] = $geojson['properties'][$field . '_url'];
+                unset($geojson['properties'][$field . '_url']);
             }
         }
 
@@ -363,13 +363,13 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
 
                 if ($taxonomy === 'activity') {
                     $geojson['properties']['taxonomy'][$name] = array_map(function ($item) use ($name) {
-                        return $name.'_'.$item;
+                        return $name . '_' . $item;
                     }, array_map(function ($item) {
                         return $item['id'];
                     }, $values));
                 } else {
                     $geojson['properties']['taxonomy'][$name] = array_map(function ($item) use ($name) {
-                        return $name.'_'.$item;
+                        return $name . '_' . $item;
                     }, $values);
                 }
             }
@@ -446,76 +446,76 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
     /**
      * Returns an array of app_id => layer_id associated with the current EcTrack
      */
-    public function getLayersByApp(): array
-    {
-        $layers = [];
+    // public function getLayersByApp(): array
+    // {
+    //     $layers = [];
 
-        // Estrazione delle tassonomie per il filtro
-        $taxonomyActivities = $this->taxonomyActivities->pluck('id')->toArray();
-        $taxonomyWheres = $this->taxonomyWheres->pluck('id')->toArray();
-        $taxonomyThemes = $this->taxonomyThemes->pluck('id')->toArray();
+    //     // Estrazione delle tassonomie per il filtro
+    //     $taxonomyActivities = $this->taxonomyActivities->pluck('id')->toArray();
+    //     $taxonomyWheres = $this->taxonomyWheres->pluck('id')->toArray();
+    //     $taxonomyThemes = $this->taxonomyThemes->pluck('id')->toArray();
 
-        $trackTaxonomies = [];
+    //     $trackTaxonomies = [];
 
-        if (! empty($taxonomyActivities)) {
-            $trackTaxonomies['activities'] = $taxonomyActivities;
-        }
-        if (! empty($taxonomyWheres)) {
-            $trackTaxonomies['wheres'] = $taxonomyWheres;
-        }
-        if (! empty($taxonomyThemes)) {
-            $trackTaxonomies['themes'] = $taxonomyThemes;
-        }
+    //     if (! empty($taxonomyActivities)) {
+    //         $trackTaxonomies['activities'] = $taxonomyActivities;
+    //     }
+    //     if (! empty($taxonomyWheres)) {
+    //         $trackTaxonomies['wheres'] = $taxonomyWheres;
+    //     }
+    //     if (! empty($taxonomyThemes)) {
+    //         $trackTaxonomies['themes'] = $taxonomyThemes;
+    //     }
 
-        // Verifica se ci sono app associate
-        if (is_null($this->trackHasApps())) {
-            return $layers;
-        }
+    //     // Verifica se ci sono app associate
+    //     if (is_null($this->trackHasApps())) {
+    //         return $layers;
+    //     }
 
-        foreach ($this->trackHasApps() as $app) {
-            $layersCollection = collect($app->layers);
-            // Ottieni gli ID dei layer associati tramite la tabella app_layer
-            // TODO: use morph relation instead of direct query
-            $associatedLayerIds = DB::table('app_layer')
-                ->where('layerable_id', $app->id)
-                ->where('layerable_type', 'LIKE', '%\\Models\\App')
-                ->pluck('layer_id'); // Ottiene solo gli ID
+    //     foreach ($this->trackHasApps() as $app) {
+    //         $layersCollection = collect($app->layers);
+    //         // Ottieni gli ID dei layer associati tramite la tabella app_layer
+    //         // TODO: use morph relation instead of direct query
+    //         $associatedLayerIds = DB::table('app_layer')
+    //             ->where('layerable_id', $app->id)
+    //             ->where('layerable_type', 'LIKE', '%\\Models\\App')
+    //             ->pluck('layer_id'); // Ottiene solo gli ID
 
-            // Recupera i Layer associati tramite gli ID
-            $associatedLayers = Layer::whereIn('id', $associatedLayerIds)->get();
-            // Unisci le due collection e rimuovi eventuali duplicati
-            $mergedLayers = $layersCollection->merge($associatedLayers)->unique();
-            $sortedLayers = $mergedLayers->sortBy('rank');
+    //         // Recupera i Layer associati tramite gli ID
+    //         $associatedLayers = Layer::whereIn('id', $associatedLayerIds)->get();
+    //         // Unisci le due collection e rimuovi eventuali duplicati
+    //         $mergedLayers = $layersCollection->merge($associatedLayers)->unique();
+    //         $sortedLayers = $mergedLayers->sortBy('rank');
 
-            foreach ($sortedLayers as $layer) {
-                $layerTaxonomies = $layer->getLayerTaxonomyIDs();
-                $hasAtLeastOneMatch = false; // Assume che nessuna tassonomia corrisponda
+    //         foreach ($sortedLayers as $layer) {
+    //             $layerTaxonomies = $layer->getLayerTaxonomyIDs();
+    //             $hasAtLeastOneMatch = false; // Assume che nessuna tassonomia corrisponda
 
-                foreach ($trackTaxonomies as $taxonomyType => $requiredIds) {
-                    // Verifica se il layer contiene la tassonomia corrente
-                    if (isset($layerTaxonomies[$taxonomyType])) {
-                        // Controlla se c'è almeno una corrispondenza tra le tassonomie del layer e quelle della traccia
-                        if (array_intersect($layerTaxonomies[$taxonomyType], $requiredIds)) {
-                            $hasAtLeastOneMatch = true;
-                            break; // Esce dal loop appena trova una corrispondenza
-                        }
-                    }
-                }
+    //             foreach ($trackTaxonomies as $taxonomyType => $requiredIds) {
+    //                 // Verifica se il layer contiene la tassonomia corrente
+    //                 if (isset($layerTaxonomies[$taxonomyType])) {
+    //                     // Controlla se c'è almeno una corrispondenza tra le tassonomie del layer e quelle della traccia
+    //                     if (array_intersect($layerTaxonomies[$taxonomyType], $requiredIds)) {
+    //                         $hasAtLeastOneMatch = true;
+    //                         break; // Esce dal loop appena trova una corrispondenza
+    //                     }
+    //                 }
+    //             }
 
-                // Se il layer non ha alcuna corrispondenza, non lo includiamo
-                if ($hasAtLeastOneMatch) {
-                    $layers[$layer->app_id][] = $layer->id;
-                }
-            }
+    //             // Se il layer non ha alcuna corrispondenza, non lo includiamo
+    //             if ($hasAtLeastOneMatch) {
+    //                 $layers[$layer->app_id][] = $layer->id;
+    //             }
+    //         }
 
-            // Se non ci sono layers corrispondenti, crea comunque un array vuoto per l'app
-            if (empty($layers[$app->id])) {
-                $layers[$app->id] = [];
-            }
-        }
+    //         // Se non ci sono layers corrispondenti, crea comunque un array vuoto per l'app
+    //         if (empty($layers[$app->id])) {
+    //             $layers[$app->id] = [];
+    //         }
+    //     }
 
-        return $layers;
-    }
+    //     return $layers;
+    // }
 
     //
     // LARAVEL SCOUT - ELASTICSEARCH
@@ -537,7 +537,7 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
             'app_id' => $this->app_id,
             // 'from' => $this->getActualOrOSFValue('from'),
             // 'to' => $this->getActualOrOSFValue('to'),
-            'name' => $this->name,
+            'name' => $this->getTranslation('name', 'it'),
             'taxonomyWheres' => $ecTrackService->getTaxonomyWheres($this),
             'feature_image' => $this->getMedia()->first(),
             'strokeColor' => isset($this->properties['color']) ? hexToRgba($this->properties['color']) : '',
@@ -569,7 +569,7 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
         }
 
         if (empty($searchables) || (in_array('name', $searchables) && ! empty($this->name))) {
-            $string .= str_replace('"', '', json_encode($this->getTranslations('name'))).' ';
+            $string .= str_replace('"', '', json_encode($this->getTranslations('name'))) . ' ';
         }
         // if (empty($searchables) || (in_array('description', $searchables) && ! empty($this->description))) {
         //     $description = str_replace('"', '', json_encode($this->getTranslations('description')));
@@ -582,16 +582,16 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
         //     $string .= strip_tags($excerpt) . ' ';
         // }
         if (empty($searchables) || (in_array('ref', $searchables) && ! empty($this->ref))) {
-            $string .= $this->ref.' ';
+            $string .= $this->ref . ' ';
         }
         if (empty($searchables) || (in_array('osmid', $searchables) && ! empty($this->osmid))) {
 
-            $string .= $this->osmid.' ';
+            $string .= $this->osmid . ' ';
         }
 
         if (empty($searchables) || (in_array('taxonomyActivities', $searchables) && ! empty($this->taxonomyActivities))) {
             foreach ($this->taxonomyActivities as $tax) {
-                $string .= str_replace('"', '', json_encode($tax->getTranslations('name'))).' ';
+                $string .= str_replace('"', '', json_encode($tax->getTranslations('name'))) . ' ';
             }
         }
 

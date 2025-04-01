@@ -14,8 +14,19 @@ return [
                             'keyword' => [
                                 'type' => 'keyword',
                             ],
+                            'exact' => [
+                                'type' => 'text',
+                                'analyzer' => 'standard',
+                            ],
+                            'phrase' => [
+                                'type' => 'text',
+                                'analyzer' => 'phrase_analyzer'
+                            ],
+                            'completion' => [
+                                'type' => 'completion'
+                            ]
                         ],
-                        'analyzer' => 'standard',
+                        'analyzer' => 'my',
                     ],
                     'start' => [
                         'type' => 'geo_point',
@@ -39,7 +50,30 @@ return [
             'default' => [
                 'number_of_shards' => 1,
                 'number_of_replicas' => 0,
-            ],
+                'analysis' => [
+                    'analyzer' => [
+                        'my' => [
+                            'tokenizer' => 'split-into-3-chars'
+                        ],
+                        'phrase_analyzer' => [
+                            'type' => 'custom',
+                            'tokenizer' => 'keyword',
+                            'filter' => ['lowercase']
+                        ]
+                    ],
+                    'tokenizer' => [
+                        'split-into-3-chars' => [
+                            'type' => 'ngram',
+                            'min_gram' => 3,
+                            'max_gram' => 3,
+                            'token_chars' => [
+                                'letter',
+                                'digit'
+                            ]
+                        ]
+                    ]
+                ]
+            ]
         ],
     ],
 ];
