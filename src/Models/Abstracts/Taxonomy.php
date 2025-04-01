@@ -5,7 +5,6 @@ namespace Wm\WmPackage\Models\Abstracts;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Spatie\Translatable\HasTranslations;
-use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\Layer;
@@ -43,16 +42,16 @@ abstract class Taxonomy extends Polygon
 
     public function ecTracks(): MorphToMany
     {
-        return $this->morphedByMany(EcTrack::class, 'taxonomy_' . $this->getRelationKey());
+        return $this->morphedByMany(EcTrack::class, 'taxonomy_'.$this->getRelationKey());
     }
 
     public function layers(): MorphToMany
     {
-        return $this->morphedByMany(Layer::class, 'taxonomy_' . $this->getRelationKey());
+        return $this->morphedByMany(Layer::class, 'taxonomy_'.$this->getRelationKey());
     }
 
     public function ecPois(): MorphToMany
     {
-        return $this->morphedByMany(EcPoi::class, 'taxonomy_' . $this->getRelationKey());
+        return $this->morphedByMany(EcPoi::class, 'taxonomy_'.$this->getRelationKey());
     }
 }
