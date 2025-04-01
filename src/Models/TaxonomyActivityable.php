@@ -8,6 +8,7 @@ use Wm\WmPackage\Observers\TaxonomyActivityablesObserver;
 class TaxonomyActivityable extends MorphPivot
 {
     protected $table = 'taxonomy_activityables';
+
     public $incrementing = true;
 
     protected static function boot()

@@ -76,7 +76,7 @@ class GeneratePBFByZoomJob implements ShouldQueue
                 Log::error("Impossibile avviare il batch per il livello di zoom {$this->zoom}");
             }
         } catch (Throwable $e) {
-            Log::error("Errore nel Job PBF per il livello di zoom {$this->zoom}: " . $e->getMessage());
+            Log::error("Errore nel Job PBF per il livello di zoom {$this->zoom}: ".$e->getMessage());
             throw $e;
         }
     }

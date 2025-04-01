@@ -4,20 +4,18 @@ namespace Wm\WmPackage\Jobs;
 
 use Illuminate\Bus\Batchable;
 use Illuminate\Bus\Queueable;
-use Wm\WmPackage\Models\Layer;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Contracts\Queue\ShouldBeUnique;
-use Wm\WmPackage\Services\Models\LayerService;
+use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\Middleware\WithoutOverlapping;
+use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
+use Wm\WmPackage\Models\Layer;
+use Wm\WmPackage\Services\Models\LayerService;
 
 class UpdateLayeredFeaturesJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels, Batchable;
-
+    use Batchable, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     /**
      * Create a new job instance.
@@ -31,7 +29,7 @@ class UpdateLayeredFeaturesJob implements ShouldQueue
      */
     public function uniqueId(): string
     {
-        return 'update_layered_' . class_basename($this->ecModelClass) . '_' . $this->layer->id;
+        return 'update_layered_'.class_basename($this->ecModelClass).'_'.$this->layer->id;
     }
 
     /**
