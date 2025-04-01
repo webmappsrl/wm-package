@@ -42,33 +42,30 @@ class ElasticsearchController extends Controller
         // base query
         $query = EcTrack::search($search, function (\Elastic\Elasticsearch\Client $client, Search $body) use ($search) {
 
-            ## The es driver for Laravel Scout
-            ## https://github.com/matchish/laravel-scout-elasticsearch?tab=readme-ov-file#search
+            // # The es driver for Laravel Scout
+            // # https://github.com/matchish/laravel-scout-elasticsearch?tab=readme-ov-file#search
 
-            ## The package to build es request body with PHP
-            ## https://github.com/handcraftedinthealps/ElasticsearchDSL/blob/7.x/docs/index.md
-            ## https://github.com/handcraftedinthealps/ElasticsearchDSL/blob/7.x/docs/HowTo/HowToSearch.md
+            // # The package to build es request body with PHP
+            // # https://github.com/handcraftedinthealps/ElasticsearchDSL/blob/7.x/docs/index.md
+            // # https://github.com/handcraftedinthealps/ElasticsearchDSL/blob/7.x/docs/HowTo/HowToSearch.md
 
-            ## The es query sintax
-            ## https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-bool-query.html
+            // # The es query sintax
+            // # https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-bool-query.html
 
-            ## The es indices mappings and settings
-            ## wm-package/config/wm-elasticsearch.php
+            // # The es indices mappings and settings
+            // # wm-package/config/wm-elasticsearch.php
 
             // Customize search to prioritize exact matches in name field
 
-            $boolQuery = new BoolQuery();
+            $boolQuery = new BoolQuery;
             $boolQuery->add(new MatchPhraseQuery('name.phrase', $search, [
-                'boost' => 10
-            ]), BoolQuery::SHOULD); ##OR
+                'boost' => 10,
+            ]), BoolQuery::SHOULD); // #OR
             $boolQuery->add(new MatchQuery('name.exact', $search, [
                 'boost' => 5
             ]), BoolQuery::SHOULD); ##OR
             $boolQuery->add(new MatchQuery('name.edge', $search, [
                 'boost' => 4
-            ]), BoolQuery::SHOULD); ##OR
-            $boolQuery->add(new MatchQuery('name', $search, [
-                'boost' => 3
             ]), BoolQuery::SHOULD); ##OR
 
 
@@ -77,9 +74,8 @@ class ElasticsearchController extends Controller
             // Replace the original query with our custom one
             $body->addQuery($boolQuery);
 
-            ## Dump the es query body as array
-            //dd($body->toArray());
-
+            // # Dump the es query body as array
+            // dd($body->toArray());
 
             // // Create a custom query that prioritizes exact matches
             // $customQuery = [
@@ -94,9 +90,6 @@ class ElasticsearchController extends Controller
             //         ]
             //     ]
             // ];
-
-
-
 
             $themesAggregation = new TermsAggregation('taxonomyWheres');
             $themesAggregation->setField('taxonomyWheres');

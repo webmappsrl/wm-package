@@ -20,7 +20,7 @@ return [
                             ],
                             'phrase' => [
                                 'type' => 'text',
-                                'analyzer' => 'phrase_analyzer'
+                                'analyzer' => 'phrase_analyzer',
                             ],
                             'edge' => [
                                 'type' => 'text',
@@ -28,8 +28,8 @@ return [
                                 'search_analyzer' => 'standard'
                             ],
                             'completion' => [
-                                'type' => 'completion'
-                            ]
+                                'type' => 'completion',
+                            ],
                         ],
                     ],
                     'start' => [
@@ -64,8 +64,8 @@ return [
                         'phrase_analyzer' => [
                             'type' => 'custom',
                             'tokenizer' => 'keyword',
-                            'filter' => ['lowercase']
-                        ]
+                            'filter' => ['lowercase'],
+                        ],
                     ],
                     'filter' => [
                         'edge_ngram_filter' => [
