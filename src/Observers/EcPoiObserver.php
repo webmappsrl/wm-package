@@ -7,7 +7,7 @@ use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Services\Models\EcPoiService;
 use Wm\WmPackage\Services\Models\UserService;
 
-class EcPoiObserver extends AbstractObserver
+class EcPoiObserver extends AbstractEcObserver
 {
     /**
      * Handle the EcMedia "deleted" event.

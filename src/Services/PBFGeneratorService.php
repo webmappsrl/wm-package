@@ -15,9 +15,12 @@ class PBFGeneratorService extends BaseService
 
     protected $format;
 
-    protected $zoomTreshold = 6;
-
     public function __construct(protected StorageService $cloudStorageService, protected GeometryComputationService $geometryComputationService) {}
+
+    public function getZoomTreshold(): int
+    {
+        return config('wm-package.services.pbf.zoom_treshold', 6);
+    }
 
     public function generate($app_id, $z, $x, $y)
     {
@@ -122,7 +125,7 @@ class PBFGeneratorService extends BaseService
         }
 
         // simplifies geometry by a factor of 4 for zoom levels <= 8
-        $simplificationFactor = $this->geometryComputationService->getSimplificationFactor($z, $this->zoomTreshold);
+        $simplificationFactor = $this->geometryComputationService->getSimplificationFactor($z, $this->getZoomTreshold());
 
         $boundingBoxSQL = sprintf(
             'ST_MakeEnvelope(%f, %f, %f, %f, 3857)',
