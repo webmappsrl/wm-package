@@ -21,7 +21,7 @@ abstract class UgcController extends Controller
     {
         $user = auth()->user();
 
-        $query = $this->getModelIstance()->getQuery()->where('user_id', $user->id);
+        $query = $this->getModelIstance()->where('user_id', $user->id);
 
         // TODO: is it regular on header?
         if (! empty($request->header('app-id'))) {
@@ -30,7 +30,6 @@ abstract class UgcController extends Controller
         }
 
         $tracks = $query->orderByRaw('updated_at DESC')->get();
-
         return $this->getFeatureCollection($tracks);
     }
 
@@ -62,8 +61,9 @@ abstract class UgcController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    protected function _destroy(GeometryModel $model): JsonResponse
+    protected function _destroy(int $id): JsonResponse
     {
+        $model = $this->getModelIstance()::find($id);
         $this->validateUser($model);
         try {
             $model->delete();
@@ -87,13 +87,13 @@ abstract class UgcController extends Controller
             'geometry' => GeometryComputationService::make()->getGeometryFromGeojsonRAW(json_encode($geometry)),
             'properties' => $properties,
             'name' => $properties['name'], // validated in the validateProperties method
-            'app_id' => $properties['app_id'], // validated in the validateProperties method
+            'app_id' => $properties['app_id'],
         ]);
 
         try {
             $model->save();
         } catch (\Exception $e) {
-            $message = 'Error saving '.class_basename($this->getModelIstance()::class).'. '.$e->getMessage();
+            $message = 'Error saving ' . class_basename($this->getModelIstance()::class) . '. ' . $e->getMessage();
             Log::channel('ugc')->error($message);
             throw new Exception($message, 500);
         }
