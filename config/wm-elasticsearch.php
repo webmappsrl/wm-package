@@ -20,11 +20,11 @@ return [
                             ],
                             'phrase' => [
                                 'type' => 'text',
-                                'analyzer' => 'phrase_analyzer'
+                                'analyzer' => 'phrase_analyzer',
                             ],
                             'completion' => [
-                                'type' => 'completion'
-                            ]
+                                'type' => 'completion',
+                            ],
                         ],
                         'analyzer' => 'my',
                     ],
@@ -53,13 +53,13 @@ return [
                 'analysis' => [
                     'analyzer' => [
                         'my' => [
-                            'tokenizer' => 'split-into-3-chars'
+                            'tokenizer' => 'split-into-3-chars',
                         ],
                         'phrase_analyzer' => [
                             'type' => 'custom',
                             'tokenizer' => 'keyword',
-                            'filter' => ['lowercase']
-                        ]
+                            'filter' => ['lowercase'],
+                        ],
                     ],
                     'tokenizer' => [
                         'split-into-3-chars' => [
@@ -68,12 +68,12 @@ return [
                             'max_gram' => 3,
                             'token_chars' => [
                                 'letter',
-                                'digit'
-                            ]
-                        ]
-                    ]
-                ]
-            ]
+                                'digit',
+                            ],
+                        ],
+                    ],
+                ],
+            ],
         ],
     ],
 ];
