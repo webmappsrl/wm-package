@@ -9,7 +9,7 @@ use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Services\Models\EcTrackService;
 use Wm\WmPackage\Services\Models\UserService;
 
-class EcTrackObserver extends AbstractObserver
+class EcTrackObserver extends AbstractEcObserver
 {
     /**
      * Handle events after all transactions are committed.
@@ -81,7 +81,7 @@ class EcTrackObserver extends AbstractObserver
         if ($apps && $bbox && $author_id) {
             GenerateAppPBFJob::dispatch($apps, $bbox);
         } else {
-            Log::info('No apps or bbox or author_id found for track '.$ecTrack->id.' to delete PBFs.');
+            Log::info('No apps or bbox or author_id found for track ' . $ecTrack->id . ' to delete PBFs.');
         }
     }
 }

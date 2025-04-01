@@ -2,24 +2,25 @@
 
 namespace Wm\WmPackage\Models;
 
-use ChristianKuri\LaravelFavorite\Traits\Favoriteable;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\MorphToMany;
-use Illuminate\Support\Facades\DB;
 use Laravel\Scout\Searchable;
-use Spatie\Translatable\HasTranslations;
-use Wm\WmPackage\Models\Abstracts\MultiLineString;
-use Wm\WmPackage\Models\Interfaces\LayerRelatedModel;
-use Wm\WmPackage\Observers\EcTrackObserver;
-use Wm\WmPackage\Services\GeometryComputationService;
-use Wm\WmPackage\Services\Models\EcTrackService;
+use Illuminate\Support\Facades\DB;
 use Wm\WmPackage\Traits\EcFeatureTrait;
+use Spatie\Translatable\HasTranslations;
 use Wm\WmPackage\Traits\TaxonomyAbleModel;
+use Wm\WmPackage\Observers\EcTrackObserver;
+use Wm\WmPackage\Services\Models\EcTrackService;
+use Wm\WmPackage\Models\Abstracts\MultiLineString;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Wm\WmPackage\Models\Interfaces\LayerRelatedModel;
+use Wm\WmPackage\Services\GeometryComputationService;
+use ChristianKuri\LaravelFavorite\Traits\Favoriteable;
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Chelout\RelationshipEvents\Concerns\HasMorphToManyEvents;
 
 class EcTrack extends MultiLineString implements LayerRelatedModel
 {
-    use EcFeatureTrait, Favoriteable, HasTranslations, Searchable, TaxonomyAbleModel;
+    use HasMorphToManyEvents, EcFeatureTrait, Favoriteable, HasTranslations, Searchable, TaxonomyAbleModel;
 
     protected $fillable = [
         'name',
@@ -62,7 +63,9 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
 
     public function taxonomyActivities(): MorphToMany
     {
-        return $this->morphToMany(TaxonomyActivity::class, 'taxonomy_activityable');
+        return $this->morphToMany(TaxonomyActivity::class, 'taxonomy_activityable')
+            ->using(TaxonomyActivityable::class); // this is necessary to make events on pivot working
+        // https://github.com/chelout/laravel-relationship-events/issues/16;;
     }
 
     public function usersCanDownload(): BelongsToMany
@@ -312,7 +315,7 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
     {
         $geojson = $this->getGeojson();
         // MAPPING
-        $geojson['properties']['id'] = 'ec_track_'.$this->id;
+        $geojson['properties']['id'] = 'ec_track_' . $this->id;
         $geojson = $this->_mapElbrusGeojsonProperties($geojson);
 
         if ($this->ecPois) {
@@ -347,9 +350,9 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
 
         $fields = ['kml', 'gpx'];
         foreach ($fields as $field) {
-            if (isset($geojson['properties'][$field.'_url'])) {
-                $geojson['properties'][$field] = $geojson['properties'][$field.'_url'];
-                unset($geojson['properties'][$field.'_url']);
+            if (isset($geojson['properties'][$field . '_url'])) {
+                $geojson['properties'][$field] = $geojson['properties'][$field . '_url'];
+                unset($geojson['properties'][$field . '_url']);
             }
         }
 
@@ -359,13 +362,13 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
 
                 if ($taxonomy === 'activity') {
                     $geojson['properties']['taxonomy'][$name] = array_map(function ($item) use ($name) {
-                        return $name.'_'.$item;
+                        return $name . '_' . $item;
                     }, array_map(function ($item) {
                         return $item['id'];
                     }, $values));
                 } else {
                     $geojson['properties']['taxonomy'][$name] = array_map(function ($item) use ($name) {
-                        return $name.'_'.$item;
+                        return $name . '_' . $item;
                     }, $values);
                 }
             }
@@ -565,7 +568,7 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
         }
 
         if (empty($searchables) || (in_array('name', $searchables) && ! empty($this->name))) {
-            $string .= str_replace('"', '', json_encode($this->getTranslations('name'))).' ';
+            $string .= str_replace('"', '', json_encode($this->getTranslations('name'))) . ' ';
         }
         // if (empty($searchables) || (in_array('description', $searchables) && ! empty($this->description))) {
         //     $description = str_replace('"', '', json_encode($this->getTranslations('description')));
@@ -578,16 +581,16 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
         //     $string .= strip_tags($excerpt) . ' ';
         // }
         if (empty($searchables) || (in_array('ref', $searchables) && ! empty($this->ref))) {
-            $string .= $this->ref.' ';
+            $string .= $this->ref . ' ';
         }
         if (empty($searchables) || (in_array('osmid', $searchables) && ! empty($this->osmid))) {
 
-            $string .= $this->osmid.' ';
+            $string .= $this->osmid . ' ';
         }
 
         if (empty($searchables) || (in_array('taxonomyActivities', $searchables) && ! empty($this->taxonomyActivities))) {
             foreach ($this->taxonomyActivities as $tax) {
-                $string .= str_replace('"', '', json_encode($tax->getTranslations('name'))).' ';
+                $string .= str_replace('"', '', json_encode($tax->getTranslations('name'))) . ' ';
             }
         }
 

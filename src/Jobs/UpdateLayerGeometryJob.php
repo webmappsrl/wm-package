@@ -14,13 +14,15 @@ use Wm\WmPackage\Services\Models\LayerService;
 class UpdateLayerGeometryJob implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
-
     /**
      * Create a new job instance.
      *
      * @return void
      */
-    public function __construct(protected Layer $layer) {}
+    public function __construct(protected Layer $layer)
+    {
+        $this->afterCommit(true);
+    }
 
     /**
      * Get the unique ID for the job.
@@ -28,7 +30,7 @@ class UpdateLayerGeometryJob implements ShouldBeUnique, ShouldQueue
     public function uniqueId(): string
     {
 
-        return 'update_layer_geometry_'.$this->layer->id;
+        return 'update_layer_geometry_' . $this->layer->id;
     }
 
     /**

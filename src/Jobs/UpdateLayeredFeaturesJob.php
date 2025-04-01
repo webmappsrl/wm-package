@@ -2,19 +2,22 @@
 
 namespace Wm\WmPackage\Jobs;
 
+use Illuminate\Bus\Batchable;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldBeUnique;
+use Wm\WmPackage\Models\Layer;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Queue\SerializesModels;
+use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Log;
-use Wm\WmPackage\Models\Layer;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Wm\WmPackage\Services\Models\LayerService;
+use Illuminate\Queue\Middleware\WithoutOverlapping;
 
-class UpdateLayeredFeaturesJob implements ShouldBeUnique, ShouldQueue
+class UpdateLayeredFeaturesJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels, Batchable;
+
 
     /**
      * Create a new job instance.
@@ -28,7 +31,17 @@ class UpdateLayeredFeaturesJob implements ShouldBeUnique, ShouldQueue
      */
     public function uniqueId(): string
     {
-        return 'update_layered_'.$this->ecModelClass.'_'.$this->layer->id;
+        return 'update_layered_' . class_basename($this->ecModelClass) . '_' . $this->layer->id;
+    }
+
+    /**
+     * Get the middleware the job should pass through.
+     *
+     * @return array<int, object>
+     */
+    public function middleware(): array
+    {
+        return [new WithoutOverlapping($this->uniqueId())->dontRelease()];
     }
 
     /**
