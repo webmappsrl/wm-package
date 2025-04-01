@@ -5,7 +5,6 @@ namespace Wm\WmPackage\Traits;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Wm\WmPackage\Models\Layer;
-use Wm\WmPackage\Services\TaxonomyWhereService;
 
 trait EcFeatureTrait
 {
@@ -33,7 +32,6 @@ trait EcFeatureTrait
         // ## TAXONOMY WHERE - strings inside properties
         // check the local scope here wm-package/src/Traits/TaxonomyWhereAbleModel.php
         $query->byWhereProperty($layer->properties);
-
 
         // ## TAXONOMY ACTIVITY - relation
         $ids = $layer->taxonomyActivities->pluck('id')->toArray() ?? [];

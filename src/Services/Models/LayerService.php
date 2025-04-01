@@ -2,21 +2,21 @@
 
 namespace Wm\WmPackage\Services\Models;
 
-use Illuminate\Support\Carbon;
-use Wm\WmPackage\Models\EcPoi;
-use Wm\WmPackage\Models\Layer;
-use Wm\WmPackage\Models\EcTrack;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Bus;
-use Illuminate\Support\Facades\Log;
-use Wm\WmPackage\Services\BaseService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
-use Wm\WmPackage\Jobs\UpdateLayerGeometryJob;
-use Wm\WmPackage\Jobs\UpdateLayeredFeaturesJob;
-use Wm\WmPackage\Models\Abstracts\GeometryModel;
-use Wm\WmPackage\Services\GeometryComputationService;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Wm\WmPackage\Jobs\UpdateLayeredFeaturesJob;
+use Wm\WmPackage\Jobs\UpdateLayerGeometryJob;
+use Wm\WmPackage\Models\Abstracts\GeometryModel;
+use Wm\WmPackage\Models\EcPoi;
+use Wm\WmPackage\Models\EcTrack;
+use Wm\WmPackage\Models\Layer;
+use Wm\WmPackage\Services\BaseService;
+use Wm\WmPackage\Services\GeometryComputationService;
 
 class LayerService extends BaseService
 {

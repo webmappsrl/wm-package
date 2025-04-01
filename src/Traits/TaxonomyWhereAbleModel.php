@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Builder;
 
 trait TaxonomyWhereAbleModel
 {
-
     public function scopeByWhereProperty(Builder $query, array $properties)
     {
         $whereProperty = $properties['taxonomy_where'] ?? [];

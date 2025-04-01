@@ -14,8 +14,9 @@ class AbstractEcObserver extends AbstractObserver
         // ## TAXONOMY WHERE - strings inside properties
         // check the local scope here wm-package/src/Traits/TaxonomyWhereAbleModel.php
         $layers = Layer::byWhereProperty($model->properties)->get();
-        if ($layers->count() > 0)
+        if ($layers->count() > 0) {
             LayerService::make()->updateLayerIdsPropertyOnLayeredFeature($model, $layers->pluck('id')->toArray(), true);
+        }
     }
 
     public function morphToManyAttached($relation, $parent, $ids, $attributes)

@@ -25,6 +25,7 @@ class TaxonomyActivityable extends MorphPivot
     {
         return $this->morphTo('taxonomy_activityable');
     }
+
     /**
      * Get the taxonomy activity that owns the relationship.
      */
