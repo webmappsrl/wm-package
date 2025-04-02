@@ -168,8 +168,9 @@ class LayerService extends BaseService
     {
         $properties = $geometryModel->properties;
 
-        if (! isset($properties['layers']))
+        if (! isset($properties['layers'])) {
             $properties['layers'] = [];
+        }
 
         if ($add) {
             $properties['layers'] = array_merge($properties['layers'], $layerIds);
