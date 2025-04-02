@@ -46,5 +46,8 @@ return [
         'osmfeatures' => [
             'host' => env('OSMFEATURES_HOST', 'https://osmfeatures.maphub.it'),
         ],
+        'geohub' => [
+            'host' => env('GEOHUB_HOST', 'https://geohub.webmapp.it'),
+        ],
     ],
 ];
