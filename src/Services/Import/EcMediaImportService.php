@@ -2,6 +2,9 @@
 
 namespace Wm\WmPackage\Services\Import;
 
+use Illuminate\Database\Query\Expression;
+use Illuminate\Support\Facades\DB;
+
 class EcMediaImportService extends GeohubImportService
 {
     public function __construct()
@@ -13,12 +16,23 @@ class EcMediaImportService extends GeohubImportService
      * Process the entire EC Media import
      *
      * @param  array  $data  The original data from Geohub
-     * @param  string  $geometry  The geometry of the related model
+     * @param  Expression  $geometry  The geometry of the related model
      */
-    public function processEcMediaImport(array $data, string $geometry): void
+    public function processEcMediaImport(array $data, Expression $geometry): void
     {
         $transformedData = $this->transformEcMediaData($data);
-        $transformedData['custom_properties']['geometry'] = $geometry;
+
+        // Convert Expression to WKT before assigning to custom properties
+        try {
+            $sqlGeometry = $geometry->getValue(DB::getQueryGrammar());
+
+            $wktGeometry = DB::selectOne("SELECT ST_AsText($sqlGeometry) as geom")->geom;
+
+            $transformedData['custom_properties']['geometry'] = $wktGeometry;
+        } catch (\Exception $e) {
+            // If conversion fails, store an empty object to avoid array to string conversion errors
+            $transformedData['custom_properties']['geometry'] = '{}';
+        }
 
         $relatedModel = $transformedData['model_type']::find($transformedData['model_id']);
 
@@ -29,7 +43,7 @@ class EcMediaImportService extends GeohubImportService
         // Get the URL and prepare it
         $url = $transformedData['url'];
         if (! filter_var($url, FILTER_VALIDATE_URL)) {
-            $url = 'https://geohub.webmapp.it/storage/'.ltrim($url, '/');
+            $url = config('wm-package.clients.geohub.host') . '/storage/' . ltrim($url, '/');
 
             // validate if the url returns an image content type
             $contentType = get_headers($url, 1)[0];
@@ -44,9 +58,8 @@ class EcMediaImportService extends GeohubImportService
             ->first();
 
         if ($existingMedia) {
-            unset($transformedData['custom_properties']['geometry']);
             $existingMedia->update([
-                'custom_properties' => $transformedData['custom_properties'],
+                'custom_properties' => $transformedData['custom_properties']
             ]);
 
             return; // Skip adding new media since we updated the existing one
@@ -63,7 +76,12 @@ class EcMediaImportService extends GeohubImportService
             ->withCustomProperties($transformedData['custom_properties'])
             ->toMediaCollection('default', config('wm-media-library.disk_name'));
 
-        unset($mediaItem->custom_properties['geometry']);
+        // Remove geometry from custom properties and update the media item
+        $customProperties = $mediaItem->custom_properties;
+        unset($customProperties['geometry']);
+        $mediaItem->updateQuietly([
+            'custom_properties' => $customProperties
+        ]);
     }
 
     /**

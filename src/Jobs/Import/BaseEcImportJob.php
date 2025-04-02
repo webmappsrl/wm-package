@@ -2,8 +2,9 @@
 
 namespace Wm\WmPackage\Jobs\Import;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Eloquent\Model;
+use Wm\WmPackage\Services\GeometryComputationService;
 
 abstract class BaseEcImportJob extends BaseImportJob
 {
@@ -18,34 +19,26 @@ abstract class BaseEcImportJob extends BaseImportJob
     {
         $transformedData = parent::transformData($data);
 
-        // if geometry is null set a default 3D geometry
-        if (empty($transformedData['geometry'])) {
-            $transformedData['geometry'] = DB::raw("ST_GeomFromText('{$this->getGeometryType()} ({$this::DEFAULT_LON_LAT[$this->getGeometryType()]})')");
-        } else {
-            $transformedData['geometry'] = $this->convertTo3DGeometry($transformedData['geometry']);
-        }
+        $transformedData['geometry'] = $this->fillGeometry($transformedData);
 
         return $transformedData;
     }
 
     protected function processDependencies(array $data, Model $model): void {}
 
-    /**
-     * Convert the geometry to 3D.
-     */
-    private function convertTo3DGeometry(string $geometry): string
+    protected function fillGeometry(array $data)
     {
-        // force geometry to 3D
-        if (is_string($geometry) && preg_match('/^[0-9A-Fa-f]+$/', $geometry)) {
-            // Properly format WKB hex string for PostgreSQL
-            $sql = "SELECT ST_AsText(ST_Force3D(ST_GeomFromEWKB('\\x{$geometry}'))) as geom";
+        if (!isset($data['geometry']) || empty($data['geometry'])) {
+            $geometry = $this->setDefaultGeometry();
         } else {
-            $sql = "SELECT ST_AsText(ST_Force3D({$geometry})) as geom";
+            $geometry = app(GeometryComputationService::class)->convertTo3DGeometry($data['geometry']);
         }
+        return $geometry;
+    }
 
-        $result = DB::selectOne($sql);
-
-        return $result->geom;
+    protected function setDefaultGeometry()
+    {
+        return DB::raw("ST_GeomFromText('{$this->getGeometryType()} ({$this::DEFAULT_LON_LAT[$this->getGeometryType()]})')");
     }
 
     abstract protected function getGeometryType(): string;
