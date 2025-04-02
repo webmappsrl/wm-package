@@ -167,6 +167,10 @@ class LayerService extends BaseService
     public function updateLayerIdsPropertyOnLayeredFeature(GeometryModel $geometryModel, array $layerIds, bool $add)
     {
         $properties = $geometryModel->properties;
+
+        if (! isset($properties['layers']))
+            $properties['layers'] = [];
+
         if ($add) {
             $properties['layers'] = array_merge($properties['layers'], $layerIds);
         } else {
