@@ -34,8 +34,9 @@ class LayerObserver extends AbstractObserver
         }
     }
 
-    public function saving(Layer $layer)
+    public function saving($layer)
     {
+        parent::saving($layer);
         if (is_null($layer->properties)) {
             $layer->properties = [];
         }

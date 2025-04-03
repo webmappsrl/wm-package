@@ -11,8 +11,9 @@ class AppObserver extends AbstractObserver
      *
      * @return void
      */
-    public function saving(App $app)
+    public function saving($app)
     {
+        parent::saving($app);
         $json = json_encode(json_decode($app->external_overlays));
 
         $app->external_overlays = $json;
