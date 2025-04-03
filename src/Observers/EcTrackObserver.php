@@ -83,7 +83,7 @@ class EcTrackObserver extends AbstractEcObserver
         if ($apps && $bbox && $author_id) {
             GenerateAppPBFJob::dispatch($apps, $bbox);
         } else {
-            Log::info('No apps or bbox or author_id found for track ' . $ecTrack->id . ' to delete PBFs.');
+            Log::info('No apps or bbox or author_id found for track '.$ecTrack->id.' to delete PBFs.');
         }
     }
 }

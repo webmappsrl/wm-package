@@ -4,7 +4,6 @@ namespace Wm\WmPackage\Observers;
 
 abstract class AbstractObserver
 {
-
     public function saving($model)
     {
         if ($model->name) {
