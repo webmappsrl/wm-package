@@ -61,9 +61,8 @@ abstract class UgcController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    protected function _destroy(int $id): JsonResponse
+    protected function _destroy(GeometryModel $model): JsonResponse
     {
-        $model = $this->getModelIstance()::find($id);
         $this->validateUser($model);
         try {
             $model->delete();
