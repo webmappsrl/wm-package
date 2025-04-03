@@ -16,6 +16,8 @@ class Layer extends AbstractGeometryResource
         fields as protected fieldsTrait;
     }
 
+    public static $with = ['ecTracks', 'manualEcPois', 'appOwner', 'associatedApps'];
+
     public static $model = \Wm\WmPackage\Models\Layer::class;
 
     public function fields(NovaRequest $request): array

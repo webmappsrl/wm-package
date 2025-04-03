@@ -21,7 +21,7 @@ abstract class UgcController extends Controller
     {
         $user = auth()->user();
 
-        $query = $this->getModelIstance()->getQuery()->where('user_id', $user->id);
+        $query = $this->getModelIstance()->where('user_id', $user->id);
 
         // TODO: is it regular on header?
         if (! empty($request->header('app-id'))) {
@@ -87,7 +87,7 @@ abstract class UgcController extends Controller
             'geometry' => GeometryComputationService::make()->getGeometryFromGeojsonRAW(json_encode($geometry)),
             'properties' => $properties,
             'name' => $properties['name'], // validated in the validateProperties method
-            'app_id' => $properties['app_id'], // validated in the validateProperties method
+            'app_id' => $properties['app_id'],
         ]);
 
         try {

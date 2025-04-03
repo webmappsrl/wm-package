@@ -8,6 +8,8 @@ use Orchestra\Testbench\Attributes\WithMigration;
 use Orchestra\Testbench\TestCase as Orchestra;
 use Wm\WmPackage\WmPackageServiceProvider;
 
+use function Orchestra\Testbench\artisan;
+
 #[WithMigration]
 class TestCase extends Orchestra
 {
@@ -30,5 +32,10 @@ class TestCase extends Orchestra
             'driver' => 'jwt',
             'provider' => 'users',
         ]);
+    }
+
+    protected function defineDatabaseMigrations()
+    {
+        artisan($this, 'vendor:publish', ['--tag' => 'wm-package-migrations']);
     }
 }

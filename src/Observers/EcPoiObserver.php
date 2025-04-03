@@ -7,7 +7,7 @@ use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Services\Models\EcPoiService;
 use Wm\WmPackage\Services\Models\UserService;
 
-class EcPoiObserver extends AbstractObserver
+class EcPoiObserver extends AbstractEcObserver
 {
     /**
      * Handle the EcMedia "deleted" event.
@@ -26,8 +26,9 @@ class EcPoiObserver extends AbstractObserver
      *
      * @return void
      */
-    public function saved(EcPoi $ecPoi)
+    public function saved($ecPoi)
     {
+        parent::saved($ecPoi);
         if (! $ecPoi->skip_geomixer_tech && ! empty($ecPoi->geometry)) {
             EcPoiService::make()->updateDataChain($ecPoi);
         }

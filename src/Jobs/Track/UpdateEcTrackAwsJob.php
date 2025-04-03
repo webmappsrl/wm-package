@@ -14,6 +14,6 @@ class UpdateEcTrackAwsJob extends BaseEcTrackJob
     public function handle(StorageService $cloudStorageService)
     {
         $geojson = $this->ecTrack->getGeojson();
-        $cloudStorageService->storeTrack($this->ecTrack->id, json_encode($geojson), $this->ecTrack->app_id);
+        $cloudStorageService->storeTrack($this->ecTrack->id, json_encode($geojson));
     }
 }

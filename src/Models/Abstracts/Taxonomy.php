@@ -5,7 +5,6 @@ namespace Wm\WmPackage\Models\Abstracts;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Spatie\Translatable\HasTranslations;
-use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\Layer;
@@ -38,7 +37,7 @@ abstract class Taxonomy extends Polygon
     protected static function boot()
     {
         parent::boot();
-        App::observe(TaxonomyObserver::class);
+        self::observe(TaxonomyObserver::class);
     }
 
     public function ecTracks(): MorphToMany

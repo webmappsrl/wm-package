@@ -17,7 +17,7 @@
     ],
     "require": {
         "php": ">8.1",
-        "chelout/laravel-relationship-events": "^3.0",
+        "chelout/laravel-relationship-events": "^2.0 || ^3.0",
         "chillerlan/php-qrcode": "^5.0",
         "christiankuri/laravel-favorite": "^1.4",
         "cweagans/composer-patches": "^1.7",

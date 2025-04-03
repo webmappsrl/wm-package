@@ -9,6 +9,7 @@ class GeoJsonService extends BaseService
     public function getModelAsGeojson(Model $model)
     {
         $properties = $model->properties ?? [];
+        $properties['id'] = $model->id;
         $geom = GeometryComputationService::make()->getModelGeometryAsGeojson($model);
 
         $decodedGeom = isset($geom) ? json_decode($geom, true) : null;

@@ -2,6 +2,7 @@
 
 namespace Wm\WmPackage\Models;
 
+use Chelout\RelationshipEvents\Concerns\HasMorphToManyEvents;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Support\Facades\App;
@@ -11,10 +12,11 @@ use Wm\WmPackage\Models\Interfaces\LayerRelatedModel;
 use Wm\WmPackage\Observers\EcPoiObserver;
 use Wm\WmPackage\Traits\EcFeatureTrait;
 use Wm\WmPackage\Traits\TaxonomyAbleModel;
+use Wm\WmPackage\Traits\TaxonomyWhereAbleModel;
 
 class EcPoi extends Point implements LayerRelatedModel
 {
-    use EcFeatureTrait, HasTranslations, TaxonomyAbleModel;
+    use EcFeatureTrait, HasMorphToManyEvents, HasTranslations, TaxonomyAbleModel, TaxonomyWhereAbleModel;
 
     const MEDIA_COLLECTION_NAME = 'feature_image';
 
@@ -59,7 +61,9 @@ class EcPoi extends Point implements LayerRelatedModel
 
     public function taxonomyActivities(): MorphToMany
     {
-        return $this->morphToMany(TaxonomyActivity::class, 'taxonomy_activityable');
+        return $this->morphToMany(TaxonomyActivity::class, 'taxonomy_activityable')
+            ->using(TaxonomyActivityable::class); // this is necessary to make events on pivot working
+        // https://github.com/chelout/laravel-relationship-events/issues/16;;
     }
 
     // /**
@@ -218,7 +222,7 @@ class EcPoi extends Point implements LayerRelatedModel
 
     public function getLayerRelationName(): string
     {
-        return 'ecPois';
+        return 'manualEcPois';
     }
 
     private function getValuesOfMorphToMany($relation, $slug): array

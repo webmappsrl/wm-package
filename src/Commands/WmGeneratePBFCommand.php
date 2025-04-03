@@ -38,8 +38,6 @@ class WmGeneratePBFCommand extends Command
      */
     protected $description = 'Create PBF files for the app and upload the to AWS.';
 
-    protected $format;
-
     protected $min_zoom;
 
     protected $max_zoom;
@@ -91,7 +89,6 @@ class WmGeneratePBFCommand extends Command
 
             return;
         }
-        $this->format = 'pbf';
 
         // Dispatch the generation process using batches
         $this->dispatchBatches($bbox);

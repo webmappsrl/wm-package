@@ -13,10 +13,11 @@ use Wm\WmPackage\Observers\LayerObserver;
 use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Traits\HasPackageFactory;
 use Wm\WmPackage\Traits\TaxonomyAbleModel;
+use Wm\WmPackage\Traits\TaxonomyWhereAbleModel;
 
 class Layer extends Model
 {
-    use HasMorphToManyEvents, HasPackageFactory, HasRelationshipObservables, HasTranslations, TaxonomyAbleModel;
+    use HasMorphToManyEvents, HasPackageFactory, HasRelationshipObservables, HasTranslations, TaxonomyAbleModel, TaxonomyWhereAbleModel;
 
     protected static function boot()
     {

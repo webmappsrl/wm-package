@@ -30,14 +30,15 @@ return [
         'pbf' => [
             'min_zoom' => env('PBF_MIN_ZOOM', 5),
             'max_zoom' => env('PBF_MAX_ZOOM', 13),
+            'zoom_treshold' => env('PBF_ZOOM_TRESHOLD', 6),
         ],
     ],
     'clients' => [
         'dem' => [
             'host' => env('DEM_HOST', 'https://dem.maphub.it'),
-            'ele_api' => env('DEM_ELE_API', '/api/v1/elevation'),
-            'tech_data_api' => env('DEM_TECH_DATA_API', '/api/v1/track'),
-            '3d_data_api' => env('DEM_3D_DATA_API', '/api/v1/track3d'),
+            'ele_api' => env('DEM_ELE_API', 'api/v1/elevation'),
+            'tech_data_api' => env('DEM_TECH_DATA_API', 'api/v1/track'),
+            '3d_data_api' => env('DEM_3D_DATA_API', 'api/v1/track3d'),
         ],
         'cai' => [
             'basic_auth_user' => env('CAI_BASIC_AUTH_USER'),

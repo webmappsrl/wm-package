@@ -9,7 +9,7 @@ use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Services\Models\EcTrackService;
 use Wm\WmPackage\Services\Models\UserService;
 
-class EcTrackObserver extends AbstractObserver
+class EcTrackObserver extends AbstractEcObserver
 {
     /**
      * Handle events after all transactions are committed.
@@ -25,8 +25,9 @@ class EcTrackObserver extends AbstractObserver
      *
      * @return void
      */
-    public function saved(EcTrack $ecTrack)
+    public function saved($ecTrack)
     {
+        parent::saved($ecTrack);
         $this->ecTrackService->updateDataChain($ecTrack);
 
         if ($user = auth()->user()) {
@@ -39,11 +40,24 @@ class EcTrackObserver extends AbstractObserver
      *
      * @return void
      */
-    public function saving(EcTrack $ecTrack)
+    public function saving($ecTrack)
     {
+        parent::saving($ecTrack);
         if (isset($ecTrack->properties['excerpt'])) {
             $properties = $ecTrack->properties;
-            $properties['excerpt'] = substr($ecTrack->properties['excerpt'], 0, 255);
+
+            if (is_array($properties['excerpt'])) {
+                foreach ($properties['excerpt'] as $locale => $text) {
+                    if (is_string($text)) {
+                        $properties['excerpt'][$locale] = substr($text, 0, 255);
+                    }
+                }
+            } elseif (is_string($properties['excerpt'])) {
+                $properties['excerpt'] = substr($properties['excerpt'], 0, 255);
+            } elseif ($properties['excerpt'] === null) {
+                $properties['excerpt'] = [];
+            }
+
             $ecTrack->properties = $properties;
         }
     }

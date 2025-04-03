@@ -21,6 +21,7 @@ trait EcFeatureTrait
      */
     public function scopeOnLayer(Builder $query, Layer $layer): void
     {
+
         $query
             ->whereIn('app_id', [
                 $layer->app_id,
@@ -29,25 +30,15 @@ trait EcFeatureTrait
             ->whereNotNull('geometry');  // Controlla che la geometria non sia null
 
         // ## TAXONOMY WHERE - strings inside properties
-        $layerWhere = $layer->properties['taxonomy_where'] ?? [];
-        if (count($layerWhere) > 0) {
-            $query
-                ->where(function ($query) use ($layerWhere) { // LOGIC OPERATOR AND
-                    $layerWhereIdentifiers = collect($layerWhere)->keys();
-                    $query->orWhere(function (Builder $query) use ($layerWhereIdentifiers) { // LOGIC OPERATOR OR
-                        foreach ($layerWhereIdentifiers as $key => $value) {
-                            $query->whereRaw("properties->'taxonomy_where' ? '$value'");
-                        }
-                    });
-                });
-        }
+        // check the local scope here wm-package/src/Traits/TaxonomyWhereAbleModel.php
+        $query->byWhereProperty($layer->properties);
 
         // ## TAXONOMY ACTIVITY - relation
         $ids = $layer->taxonomyActivities->pluck('id')->toArray() ?? [];
         if (count($ids) > 0) {
             $query
                 ->whereHas('taxonomyActivities', function ($query) use ($ids) {
-                    $query->whereIn('id', $ids); // whereIn = LOGIC OPERATOR OR
+                    $query->whereIn('taxonomy_activities.id', $ids); // whereIn = LOGIC OPERATOR OR
                 });
         }
     }

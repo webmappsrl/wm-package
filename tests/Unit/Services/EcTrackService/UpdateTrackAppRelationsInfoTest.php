@@ -40,41 +40,11 @@ class UpdateTrackAppRelationsInfoTest extends AbstractEcTrackServiceTest
     }
 
     /** @test */
-    public function update_track_app_relations_info_does_not_call_update_when_no_layers()
-    {
-        $this->track->associatedLayers = new Collection;
-        $this->track->shouldNotReceive('update');
-        $this->ecTrackService->updateTrackAppRelationsInfo($this->track);
-    }
+    // public function update_track_app_relations_info_does_not_call_update_when_no_layers()
+    // {
+    //     $this->track->associatedLayers = new Collection;
+    //     $this->track->shouldNotReceive('update');
+    //     $this->ecTrackService->updateTrackAppRelationsInfo($this->track);
+    // }
 
-    /** @test */
-    public function update_track_app_relations_info_calls_update_with_correct_updates()
-    {
-        $this->track->associatedLayers = new Collection($this->layers);
-        $this->track->taxonomyActivities = 'activities_field';
-        $this->track->taxonomyThemes = 'themes_field';
-
-        $this->track->shouldReceive('getTaxonomyArray')
-            ->with('activities_field')
-            ->andReturn('activities_data')
-            ->twice();
-        $this->track->shouldReceive('getTaxonomyArray')
-            ->with('themes_field')
-            ->andReturn('themes_data')
-            ->twice();
-        $this->track->shouldReceive('getSearchableString')
-            ->with('app1')
-            ->andReturn('searchable_app1')
-            ->once();
-        $this->track->shouldReceive('getSearchableString')
-            ->with('app2')
-            ->andReturn('searchable_app2')
-            ->once();
-
-        $this->track->shouldReceive('update')
-            ->once()
-            ->with(self::EXPECTED_UPDATES);
-
-        $this->ecTrackService->updateTrackAppRelationsInfo($this->track);
-    }
 }

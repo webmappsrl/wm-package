@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 use Wm\WmPackage\Services\GeometryComputationService;
+use Wm\WmPackage\Services\PBFGeneratorService;
 
 class GeneratePBFByZoomJob implements ShouldQueue
 {
@@ -29,7 +30,7 @@ class GeneratePBFByZoomJob implements ShouldQueue
 
     private $app_id;
 
-    private $zoomTreshold = 6;
+    private $zoomTreshold;
 
     private $no_pbf_layer = false;
 
@@ -44,6 +45,7 @@ class GeneratePBFByZoomJob implements ShouldQueue
         $this->zoom = $zoom;
         $this->app_id = $app_id;
         $this->no_pbf_layer = $no_pbf_layer;
+        $this->zoomTreshold = PBFGeneratorService::make()->getzoomTreshold();
     }
 
     public function handle(GeometryComputationService $geometryService)

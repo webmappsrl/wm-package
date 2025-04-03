@@ -64,8 +64,12 @@ class EcTrackService extends BaseService
         $demData = $responseData['properties'];
         $demData['duration_forward'] = $demData['duration_forward_hiking'];
         $demData['duration_backward'] = $demData['duration_backward_hiking'];
-        $oldDemData = json_decode($track->dem_data, true);
-        $track->dem_data = $demData;
+
+        $trackCurrentDemData = $track->properties['dem_data'] ?? [];
+        $oldDemData = json_decode($trackCurrentDemData, true);
+        $properties = $track->properties;
+        $properties['dem_data'] = $demData;
+        $track->properties = $properties;
         $track->saveQuietly();
         try {
             if (isset($demData)) {
@@ -268,8 +272,8 @@ class EcTrackService extends BaseService
         $chain[] = new UpdateEcTrackGenerateElevationChartImage($track);
         $chain[] = new UpdateEcTrackAwsJob($track);
         $chain[] = new UpdateEcTrackAppRelationsInfoJob($track);
-        $chain[] = new GenerateEcTrackPBFBatch($track);
         $chain[] = new UpdateEcTrackOrderRelatedPoi($track);
+        $chain[] = new GenerateEcTrackPBFBatch($track);
 
         Bus::chain($chain)->dispatch();
     }

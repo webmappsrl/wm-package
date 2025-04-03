@@ -20,7 +20,10 @@ class UpdateLayerGeometryJob implements ShouldBeUnique, ShouldQueue
      *
      * @return void
      */
-    public function __construct(protected Layer $layer) {}
+    public function __construct(protected Layer $layer)
+    {
+        $this->afterCommit(true);
+    }
 
     /**
      * Get the unique ID for the job.

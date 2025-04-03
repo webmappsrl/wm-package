@@ -15,9 +15,12 @@ class PBFGeneratorService extends BaseService
 
     protected $format;
 
-    protected $zoomTreshold = 6;
-
     public function __construct(protected StorageService $cloudStorageService, protected GeometryComputationService $geometryComputationService) {}
+
+    public function getZoomTreshold(): int
+    {
+        return config('wm-package.services.pbf.zoom_treshold', 6);
+    }
 
     public function generate($app_id, $z, $x, $y)
     {
@@ -122,7 +125,7 @@ class PBFGeneratorService extends BaseService
         }
 
         // simplifies geometry by a factor of 4 for zoom levels <= 8
-        $simplificationFactor = $this->geometryComputationService->getSimplificationFactor($z, $this->zoomTreshold);
+        $simplificationFactor = $this->geometryComputationService->getSimplificationFactor($z, $this->getZoomTreshold());
 
         $boundingBoxSQL = sprintf(
             'ST_MakeEnvelope(%f, %f, %f, %f, 3857)',
@@ -140,50 +143,34 @@ class PBFGeneratorService extends BaseService
     bounds AS (
         SELECT {$boundingBoxSQL} AS geom, {$boundingBoxSQL}::box2d AS b2d
     ),
-    track_layers AS (
+    ecTracks AS (
         SELECT 
-            ST_Transform(ec.geometry::geometry,3857) as geometry, -- Forza la geometria a 2D
+            ST_AsMVTGeom(
+                ST_SimplifyPreserveTopology(
+                    ST_Transform(ec.geometry::geometry,3857), --indexed
+                    $simplificationFactor
+                ), 
+                bounds.b2d
+            ) AS geom,
             ec.id,
             ec.name,
             ec.properties ->> 'ref' as ref,
             ec.properties ->> 'cai_scale' as cai_scale,
             ec.properties ->> 'distance' as distance,
             ec.properties ->> 'duration_forward' as duration_forward,
-            JSON_AGG(DISTINCT etl.layer_id) AS layers,
+            ec.properties -> 'layers' AS layers, -- jsonb
             ec.properties ->> 'color' as stroke_color
         FROM ec_tracks ec
-        JOIN layerables etl ON ec.id = etl.layerable_id AND etl.layerable_type LIKE '%EcTrack'
-        JOIN layers l ON etl.layer_id = l.id
-        WHERE l.app_id = $app_id -- Filtra per i layer associati all'app
-        GROUP BY ec.id, ec.geometry
-    ),
-    mvtgeom AS (
-        SELECT 
-            ST_AsMVTGeom(
-                ST_SimplifyPreserveTopology(
-                    track_layers.geometry, 
-                    $simplificationFactor
-                ), 
-                bounds.b2d
-            ) AS geom,
-            track_layers.id,
-            track_layers.name,
-            track_layers.ref,
-            track_layers.cai_scale,
-            track_layers.layers,
-            track_layers.stroke_color
-        FROM track_layers
         CROSS JOIN bounds
         WHERE 
-            ST_Intersects(
-                track_layers.geometry,
+            ec.app_id = $app_id -- Filtra per i layer associati all'app
+            AND ST_Intersects(
+                ST_Transform(ec.geometry::geometry,3857), --indexed
                 bounds.geom
             )
-            AND ST_Dimension(track_layers.geometry) = 1
-            AND NOT ST_IsEmpty(track_layers.geometry)
-            AND ST_IsValid(track_layers.geometry)
+            AND ST_Dimension(ST_Transform(ec.geometry::geometry,3857)) = 1
     )
-    SELECT ST_AsMVT(mvtgeom.*, 'ec_tracks') FROM mvtgeom;
+    SELECT ST_AsMVT(ecTracks.*, 'ec_tracks') FROM ecTracks;
     SQL;
 
         // Log::info($sql);
