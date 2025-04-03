@@ -22,6 +22,7 @@ return [
                                 'type' => 'text',
                                 'analyzer' => 'phrase_analyzer',
                             ],
+
                             'edge' => [
                                 'type' => 'text',
                                 'analyzer' => 'edge_ngram_analyzer',

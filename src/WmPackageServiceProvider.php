@@ -52,15 +52,15 @@ class WmPackageServiceProvider extends PackageServiceProvider
             Route::name('v2.')
                 ->middleware('api')
                 ->prefix('api/v2')
-                ->group($packageDirPath.'routes/api.php');
+                ->group($packageDirPath . 'routes/api.php');
 
             Route::name('default.')
                 ->middleware('api')
                 ->prefix('api')
-                ->group($packageDirPath.'routes/api.php');
+                ->group($packageDirPath . 'routes/api.php');
 
             Route::middleware('web')
-                ->group($packageDirPath.'routes/web.php');
+                ->group($packageDirPath . 'routes/web.php');
         });
 
         // Register policies
@@ -85,12 +85,15 @@ class WmPackageServiceProvider extends PackageServiceProvider
 
         // BACKUP
         // Questo verrà eseguito dopo che tutti i provider sono stati registrati e avviati
-        $this->app->booted(function () {
-            if (class_exists(\Spatie\Backup\Config\Config::class)) {
-                $this->app->config['backup'] = $this->setDefaultBackupSettings();
-                $this->commands([WmBackupCommand::class]);
-            }
-        });
+        if (! $this->app->runningUnitTests()) {
+            $this->app->booted(function () {
+                if (class_exists(\Spatie\Backup\Config\Config::class)) {
+                    $this->app->config['backup'] = $this->setDefaultBackupSettings();
+                    \Spatie\Backup\Config\Config::rebind();
+                    $this->commands([WmBackupCommand::class]);
+                }
+            });
+        }
     }
 
     public function configurePackage(Package $package): void
@@ -232,7 +235,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
     protected function resources()
     {
 
-        Nova::resourcesIn($this->getPackageBaseDir().'/Nova');
+        Nova::resourcesIn($this->getPackageBaseDir() . '/Nova');
     }
 
     /**

@@ -6,6 +6,7 @@ use Carbon\Carbon;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Queue;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Services\Models\EcTrackService;
@@ -16,6 +17,7 @@ class GetUpdatedAtTracksTest extends AbstractEcTrackServiceTest
 
     public function test_get_updated_at_tracks_for_existing_user()
     {
+        Queue::fake();
         $app = App::factory()->create();
 
         $track1 = EcTrack::factory()->create([
