@@ -16,7 +16,7 @@ class DemClient extends JsonClient
 
     private function getElevationUrl($x, $y)
     {
-        return $this->getHost().'/'.rtrim(config('wm-package.clients.dem.ele_api'), '/')."/$x/$y";
+        return $this->getHost() . '/' . rtrim(config('wm-package.clients.dem.ele_api'), '/') . "/$x/$y";
     }
 
     public function getTechData($geojson)
@@ -25,6 +25,9 @@ class DemClient extends JsonClient
             $this->getTechDataUrl(),
             $geojson
         );
+
+        $responseData = $response->json();
+
         // Check the response
         if (! $response->successful() || empty($responseData['geometry'])) {
             // Request failed, handle the error here
@@ -38,7 +41,7 @@ class DemClient extends JsonClient
 
     private function getTechDataUrl()
     {
-        return $this->getHost().'/'.rtrim(config('wm-package.clients.dem.tech_data_api'), '/');
+        return $this->getHost() . '/' . rtrim(config('wm-package.clients.dem.tech_data_api'), '/');
     }
 
     protected function getHost(): string
