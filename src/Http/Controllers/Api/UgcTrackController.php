@@ -26,6 +26,7 @@ class UgcTrackController extends UgcController
     {
         $validated = $this->validate($request, ['properties.id' => 'required|exists:ugc_tracks,id']);
         $track = UgcTrack::find($validated['properties']['id']);
+
         return parent::_update($request, $track);
     }
 

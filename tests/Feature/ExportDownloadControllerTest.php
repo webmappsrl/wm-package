@@ -32,7 +32,7 @@ class ExportDownloadControllerTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        $response->assertHeader('Content-Disposition', 'attachment; filename=' . $fileName);
+        $response->assertHeader('Content-Disposition', 'attachment; filename='.$fileName);
     }
 
     /** @test */

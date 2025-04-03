@@ -27,7 +27,7 @@ class TestCase extends Orchestra
     protected function getEnvironmentSetUp($app)
     {
         // set app key for testing routes
-        $app['config']->set('app.key', 'base64:' . base64_encode(random_bytes(32)));
+        $app['config']->set('app.key', 'base64:'.base64_encode(random_bytes(32)));
         $app['config']->set('auth.guards.api', [
             'driver' => 'jwt',
             'provider' => 'users',
@@ -36,6 +36,6 @@ class TestCase extends Orchestra
 
     protected function defineDatabaseMigrations()
     {
-        artisan($this, "vendor:publish", ["--tag" => "wm-package-migrations"]);
+        artisan($this, 'vendor:publish', ['--tag' => 'wm-package-migrations']);
     }
 }

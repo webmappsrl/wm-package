@@ -69,7 +69,6 @@ class ElasticsearchController extends Controller
                 'boost' => 4,
             ]), BoolQuery::SHOULD); // #OR
 
-
             // Replace the original query with our custom one
             $body->addQuery($boolQuery);
 

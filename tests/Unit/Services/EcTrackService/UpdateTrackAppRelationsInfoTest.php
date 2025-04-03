@@ -3,7 +3,6 @@
 namespace Tests\Unit\Services\EcTrackService;
 
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Queue;
 
 class UpdateTrackAppRelationsInfoTest extends AbstractEcTrackServiceTest
 {
@@ -47,6 +46,5 @@ class UpdateTrackAppRelationsInfoTest extends AbstractEcTrackServiceTest
     //     $this->track->shouldNotReceive('update');
     //     $this->ecTrackService->updateTrackAppRelationsInfo($this->track);
     // }
-
 
 }
