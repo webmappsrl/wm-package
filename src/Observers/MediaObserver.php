@@ -9,6 +9,12 @@ use Wm\WmPackage\Services\GeometryComputationService;
 
 class MediaObserver extends AbstractAuthorableObserver
 {
+
+    public function saving($media)
+    {
+        //OVERRIDE AbstractObserver saving method
+        //Do not set name in properties
+    }
     /**
      * Handles the "creating" event of the Media model
      *
