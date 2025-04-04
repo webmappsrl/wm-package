@@ -27,6 +27,11 @@ class MediaObserver extends AbstractAuthorableObserver
         }
     }
 
+    public function created(Model $media)
+    {
+        $this->removeGeometryFromCustomProperties($media);
+    }
+
     /**
      * Sets app_id and geometry for the media
      *
@@ -37,13 +42,11 @@ class MediaObserver extends AbstractAuthorableObserver
         // If app_id is missing, we need to find the related model
         if (! $media->app_id) {
             try {
-
                 $model = $media->model;
 
                 if (! $model) {
                     Log::warning('MediaObserver-creating: Related model not found');
                     $this->setDefaultValues($media);
-
                     return;
                 }
 
@@ -54,7 +57,13 @@ class MediaObserver extends AbstractAuthorableObserver
                 // Sets app_id from parent model
                 $media->app_id = $model->app_id;
 
-                // Sets geometry based on model geometry
+                if (isset($media->custom_properties['geometry']) && $media->custom_properties['geometry'] !== null) {
+                    $media->geometry = $media->custom_properties['geometry'];
+
+                    return;
+                }
+
+                // Sets geometry based on model geometry if not found in custom properties
                 $this->setGeometryFromModel($media, $model);
             } catch (\Exception $e) {
                 $this->handleException($e, $media);
@@ -121,7 +130,7 @@ class MediaObserver extends AbstractAuthorableObserver
      */
     private function handleException(\Exception $e, Media $media)
     {
-        Log::error('Error in MediaObserver-creating: '.$e->getMessage());
+        Log::error('Error in MediaObserver-creating: ' . $e->getMessage());
         Log::error($e->getTraceAsString());
         // In case of error, set default values to avoid crashes
         $this->setDefaultValues($media);
@@ -142,7 +151,7 @@ class MediaObserver extends AbstractAuthorableObserver
 
             $this->setDefaultGeometry($media);
         } catch (\Exception $e) {
-            Log::error('Error setting default values: '.$e->getMessage());
+            Log::error('Error setting default values: ' . $e->getMessage());
             // Last resort fallback
             $media->app_id = 1;
             $media->geometry = 'POINT(10.4018624 43.7159395)';
@@ -160,7 +169,16 @@ class MediaObserver extends AbstractAuthorableObserver
             // Default point (Pisa, Italy)
             $media->geometry = 'POINT(10.4018624 43.7159395)';
         } catch (\Exception $e) {
-            Log::error('Error setting default geometry: '.$e->getMessage());
+            Log::error('Error setting default geometry: ' . $e->getMessage());
         }
+    }
+
+    private function removeGeometryFromCustomProperties(Media $media)
+    {
+        $customProperties = $media->custom_properties;
+        unset($customProperties['geometry']);
+        $media->update([
+            'custom_properties' => $customProperties
+        ]);
     }
 }

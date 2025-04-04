@@ -16,8 +16,11 @@ use Wm\WmPackage\Commands\WmGeneratePBFCommand;
 use Wm\WmPackage\Commands\WmImportFromGeohubCommand;
 use Wm\WmPackage\Commands\WmPackageCommand;
 use Wm\WmPackage\ElasticSearch\HitsIteratorAggregate as ElasticSearchHitsIteratorAggregate;
+use Wm\WmPackage\Jobs\Import\ImportEcMediaJob;
 use Wm\WmPackage\Providers\EventServiceProvider;
 use Wm\WmPackage\Providers\ScheduleServiceProvider;
+use Wm\WmPackage\Services\Import\EcMediaImportService;
+use Wm\WmPackage\Services\Import\GeohubImportService;
 
 class WmPackageServiceProvider extends PackageServiceProvider
 {
@@ -145,6 +148,11 @@ class WmPackageServiceProvider extends PackageServiceProvider
 
         // Schedule
         $this->app->register(ScheduleServiceProvider::class);
+
+        // Register the correct import service for the ImportEcMediaJob
+        $this->app->when(ImportEcMediaJob::class)
+            ->needs(GeohubImportService::class)
+            ->give(EcMediaImportService::class);
 
         // Register the morphMap for polymorphic relationships
         Relation::morphMap([

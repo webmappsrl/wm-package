@@ -18,6 +18,8 @@ class EcPoi extends Point implements LayerRelatedModel
 {
     use EcFeatureTrait, HasMorphToManyEvents, HasTranslations, TaxonomyAbleModel, TaxonomyWhereAbleModel;
 
+    const MEDIA_COLLECTION_NAME = 'feature_image';
+
     protected $fillable = [
         'name',
         'app_id',

@@ -37,9 +37,8 @@ class GeohubImportService
         'ec_track',
         'taxonomy_activity',
         'layer',
+        'ec_media',
     ];
-
-    protected const GEOHUB_URL = 'https://geohub.webmapp.it/';
 
     /**
      * The database connection to Geohub
@@ -105,7 +104,7 @@ class GeohubImportService
             ->allowFailures()
             ->dispatch();
 
-        $this->logger->info("Dispatched batch {$batch->id} with ".count($jobs)." jobs for {$modelKey}s");
+        $this->logger->info("Dispatched batch {$batch->id} with " . count($jobs) . " jobs for {$modelKey}s");
     }
 
     /**
@@ -143,6 +142,11 @@ class GeohubImportService
      */
     public function fetchData(int $entityId, string $tableName): ?array
     {
+        // handle media table
+        if ($tableName === 'media') {
+            $tableName = 'ec_media';
+        }
+
         $element = $this->dbConnection
             ->table($tableName)
             ->where('id', $entityId)
@@ -160,29 +164,30 @@ class GeohubImportService
      * Import the transformed data into the database
      *
      * @param  array  $transformedData  The data to import
+     * @param  string  $modelKey  The model key
      * @param  string  $modelName  The model class name
      * @param  int  $entityId  The ID of the entity to import
      * @return Model The imported model
      *
      * @throws \Exception If import fails
      */
-    public function importData(array $transformedData, string $modelName, int $entityId): Model
+    public function importData(array $transformedData, string $modelKey, string $modelName, int $entityId): Model
     {
         try {
             if (! class_exists($modelName)) {
                 throw new \RuntimeException("App model class {$modelName} not found or not configured");
             }
 
-            $identifiers = $this->getIdentifiers($transformedData, $entityId);
+            $identifier = $this->getIdentifier($modelKey, $entityId);
 
             // Create or update the app
-            $model = $modelName::updateOrCreate($identifiers, $transformedData);
+            $model = $modelName::updateOrCreate($identifier, $transformedData);
 
             $this->logger->info("{$modelName} with ID {$entityId} imported successfully. Local ID: {$model->id}");
 
             return $model;
         } catch (\Exception $e) {
-            $this->logger->error("Error importing {$modelName} with ID {$entityId}: ".$e->getMessage());
+            $this->logger->error("Error importing {$modelName} with ID {$entityId}: " . $e->getMessage());
             throw $e;
         }
     }
@@ -263,30 +268,17 @@ class GeohubImportService
     }
 
     /**
-     * Get the identifiers for the updateOrCreate method.
+     * Get the identifier for the updateOrCreate method.
      *
-     * @param  array  $data  The data to extract identifiers from
+     * @param  string  $modelKey  The model key
      * @param  int  $entityId  The ID of the entity to import
-     * @return array The identifiers
+     * @return array The identifier
      */
-    protected function getIdentifiers(array $data, int $entityId): array
+    protected function getIdentifier(string $modelKey, int $entityId): array
     {
-        // Extract identifier fields for updateOrCreate
-        $identifiers = [];
-        foreach ($this->mapping['identifiers'] ?? [] as $field) {
-            if (isset($data[$field])) {
-                $identifiers[$field] = $data[$field];
-            }
-        }
-
-        if (empty($identifiers)) {
-            // If no identifiers are found, use custom properties with geohub_id
-            $identifiers = [
-                'properties->geohub_id' => $entityId,
-            ];
-        }
-
-        return $identifiers;
+        return [
+            $this->importMapping[$modelKey]['identifier'] ?? 'properties->geohub_id' => $entityId,
+        ];
     }
 
     /**
@@ -390,10 +382,10 @@ class GeohubImportService
     {
         $transformedProperties = [];
 
-        if (isset($this->importMapping[$modelKey]['properties'])) {
+        if (isset($this->importMapping[$modelKey]['properties']['mapping'])) {
             $transformedProperties = $this->transformMappedFields(
                 $data,
-                $this->importMapping[$modelKey]['properties']
+                $this->importMapping[$modelKey]['properties']['mapping']
             );
         }
 
@@ -597,8 +589,8 @@ class GeohubImportService
             }
             // Otherwise we need to download and upload to AWS
             else {
-                $fileUrl = self::GEOHUB_URL.'storage/'.$featureCollection;
-                $fileContent = $this->downloadFileFromGeohub($fileUrl);
+                $fileUrl = config('wm-package.clients.geohub.host') . '/storage/' . $featureCollection;
+                $fileContent = $this->downloadFileContent($fileUrl);
 
                 if ($fileContent !== false) {
                     $this->storeFeatureCollectionOnAws($model, $fileContent);
@@ -623,7 +615,7 @@ class GeohubImportService
      * @param  string  $url  The URL of the file to download
      * @return string|false The file content or false if the file doesn't exist
      */
-    protected function downloadFileFromGeohub(string $url): string|false
+    protected function downloadFileContent(string $url): string|false
     {
         $contents = @file_get_contents($url);
 
@@ -649,7 +641,7 @@ class GeohubImportService
                 $fileContent
             );
         } catch (\Exception $e) {
-            $this->logger->error('Error storing layer feature collection: '.$e->getMessage());
+            $this->logger->error('Error storing layer feature collection: ' . $e->getMessage());
         }
 
         if ($path) {

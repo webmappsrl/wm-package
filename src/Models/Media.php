@@ -27,6 +27,11 @@ class Media extends SpatieMedia
         'model_id',
         'model_type',
         'geometry',
+        'collection_name',
+        'name',
+        'file_name',
+        'disk',
+        'custom_properties',
     ];
 
     protected static function booted()

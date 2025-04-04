@@ -26,16 +26,20 @@ class UpdateDemDataTest extends AbstractEcTrackServiceTest
         $track = $this->prepareTrackWithGeojson(1, ['type' => 'Feature']);
         $track->shouldReceive('saveQuietly')->once();
 
+        // Mock array access methods
+        $track->shouldReceive('offsetExists')->with('properties')->andReturn(true);
+        $track->shouldReceive('offsetGet')->with('properties')->andReturn(['dem_data' => []]);
+
         $track->shouldReceive('setAttribute')
-            ->with('dem_data', Mockery::type('array'))
+            ->with('properties', Mockery::type('array'))
             ->once();
 
         $track->shouldReceive('getAttribute')
-            ->with('dem_data')
-            ->andReturn(json_encode(self::EXPECTED_DEM_DATA['properties']));
+            ->with('properties')
+            ->andReturn(['dem_data' => self::EXPECTED_DEM_DATA['properties']]);
 
         $this->ecTrackService->updateDemData($track);
 
-        $this->assertEquals(self::EXPECTED_DEM_DATA['properties'], json_decode($track->dem_data, true));
+        $this->assertEquals(self::EXPECTED_DEM_DATA['properties'], $track->properties['dem_data']);
     }
 }

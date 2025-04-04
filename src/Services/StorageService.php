@@ -203,7 +203,7 @@ class StorageService extends BaseService
 
     public function getMediaDisk(): Filesystem
     {
-        return $this->getDisk('s3');
+        return $this->getDisk('wmfe');
     }
 
     public function getPublicDisk(): Filesystem
@@ -255,7 +255,7 @@ class StorageService extends BaseService
         return config('wm-package.shard_name', 'webmapp');
     }
 
-    private function getShardBasePath(?int $appId = null)
+    public function getShardBasePath(?int $appId = null)
     {
         $basePath = '/'.$this->getShardName().'/';
         if (is_int($appId)) {

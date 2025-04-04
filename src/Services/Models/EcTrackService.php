@@ -65,8 +65,7 @@ class EcTrackService extends BaseService
         $demData['duration_forward'] = $demData['duration_forward_hiking'];
         $demData['duration_backward'] = $demData['duration_backward_hiking'];
 
-        $trackCurrentDemData = $track->properties['dem_data'] ?? [];
-        $oldDemData = json_decode($trackCurrentDemData, true);
+        $oldDemData = $track->properties['dem_data'] ?? [];
         $properties = $track->properties;
         $properties['dem_data'] = $demData;
         $track->properties = $properties;
@@ -82,7 +81,7 @@ class EcTrackService extends BaseService
 
             $track->saveQuietly();
         } catch (\Exception $e) {
-            Log::error('An error occurred during DEM operation: '.$e->getMessage());
+            Log::error('An error occurred during DEM operation: ' . $e->getMessage());
         }
     }
 
@@ -93,7 +92,7 @@ class EcTrackService extends BaseService
         try {
             $osmId = trim($track->osmid);
             $osmClient = new OsmClient;
-            $geojson_content = $osmClient::getGeojson('relation/'.$osmId);
+            $geojson_content = $osmClient::getGeojson('relation/' . $osmId);
             $geojson_content = json_decode($geojson_content, true);
             $osmData = $geojson_content['properties'];
             if (isset($osmData['duration:forward'])) {
@@ -161,10 +160,10 @@ class EcTrackService extends BaseService
                     $osmData = json_decode($track->osm_data, true);
                     if (isset($osmData[$field]) && ! is_null($osmData[$field])) {
                         $track[$field] = $osmData[$field];
-                        Log::info("Updated $field with OSM value: ".$osmData[$field]);
+                        Log::info("Updated $field with OSM value: " . $osmData[$field]);
                     } elseif (isset($demData[$field]) && ! is_null($demData[$field])) {
                         $track[$field] = $demData[$field];
-                        Log::info("Updated $field with DEM value: ".$demData[$field]);
+                        Log::info("Updated $field with DEM value: " . $demData[$field]);
                     }
                 }
             }
@@ -172,7 +171,7 @@ class EcTrackService extends BaseService
             $track->manual_data = $manualData;
             $track->saveQuietly();
         } catch (\Exception $e) {
-            Log::error($track->id.': HandlesData: An error occurred during a store operation: '.$e->getMessage());
+            Log::error($track->id . ': HandlesData: An error occurred during a store operation: ' . $e->getMessage());
         }
     }
 

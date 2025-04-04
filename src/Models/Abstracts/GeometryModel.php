@@ -164,7 +164,9 @@ abstract class GeometryModel extends Model implements HasMedia
     {
         foreach (MediaService::make()->getThumbnailSizes() as $size) {
             $this
-                ->addMediaConversion('thumbnail')
+                ->addMediaConversion(
+                    'thumbnail_'.implode('_', $size)
+                )
                 ->fit(Fit::Contain, $size['width'], $size['height'])
                 ->nonQueued();
         }

@@ -6,11 +6,9 @@ use Illuminate\Bus\Batchable;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Query\Expression;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Wm\WmPackage\Services\Import\GeohubImportService;
 
@@ -53,7 +51,7 @@ abstract class BaseImportJob implements ShouldQueue
             $data = $this->geohubImportService->fetchData($this->entityId, $this->getTableName());
             $transformedData = $this->transformData($data);
 
-            $model = $this->geohubImportService->importData($transformedData, $modelName, $this->entityId);
+            $model = $this->geohubImportService->importData($transformedData, $this->getModelKey(), $modelName, $this->entityId);
 
             // using $data instead of $transformedData for referenced keys in geohub database
             $this->processDependencies($data, $model);
@@ -105,29 +103,14 @@ abstract class BaseImportJob implements ShouldQueue
     protected function transformData(array $data): array
     {
         $transformedData = $this->geohubImportService->transformFields($data, $this->getModelKey());
-        $transformedData['properties'] = $this->geohubImportService->transformProperties($data, $this->getModelKey());
+
+        $propertiesColumnName = config('wm-geohub-import.import_mapping.'.$this->getModelKey().'.properties.column_name', 'properties');
+
+        $transformedData[$propertiesColumnName] = $this->geohubImportService->transformProperties($data, $this->getModelKey());
+
         isset($this->data['app_id']) ? $transformedData['app_id'] = $this->data['app_id'] : null;
 
         return $transformedData;
-    }
-
-    /**
-     * Force the geometry to 3D.
-     */
-    protected function forceTo3DGeometry(string $geometry): Expression
-    {
-        // force geometry to 3D
-        if (is_string($geometry) && preg_match('/^[0-9A-Fa-f]+$/', $geometry)) {
-            // Properly format WKB hex string for PostgreSQL
-            $geometry = DB::raw("ST_Force3D(ST_GeomFromEWKB('\\x{$geometry}'))");
-        } elseif (! is_string($geometry)) {
-            // Handle DB::raw objects directlyå
-            $geometry = DB::raw("ST_Force3D({$geometry})");
-        } else {
-            $geometry = DB::raw("ST_Force3D({$geometry})");
-        }
-
-        return $geometry;
     }
 
     /**
