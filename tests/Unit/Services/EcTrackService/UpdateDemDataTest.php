@@ -27,15 +27,15 @@ class UpdateDemDataTest extends AbstractEcTrackServiceTest
         $track->shouldReceive('saveQuietly')->once();
 
         $track->shouldReceive('setAttribute')
-            ->with('dem_data', Mockery::type('array'))
+            ->with('properties', Mockery::type('array'))
             ->once();
 
         $track->shouldReceive('getAttribute')
-            ->with('dem_data')
+            ->with('properties')
             ->andReturn(json_encode(self::EXPECTED_DEM_DATA['properties']));
 
         $this->ecTrackService->updateDemData($track);
 
-        $this->assertEquals(self::EXPECTED_DEM_DATA['properties'], json_decode($track->dem_data, true));
+        $this->assertEquals(self::EXPECTED_DEM_DATA['properties'], json_decode($track->properties['dem_data'], true));
     }
 }
