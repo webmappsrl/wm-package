@@ -19,6 +19,6 @@ class WmfePathGenerator extends DefaultPathGenerator implements PathGenerator
 
         $basePath = $storageService->getShardBasePath($media->app_id);
 
-        return $basePath . 'media/' . $this->getBasePath($media) . '/';
+        return $basePath.'media/'.$this->getBasePath($media).'/';
     }
 }
