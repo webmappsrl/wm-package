@@ -43,7 +43,7 @@ class EcMediaImportService extends GeohubImportService
         // Get the URL and prepare it
         $url = $transformedData['url'];
         if (! filter_var($url, FILTER_VALIDATE_URL)) {
-            $url = config('wm-package.clients.geohub.host') . '/storage/' . ltrim($url, '/');
+            $url = config('wm-package.clients.geohub.host').'/storage/'.ltrim($url, '/');
 
             // validate if the url returns an image content type
             $contentType = get_headers($url, 1)[0];
@@ -59,7 +59,7 @@ class EcMediaImportService extends GeohubImportService
 
         if ($existingMedia) {
             $existingMedia->update([
-                'custom_properties' => $transformedData['custom_properties']
+                'custom_properties' => $transformedData['custom_properties'],
             ]);
 
             return; // Skip adding new media since we updated the existing one
@@ -80,7 +80,7 @@ class EcMediaImportService extends GeohubImportService
         $customProperties = $mediaItem->custom_properties;
         unset($customProperties['geometry']);
         $mediaItem->updateQuietly([
-            'custom_properties' => $customProperties
+            'custom_properties' => $customProperties,
         ]);
     }
 

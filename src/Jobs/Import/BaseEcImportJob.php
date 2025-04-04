@@ -2,8 +2,8 @@
 
 namespace Wm\WmPackage\Jobs\Import;
 
-use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 use Wm\WmPackage\Services\GeometryComputationService;
 
 abstract class BaseEcImportJob extends BaseImportJob
@@ -28,11 +28,12 @@ abstract class BaseEcImportJob extends BaseImportJob
 
     protected function fillGeometry(array $data)
     {
-        if (!isset($data['geometry']) || empty($data['geometry'])) {
+        if (! isset($data['geometry']) || empty($data['geometry'])) {
             $geometry = $this->setDefaultGeometry();
         } else {
             $geometry = app(GeometryComputationService::class)->convertTo3DGeometry($data['geometry']);
         }
+
         return $geometry;
     }
 
