@@ -60,7 +60,7 @@ class OsmfeaturesClient extends JsonClient
 
     protected function getAdminAreasIntersectsUrl()
     {
-        return $this->getHost() . '/api/v1/features/admin-areas/geojson';
+        return $this->getHost().'/api/v1/features/admin-areas/geojson';
     }
 
     protected function getHost(): string
