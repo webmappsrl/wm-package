@@ -64,6 +64,10 @@ class ModelExporter implements FromCollection, ShouldAutoSize, WithHeadings, Wit
 
     protected array $styles;
 
+    protected array $expandJsonColumns = [];
+
+    protected array $expandedColumnHeaders = [];
+
     public function __construct(Collection $models, array $columns = [], array $relations = [], array $styles = self::DEFAULT_STYLE)
     {
         $this->models = $models;
@@ -72,10 +76,100 @@ class ModelExporter implements FromCollection, ShouldAutoSize, WithHeadings, Wit
         $this->styles = $styles;
     }
 
+    /**
+     * Set columns that should be expanded from JSON to individual columns
+     *
+     * @param array $columns Array of column names that contain JSON data to be expanded
+     * @return $this
+     */
+    public function expandJsonColumns(array $columns): self
+    {
+        $this->expandJsonColumns = $columns;
+
+        // Cache expanded column headers
+        if (!empty($this->expandJsonColumns) && $this->models->isNotEmpty()) {
+            $this->cacheExpandedColumnHeaders();
+        }
+
+        return $this;
+    }
+
+    /**
+     * Cache all possible keys from the JSON columns to ensure consistent columns across rows
+     */
+    protected function cacheExpandedColumnHeaders(): void
+    {
+        $this->expandedColumnHeaders = [];
+
+        foreach ($this->expandJsonColumns as $jsonColumn) {
+            $allKeys = [];
+
+            // Collect all possible keys from all rows
+            $this->models->each(function ($model) use ($jsonColumn, &$allKeys) {
+                $jsonData = data_get($model, $jsonColumn, []);
+                if (is_array($jsonData) || is_object($jsonData)) {
+                    // Extract all keys recursively
+                    $this->extractJsonKeysRecursively($jsonData, $allKeys);
+                }
+            });
+
+            // Store the keys for this column
+            $this->expandedColumnHeaders[$jsonColumn] = $allKeys;
+        }
+    }
+
+    /**
+     * Extract all keys from a nested JSON structure recursively
+     *
+     * @param array|object $data The JSON data to extract keys from
+     * @param array $keys Array to collect the flattened keys
+     * @param string $prefix Current key prefix for nested structures
+     */
+    protected function extractJsonKeysRecursively($data, array &$keys, string $prefix = ''): void
+    {
+        foreach ($data as $key => $value) {
+            $currentKey = $prefix ? "{$prefix}.{$key}" : $key;
+
+            // Add the current key
+            if (!in_array($currentKey, $keys)) {
+                $keys[] = $currentKey;
+            }
+
+            // If value is an array or object, process it recursively
+            if (is_array($value) || is_object($value)) {
+                $this->extractJsonKeysRecursively($value, $keys, $currentKey);
+            }
+        }
+    }
+
     public function collection(): Collection
     {
         if (empty($this->columns)) {
-            return $this->models->filter()->values();
+            // When no columns specified, get all model data and expand JSON columns
+            return $this->models->filter()->values()->map(function ($item) {
+                $result = is_array($item) ? $item : $item->toArray();
+
+                // Expand JSON columns
+                foreach ($this->expandJsonColumns as $jsonColumn) {
+                    $jsonData = data_get($item, $jsonColumn, []);
+                    if (is_array($jsonData) || is_object($jsonData)) {
+                        // Remove the original JSON column if we're expanding it
+                        if (isset($result[$jsonColumn])) {
+                            unset($result[$jsonColumn]);
+                        }
+
+                        // Add all nested JSON properties as separate columns
+                        $flattenedData = [];
+                        $this->flattenJsonData($jsonData, $flattenedData);
+
+                        foreach ($this->expandedColumnHeaders[$jsonColumn] as $nestedKey) {
+                            $result["{$jsonColumn}.{$nestedKey}"] = $flattenedData[$nestedKey] ?? null;
+                        }
+                    }
+                }
+
+                return $result;
+            });
         }
 
         return $this->models->filter()->values()->map(function ($item) {
@@ -91,8 +185,49 @@ class ModelExporter implements FromCollection, ShouldAutoSize, WithHeadings, Wit
                 $result["$relation.$attribute"] = $relatedValue;
             }
 
+            // Expand JSON columns
+            foreach ($this->expandJsonColumns as $jsonColumn) {
+                $jsonData = data_get($item, $jsonColumn, []);
+                if (is_array($jsonData) || is_object($jsonData)) {
+                    // Remove the original JSON column if it's included and we're expanding it
+                    if (isset($result[$jsonColumn])) {
+                        unset($result[$jsonColumn]);
+                    }
+
+                    // Add all nested JSON properties as separate columns
+                    $flattenedData = [];
+                    $this->flattenJsonData($jsonData, $flattenedData);
+
+                    foreach ($this->expandedColumnHeaders[$jsonColumn] as $nestedKey) {
+                        $result["{$jsonColumn}.{$nestedKey}"] = $flattenedData[$nestedKey] ?? null;
+                    }
+                }
+            }
+
             return $result;
         });
+    }
+
+    /**
+     * Flatten a nested JSON structure into dot notation
+     *
+     * @param array|object $data The JSON data to flatten
+     * @param array $result Array to store the flattened data
+     * @param string $prefix Current key prefix for nested structures
+     */
+    protected function flattenJsonData($data, array &$result, string $prefix = ''): void
+    {
+        foreach ($data as $key => $value) {
+            $currentKey = $prefix ? "{$prefix}.{$key}" : $key;
+
+            if (is_array($value) || is_object($value)) {
+                // If this is a nested structure, flatten it recursively
+                $this->flattenJsonData($value, $result, $currentKey);
+            } else {
+                // Add leaf value with full dot notation path
+                $result[$currentKey] = $value;
+            }
+        }
     }
 
     /**
@@ -107,6 +242,11 @@ class ModelExporter implements FromCollection, ShouldAutoSize, WithHeadings, Wit
         return collect($row)->map(function ($value) {
             if (is_bool($value)) {
                 return $value ? __('Yes') : __('No');
+            }
+
+            // Convert arrays/objects to JSON strings
+            if (is_array($value) || is_object($value)) {
+                return json_encode($value, JSON_UNESCAPED_UNICODE);
             }
 
             return $value;
@@ -134,14 +274,44 @@ class ModelExporter implements FromCollection, ShouldAutoSize, WithHeadings, Wit
      */
     public function headings(): array
     {
-        if ($this->columns === []) {
-            $table = $this->models->first()->getTable();
+        $headers = [];
 
-            return Schema::getColumnListing($table);
+        if ($this->columns === []) {
+            if ($this->models->isEmpty()) {
+                return [];
+            }
+
+            $table = $this->models->first()->getTable();
+            $headers = Schema::getColumnListing($table);
+
+            // Remove JSON columns that will be expanded
+            foreach ($this->expandJsonColumns as $jsonColumn) {
+                $columnIndex = array_search($jsonColumn, $headers);
+                if ($columnIndex !== false) {
+                    unset($headers[$columnIndex]);
+                }
+            }
+        } else {
+            $headers = collect($this->columns)->values()->map(function ($value) {
+                return __($value);
+            })->toArray();
+
+            // Remove JSON columns that will be expanded
+            foreach ($this->expandJsonColumns as $jsonColumn) {
+                $columnIndex = array_search($jsonColumn, $headers);
+                if ($columnIndex !== false) {
+                    unset($headers[$columnIndex]);
+                }
+            }
         }
 
-        return collect($this->columns)->values()->map(function ($value) {
-            return __($value);
-        })->toArray();
+        // Add expanded JSON column headers
+        foreach ($this->expandJsonColumns as $jsonColumn) {
+            foreach ($this->expandedColumnHeaders[$jsonColumn] as $key) {
+                $headers[] = "{$jsonColumn}.{$key}";
+            }
+        }
+
+        return array_values($headers);
     }
 }
