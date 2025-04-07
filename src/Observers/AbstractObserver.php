@@ -8,7 +8,7 @@ abstract class AbstractObserver
     {
         if ($model->name) {
             $properties = $model->properties ?? [];
-            $properties['name'] = $model->name;
+            $properties['name'] = $model->getTranslations('name');
             $model->properties = $properties;
         }
     }
