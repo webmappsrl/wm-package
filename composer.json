@@ -88,6 +88,12 @@
             "@prepare",
             "@php ./vendor/bin/testbench package:discover --ansi"
         ],
+        "post-install-cmd": [
+            "npm install"
+        ],
+        "post-update-cmd": [
+            "npm install"
+        ],
         "analyse": "vendor/bin/phpstan analyse",
         "test": "vendor/bin/pest",
         "test-coverage": "vendor/bin/pest --coverage",

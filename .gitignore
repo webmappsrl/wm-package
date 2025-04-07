@@ -9,3 +9,5 @@ vendor
 .env
 .phpunit.cache
 auth.json
+node_modules
+build

@@ -13,6 +13,6 @@
     "author": "",
     "license": "ISC",
     "dependencies": {
-        "chartjs-node-canvas": "^5.0.0"
+        "chartjs-node-canvas": "^3.2.0"
     }
 }
