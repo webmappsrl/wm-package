@@ -59,6 +59,14 @@ abstract class UgcController extends Controller
         return response()->json(['id' => $model->id, 'message' => 'Updated successfully'], 200);
     }
 
+    public function legacyUpdate(Request $request): JsonResponse
+    {
+        $validated = $this->validate($request, ['properties.id' => 'required|exists:ugc_pois,id']);
+        $model = $this->getModelIstance()->find($validated['properties']['id']);
+
+        return $this->_update($request, $model);
+    }
+
     /**
      * Remove the specified resource from storage.
      */
@@ -93,7 +101,7 @@ abstract class UgcController extends Controller
         try {
             $model->save();
         } catch (\Exception $e) {
-            $message = 'Error saving '.class_basename($this->getModelIstance()::class).'. '.$e->getMessage();
+            $message = 'Error saving ' . class_basename($this->getModelIstance()::class) . '. ' . $e->getMessage();
             Log::channel('ugc')->error($message);
             throw new Exception($message, 500);
         }
