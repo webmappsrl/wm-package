@@ -26,7 +26,7 @@ return [
             'rules' => ['nullable', 'integer'],
         ],
         'color' => [
-            'type' => 'text',
+            'type' => 'color',
             'label' => 'Color',
             'rules' => ['nullable', 'regex:/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/'],
             'help' => 'Enter a valid hex color code (e.g., #000000, #000, #00000000)',
@@ -65,7 +65,7 @@ return [
             'rules' => ['nullable'],
         ],
         'color' => [
-            'type' => 'text',
+            'type' => 'color',
             'label' => 'Color',
             'rules' => ['nullable', 'regex:/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/'],
             'help' => 'Enter a valid hex color code (e.g., #000000)',

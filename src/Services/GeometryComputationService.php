@@ -896,7 +896,13 @@ GROUP BY
 
         // If it's already a DB expression, ensure it's 3D
         if ($geometry instanceof \Illuminate\Database\Query\Expression) {
-            return DB::raw("ST_Force3D($geometry)");
+            // Use reflection to access the protected 'value' property
+            $reflection = new \ReflectionProperty(get_class($geometry), 'value');
+            $reflection->setAccessible(true);
+            $sqlValue = $reflection->getValue($geometry);
+
+            // Now we can use the SQL value directly
+            return DB::raw("ST_Force3D($sqlValue)");
         }
 
         // Handle GeoJSON
