@@ -24,4 +24,13 @@ abstract class AbstractUgcResource extends AbstractGeometryResource
             Images::make('Image', 'default')->onlyOnDetail(),
         ];
     }
+
+    public function actions(NovaRequest $request): array
+    {
+        return [
+            ...parent::actions($request),
+            new ExportTo(),
+            new CopyUgc(),
+        ];
+    }
 }
