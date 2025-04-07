@@ -52,15 +52,6 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
         return $this->morphToMany(Layer::class, 'layerable');
     }
 
-    public function updateManualDataField($field, $value)
-    {
-        $properties = $this->properties;
-        if (! isset($properties['manual_data']))
-            $properties['manual_data'] = [];
-        $properties['manual_data'][$field] = $value;
-        $this->properties = $properties;
-    }
-
     public function ecPois(): BelongsToMany
     {
         return $this->belongsToMany(EcPoi::class)->withPivot('order')->orderByPivot('order');
