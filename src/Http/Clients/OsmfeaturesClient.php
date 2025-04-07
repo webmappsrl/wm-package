@@ -45,7 +45,7 @@ class OsmfeaturesClient extends JsonClient
     {
         $response = $this->getHttpClient()->post(
             $this->getAdminAreasIntersectsUrl(),
-            $geojson
+            ['geojson' => $geojson]
         );
         // Check the response
         if (! $response->successful()) {
@@ -60,7 +60,7 @@ class OsmfeaturesClient extends JsonClient
 
     protected function getAdminAreasIntersectsUrl()
     {
-        return $this->getHost().'/api/v1/features/admin-areas/geojson';
+        return $this->getHost() . '/api/v1/features/admin-areas/geojson';
     }
 
     protected function getHost(): string
