@@ -7,7 +7,6 @@ docs
 phpunit.xml
 phpstan.neon
 vendor
-node_modules
 .env
 .phpunit.cache
 auth.json

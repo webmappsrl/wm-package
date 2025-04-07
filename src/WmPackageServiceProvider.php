@@ -38,6 +38,13 @@ class WmPackageServiceProvider extends PackageServiceProvider
         $this->app->bind(HitsIteratorAggregate::class, ElasticSearchHitsIteratorAggregate::class);
     }
 
+    public static function getBasePath(): string
+    {
+        /** @var WmPackageServiceProvider $provider */
+        $provider = app()->getProvider(static::class);
+        return realpath($provider->package->basePath('/../'));
+    }
+
     /**
      * Define your route model bindings, pattern filters, and other route configuration.
      *
@@ -55,15 +62,15 @@ class WmPackageServiceProvider extends PackageServiceProvider
             Route::name('v2.')
                 ->middleware('api')
                 ->prefix('api/v2')
-                ->group($packageDirPath.'routes/api.php');
+                ->group($packageDirPath . 'routes/api.php');
 
             Route::name('default.')
                 ->middleware('api')
                 ->prefix('api')
-                ->group($packageDirPath.'routes/api.php');
+                ->group($packageDirPath . 'routes/api.php');
 
             Route::middleware('web')
-                ->group($packageDirPath.'routes/web.php');
+                ->group($packageDirPath . 'routes/web.php');
         });
 
         // Register policies
@@ -243,7 +250,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
     protected function resources()
     {
 
-        Nova::resourcesIn($this->getPackageBaseDir().'/Nova');
+        Nova::resourcesIn($this->getPackageBaseDir() . '/Nova');
     }
 
     /**

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-let fs = require("fs"),
-  {ChartJSNodeCanvas} = require("chartjs-node-canvas");
+
+import fs from "fs";
+import {ChartJSNodeCanvas} from "chartjs-node-canvas";
 
 let argv = process.argv.slice(2),
   width = 355,
@@ -47,12 +48,12 @@ for (let i in argv) {
 
 if (!geojsonUri) {
   console.error("Missing geojson uri parameter: --geojson=");
-  return;
+  process.exit(1);
 }
 
 if (!dest) {
   console.error("Missing file destination uri parameter: --dest=");
-  return;
+  process.exit(1);
 }
 
 console.log("Generating elevation chart:");
@@ -102,7 +103,7 @@ try {
   });
 } catch (e) {
   console.error("Unable to read the file from " + geojsonUri);
-  return;
+  process.exit(1);
 }
 
 async function processGeojson(content, config) {
@@ -113,10 +114,10 @@ async function processGeojson(content, config) {
       console.error("Geometry not defined");
       return;
     }
-    if (geojson["geometry"]["type"] !== "LineString") {
-      console.error("The geometry " + geojson["geometry"]["type"] + " is not supported to generate the elevation chart image");
-      return;
-    }
+    // if (geojson["geometry"]["type"] !== "LineString") {
+    //   console.error("The geometry " + geojson["geometry"]["type"] + " is not supported to generate the elevation chart image");
+    //   return;
+    // }
 
     let chartNodeCanvas = new ChartJSNodeCanvas({
         type: config.type, // comment to get the png
@@ -262,7 +263,7 @@ function getChartOptions(geojson) {
     }
   }
 
-  surfaces = [];
+  const surfaces = [];
   for (let surface of usedSurfaces) {
     surfaces.push({
       id: surface,
