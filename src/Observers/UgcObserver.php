@@ -7,7 +7,6 @@ use Wm\WmPackage\Services\GeometryComputationService;
 
 class UgcObserver extends AbstractAuthorableObserver
 {
-
     public function creating(Model $model)
     {
         parent::creating($model);

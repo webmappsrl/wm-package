@@ -117,7 +117,7 @@ class PropertiesPanel extends Panel
      */
     protected function findModel(int $id)
     {
-        return  NovaRequest::createFrom(request())->findModelQuery()->first();
+        return NovaRequest::createFrom(request())->findModelQuery()->first();
     }
 
     /**
@@ -145,7 +145,7 @@ class PropertiesPanel extends Panel
     protected function inferSchemaForNestedArray(string $parentKey, array $nestedArray): void
     {
         foreach ($nestedArray as $key => $value) {
-            $fullKey = $parentKey . '.' . $key;
+            $fullKey = $parentKey.'.'.$key;
             if (is_array($value)) {
                 $this->inferSchemaForNestedArray($fullKey, $value);
             } else {
@@ -222,6 +222,7 @@ class PropertiesPanel extends Panel
     protected function isUuid(string $string): bool
     {
         $pattern = '/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i';
+
         return preg_match($pattern, $string) === 1 || $string === 'uuid';
     }
 
@@ -234,6 +235,7 @@ class PropertiesPanel extends Panel
     protected function isJson(string $string): bool
     {
         json_decode($string);
+
         return json_last_error() === JSON_ERROR_NONE;
     }
 
