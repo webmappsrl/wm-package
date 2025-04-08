@@ -2,10 +2,10 @@
 
 namespace Wm\WmPackage\Nova;
 
-use Laravel\Nova\Resource;
 use Laravel\Nova\Fields\ID;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
+use Laravel\Nova\Resource;
 use Wm\WmPackage\Nova\Actions\UpdateTracksOnAws;
 
 class App extends Resource
