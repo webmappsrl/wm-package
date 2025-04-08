@@ -21,11 +21,10 @@ class DataTransformer
         return array_filter($arr, fn($value) => $value !== null && $value !== '');
     }
 
-
     /**
      * Convert a JSON string to an array.
      */
-    public function nullableJsonToArray(?string $json): array|null
+    public function nullableJsonToArray(?string $json): ?array
     {
         if (! $json) {
             return null;
@@ -33,6 +32,7 @@ class DataTransformer
 
         return $this->jsonToArray($json);
     }
+
     /**
      * Convert a string to a boolean.
      */
