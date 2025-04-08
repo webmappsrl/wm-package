@@ -26,7 +26,7 @@ class UpdateTracksOnAws extends Action
         foreach ($models as $model) {
             if ($model instanceof App) {
                 $tracks = EcTrack::where('app_id', $model->id)->get();
-                $count++;
+                $count += $tracks->count();
                 $this->writeOnAws($tracks);
             } elseif ($model instanceof EcTrack) {
                 $this->writeOnAws([$model]);
