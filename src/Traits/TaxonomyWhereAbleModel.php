@@ -10,7 +10,7 @@ trait TaxonomyWhereAbleModel
     {
         $whereProperty = $properties['taxonomy_where'] ?? [];
         if (count($whereProperty) === 0) {
-            return;
+            $query->where('id', 0); // return empty collection if no where property is set
         }
 
         $query
