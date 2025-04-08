@@ -30,14 +30,14 @@ Route::middleware('auth:api')->post('/wallet/buy', [WalletController::class, 'bu
 
 Route::name('ugc.')->prefix('ugc')->middleware('auth:api')->group(function () {
 
-    Route::apiResource('poi', UgcPoiController::class)->except('show');
+    //Route::apiResource('poi', UgcPoiController::class)->except('show');
     // Route::apiResource('track', UgcTrackController::class)->except('show');
 
     // # LEGACY
     Route::prefix('poi')->name('poi.')->group(function () {
         Route::post('store', [UgcPoiController::class, 'store'])->name('store.legacy');
         Route::get('index', [UgcPoiController::class, 'index'])->name('index.legacy');
-        Route::post('edit', [UgcPoiController::class, 'update'])->name('update.legacy');
+        Route::post('edit', [UgcPoiController::class, 'legacyUpdate'])->name('update.legacy');
         Route::get('delete/{poi}', [UgcPoiController::class, 'destroy'])->name('destroy.legacy');
     });
     Route::prefix('track')->name('track.')->group(function () {
@@ -156,7 +156,7 @@ Route::name('api.')->group(function () {
             ])->name('track.taxonomies');
             Route::get('/{app}/taxonomies/{taxonomy_name}.json', [AppElbrusTaxonomyController::class, 'getTerms'])->name('taxonomies');
             Route::get('/{app_id}/tiles/map.mbtiles', function ($app_id) {
-                return redirect('https://k.webmapp.it/elbrus/'.$app_id.'.mbtiles');
+                return redirect('https://k.webmapp.it/elbrus/' . $app_id . '.mbtiles');
             });
         });
         Route::prefix('webmapp')->name('webmapp.')->group(function () {
