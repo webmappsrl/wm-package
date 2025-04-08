@@ -18,7 +18,7 @@ class DataTransformer
 
         $arr = json_decode($json, true);
 
-        return array_filter($arr, fn($value) => $value !== null && $value !== '');
+        return array_filter($arr, fn ($value) => $value !== null && $value !== '');
     }
 
     /**
