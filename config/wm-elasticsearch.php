@@ -43,7 +43,14 @@ return [
                         'type' => 'keyword',
                     ],
                     'taxonomyWheres' => [
-                        'type' => 'keyword',
+                        'type' => 'object',
+                        'properties' => [
+                            'en' => ['type' => 'text'],
+                            'it' => ['type' => 'text'],
+                            'de' => ['type' => 'text'],
+                            'fr' => ['type' => 'text'],
+                            'es' => ['type' => 'text']
+                        ]
                     ],
                     'layers' => [
                         'type' => 'keyword',
