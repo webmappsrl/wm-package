@@ -19,11 +19,10 @@ class DataTransformer
         return json_decode($json, true);
     }
 
-
     /**
      * Convert a JSON string to an array.
      */
-    public function nullableJsonToArray(?string $json): array|null
+    public function nullableJsonToArray(?string $json): ?array
     {
         if (! $json) {
             return null;
@@ -31,6 +30,7 @@ class DataTransformer
 
         return $this->jsonToArray($json);
     }
+
     /**
      * Convert a string to a boolean.
      */
