@@ -22,16 +22,19 @@ class UpdateTracksOnAws extends Action
 
     public function handle(ActionFields $fields, Collection $models)
     {
+        $count = 0;
         foreach ($models as $model) {
             if ($model instanceof App) {
                 $tracks = EcTrack::where('app_id', $model->id)->get();
+                $count++;
                 $this->writeOnAws($tracks);
             } elseif ($model instanceof EcTrack) {
                 $this->writeOnAws([$model]);
+                $count++;
             }
         }
 
-        return Action::message('Update jobs have been dispatched!');
+        return Action::message("Messe in coda {$count} tracce per l'aggiornamento su aws!");
     }
 
     private function writeOnAws($tracks)

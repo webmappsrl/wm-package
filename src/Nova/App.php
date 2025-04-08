@@ -32,6 +32,10 @@ class App extends Resource
     {
         return [
             UpdateTracksOnAws::make()
+                ->onlyOnDetail()
+                ->confirmText('Sei sicuro di voler aggiornare tutte le tracks di questa app su AWS?')
+                ->confirmButtonText('Sì, aggiorna')
+                ->cancelButtonText('No, annulla'),
         ];
     }
 }
