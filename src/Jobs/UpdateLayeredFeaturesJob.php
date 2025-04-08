@@ -5,10 +5,7 @@ namespace Wm\WmPackage\Jobs;
 use Illuminate\Bus\Batchable;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Queue\SerializesModels;
@@ -32,7 +29,7 @@ class UpdateLayeredFeaturesJob implements ShouldQueue
      */
     public function uniqueId(): string
     {
-        return 'update_layered_'.class_basename($this->ecModelClass).'_'.$this->layer->id;
+        return 'update_layered_' . class_basename($this->ecModelClass) . '_' . $this->layer->id;
     }
 
     /**
