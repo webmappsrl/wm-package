@@ -64,8 +64,8 @@ return [
                 'number_of_replicas' => 0,
                 'mapping' => [
                     'total_fields' => [
-                        'limit' => 2000
-                    ]
+                        'limit' => 2000,
+                    ],
                 ],
                 'analysis' => [
                     'analyzer' => [

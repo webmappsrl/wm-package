@@ -26,8 +26,9 @@ class OsmfeaturesClient extends JsonClient
                     // 5 = the length of "name:"
                     // 2 = the length of the language code, eg: "it", "en"
                     $language = substr($tagName, $pos + 5, 2);
-                    if (in_array($language, ['it', 'en', 'de', 'fr', 'es']))
+                    if (in_array($language, ['it', 'en', 'de', 'fr', 'es'])) {
                         $wheres[$whereId][$language] = $tagValue;
+                    }
                 }
             }
 
@@ -62,7 +63,7 @@ class OsmfeaturesClient extends JsonClient
 
     protected function getAdminAreasIntersectsUrl()
     {
-        return $this->getHost() . '/api/v1/features/admin-areas/geojson';
+        return $this->getHost().'/api/v1/features/admin-areas/geojson';
     }
 
     protected function getHost(): string
