@@ -196,8 +196,8 @@ class EcTrackService extends BaseService
 
         $manualData = null;
         $fieldsToCheck = $this->getDemDataFields();
-        $demData = isset($track->properties['dem_data']) ? json_decode($track->properties['dem_data'], true) : [];
-        $osmData = isset($track->properties['osm_data']) ? json_decode($track->properties['osm_data'], true) : [];
+        $demData = isset($track->properties['dem_data']) ? $track->properties['dem_data'] : [];
+        $osmData = isset($track->properties['osm_data']) ? $track->properties['osm_data'] : [];
         $properties = $track->properties;
         foreach ($fieldsToCheck as $field) {
             $osmValue = $osmData[$field] ?? null;
