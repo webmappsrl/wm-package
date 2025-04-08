@@ -16,7 +16,9 @@ class DataTransformer
             return [];
         }
 
-        return json_decode($json, true);
+        $arr = json_decode($json, true);
+
+        return array_filter($arr, fn($value) => $value !== null && $value !== '');
     }
 
 
