@@ -153,7 +153,7 @@ abstract class GeometryModel extends Model implements HasMedia
      */
     public function getMorphClass()
     {
-        return 'App\\Models\\' . class_basename($this);
+        return 'App\\Models\\'.class_basename($this);
     }
 
     //
@@ -165,7 +165,7 @@ abstract class GeometryModel extends Model implements HasMedia
         foreach (MediaService::make()->getThumbnailSizes() as $size) {
             $this
                 ->addMediaConversion(
-                    'thumbnail_' . implode('_', $size)
+                    'thumbnail_'.implode('_', $size)
                 )
                 ->fit(Fit::Contain, $size['width'], $size['height'])
                 ->queued();
