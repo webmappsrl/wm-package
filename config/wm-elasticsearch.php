@@ -49,8 +49,8 @@ return [
                             'it' => ['type' => 'text'],
                             'de' => ['type' => 'text'],
                             'fr' => ['type' => 'text'],
-                            'es' => ['type' => 'text']
-                        ]
+                            'es' => ['type' => 'text'],
+                        ],
                     ],
                     'layers' => [
                         'type' => 'keyword',
