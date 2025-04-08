@@ -20,7 +20,7 @@ abstract class AbstractUgcResource extends AbstractGeometryResource
     {
         return [
             ...parent::fields($request),
-            BelongsTo::make('Author', 'author', User::class),
+            BelongsTo::make('Author', 'author', User::class)->searchable()->filterable(),
             Images::make('Image', 'default')->onlyOnDetail(),
         ];
     }
