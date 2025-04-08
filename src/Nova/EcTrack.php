@@ -49,4 +49,17 @@ class EcTrack extends AbstractEcResource
 
         return [];
     }
+
+    /**
+     * Get the actions available for the resource.
+     *
+     * @param  \Laravel\Nova\Http\Requests\NovaRequest  $request
+     * @return array
+     */
+    public function actions(NovaRequest $request): array
+    {
+        return array_merge(parent::actions($request), [
+            new Actions\ReindexSearchableAction,
+        ]);
+    }
 }
