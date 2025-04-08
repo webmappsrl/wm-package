@@ -17,8 +17,8 @@ class UpdateEcTrackAwsJob extends BaseEcTrackJob
         $geojson = $this->ecTrack->getGeojson();
 
         // force linestring
-        $geometryLinestring = $geometryComputationService->get3dLineMergeGeojsonFromGeojson(json_encode($geojson));
-        $geojson['geometry'] = json_decode($geometryLinestring, true)['geometry'];
+        $geometryLinestring = $geometryComputationService->getModelLineMergeGeojson($this->ecTrack);
+        $geojson['geometry'] = json_decode($geometryLinestring, true);
 
         // save on aws
         $cloudStorageService->storeTrack($this->ecTrack->id, json_encode($geojson));
