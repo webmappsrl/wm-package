@@ -113,7 +113,7 @@ class MediaService extends BaseService
                     'coordinates' => $coordinates,
                 ];
             } catch (Exception $e) {
-                Log::error('getMediaExifCoordinatesAsGeojson on media id ' . $mediaModel->id . ': invalid Coordinates present');
+                Log::error('getMediaExifCoordinatesAsGeojson on media id '.$mediaModel->id.': invalid Coordinates present');
             }
         }
 
