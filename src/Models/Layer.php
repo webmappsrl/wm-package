@@ -2,7 +2,6 @@
 
 namespace Wm\WmPackage\Models;
 
-use Chelout\RelationshipEvents\Traits\HasRelationshipObservables;
 use Exception;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
@@ -16,7 +15,7 @@ use Wm\WmPackage\Traits\TaxonomyWhereAbleModel;
 
 class Layer extends Model
 {
-    use HasPackageFactory, HasRelationshipObservables, HasTranslations, TaxonomyAbleModel, TaxonomyWhereAbleModel;
+    use HasPackageFactory, HasTranslations, TaxonomyAbleModel, TaxonomyWhereAbleModel;
 
     protected static function boot()
     {
@@ -87,7 +86,7 @@ class Layer extends Model
             $this->bbox = $bbox ?? $defaultBBOX;
             $this->save();
         } catch (Exception $e) {
-            Log::channel('layer')->error('computeBB of layer with id: '.$this->id);
+            Log::channel('layer')->error('computeBB of layer with id: ' . $this->id);
         }
     }
 
