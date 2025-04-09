@@ -133,7 +133,7 @@
         },
         "patches": {
             "chelout/laravel-relationship-events": {
-                "Add compatibility for Laravel 12": "patches/laravel-relationship-events_laravel-12.diff"
+                "Add compatibility for Laravel 12": "https://raw.githubusercontent.com/webmappsrl/wm-package/refs/heads/develop/patches/laravel-relationship-events_laravel-12.diff"
             }
         }
     },
