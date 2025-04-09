@@ -3,8 +3,6 @@
 namespace Wm\WmPackage\Http\Resources;
 
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Facades\DB;
-use Wm\WmPackage\Models\UgcPoi;
 
 class GeometryModelResource extends JsonResource
 {
