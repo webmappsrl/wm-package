@@ -427,7 +427,7 @@ class GeometryComputationService extends BaseService
     public function isRoundtrip(MultiLineString $model): bool
     {
         $geojson = $this->getModelLineMergeGeojson($model);
-        $coords = json_decode($geojson, true)['geometry']['coordinates'];
+        $coords = json_decode($geojson, true)['coordinates'];
 
         $treshold = 0.001; // diff < 300 metri ref trackid:1592
 
