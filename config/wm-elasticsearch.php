@@ -45,6 +45,10 @@ return [
                     'layers' => [
                         'type' => 'keyword',
                     ],
+                    'taxonomyWheres' => [
+                        'type' => 'object',
+                        'enabled' => false
+                    ],
                 ],
             ],
         ],
