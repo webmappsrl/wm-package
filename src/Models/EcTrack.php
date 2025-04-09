@@ -2,23 +2,23 @@
 
 namespace Wm\WmPackage\Models;
 
-use Laravel\Scout\Searchable;
-use Illuminate\Support\Facades\DB;
-use Wm\WmPackage\Traits\EcFeatureTrait;
-use Spatie\Translatable\HasTranslations;
-use Wm\WmPackage\Traits\TaxonomyAbleModel;
-use Wm\WmPackage\Observers\EcTrackObserver;
-use Wm\WmPackage\Services\Models\MediaService;
-use Wm\WmPackage\Traits\TaxonomyWhereAbleModel;
-use Wm\WmPackage\Services\Models\EcTrackService;
-use Wm\WmPackage\Models\Abstracts\MultiLineString;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Wm\WmPackage\Models\Interfaces\LayerRelatedModel;
-use Wm\WmPackage\Services\GeometryComputationService;
-use ChristianKuri\LaravelFavorite\Traits\Favoriteable;
-use Illuminate\Database\Eloquent\Relations\MorphToMany;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Chelout\RelationshipEvents\Concerns\HasMorphToManyEvents;
+use ChristianKuri\LaravelFavorite\Traits\Favoriteable;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
+use Illuminate\Support\Facades\DB;
+use Laravel\Scout\Searchable;
+use Spatie\Translatable\HasTranslations;
+use Wm\WmPackage\Models\Abstracts\MultiLineString;
+use Wm\WmPackage\Models\Interfaces\LayerRelatedModel;
+use Wm\WmPackage\Observers\EcTrackObserver;
+use Wm\WmPackage\Services\GeometryComputationService;
+use Wm\WmPackage\Services\Models\EcTrackService;
+use Wm\WmPackage\Services\Models\MediaService;
+use Wm\WmPackage\Traits\EcFeatureTrait;
+use Wm\WmPackage\Traits\TaxonomyAbleModel;
+use Wm\WmPackage\Traits\TaxonomyWhereAbleModel;
 
 class EcTrack extends MultiLineString implements LayerRelatedModel
 {
