@@ -3,7 +3,6 @@
 namespace Wm\WmPackage\Jobs\Track;
 
 use Wm\WmPackage\Http\Resources\EcTrackResource;
-use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Services\StorageService;
 
 class UpdateEcTrackAwsJob extends BaseEcTrackJob

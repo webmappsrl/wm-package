@@ -2,15 +2,14 @@
 
 namespace Wm\WmPackage\Services\Models;
 
-
+use Exception;
 use Illuminate\Support\Facades\Log;
+use Intervention\Image\Facades\Image;
+use Wm\WmPackage\Http\Resources\MediaResource;
 use Wm\WmPackage\Models\Abstracts\GeometryModel;
 use Wm\WmPackage\Models\Media;
 use Wm\WmPackage\Services\BaseService;
 use Wm\WmPackage\Services\StorageService;
-use Exception;
-use Intervention\Image\Facades\Image;
-use Wm\WmPackage\Http\Resources\MediaResource;
 
 class MediaService extends BaseService
 {
@@ -115,7 +114,7 @@ class MediaService extends BaseService
                     'coordinates' => $coordinates,
                 ];
             } catch (Exception $e) {
-                Log::error('getMediaExifCoordinatesAsGeojson on media id ' . $mediaModel->id . ': invalid Coordinates present');
+                Log::error('getMediaExifCoordinatesAsGeojson on media id '.$mediaModel->id.': invalid Coordinates present');
             }
         }
 
@@ -137,6 +136,7 @@ class MediaService extends BaseService
             $height = $size['height'];
             $urls["{$width}x{$height}"] = $media->getUrl($this->getMediaConversionNameByWidthAndHeight($width, $height));
         }
+
         return $urls;
     }
 
