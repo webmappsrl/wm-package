@@ -16,6 +16,7 @@ class MediaController extends Controller
     {
         $geojson = $media->getGeojson();
         $geojson['properties'] = new MediaResource($media)->toArray();
+
         return response()->json($geojson);
     }
 }

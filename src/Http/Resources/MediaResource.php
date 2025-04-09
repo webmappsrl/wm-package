@@ -3,8 +3,8 @@
 namespace Wm\WmPackage\Http\Resources;
 
 use Illuminate\Http\Request;
-use Wm\WmPackage\Services\Models\MediaService;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Wm\WmPackage\Services\Models\MediaService;
 
 class MediaResource extends JsonResource
 {
@@ -16,6 +16,7 @@ class MediaResource extends JsonResource
     public function toArray(Request $request): array
     {
         $mediaService = MediaService::make();
+
         return [
             'id' => $this->id,
             'name' => $this->custom_properties['name'] ?? ['it' => $this->name],

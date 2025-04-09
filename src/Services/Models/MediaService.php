@@ -2,14 +2,13 @@
 
 namespace Wm\WmPackage\Services\Models;
 
-
+use Exception;
 use Illuminate\Support\Facades\Log;
+use Intervention\Image\Facades\Image;
 use Wm\WmPackage\Models\Abstracts\GeometryModel;
 use Wm\WmPackage\Models\Media;
 use Wm\WmPackage\Services\BaseService;
 use Wm\WmPackage\Services\StorageService;
-use Exception;
-use Intervention\Image\Facades\Image;
 
 class MediaService extends BaseService
 {
@@ -136,6 +135,7 @@ class MediaService extends BaseService
             $height = $size['height'];
             $urls["{$width}x{$height}"] = $media->getUrl($this->getMediaConversionNameByWidthAndHeight($width, $height));
         }
+
         return $urls;
     }
 
