@@ -16,7 +16,8 @@ class GeoJsonService extends BaseService
 
         return [
             'type' => 'Feature',
-            'properties' => $properties,
+            //remove empty arrays from properties
+            'properties' => array_filter($properties, fn($e) => ! is_array($e) || count($e) !== 0),
             'geometry' => $decodedGeom,
         ];
     }
