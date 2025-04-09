@@ -42,16 +42,6 @@ return [
                     'taxonomyActivities' => [
                         'type' => 'keyword',
                     ],
-                    'taxonomyWheres' => [
-                        'type' => 'object',
-                        'properties' => [
-                            'en' => ['type' => 'text'],
-                            'it' => ['type' => 'text'],
-                            'de' => ['type' => 'text'],
-                            'fr' => ['type' => 'text'],
-                            'es' => ['type' => 'text'],
-                        ],
-                    ],
                     'layers' => [
                         'type' => 'keyword',
                     ],
