@@ -19,6 +19,6 @@ class WmfePathGenerator extends DefaultPathGenerator implements PathGenerator
 
         $shardPrefix = $storageService->getShardBasePath($media->app_id);
 
-        return $shardPrefix.'media/'.parent::getBasePath($media).'/';
+        return $shardPrefix . 'media/' . parent::getBasePath($media);
     }
 }

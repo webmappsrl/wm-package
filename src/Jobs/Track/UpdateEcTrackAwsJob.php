@@ -2,6 +2,7 @@
 
 namespace Wm\WmPackage\Jobs\Track;
 
+use Wm\WmPackage\Http\Resources\EcTrackResource;
 use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Services\StorageService;
 
@@ -12,15 +13,12 @@ class UpdateEcTrackAwsJob extends BaseEcTrackJob
      *
      * @return void
      */
-    public function handle(StorageService $cloudStorageService, GeometryComputationService $geometryComputationService)
+    public function handle(StorageService $cloudStorageService)
     {
-        $geojson = $this->ecTrack->getGeojson();
 
-        // force linestring
-        $geometryLinestring = $geometryComputationService->getModelLineMergeGeojson($this->ecTrack);
-        $geojson['geometry'] = json_decode($geometryLinestring, true);
+        $resource = new EcTrackResource($this->ecTrack);
 
         // save on aws
-        $cloudStorageService->storeTrack($this->ecTrack->id, json_encode($geojson));
+        $cloudStorageService->storeTrack($this->ecTrack->id, $resource->toJson());
     }
 }

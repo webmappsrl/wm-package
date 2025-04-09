@@ -292,18 +292,6 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
     //     return $array;
     // }
 
-    /**
-     * Create a geojson from the ec track
-     */
-    public function getGeojson(): array
-    {
-        $feature = parent::getGeojson();
-
-        //TODO: mv to an api resource
-        $feature['properties']['roundtrip'] = $feature['properties']['dem_data']['round_trip'] ?? GeometryComputationService::make()->isRoundtrip($this);
-
-        return $feature;
-    }
 
     /**
      * Create the track geojson using the elbrus standard
