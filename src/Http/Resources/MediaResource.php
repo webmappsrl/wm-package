@@ -20,9 +20,9 @@ class MediaResource extends JsonResource
             'id' => $this->id,
             'name' => $this->custom_properties['name'] ?? ['it' => $this->name],
             'url' => $this->getUrl(),
-            'thumbnail' => $this->getUrl($mediaService->getMediaConversionNameByWidthAndHeight(400, 200)),
+            'thumbnail' => $mediaService->getThumbnailUrl($this->resource),
             'api_url' => route('default.api.media.geojson', $this->id),
-            'sizes' => $mediaService->getSizesUrls($this),
+            'sizes' => $mediaService->getSizesUrls($this->resource),
         ];
     }
 }

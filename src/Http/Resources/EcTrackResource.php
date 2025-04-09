@@ -28,7 +28,7 @@ class EcTrackResource extends JsonResource
             ...$geojson['properties'],
             'roundtrip' => $geojson['properties']['dem_data']['round_trip'] ?? $geometryComputationService->isRoundtrip($geojson['geometry']['coordinates']),
             'feature_image' => new MediaResource($this->getMedia()->first()),
-            'image_gallery' => MediaResource::collection($this->getMedia()->skip(1)),
+            'image_gallery' => MediaResource::collection($this->getMedia()),
         ];
         return $geojson;
     }

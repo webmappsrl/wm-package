@@ -2,22 +2,23 @@
 
 namespace Wm\WmPackage\Models;
 
-use Chelout\RelationshipEvents\Concerns\HasMorphToManyEvents;
-use ChristianKuri\LaravelFavorite\Traits\Favoriteable;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\MorphToMany;
-use Illuminate\Support\Facades\DB;
 use Laravel\Scout\Searchable;
-use Spatie\Translatable\HasTranslations;
-use Wm\WmPackage\Models\Abstracts\MultiLineString;
-use Wm\WmPackage\Models\Interfaces\LayerRelatedModel;
-use Wm\WmPackage\Observers\EcTrackObserver;
-use Wm\WmPackage\Services\GeometryComputationService;
-use Wm\WmPackage\Services\Models\EcTrackService;
+use Illuminate\Support\Facades\DB;
 use Wm\WmPackage\Traits\EcFeatureTrait;
+use Spatie\Translatable\HasTranslations;
 use Wm\WmPackage\Traits\TaxonomyAbleModel;
+use Wm\WmPackage\Observers\EcTrackObserver;
+use Wm\WmPackage\Services\Models\MediaService;
 use Wm\WmPackage\Traits\TaxonomyWhereAbleModel;
+use Wm\WmPackage\Services\Models\EcTrackService;
+use Wm\WmPackage\Models\Abstracts\MultiLineString;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Wm\WmPackage\Models\Interfaces\LayerRelatedModel;
+use Wm\WmPackage\Services\GeometryComputationService;
+use ChristianKuri\LaravelFavorite\Traits\Favoriteable;
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Chelout\RelationshipEvents\Concerns\HasMorphToManyEvents;
 
 class EcTrack extends MultiLineString implements LayerRelatedModel
 {
@@ -509,6 +510,8 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
     {
 
         $ecTrackService = EcTrackService::make();
+        $mediaService = MediaService::make();
+        $firstMedia = $this->getMedia()->first();
 
         [$start, $end] = GeometryComputationService::make()->getStartEndCoordinates($this);
 
@@ -523,7 +526,7 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
             // 'to' => $this->getActualOrOSFValue('to'),
             'name' => $this->getTranslation('name', 'it'),
             'taxonomyWheres' => $ecTrackService->getTaxonomyWheres($this),
-            'feature_image' => $this->getMedia()->first(),
+            'feature_image' => $firstMedia ? $mediaService->getThumbnailUrl($firstMedia) : '',
             'strokeColor' => isset($this->properties['color']) ? hexToRgba($this->properties['color']) : '',
             'distance' => isset($this->properties['distance']) ? $this->setEmptyValueToZero($this->properties['distance']) : 0,
             'duration_forward' => isset($this->properties['duration_forward']) ? $this->setEmptyValueToZero($this->properties['duration_forward']) : 0,

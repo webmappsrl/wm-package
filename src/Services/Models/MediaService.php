@@ -10,7 +10,6 @@ use Wm\WmPackage\Services\BaseService;
 use Wm\WmPackage\Services\StorageService;
 use Exception;
 use Intervention\Image\Facades\Image;
-use Wm\WmPackage\Http\Resources\MediaResource;
 
 class MediaService extends BaseService
 {
@@ -127,7 +126,7 @@ class MediaService extends BaseService
         return config('wm-package.services.image.thumbnail_sizes');
     }
 
-    public function getSizesUrls(Media|MediaResource $media): array
+    public function getSizesUrls(Media $media): array
     {
 
         $sizes = $this->getThumbnailSizes();
@@ -143,5 +142,10 @@ class MediaService extends BaseService
     public function getMediaConversionNameByWidthAndHeight(int $width, int $height)
     {
         return "thumbnail_{$width}_{$height}";
+    }
+
+    public function getThumbnailUrl(Media $media)
+    {
+        return $media->getUrl($this->getMediaConversionNameByWidthAndHeight(400, 200));
     }
 }
