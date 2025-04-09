@@ -2,10 +2,9 @@
 
 namespace Wm\WmPackage\Observers;
 
-use Wm\WmPackage\Models\Layer;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Database\Eloquent\Model;
 use Wm\WmPackage\Models\Abstracts\Taxonomy;
+use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Services\Models\LayerService;
 
 class LayerObserver extends AbstractObserver

@@ -2,7 +2,6 @@
 
 namespace Wm\WmPackage\Observers;
 
-
 use Wm\WmPackage\Models\Layerable;
 use Wm\WmPackage\Services\Models\LayerService;
 
