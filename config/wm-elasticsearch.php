@@ -47,7 +47,7 @@ return [
                     ],
                     'taxonomyWheres' => [
                         'type' => 'object',
-                        'enabled' => false
+                        'enabled' => false,
                     ],
                 ],
             ],
