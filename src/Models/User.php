@@ -39,6 +39,8 @@ class User extends Authenticatable implements JWTSubject
         'app_id',
     ];
 
+    protected $guard_name = 'web';
+
     /**
      * The attributes that should be hidden for arrays.
      *
