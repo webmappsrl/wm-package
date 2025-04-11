@@ -34,7 +34,7 @@ class UpdateModelWithGeometryTaxonomyWhere implements ShouldQueue
     {
         $wheres = $osmfeaturesClient->getWheresByGeojson($this->model->getGeojson());
         if (count($wheres) === 0) {
-            Log::warning('No wheres found for '.class_basename($this->model).' '.$this->model->id);
+            Log::warning('No wheres found for ' . class_basename($this->model) . ' ' . $this->model->id);
 
             return;
         }
