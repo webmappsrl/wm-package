@@ -71,12 +71,12 @@ class ExportTo extends Action
     {
         $format = isset($fields->format) ? $fields->format : $this->defaultFormat;
         $uniqueId = now()->timestamp;
-        $fileName = $this->fileName . '_' . $uniqueId . '.' . ExportFormat::from($format)->extension();
+        $fileName = $this->fileName.'_'.$uniqueId.'.'.ExportFormat::from($format)->extension();
 
         $exporter = new ModelExporter($models, $this->columns, $this->relations, $this->styles);
 
         // Enable JSON columns expansion (properties by default)
-        if (!empty($this->expandJsonColumns)) {
+        if (! empty($this->expandJsonColumns)) {
             $exporter->expandJsonColumns($this->expandJsonColumns);
         }
 

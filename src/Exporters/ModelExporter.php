@@ -79,7 +79,7 @@ class ModelExporter implements FromCollection, ShouldAutoSize, WithHeadings, Wit
     /**
      * Set columns that should be expanded from JSON to individual columns
      *
-     * @param array $columns Array of column names that contain JSON data to be expanded
+     * @param  array  $columns  Array of column names that contain JSON data to be expanded
      * @return $this
      */
     public function expandJsonColumns(array $columns): self
@@ -87,7 +87,7 @@ class ModelExporter implements FromCollection, ShouldAutoSize, WithHeadings, Wit
         $this->expandJsonColumns = $columns;
 
         // Cache expanded column headers
-        if (!empty($this->expandJsonColumns) && $this->models->isNotEmpty()) {
+        if (! empty($this->expandJsonColumns) && $this->models->isNotEmpty()) {
             $this->cacheExpandedColumnHeaders();
         }
 
@@ -121,9 +121,9 @@ class ModelExporter implements FromCollection, ShouldAutoSize, WithHeadings, Wit
     /**
      * Extract all keys from a nested JSON structure recursively
      *
-     * @param array|object $data The JSON data to extract keys from
-     * @param array $keys Array to collect the flattened keys
-     * @param string $prefix Current key prefix for nested structures
+     * @param  array|object  $data  The JSON data to extract keys from
+     * @param  array  $keys  Array to collect the flattened keys
+     * @param  string  $prefix  Current key prefix for nested structures
      */
     protected function extractJsonKeysRecursively($data, array &$keys, string $prefix = ''): void
     {
@@ -131,7 +131,7 @@ class ModelExporter implements FromCollection, ShouldAutoSize, WithHeadings, Wit
             $currentKey = $prefix ? "{$prefix}.{$key}" : $key;
 
             // Add the current key
-            if (!in_array($currentKey, $keys)) {
+            if (! in_array($currentKey, $keys)) {
                 $keys[] = $currentKey;
             }
 
@@ -211,9 +211,9 @@ class ModelExporter implements FromCollection, ShouldAutoSize, WithHeadings, Wit
     /**
      * Flatten a nested JSON structure into dot notation
      *
-     * @param array|object $data The JSON data to flatten
-     * @param array $result Array to store the flattened data
-     * @param string $prefix Current key prefix for nested structures
+     * @param  array|object  $data  The JSON data to flatten
+     * @param  array  $result  Array to store the flattened data
+     * @param  string  $prefix  Current key prefix for nested structures
      */
     protected function flattenJsonData($data, array &$result, string $prefix = ''): void
     {

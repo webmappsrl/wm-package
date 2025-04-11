@@ -3,12 +3,12 @@
 namespace Wm\WmPackage\Nova;
 
 use App\Nova\User;
+use Ebess\AdvancedNovaMediaLibrary\Fields\Images;
 use Laravel\Nova\Fields\BelongsTo;
+use Laravel\Nova\Http\Requests\NovaRequest;
 use Wm\WmPackage\Nova\Actions\CopyUgc;
 use Wm\WmPackage\Nova\Actions\ExportTo;
-use Laravel\Nova\Http\Requests\NovaRequest;
 use Wm\WmPackage\Nova\Filters\SchemaFilter;
-use Ebess\AdvancedNovaMediaLibrary\Fields\Images;
 use Wm\WmPackage\Nova\Filters\UgcCreationDateFilter;
 
 abstract class AbstractUgcResource extends AbstractGeometryResource
@@ -31,8 +31,8 @@ abstract class AbstractUgcResource extends AbstractGeometryResource
     {
         return [
             ...parent::actions($request),
-            new ExportTo(),
-            new CopyUgc(),
+            new ExportTo,
+            new CopyUgc,
         ];
     }
 

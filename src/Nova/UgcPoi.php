@@ -16,7 +16,7 @@ class UgcPoi extends AbstractUgcResource
     {
         return [
             ...parent::filters($request),
-            (new ShareUgcPoiFilter)
+            (new ShareUgcPoiFilter),
         ];
     }
 }

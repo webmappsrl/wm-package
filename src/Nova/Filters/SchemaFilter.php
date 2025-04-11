@@ -2,11 +2,11 @@
 
 namespace Wm\WmPackage\Nova\Filters;
 
-use Illuminate\Http\Request;
-use Wm\WmPackage\Models\App;
-use Wm\WmPackage\Models\UgcPoi;
 use Illuminate\Database\Eloquent\Model;
-use Laravel\Nova\Filters\Filter; // Importa il modello App se non già fatto
+use Illuminate\Http\Request;
+use Laravel\Nova\Filters\Filter;
+use Wm\WmPackage\Models\App;
+use Wm\WmPackage\Models\UgcPoi; // Importa il modello App se non già fatto
 
 class SchemaFilter extends Filter
 {

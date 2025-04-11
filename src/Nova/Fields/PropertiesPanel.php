@@ -150,7 +150,7 @@ class PropertiesPanel extends Panel
             'type' => 'json',
             'label' => ucwords(str_replace(['_', '.'], ' ', $parentKey)),
             'rules' => ['nullable'],
-            'readonly' => true
+            'readonly' => true,
         ];
     }
 

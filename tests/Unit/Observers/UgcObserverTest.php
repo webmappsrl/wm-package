@@ -19,6 +19,7 @@ class UgcObserverTest extends AbstractUgcObserverTest
     {
         $testModel = new TestModel;
         $testModel->geometry = '{"type":"Point","coordinates":[-24.563409,95.738052,19.699962]}';
+
         return $testModel;
     }
 
@@ -34,8 +35,8 @@ class UgcObserverTest extends AbstractUgcObserverTest
         $testModel = $this->createTestModel();
 
         $this->observer->creating($testModel);
-        $this->assertEquals($this->authUser->id, $testModel->author->id, "Author should be set to authenticated user");
-        $this->assertTrue($this->has3dTransformation($testModel->geometry), "Geometry should be transformed to 3D");
+        $this->assertEquals($this->authUser->id, $testModel->author->id, 'Author should be set to authenticated user');
+        $this->assertTrue($this->has3dTransformation($testModel->geometry), 'Geometry should be transformed to 3D');
     }
 
     /** @test */
@@ -44,7 +45,7 @@ class UgcObserverTest extends AbstractUgcObserverTest
         $testModel = $this->createTestModel();
         $this->observer->creating($testModel);
 
-        $this->assertEquals($this->webmappUser->id, $testModel->author->id, "Author should be set to authenticated user");
-        $this->assertTrue($this->has3dTransformation($testModel->geometry), "Geometry should be transformed to 3D");
+        $this->assertEquals($this->webmappUser->id, $testModel->author->id, 'Author should be set to authenticated user');
+        $this->assertTrue($this->has3dTransformation($testModel->geometry), 'Geometry should be transformed to 3D');
     }
 }

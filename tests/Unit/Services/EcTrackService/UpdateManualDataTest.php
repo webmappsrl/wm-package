@@ -51,7 +51,7 @@ class UpdateManualDataTest extends AbstractEcTrackServiceTest
 
         $this->track->properties = [
             ...$this->track->properties,
-            ...$properties
+            ...$properties,
         ];
 
         $this->ecTrackService->updateManualData($this->track);
@@ -83,9 +83,8 @@ class UpdateManualDataTest extends AbstractEcTrackServiceTest
         ];
         $this->track->properties = [
             ...$this->track->properties,
-            ...$properties
+            ...$properties,
         ];
-
 
         $this->ecTrackService->updateManualData($this->track);
 

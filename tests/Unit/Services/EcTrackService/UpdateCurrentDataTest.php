@@ -54,7 +54,6 @@ class UpdateCurrentDataTest extends AbstractEcTrackServiceTest
         // Prepara il track usando il metodo helper della classe astratta.
         $track = $this->prepareTrackWithDirtyFields($dirtyFields, $demDataFields, $initialManualData);
 
-
         $this->ecTrackService->updateCurrentData($track);
 
         // Otteniamo manual_data come array, indipendentemente dal formato originario.
@@ -83,7 +82,7 @@ class UpdateCurrentDataTest extends AbstractEcTrackServiceTest
         $track->properties = [
             ...$track->properties,
             'ascent' => 0,
-            'descent' => 0
+            'descent' => 0,
         ];
 
         $this->ecTrackService->updateCurrentData($track);
@@ -111,7 +110,7 @@ class UpdateCurrentDataTest extends AbstractEcTrackServiceTest
 
         $track->properties = [
             ...$track->properties,
-            'distance' => 0
+            'distance' => 0,
         ];
 
         $this->ecTrackService->updateCurrentData($track);
