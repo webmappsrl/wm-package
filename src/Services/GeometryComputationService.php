@@ -13,6 +13,7 @@ use stdClass;
 use Symm\Gisconverter\Exceptions\InvalidText;
 use Symm\Gisconverter\Gisconverter;
 use Wm\WmPackage\Models\Abstracts\GeometryModel;
+use Wm\WmPackage\Models\Abstracts\MultiLineString;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\Layer;
@@ -26,6 +27,13 @@ class GeometryComputationService extends BaseService
         return DB::select(
             "SELECT ST_AsText(ST_Force3D(ST_LineMerge(ST_GeomFromGeoJSON('".$geojson."')))) As wkt"
         )[0]->wkt;
+    }
+
+    public function getModelLineMergeGeojson(MultiLineString $model): string
+    {
+        return DB::select(
+            "SELECT ST_AsGeoJSON(ST_LineMerge(geometry::geometry)) As geojson FROM {$model->getTable()} WHERE id = {$model->id}"
+        )[0]->geojson;
     }
 
     public function getGeometryModelCoordinates(GeometryModel $ecPoi): stdClass
@@ -76,7 +84,7 @@ class GeometryComputationService extends BaseService
         return $result[0]->val;
     }
 
-    public function getModelGeometryAsGeojson(GeometryModel $model): string
+    public function getModelGeometryAsGeojson(GeometryModel|Media $model): string
     {
         return $model::where('id', '=', $model->id)
             ->select(
@@ -418,6 +426,7 @@ class GeometryComputationService extends BaseService
 
     public function isRoundtrip(array $coords): bool
     {
+
         $treshold = 0.001; // diff < 300 metri ref trackid:1592
 
         // Ensure we're working with a flat array of coordinates

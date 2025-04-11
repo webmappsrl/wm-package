@@ -181,7 +181,7 @@ class LayerService extends BaseService
         $properties['layers'] = array_values($properties['layers']);
 
         $geometryModel->properties = $properties;
-        $geometryModel->saveQuietly();
+        $geometryModel->save();
     }
 
     public function updateLayersPropertyOnAllLayeredFeaturesWithJobs(Layer $layer)

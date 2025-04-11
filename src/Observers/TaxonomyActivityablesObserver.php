@@ -30,6 +30,7 @@ class TaxonomyActivityablesObserver
             $layer = Layer::find($taxonomyActivityable->taxonomy_activityable_id);
             if ($layer !== null) {
                 $this->layerService->updateLayersPropertyOnAllLayeredFeaturesWithJobs($layer);
+                $this->layerService->updateLayerGeometryWithJob($layer);
             }
         } elseif (
             str_contains($relatedTypeClass, '\EcTrack')
@@ -38,9 +39,12 @@ class TaxonomyActivityablesObserver
 
             $layers = Layer::whereHas('taxonomyActivities', function ($query) use ($taxonomyActivityable) {
                 $query->where('taxonomy_activities.id', $taxonomyActivityable->taxonomy_activity_id);
-            })->get()->pluck('id');
+            })->get();
 
-            $this->layerService->updateLayerIdsPropertyOnLayeredFeature($taxonomyActivityable->model, $layers->toArray(), $add);
+            $this->layerService->updateLayerIdsPropertyOnLayeredFeature($taxonomyActivityable->model, $layers->pluck('id')->toArray(), $add);
+            foreach ($layers as $layer) {
+                $this->layerService->updateLayerGeometryWithJob($layer);
+            }
         }
     }
 }

@@ -14,8 +14,9 @@ class OsmfeaturesClient extends JsonClient
         // {"name": "Scalepranu/Escalaplano", "type": "boundary", "name:it": "Escalaplano", "name:sc": "Scalepranu", "website": "https://www.comune.escalaplano.ca.it/", "alt_name": "Iscalepranu", "boundary": "administrative", "wikidata": "Q179092", "ref:ISTAT": "111018", "wikipedia": "it:Escalaplano", "admin_level": "8", "postal_code": "08043", "ref:catasto": "D430", "wikipedia:sc": "Scalepranu"}
         $wheres = [];
         foreach ($wheresGeojson['features'] as $feature) {
-            $whereId = $feature['osmfeatures_id'];
-            $featureTags = $feature['tags'];
+            $properties = $feature['properties'];
+            $whereId = $properties['osmfeatures_id'];
+            $featureTags = $properties['osm_tags'];
             $name = null;
             foreach ($featureTags as $tagName => $tagValue) {
 
@@ -25,7 +26,9 @@ class OsmfeaturesClient extends JsonClient
                     // 5 = the length of "name:"
                     // 2 = the length of the language code, eg: "it", "en"
                     $language = substr($tagName, $pos + 5, 2);
-                    $wheres[$whereId][$language] = $tagValue;
+                    if (in_array($language, ['it', 'en', 'de', 'fr', 'es'])) {
+                        $wheres[$whereId][$language] = $tagValue;
+                    }
                 }
             }
 
@@ -45,7 +48,7 @@ class OsmfeaturesClient extends JsonClient
     {
         $response = $this->getHttpClient()->post(
             $this->getAdminAreasIntersectsUrl(),
-            $geojson
+            ['geojson' => $geojson]
         );
         // Check the response
         if (! $response->successful()) {

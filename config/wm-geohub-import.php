@@ -306,7 +306,7 @@ return [
                 'mapping' => [
                     'description' => ['field' => 'description', 'transformer' => [DataTransformer::class, 'jsonToArray']],
                     'excerpt' => ['field' => 'excerpt', 'transformer' => [DataTransformer::class, 'jsonToArray']],
-                    'audio' => ['field' => 'audio', 'transformer' => [DataTransformer::class, 'jsonToArray']],
+                    'audio' => ['field' => 'audio', 'transformer' => [DataTransformer::class, 'nullableJsonToArray']],
                     'source_id' => 'source_id',
                     'import_method' => 'import_method',
                     'source' => 'source',
@@ -388,7 +388,7 @@ return [
                 'mapping' => [
                     'description' => ['field' => 'description', 'transformer' => [DataTransformer::class, 'jsonToArray']],
                     'excerpt' => ['field' => 'excerpt', 'transformer' => [DataTransformer::class, 'jsonToArray']],
-                    'audio' => ['field' => 'audio', 'transformer' => [DataTransformer::class, 'jsonToArray']],
+                    'audio' => ['field' => 'audio', 'transformer' => [DataTransformer::class, 'nullableJsonToArray']],
                     'related_url' => 'related_url',
                     'ele' => 'ele',
                     'addr_complete' => 'addr_complete',

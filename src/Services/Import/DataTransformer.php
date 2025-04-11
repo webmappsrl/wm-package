@@ -16,7 +16,21 @@ class DataTransformer
             return [];
         }
 
-        return json_decode($json, true);
+        $arr = json_decode($json, true);
+
+        return array_filter($arr, fn ($value) => $value !== null && $value !== '');
+    }
+
+    /**
+     * Convert a JSON string to an array.
+     */
+    public function nullableJsonToArray(?string $json): ?array
+    {
+        if (! $json) {
+            return null;
+        }
+
+        return $this->jsonToArray($json);
     }
 
     /**

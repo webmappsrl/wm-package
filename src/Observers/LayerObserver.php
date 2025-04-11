@@ -41,36 +41,4 @@ class LayerObserver extends AbstractObserver
             $layer->properties = [];
         }
     }
-
-    public function morphToManyAttached($relation, $parent, $ids, $attributes)
-    {
-        $this->morphToManyEvent($relation, $parent, $ids);
-    }
-
-    public function morphToManyDetached($relation, $parent, $ids)
-    {
-        $this->morphToManyEvent($relation, $parent, $ids);
-    }
-
-    // custom method, it's not a laravel event
-    private function morphToManyEvent($relation, $parent, $ids)
-    {
-        $relatedModel = $parent->$relation()->getRelated();
-        $modelsWithLayerableProperties = $this->layerService->getModelsWithLayersInProperties();
-
-        // "manual" attach of features
-        if (
-            in_array($relatedModel::class, $modelsWithLayerableProperties)
-        ) {
-            $this->layerService->updateLayersPropertyOnLayeredFeatureWithJob($parent, $relatedModel::class);
-        }
-        // "automatic" attach of features
-        // MOVED TO wm-package/src/Observers/TaxonomyActivityablesObserver.php
-        // due this issue https://github.com/chelout/laravel-relationship-events/issues/16
-        // elseif ($relatedModel instanceof Taxonomy) {
-        //     $this->layerService->updateLayersPropertyOnAllLayeredFeaturesWithJobs($parent);
-        // }
-
-        $this->layerService->updateLayerGeometryWithJob($parent);
-    }
 }

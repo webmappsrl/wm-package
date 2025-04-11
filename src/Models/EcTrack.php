@@ -2,12 +2,10 @@
 
 namespace Wm\WmPackage\Models;
 
-use Chelout\RelationshipEvents\Concerns\HasMorphToManyEvents;
 use ChristianKuri\LaravelFavorite\Traits\Favoriteable;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
-use Illuminate\Support\Facades\DB;
 use Laravel\Scout\Searchable;
 use Spatie\Translatable\HasTranslations;
 use Wm\WmPackage\Models\Abstracts\MultiLineString;
@@ -15,13 +13,14 @@ use Wm\WmPackage\Models\Interfaces\LayerRelatedModel;
 use Wm\WmPackage\Observers\EcTrackObserver;
 use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Services\Models\EcTrackService;
+use Wm\WmPackage\Services\Models\MediaService;
 use Wm\WmPackage\Traits\EcFeatureTrait;
 use Wm\WmPackage\Traits\TaxonomyAbleModel;
 use Wm\WmPackage\Traits\TaxonomyWhereAbleModel;
 
 class EcTrack extends MultiLineString implements LayerRelatedModel
 {
-    use EcFeatureTrait, Favoriteable, HasMorphToManyEvents, HasTranslations, Searchable, TaxonomyAbleModel, TaxonomyWhereAbleModel;
+    use EcFeatureTrait, Favoriteable, HasTranslations, Searchable, TaxonomyAbleModel, TaxonomyWhereAbleModel;
 
     protected $fillable = [
         'name',
@@ -49,12 +48,7 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
 
     public function layers(): MorphToMany
     {
-        return $this->morphToMany(Layer::class, 'layerable');
-    }
-
-    public function updateManualDataField($field, $value)
-    {
-        $this->manual_data[$field] = $value;
+        return $this->morphToMany(Layer::class, 'layerable')->using(Layerable::class);
     }
 
     public function ecPois(): BelongsToMany
@@ -298,18 +292,6 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
     // }
 
     /**
-     * Create a geojson from the ec track
-     */
-    public function getGeojson(): array
-    {
-        $feature = parent::getGeojson();
-
-        $feature['properties']['roundtrip'] = GeometryComputationService::make()->isRoundtrip($feature['geometry']['coordinates']);
-
-        return $feature;
-    }
-
-    /**
      * Create the track geojson using the elbrus standard
      */
     public function getElbrusGeojson(): array
@@ -525,6 +507,8 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
     {
 
         $ecTrackService = EcTrackService::make();
+        $mediaService = MediaService::make();
+        $firstMedia = $this->getMedia()->first();
 
         [$start, $end] = GeometryComputationService::make()->getStartEndCoordinates($this);
 
@@ -538,8 +522,8 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
             // 'from' => $this->getActualOrOSFValue('from'),
             // 'to' => $this->getActualOrOSFValue('to'),
             'name' => $this->getTranslation('name', 'it'),
-            'taxonomyWheres' => $ecTrackService->getTaxonomyWheres($this),
-            'feature_image' => $this->getMedia()->first(),
+            'taxonomyWheres' => collect($ecTrackService->getTaxonomyWheres($this))->map(fn ($item) => $item['it'] ?? false)->values()->filter()->toArray(),
+            'feature_image' => $firstMedia ? $mediaService->getThumbnailUrl($firstMedia) : '',
             'strokeColor' => isset($this->properties['color']) ? hexToRgba($this->properties['color']) : '',
             'distance' => isset($this->properties['distance']) ? $this->setEmptyValueToZero($this->properties['distance']) : 0,
             'duration_forward' => isset($this->properties['duration_forward']) ? $this->setEmptyValueToZero($this->properties['duration_forward']) : 0,

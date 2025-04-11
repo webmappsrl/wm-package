@@ -11,7 +11,7 @@ use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\Media;
 use Wm\WmPackage\Services\GeoJsonService;
 use Wm\WmPackage\Services\GeometryComputationService;
-use Wm\WmPackage\Services\MediaService;
+use Wm\WmPackage\Services\Models\MediaService;
 use Wm\WmPackage\Services\StorageService;
 
 abstract class GeometryModel extends Model implements HasMedia
@@ -162,13 +162,14 @@ abstract class GeometryModel extends Model implements HasMedia
 
     public function registerMediaConversions($media = null): void
     {
-        foreach (MediaService::make()->getThumbnailSizes() as $size) {
+        $mediaService = MediaService::make();
+        foreach ($mediaService->getThumbnailSizes() as $size) {
             $this
                 ->addMediaConversion(
-                    'thumbnail_'.implode('_', $size)
+                    $mediaService->getMediaConversionNameByWidthAndHeight($size['width'], $size['height'])
                 )
                 ->fit(Fit::Contain, $size['width'], $size['height'])
-                ->nonQueued();
+                ->queued();
         }
     }
 

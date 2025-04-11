@@ -2,7 +2,6 @@
 
 namespace Wm\WmPackage\Models;
 
-use Chelout\RelationshipEvents\Concerns\HasMorphToManyEvents;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Support\Facades\App;
@@ -16,7 +15,7 @@ use Wm\WmPackage\Traits\TaxonomyWhereAbleModel;
 
 class EcPoi extends Point implements LayerRelatedModel
 {
-    use EcFeatureTrait, HasMorphToManyEvents, HasTranslations, TaxonomyAbleModel, TaxonomyWhereAbleModel;
+    use EcFeatureTrait, HasTranslations, TaxonomyAbleModel, TaxonomyWhereAbleModel;
 
     protected $fillable = [
         'name',
@@ -62,6 +61,11 @@ class EcPoi extends Point implements LayerRelatedModel
         return $this->morphToMany(TaxonomyActivity::class, 'taxonomy_activityable')
             ->using(TaxonomyActivityable::class); // this is necessary to make events on pivot working
         // https://github.com/chelout/laravel-relationship-events/issues/16;;
+    }
+
+    public function layers(): MorphToMany
+    {
+        return $this->morphToMany(Layer::class, 'layerable')->using(Layerable::class);
     }
 
     // /**

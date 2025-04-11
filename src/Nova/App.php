@@ -6,6 +6,7 @@ use Laravel\Nova\Fields\ID;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Resource;
+use Wm\WmPackage\Nova\Actions\UpdateTracksOnAws;
 
 class App extends Resource
 {
@@ -24,6 +25,17 @@ class App extends Resource
             ID::make()->sortable(),
             Text::make('Name')->sortable(),
             // TODO: implement fields
+        ];
+    }
+
+    public function actions(NovaRequest $request): array
+    {
+        return [
+            UpdateTracksOnAws::make()
+                ->onlyOnDetail()
+                ->confirmText('Sei sicuro di voler aggiornare tutte le tracks di questa app su AWS?')
+                ->confirmButtonText('Sì, aggiorna')
+                ->cancelButtonText('No, annulla'),
         ];
     }
 }
