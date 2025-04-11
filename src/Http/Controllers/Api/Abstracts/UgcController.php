@@ -59,6 +59,14 @@ abstract class UgcController extends Controller
         return response()->json(['id' => $model->id, 'message' => 'Updated successfully'], 200);
     }
 
+    public function legacyUpdate(Request $request): JsonResponse
+    {
+        $validated = $this->validate($request, ['properties.id' => 'required|exists:ugc_pois,id']);
+        $model = $this->getModelIstance()->find($validated['properties']['id']);
+
+        return $this->_update($request, $model);
+    }
+
     /**
      * Remove the specified resource from storage.
      */

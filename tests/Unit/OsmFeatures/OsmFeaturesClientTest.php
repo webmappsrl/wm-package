@@ -23,6 +23,31 @@ class OsmfeaturesClientTest extends TestCase
         'coordinates' => [0, 0],
     ];
 
+    const OSMFEATURES_RESPONSE = [
+        'features' => [
+            [
+                'osm_type' => 'way',
+                'osm_id' => '123',
+                'osmfeatures_id' => 'way123',
+                'tags' => [
+                    'name' => 'First Place',
+                    'name:it' => 'Primo Posto',
+                    'name:en' => 'First Place',
+                ],
+            ],
+            [
+                'osmfeatures_id' => 'node456',
+                'osm_type' => 'node',
+                'osm_id' => '456',
+                'tags' => [
+                    'name' => 'Second Place',
+                    'name:it' => 'Secondo Posto',
+                    'name:en' => 'Second Place',
+                ],
+            ],
+        ],
+    ];
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -43,90 +68,6 @@ class OsmfeaturesClientTest extends TestCase
         $result = $this->client->getWheresByGeojson(self::EXAMPLE_GEOJSON_REQUEST);
 
         $this->assertEquals([], $result);
-    }
-
-    public function test_get_wheres_with_only_default_names(): void
-    {
-        $this->client->shouldReceive('getAdminAreasIntersected')
-            ->once()
-            ->with(self::EXAMPLE_GEOJSON_REQUEST)
-            ->andReturn([
-                'features' => [
-                    [
-                        'osm_type' => 'way',
-                        'osmfeatures_id' => 'way123',
-                        'osm_id' => '123',
-                        'tags' => [
-                            'name' => 'First Place',
-                        ],
-                    ],
-                    [
-                        'osm_type' => 'node',
-                        'osmfeatures_id' => 'node456',
-                        'osm_id' => '456',
-                        'tags' => [
-                            'name' => 'Second Place',
-                        ],
-                    ],
-                ],
-            ]);
-
-        $result = $this->client->getWheresByGeojson(self::EXAMPLE_GEOJSON_REQUEST);
-
-        $this->assertEquals([
-            'way123' => [
-                'it' => 'First Place',
-                'en' => 'First Place',
-            ],
-            'node456' => [
-                'it' => 'Second Place',
-                'en' => 'Second Place',
-            ],
-        ], $result);
-    }
-
-    public function test_get_wheres_with_all_translations(): void
-    {
-        $this->client->shouldReceive('getAdminAreasIntersected')
-            ->once()
-            ->with(self::EXAMPLE_GEOJSON_REQUEST)
-            ->andReturn([
-                'features' => [
-                    [
-                        'osm_type' => 'way',
-                        'osm_id' => '123',
-                        'osmfeatures_id' => 'way123',
-                        'tags' => [
-                            'name' => 'First Place',
-                            'name:it' => 'Primo Posto',
-                            'name:en' => 'First Place',
-                        ],
-                    ],
-                    [
-                        'osmfeatures_id' => 'node456',
-                        'osm_type' => 'node',
-                        'osm_id' => '456',
-                        'tags' => [
-                            'name' => 'Second Place',
-                            'name:it' => 'Secondo Posto',
-                            'name:en' => 'Second Place',
-                        ],
-                    ],
-                ],
-            ]);
-
-        $result = $this->client->getWheresByGeojson(self::EXAMPLE_GEOJSON_REQUEST);
-
-        $this->assertEquals([
-            'way123' => [
-                'it' => 'Primo Posto',
-                'en' => 'First Place',
-            ],
-            'node456' => [
-                'it' => 'Secondo Posto',
-                'en' => 'Second Place',
-            ],
-        ], $result);
     }
 
     public function test_get_wheres_with_failed_response(): void

@@ -69,7 +69,7 @@ class EcTrackService extends BaseService
         $properties = $track->properties;
         $properties['dem_data'] = $demData;
         $track->properties = $properties;
-        $track->saveQuietly();
+
         try {
             if (isset($demData)) {
                 foreach ($this->getDemDataFields() as $field) {
@@ -129,10 +129,10 @@ class EcTrackService extends BaseService
             $trackname = ! empty($name_array) ? implode(' - ', $name_array) : null;
             $trackname = str_replace('"', '', $trackname);
 
-            $track->name = ! empty($track->name) ? $track->name : $trackname;
-            $track->geometry = $geometry ?? $track->geometry;
-
             $properties = $track->properties;
+            $track->name = ! empty($track->name) ? $track->name : $trackname;
+            $properties['name'] = $track->name;
+            $track->geometry = $geometry ?? $track->geometry;
             $properties['ref'] = $properties['ref'] ?? $osmData['ref'] ?? null;
 
             // Update additional fields only if they are null
@@ -164,7 +164,7 @@ class EcTrackService extends BaseService
             $dirtyFields = $track->getDirty();
             $demDataFields = array_flip($track->getDemDataFields());
             $dirtyFields = array_intersect_key($dirtyFields, $demDataFields);
-            $manualData = json_decode($track->manual_data ?? null, true);
+            $manualData = json_decode($track->properties['manual_data'] ?? null, true);
 
             $properties = $track->properties;
             foreach ($dirtyFields as $field => $newValue) {
@@ -195,15 +195,16 @@ class EcTrackService extends BaseService
 
         $manualData = null;
         $fieldsToCheck = $this->getDemDataFields();
-        $demData = isset($track->properties['dem_data']) ? $track->properties['dem_data'] : [];
-        $osmData = isset($track->properties['osm_data']) ? $track->properties['osm_data'] : [];
+        $demData = isset($track->properties['dem_data']) ? json_decode($track->properties['dem_data'], true) : [];
+        $osmData = isset($track->properties['osm_data']) ? json_decode($track->properties['osm_data'], true) : [];
         $properties = $track->properties;
         foreach ($fieldsToCheck as $field) {
             $osmValue = $osmData[$field] ?? null;
             $demValue = $demData[$field] ?? null;
             $trackValue = $properties[$field] ?? null;
 
-            if ($trackValue !== null && $trackValue != $osmValue && $trackValue != $demValue) {
+            // Check if the track value is different from both OSM and DEM values
+            if (! in_array($trackValue, [null, $osmValue, $demValue])) {
                 $manualData[$field] = $trackValue;
             }
         }
@@ -259,19 +260,24 @@ class EcTrackService extends BaseService
     protected function updateFieldIfNecessary(EcTrack $track, $field, $properties, $oldProperties, $isNumeric = false)
     {
 
+        $trackProperties = $track->properties;
         if (
-            (! isset($oldProperties[$field]) || $oldProperties[$field] === null)
-            || (
-                ! is_null($oldProperties) && isset($oldProperties[$field])
-                && $oldProperties[$field] == $oldProperties[$field]
+            isset($properties[$field]) // se esiste una nuova proprietà da salvare
+            && // E
+            (
+                ! isset($trackProperties[$field]) // se non esiste la proprietà su track
+                || $trackProperties[$field] === null // se la proprietà esistente è null
+                || ( // o se esiste una vecchia proprietà e è uguale a quella salvata su track->properties
+                    isset($oldProperties[$field])
+                    && $trackProperties[$field] == $oldProperties[$field])
             )
         ) {
-            if (isset($properties[$field])) {
-                return $isNumeric ? str_replace(',', '.', $properties[$field]) : $properties[$field];
-            }
+            // allora restituisci il nuovo campo
+            return $isNumeric ? str_replace(',', '.', $properties[$field]) : $properties[$field];
         }
 
-        return $track->properties[$field] ?? null;
+        // altrimenti la proprietà rimane invariata (niente cambia in track)
+        return $trackProperties[$field] ?? null;
     }
 
     public function updateDataChain(EcTrack $track)
