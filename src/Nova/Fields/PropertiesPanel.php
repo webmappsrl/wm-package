@@ -144,14 +144,14 @@ class PropertiesPanel extends Panel
      */
     protected function inferSchemaForNestedArray(string $parentKey, array $nestedArray): void
     {
-        foreach ($nestedArray as $key => $value) {
-            $fullKey = $parentKey.'.'.$key;
-            if (is_array($value)) {
-                $this->inferSchemaForNestedArray($fullKey, $value);
-            } else {
-                $this->formSchema[$fullKey] = $this->inferFieldSchema($fullKey, $value);
-            }
-        }
+        // Instead of recursively creating fields for nested properties,
+        // create a single JSON field for the entire nested structure
+        $this->formSchema[$parentKey] = [
+            'type' => 'json',
+            'label' => ucwords(str_replace(['_', '.'], ' ', $parentKey)),
+            'rules' => ['nullable'],
+            'readonly' => true
+        ];
     }
 
     /**
@@ -180,10 +180,12 @@ class PropertiesPanel extends Panel
             $schema['type'] = 'color';
         } elseif (is_string($value) && $this->isUuid($value)) {
             $schema['type'] = 'uuid';
-        } elseif (is_string($value) && strlen($value) > 100) {
-            $schema['type'] = 'textarea';
         } elseif (is_string($value) && $this->isJson($value)) {
             $schema['type'] = 'json';
+        } elseif (is_array($value)) {
+            $schema['type'] = 'json';
+        } elseif (is_string($value) && strlen($value) > 100) {
+            $schema['type'] = 'textarea';
         } else {
             $schema['type'] = 'text';
         }

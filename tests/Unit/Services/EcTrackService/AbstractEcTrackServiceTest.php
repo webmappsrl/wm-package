@@ -57,7 +57,7 @@ class AbstractEcTrackServiceTest extends TestCase
         foreach ($fields as $field => $expected) {
             $this->assertEquals(
                 $expected,
-                $track->$field,
+                $field === 'geometry' ? $track->geometry : $track->properties[$field] ?? null,
                 "Field '{$field}' {$messageSuffix}."
             );
         }
@@ -66,9 +66,11 @@ class AbstractEcTrackServiceTest extends TestCase
     public function createTrackWithFields(?array $fields = [])
     {
         $track = Mockery::mock(EcTrack::class)->makePartial();
+        $properties = [];
         foreach ($fields as $field => $value) {
-            $track->$field = $value;
+            $properties[$field] = $value;
         }
+        $track->properties = $properties;
 
         return $track;
     }
@@ -76,10 +78,12 @@ class AbstractEcTrackServiceTest extends TestCase
     public function prepareTrackWithDirtyFields(array $dirtyFields, array $demDataFields, ?string $manualData = '{}', ?string $osmData = '{}', ?string $demData = '{}'): EcTrack
     {
         $track = Mockery::mock(EcTrack::class)->makePartial();
-        $track->manual_data = $manualData;
-        $track->osm_data = $osmData;
-        $track->dem_data = $demData;
 
+        $track->properties = [
+            'manual_data' => $manualData,
+            'osm_data' => $osmData,
+            'dem_data' => $demData,
+        ];
         // Simula i metodi getDirty() e getDemDataFields()
         $track->shouldReceive('getDirty')->andReturn($dirtyFields);
         $track->shouldReceive('getDemDataFields')->andReturn($demDataFields);
@@ -107,20 +111,12 @@ class AbstractEcTrackServiceTest extends TestCase
 
     public function prepareTrackWithOsmData($track): void
     {
-        $track->shouldReceive('setAttribute')
-            ->with('osm_data', Mockery::type('array'))
-            ->once();
-        $track->shouldReceive('getAttribute')
-            ->with('osm_data')
-            ->andReturn(json_encode([]));
         $track->shouldReceive('saveQuietly')->once();
     }
 
     public function getManualData($track): array
     {
-        return is_array($track->manual_data)
-            ? $track->manual_data
-            : json_decode($track->manual_data, true);
+        return $track->properties['manual_data'] ?? [];
     }
 
     public function createMockApp(string $appId, Collection $tracks)

@@ -28,7 +28,7 @@ class UpdateLayeredFeaturesJob implements ShouldQueue
      */
     public function uniqueId(): string
     {
-        return 'update_layered_'.class_basename($this->ecModelClass).'_'.$this->layer->id;
+        return 'update_layered_' . class_basename($this->ecModelClass) . '_' . $this->layer->id;
     }
 
     /**

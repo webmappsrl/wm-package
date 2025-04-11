@@ -43,9 +43,16 @@ class UpdateManualDataTest extends AbstractEcTrackServiceTest
     /** @test */
     public function update_manual_data_updates_field_when_track_value_differs_from_osm_and_dem()
     {
-        $this->track->ascent = self::DIRTY_FIELDS[self::ASCENT_FIELD_LABEL];   // diverso da 500 (OSM) e 300 (DEM) → deve essere salvato in manual_data
-        $this->track->descent = self::OSM_DATA_FIELDS[self::DESCENT_FIELD_LABEL];  // uguale a OSM, quindi non va registrato
-        $this->track->distance = self::OSM_DATA_FIELDS[self::DISTANCE_FIELD_LABEL]; // uguale a OSM, quindi non va registrato
+        $properties = [
+            'ascent' => self::DIRTY_FIELDS[self::ASCENT_FIELD_LABEL], // diverso da 500 (OSM) e 300 (DEM) → deve essere salvato in manual_data
+            'descent' => self::OSM_DATA_FIELDS[self::DESCENT_FIELD_LABEL], // uguale a OSM, quindi non va registrato
+            'distance' => self::OSM_DATA_FIELDS[self::DISTANCE_FIELD_LABEL], // uguale a OSM, quindi non va registrato
+        ];
+
+        $this->track->properties = [
+            ...$this->track->properties,
+            ...$properties
+        ];
 
         $this->ecTrackService->updateManualData($this->track);
 
@@ -69,9 +76,16 @@ class UpdateManualDataTest extends AbstractEcTrackServiceTest
     /** @test */
     public function update_manual_data_updates_multiple_fields_correctly()
     {
-        $this->track->ascent = self::DIRTY_FIELDS[self::ASCENT_FIELD_LABEL]; // 660
-        $this->track->descent = self::DIRTY_FIELDS[self::DESCENT_FIELD_LABEL]; // 210
-        $this->track->distance = self::DIRTY_FIELDS[self::DISTANCE_FIELD_LABEL]; // 7100
+        $properties = [
+            'ascent' => self::DIRTY_FIELDS[self::ASCENT_FIELD_LABEL], // 660
+            'descent' => self::DIRTY_FIELDS[self::DESCENT_FIELD_LABEL], // 210
+            'distance' => self::DIRTY_FIELDS[self::DISTANCE_FIELD_LABEL], // 7100
+        ];
+        $this->track->properties = [
+            ...$this->track->properties,
+            ...$properties
+        ];
+
 
         $this->ecTrackService->updateManualData($this->track);
 

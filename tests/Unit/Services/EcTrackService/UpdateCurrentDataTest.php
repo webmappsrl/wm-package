@@ -54,10 +54,12 @@ class UpdateCurrentDataTest extends AbstractEcTrackServiceTest
         // Prepara il track usando il metodo helper della classe astratta.
         $track = $this->prepareTrackWithDirtyFields($dirtyFields, $demDataFields, $initialManualData);
 
+
         $this->ecTrackService->updateCurrentData($track);
 
         // Otteniamo manual_data come array, indipendentemente dal formato originario.
         $manualData = $this->getManualData($track);
+
         $this->assertEquals('data', $manualData['existing']);
         $this->assertEquals(self::DIRTY_DATA_FIELDS[self::ASCENT_FIELD_LABEL], $manualData['ascent']);
         $this->assertEquals(self::DIRTY_DATA_FIELDS[self::DESCENT_FIELD_LABEL], $manualData['descent']);
@@ -77,13 +79,17 @@ class UpdateCurrentDataTest extends AbstractEcTrackServiceTest
         $track = $this->prepareTrackWithDirtyFields($dirtyFields, $demDataFields, '{}', $osmData, $demData);
 
         // Impostiamo valori iniziali che dovranno essere sovrascritti.
-        $track->ascent = 0;
-        $track->descent = 0;
+
+        $track->properties = [
+            ...$track->properties,
+            'ascent' => 0,
+            'descent' => 0
+        ];
 
         $this->ecTrackService->updateCurrentData($track);
 
-        $this->assertEquals(self::OSM_DATA_FIELDS[self::ASCENT_FIELD_LABEL], $track->ascent);
-        $this->assertEquals(self::OSM_DATA_FIELDS[self::DESCENT_FIELD_LABEL], $track->descent);
+        $this->assertEquals(self::OSM_DATA_FIELDS[self::ASCENT_FIELD_LABEL], $track->properties['ascent']);
+        $this->assertEquals(self::OSM_DATA_FIELDS[self::DESCENT_FIELD_LABEL], $track->properties['descent']);
 
         $manualData = $this->getManualData($track);
         // I dirty fields vengono copiati in manual_data, anche se il valore viene sostituito sul campo.
@@ -103,11 +109,14 @@ class UpdateCurrentDataTest extends AbstractEcTrackServiceTest
         $demData = json_encode([self::DISTANCE_FIELD_LABEL => self::DEM_DATA_FIELDS[self::DISTANCE_FIELD_LABEL]]);
         $track = $this->prepareTrackWithDirtyFields($dirtyFields, $demDataFields, '{}', $osmData, $demData);
 
-        $track->distance = 0;
+        $track->properties = [
+            ...$track->properties,
+            'distance' => 0
+        ];
 
         $this->ecTrackService->updateCurrentData($track);
 
-        $this->assertEquals(self::DEM_DATA_FIELDS[self::DISTANCE_FIELD_LABEL], $track->distance);
+        $this->assertEquals(self::DEM_DATA_FIELDS[self::DISTANCE_FIELD_LABEL], $track->properties['distance']);
         $manualData = $this->getManualData($track);
         $this->assertArrayHasKey(self::DISTANCE_FIELD_LABEL, $manualData);
         $this->assertNull($manualData[self::DISTANCE_FIELD_LABEL]);

@@ -4,7 +4,12 @@ namespace Wm\WmPackage\Nova;
 
 use App\Nova\User;
 use Laravel\Nova\Fields\BelongsTo;
+use Wm\WmPackage\Nova\Actions\CopyUgc;
+use Wm\WmPackage\Nova\Actions\ExportTo;
 use Laravel\Nova\Http\Requests\NovaRequest;
+use Wm\WmPackage\Nova\Filters\SchemaFilter;
+use Ebess\AdvancedNovaMediaLibrary\Fields\Images;
+use Wm\WmPackage\Nova\Filters\UgcCreationDateFilter;
 
 abstract class AbstractUgcResource extends AbstractGeometryResource
 {
@@ -17,7 +22,25 @@ abstract class AbstractUgcResource extends AbstractGeometryResource
     {
         return [
             ...parent::fields($request),
-            BelongsTo::make('Author', 'author', User::class),
+            BelongsTo::make('Author', 'author', User::class)->searchable()->filterable(),
+            Images::make('Image', 'default')->onlyOnDetail(),
+        ];
+    }
+
+    public function actions(NovaRequest $request): array
+    {
+        return [
+            ...parent::actions($request),
+            new ExportTo(),
+            new CopyUgc(),
+        ];
+    }
+
+    public function filters(NovaRequest $request): array
+    {
+        return [
+            (new UgcCreationDateFilter),
+            (new SchemaFilter($this->model())),
         ];
     }
 }
