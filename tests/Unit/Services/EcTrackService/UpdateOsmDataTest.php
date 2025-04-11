@@ -12,10 +12,10 @@ class UpdateOsmDataTest extends AbstractEcTrackServiceTest
 
     const PROPERTIES_TO_CHECK = [
         'name' => 'T123 - New Track Name',
+        'geometry' => 'LINESTRING(10.0 45.0, 10.5 45.5)',
         'ref' => 'T123',
         'duration_forward' => '150',
         'duration_backward' => '180',
-        'geometry' => 'LINESTRING(10.0 45.0, 10.5 45.5)',
         'ascent' => 500,
         'descent' => 400,
         'distance' => 7000,
@@ -60,7 +60,7 @@ class UpdateOsmDataTest extends AbstractEcTrackServiceTest
 
         $result = $this->ecTrackService->updateOsmData($this->track);
 
-        $this->assertTrue($result['success']);
+        $this->assertTrue($result['success'], $result['message']);
 
         $this->assertFields($this->track, self::PROPERTIES_TO_CHECK, self::ERROR_MESSAGES['unmatched_properties']);
     }
@@ -90,20 +90,24 @@ class UpdateOsmDataTest extends AbstractEcTrackServiceTest
     /** @test */
     public function updates_only_null_fields_are_updated()
     {
-        $this->track->name = self::UNCHANGED_FIELDS['name'];
-        $this->track->ref = self::UNCHANGED_FIELDS['ref'];
-        $this->track->ascent = self::UNCHANGED_FIELDS['ascent'];
 
+        $this->track->name = self::UNCHANGED_FIELDS['name'];
         $this->track->geometry = null;
-        $this->track->descent = null;
-        $this->track->distance = null;
-        $this->track->duration_forward = null;
-        $this->track->duration_backward = null;
+
+        $properties = $this->track->properties;
+        $properties['ref'] = self::UNCHANGED_FIELDS['ref'];
+        $properties['ascent'] = self::UNCHANGED_FIELDS['ascent'];
+        $properties['descent'] = null;
+        $properties['distance'] = null;
+        $properties['duration_forward'] = null;
+        $properties['duration_backward'] = null;
+
+        $this->track->properties = $properties;
 
         $this->prepareTrackWithOsmData($this->track);
 
         $result = $this->ecTrackService->updateOsmData($this->track);
-        $this->assertTrue($result['success']);
+        $this->assertTrue($result['success'], $result['message']);
 
         $this->assertFields($this->track, self::UNCHANGED_FIELDS, self::ERROR_MESSAGES['should_remain_unchanged']);
         $this->assertFields($this->track, self::UPDATED_FIELDS, self::ERROR_MESSAGES['should_be_updated']);
