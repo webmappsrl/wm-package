@@ -38,6 +38,14 @@ class WmPackageServiceProvider extends PackageServiceProvider
         $this->app->bind(HitsIteratorAggregate::class, ElasticSearchHitsIteratorAggregate::class);
     }
 
+    public static function getBasePath(): string
+    {
+        /** @var WmPackageServiceProvider $provider */
+        $provider = app()->getProvider(static::class);
+
+        return realpath($provider->package->basePath('/../'));
+    }
+
     /**
      * Define your route model bindings, pattern filters, and other route configuration.
      *

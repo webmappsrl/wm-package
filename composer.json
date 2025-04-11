@@ -17,7 +17,6 @@
     ],
     "require": {
         "php": ">8.1",
-        "chelout/laravel-relationship-events": "^2.0 || ^3.0",
         "chillerlan/php-qrcode": "^5.0",
         "christiankuri/laravel-favorite": "^1.4",
         "cweagans/composer-patches": "^1.7",
@@ -88,6 +87,12 @@
             "@prepare",
             "@php ./vendor/bin/testbench package:discover --ansi"
         ],
+        "post-install-cmd": [
+            "npm install"
+        ],
+        "post-update-cmd": [
+            "npm install"
+        ],
         "analyse": "vendor/bin/phpstan analyse",
         "test": "vendor/bin/pest",
         "test-coverage": "vendor/bin/pest --coverage",
@@ -123,11 +128,6 @@
                 "WmPackage": "Wm\\WmPackage\\Facades\\WmPackage",
                 "JWTAuth": "Tymon\\JWTAuth\\Facades\\JWTAuth",
                 "JWTFactory": "Tymon\\JWTAuth\\Facades\\JWTFactory"
-            }
-        },
-        "patches": {
-            "chelout/laravel-relationship-events": {
-                "Add compatibility for Laravel 12": "patches/laravel-relationship-events_laravel-12.diff"
             }
         }
     },

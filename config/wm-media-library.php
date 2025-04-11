@@ -14,7 +14,7 @@ return [
      */
     'path_generator' => \Wm\WmPackage\Support\PathGenerator\WmfePathGenerator::class,
 
-    'queue_conversions_after_database_commit' => false,
+    'queue_conversions_after_database_commit' => true,
 
     'max_file_size' => 1024 * 1024 * 20,
 ];

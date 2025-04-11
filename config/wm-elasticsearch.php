@@ -42,11 +42,12 @@ return [
                     'taxonomyActivities' => [
                         'type' => 'keyword',
                     ],
-                    'taxonomyWheres' => [
-                        'type' => 'keyword',
-                    ],
                     'layers' => [
                         'type' => 'keyword',
+                    ],
+                    'taxonomyWheres' => [
+                        'type' => 'object',
+                        'enabled' => false,
                     ],
                 ],
             ],
@@ -55,6 +56,11 @@ return [
             'default' => [
                 'number_of_shards' => 1,
                 'number_of_replicas' => 0,
+                'mapping' => [
+                    'total_fields' => [
+                        'limit' => 2000,
+                    ],
+                ],
                 'analysis' => [
                     'analyzer' => [
                         'edge_ngram_analyzer' => [

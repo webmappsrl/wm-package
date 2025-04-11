@@ -20,7 +20,10 @@ class UpdateEcTrackGenerateElevationChartImage extends BaseEcTrackJob
         }
 
         $path = $nodeJsService->generateElevationChartImage($geojson);
-        $this->ecTrack->elevation_chart_image = $path;
+
+        $properties = $this->ecTrack->properties;
+        $properties['elevation_chart_image'] = $path;
+        $this->ecTrack->properties = $properties;
         $this->ecTrack->saveQuietly();
     }
 }

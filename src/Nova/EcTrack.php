@@ -6,6 +6,7 @@ use Laravel\Nova\Fields\BelongsToMany;
 use Laravel\Nova\Fields\MorphMany;
 use Laravel\Nova\Fields\MorphToMany;
 use Laravel\Nova\Http\Requests\NovaRequest;
+use Wm\WmPackage\Nova\Actions\UpdateTracksOnAws;
 use Wm\WmPackage\Nova\Filters\FeaturesByLayerFilter;
 use Wm\WmPackage\Nova\Filters\FeaturesExcludeByIds;
 use Wm\WmPackage\Nova\Filters\FeaturesIncludeByIds;
@@ -48,5 +49,16 @@ class EcTrack extends AbstractEcResource
         }
 
         return [];
+    }
+
+    /**
+     * Get the actions available for the resource.
+     */
+    public function actions(NovaRequest $request): array
+    {
+        return array_merge(parent::actions($request), [
+            new Actions\ReindexSearchableAction,
+            new UpdateTracksOnAws,
+        ]);
     }
 }

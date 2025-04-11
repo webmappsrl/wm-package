@@ -42,7 +42,9 @@ class NodeJsService extends BaseService
         $src = $localDisk->path("geojson/$id.geojson");
         $dest = $localDisk->path("elevation_charts/$id.svg");
 
-        $cmd = config('wm-package.nodejs.node_executable')." node/jobs/build-elevation-chart.js --geojson=$src --dest=$dest --type=svg";
+        $packageServiceProvider = \Wm\WmPackage\WmPackageServiceProvider::getBasePath();
+
+        $cmd = config('wm-package.services.nodejs.executable')." {$packageServiceProvider}/node/jobs/build-elevation-chart.js --geojson=$src --dest=$dest --type=svg";
 
         // Log::info("Running node command: {$cmd}");
 
@@ -98,7 +100,7 @@ class NodeJsService extends BaseService
             }
 
             if ($s = fgets($pipes[2])) {
-                throw new Exception($s);
+                throw new Exception("Exception running command: {$cmd}.\n{$s}");
             }
         }
     }

@@ -67,6 +67,9 @@ class Media extends SpatieMedia
      */
     public function getGeojson(): array
     {
-        return GeoJsonService::make()->getModelAsGeojson($this);
+        $geojson = GeoJsonService::make()->getModelAsGeojson($this);
+        $geojson['properties'] = $this->custom_properties;
+
+        return $geojson;
     }
 }

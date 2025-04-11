@@ -2,8 +2,6 @@
 
 namespace Wm\WmPackage\Models;
 
-use Chelout\RelationshipEvents\Concerns\HasMorphToManyEvents;
-use Chelout\RelationshipEvents\Traits\HasRelationshipObservables;
 use Exception;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
@@ -17,7 +15,7 @@ use Wm\WmPackage\Traits\TaxonomyWhereAbleModel;
 
 class Layer extends Model
 {
-    use HasMorphToManyEvents, HasPackageFactory, HasRelationshipObservables, HasTranslations, TaxonomyAbleModel, TaxonomyWhereAbleModel;
+    use HasPackageFactory, HasTranslations, TaxonomyAbleModel, TaxonomyWhereAbleModel;
 
     protected static function boot()
     {
@@ -60,19 +58,18 @@ class Layer extends Model
 
     public function ecTracks(): MorphToMany
     {
-        return $this->morphedByMany(EcTrack::class, 'layerable');
+        return $this->morphedByMany(EcTrack::class, 'layerable')->using(Layerable::class);
     }
 
     public function manualEcPois(): MorphToMany
     {
-        return $this->morphedByMany(EcPoi::class, 'layerable');
+        return $this->morphedByMany(EcPoi::class, 'layerable')->using(Layerable::class);
     }
 
     public function taxonomyActivities(): MorphToMany
     {
         return $this->morphToMany(TaxonomyActivity::class, 'taxonomy_activityable')
-            ->using(TaxonomyActivityable::class); // this is necessary to make events on pivot working
-        // https://github.com/chelout/laravel-relationship-events/issues/16;
+            ->using(TaxonomyActivityable::class);
     }
 
     /**

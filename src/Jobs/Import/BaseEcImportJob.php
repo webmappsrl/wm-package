@@ -8,7 +8,7 @@ use Wm\WmPackage\Services\GeometryComputationService;
 
 abstract class BaseEcImportJob extends BaseImportJob
 {
-    const DEFAULT_LON_LAT = ['POINT Z' => '12.4964 41.9028 0', 'LINESTRING Z' => '12.4964 41.9028 0, 12.5033 41.9019 0, 12.5092 41.9101 0, 12.4964 41.9028 0'];
+    const DEFAULT_LON_LAT = ['POINT Z' => '12.4964 41.9028 0', 'MULTILINESTRING Z' => '12.4964 41.9028 0, 12.5033 41.9019 0, 12.5092 41.9101 0, 12.4964 41.9028 0'];
 
     protected function getModelKey(): string
     {
