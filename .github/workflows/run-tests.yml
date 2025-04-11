@@ -61,5 +61,5 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: test-logs
-          path: storage/logs
+          name: laravel.log
+          path: storage/logs/laravel.log
