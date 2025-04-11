@@ -29,7 +29,7 @@ class EcPoiObserver extends AbstractEcObserver
     public function saved($ecPoi)
     {
         parent::saved($ecPoi);
-        if (!empty($ecPoi->geometry)) {
+        if (! empty($ecPoi->geometry)) {
             EcPoiService::make()->updateDataChain($ecPoi);
         }
 
