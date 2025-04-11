@@ -17,7 +17,10 @@ class UgcPoi extends AbstractUgcResource
     public function actions(NovaRequest $request): array
     {
         return [
+            ...parent::actions($request),
             new ConvertUgcPoiToEcPoi,
+        ];
+    }
 
     public function filters(NovaRequest $request): array
     {
