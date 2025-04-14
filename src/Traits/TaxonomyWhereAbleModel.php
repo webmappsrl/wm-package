@@ -2,9 +2,8 @@
 
 namespace Wm\WmPackage\Traits;
 
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Log;
 
 trait TaxonomyWhereAbleModel
 {
@@ -26,6 +25,6 @@ trait TaxonomyWhereAbleModel
                     }
                 });
             });
-        //Log::info($query->toSql());
+        // Log::info($query->toSql());
     }
 }
