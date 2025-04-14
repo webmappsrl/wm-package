@@ -2,8 +2,6 @@
 
 namespace Tests\Unit\Services\EcTrackService;
 
-use Illuminate\Support\Collection;
-
 class UpdateTrackAppRelationsInfoTest extends AbstractEcTrackServiceTest
 {
     protected $track;
