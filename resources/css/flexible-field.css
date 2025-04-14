@@ -1,0 +1,4 @@
+/* Fix per la visualizzazione delle icone di Flexible in App.php */
+.box-content button {
+    min-width: 50px !important;
+} 

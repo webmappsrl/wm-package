@@ -11,6 +11,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Laravel\Scout\Searchable;
 use Spatie\Translatable\HasTranslations;
+use Whitecube\NovaFlexibleContent\Value\FlexibleCast;
 use Wm\WmPackage\Observers\AppObserver;
 use Wm\WmPackage\Services\Models\App\AppConfigService;
 use Wm\WmPackage\Services\StorageService;
@@ -40,6 +41,7 @@ class App extends Model
         'track_technical_details' => 'array',
         'sku' => 'array',
         'properties' => 'array',
+        'config_home' => FlexibleCast::class
     ];
 
     protected static function boot()
@@ -190,7 +192,7 @@ class App extends Model
                             $new_array[$key] = json_decode($val, true);
                         }
                         if ($key == 'identifier') {
-                            $new_array[$key] = 'poi_type_'.$val;
+                            $new_array[$key] = 'poi_type_' . $val;
                         }
                         if (! empty($val) && $key != 'name' && $key != 'identifier') {
                             $new_array[$key] = $val;
@@ -214,7 +216,7 @@ class App extends Model
                             $new_array[$key] = json_decode($val, true);
                         }
                         if ($key == 'identifier') {
-                            $new_array[$key] = 'poi_type_'.$val;
+                            $new_array[$key] = 'poi_type_' . $val;
                         }
                         if (! empty($val) && $key != 'name' && $key != 'identifier') {
                             $new_array[$key] = $val;
@@ -279,7 +281,7 @@ class App extends Model
                     });
                 break;
             default:
-                throw new \Exception('Wrong taxonomy name: '.$taxonomy_name);
+                throw new \Exception('Wrong taxonomy name: ' . $taxonomy_name);
         }
 
         $tracks = $query->orderBy('name')->get();
@@ -417,7 +419,7 @@ class App extends Model
         if (isset($customUrl) && $customUrl != null) {
             $url = $customUrl;
         } else {
-            $url = 'https://'.$this->id.'.app.webmapp.it';
+            $url = 'https://' . $this->id . '.app.webmapp.it';
         }
         // create the svg code for the QR code
 
@@ -453,12 +455,31 @@ class App extends Model
     }
 
     /**
+     * Get the indexable data array for the model.
+     *
+     * @return array
+     */
+    public function toSearchableArray()
+    {
+        $array = $this->toArray();
+
+        // Converto config_home in stringa JSON se è un array
+        if (isset($array['config_home']) && is_array($array['config_home'])) {
+            $array['config_home'] = json_encode($array['config_home']);
+        }
+
+        return $array;
+    }
+
+    /**
      * Get the class name for polymorphic relations.
      *
      * @return string
      */
     public function getMorphClass()
     {
-        return 'App\\Models\\'.class_basename($this);
+        return 'App\\Models\\' . class_basename($this);
     }
+
+    // Le funzioni custom per config_home sono state spostate nel resolver layerBoxResolver
 }
