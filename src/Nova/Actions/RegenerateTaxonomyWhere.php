@@ -28,7 +28,7 @@ class RegenerateTaxonomyWhere extends Action
             Bus::chain([
                 new UpdateModelWithGeometryTaxonomyWhere($m),
                 new UpdateTracksOnAws($m),
-            ]);
+            ])->dispatch();
         });
 
         return Action::message('Models enqueued for taxonomy where regeneration!');
