@@ -251,7 +251,7 @@ class LayerService extends BaseService
                 $properties['layers'] = array_diff($properties['layers'], [$layer->id]);
                 $properties['layers'] = array_values($properties['layers']);
                 $feature->properties = $properties;
-                $feature->saveQuietly();
+                $feature->save();
                 $deleted[] = $feature->id;
             }
             $oldLayerFeatures = null;
@@ -262,7 +262,7 @@ class LayerService extends BaseService
                 $properties = $feature->properties;
                 $properties['layers'][] = $layer->id;
                 $feature->properties = $properties;
-                $feature->saveQuietly();
+                $feature->save();
                 $added[] = $feature->id;
             }
 
