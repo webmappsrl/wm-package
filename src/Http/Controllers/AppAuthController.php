@@ -84,7 +84,7 @@ class AppAuthController extends Controller
 
         $credentials = $request->only(['email', 'password']);
 
-        //check if email exists
+        // check if email exists
         $user = User::where('email', $credentials['email'])->first();
         if (! $user) {
             return response()->json([

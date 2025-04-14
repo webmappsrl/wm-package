@@ -29,7 +29,7 @@ class UgcTrackController extends Controller
 
             if (! empty($request->header('app-id'))) {
                 $reqAppId = $request->header('app-id');
-                $appId = 'geohub_' . $reqAppId;
+                $appId = 'geohub_'.$reqAppId;
                 $tracks = UgcTrack::where([['user_id', $user->id], ['app_id', $appId]])->orderByRaw('updated_at DESC')->get();
 
                 return $this->getUGCFeatureCollection($tracks);
@@ -84,11 +84,11 @@ class UgcTrackController extends Controller
         if (isset($data['properties']['description'])) {
             $track->description = $data['properties']['description'];
         }
-        $track->geometry = DB::raw("ST_GeomFromGeojson('" . json_encode($data['geometry']) . ")')");
+        $track->geometry = DB::raw("ST_GeomFromGeojson('".json_encode($data['geometry']).")')");
         $track->user_id = $user->id;
 
         if (isset($data['properties']['app_id'])) {
-            $appId = 'geohub_' . $data['properties']['app_id'];
+            $appId = 'geohub_'.$data['properties']['app_id'];
             if ($appId) {
                 $track->app_id = $appId;
             }
