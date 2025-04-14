@@ -4,12 +4,11 @@ namespace Wm\WmPackage\Nova\Actions;
 
 use Exception;
 use Illuminate\Bus\Queueable;
-use Laravel\Scout\Searchable;
-use Laravel\Nova\Actions\Action;
+use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
+use Laravel\Nova\Actions\Action;
 use Laravel\Nova\Fields\ActionFields;
-use Illuminate\Queue\InteractsWithQueue;
 use Laravel\Nova\Http\Requests\NovaRequest;
 
 class SaveModelsAction extends Action
@@ -33,10 +32,10 @@ class SaveModelsAction extends Action
                 $m->save();
                 $ok++;
             } catch (Exception $e) {
-                Log::error("Impossible save model with Save models Nova action", [
+                Log::error('Impossible save model with Save models Nova action', [
                     'model_id' => $m->id,
                     'model_class' => $m::class,
-                    'message' => $e->getMessage()
+                    'message' => $e->getMessage(),
                 ]);
                 $ko++;
             }
