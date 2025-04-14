@@ -2,14 +2,12 @@
 
 namespace Wm\WmPackage\Nova\Actions;
 
-use Exception;
 use Illuminate\Bus\Queueable;
-use Laravel\Nova\Actions\Action;
+use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Bus;
-use Illuminate\Support\Facades\Log;
+use Laravel\Nova\Actions\Action;
 use Laravel\Nova\Fields\ActionFields;
-use Illuminate\Queue\InteractsWithQueue;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Wm\WmPackage\Jobs\UpdateModelWithGeometryTaxonomyWhere;
 
@@ -29,11 +27,11 @@ class RegenerateTaxonomyWhere extends Action
         $models->each(function ($m) {
             Bus::chain([
                 new UpdateModelWithGeometryTaxonomyWhere($m),
-                new UpdateTracksOnAws($m)
+                new UpdateTracksOnAws($m),
             ]);
         });
 
-        return Action::message("Models enqueued for taxonomy where regeneration!");
+        return Action::message('Models enqueued for taxonomy where regeneration!');
     }
 
     /**
