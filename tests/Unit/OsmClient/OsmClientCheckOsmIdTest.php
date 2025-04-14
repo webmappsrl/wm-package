@@ -2,7 +2,7 @@
 
 namespace Tests\Unit\Providers;
 
-use Wm\WmPackage\Http\OsmClient;
+use Wm\WmPackage\Http\Clients\OsmClient;
 use Wm\WmPackage\Tests\TestCase;
 
 class OsmClientCheckOsmIdTest extends TestCase

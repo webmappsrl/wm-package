@@ -1,9 +1,12 @@
 <?php
 
-namespace App\Traits;
+namespace Wm\WmPackage\Traits;
 
 use Illuminate\Support\Facades\Schema;
 
+/**
+ * @phpstan-ignore trait.unused
+ */
 trait WmNovaFieldsTrait
 {
     /**

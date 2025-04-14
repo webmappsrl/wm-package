@@ -55,7 +55,9 @@ class ExportDownloadControllerTest extends TestCase
         $response = $this->get($signedUrl);
 
         // Force the deletion callback to run because the deletefileaftersend() is not working with tests (https://github.com/laravel/framework/issues/36286)
+        ob_start();
         $response->sendContent();
+        ob_end_clean();
 
         $this->assertFalse(Storage::disk('public')->exists($fileName));
     }
