@@ -13,6 +13,10 @@ trait EcFeatureTrait
     {
         return $this->morphToMany(Layer::class, 'layerable')->using(Layerable::class);
     }
+    public function layers(): MorphToMany
+    {
+        return $this->associatedLayers();
+    }
 
     /**
      * Scope a query to only a specific layer.

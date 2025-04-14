@@ -17,29 +17,17 @@ class EcTrackPolicy
 
     public function view(User $user, EcTrack $model): bool
     {
-        if ($user->hasRole('Editor') && $user->id === $model->user_id) {
-            return true;
-        }
-
-        return false;
+        return true;
     }
 
     public function create(User $user): bool
     {
-        if ($user->hasRole('Editor')) {
-            return true;
-        }
-
-        return false;
+        return true;
     }
 
     public function update(User $user, EcTrack $model): bool
     {
-        if ($user->hasRole('Editor') && $user->id === $model->user_id) {
-            return true;
-        }
-
-        return false;
+        return true;
     }
 
     public function delete(User $user, EcTrack $model): bool
