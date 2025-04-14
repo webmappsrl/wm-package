@@ -22,7 +22,7 @@ class Layer extends AbstractGeometryResource
 
     public static $search = [
         'id',
-        'name'
+        'name',
     ];
 
     public function fields(NovaRequest $request): array
