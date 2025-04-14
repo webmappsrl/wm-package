@@ -87,7 +87,7 @@ class EcTrackService extends BaseService
 
             $track->saveQuietly();
         } catch (\Exception $e) {
-            Log::error('An error occurred during DEM operation: '.$e->getMessage());
+            Log::error('An error occurred during DEM operation: ' . $e->getMessage());
         }
     }
 
@@ -101,7 +101,7 @@ class EcTrackService extends BaseService
                 throw new Exception('No OSM ID found');
             }
             $osmClient = new OsmClient;
-            $geojson_content = $osmClient::getGeojson('relation/'.$osmId);
+            $geojson_content = $osmClient::getGeojson('relation/' . $osmId);
             $geojson_content = json_decode($geojson_content, true);
             $osmData = $geojson_content['properties'];
             if (isset($osmData['duration:forward'])) {
@@ -174,10 +174,10 @@ class EcTrackService extends BaseService
                     $osmData = isset($properties['osm_data']) ? json_decode($properties['osm_data'], true) : [];
                     if (isset($osmData[$field]) && ! is_null($osmData[$field])) {
                         $properties[$field] = $osmData[$field];
-                        Log::info("Updated $field with OSM value: ".$osmData[$field]);
+                        Log::info("Updated $field with OSM value: " . $osmData[$field]);
                     } elseif (isset($demData[$field]) && ! is_null($demData[$field])) {
                         $properties[$field] = $demData[$field];
-                        Log::info("Updated $field with DEM value: ".$demData[$field]);
+                        Log::info("Updated $field with DEM value: " . $demData[$field]);
                     }
                 }
             }
@@ -186,7 +186,7 @@ class EcTrackService extends BaseService
             $track->properties = $properties;
             $track->saveQuietly();
         } catch (\Exception $e) {
-            Log::error($track->id.': HandlesData: An error occurred during a store operation: '.$e->getMessage());
+            Log::error($track->id . ': HandlesData: An error occurred during a store operation: ' . $e->getMessage());
         }
     }
 
@@ -294,7 +294,7 @@ class EcTrackService extends BaseService
     public function updateDataChain(EcTrack $track)
     {
         $chain = [];
-        if ($track->osmid) {
+        if ($track->osmid && $track->wasChanged('osmid')) {
             $chain[] = new UpdateEcTrackFromOsmJob($track);
         }
         // $layers = $track->associatedLayers;
@@ -304,13 +304,16 @@ class EcTrackService extends BaseService
         //         $chain[] = new UpdateLayerTracksJob($layer);
         //     }
         // }
-        $chain[] = new UpdateEcTrackDemJob($track);
-        $chain[] = new UpdateEcTrackManualDataJob($track);
-        $chain[] = new UpdateEcTrackCurrentDataJob($track);
-        $chain[] = new UpdateEcTrack3DDemJob($track);
-        $chain[] = new UpdateEcTrackSlopeValues($track);
-        $chain[] = new UpdateModelWithGeometryTaxonomyWhere($track);
-        $chain[] = new UpdateEcTrackGenerateElevationChartImage($track);
+        if ($track->wasChanged('geometry')) {
+            $chain[] = new UpdateEcTrackDemJob($track);
+            $chain[] = new UpdateEcTrackManualDataJob($track);
+            $chain[] = new UpdateEcTrackCurrentDataJob($track);
+            $chain[] = new UpdateEcTrack3DDemJob($track);
+            $chain[] = new UpdateEcTrackSlopeValues($track);
+            $chain[] = new UpdateModelWithGeometryTaxonomyWhere($track);
+            $chain[] = new UpdateEcTrackGenerateElevationChartImage($track);
+        }
+
         $chain[] = new UpdateEcTrackAwsJob($track);
         // $chain[] = new UpdateEcTrackAppRelationsInfoJob($track);
         $chain[] = new UpdateEcTrackOrderRelatedPoi($track);
