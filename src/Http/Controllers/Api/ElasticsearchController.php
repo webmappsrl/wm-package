@@ -40,7 +40,7 @@ class ElasticsearchController extends Controller
         // https://github.com/matchish/laravel-scout-elasticsearch?tab=readme-ov-file#conditions
 
         // base query
-        $query = EcTrack::search($search, function (\Elastic\Elasticsearch\Client $client, Search $body) use ($search) {
+        $query = EcTrack::search($search, function (\Elastic\Elasticsearch\Client $client, Search $body) use ($search, $layer) {
 
             // # The es driver for Laravel Scout
             // # https://github.com/matchish/laravel-scout-elasticsearch?tab=readme-ov-file#search
@@ -69,8 +69,12 @@ class ElasticsearchController extends Controller
                 'boost' => 4,
             ]), BoolQuery::SHOULD); // #OR
 
+            if ($layer)
+                $boolQuery->add(new \ONGR\ElasticsearchDSL\Query\TermLevel\TermsQuery('layers', [$layer])); // #AND
+
             // Replace the original query with our custom one
             $body->addQuery($boolQuery);
+
 
             // # Dump the es query body as array
             // dd($body->toArray());
@@ -89,6 +93,7 @@ class ElasticsearchController extends Controller
             //     ]
             // ];
 
+
             $themesAggregation = new TermsAggregation('taxonomyWheres');
             $themesAggregation->setField('taxonomyWheres');
 
@@ -98,13 +103,13 @@ class ElasticsearchController extends Controller
             $body->addAggregation($activitiesAggregation);
             $body->addAggregation($themesAggregation);
 
-            return $client->search(['index' => 'ec_tracks', 'body' => $body->toArray()])->asArray();
-        })->where('app_id', $appId);
+            //dd($body->toArray()); // #DEBUG
 
-        // handle layer
-        if ($layer) {
-            $query->whereIn('layers', $layer);
-        }
+            return $client->search(['index' => 'ec_tracks', 'body' => $body->toArray()])->asArray();
+        })
+            ->where('app_id', $appId); // #AND
+
+
 
         // handle filters
         if (count($filters) > 0) {
