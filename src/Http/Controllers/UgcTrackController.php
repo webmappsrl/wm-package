@@ -176,7 +176,7 @@ class UgcTrackController extends Controller
 
         foreach ($tracks as $track) {
             $feature = $track->getEmptyGeojson();
-            $feature['properties'] = $track->getJson();
+            $feature['properties'] = $track->getJsonProperties();
             $featureCollection['features'][] = $feature;
         }
 
