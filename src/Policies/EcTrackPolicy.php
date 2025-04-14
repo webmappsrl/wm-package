@@ -10,36 +10,9 @@ class EcTrackPolicy
 {
     use HandlesAuthorization;
 
-    /**
-     * Create a new policy instance.
-     *
-     * @return void
-     */
-    public function __construct() {}
-
-    /**
-     * Perform pre-authorization checks.
-     *
-     * @param  string  $ability
-     * @return void|bool
-     */
-    public function before(User $user, $ability)
-    {
-        // if ($user->hasRole('Admin')) {
-        //     return true;
-        // }
-        // if ($user->hasRole('Author') || $user->hasRole('Contributor')) {
-        //     return false;
-        // }
-
-        return true;
-    }
-
     public function viewAny(User $user): bool
     {
-        if ($user->hasRole('Editor')) {
-            return true;
-        }
+        return true;
     }
 
     public function view(User $user, EcTrack $model): bool

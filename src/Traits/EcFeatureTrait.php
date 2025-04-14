@@ -5,12 +5,13 @@ namespace Wm\WmPackage\Traits;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Wm\WmPackage\Models\Layer;
+use Wm\WmPackage\Models\Layerable;
 
 trait EcFeatureTrait
 {
     public function associatedLayers(): MorphToMany
     {
-        return $this->morphToMany(Layer::class, 'layerable');
+        return $this->morphToMany(Layer::class, 'layerable')->using(Layerable::class);
     }
 
     /**

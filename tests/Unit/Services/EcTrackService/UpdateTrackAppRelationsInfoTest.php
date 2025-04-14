@@ -38,13 +38,4 @@ class UpdateTrackAppRelationsInfoTest extends AbstractEcTrackServiceTest
             (object) ['app_id' => 'app2', 'id' => 456],
         ];
     }
-
-    /** @test */
-    // public function update_track_app_relations_info_does_not_call_update_when_no_layers()
-    // {
-    //     $this->track->associatedLayers = new Collection;
-    //     $this->track->shouldNotReceive('update');
-    //     $this->ecTrackService->updateTrackAppRelationsInfo($this->track);
-    // }
-
 }
