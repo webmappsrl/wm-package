@@ -20,6 +20,11 @@ class Layer extends AbstractGeometryResource
 
     public static $model = \Wm\WmPackage\Models\Layer::class;
 
+    public static $search = [
+        'id',
+        'name'
+    ];
+
     public function fields(NovaRequest $request): array
     {
         return [
