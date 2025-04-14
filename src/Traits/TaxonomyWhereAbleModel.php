@@ -12,6 +12,7 @@ trait TaxonomyWhereAbleModel
         $whereProperty = $properties['taxonomy_where'] ?? [];
         if (count($whereProperty) === 0) {
             $query->where('id', 0); // return empty collection if no where property is set
+
             return;
         }
 
@@ -24,6 +25,6 @@ trait TaxonomyWhereAbleModel
                     }
                 });
             });
-        //Log::info($query->toSql());
+        // Log::info($query->toSql());
     }
 }
