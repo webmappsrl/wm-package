@@ -27,7 +27,7 @@ class SaveModelsAction extends Action
         $ok = 0;
         $ko = 0;
 
-        $models->each(function ($m) use ($ok, $ko) {
+        $models->each(function ($m) use (&$ok, &$ko) {
             try {
                 $m->save();
                 $ok++;
