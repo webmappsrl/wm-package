@@ -11,7 +11,7 @@ class OsmfeaturesClient extends JsonClient
     {
 
         if (isset($geojson['properties'])) {
-            $geojson['properties'] = []; //unused on osmfeatures computation, this decrease the payload size
+            $geojson['properties'] = []; // unused on osmfeatures computation, this decrease the payload size
         }
 
         $wheresGeojson = $this->getAdminAreasIntersected($geojson);
@@ -56,7 +56,7 @@ class OsmfeaturesClient extends JsonClient
             $this->getAdminAreasIntersectsUrl(),
             [
                 'geojson' => $geojson,
-                'admin_level' => 8 // COMUNE
+                'admin_level' => 8, // COMUNE
             ]
         );
         // Check the response
@@ -72,7 +72,7 @@ class OsmfeaturesClient extends JsonClient
 
     protected function getAdminAreasIntersectsUrl()
     {
-        return $this->getHost() . '/api/v1/features/admin-areas/geojson';
+        return $this->getHost().'/api/v1/features/admin-areas/geojson';
     }
 
     protected function getHost(): string
