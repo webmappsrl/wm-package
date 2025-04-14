@@ -23,13 +23,8 @@ class ReindexSearchableAction extends Action
      */
     public function handle(ActionFields $fields, Collection $models)
     {
-        $count = 0;
-        foreach ($models as $model) {
-            if (in_array(Searchable::class, class_uses_recursive($model))) {
-                $model->searchable();
-                $count++;
-            }
-        }
+        $models->searchable();
+        $count = $models->count();
 
         return Action::message("$count models have been reindexed successfully!");
     }
