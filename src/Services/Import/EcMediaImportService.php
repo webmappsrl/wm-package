@@ -43,7 +43,7 @@ class EcMediaImportService extends GeohubImportService
         // Get the URL and prepare it
         $url = $transformedData['url'];
         if (! filter_var($url, FILTER_VALIDATE_URL)) {
-            $url = config('wm-package.clients.geohub.host').'/storage/'.ltrim($url, '/');
+            $url = config('wm-package.clients.geohub.host') . '/storage/' . ltrim($url, '/');
 
             // validate if the url returns an image content type
             $contentType = get_headers($url, 1)[0];
@@ -152,43 +152,56 @@ class EcMediaImportService extends GeohubImportService
         $relations = $this->importMapping['ec_media']['relations'];
 
         // Check each relationship
+        //TODO: this should be a while
         foreach ($relations as $relatedTableName => $relation) {
-            $association = $this->dbConnection
+            $relatedId = null;
+
+            //check if there is a relation on the pivot table
+            $pivotRelation = $this->dbConnection
                 ->table($relation['pivot_table'])
                 ->where('ec_media_id', $mediaId)
                 ->first();
+            if ($pivotRelation) {
+                $relatedId = $pivotRelation->{$relation['key']};
+            }
 
-            if ($association) {
-                $relatedId = $association->{$relation['key']};
-                $model = $relation['model']::where('properties->geohub_id', $relatedId)->first();
+            try {
+                // check if the media is a feature image
+                $featuredImageModel = $this->dbConnection
+                    ->table($relatedTableName);
 
-                if ($model) {
-                    $data = [
-                        'model_type' => get_class($model),
-                        'model_id' => $model->id,
-                        'model_app_id' => $model->app_id,
-                    ];
+                if ($relatedId)
+                    $featuredImageModel->where('id', $relatedId);
 
-                    try {
-                        // check if the media is a feature image
-                        $isFeatureImage = $this->dbConnection
-                            ->table($relatedTableName)
-                            ->where('id', $relatedId)
-                            ->where('feature_image', $mediaId)
-                            ->exists();
-                    } catch (\Exception $e) {
-                        // If the related table does not have a properties column, skip the check
-                        $isFeatureImage = false;
-                    }
+                $featuredImageModel = $featuredImageModel->where('feature_image', $mediaId)->first();
+                //now we now that this media is a feature image
 
-                    if ($isFeatureImage) {
-                        // https://spatie.be/docs/laravel-medialibrary/v11/advanced-usage/ordering-media
-                        // the feature image will be the first media
-                        $data['order_column'] = 0;
-                    }
-
-                    return $data;
+                //this is needed because on geohub sometimes the relation between model and media is only on feature_image column
+                // some times instead is in the pivot table ... awesome!
+                if ($featuredImageModel) {
+                    $relatedId = $featuredImageModel->id;
                 }
+            } catch (\Exception $e) {
+                // If the related table does not have a properties column, skip the check
+                $featuredImageModel = false;
+            }
+
+
+
+            $model = $relation['model']::where('properties->geohub_id', $relatedId)->first();
+
+            if ($model) {
+                $data = [
+                    'model_type' => get_class($model),
+                    'model_id' => $model->id,
+                    'model_app_id' => $model->app_id,
+                ];
+                if ($featuredImageModel) {
+                    // https://spatie.be/docs/laravel-medialibrary/v11/advanced-usage/ordering-media
+                    // the feature image will be the first media
+                    $data['order_column'] = 0;
+                }
+                return $data;
             }
         }
 
