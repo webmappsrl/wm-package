@@ -43,7 +43,7 @@ class EcMediaImportService extends GeohubImportService
         // Get the URL and prepare it
         $url = $transformedData['url'];
         if (! filter_var($url, FILTER_VALIDATE_URL)) {
-            $url = config('wm-package.clients.geohub.host').'/storage/'.ltrim($url, '/');
+            $url = config('wm-package.clients.geohub.host') . '/storage/' . ltrim($url, '/');
 
             // validate if the url returns an image content type
             $contentType = get_headers($url, 1)[0];
@@ -173,7 +173,7 @@ class EcMediaImportService extends GeohubImportService
                         $isFeatureImage = $this->dbConnection
                             ->table($relatedTableName)
                             ->where('id', $relatedId)
-                            ->where('properties->feature_image', $mediaId)
+                            ->where('feature_image', $mediaId)
                             ->exists();
                     } catch (\Exception $e) {
                         // If the related table does not have a properties column, skip the check
