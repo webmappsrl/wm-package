@@ -169,7 +169,7 @@ class EcMediaImportService extends GeohubImportService
                     ];
 
                     try {
-                        //check if the media is a feature image
+                        // check if the media is a feature image
                         $isFeatureImage = $this->dbConnection
                             ->table($relatedTableName)
                             ->where('id', $relatedId)
