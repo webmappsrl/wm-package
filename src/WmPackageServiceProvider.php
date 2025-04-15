@@ -63,15 +63,15 @@ class WmPackageServiceProvider extends PackageServiceProvider
             Route::name('v2.')
                 ->middleware('api')
                 ->prefix('api/v2')
-                ->group($packageDirPath.'routes/api.php');
+                ->group($packageDirPath . 'routes/api.php');
 
             Route::name('default.')
                 ->middleware('api')
                 ->prefix('api')
-                ->group($packageDirPath.'routes/api.php');
+                ->group($packageDirPath . 'routes/api.php');
 
             Route::middleware('web')
-                ->group($packageDirPath.'routes/web.php');
+                ->group($packageDirPath . 'routes/web.php');
         });
 
         // Register policies
@@ -160,7 +160,9 @@ class WmPackageServiceProvider extends PackageServiceProvider
         // Register the correct import service for the ImportEcMediaJob
         $this->app->when(ImportEcMediaJob::class)
             ->needs(GeohubImportService::class)
-            ->give(EcMediaImportService::class);
+            ->give(function () {
+                return new EcMediaImportService();
+            });
 
         // Register the morphMap for polymorphic relationships
         Relation::morphMap([
@@ -251,7 +253,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
     protected function resources()
     {
 
-        Nova::resourcesIn($this->getPackageBaseDir().'/Nova');
+        Nova::resourcesIn($this->getPackageBaseDir() . '/Nova');
     }
 
     /**
