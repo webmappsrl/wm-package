@@ -54,7 +54,8 @@ class EcMediaImportService extends GeohubImportService
 
         // Check if media with the same geohub_id already exists in the collection
         $existingMedia = $relatedModel->getMedia('default')
-            ->where('custom_properties->geohub_id', $transformedData['custom_properties']['geohub_id'])
+            // the "." instead of "->" is needed because here we are in a MediaCollection
+            ->where('custom_properties.geohub_id', $transformedData['custom_properties']['geohub_id'])
             ->first();
 
         if ($existingMedia) {
