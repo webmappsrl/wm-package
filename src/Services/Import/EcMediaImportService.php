@@ -82,7 +82,7 @@ class EcMediaImportService extends GeohubImportService
         unset($customProperties['geometry']);
         $mediaItem->updateQuietly([
             'custom_properties' => $customProperties,
-            'order_column' => $transformedData['order_column'] ?? $existingMedia->order_column
+            'order_column' => $transformedData['order_column'] ?? $mediaItem->order_column
         ]);
     }
 
