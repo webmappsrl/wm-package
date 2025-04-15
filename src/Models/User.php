@@ -222,4 +222,9 @@ class User extends Authenticatable implements JWTSubject
 
         return $pass;
     }
+
+    public function getMorphClass()
+    {
+        return 'App\\Models\\User';
+    }
 }
