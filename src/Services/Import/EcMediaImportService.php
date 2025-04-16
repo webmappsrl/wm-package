@@ -2,8 +2,9 @@
 
 namespace Wm\WmPackage\Services\Import;
 
-use Illuminate\Database\Query\Expression;
+use Wm\WmPackage\Models\Media;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Query\Expression;
 
 class EcMediaImportService extends GeohubImportService
 {
@@ -43,7 +44,7 @@ class EcMediaImportService extends GeohubImportService
         // Get the URL and prepare it
         $url = $transformedData['url'];
         if (! filter_var($url, FILTER_VALIDATE_URL)) {
-            $url = config('wm-package.clients.geohub.host').'/storage/'.ltrim($url, '/');
+            $url = config('wm-package.clients.geohub.host') . '/storage/' . ltrim($url, '/');
 
             // validate if the url returns an image content type
             $contentType = get_headers($url, 1)[0];
@@ -59,10 +60,12 @@ class EcMediaImportService extends GeohubImportService
             ->first();
 
         if ($existingMedia) {
-            $existingMedia->updateQuietly([
-                'custom_properties' => $transformedData['custom_properties'],
-                'order_column' => $transformedData['order_column'] ?? $existingMedia->order_column,
-            ]);
+            if (! $this->mediaIsAlreadyUpToDate($existingMedia, $transformedData)) {
+                $existingMedia->updateQuietly([
+                    'custom_properties' => $transformedData['custom_properties'],
+                    'order_column' => $transformedData['order_column'] ?? $existingMedia->order_column,
+                ]);
+            }
 
             return; // Skip adding new media since we updated the existing one
         }
@@ -85,6 +88,13 @@ class EcMediaImportService extends GeohubImportService
             'custom_properties' => $customProperties,
             'order_column' => $transformedData['order_column'] ?? $mediaItem->order_column,
         ]);
+    }
+
+    private function mediaIsAlreadyUpToDate(Media $media, array $transformedData): bool
+    {
+        //https://www.php.net/manual/en/language.operators.array.php
+        return $media->custom_properties == $transformedData['custom_properties']
+            && $media->order_column == $transformedData['order_column'];
     }
 
     /**
