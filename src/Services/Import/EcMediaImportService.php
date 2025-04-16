@@ -2,9 +2,9 @@
 
 namespace Wm\WmPackage\Services\Import;
 
-use Wm\WmPackage\Models\Media;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Query\Expression;
+use Illuminate\Support\Facades\DB;
+use Wm\WmPackage\Models\Media;
 
 class EcMediaImportService extends GeohubImportService
 {
@@ -44,7 +44,7 @@ class EcMediaImportService extends GeohubImportService
         // Get the URL and prepare it
         $url = $transformedData['url'];
         if (! filter_var($url, FILTER_VALIDATE_URL)) {
-            $url = config('wm-package.clients.geohub.host') . '/storage/' . ltrim($url, '/');
+            $url = config('wm-package.clients.geohub.host').'/storage/'.ltrim($url, '/');
 
             // validate if the url returns an image content type
             $contentType = get_headers($url, 1)[0];
@@ -92,7 +92,7 @@ class EcMediaImportService extends GeohubImportService
 
     private function mediaIsAlreadyUpToDate(Media $media, array $transformedData): bool
     {
-        //https://www.php.net/manual/en/language.operators.array.php
+        // https://www.php.net/manual/en/language.operators.array.php
         return $media->custom_properties == $transformedData['custom_properties']
             && $media->order_column == $transformedData['order_column'];
     }
