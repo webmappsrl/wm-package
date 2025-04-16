@@ -76,11 +76,6 @@ class AppConfigService extends AppBaseService
         return null;
     }
 
-    public function regenerateConfig()
-    {
-        $config = $this->config();
-        StorageService::make()->storeAppConfig($this->app->id, json_encode($config));
-    }
     private function config_section_app(): array
     {
         $data = [];
@@ -285,7 +280,6 @@ class AppConfigService extends AppBaseService
                 } catch (\Exception  $e) {
                     Log::warning('The bbox value '.$layer->id.' are not correct. Error: '.$e->getMessage());
                 }
-
                 // style
                 foreach (['color', 'fill_color', 'fill_opacity', 'stroke_width', 'stroke_opacity', 'zindex', 'line_dash'] as $field) {
                     if (isset($item[$field])) {
