@@ -2,7 +2,6 @@
 
 namespace Wm\WmPackage\Http\Controllers\Api;
 
-use Couchbase\RegexpSearchQuery;
 use Illuminate\Http\Request;
 use ONGR\ElasticsearchDSL\Aggregation\Bucketing\TermsAggregation;
 use ONGR\ElasticsearchDSL\Query\Compound\BoolQuery;
@@ -40,16 +39,16 @@ class ElasticsearchController extends Controller
         $search = str_replace('%20', ' ', $query);
 
         $search = explode(' ', $search);
-        # https://www.elastic.co/docs/reference/query-languages/query-dsl/query-dsl-query-string-query
+        // https://www.elastic.co/docs/reference/query-languages/query-dsl/query-dsl-query-string-query
         $queryString = '';
         foreach ($search as $word) {
             $queryString .= "(name:$word OR name.edge:$word) AND ";
         }
         $queryString = rtrim($queryString, ' AND ');
-        //dd($queryString);
+        // dd($queryString);
         // https://github.com/matchish/laravel-scout-elasticsearch?tab=readme-ov-file#conditions
         // base query
-        $query = EcTrack::search($queryString, function (\Elastic\Elasticsearch\Client $client, Search $body) use ($search, $layer) {
+        $query = EcTrack::search($queryString, function (\Elastic\Elasticsearch\Client $client, Search $body) use ($layer) {
 
             // # The es driver for Laravel Scout
             // # https://github.com/matchish/laravel-scout-elasticsearch?tab=readme-ov-file#search
@@ -72,8 +71,6 @@ class ElasticsearchController extends Controller
             //     'case_insensitive' => true
             // ]));
 
-
-
             // $boolQuery->add(new MatchPhraseQuery('name.phrase', $search, [
             //     'boost' => 10,
             // ]), BoolQuery::SHOULD); // #OR
@@ -93,7 +90,7 @@ class ElasticsearchController extends Controller
             $body->addQuery($boolQuery);
 
             // # Dump the es query body as array
-            //dd($body->toArray());
+            // dd($body->toArray());
 
             // // Create a custom query that prioritizes exact matches
             // $customQuery = [
