@@ -2,6 +2,7 @@
 
 namespace Wm\WmPackage\Nova;
 
+use Kongulov\NovaTabTranslatable\NovaTabTranslatable;
 use Laravel\Nova\Fields\BelongsTo;
 use Laravel\Nova\Fields\ID;
 use Laravel\Nova\Fields\Text;
@@ -37,7 +38,7 @@ abstract class AbstractGeometryResource extends Resource
     {
         return [
             ID::make()->sortable(),
-            Text::make('Name', 'name'),
+            NovaTabTranslatable::make([Text::make('Name', 'name')]),
             BelongsTo::make('App', 'app', App::class)->filterable(),
             PropertiesPanel::make(ucwords($this->getPropertiesColumnName()), $this->getPropertiesModelKey())->collapsible(),
         ];

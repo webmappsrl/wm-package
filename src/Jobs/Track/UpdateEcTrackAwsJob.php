@@ -2,11 +2,17 @@
 
 namespace Wm\WmPackage\Jobs\Track;
 
-use Wm\WmPackage\Http\Resources\EcTrackResource;
+use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Services\StorageService;
+use Wm\WmPackage\Http\Resources\EcTrackResource;
 
 class UpdateEcTrackAwsJob extends BaseEcTrackJob
 {
+    public function __construct(protected EcTrack $ecTrack)
+    {
+        parent::__construct($ecTrack);
+        $this->onQueue('aws');
+    }
     /**
      * Execute the job.
      *
