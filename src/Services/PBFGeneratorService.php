@@ -158,7 +158,7 @@ class PBFGeneratorService extends BaseService
             ec.properties ->> 'cai_scale' as cai_scale,
             ec.properties ->> 'distance' as distance,
             ec.properties ->> 'duration_forward' as duration_forward,
-            ec.properties -> 'layers'::text AS layers, -- jsonb
+            ec.properties ->> 'layers' AS layers, -- text
             ec.properties ->> 'searchable' as searchable,
             ec.properties ->> 'color' as stroke_color
         FROM ec_tracks ec
