@@ -80,7 +80,7 @@ class PBFGeneratorService extends BaseService
         SQL;
 
         $result = DB::select($sql, [
-            'layer_ids' => '{'.implode(',', $layerIds).'}', // Converti in array PostgreSQL
+            'layer_ids' => '{' . implode(',', $layerIds) . '}', // Converti in array PostgreSQL
         ]);
 
         return $result[0]->total_tracks ?? 0;
@@ -158,7 +158,8 @@ class PBFGeneratorService extends BaseService
             ec.properties ->> 'cai_scale' as cai_scale,
             ec.properties ->> 'distance' as distance,
             ec.properties ->> 'duration_forward' as duration_forward,
-            ec.properties -> 'layers' AS layers, -- jsonb
+            ec.properties -> 'layers'::text AS layers, -- jsonb
+            ec.properties ->> 'searchable' as searchable,
             ec.properties ->> 'color' as stroke_color
         FROM ec_tracks ec
         CROSS JOIN bounds
