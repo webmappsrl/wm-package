@@ -23,4 +23,15 @@ abstract class AbstractEcResource extends AbstractGeometryResource
             new FeaturesByLayerFilter($this->model()::class),
         ];
     }
+
+    /**
+     * Determine if this resource uses Laravel Scout.
+     * https://nova.laravel.com/docs/v5/search/scout-integration
+     *
+     * @return bool
+     */
+    public static function usesScout()
+    {
+        return false;
+    }
 }
