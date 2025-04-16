@@ -2,10 +2,10 @@
 
 namespace Wm\WmPackage\Jobs\Track;
 
+use Illuminate\Queue\Middleware\WithoutOverlapping;
+use Wm\WmPackage\Http\Resources\EcTrackResource;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Services\StorageService;
-use Wm\WmPackage\Http\Resources\EcTrackResource;
-use Illuminate\Queue\Middleware\WithoutOverlapping;
 
 class UpdateEcTrackAwsJob extends BaseEcTrackJob
 {
@@ -36,7 +36,7 @@ class UpdateEcTrackAwsJob extends BaseEcTrackJob
     protected function getLockKey()
     {
         // Utilizza un identificatore unico per ogni tile
-        return 'upload-ectrack-to-aws-' . $this->ecTrack->id;
+        return 'upload-ectrack-to-aws-'.$this->ecTrack->id;
     }
 
     /**
