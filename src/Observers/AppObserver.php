@@ -3,6 +3,7 @@
 namespace Wm\WmPackage\Observers;
 
 use Wm\WmPackage\Models\App;
+use Wm\WmPackage\Services\Models\App\AppConfigService;
 
 class AppObserver extends AbstractObserver
 {
@@ -18,4 +19,9 @@ class AppObserver extends AbstractObserver
 
         $app->external_overlays = $json;
     }
+
+    // public function save( App $app )
+    // {
+    //     new AppConfigService($app)->writeAppConfigOnAws();
+    // }
 }
