@@ -10,7 +10,7 @@ class ImportEcMediaJob extends BaseEcImportJob
 {
     protected function getModelKey(): string
     {
-        return parent::getModelKey() . 'media';
+        return parent::getModelKey().'media';
     }
 
     protected function getGeometryType(): string
@@ -34,13 +34,13 @@ class ImportEcMediaJob extends BaseEcImportJob
             // Process the media import
             $this->geohubImportService->processEcMediaImport($data, $transformedData['geometry']);
 
-            //$logger->info("Completed import of media with ID {$this->entityId}");
+            // $logger->info("Completed import of media with ID {$this->entityId}");
         } catch (\Exception $e) {
             $logger->error("Failed to import media with ID {$this->entityId}: {$e->getMessage()}", [
                 'exception' => $e,
             ]);
-            //This increase the number of failed imports and the db size
-            //throw $e;
+            // This increase the number of failed imports and the db size
+            // throw $e;
         }
     }
 
