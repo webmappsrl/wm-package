@@ -40,11 +40,14 @@ class ElasticsearchController extends Controller
 
         $search = explode(' ', $search);
         // https://www.elastic.co/docs/reference/query-languages/query-dsl/query-dsl-query-string-query
+
         $queryString = '';
-        foreach ($search as $word) {
-            $queryString .= "(name:$word OR name.edge:$word) AND ";
+        if (count($search) > 1) {
+            foreach ($search as $word) {
+                $queryString .= "(name:$word OR name.edge:$word) AND ";
+            }
+            $queryString = rtrim($queryString, ' AND ');
         }
-        $queryString = rtrim($queryString, ' AND ');
         // dd($queryString);
         // https://github.com/matchish/laravel-scout-elasticsearch?tab=readme-ov-file#conditions
         // base query
