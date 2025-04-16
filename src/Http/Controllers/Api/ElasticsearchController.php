@@ -77,7 +77,7 @@ class ElasticsearchController extends Controller
             $body->addQuery($boolQuery);
 
             // # Dump the es query body as array
-            //dd($body->toArray());
+            // dd($body->toArray());
 
             // // Create a custom query that prioritizes exact matches
             // $customQuery = [
