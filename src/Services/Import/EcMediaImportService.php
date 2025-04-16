@@ -39,7 +39,7 @@ class EcMediaImportService extends GeohubImportService
         // Get the URL and prepare it
         $url = $transformedData['url'];
         if (! filter_var($url, FILTER_VALIDATE_URL)) {
-            $url = config('wm-package.clients.geohub.host') . '/storage/' . ltrim($url, '/');
+            $url = config('wm-package.clients.geohub.host').'/storage/'.ltrim($url, '/');
 
             // validate if the url returns an image content type
             $contentType = get_headers($url, 1)[0];
@@ -176,7 +176,7 @@ class EcMediaImportService extends GeohubImportService
                 // If the related table does not have a properties column, skip the check
             }
 
-            //handle features image
+            // handle features image
             $featureImagedModelsIds = [];
             foreach ($featuredImageModels as $featuredImageModel) {
                 $relatedId = $featuredImageModel->id;
@@ -185,7 +185,7 @@ class EcMediaImportService extends GeohubImportService
                 $featureImagedModelsIds[] = $model->id;
             }
 
-            //handle other relations
+            // handle other relations
             $pivotRelation = $this->dbConnection
                 ->table($relation['pivot_table'])
                 ->where('ec_media_id', $mediaId)
@@ -194,7 +194,7 @@ class EcMediaImportService extends GeohubImportService
             foreach ($pivotRelation as $pivot) {
                 $relatedId = $pivot->{$relation['key']};
                 $model = $relation['model']::where('properties->geohub_id', $relatedId)->first();
-                //dont import media in gallery if they already are feature image
+                // dont import media in gallery if they already are feature image
                 if (! in_array($model->id, $featureImagedModelsIds)) {
                     $models[] = $this->getImportMediaData($model, false);
                 }
@@ -209,7 +209,7 @@ class EcMediaImportService extends GeohubImportService
 
         $data = [
             'model_type' => get_class($model),
-            'model_id' => $model->id
+            'model_id' => $model->id,
         ];
         if ($featuredImageModel) {
             // https://spatie.be/docs/laravel-medialibrary/v11/advanced-usage/ordering-media
