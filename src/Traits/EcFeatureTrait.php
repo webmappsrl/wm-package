@@ -33,7 +33,7 @@ trait EcFeatureTrait
                 $layer->app_id,
                 ...$layer->associatedApps->pluck('id')->toArray(),
             ])
-            ->whereNotNull('geometry');  // Controlla che la geometria non sia null
+            ->whereNotNull('geometry');  // Controlla che la geometria non sia null-> todo: remove
 
         // ## TAXONOMY WHERE - strings inside properties
         // check the local scope here wm-package/src/Traits/TaxonomyWhereAbleModel.php
