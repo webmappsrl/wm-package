@@ -25,6 +25,7 @@ abstract class AbstractGeometryResource extends Resource
      */
     public static $search = [
         'id',
+        'name'
     ];
 
     /**
