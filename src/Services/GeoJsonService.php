@@ -24,8 +24,7 @@ class GeoJsonService extends BaseService
 
     public function removeInvalidProperties(array $properties): array
     {
-        return array_filter($properties, fn($e) =>
-        ! is_array($e)
+        return array_filter($properties, fn ($e) => ! is_array($e)
             || count(array_filter($e)) !== 0);
     }
 
