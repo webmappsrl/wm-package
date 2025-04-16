@@ -2,6 +2,8 @@
 
 namespace Wm\WmPackage\Nova;
 
+use Ebess\AdvancedNovaMediaLibrary\Fields\Images;
+use Kongulov\NovaTabTranslatable\NovaTabTranslatable;
 use Laravel\Nova\Fields\BelongsTo;
 use Laravel\Nova\Fields\ID;
 use Laravel\Nova\Fields\MorphToMany;
@@ -29,10 +31,13 @@ class Layer extends AbstractGeometryResource
     {
         return [
             ID::make()->sortable(),
-            Text::make('Name', 'name'),
-            BelongsTo::make('App', 'appOwner', App::class),
-            PropertiesPanel::make('Properties', 'layer')->collapsible(),
-            MorphToMany::make('Activities', 'taxonomyActivities', TaxonomyActivity::class),
+            BelongsTo::make(__('App'), 'appOwner', App::class),
+            NovaTabTranslatable::make([
+                Text::make(__('name'), 'properties->title'),
+            ])->onlyOnIndex(),
+            Images::make(__('Image'), 'default'),
+            PropertiesPanel::make(__('Properties'), 'layer')->collapsible(),
+            MorphToMany::make(__('Activities'), 'taxonomyActivities', TaxonomyActivity::class),
             ...$this->fieldsTrait($request),
         ];
     }

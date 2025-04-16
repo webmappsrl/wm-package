@@ -57,6 +57,11 @@ class WmPackageServiceProvider extends PackageServiceProvider
 
         $packageDirPath = $this->package->basePath('/../');
 
+        // Register Nova CSS assets
+        Nova::serving(function () {
+            Nova::style('wm-flexible-field', __DIR__.'/../resources/css/flexible-field.css');
+        });
+
         // Register routes as Laravel does with RouteServiceProvider
         // assign the correct group and prefix set on Laravel instance
         $this->app->call(function () use ($packageDirPath) {
@@ -80,7 +85,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
         // ./vendor/bin/testbench tinker --execute "dd(Gate::getPolicyFor("\\Wm\\WmPackage\\Models\\User"))"
         // The procedure below OVERWRITES all application policies.
         // Gate::guessPolicyNamesUsing(function (string $modelClass) {
-        //     $t =  "Wm\\WmPackage\\Policies\\" . class_basename($modelClass) . "Policy";
+        //     $t =  "Wm\\WmPackage\\Policies\\".class_basename($modelClass)."Policy";
         //     //dump($t);
         //     return $t;
         // });
@@ -170,6 +175,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
             'App\Models\UgcTrack' => \Wm\WmPackage\Models\UgcTrack::class,
             'App\Models\EcPoi' => \Wm\WmPackage\Models\EcPoi::class,
             'App\Models\EcTrack' => \Wm\WmPackage\Models\EcTrack::class,
+            'App\Models\Layer' => \Wm\WmPackage\Models\Layer::class,
         ]);
 
         // #######

@@ -14,9 +14,24 @@ use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\OverlayLayer;
 use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Services\Models\MediaService;
+use Wm\WmPackage\Services\StorageService;
+use Wm\WmPackage\Models\App;
+use Wm\WmPackage\Models\Layer;
 
 class AppConfigService extends AppBaseService
 {
+
+
+    public function writeAppConfigOnAws()
+    {
+
+        $json = $this->config();
+
+        StorageService::make()->storeAppConfig($this->app->id, json_encode($json));
+
+        return $json;
+    }
+
     /**
      * Display the specified resource.
      *
@@ -50,7 +65,7 @@ class AppConfigService extends AppBaseService
     // TODO: is jido stuff used anymore?
     public function config_update_jido_time()
     {
-        $confUri = $this->app->id.'.json';
+        $confUri = $this->app->id . '.json';
         if (Storage::disk('conf')->exists($confUri)) {
             $json = json_decode(Storage::disk('conf')->get($confUri));
             $json->JIDO_UPDATE_TIME = floor(microtime(true) * 1000);
@@ -60,7 +75,7 @@ class AppConfigService extends AppBaseService
 
     public function config_get_jido_time()
     {
-        $confUri = $this->app->id.'.json';
+        $confUri = $this->app->id . '.json';
         if (Storage::disk('conf')->exists($confUri)) {
             $json = json_decode(Storage::disk('conf')->get($confUri));
             if (isset($json->JIDO_UPDATE_TIME)) {
@@ -152,7 +167,12 @@ class AppConfigService extends AppBaseService
         ];
 
         if (! empty($this->app->config_home)) {
-            $data = json_decode($this->app->config_home, true);
+            if (is_string($this->app->config_home)) {
+                $data = json_decode($this->app->config_home, true);
+            } elseif (is_array($this->app->config_home)) {
+                // Se config_home è già un array, lo usiamo direttamente
+                $data = $this->app->config_home;
+            }
         } elseif ($this->app->layers->count() > 0) {
             foreach ($this->app->layers()->orderBy('rank')->get() as $layer) {
                 $data['HOME'][] = [
@@ -252,26 +272,13 @@ class AppConfigService extends AppBaseService
             return json_decode($v);
         }, json_decode($this->app->tiles, true));
 
-        $bbox = GeometryComputationService::make()->getEcTracksBboxByUserId($this->app->user_id);
         if (is_null($this->app->map_bbox)) {
+            $bbox = GeometryComputationService::make()->getEcTracksBboxByAppId($this->app->id);
             $data['MAP']['bbox'] = $bbox;
         } else {
             $data['MAP']['bbox'] = json_decode($this->app->map_bbox, true);
         }
 
-        // MAP section (bbox)
-        if (in_array($this->app->api, ['elbrus'])) {
-            $data['MAP']['bbox'] = $bbox;
-            // Map section layers
-            $data['MAP']['layers'][0]['label'] = 'Mappa';
-            $data['MAP']['layers'][0]['type'] = 'maptile';
-            $data['MAP']['layers'][0]['tilesUrl'] = 'https://api.webmapp.it/tiles/';
-            try {
-                $data['MAP']['overlays'] = json_decode($this->app->external_overlays);
-            } catch (\Exception $e) {
-                Log::warning('The overlays in the app '.$this->app->id.' are not correctly mapped. Error: '.$e->getMessage());
-            }
-        }
 
         if ($this->app->layers->count() > 0) {
             $layers = [];
@@ -283,89 +290,33 @@ class AppConfigService extends AppBaseService
                         $item['bbox'] = array_map('floatval', json_decode(strval($item['bbox']), true));
                     }
                 } catch (\Exception  $e) {
-                    Log::warning('The bbox value '.$layer->id.' are not correct. Error: '.$e->getMessage());
+                    Log::warning('The bbox value ' . $layer->id . ' are not correct. Error: ' . $e->getMessage());
                 }
                 // style
                 foreach (['color', 'fill_color', 'fill_opacity', 'stroke_width', 'stroke_opacity', 'zindex', 'line_dash'] as $field) {
-                    $item['style'][$field] = $item[$field];
-                    unset($item[$field]);
+                    if (isset($item[$field])) {
+                        $item['style'][$field] = $item[$field];
+                        unset($item[$field]);
+                    }
                 }
                 // behaviour
                 foreach (['noDetails', 'noInteraction', 'minZoom', 'maxZoom', 'preventFilter', 'invertPolygons', 'alert', 'show_label'] as $field) {
-                    $item['behaviour'][$field] = $item[$field];
-                    unset($item[$field]);
+                    if (isset($item[$field])) {
+                        $item['behaviour'][$field] = $item[$field];
+                        unset($item[$field]);
+                    }
                 }
                 unset($item['created_at']);
                 unset($item['updated_at']);
                 unset($item['sku']);
                 unset($item['generate_edges']);
 
-                // FEATURE IMAGE:
-                $feature_image = null;
-                if (! empty($layer->featureImage) && $layer->featureImage->count() > 0) {
-                    $feature_image = MediaService::make()->thumbnail($layer->featureImage, '400x200');
-                    if (! is_null($feature_image)) {
-                        $item['feature_image'] = $feature_image;
-                    }
-                } else {
-                    if ($layer->taxonomyWheres->count() > 0) {
-                        foreach ($layer->taxonomyWheres as $term) {
-                            if (isset($term->feature_image) && ! empty($term->feature_image)) {
-                                $feature_image = $term->feature_image;
-                            }
-                        }
-                    }
-                    if ($feature_image == null && $layer->taxonomyThemes->count() > 0) {
-                        foreach ($layer->taxonomyThemes as $term) {
-                            if (isset($term->feature_image) && ! empty($term->feature_image)) {
-                                $feature_image = $term->feature_image;
-                            }
-                        }
-                    }
-
-                    if ($feature_image == null && $layer->taxonomyActivities->count() > 0) {
-                        foreach ($layer->taxonomyActivities as $term) {
-                            if (isset($term->feature_image) && ! empty($term->feature_image)) {
-                                $feature_image = $term->feature_image;
-                            }
-                        }
-                    }
-
-                    if ($feature_image == null && $layer->taxonomyWhens->count() > 0) {
-                        foreach ($layer->taxonomyWhens as $term) {
-                            if (isset($term->feature_image) && ! empty($term->feature_image)) {
-                                $feature_image = $term->feature_image;
-                            }
-                        }
-                    }
-
-                    if ($feature_image == null && $layer->taxonomyTargets->count() > 0) {
-                        foreach ($layer->taxonomyTargets as $term) {
-                            if (isset($term->feature_image) && ! empty($term->feature_image)) {
-                                $feature_image = $term->feature_image;
-                            }
-                        }
-                    }
-
-                    if ($feature_image == null && $layer->taxonomyPoiTypes->count() > 0) {
-                        foreach ($layer->taxonomyPoiTypes as $term) {
-                            if (isset($term->feature_image) && ! empty($term->feature_image)) {
-                                $feature_image = $term->feature_image;
-                            }
-                        }
-                    }
-
-                    // if ($feature_image != null) {
-                    //     // Retrieve proper image
-                    //     $image = EcMedia::find($feature_image);
-                    //     if (! is_null(($resizedImage = MediaService::make()->thumbnail($image, '400x200')))) {
-                    //         $item['feature_image'] = $resizedImage;
-                    //     }
-                    // }
+                $image = $layer->getMedia()->first();
+                if ($image) {
+                    $item['feature_image'] = MediaService::make()->getThumbnailUrl($image);
                 }
-
                 // remove useless attribute geometry from taxonomy where of layer
-                if ($item['taxonomy_wheres']) {
+                if (isset($item['taxonomy_wheres']) && !empty($item['taxonomy_wheres'])) {
                     $unsetAttr = ['geometry', 'query_string'];
                     for ($i = 0; $i < count($item['taxonomy_wheres']); $i++) {
                         foreach ($unsetAttr as $attr) {
@@ -398,7 +349,7 @@ class AppConfigService extends AppBaseService
         $data['MAP']['pois']['poiIconRadius'] = $this->app->poi_icon_radius;
         $data['MAP']['pois']['poiMinZoom'] = $this->app->poi_min_zoom;
         $data['MAP']['pois']['poiLabelMinZoom'] = $this->app->poi_label_min_zoom;
-        $data['MAP']['pois']['taxonomies'] = $this->app->getAllPoiTaxonomies();
+        //$data['MAP']['pois']['taxonomies'] = $this->app->getAllPoiTaxonomies(); //TODO trovare le tassonomie non piu tramite tema ma tramite associazione layer
         $data['MAP']['pois']['poi_interaction'] = $this->app->poi_interaction;
 
         // Other Options
@@ -531,7 +482,7 @@ class AppConfigService extends AppBaseService
 
             foreach ($poi_types as $poi_type) {
                 $a = [
-                    'identifier' => 'poi_type_'.$poi_type->identifier,
+                    'identifier' => 'poi_type_' . $poi_type->identifier,
                     'name' => json_decode($poi_type->name, true),
                     'id' => $poi_type->id,
                     'icon' => $poi_type->icon,
@@ -631,10 +582,7 @@ class AppConfigService extends AppBaseService
     private function config_section_options(): array
     {
         $data = [];
-        if (in_array($this->app->api, ['elbrus'])) {
-            // OPTIONS section
-            $data['OPTIONS']['baseUrl'] = 'https://geohub.webmapp.it/api/app/elbrus/'.$this->app->id.'/';
-        }
+
 
         $data['OPTIONS']['startUrl'] = $this->app->start_url;
         $data['OPTIONS']['showEditLink'] = $this->app->show_edit_link;
@@ -650,9 +598,17 @@ class AppConfigService extends AppBaseService
         $data['OPTIONS']['showGeojsonDownload'] = (bool) $this->app->table_details_show_geojson_download;
         $data['OPTIONS']['showShapefileDownload'] = (bool) $this->app->table_details_show_shapefile_download;
 
-        foreach ($this->app->track_technical_details as $label => $value) {
-            $label = Str::camel($label);
-            $data['OPTIONS'][$label] = $value;
+        // Assicuriamoci che track_technical_details sia un array
+        $technical_details = $this->app->track_technical_details;
+        if (is_string($technical_details)) {
+            $technical_details = json_decode($technical_details, true);
+        }
+
+        if (is_array($technical_details)) {
+            foreach ($technical_details as $label => $value) {
+                $label = Str::camel($label);
+                $data['OPTIONS'][$label] = $value;
+            }
         }
 
         return $data;
