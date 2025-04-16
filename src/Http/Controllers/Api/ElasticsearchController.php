@@ -148,6 +148,6 @@ class ElasticsearchController extends Controller
         }
 
         // results are formatted in wm-package/src/ElasticSearch/HitsIteratorAggregate.php
-        return collect($query->orderBy('name.keyword', 'asc')->take(10000)->get()['hits'])->pluck('name');
+        return $query->orderBy('name.keyword', 'asc')->take(10000)->get();
     }
 }
