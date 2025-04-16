@@ -20,8 +20,8 @@ class AppObserver extends AbstractObserver
         $app->external_overlays = $json;
     }
 
-    // public function save( App $app )
-    // {
-    //     new AppConfigService($app)->writeAppConfigOnAws();
-    // }
+    public function saved(App $app)
+    {
+        (new AppConfigService($app))->writeAppConfigOnAws();
+    }
 }
