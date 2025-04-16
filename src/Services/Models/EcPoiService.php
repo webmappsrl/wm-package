@@ -18,17 +18,20 @@ class EcPoiService extends BaseService
     public function updateDataChain(EcPoi $model)
     {
 
-        $chain = [
+        if ($model->wasChanged('geometry')) {
 
-            new UpdateModelWithGeometryTaxonomyWhere($model), // it relates where taxonomy terms to the media model based on geometry attribute
-            new UpdateEcPoiDemJob($model),
-        ];
+            $chain = [
 
-        Bus::chain($chain)
-            ->catch(function (Throwable $e) {
-                // A job within the chain has failed...
-                Log::error($e->getMessage());
-            })->dispatch();
+                new UpdateModelWithGeometryTaxonomyWhere($model), // it relates where taxonomy terms to the media model based on geometry attribute
+                new UpdateEcPoiDemJob($model),
+            ];
+
+            Bus::chain($chain)
+                ->catch(function (Throwable $e) {
+                    // A job within the chain has failed...
+                    Log::error($e->getMessage());
+                })->dispatch();
+        }
     }
 
     public function getUpdatedAtPois(?int $app_id = null): Collection
