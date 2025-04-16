@@ -8,8 +8,6 @@ use Illuminate\Support\Collection;
 use Laravel\Nova\Actions\Action;
 use Laravel\Nova\Fields\ActionFields;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
-use Wm\WmPackage\Models\App;
-use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Services\Models\LayerService;
 
 class UpdateLayerPbfAction extends Action
