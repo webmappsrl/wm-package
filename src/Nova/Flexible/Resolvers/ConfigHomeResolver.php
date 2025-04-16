@@ -12,19 +12,19 @@ class ConfigHomeResolver implements ResolverInterface
      * @param  mixed  $resource
      * @param  string  $attribute
      * @param  \Whitecube\NovaFlexibleContent\Layouts\Collection  $layouts
-     * @return  \Illuminate\Support\Collection<array-key, \Whitecube\NovaFlexibleContent\Layouts\Layout>
+     * @return \Illuminate\Support\Collection<array-key, \Whitecube\NovaFlexibleContent\Layouts\Layout>
      */
     public function get($resource, $attribute, $layouts)
     {
         $value = $resource->{$attribute};
 
-        if (!$value) {
+        if (! $value) {
             return collect();
         }
 
         $data = is_string($value) ? json_decode($value, true) : $value;
 
-        if (!isset($data['HOME']) || empty($data['HOME'])) {
+        if (! isset($data['HOME']) || empty($data['HOME'])) {
             return collect();
         }
 
@@ -54,14 +54,15 @@ class ConfigHomeResolver implements ResolverInterface
      * Save the Flexible field's content somewhere the get method will be able to access it.
      *
      * @param  mixed  $resource
-     * @param  string  $attribute Attribute name set for a Flexible field.
+     * @param  string  $attribute  Attribute name set for a Flexible field.
      * @param  \Illuminate\Support\Collection<int, \Whitecube\NovaFlexibleContent\Layouts\Layout>  $groups
-     * @return  mixed
+     * @return mixed
      */
     public function set($resource, $attribute, $groups)
     {
         if ($groups->isEmpty()) {
             $resource->{$attribute} = json_encode(['HOME' => []]);
+
             return $resource;
         }
 
@@ -69,7 +70,7 @@ class ConfigHomeResolver implements ResolverInterface
 
         foreach ($groups as $layout) {
             $homeElement = [
-                'box_type' => $layout->name()
+                'box_type' => $layout->name(),
             ];
 
             // Merge all attributes

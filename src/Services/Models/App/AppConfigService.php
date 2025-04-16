@@ -9,19 +9,16 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Wm\WmPackage\Enums\AppTiles;
-use Wm\WmPackage\Models\EcMedia;
+use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcTrack;
+use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Models\OverlayLayer;
 use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Services\Models\MediaService;
 use Wm\WmPackage\Services\StorageService;
-use Wm\WmPackage\Models\App;
-use Wm\WmPackage\Models\Layer;
 
 class AppConfigService extends AppBaseService
 {
-
-
     public function writeAppConfigOnAws()
     {
 
@@ -65,7 +62,7 @@ class AppConfigService extends AppBaseService
     // TODO: is jido stuff used anymore?
     public function config_update_jido_time()
     {
-        $confUri = $this->app->id . '.json';
+        $confUri = $this->app->id.'.json';
         if (Storage::disk('conf')->exists($confUri)) {
             $json = json_decode(Storage::disk('conf')->get($confUri));
             $json->JIDO_UPDATE_TIME = floor(microtime(true) * 1000);
@@ -75,7 +72,7 @@ class AppConfigService extends AppBaseService
 
     public function config_get_jido_time()
     {
-        $confUri = $this->app->id . '.json';
+        $confUri = $this->app->id.'.json';
         if (Storage::disk('conf')->exists($confUri)) {
             $json = json_decode(Storage::disk('conf')->get($confUri));
             if (isset($json->JIDO_UPDATE_TIME)) {
@@ -279,7 +276,6 @@ class AppConfigService extends AppBaseService
             $data['MAP']['bbox'] = json_decode($this->app->map_bbox, true);
         }
 
-
         if ($this->app->layers->count() > 0) {
             $layers = [];
             foreach ($this->app->layers as $layer) {
@@ -290,7 +286,7 @@ class AppConfigService extends AppBaseService
                         $item['bbox'] = array_map('floatval', json_decode(strval($item['bbox']), true));
                     }
                 } catch (\Exception  $e) {
-                    Log::warning('The bbox value ' . $layer->id . ' are not correct. Error: ' . $e->getMessage());
+                    Log::warning('The bbox value '.$layer->id.' are not correct. Error: '.$e->getMessage());
                 }
                 // style
                 foreach (['color', 'fill_color', 'fill_opacity', 'stroke_width', 'stroke_opacity', 'zindex', 'line_dash'] as $field) {
@@ -316,7 +312,7 @@ class AppConfigService extends AppBaseService
                     $item['feature_image'] = MediaService::make()->getThumbnailUrl($image);
                 }
                 // remove useless attribute geometry from taxonomy where of layer
-                if (isset($item['taxonomy_wheres']) && !empty($item['taxonomy_wheres'])) {
+                if (isset($item['taxonomy_wheres']) && ! empty($item['taxonomy_wheres'])) {
                     $unsetAttr = ['geometry', 'query_string'];
                     for ($i = 0; $i < count($item['taxonomy_wheres']); $i++) {
                         foreach ($unsetAttr as $attr) {
@@ -349,7 +345,7 @@ class AppConfigService extends AppBaseService
         $data['MAP']['pois']['poiIconRadius'] = $this->app->poi_icon_radius;
         $data['MAP']['pois']['poiMinZoom'] = $this->app->poi_min_zoom;
         $data['MAP']['pois']['poiLabelMinZoom'] = $this->app->poi_label_min_zoom;
-        //$data['MAP']['pois']['taxonomies'] = $this->app->getAllPoiTaxonomies(); //TODO trovare le tassonomie non piu tramite tema ma tramite associazione layer
+        // $data['MAP']['pois']['taxonomies'] = $this->app->getAllPoiTaxonomies(); //TODO trovare le tassonomie non piu tramite tema ma tramite associazione layer
         $data['MAP']['pois']['poi_interaction'] = $this->app->poi_interaction;
 
         // Other Options
@@ -482,7 +478,7 @@ class AppConfigService extends AppBaseService
 
             foreach ($poi_types as $poi_type) {
                 $a = [
-                    'identifier' => 'poi_type_' . $poi_type->identifier,
+                    'identifier' => 'poi_type_'.$poi_type->identifier,
                     'name' => json_decode($poi_type->name, true),
                     'id' => $poi_type->id,
                     'icon' => $poi_type->icon,
@@ -582,7 +578,6 @@ class AppConfigService extends AppBaseService
     private function config_section_options(): array
     {
         $data = [];
-
 
         $data['OPTIONS']['startUrl'] = $this->app->start_url;
         $data['OPTIONS']['showEditLink'] = $this->app->show_edit_link;

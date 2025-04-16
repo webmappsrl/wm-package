@@ -2,20 +2,19 @@
 
 namespace Wm\WmPackage\Nova;
 
+use Kongulov\NovaTabTranslatable\NovaTabTranslatable;
 use Laravel\Nova\Fields\ID;
+use Laravel\Nova\Fields\Image;
 use Laravel\Nova\Fields\Select;
 use Laravel\Nova\Fields\Text;
-use Laravel\Nova\Fields\Image;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Resource;
 use Laravel\Nova\Tabs\Tab;
 use Marshmallow\Tiptap\Tiptap;
 use Whitecube\NovaFlexibleContent\Flexible;
-use Kongulov\NovaTabTranslatable\NovaTabTranslatable;
-
+use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Nova\Actions\UpdateTracksOnAws;
 use Wm\WmPackage\Nova\Flexible\Resolvers\ConfigHomeResolver;
-use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Services\Models\MediaService;
 
 class App extends Resource
@@ -35,7 +34,7 @@ class App extends Resource
             ID::make()->sortable(),
             Text::make('Name')->sortable(),
             Tab::group('App', [
-                Tab::make('home', $this->home_tab())
+                Tab::make('home', $this->home_tab()),
             ]),
 
             // TODO: implement fields
@@ -107,14 +106,14 @@ class App extends Resource
                             $title = $layer->properties['title'] ?? null;
                             if (is_array($title)) {
                                 // Se è un array, prendi prima la versione italiana, poi quella inglese, altrimenti usa l'ID
-                                $title = $title['it'] ?? $title['en'] ?? ('Layer #' . $layer->id);
+                                $title = $title['it'] ?? $title['en'] ?? ('Layer #'.$layer->id);
                             } elseif (is_null($title)) {
-                                $title = 'Layer #' . $layer->id;
+                                $title = 'Layer #'.$layer->id;
                             }
 
                             return [
                                 'id' => $layer->id,
-                                'title' => $title
+                                'title' => $title,
                             ];
                         });
                     $layers = $layers->sortBy('title');
@@ -136,18 +135,19 @@ class App extends Resource
 
                     // Recupera il layer selezionato
                     $layer = Layer::find($layerId);
-                    if (!$layer) {
+                    if (! $layer) {
                         return null;
                     }
 
                     // Verifica se il layer ha un'immagine
                     $media = $layer->getFirstMedia('default');
-                    if (!$media) {
+                    if (! $media) {
                         return null;
                     }
 
                     // Restituisci l'URL dell'immagine del layer
                     $mediaService = MediaService::make();
+
                     return $mediaService->getThumbnailUrl($media);
                 })
                 ->help(__('Immagine del layer selezionato'))
