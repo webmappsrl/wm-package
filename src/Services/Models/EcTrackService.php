@@ -294,7 +294,7 @@ class EcTrackService extends BaseService
     public function updateDataChain(EcTrack $track)
     {
         $chain = [];
-        if ($track->properties['osmid']) {
+        if (isset($track->properties['osmid']) && $track->properties['osmid']) {
             $chain[] = new UpdateEcTrackFromOsmJob($track);
         }
         // $layers = $track->associatedLayers;

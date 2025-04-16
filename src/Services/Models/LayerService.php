@@ -184,19 +184,19 @@ class LayerService extends BaseService
         $geometryModel->save();
     }
 
-    public function updateLayersPropertyOnAllLayeredFeaturesWithJobs(Layer $layer)
+    public function updateLayersPropertyOnAllLayeredFeaturesWithJobs(Layer $layer, bool $delay = true)
     {
         // update all ecpoi and ectrack related to the layer
         foreach ($this->getModelsWithLayersInProperties() as $modelClass) {
-            $this->updateLayersPropertyOnLayeredFeatureWithJob($layer, $modelClass);
+            $this->updateLayersPropertyOnLayeredFeatureWithJob($layer, $modelClass, $delay);
         }
         // Bus::batch([$jobs])->name("Layer {$layer->id} features properties update")->dispatch(); //to avoid transactions errors
     }
 
-    public function updateLayersPropertyOnLayeredFeatureWithJob(Layer $layer, string $ecModelClass)
+    public function updateLayersPropertyOnLayeredFeatureWithJob(Layer $layer, string $ecModelClass, bool $delay = true)
     {
         UpdateLayeredFeaturesJob::dispatch($layer, $ecModelClass)
-            ->delay($this->getUniqueJobDelay());
+            ->delay($delay ? $this->getUniqueJobDelay() : null);
     }
 
     public function updateLayerGeometryWithJob(Layer $layer)
@@ -281,7 +281,7 @@ class LayerService extends BaseService
     private function getUniqueJobDelay(): Carbon
     {
         return now()->addSeconds(
-            app()->isLocal() ? 5 : 60 * 15
+            app()->isLocal() ? 5 : 60 * 5
         );
     }
 
