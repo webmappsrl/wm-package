@@ -59,7 +59,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
 
         // Register Nova CSS assets
         Nova::serving(function () {
-            Nova::style('wm-flexible-field', __DIR__ . '/../resources/css/flexible-field.css');
+            Nova::style('wm-flexible-field', __DIR__.'/../resources/css/flexible-field.css');
         });
 
         // Register routes as Laravel does with RouteServiceProvider
@@ -68,15 +68,15 @@ class WmPackageServiceProvider extends PackageServiceProvider
             Route::name('v2.')
                 ->middleware('api')
                 ->prefix('api/v2')
-                ->group($packageDirPath . 'routes/api.php');
+                ->group($packageDirPath.'routes/api.php');
 
             Route::name('default.')
                 ->middleware('api')
                 ->prefix('api')
-                ->group($packageDirPath . 'routes/api.php');
+                ->group($packageDirPath.'routes/api.php');
 
             Route::middleware('web')
-                ->group($packageDirPath . 'routes/web.php');
+                ->group($packageDirPath.'routes/web.php');
         });
 
         // Register policies
@@ -85,7 +85,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
         // ./vendor/bin/testbench tinker --execute "dd(Gate::getPolicyFor("\\Wm\\WmPackage\\Models\\User"))"
         // The procedure below OVERWRITES all application policies.
         // Gate::guessPolicyNamesUsing(function (string $modelClass) {
-        //     $t =  "Wm\\WmPackage\\Policies\\" . class_basename($modelClass) . "Policy";
+        //     $t =  "Wm\\WmPackage\\Policies\\".class_basename($modelClass)."Policy";
         //     //dump($t);
         //     return $t;
         // });
@@ -259,7 +259,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
     protected function resources()
     {
 
-        Nova::resourcesIn($this->getPackageBaseDir() . '/Nova');
+        Nova::resourcesIn($this->getPackageBaseDir().'/Nova');
     }
 
     /**
