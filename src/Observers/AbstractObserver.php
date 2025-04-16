@@ -9,7 +9,7 @@ abstract class AbstractObserver
         if (in_array('name', $model->translatable ?? [])) {
             $properties = $model->properties ?? [];
             $properties['name'] = $model->getTranslations('name');
-            $model->properties = $properties;
+            $model->setAttribute('properties', $properties);
         }
     }
 }

@@ -2,9 +2,10 @@
 
 namespace Wm\WmPackage\Jobs\Track;
 
-use Wm\WmPackage\Http\Resources\EcTrackResource;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Services\StorageService;
+use Wm\WmPackage\Http\Resources\EcTrackResource;
+use Illuminate\Queue\Middleware\WithoutOverlapping;
 
 class UpdateEcTrackAwsJob extends BaseEcTrackJob
 {
@@ -12,6 +13,30 @@ class UpdateEcTrackAwsJob extends BaseEcTrackJob
     {
         parent::__construct($ecTrack);
         $this->onQueue('aws');
+    }
+
+    /**
+     * Definisci i middleware per il job.
+     *
+     * @return array
+     */
+    public function middleware()
+    {
+        return [
+            // Applica WithoutOverlapping con una chiave unica per limitare la concorrenza
+            new WithoutOverlapping($this->getLockKey()),
+        ];
+    }
+
+    /**
+     * Genera una chiave unica per il lock di WithoutOverlapping.
+     *
+     * @return string
+     */
+    protected function getLockKey()
+    {
+        // Utilizza un identificatore unico per ogni tile
+        return 'upload-ectrack-to-aws-' . $this->ecTrack->id;
     }
 
     /**
