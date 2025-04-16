@@ -77,7 +77,7 @@ class ElasticsearchController extends Controller
             $body->addQuery($boolQuery);
 
             // # Dump the es query body as array
-            // dd($body->toArray());
+            //dd($body->toArray());
 
             // // Create a custom query that prioritizes exact matches
             // $customQuery = [
@@ -132,6 +132,6 @@ class ElasticsearchController extends Controller
         }
 
         // results are formatted in wm-package/src/ElasticSearch/HitsIteratorAggregate.php
-        return $query->take(10000)->get();
+        return $query->orderBy('name.keyword', 'asc')->take(10000)->get();
     }
 }
