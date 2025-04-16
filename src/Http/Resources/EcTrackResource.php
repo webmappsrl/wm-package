@@ -4,6 +4,7 @@ namespace Wm\WmPackage\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Wm\WmPackage\Services\GeoJsonService;
 use Wm\WmPackage\Services\GeometryComputationService;
 
 class EcTrackResource extends JsonResource
@@ -23,7 +24,8 @@ class EcTrackResource extends JsonResource
         $geojson['geometry'] = json_decode($geometryLinestring, true);
 
         $geojson['properties'] = [
-            ...$geojson['properties'],
+            ...GeoJsonService::make()->removeInvalidProperties($geojson['properties']),
+            'name' => $this->getTranslations('name'),
             'roundtrip' => $geojson['properties']['dem_data']['round_trip'] ?? $geometryComputationService->isRoundtrip($geojson['geometry']['coordinates']),
             'feature_image' => new MediaResource($this->getMedia()->first()),
             'image_gallery' => MediaResource::collection($this->getMedia()),
