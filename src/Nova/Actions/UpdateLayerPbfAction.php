@@ -24,17 +24,10 @@ class UpdateLayerPbfAction extends Action
         $layerService = LayerService::make();
         $count = 0;
         foreach ($models as $model) {
-            $layerService->updateLayersPropertyOnAllLayeredFeaturesWithJobs($model);
+            $layerService->updateLayersPropertyOnAllLayeredFeaturesWithJobs($model, false);
             $count++;
         }
 
         return Action::message("Messe in coda {$count} layer per l'aggiornamento su aws!");
-    }
-
-    private function writeOnAws($tracks)
-    {
-        foreach ($tracks as $track) {
-            UpdateEcTrackAwsJob::dispatch($track);
-        }
     }
 }
