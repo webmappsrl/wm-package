@@ -556,10 +556,10 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
             $excerpt = str_replace('\\', '', $excerpt);
             $string .= strip_tags($excerpt) . ' ';
         }
-        if (empty($searchables) || (in_array('ref', $searchables) && ! empty($this->properties['ref']))) {
+        if (empty($searchables) || (in_array('ref', $searchables) && isset($this->properties['ref']) && ! empty($this->properties['ref']))) {
             $string .= $this->properties['ref'] . ' ';
         }
-        if (empty($searchables) || (in_array('osmid', $searchables) && ! empty($this->properties['osmid']))) {
+        if (empty($searchables) || (in_array('osmid', $searchables) && isset($this->properties['osmid']) && ! empty($this->properties['osmid']))) {
 
             $string .= $this->properties['osmid'] . ' ';
         }
