@@ -36,4 +36,12 @@ class Layer extends AbstractGeometryResource
             ...$this->fieldsTrait($request),
         ];
     }
+
+    public function actions(NovaRequest $request): array
+    {
+        return [
+            ...parent::actions($request),
+            new Actions\UpdateLayerPbfAction,
+        ];
+    }
 }
