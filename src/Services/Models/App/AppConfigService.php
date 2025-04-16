@@ -299,37 +299,10 @@ class AppConfigService extends AppBaseService
                 unset($item['sku']);
                 unset($item['generate_edges']);
 
-                // FEATURE IMAGE:
-                $feature_image = null;
-                if (! empty($layer->featureImage) && $layer->featureImage->count() > 0) {
-                    $feature_image = MediaService::make()->thumbnail($layer->featureImage, '400x200');
-                    if (! is_null($feature_image)) {
-                        $item['feature_image'] = $feature_image;
-                    }
-                } else {
-                    // Array di tutte le proprietà delle tassonomie da controllare in ordine
-                    $taxonomyProperties = [
-                        'taxonomyWheres',
-                        'taxonomyThemes',
-                        'taxonomyActivities',
-                        'taxonomyWhens',
-                        'taxonomyTargets',
-                        'taxonomyPoiTypes'
-                    ];
-
-                    // Scansione ordinata delle tassonomie per trovare la prima feature_image valida
-                    foreach ($taxonomyProperties as $taxonomyProperty) {
-                        if ($feature_image === null && !empty($layer->$taxonomyProperty) && $layer->$taxonomyProperty->count() > 0) {
-                            foreach ($layer->$taxonomyProperty as $term) {
-                                if (isset($term->feature_image) && !empty($term->feature_image)) {
-                                    $feature_image = $term->feature_image;
-                                    break 2; // Uscita da entrambi i cicli non appena troviamo un'immagine
-                                }
-                            }
-                        }
-                    }
+                $image = $layer->getMedia()->first();
+                if ($image) {
+                    $item['feature_image'] = MediaService::make()->getThumbnailUrl($image);
                 }
-
                 // remove useless attribute geometry from taxonomy where of layer
                 if (isset($item['taxonomy_wheres']) && !empty($item['taxonomy_wheres'])) {
                     $unsetAttr = ['geometry', 'query_string'];
