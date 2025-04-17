@@ -3,7 +3,6 @@
 namespace Wm\WmPackage\Nova;
 
 use Laravel\Nova\Fields\BelongsToMany;
-use Laravel\Nova\Fields\MorphMany;
 use Laravel\Nova\Fields\MorphToMany;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Wm\WmPackage\Nova\Actions\RegenerateTaxonomyWhere;

@@ -39,7 +39,7 @@ class ElasticsearchController extends Controller
         $appId = (int) last(explode('_', $app));
         $search = str_replace('%20', ' ', $query);
 
-        //$search = explode(' ', $search);
+        // $search = explode(' ', $search);
         // https://www.elastic.co/docs/reference/query-languages/query-dsl/query-dsl-query-string-query
 
         // $queryString = '';
@@ -86,7 +86,7 @@ class ElasticsearchController extends Controller
             //     'boost' => 4,
             // ]), BoolQuery::SHOULD); // #OR
 
-            $boolQuery->add(new QueryStringQuery('*' . $search . '*', [
+            $boolQuery->add(new QueryStringQuery('*'.$search.'*', [
                 'default_operator' => 'and',
             ]), BoolQuery::MUST); // #OR
             // $boolQuery->add(new MatchQuery('name.exact', $search, [
@@ -105,7 +105,7 @@ class ElasticsearchController extends Controller
             $body->addQuery($boolQuery);
 
             // # Dump the es query body as array
-            //dd($body->toArray());
+            // dd($body->toArray());
 
             // // Create a custom query that prioritizes exact matches
             // $customQuery = [
@@ -160,7 +160,7 @@ class ElasticsearchController extends Controller
         }
 
         // results are formatted in wm-package/src/ElasticSearch/HitsIteratorAggregate.php
-        //return collect($query->orderBy('name.keyword', 'asc')->take(10000)->get()['hits'])->pluck('name');
+        // return collect($query->orderBy('name.keyword', 'asc')->take(10000)->get()['hits'])->pluck('name');
         return $query->orderBy('name.keyword', 'asc')->take(10000)->get();
     }
 }
