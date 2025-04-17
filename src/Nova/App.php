@@ -4,7 +4,6 @@ namespace Wm\WmPackage\Nova;
 
 use Kongulov\NovaTabTranslatable\NovaTabTranslatable;
 use Laravel\Nova\Fields\ID;
-use Laravel\Nova\Fields\Image;
 use Laravel\Nova\Fields\Select;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
@@ -15,7 +14,6 @@ use Whitecube\NovaFlexibleContent\Flexible;
 use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Nova\Actions\UpdateTracksOnAws;
 use Wm\WmPackage\Nova\Flexible\Resolvers\ConfigHomeResolver;
-use Wm\WmPackage\Services\Models\MediaService;
 
 class App extends Resource
 {
@@ -123,38 +121,7 @@ class App extends Resource
                 ->searchable()
                 ->rules('required')
                 ->help(__('Seleziona un layer esistente'))
-                ->displayUsingLabels(),
-
-            Image::make('Immagine Layer', 'image')
-                ->resolveUsing(function ($value, $resource, $attribute) {
-                    // Verifica se esiste un layer selezionato
-                    $layerId = $resource['layer'];
-                    if (empty($layerId)) {
-                        return null;
-                    }
-
-                    // Recupera il layer selezionato
-                    $layer = Layer::find($layerId);
-                    if (! $layer) {
-                        return null;
-                    }
-
-                    // Verifica se il layer ha un'immagine
-                    $media = $layer->getFirstMedia('default');
-                    if (! $media) {
-                        return null;
-                    }
-
-                    // Restituisci l'URL dell'immagine del layer
-                    $mediaService = MediaService::make();
-
-                    return $mediaService->getThumbnailUrl($media);
-                })
-                ->help(__('Immagine del layer selezionato'))
-                ->hideWhenCreating()
-                ->hideFromIndex()
-                ->readonly()
-                ->disableDownload(),
+                ->displayUsingLabels()
         ];
     }
 }
