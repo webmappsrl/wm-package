@@ -2,7 +2,11 @@
 
 namespace Wm\WmPackage\Nova;
 
+use Illuminate\Support\Facades\Log;
 use Kongulov\NovaTabTranslatable\NovaTabTranslatable;
+use Laravel\Nova\Fields\Code;
+use Laravel\Nova\Fields\FormData;
+use Laravel\Nova\Fields\Hidden;
 use Laravel\Nova\Fields\ID;
 use Laravel\Nova\Fields\Select;
 use Laravel\Nova\Fields\Text;
@@ -54,7 +58,9 @@ class App extends Resource
     {
         return [
             NovaTabTranslatable::make([
-                Tiptap::make('Welcome', 'welcome')
+                Code::make('Welcome', 'welcome')
+                    ->stacked()
+             /*   Tiptap::make('Welcome', 'welcome')
                     ->buttons([
                         'heading',
                         '|',
@@ -70,9 +76,11 @@ class App extends Resource
                         '|',
                         'textAlign',
                         '|',
-                        'horizontalRule',
+                        'horizontalRule',     
+                        '|',
+                        'editHtml',
                     ])
-                    ->headingLevels([2, 3, 4]),
+                    ->headingLevels([2, 3, 4]),*/
             ]),
             Flexible::make('config_home')
                 ->resolver(ConfigHomeResolver::class)

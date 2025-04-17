@@ -3,6 +3,7 @@
 namespace Wm\WmPackage\Nova\Flexible\Resolvers;
 
 use Whitecube\NovaFlexibleContent\Value\ResolverInterface;
+use Wm\WmPackage\Models\Layer;
 
 class ConfigHomeResolver implements ResolverInterface
 {
@@ -75,7 +76,28 @@ class ConfigHomeResolver implements ResolverInterface
 
             // Merge all attributes
             foreach ($layout->getAttributes() as $key => $val) {
-                $homeElement[$key] = $val;
+                // Assicuriamoci che 'layer' sia sempre un numero intero
+                if ($key === 'layer' && $val) {
+                    $homeElement[$key] = (int) $val;
+                } else {
+                    $homeElement[$key] = $val;
+                }
+            }
+            
+            // Se è un layout di tipo Layer, aggiungiamo automaticamente il titolo del layer
+            if ($layout->name() === 'layer' && isset($homeElement['layer'])) {
+                $layerId = $homeElement['layer'];
+                $layer = Layer::find($layerId);
+                
+                if ($layer) {
+                    $title = $layer->properties['title'] ?? null;
+                    if (is_null($title)) {
+                        $title = 'Layer #'.$layer->id;
+                    }
+                    
+                    // Aggiungiamo il titolo del layer come 'name'
+                    $homeElement['title'] = $title;
+                }
             }
 
             $homeData[] = $homeElement;
