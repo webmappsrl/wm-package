@@ -7,6 +7,7 @@ use Kongulov\NovaTabTranslatable\NovaTabTranslatable;
 use Laravel\Nova\Fields\BelongsTo;
 use Laravel\Nova\Fields\ID;
 use Laravel\Nova\Fields\MorphToMany;
+use Laravel\Nova\Fields\Number;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Wm\WmPackage\Nova\Fields\PropertiesPanel;
@@ -35,7 +36,9 @@ class Layer extends AbstractGeometryResource
                 Text::make(__('Name'), 'name')->required(),
             ]),
 
-            Text::make(__('Rank'), 'properties->rank')->onlyOnIndex()->sortable(),
+            Number::make(__('Rank'), 'rank', function () {
+                return (int) $this->properties['rank'] ?? 0;
+            })->onlyOnIndex()->sortable(),
 
             BelongsTo::make(__('App'), 'appOwner', App::class),
             Images::make(__('Image'), 'default'),
