@@ -142,7 +142,7 @@ class MediaObserver extends AbstractAuthorableObserver
      */
     private function handleException(\Exception $e, Media $media)
     {
-        Log::error('Error in MediaObserver-creating: ' . $e->getMessage());
+        Log::error('Error in MediaObserver-creating: '.$e->getMessage());
         Log::error($e->getTraceAsString());
         // In case of error, set default values to avoid crashes
         $this->setDefaultValues($media);
@@ -163,7 +163,7 @@ class MediaObserver extends AbstractAuthorableObserver
 
             $this->setDefaultGeometry($media);
         } catch (\Exception $e) {
-            Log::error('Error setting default values: ' . $e->getMessage());
+            Log::error('Error setting default values: '.$e->getMessage());
             // Last resort fallback
             $media->app_id = 1;
             $media->geometry = 'POINT(10.4018624 43.7159395)';
@@ -181,7 +181,7 @@ class MediaObserver extends AbstractAuthorableObserver
             // Default point (Pisa, Italy)
             $media->geometry = 'POINTZ(10.4018624 43.7159395 0)';
         } catch (\Exception $e) {
-            Log::error('Error setting default geometry: ' . $e->getMessage());
+            Log::error('Error setting default geometry: '.$e->getMessage());
         }
     }
 
