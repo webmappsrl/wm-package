@@ -2,11 +2,11 @@
 
 namespace Wm\WmPackage\Http\Controllers\Api;
 
+use App\Models\UgcPoi as ModelsUgcPoi;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Wm\WmPackage\Http\Controllers\Api\Abstracts\UgcController;
 use Wm\WmPackage\Models\UgcPoi;
-use App\Models\UgcPoi as ModelsUgcPoi;
 
 class UgcPoiController extends UgcController
 {
@@ -31,8 +31,8 @@ class UgcPoiController extends UgcController
         return parent::_destroy($poi);
     }
 
-    //osm2cai api for geojson download 
-    //TODO: update when osm2cai will use wm-package UGCs
+    // osm2cai api for geojson download
+    // TODO: update when osm2cai will use wm-package UGCs
     public function downloadGeojson($ids)
     {
         $featureCollection = ['type' => 'FeatureCollection', 'features' => []];

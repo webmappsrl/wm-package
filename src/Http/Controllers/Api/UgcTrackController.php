@@ -31,8 +31,8 @@ class UgcTrackController extends UgcController
         return parent::_destroy($track);
     }
 
-    //osm2cai api for geojson download
-    //TODO: update when osm2cai will use wm-package UGCs
+    // osm2cai api for geojson download
+    // TODO: update when osm2cai will use wm-package UGCs
     public function downloadGeojson($ids)
     {
         $featureCollection = ['type' => 'FeatureCollection', 'features' => []];
