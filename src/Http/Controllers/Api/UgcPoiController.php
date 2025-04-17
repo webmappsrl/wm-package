@@ -6,6 +6,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Wm\WmPackage\Http\Controllers\Api\Abstracts\UgcController;
 use Wm\WmPackage\Models\UgcPoi;
+use App\Models\UgcPoi as ModelsUgcPoi;
 
 class UgcPoiController extends UgcController
 {
@@ -28,5 +29,28 @@ class UgcPoiController extends UgcController
     public function destroy(UgcPoi $poi): JsonResponse
     {
         return parent::_destroy($poi);
+    }
+
+    //osm2cai api for geojson download 
+    //TODO: update when osm2cai will use wm-package UGCs
+    public function downloadGeojson($ids)
+    {
+        $featureCollection = ['type' => 'FeatureCollection', 'features' => []];
+
+        $ids = explode(',', $ids);
+        $pois = ModelsUgcPoi::whereIn('id', $ids)->get();
+
+        foreach ($pois as $poi) {
+            $feature = $poi->getEmptyGeojson();
+            $feature['properties'] = $poi->getJsonProperties();
+            $featureCollection['features'][] = $feature;
+        }
+
+        $headers = [
+            'Content-type' => 'application/json',
+            'Content-Disposition' => 'attachment; filename="ugc_pois.geojson"',
+        ];
+
+        return response()->json($featureCollection, 200, $headers);
     }
 }
