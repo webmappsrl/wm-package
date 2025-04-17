@@ -121,7 +121,7 @@ class App extends Resource
                 ->searchable()
                 ->rules('required')
                 ->help(__('Seleziona un layer esistente'))
-                ->displayUsingLabels()
+                ->displayUsingLabels(),
         ];
     }
 }
