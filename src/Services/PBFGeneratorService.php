@@ -3,12 +3,12 @@
 namespace Wm\WmPackage\Services;
 
 use Exception;
-use Wm\WmPackage\Models\App;
-use Wm\WmPackage\Models\EcTrack;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Wm\WmPackage\Jobs\Pbf\GeneratePBFByZoomJob;
+use Wm\WmPackage\Models\App;
+use Wm\WmPackage\Models\EcTrack;
 
 class PBFGeneratorService extends BaseService
 {
@@ -83,7 +83,7 @@ class PBFGeneratorService extends BaseService
         SQL;
 
         $result = DB::select($sql, [
-            'layer_ids' => '{' . implode(',', $layerIds) . '}', // Converti in array PostgreSQL
+            'layer_ids' => '{'.implode(',', $layerIds).'}', // Converti in array PostgreSQL
         ]);
 
         return $result[0]->total_tracks ?? 0;
@@ -181,7 +181,6 @@ class PBFGeneratorService extends BaseService
         return $sql;
     }
 
-
     public function generateWholeAppPbfs(App $app, $minZoom = null, $maxZoom = null, $noPbfLayer = false)
     {
         $bbox = GeometryComputationService::make()->getTracksBbox($app->ecTracks);
@@ -190,6 +189,7 @@ class PBFGeneratorService extends BaseService
         }
         if (empty($bbox)) {
             throw new Exception('This app does not have bounding box! Please add bbox. (e.g. [10.39637,43.71683,10.52729,43.84512])');
+
             return;
         }
 
