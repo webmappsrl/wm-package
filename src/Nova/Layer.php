@@ -31,10 +31,10 @@ class Layer extends AbstractGeometryResource
     {
         return [
             ID::make()->sortable(),
-            BelongsTo::make(__('App'), 'appOwner', App::class),
             NovaTabTranslatable::make([
-                Text::make(__('name'), 'properties->title'),
-            ])->onlyOnIndex(),
+                Text::make(__('Name'), 'name')->required(),
+            ]),
+            BelongsTo::make(__('App'), 'appOwner', App::class),
             Images::make(__('Image'), 'default'),
             PropertiesPanel::make(__('Properties'), 'layer')->collapsible(),
             MorphToMany::make(__('Activities'), 'taxonomyActivities', TaxonomyActivity::class),
