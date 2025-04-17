@@ -289,7 +289,7 @@ class AppConfigService extends AppBaseService
                 try {
                     if (isset($item['bbox'])) {
                         $item['bbox'] = array_map('floatval', json_decode(strval($item['bbox']), true));
-                    } else if (isset($item['geometry'])) {
+                    } elseif (isset($item['geometry'])) {
                         $item['bbox'] = GeometryComputationService::make()->getGeometryModelBbox($layer);
                     }
                 } catch (\Exception  $e) {
@@ -309,7 +309,7 @@ class AppConfigService extends AppBaseService
                         unset($item[$field]);
                     }
                 }
-                $removedFields = ['created_at', 'updated_at', 'sku', 'generate_edges', 'geometry','geohub_synced_at', 'geohub_id', 'feature_collection', 'configuration', 'color'];
+                $removedFields = ['created_at', 'updated_at', 'sku', 'generate_edges', 'geometry', 'geohub_synced_at', 'geohub_id', 'feature_collection', 'configuration', 'color'];
                 foreach ($removedFields as $field) {
                     unset($item[$field]);
                 }
