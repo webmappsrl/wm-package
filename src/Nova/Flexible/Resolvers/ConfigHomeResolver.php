@@ -83,18 +83,18 @@ class ConfigHomeResolver implements ResolverInterface
                     $homeElement[$key] = $val;
                 }
             }
-            
+
             // Se è un layout di tipo Layer, aggiungiamo automaticamente il titolo del layer
             if ($layout->name() === 'layer' && isset($homeElement['layer'])) {
                 $layerId = $homeElement['layer'];
                 $layer = Layer::find($layerId);
-                
+
                 if ($layer) {
                     $title = $layer->properties['title'] ?? null;
                     if (is_null($title)) {
                         $title = 'Layer #'.$layer->id;
                     }
-                    
+
                     // Aggiungiamo il titolo del layer come 'name'
                     $homeElement['title'] = $title;
                 }
