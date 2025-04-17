@@ -280,10 +280,17 @@ class AppConfigService extends AppBaseService
             $layers = [];
             foreach ($this->app->layers as $layer) {
                 $item = $layer->toArray();
+                if (isset($item['properties']) && is_array($item['properties'])) {
+                    foreach ($item['properties'] as $key => $value) {
+                        $item[$key] = $value;
+                    }
+                }
+                unset($item['properties']);
                 try {
-
                     if (isset($item['bbox'])) {
                         $item['bbox'] = array_map('floatval', json_decode(strval($item['bbox']), true));
+                    } else if (isset($item['geometry'])) {
+                        $item['bbox'] = GeometryComputationService::make()->getGeometryModelBbox($layer);
                     }
                 } catch (\Exception  $e) {
                     Log::warning('The bbox value '.$layer->id.' are not correct. Error: '.$e->getMessage());
@@ -302,10 +309,10 @@ class AppConfigService extends AppBaseService
                         unset($item[$field]);
                     }
                 }
-                unset($item['created_at']);
-                unset($item['updated_at']);
-                unset($item['sku']);
-                unset($item['generate_edges']);
+                $removedFields = ['created_at', 'updated_at', 'sku', 'generate_edges', 'geometry','geohub_synced_at', 'geohub_id', 'feature_collection', 'configuration', 'color'];
+                foreach ($removedFields as $field) {
+                    unset($item[$field]);
+                }
 
                 $image = $layer->getMedia()->first();
                 if ($image) {
