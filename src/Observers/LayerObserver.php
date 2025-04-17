@@ -2,10 +2,11 @@
 
 namespace Wm\WmPackage\Observers;
 
+use Wm\WmPackage\Models\Layer;
 use Illuminate\Database\Eloquent\Model;
 use Wm\WmPackage\Models\Abstracts\Taxonomy;
-use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Services\Models\LayerService;
+use Wm\WmPackage\Services\PBFGeneratorService;
 
 class LayerObserver extends AbstractObserver
 {
@@ -40,5 +41,10 @@ class LayerObserver extends AbstractObserver
         if (is_null($layer->properties)) {
             $layer->properties = [];
         }
+    }
+
+    public function deleted(Layer $layer)
+    {
+        PBFGeneratorService::make()->generateWholeAppPbfs($layer->app);
     }
 }

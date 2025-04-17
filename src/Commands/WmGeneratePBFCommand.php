@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Bus;
 use Wm\WmPackage\Jobs\Pbf\GeneratePBFByZoomJob;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Services\GeometryComputationService;
+use Wm\WmPackage\Services\PBFGeneratorService;
 
 /**
  * MBTILES Specs documentation: https://github.com/mapbox/mbtiles-spec/blob/master/1.3/spec.md
@@ -65,33 +66,17 @@ class WmGeneratePBFCommand extends Command
     {
         $app = App::where('id', $this->argument('app_id'))->first();
         if (! $app) {
-            $this->error('App with id '.$this->argument('app_id').' not found!');
-
-            return;
-        }
-        if (! $app->id) {
-            $this->error('This app does not have app_id! Please add app_id. (e.g. 3)');
-
-            return;
-        }
-        $this->app_id = $app->id;
-
-        $this->min_zoom = (int) ($this->option('min') ? $this->option('min') : config('wm-package.services.pbf.min_zoom'));
-        $this->max_zoom = (int) ($this->option('max') ? $this->option('max') : config('wm-package.services.pbf.max_zoom'));
-        $this->no_pbf_layer = ($this->option('no_pbf_layer') ? true : false);
-
-        $bbox = GeometryComputationService::make()->getTracksBbox($app->ecTracks);
-        if (empty($bbox)) {
-            $bbox = json_decode($app->map_bbox);
-        }
-        if (empty($bbox)) {
-            $this->error('This app does not have bounding box! Please add bbox. (e.g. [10.39637,43.71683,10.52729,43.84512])');
+            $this->error('App with id ' . $this->argument('app_id') . ' not found!');
 
             return;
         }
 
-        // Dispatch the generation process using batches
-        $this->dispatchBatches($bbox);
+        PBFGeneratorService::make()->generateWholeAppPbfs(
+            $app,
+            $this->option('min'),
+            $this->option('max'),
+            $this->no_pbf_layer
+        );
 
         $this->output->success('PBF generation process started!');
 

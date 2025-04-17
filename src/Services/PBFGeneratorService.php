@@ -2,10 +2,13 @@
 
 namespace Wm\WmPackage\Services;
 
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
+use Exception;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcTrack;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Log;
+use Wm\WmPackage\Jobs\Pbf\GeneratePBFByZoomJob;
 
 class PBFGeneratorService extends BaseService
 {
@@ -80,7 +83,7 @@ class PBFGeneratorService extends BaseService
         SQL;
 
         $result = DB::select($sql, [
-            'layer_ids' => '{'.implode(',', $layerIds).'}', // Converti in array PostgreSQL
+            'layer_ids' => '{' . implode(',', $layerIds) . '}', // Converti in array PostgreSQL
         ]);
 
         return $result[0]->total_tracks ?? 0;
@@ -176,5 +179,27 @@ class PBFGeneratorService extends BaseService
 
         // Log::info($sql);
         return $sql;
+    }
+
+
+    public function generateWholeAppPbfs(App $app, $minZoom = null, $maxZoom = null, $noPbfLayer = false)
+    {
+        $bbox = GeometryComputationService::make()->getTracksBbox($app->ecTracks);
+        if (empty($bbox)) {
+            $bbox = json_decode($app->map_bbox);
+        }
+        if (empty($bbox)) {
+            throw new Exception('This app does not have bounding box! Please add bbox. (e.g. [10.39637,43.71683,10.52729,43.84512])');
+            return;
+        }
+
+        $minZoom = $minZoom ?? config('wm-package.services.pbf.min_zoom');
+        $maxZoom = $maxZoom ?? config('wm-package.services.pbf.max_zoom');
+
+        $chain = [];
+        for ($zoom = $minZoom; $zoom <= $maxZoom; $zoom++) {
+            $chain[] = new GeneratePBFByZoomJob($bbox, $zoom, $this->app_id, $noPbfLayer);
+        }
+        Bus::chain($chain)->onConnection('redis')->onQueue('pbf')->dispatch();
     }
 }
