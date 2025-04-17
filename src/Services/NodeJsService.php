@@ -33,15 +33,13 @@ class NodeJsService extends BaseService
 
         $packageServiceProvider = \Wm\WmPackage\WmPackageServiceProvider::getBasePath();
 
-        $cmd = config('wm-package.services.nodejs.executable') . " {$packageServiceProvider}/node/jobs/build-elevation-chart.js --geojson=$src --dest=$dest --type=svg";
+        $cmd = config('wm-package.services.nodejs.executable')." {$packageServiceProvider}/node/jobs/build-elevation-chart.js --geojson=$src --dest=$dest --type=svg";
 
         // Log::info("Running node command: {$cmd}");
 
         $this->runNodeJsCommand($cmd);
 
         $this->storageService->deleteLocalTempGeojsonForElavationChartImageGeneration($id);
-
-
 
         return $this->storageService->storeRemoteElevationChartImage($id);
     }
