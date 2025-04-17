@@ -3,10 +3,9 @@
 namespace Wm\WmPackage\Http\Resources;
 
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
 use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Services\GeoJsonService;
-use Wm\WmPackage\Http\Resources\EcPoiResource;
-use Illuminate\Http\Resources\Json\JsonResource;
 use Wm\WmPackage\Services\GeometryComputationService;
 
 class EcTrackResource extends JsonResource

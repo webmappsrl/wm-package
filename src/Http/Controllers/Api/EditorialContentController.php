@@ -64,12 +64,12 @@ class EditorialContentController extends Controller
 
             return response()->streamDownload(function () use ($ec) {
                 file_get_contents($ec->url);
-            }, 'name.' . $pathInfo['extension']);
+            }, 'name.'.$pathInfo['extension']);
         } else {
             // Scaricare risorsa locale
             $filename = 'name';
             if (isset($pathInfo['extension'])) {
-                $filename = 'name.' . $pathInfo['extension'];
+                $filename = 'name.'.$pathInfo['extension'];
             }
 
             return Storage::disk('public')->download($ec->url, $filename);
@@ -86,7 +86,7 @@ class EditorialContentController extends Controller
         } catch (Exception $e) {
             return response()->json([
                 'code' => $e->getCode(),
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
 
@@ -135,7 +135,7 @@ class EditorialContentController extends Controller
     public function downloadEcGeojson(int $id): JsonResponse
     {
         $headers['Content-Type'] = 'application/vnd.api+json';
-        $headers['Content-Disposition'] = 'attachment; filename="' . $id . '.geojson"';
+        $headers['Content-Disposition'] = 'attachment; filename="'.$id.'.geojson"';
 
         return $this->viewEcGeojson($id, $headers);
     }
@@ -146,7 +146,7 @@ class EditorialContentController extends Controller
     public function downloadEcGpx(int $id)
     {
         $headers['Content-Type'] = 'application/xml';
-        $headers['Content-Disposition'] = 'attachment; filename="' . $id . '.gpx"';
+        $headers['Content-Disposition'] = 'attachment; filename="'.$id.'.gpx"';
 
         return $this->viewEcGpx($id, $headers);
     }
@@ -157,7 +157,7 @@ class EditorialContentController extends Controller
     public function downloadEcKml(int $id)
     {
         $headers['Content-Type'] = 'application/xml';
-        $headers['Content-Disposition'] = 'attachment; filename="' . $id . '.kml"';
+        $headers['Content-Disposition'] = 'attachment; filename="'.$id.'.kml"';
 
         return $this->viewEcKml($id, $headers);
     }
@@ -180,7 +180,7 @@ class EditorialContentController extends Controller
             $originalFileName = $headers['Content-Disposition'];
             $extension = trim(pathinfo($originalFileName, PATHINFO_EXTENSION), '"');
 
-            $headers['Content-Disposition'] = 'attachment; filename="' . $fileName . '.' . $extension . '"';
+            $headers['Content-Disposition'] = 'attachment; filename="'.$fileName.'.'.$extension.'"';
         }
 
         return $headers;

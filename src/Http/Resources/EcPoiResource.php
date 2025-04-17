@@ -3,8 +3,8 @@
 namespace Wm\WmPackage\Http\Resources;
 
 use Illuminate\Http\Request;
-use Wm\WmPackage\Services\GeoJsonService;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Wm\WmPackage\Services\GeoJsonService;
 
 class EcPoiResource extends JsonResource
 {
@@ -26,7 +26,7 @@ class EcPoiResource extends JsonResource
 
         $fileTypes = ['geojson', 'gpx', 'kml'];
         foreach ($fileTypes as $fileType) {
-            $geojson['properties'][$fileType . '_url'] = route('default.api.ec.poi.download.' . $fileType, ['id' => $this->id]);
+            $geojson['properties'][$fileType.'_url'] = route('default.api.ec.poi.download.'.$fileType, ['id' => $this->id]);
         }
 
         return $geojson;
