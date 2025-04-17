@@ -34,6 +34,9 @@ class Layer extends AbstractGeometryResource
             NovaTabTranslatable::make([
                 Text::make(__('Name'), 'name')->required(),
             ]),
+
+            Text::make(__('Rank'), 'properties->rank')->onlyOnIndex()->sortable(),
+
             BelongsTo::make(__('App'), 'appOwner', App::class),
             Images::make(__('Image'), 'default'),
             PropertiesPanel::make(__('Properties'), 'layer')->collapsible(),
