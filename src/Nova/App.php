@@ -55,9 +55,8 @@ class App extends Resource
     {
         return [
             NovaTabTranslatable::make([
-                Code::make('Welcome', 'welcome')
-                    ->stacked(),
-                /*   Tiptap::make('Welcome', 'welcome')
+                Code::make('Welcome', 'welcome'),
+             /*   Tiptap::make('Welcome', 'welcome')
                     ->buttons([
                         'heading',
                         '|',
@@ -73,7 +72,7 @@ class App extends Resource
                         '|',
                         'textAlign',
                         '|',
-                        'horizontalRule',
+                        'horizontalRule',     
                         '|',
                         'editHtml',
                     ])
