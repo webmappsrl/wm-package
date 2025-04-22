@@ -279,6 +279,7 @@ class App extends Model
 
         return $tracks_array;
     }
+
     /**
      * Returns array of all tracks'id in APP through layers deifinition
      *  $tracks = [
@@ -430,14 +431,12 @@ class App extends Model
         return 'App\\Models\\'.class_basename($this);
     }
 
-
-
-public function registerMediaCollections(): void
-{
-    $this->addMediaCollection('icon');
-    $this->addMediaCollection('icon_small');
-    $this->addMediaCollection('splash');
-}
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('icon');
+        $this->addMediaCollection('icon_small');
+        $this->addMediaCollection('splash');
+    }
 
     // Le funzioni custom per config_home sono state spostate nel resolver layerBoxResolver
 }
