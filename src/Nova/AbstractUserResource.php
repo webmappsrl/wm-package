@@ -62,11 +62,11 @@ abstract class AbstractUserResource extends Resource
 
             RoleBooleanGroup::make('Roles', 'roles')
                 ->readonly(function () {
-                    return !auth()->user()->hasRole('Administrator') && !auth()->user()->hasPermissionTo('manage roles and permissions');
+                    return ! auth()->user()->hasRole('Administrator') && ! auth()->user()->hasPermissionTo('manage roles and permissions');
                 }),
             PermissionBooleanGroup::make('Permissions', 'permissions')
                 ->readonly(function () {
-                    return !auth()->user()->hasRole('Administrator') && !auth()->user()->hasPermissionTo('manage roles and permissions');
+                    return ! auth()->user()->hasRole('Administrator') && ! auth()->user()->hasPermissionTo('manage roles and permissions');
                 })
                 ->dependsOn('roles', function (PermissionBooleanGroup $field, NovaRequest $request, FormData $formData) {
                     $roles = $formData->get('roles');
