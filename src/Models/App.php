@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\Translatable\HasTranslations;
 use Whitecube\NovaFlexibleContent\Value\FlexibleCast;
 use Wm\WmPackage\Observers\AppObserver;
@@ -22,9 +24,9 @@ use Wm\WmPackage\Traits\HasPackageFactory;
  * @property string app_id
  * @property string available_languages
  */
-class App extends Model
+class App extends Model implements HasMedia
 {
-    use HasPackageFactory, HasTranslations;
+    use HasPackageFactory, HasTranslations, InteractsWithMedia;
 
     protected $guarded = [];
 
@@ -176,7 +178,7 @@ class App extends Model
                             $new_array[$key] = json_decode($val, true);
                         }
                         if ($key == 'identifier') {
-                            $new_array[$key] = 'poi_type_'.$val;
+                            $new_array[$key] = 'poi_type_' . $val;
                         }
                         if (! empty($val) && $key != 'name' && $key != 'identifier') {
                             $new_array[$key] = $val;
@@ -200,7 +202,7 @@ class App extends Model
                             $new_array[$key] = json_decode($val, true);
                         }
                         if ($key == 'identifier') {
-                            $new_array[$key] = 'poi_type_'.$val;
+                            $new_array[$key] = 'poi_type_' . $val;
                         }
                         if (! empty($val) && $key != 'name' && $key != 'identifier') {
                             $new_array[$key] = $val;
@@ -265,7 +267,7 @@ class App extends Model
                     });
                 break;
             default:
-                throw new \Exception('Wrong taxonomy name: '.$taxonomy_name);
+                throw new \Exception('Wrong taxonomy name: ' . $taxonomy_name);
         }
 
         $tracks = $query->orderBy('name')->get();
@@ -385,7 +387,7 @@ class App extends Model
         if (isset($customUrl) && $customUrl != null) {
             $url = $customUrl;
         } else {
-            $url = 'https://'.$this->id.'.app.webmapp.it';
+            $url = 'https://' . $this->id . '.app.webmapp.it';
         }
         // create the svg code for the QR code
 
@@ -427,17 +429,17 @@ class App extends Model
      */
     public function getMorphClass()
     {
-        return 'App\\Models\\'.class_basename($this);
+        return 'App\\Models\\' . class_basename($this);
     }
 
 
 
-public function registerMediaCollections(): void
-{
-    $this->addMediaCollection('icon');
-    $this->addMediaCollection('icon_small');
-    $this->addMediaCollection('splash');
-}
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('icon');
+        $this->addMediaCollection('icon_small');
+        $this->addMediaCollection('splash');
+    }
 
     // Le funzioni custom per config_home sono state spostate nel resolver layerBoxResolver
 }
