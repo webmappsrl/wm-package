@@ -65,7 +65,7 @@ class WmGeneratePBFCommand extends Command
     {
         $app = App::where('id', $this->argument('app_id'))->first();
         if (! $app) {
-            $this->error('App with id '.$this->argument('app_id').' not found!');
+            $this->error('App with id ' . $this->argument('app_id') . ' not found!');
 
             return;
         }
@@ -80,14 +80,5 @@ class WmGeneratePBFCommand extends Command
         $this->output->success('PBF generation process started!');
 
         return 0;
-    }
-
-    private function dispatchBatches($bbox)
-    {
-        $chain = [];
-        for ($zoom = $this->min_zoom; $zoom <= $this->max_zoom; $zoom++) {
-            $chain[] = new GeneratePBFByZoomJob($bbox, $zoom, $this->app_id, $this->no_pbf_layer);
-        }
-        Bus::chain($chain)->onConnection('redis')->onQueue('pbf')->dispatch();
     }
 }

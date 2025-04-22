@@ -83,7 +83,7 @@ class PBFGeneratorService extends BaseService
         SQL;
 
         $result = DB::select($sql, [
-            'layer_ids' => '{'.implode(',', $layerIds).'}', // Converti in array PostgreSQL
+            'layer_ids' => '{' . implode(',', $layerIds) . '}', // Converti in array PostgreSQL
         ]);
 
         return $result[0]->total_tracks ?? 0;
@@ -198,7 +198,7 @@ class PBFGeneratorService extends BaseService
 
         $chain = [];
         for ($zoom = $minZoom; $zoom <= $maxZoom; $zoom++) {
-            $chain[] = new GeneratePBFByZoomJob($bbox, $zoom, $this->app_id, $noPbfLayer);
+            $chain[] = new GeneratePBFByZoomJob($bbox, $zoom, $app->id, $noPbfLayer);
         }
         Bus::chain($chain)->onConnection('redis')->onQueue('pbf')->dispatch();
     }
