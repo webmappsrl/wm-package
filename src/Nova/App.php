@@ -54,24 +54,26 @@ class App extends Resource
         ];
     }
 
-    protected function webapp_tab(): array {
+    protected function webapp_tab(): array
+    {
 
         return [
             Boolean::make(__('Show Auth at startup'), 'webapp_auth_show_at_startup')
-            ->default(false)
-            ->hideFromIndex()
-            ->help(__('Shows the authentication and registration page for users'))
+                ->default(false)
+                ->hideFromIndex()
+                ->help(__('Shows the authentication and registration page for users')),
 
         ];
 
     }
+
     protected function app_tab(): array
     {
         return [
             Boolean::make(__('Geolocation Record Enable'), 'geolocation_record_enable')
-            ->default(false)
-            ->hideFromIndex()
-            ->help(__('Enables user geolocation recording on tracks'))
+                ->default(false)
+                ->hideFromIndex()
+                ->help(__('Enables user geolocation recording on tracks')),
 
         ];
     }
