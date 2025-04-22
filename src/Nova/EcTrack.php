@@ -25,6 +25,13 @@ class EcTrack extends AbstractEcResource
 
     public static $model = \Wm\WmPackage\Models\EcTrack::class;
 
+    public static $title = 'name';
+
+    public function title()
+    {
+        return $this->getTranslation('name', 'it');
+    }
+
     public function fields(NovaRequest $request): array
     {
         return [
