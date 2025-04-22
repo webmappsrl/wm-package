@@ -32,17 +32,17 @@ class ElasticsearchController extends Controller
                     $decoded = json_decode($value, true);
 
                     if (json_last_error() !== JSON_ERROR_NONE) {
-                        return $fail('Il campo '.$attribute.' deve essere un JSON valido.');
+                        return $fail('Il campo ' . $attribute . ' deve essere un JSON valido.');
                     }
 
                     // Verifica che sia un array
                     if (! is_array($decoded)) {
-                        return $fail('Il campo '.$attribute.' deve essere un array.');
+                        return $fail('Il campo ' . $attribute . ' deve essere un array.');
                     }
                     // Verifica che ogni elemento sia un intero
                     foreach ($decoded as $id) {
                         if (! is_int($id)) {
-                            return $fail('Tutti gli elementi in '.$attribute.' devono essere numeri interi.');
+                            return $fail('Tutti gli elementi in ' . $attribute . ' devono essere numeri interi.');
                         }
                     }
                 }],
@@ -65,7 +65,7 @@ class ElasticsearchController extends Controller
         $layer = $validated['layer'] ?? false;
         $filters = isset($validated['filters']) ? json_decode($validated['filters'], true) : [];
         $app = $validated['app'] ?? false;
-        $ids = $validated['ids'] ? json_decode($validated['ids'], true) : [];
+        $ids = isset($validated['ids']) ? json_decode($validated['ids'], true) : [];
 
         $appId = (int) last(explode('_', $app));
         $search = str_replace('%20', ' ', $query);
@@ -117,7 +117,7 @@ class ElasticsearchController extends Controller
             //     'boost' => 4,
             // ]), BoolQuery::SHOULD); // #OR
 
-            $boolQuery->add(new QueryStringQuery('*'.$search.'*', [
+            $boolQuery->add(new QueryStringQuery('*' . $search . '*', [
                 'default_operator' => 'and',
             ]), BoolQuery::MUST); // #OR
             // $boolQuery->add(new MatchQuery('name.exact', $search, [
