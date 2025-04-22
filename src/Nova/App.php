@@ -148,15 +148,15 @@ class App extends Resource
                 ->hideFromIndex()
                 ->help(__('Url to the website')),
             Images::make(__('Icon'), 'icon')
-                //->rules('image', 'mimes:png', 'dimensions:width=1024,height=1024')
+                // ->rules('image', 'mimes:png', 'dimensions:width=1024,height=1024')
                 ->help(__('Required size is :widthx:heightpx', ['width' => 1024, 'height' => 1024]))
                 ->hideFromIndex(),
             Images::make(__('Splash image'), 'splash')
-                //->rules('image', 'mimes:png', 'dimensions:width=2732,height=2732')
+                // ->rules('image', 'mimes:png', 'dimensions:width=2732,height=2732')
                 ->help(__('Required size is :widthx:heightpx', ['width' => 2732, 'height' => 2732]))
                 ->hideFromIndex(),
             Images::make(__('Icon small'), 'icon_small')
-                //->rules('image', 'mimes:png', 'dimensions:width=512,height=512')
+                // ->rules('image', 'mimes:png', 'dimensions:width=512,height=512')
                 ->help(__('Required size is :widthx:heightpx', ['width' => 512, 'height' => 512]))
                 ->hideFromIndex(),
         ];
@@ -181,9 +181,9 @@ class App extends Resource
                             $title = $layer->properties['title'] ?? null;
                             if (is_array($title)) {
                                 // Se è un array, prendi prima la versione italiana, poi quella inglese, altrimenti usa l'ID
-                                $title = $title['it'] ?? $title['en'] ?? ('Layer #' . $layer->id);
+                                $title = $title['it'] ?? $title['en'] ?? ('Layer #'.$layer->id);
                             } elseif (is_null($title)) {
-                                $title = 'Layer #' . $layer->id;
+                                $title = 'Layer #'.$layer->id;
                             }
 
                             return [
