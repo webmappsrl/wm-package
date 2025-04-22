@@ -21,7 +21,6 @@ class AppConfigService extends AppBaseService
 {
     public function writeAppConfigOnAws()
     {
-
         $json = $this->config();
 
         StorageService::make()->storeAppConfig($this->app->id, json_encode($json));
@@ -37,7 +36,6 @@ class AppConfigService extends AppBaseService
      */
     public function config()
     {
-
         $data = [];
 
         $data = array_merge($data, $this->config_section_app());
@@ -62,7 +60,7 @@ class AppConfigService extends AppBaseService
     // TODO: is jido stuff used anymore?
     public function config_update_jido_time()
     {
-        $confUri = $this->app->id.'.json';
+        $confUri = $this->app->id . '.json';
         if (Storage::disk('conf')->exists($confUri)) {
             $json = json_decode(Storage::disk('conf')->get($confUri));
             $json->JIDO_UPDATE_TIME = floor(microtime(true) * 1000);
@@ -72,7 +70,7 @@ class AppConfigService extends AppBaseService
 
     public function config_get_jido_time()
     {
-        $confUri = $this->app->id.'.json';
+        $confUri = $this->app->id . '.json';
         if (Storage::disk('conf')->exists($confUri)) {
             $json = json_decode(Storage::disk('conf')->get($confUri));
             if (isset($json->JIDO_UPDATE_TIME)) {
@@ -94,7 +92,7 @@ class AppConfigService extends AppBaseService
         $data['APP']['customerName'] = $this->app->customer_name;
         $data['APP']['geohubId'] = $this->app->id;
 
-        if (! is_null($this->app->welcome)) {
+        if (!is_null($this->app->welcome)) {
             $data['APP']['welcome'] = [];
             $welcome = $this->app->toArray()['welcome'];
             $data['APP']['welcome'] = $welcome;
@@ -144,10 +142,10 @@ class AppConfigService extends AppBaseService
     {
         $data = [];
         $data['TRANSLATIONS'] = [];
-        if (! is_null($this->app->translations_it)) {
+        if (!is_null($this->app->translations_it)) {
             $data['TRANSLATIONS']['it'] = json_decode($this->app->translations_it, true);
         }
-        if (! is_null($this->app->translations_en)) {
+        if (!is_null($this->app->translations_en)) {
             $data['TRANSLATIONS']['en'] = json_decode($this->app->translations_en, true);
         }
 
@@ -163,7 +161,7 @@ class AppConfigService extends AppBaseService
             'title' => $this->app->name,
         ];
 
-        if (! empty($this->app->config_home)) {
+        if (!empty($this->app->config_home)) {
             if (is_string($this->app->config_home)) {
                 $data = json_decode($this->app->config_home, true);
             } elseif (is_array($this->app->config_home)) {
@@ -211,7 +209,7 @@ class AppConfigService extends AppBaseService
     private function collect_taxonomies_from_layers(Collection $all_taxonomies, $taxonomy_relation)
     {
         foreach ($this->app->layers as $layer) {
-            if (! method_exists($layer, $taxonomy_relation)) {
+            if (!method_exists($layer, $taxonomy_relation)) {
                 throw new Exception("The taxonomy relation {$taxonomy_relation} does not exist on the Layer model.");
             }
 
@@ -230,7 +228,7 @@ class AppConfigService extends AppBaseService
         $ec_tracks = EcTrack::where('user_id', $this->app->user_id)->get();
 
         foreach ($ec_tracks as $track) {
-            if (! method_exists($track, $taxonomy_relation)) {
+            if (!method_exists($track, $taxonomy_relation)) {
                 throw new Exception("The taxonomy relation {$taxonomy_relation} does not exist on the EcTrack model.");
             }
 
@@ -246,14 +244,17 @@ class AppConfigService extends AppBaseService
 
     private function filter_taxonomy($taxonomy)
     {
-        return array_filter([
-            'id' => $taxonomy->id,
-            'identifier' => $taxonomy->identifier,
-            'name' => $taxonomy->getTranslations('name'),
-            'color' => $taxonomy->color ?? null,
-        ], function ($value) {
-            return ! is_null($value);
-        });
+        return array_filter(
+            [
+                'id' => $taxonomy->id,
+                'identifier' => $taxonomy->identifier,
+                'name' => $taxonomy->getTranslations('name'),
+                'color' => $taxonomy->color ?? null,
+            ],
+            function ($value) {
+                return !is_null($value);
+            },
+        );
     }
 
     private function config_section_map(): array
@@ -292,8 +293,8 @@ class AppConfigService extends AppBaseService
                     } elseif (isset($item['geometry'])) {
                         $item['bbox'] = GeometryComputationService::make()->getGeometryModelBbox($layer);
                     }
-                } catch (\Exception  $e) {
-                    Log::warning('The bbox value '.$layer->id.' are not correct. Error: '.$e->getMessage());
+                } catch (\Exception $e) {
+                    Log::warning('The bbox value ' . $layer->id . ' are not correct. Error: ' . $e->getMessage());
                 }
                 // style
                 foreach (['color', 'fill_color', 'fill_opacity', 'stroke_width', 'stroke_opacity', 'zindex', 'line_dash'] as $field) {
@@ -319,7 +320,7 @@ class AppConfigService extends AppBaseService
                     $item['feature_image'] = MediaService::make()->getThumbnailUrl($image);
                 }
                 // remove useless attribute geometry from taxonomy where of layer
-                if (isset($item['taxonomy_wheres']) && ! empty($item['taxonomy_wheres'])) {
+                if (isset($item['taxonomy_wheres']) && !empty($item['taxonomy_wheres'])) {
                     $unsetAttr = ['geometry', 'query_string'];
                     for ($i = 0; $i < count($item['taxonomy_wheres']); $i++) {
                         foreach ($unsetAttr as $attr) {
@@ -368,8 +369,8 @@ class AppConfigService extends AppBaseService
         $data['MAP']['flow_line_quote_red'] = $this->app->flow_line_quote_red;
 
         // Tiles
-        if ($this->app->tiles && ! empty(json_decode($this->app->tiles, true))) {
-            $appTiles = new AppTiles;
+        if ($this->app->tiles && !empty(json_decode($this->app->tiles, true))) {
+            $appTiles = new AppTiles();
             $data['MAP']['controls']['tiles'][] = ['label' => $this->app->getTranslations('tiles_label'), 'type' => 'title'];
             $ta = array_map(function ($v) use ($appTiles) {
                 $v = json_decode($v, true);
@@ -485,7 +486,7 @@ class AppConfigService extends AppBaseService
 
             foreach ($poi_types as $poi_type) {
                 $a = [
-                    'identifier' => 'poi_type_'.$poi_type->identifier,
+                    'identifier' => 'poi_type_' . $poi_type->identifier,
                     'name' => json_decode($poi_type->name, true),
                     'id' => $poi_type->id,
                     'icon' => $poi_type->icon,
@@ -624,20 +625,20 @@ class AppConfigService extends AppBaseService
             $data['TABLES']['details']['showGpxDownload'] = (bool) $this->app->table_details_show_gpx_download;
             $data['TABLES']['details']['showKmlDownload'] = (bool) $this->app->table_details_show_kml_download;
             $data['TABLES']['details']['showRelatedPoi'] = (bool) $this->app->table_details_show_related_poi;
-            $data['TABLES']['details']['hide_duration:forward'] = ! $this->app->table_details_show_duration_forward;
-            $data['TABLES']['details']['hide_duration:backward'] = ! $this->app->table_details_show_duration_backward;
-            $data['TABLES']['details']['hide_distance'] = ! $this->app->table_details_show_distance;
-            $data['TABLES']['details']['hide_ascent'] = ! $this->app->table_details_show_ascent;
-            $data['TABLES']['details']['hide_descent'] = ! $this->app->table_details_show_descent;
-            $data['TABLES']['details']['hide_ele:max'] = ! $this->app->table_details_show_ele_max;
-            $data['TABLES']['details']['hide_ele:min'] = ! $this->app->table_details_show_ele_min;
-            $data['TABLES']['details']['hide_ele:from'] = ! $this->app->table_details_show_ele_from;
-            $data['TABLES']['details']['hide_ele:to'] = ! $this->app->table_details_show_ele_to;
-            $data['TABLES']['details']['hide_scale'] = ! $this->app->table_details_show_scale;
-            $data['TABLES']['details']['hide_cai_scale'] = ! $this->app->table_details_show_cai_scale;
-            $data['TABLES']['details']['hide_mtb_scale'] = ! $this->app->table_details_show_mtb_scale;
-            $data['TABLES']['details']['hide_ref'] = ! $this->app->table_details_show_ref;
-            $data['TABLES']['details']['hide_surface'] = ! $this->app->table_details_show_surface;
+            $data['TABLES']['details']['hide_duration:forward'] = !$this->app->table_details_show_duration_forward;
+            $data['TABLES']['details']['hide_duration:backward'] = !$this->app->table_details_show_duration_backward;
+            $data['TABLES']['details']['hide_distance'] = !$this->app->table_details_show_distance;
+            $data['TABLES']['details']['hide_ascent'] = !$this->app->table_details_show_ascent;
+            $data['TABLES']['details']['hide_descent'] = !$this->app->table_details_show_descent;
+            $data['TABLES']['details']['hide_ele:max'] = !$this->app->table_details_show_ele_max;
+            $data['TABLES']['details']['hide_ele:min'] = !$this->app->table_details_show_ele_min;
+            $data['TABLES']['details']['hide_ele:from'] = !$this->app->table_details_show_ele_from;
+            $data['TABLES']['details']['hide_ele:to'] = !$this->app->table_details_show_ele_to;
+            $data['TABLES']['details']['hide_scale'] = !$this->app->table_details_show_scale;
+            $data['TABLES']['details']['hide_cai_scale'] = !$this->app->table_details_show_cai_scale;
+            $data['TABLES']['details']['hide_mtb_scale'] = !$this->app->table_details_show_mtb_scale;
+            $data['TABLES']['details']['hide_ref'] = !$this->app->table_details_show_ref;
+            $data['TABLES']['details']['hide_surface'] = !$this->app->table_details_show_surface;
             $data['TABLES']['details']['showGeojsonDownload'] = (bool) $this->app->table_details_show_geojson_download;
             $data['TABLES']['details']['showShapefileDownload'] = (bool) $this->app->table_details_show_shapefile_download;
         }
@@ -690,21 +691,15 @@ class AppConfigService extends AppBaseService
     private function config_section_auth(): array
     {
         $data = [];
-        if (in_array($this->app->api, ['elbrus'])) {
-            // AUTH section
-            $data['AUTH']['showAtStartup'] = false;
-            if ($this->app->auth_show_at_startup) {
-                $data['AUTH']['showAtStartup'] = true;
-            }
+
+        if ($this->app->auth_show_at_startup) {
             $data['AUTH']['enable'] = true;
-            $data['AUTH']['loginToGeohub'] = true;
+            $data['AUTH']['showAtStartup'] = true;
         } else {
-            if ($this->app->auth_show_at_startup) {
-                $data['AUTH']['enable'] = true;
-                $data['AUTH']['showAtStartup'] = true;
-            } else {
-                $data['AUTH']['enable'] = false;
-            }
+            $data['AUTH']['enable'] = false;
+        }
+        if ($this->app->webapp_auth_show_at_startup) {
+            $data['AUTH']['webappEnable'] = true;
         }
 
         return $data;
@@ -733,43 +728,43 @@ class AppConfigService extends AppBaseService
     private function _getReportSection()
     {
         $json_string = <<<'EOT'
- {
-    "enable": true,
-    "url": "https://geohub.webmapp.it/api/usergenerateddata/store",
-    "items": [
-    {
-    "title": "Crea un nuovo waypoint",
-    "success": "Waypoint creato con successo",
-    "url": "https://geohub.webmapp.it/api/usergenerateddata/store",
-    "type": "geohub",
-    "fields": [
-    {
-    "label": "Nome",
-    "name": "title",
-    "mandatory": true,
-    "type": "text",
-    "placeholder": "Scrivi qua il nome del waypoint"
-    },
-    {
-    "label": "Descrizione",
-    "name": "description",
-    "mandatory": true,
-    "type": "textarea",
-    "placeholder": "Descrivi brevemente il waypoint"
-    },
-    {
-    "label": "Foto",
-    "name": "gallery",
-    "mandatory": false,
-    "type": "gallery",
-    "limit": 5,
-    "placeholder": "Aggiungi qualche foto descrittiva del waypoint"
-    }
-    ]
-    }
-    ]
-    }
-EOT;
+         {
+            "enable": true,
+            "url": "https://geohub.webmapp.it/api/usergenerateddata/store",
+            "items": [
+            {
+            "title": "Crea un nuovo waypoint",
+            "success": "Waypoint creato con successo",
+            "url": "https://geohub.webmapp.it/api/usergenerateddata/store",
+            "type": "geohub",
+            "fields": [
+            {
+            "label": "Nome",
+            "name": "title",
+            "mandatory": true,
+            "type": "text",
+            "placeholder": "Scrivi qua il nome del waypoint"
+            },
+            {
+            "label": "Descrizione",
+            "name": "description",
+            "mandatory": true,
+            "type": "textarea",
+            "placeholder": "Descrivi brevemente il waypoint"
+            },
+            {
+            "label": "Foto",
+            "name": "gallery",
+            "mandatory": false,
+            "type": "gallery",
+            "limit": 5,
+            "placeholder": "Aggiungi qualche foto descrittiva del waypoint"
+            }
+            ]
+            }
+            ]
+            }
+        EOT;
 
         return json_decode($json_string, true);
     }

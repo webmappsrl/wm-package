@@ -70,6 +70,10 @@ class App extends Resource
     protected function app_tab(): array
     {
         return [
+            Boolean::make(__('Show Auth at startup'), 'auth_show_at_startup')
+            ->default(false)
+            ->hideFromIndex()
+            ->help(__('Shows the authentication and registration page for users')),
             Boolean::make(__('Geolocation Record Enable'), 'geolocation_record_enable')
                 ->default(false)
                 ->hideFromIndex()
