@@ -26,7 +26,7 @@ class WmBackupCommand extends BackupCommand
      */
     public function handle(): int
     {
-        $this->buildConfig();
+        //$this->buildConfig();
         $filenamePrefix = '';
         switch (true) {
             case $this->option('only-db'):
