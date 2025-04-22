@@ -3,6 +3,7 @@
 namespace Wm\WmPackage\Nova;
 
 use Kongulov\NovaTabTranslatable\NovaTabTranslatable;
+use Laravel\Nova\Fields\Boolean;
 use Laravel\Nova\Fields\Code;
 use Laravel\Nova\Fields\ID;
 use Laravel\Nova\Fields\Select;
@@ -34,6 +35,8 @@ class App extends Resource
             Text::make('Name')->sortable(),
             Tab::group('App', [
                 Tab::make('home', $this->home_tab()),
+                Tab::make('webapp', $this->webapp_tab()),
+                Tab::make('app', $this->app_tab()),
             ]),
 
             // TODO: implement fields
@@ -48,6 +51,28 @@ class App extends Resource
                 ->confirmText('Sei sicuro di voler aggiornare tutte le tracks di questa app su AWS?')
                 ->confirmButtonText('Sì, aggiorna')
                 ->cancelButtonText('No, annulla'),
+        ];
+    }
+
+    protected function webapp_tab(): array {
+
+        return [
+            Boolean::make(__('Show Auth at startup'), 'webapp_auth_show_at_startup')
+            ->default(false)
+            ->hideFromIndex()
+            ->help(__('Shows the authentication and registration page for users'))
+
+        ];
+
+    }
+    protected function app_tab(): array
+    {
+        return [
+            Boolean::make(__('Geolocation Record Enable'), 'geolocation_record_enable')
+            ->default(false)
+            ->hideFromIndex()
+            ->help(__('Enables user geolocation recording on tracks'))
+
         ];
     }
 
