@@ -60,7 +60,7 @@ class AppConfigService extends AppBaseService
     // TODO: is jido stuff used anymore?
     public function config_update_jido_time()
     {
-        $confUri = $this->app->id . '.json';
+        $confUri = $this->app->id.'.json';
         if (Storage::disk('conf')->exists($confUri)) {
             $json = json_decode(Storage::disk('conf')->get($confUri));
             $json->JIDO_UPDATE_TIME = floor(microtime(true) * 1000);
@@ -70,7 +70,7 @@ class AppConfigService extends AppBaseService
 
     public function config_get_jido_time()
     {
-        $confUri = $this->app->id . '.json';
+        $confUri = $this->app->id.'.json';
         if (Storage::disk('conf')->exists($confUri)) {
             $json = json_decode(Storage::disk('conf')->get($confUri));
             if (isset($json->JIDO_UPDATE_TIME)) {
@@ -92,7 +92,7 @@ class AppConfigService extends AppBaseService
         $data['APP']['customerName'] = $this->app->customer_name;
         $data['APP']['geohubId'] = $this->app->id;
 
-        if (!is_null($this->app->welcome)) {
+        if (! is_null($this->app->welcome)) {
             $data['APP']['welcome'] = [];
             $welcome = $this->app->toArray()['welcome'];
             $data['APP']['welcome'] = $welcome;
@@ -142,10 +142,10 @@ class AppConfigService extends AppBaseService
     {
         $data = [];
         $data['TRANSLATIONS'] = [];
-        if (!is_null($this->app->translations_it)) {
+        if (! is_null($this->app->translations_it)) {
             $data['TRANSLATIONS']['it'] = json_decode($this->app->translations_it, true);
         }
-        if (!is_null($this->app->translations_en)) {
+        if (! is_null($this->app->translations_en)) {
             $data['TRANSLATIONS']['en'] = json_decode($this->app->translations_en, true);
         }
 
@@ -161,7 +161,7 @@ class AppConfigService extends AppBaseService
             'title' => $this->app->name,
         ];
 
-        if (!empty($this->app->config_home)) {
+        if (! empty($this->app->config_home)) {
             if (is_string($this->app->config_home)) {
                 $data = json_decode($this->app->config_home, true);
             } elseif (is_array($this->app->config_home)) {
@@ -209,7 +209,7 @@ class AppConfigService extends AppBaseService
     private function collect_taxonomies_from_layers(Collection $all_taxonomies, $taxonomy_relation)
     {
         foreach ($this->app->layers as $layer) {
-            if (!method_exists($layer, $taxonomy_relation)) {
+            if (! method_exists($layer, $taxonomy_relation)) {
                 throw new Exception("The taxonomy relation {$taxonomy_relation} does not exist on the Layer model.");
             }
 
@@ -228,7 +228,7 @@ class AppConfigService extends AppBaseService
         $ec_tracks = EcTrack::where('user_id', $this->app->user_id)->get();
 
         foreach ($ec_tracks as $track) {
-            if (!method_exists($track, $taxonomy_relation)) {
+            if (! method_exists($track, $taxonomy_relation)) {
                 throw new Exception("The taxonomy relation {$taxonomy_relation} does not exist on the EcTrack model.");
             }
 
@@ -252,7 +252,7 @@ class AppConfigService extends AppBaseService
                 'color' => $taxonomy->color ?? null,
             ],
             function ($value) {
-                return !is_null($value);
+                return ! is_null($value);
             },
         );
     }
@@ -294,7 +294,7 @@ class AppConfigService extends AppBaseService
                         $item['bbox'] = GeometryComputationService::make()->getGeometryModelBbox($layer);
                     }
                 } catch (\Exception $e) {
-                    Log::warning('The bbox value ' . $layer->id . ' are not correct. Error: ' . $e->getMessage());
+                    Log::warning('The bbox value '.$layer->id.' are not correct. Error: '.$e->getMessage());
                 }
                 // style
                 foreach (['color', 'fill_color', 'fill_opacity', 'stroke_width', 'stroke_opacity', 'zindex', 'line_dash'] as $field) {
@@ -320,7 +320,7 @@ class AppConfigService extends AppBaseService
                     $item['feature_image'] = MediaService::make()->getThumbnailUrl($image);
                 }
                 // remove useless attribute geometry from taxonomy where of layer
-                if (isset($item['taxonomy_wheres']) && !empty($item['taxonomy_wheres'])) {
+                if (isset($item['taxonomy_wheres']) && ! empty($item['taxonomy_wheres'])) {
                     $unsetAttr = ['geometry', 'query_string'];
                     for ($i = 0; $i < count($item['taxonomy_wheres']); $i++) {
                         foreach ($unsetAttr as $attr) {
@@ -369,8 +369,8 @@ class AppConfigService extends AppBaseService
         $data['MAP']['flow_line_quote_red'] = $this->app->flow_line_quote_red;
 
         // Tiles
-        if ($this->app->tiles && !empty(json_decode($this->app->tiles, true))) {
-            $appTiles = new AppTiles();
+        if ($this->app->tiles && ! empty(json_decode($this->app->tiles, true))) {
+            $appTiles = new AppTiles;
             $data['MAP']['controls']['tiles'][] = ['label' => $this->app->getTranslations('tiles_label'), 'type' => 'title'];
             $ta = array_map(function ($v) use ($appTiles) {
                 $v = json_decode($v, true);
@@ -486,7 +486,7 @@ class AppConfigService extends AppBaseService
 
             foreach ($poi_types as $poi_type) {
                 $a = [
-                    'identifier' => 'poi_type_' . $poi_type->identifier,
+                    'identifier' => 'poi_type_'.$poi_type->identifier,
                     'name' => json_decode($poi_type->name, true),
                     'id' => $poi_type->id,
                     'icon' => $poi_type->icon,
@@ -625,20 +625,20 @@ class AppConfigService extends AppBaseService
             $data['TABLES']['details']['showGpxDownload'] = (bool) $this->app->table_details_show_gpx_download;
             $data['TABLES']['details']['showKmlDownload'] = (bool) $this->app->table_details_show_kml_download;
             $data['TABLES']['details']['showRelatedPoi'] = (bool) $this->app->table_details_show_related_poi;
-            $data['TABLES']['details']['hide_duration:forward'] = !$this->app->table_details_show_duration_forward;
-            $data['TABLES']['details']['hide_duration:backward'] = !$this->app->table_details_show_duration_backward;
-            $data['TABLES']['details']['hide_distance'] = !$this->app->table_details_show_distance;
-            $data['TABLES']['details']['hide_ascent'] = !$this->app->table_details_show_ascent;
-            $data['TABLES']['details']['hide_descent'] = !$this->app->table_details_show_descent;
-            $data['TABLES']['details']['hide_ele:max'] = !$this->app->table_details_show_ele_max;
-            $data['TABLES']['details']['hide_ele:min'] = !$this->app->table_details_show_ele_min;
-            $data['TABLES']['details']['hide_ele:from'] = !$this->app->table_details_show_ele_from;
-            $data['TABLES']['details']['hide_ele:to'] = !$this->app->table_details_show_ele_to;
-            $data['TABLES']['details']['hide_scale'] = !$this->app->table_details_show_scale;
-            $data['TABLES']['details']['hide_cai_scale'] = !$this->app->table_details_show_cai_scale;
-            $data['TABLES']['details']['hide_mtb_scale'] = !$this->app->table_details_show_mtb_scale;
-            $data['TABLES']['details']['hide_ref'] = !$this->app->table_details_show_ref;
-            $data['TABLES']['details']['hide_surface'] = !$this->app->table_details_show_surface;
+            $data['TABLES']['details']['hide_duration:forward'] = ! $this->app->table_details_show_duration_forward;
+            $data['TABLES']['details']['hide_duration:backward'] = ! $this->app->table_details_show_duration_backward;
+            $data['TABLES']['details']['hide_distance'] = ! $this->app->table_details_show_distance;
+            $data['TABLES']['details']['hide_ascent'] = ! $this->app->table_details_show_ascent;
+            $data['TABLES']['details']['hide_descent'] = ! $this->app->table_details_show_descent;
+            $data['TABLES']['details']['hide_ele:max'] = ! $this->app->table_details_show_ele_max;
+            $data['TABLES']['details']['hide_ele:min'] = ! $this->app->table_details_show_ele_min;
+            $data['TABLES']['details']['hide_ele:from'] = ! $this->app->table_details_show_ele_from;
+            $data['TABLES']['details']['hide_ele:to'] = ! $this->app->table_details_show_ele_to;
+            $data['TABLES']['details']['hide_scale'] = ! $this->app->table_details_show_scale;
+            $data['TABLES']['details']['hide_cai_scale'] = ! $this->app->table_details_show_cai_scale;
+            $data['TABLES']['details']['hide_mtb_scale'] = ! $this->app->table_details_show_mtb_scale;
+            $data['TABLES']['details']['hide_ref'] = ! $this->app->table_details_show_ref;
+            $data['TABLES']['details']['hide_surface'] = ! $this->app->table_details_show_surface;
             $data['TABLES']['details']['showGeojsonDownload'] = (bool) $this->app->table_details_show_geojson_download;
             $data['TABLES']['details']['showShapefileDownload'] = (bool) $this->app->table_details_show_shapefile_download;
         }
