@@ -60,12 +60,13 @@ abstract class AbstractUserResource extends Resource
                 ->creationRules('required', Rules\Password::defaults())
                 ->updateRules('nullable', Rules\Password::defaults()),
 
-            RoleBooleanGroup::make('Roles', 'roles')->canSee(function () {
-                return auth()->user()->hasRole('Administrator') || auth()->user()->hasPermissionTo('manage roles and permissions');
-            }),
+            RoleBooleanGroup::make('Roles', 'roles')
+                ->readonly(function () {
+                    return !auth()->user()->hasRole('Administrator') && !auth()->user()->hasPermissionTo('manage roles and permissions');
+                }),
             PermissionBooleanGroup::make('Permissions', 'permissions')
-                ->canSee(function () {
-                    return auth()->user()->hasRole('Administrator') || auth()->user()->hasPermissionTo('manage roles and permissions');
+                ->readonly(function () {
+                    return !auth()->user()->hasRole('Administrator') && !auth()->user()->hasPermissionTo('manage roles and permissions');
                 })
                 ->dependsOn('roles', function (PermissionBooleanGroup $field, NovaRequest $request, FormData $formData) {
                     $roles = $formData->get('roles');
