@@ -281,6 +281,7 @@ class App extends Model implements HasMedia
 
         return $tracks_array;
     }
+
     /**
      * Returns array of all tracks'id in APP through layers deifinition
      *  $tracks = [
@@ -431,8 +432,6 @@ class App extends Model implements HasMedia
     {
         return 'App\\Models\\' . class_basename($this);
     }
-
-
 
     public function registerMediaCollections(): void
     {

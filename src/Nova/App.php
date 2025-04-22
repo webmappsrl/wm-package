@@ -121,6 +121,7 @@ class App extends Resource
                 ->confirmRemove('Sei sicuro di voler eliminare questo elemento?', 'Elimina', 'Annulla'),
         ];
     }
+
     protected function app_release_data_tab(): array
     {
         return [
@@ -160,6 +161,7 @@ class App extends Resource
                 ->hideFromIndex(),
         ];
     }
+
     protected function title_layout(): array
     {
         return [
