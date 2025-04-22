@@ -4,16 +4,16 @@ namespace Wm\WmPackage\Http\Controllers\Api;
 
 use Exception;
 use Illuminate\Http\Request;
-use Wm\WmPackage\Models\EcTrack;
-use ONGR\ElasticsearchDSL\Search;
-use Wm\WmPackage\Http\Controllers\Controller;
+use ONGR\ElasticsearchDSL\Aggregation\Bucketing\TermsAggregation;
 use ONGR\ElasticsearchDSL\Query\Compound\BoolQuery;
+use ONGR\ElasticsearchDSL\Query\FullText\MatchPhraseQuery;
 use ONGR\ElasticsearchDSL\Query\FullText\MatchQuery;
+use ONGR\ElasticsearchDSL\Query\FullText\QueryStringQuery;
 use ONGR\ElasticsearchDSL\Query\TermLevel\RangeQuery;
 use ONGR\ElasticsearchDSL\Query\TermLevel\RegexpQuery;
-use ONGR\ElasticsearchDSL\Query\FullText\MatchPhraseQuery;
-use ONGR\ElasticsearchDSL\Query\FullText\QueryStringQuery;
-use ONGR\ElasticsearchDSL\Aggregation\Bucketing\TermsAggregation;
+use ONGR\ElasticsearchDSL\Search;
+use Wm\WmPackage\Http\Controllers\Controller;
+use Wm\WmPackage\Models\EcTrack;
 
 class ElasticsearchController extends Controller
 {
@@ -26,23 +26,23 @@ class ElasticsearchController extends Controller
                 'layer' => 'integer',
                 'filters' => 'json',
                 'app' => 'string|required',
-                //IDS
+                // IDS
                 'ids' => ['json', 'nullable', function ($attribute, $value, $fail) {
                     // Verifica che sia un JSON valido
                     $decoded = json_decode($value, true);
 
                     if (json_last_error() !== JSON_ERROR_NONE) {
-                        return $fail('Il campo ' . $attribute . ' deve essere un JSON valido.');
+                        return $fail('Il campo '.$attribute.' deve essere un JSON valido.');
                     }
 
                     // Verifica che sia un array
-                    if (!is_array($decoded)) {
-                        return $fail('Il campo ' . $attribute . ' deve essere un array.');
+                    if (! is_array($decoded)) {
+                        return $fail('Il campo '.$attribute.' deve essere un array.');
                     }
                     // Verifica che ogni elemento sia un intero
                     foreach ($decoded as $id) {
-                        if (!is_int($id)) {
-                            return $fail('Tutti gli elementi in ' . $attribute . ' devono essere numeri interi.');
+                        if (! is_int($id)) {
+                            return $fail('Tutti gli elementi in '.$attribute.' devono essere numeri interi.');
                         }
                     }
                 }],
@@ -50,11 +50,11 @@ class ElasticsearchController extends Controller
             ]);
         } catch (Exception $e) {
             return response()->json([
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
 
-        //dd($validated->errors());
+        // dd($validated->errors());
 
         $taxonomiesMapping = [
             'wheres' => 'taxonomyWheres',
@@ -117,7 +117,7 @@ class ElasticsearchController extends Controller
             //     'boost' => 4,
             // ]), BoolQuery::SHOULD); // #OR
 
-            $boolQuery->add(new QueryStringQuery('*' . $search . '*', [
+            $boolQuery->add(new QueryStringQuery('*'.$search.'*', [
                 'default_operator' => 'and',
             ]), BoolQuery::MUST); // #OR
             // $boolQuery->add(new MatchQuery('name.exact', $search, [
@@ -140,7 +140,7 @@ class ElasticsearchController extends Controller
             $body->addQuery($boolQuery);
 
             // # Dump the es query body as array
-            //dd($body->toArray());
+            // dd($body->toArray());
 
             // // Create a custom query that prioritizes exact matches
             // $customQuery = [
