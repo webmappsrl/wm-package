@@ -32,17 +32,17 @@ class ElasticsearchController extends Controller
                     $decoded = json_decode($value, true);
 
                     if (json_last_error() !== JSON_ERROR_NONE) {
-                        return $fail('Il campo ' . $attribute . ' deve essere un JSON valido.');
+                        return $fail('Il campo '.$attribute.' deve essere un JSON valido.');
                     }
 
                     // Verifica che sia un array
                     if (! is_array($decoded)) {
-                        return $fail('Il campo ' . $attribute . ' deve essere un array.');
+                        return $fail('Il campo '.$attribute.' deve essere un array.');
                     }
                     // Verifica che ogni elemento sia un intero
                     foreach ($decoded as $id) {
                         if (! is_int($id)) {
-                            return $fail('Tutti gli elementi in ' . $attribute . ' devono essere numeri interi.');
+                            return $fail('Tutti gli elementi in '.$attribute.' devono essere numeri interi.');
                         }
                     }
                 }],
@@ -117,7 +117,7 @@ class ElasticsearchController extends Controller
             //     'boost' => 4,
             // ]), BoolQuery::SHOULD); // #OR
 
-            $boolQuery->add(new QueryStringQuery('*' . $search . '*', [
+            $boolQuery->add(new QueryStringQuery('*'.$search.'*', [
                 'default_operator' => 'and',
             ]), BoolQuery::MUST); // #OR
             // $boolQuery->add(new MatchQuery('name.exact', $search, [
