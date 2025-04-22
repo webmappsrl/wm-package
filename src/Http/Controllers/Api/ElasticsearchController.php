@@ -2,29 +2,59 @@
 
 namespace Wm\WmPackage\Http\Controllers\Api;
 
+use Exception;
 use Illuminate\Http\Request;
-use ONGR\ElasticsearchDSL\Aggregation\Bucketing\TermsAggregation;
-use ONGR\ElasticsearchDSL\Query\Compound\BoolQuery;
-use ONGR\ElasticsearchDSL\Query\FullText\MatchPhraseQuery;
-use ONGR\ElasticsearchDSL\Query\FullText\MatchQuery;
-use ONGR\ElasticsearchDSL\Query\FullText\QueryStringQuery;
-use ONGR\ElasticsearchDSL\Query\TermLevel\RangeQuery;
-use ONGR\ElasticsearchDSL\Query\TermLevel\RegexpQuery;
+use Wm\WmPackage\Models\EcTrack;
 use ONGR\ElasticsearchDSL\Search;
 use Wm\WmPackage\Http\Controllers\Controller;
-use Wm\WmPackage\Models\EcTrack;
+use ONGR\ElasticsearchDSL\Query\Compound\BoolQuery;
+use ONGR\ElasticsearchDSL\Query\FullText\MatchQuery;
+use ONGR\ElasticsearchDSL\Query\TermLevel\RangeQuery;
+use ONGR\ElasticsearchDSL\Query\TermLevel\RegexpQuery;
+use ONGR\ElasticsearchDSL\Query\FullText\MatchPhraseQuery;
+use ONGR\ElasticsearchDSL\Query\FullText\QueryStringQuery;
+use ONGR\ElasticsearchDSL\Aggregation\Bucketing\TermsAggregation;
 
 class ElasticsearchController extends Controller
 {
     public function index(Request $request)
     {
 
-        $validated = $request->validate([
-            'query' => 'string',
-            'layer' => 'integer',
-            'filters' => 'json',
-            'app' => 'string|required',
-        ]);
+        try {
+            $validated = $request->validate([
+                'query' => 'string',
+                'layer' => 'integer',
+                'filters' => 'json',
+                'app' => 'string|required',
+                //IDS
+                'ids' => ['json', 'nullable', function ($attribute, $value, $fail) {
+                    // Verifica che sia un JSON valido
+                    $decoded = json_decode($value, true);
+
+                    if (json_last_error() !== JSON_ERROR_NONE) {
+                        return $fail('Il campo ' . $attribute . ' deve essere un JSON valido.');
+                    }
+
+                    // Verifica che sia un array
+                    if (!is_array($decoded)) {
+                        return $fail('Il campo ' . $attribute . ' deve essere un array.');
+                    }
+                    // Verifica che ogni elemento sia un intero
+                    foreach ($decoded as $id) {
+                        if (!is_int($id)) {
+                            return $fail('Tutti gli elementi in ' . $attribute . ' devono essere numeri interi.');
+                        }
+                    }
+                }],
+
+            ]);
+        } catch (Exception $e) {
+            return response()->json([
+                'error' => $e->getMessage()
+            ], 500);
+        }
+
+        //dd($validated->errors());
 
         $taxonomiesMapping = [
             'wheres' => 'taxonomyWheres',
@@ -35,6 +65,7 @@ class ElasticsearchController extends Controller
         $layer = $validated['layer'] ?? false;
         $filters = isset($validated['filters']) ? json_decode($validated['filters'], true) : [];
         $app = $validated['app'] ?? false;
+        $ids = $validated['ids'] ? json_decode($validated['ids'], true) : [];
 
         $appId = (int) last(explode('_', $app));
         $search = str_replace('%20', ' ', $query);
@@ -52,7 +83,7 @@ class ElasticsearchController extends Controller
         // dd($queryString);
         // https://github.com/matchish/laravel-scout-elasticsearch?tab=readme-ov-file#conditions
         // base query
-        $query = EcTrack::search($search, function (\Elastic\Elasticsearch\Client $client, Search $body) use ($layer, $search) {
+        $query = EcTrack::search($search, function (\Elastic\Elasticsearch\Client $client, Search $body) use ($layer, $search, $ids) {
 
             // # The es driver for Laravel Scout
             // # https://github.com/matchish/laravel-scout-elasticsearch?tab=readme-ov-file#search
@@ -86,7 +117,7 @@ class ElasticsearchController extends Controller
             //     'boost' => 4,
             // ]), BoolQuery::SHOULD); // #OR
 
-            $boolQuery->add(new QueryStringQuery('*'.$search.'*', [
+            $boolQuery->add(new QueryStringQuery('*' . $search . '*', [
                 'default_operator' => 'and',
             ]), BoolQuery::MUST); // #OR
             // $boolQuery->add(new MatchQuery('name.exact', $search, [
@@ -97,6 +128,10 @@ class ElasticsearchController extends Controller
             //     'boost' => 4,
             // ]), BoolQuery::SHOULD); // #OR
 
+            if (count($ids) > 0) {
+                $boolQuery->add(new \ONGR\ElasticsearchDSL\Query\TermLevel\TermsQuery('id', $ids));
+            }
+
             if ($layer) {
                 $boolQuery->add(new \ONGR\ElasticsearchDSL\Query\TermLevel\TermsQuery('layers', [$layer]));
             } // #AND
@@ -105,7 +140,7 @@ class ElasticsearchController extends Controller
             $body->addQuery($boolQuery);
 
             // # Dump the es query body as array
-            // dd($body->toArray());
+            //dd($body->toArray());
 
             // // Create a custom query that prioritizes exact matches
             // $customQuery = [
