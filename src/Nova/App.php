@@ -84,7 +84,6 @@ class App extends Resource
         ];
     }
 
-
     protected function pages_tab(): array
     {
         return [
