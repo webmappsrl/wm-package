@@ -59,7 +59,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
 
         // Register Nova CSS assets
         Nova::serving(function () {
-            Nova::style('wm-flexible-field', __DIR__ . '/../resources/css/flexible-field.css');
+            Nova::style('wm-flexible-field', __DIR__.'/../resources/css/flexible-field.css');
         });
 
         // Register routes as Laravel does with RouteServiceProvider
@@ -68,15 +68,15 @@ class WmPackageServiceProvider extends PackageServiceProvider
             Route::name('v2.')
                 ->middleware('api')
                 ->prefix('api/v2')
-                ->group($packageDirPath . 'routes/api.php');
+                ->group($packageDirPath.'routes/api.php');
 
             Route::name('default.')
                 ->middleware('api')
                 ->prefix('api')
-                ->group($packageDirPath . 'routes/api.php');
+                ->group($packageDirPath.'routes/api.php');
 
             Route::middleware('web')
-                ->group($packageDirPath . 'routes/web.php');
+                ->group($packageDirPath.'routes/web.php');
         });
 
         // Register policies
@@ -234,7 +234,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
             if (isset($importHorizonConfig['environments']) && isset($appHorizonConfig['environments'])) {
                 foreach ($importHorizonConfig['environments'] as $env => $supervisors) {
                     // Ensure the environment exists before merging
-                    if (!isset($appHorizonConfig['environments'][$env])) {
+                    if (! isset($appHorizonConfig['environments'][$env])) {
                         $appHorizonConfig['environments'][$env] = [];
                     }
                     // Merge supervisors for the specific environment using array_merge (overwrites)
@@ -254,8 +254,8 @@ class WmPackageServiceProvider extends PackageServiceProvider
      * Merges Horizon configuration from a source array into a target array (non-overwriting).
      * Prioritizes keys already existing in the target array.
      *
-     * @param array $target The application's Horizon configuration.
-     * @param array $source The package's Horizon configuration.
+     * @param  array  $target  The application's Horizon configuration.
+     * @param  array  $source  The package's Horizon configuration.
      * @return array The merged Horizon configuration.
      */
     private function mergeHorizonConfigs(array $target, array $source): array
@@ -263,7 +263,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
         // Merge 'defaults' section (non-overwriting)
         $mergedDefaults = $target['defaults'] ?? [];
         foreach ($source['defaults'] ?? [] as $key => $value) {
-            if (!isset($mergedDefaults[$key])) {
+            if (! isset($mergedDefaults[$key])) {
                 $mergedDefaults[$key] = $value;
             }
         }
@@ -273,12 +273,12 @@ class WmPackageServiceProvider extends PackageServiceProvider
         $mergedEnvironments = $target['environments'] ?? [];
         foreach ($source['environments'] ?? [] as $env => $sourceSupervisors) {
             // Ensure the environment array exists in the target
-            if (!isset($mergedEnvironments[$env])) {
+            if (! isset($mergedEnvironments[$env])) {
                 $mergedEnvironments[$env] = [];
             }
             // Merge supervisors for the current environment (non-overwriting)
             foreach ($sourceSupervisors as $supervisorName => $supervisorConfig) {
-                if (!isset($mergedEnvironments[$env][$supervisorName])) {
+                if (! isset($mergedEnvironments[$env][$supervisorName])) {
                     $mergedEnvironments[$env][$supervisorName] = $supervisorConfig;
                 }
             }
@@ -296,7 +296,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
     protected function resources()
     {
 
-        Nova::resourcesIn($this->getPackageBaseDir() . '/Nova');
+        Nova::resourcesIn($this->getPackageBaseDir().'/Nova');
     }
 
     /**
