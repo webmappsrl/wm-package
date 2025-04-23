@@ -5,6 +5,7 @@ namespace Wm\WmPackage\Nova;
 use App\Nova\User;
 use Ebess\AdvancedNovaMediaLibrary\Fields\Images;
 use Laravel\Nova\Fields\BelongsTo;
+use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Wm\WmPackage\Nova\Actions\CopyUgc;
 use Wm\WmPackage\Nova\Actions\ExportTo;
@@ -22,6 +23,7 @@ abstract class AbstractUgcResource extends AbstractGeometryResource
     {
         return [
             ...parent::fields($request),
+            Text::make('Name', 'properties->name'),
             BelongsTo::make('Author', 'author', User::class)->searchable()->filterable(),
             Images::make('Image', 'default')->onlyOnDetail(),
         ];
