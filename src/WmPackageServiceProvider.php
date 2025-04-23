@@ -59,7 +59,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
 
         // Register Nova CSS assets
         Nova::serving(function () {
-            Nova::style('wm-flexible-field', __DIR__.'/../resources/css/flexible-field.css');
+            Nova::style('wm-flexible-field', __DIR__ . '/../resources/css/flexible-field.css');
         });
 
         // Register routes as Laravel does with RouteServiceProvider
@@ -68,15 +68,15 @@ class WmPackageServiceProvider extends PackageServiceProvider
             Route::name('v2.')
                 ->middleware('api')
                 ->prefix('api/v2')
-                ->group($packageDirPath.'routes/api.php');
+                ->group($packageDirPath . 'routes/api.php');
 
             Route::name('default.')
                 ->middleware('api')
                 ->prefix('api')
-                ->group($packageDirPath.'routes/api.php');
+                ->group($packageDirPath . 'routes/api.php');
 
             Route::middleware('web')
-                ->group($packageDirPath.'routes/web.php');
+                ->group($packageDirPath . 'routes/web.php');
         });
 
         // Register policies
@@ -224,32 +224,68 @@ class WmPackageServiceProvider extends PackageServiceProvider
 
         // Configure Horizon
         if (isset($this->app->config['horizon']) && is_array($this->app->config['horizon'])) {
+            // Merge wm-package horizon config (non-overwriting)
+            $appHorizonConfig = $this->app->config['horizon'] ?? [];
+            $wmPackageHorizonConfig = config('wm-horizon', []);
+            $appHorizonConfig = $this->mergeHorizonConfigs($appHorizonConfig, $wmPackageHorizonConfig);
 
-            // override the horizon config file
-            $this->app->config['horizon.environments'] = config('wm-horizon.environments', []);
-            $this->app->config['horizon.defaults'] = config('wm-horizon.defaults', []);
-
-            // Get current Horizon config and import config
-            $appHorizon = $this->app->config['horizon'];
-            $importHorizon = config('wm-geohub-import.horizon', []);
-
-            // Merge environments
-            if (isset($importHorizon['environments']) && isset($appHorizon['environments'])) {
-                foreach ($importHorizon['environments'] as $env => $supervisors) {
-                    if (isset($appHorizon['environments'][$env])) {
-                        $appHorizon['environments'][$env] = array_merge(
-                            $appHorizon['environments'][$env],
-                            $supervisors
-                        );
-                    } else {
-                        $appHorizon['environments'][$env] = $supervisors;
+            // Merge wm-geohub-import horizon config (potentially overwriting environments)
+            $importHorizonConfig = config('wm-geohub-import.horizon', []);
+            if (isset($importHorizonConfig['environments']) && isset($appHorizonConfig['environments'])) {
+                foreach ($importHorizonConfig['environments'] as $env => $supervisors) {
+                    // Ensure the environment exists before merging
+                    if (!isset($appHorizonConfig['environments'][$env])) {
+                        $appHorizonConfig['environments'][$env] = [];
                     }
+                    // Merge supervisors for the specific environment using array_merge (overwrites)
+                    $appHorizonConfig['environments'][$env] = array_merge(
+                        $appHorizonConfig['environments'][$env],
+                        $supervisors
+                    );
                 }
             }
 
-            // Update the config
-            $this->app->config['horizon'] = $appHorizon;
+            // Update the application's final horizon configuration
+            $this->app->config['horizon'] = $appHorizonConfig;
         }
+    }
+
+    /**
+     * Merges Horizon configuration from a source array into a target array (non-overwriting).
+     * Prioritizes keys already existing in the target array.
+     *
+     * @param array $target The application's Horizon configuration.
+     * @param array $source The package's Horizon configuration.
+     * @return array The merged Horizon configuration.
+     */
+    private function mergeHorizonConfigs(array $target, array $source): array
+    {
+        // Merge 'defaults' section (non-overwriting)
+        $mergedDefaults = $target['defaults'] ?? [];
+        foreach ($source['defaults'] ?? [] as $key => $value) {
+            if (!isset($mergedDefaults[$key])) {
+                $mergedDefaults[$key] = $value;
+            }
+        }
+        $target['defaults'] = $mergedDefaults;
+
+        // Merge 'environments' section (non-overwriting for supervisors within each environment)
+        $mergedEnvironments = $target['environments'] ?? [];
+        foreach ($source['environments'] ?? [] as $env => $sourceSupervisors) {
+            // Ensure the environment array exists in the target
+            if (!isset($mergedEnvironments[$env])) {
+                $mergedEnvironments[$env] = [];
+            }
+            // Merge supervisors for the current environment (non-overwriting)
+            foreach ($sourceSupervisors as $supervisorName => $supervisorConfig) {
+                if (!isset($mergedEnvironments[$env][$supervisorName])) {
+                    $mergedEnvironments[$env][$supervisorName] = $supervisorConfig;
+                }
+            }
+        }
+        $target['environments'] = $mergedEnvironments;
+
+        return $target; // Return the modified target array
     }
 
     /**
@@ -260,7 +296,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
     protected function resources()
     {
 
-        Nova::resourcesIn($this->getPackageBaseDir().'/Nova');
+        Nova::resourcesIn($this->getPackageBaseDir() . '/Nova');
     }
 
     /**
