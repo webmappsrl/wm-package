@@ -4,7 +4,7 @@ namespace Wm\WmPackage\Policies;
 
 use Illuminate\Auth\Access\HandlesAuthorization;
 use Wm\WmPackage\Models\TaxonomyPoiType;
-use Wm\WmPackage\Models\User;
+use App\Models\User;
 
 class TaxonomyPoiTypePolicy
 {
