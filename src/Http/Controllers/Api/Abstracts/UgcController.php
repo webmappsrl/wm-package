@@ -61,7 +61,7 @@ abstract class UgcController extends Controller
 
     public function legacyUpdate(Request $request): JsonResponse
     {
-        $validated = $this->validate($request, ['properties.id' => 'required|exists:' . $this->getModelIstance()->getTable() . ',id']);
+        $validated = $this->validate($request, ['properties.id' => 'required|exists:'.$this->getModelIstance()->getTable().',id']);
         $model = $this->getModelIstance()->find($validated['properties']['id']);
 
         return $this->_update($request, $model);
@@ -101,7 +101,7 @@ abstract class UgcController extends Controller
         try {
             $model->save();
         } catch (\Exception $e) {
-            $message = 'Error saving ' . class_basename($this->getModelIstance()::class) . '. ' . $e->getMessage();
+            $message = 'Error saving '.class_basename($this->getModelIstance()::class).'. '.$e->getMessage();
             Log::channel('ugc')->error($message);
             throw new Exception($message, 500);
         }
@@ -127,11 +127,10 @@ abstract class UgcController extends Controller
             foreach ($features as $feature) {
                 $geojson = $feature->getGeojson();
 
-                $geojson['properties']['media'] = $feature->getMedia()->map(fn($media) =>
-                [
+                $geojson['properties']['media'] = $feature->getMedia()->map(fn ($media) => [
                     'id' => $media->id,
                     'name' => $media->name,
-                    'webPath' => $media->getUrl()
+                    'webPath' => $media->getUrl(),
                 ]);
 
                 $featureCollection['features'][] = $geojson;
