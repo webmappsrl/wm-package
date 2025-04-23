@@ -17,21 +17,6 @@ class AppPolicy
      */
     public function __construct() {}
 
-    /**
-     * Perform pre-authorization checks.
-     *
-     * @param  string  $ability
-     * @return void|bool
-     */
-    public function before(User $user, $ability)
-    {
-        if ($user->hasRole('Admin')) {
-            return true;
-        }
-        if ($user->isInDefaultRoles($user)) {
-            return false;
-        }
-    }
 
     public function viewAny(User $user): bool
     {
