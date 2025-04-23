@@ -109,7 +109,7 @@ Route::name('api.')->group(function () {
         Route::prefix('track')->name('track.')->group(function () {
             Route::get('/multiple', [EcTrackController::class, 'multiple'])->name('multiple');
             Route::get('/pdf/{ecTrack}', [EcTrackController::class, 'getFeatureCollectionForTrackPdf'])->name('feature_collection_for_pdf');
-            Route::middleware('auth.jwt')
+            Route::middleware('auth:api')
                 ->prefix('favorite')->name('favorite.')->group(function () {
                     Route::post('/add/{ecTrack}', [EcTrackController::class, 'addFavorite'])->name('add');
                     Route::post('/remove/{ecTrack}', [EcTrackController::class, 'removeFavorite'])->name('remove');
@@ -159,7 +159,7 @@ Route::name('api.')->group(function () {
             ])->name('track.taxonomies');
             Route::get('/{app}/taxonomies/{taxonomy_name}.json', [AppElbrusTaxonomyController::class, 'getTerms'])->name('taxonomies');
             Route::get('/{app_id}/tiles/map.mbtiles', function ($app_id) {
-                return redirect('https://k.webmapp.it/elbrus/'.$app_id.'.mbtiles');
+                return redirect('https://k.webmapp.it/elbrus/' . $app_id . '.mbtiles');
             });
         });
         Route::prefix('webmapp')->name('webmapp.')->group(function () {
