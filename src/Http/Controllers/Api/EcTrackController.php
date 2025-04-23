@@ -136,7 +136,7 @@ class EcTrackController extends Controller
          */
         $user = auth('api')->user();
 
-        $ids = $user->favorite(EcTrack::class)->pluck('id');
+        $ids = $user->favorite((new EcTrack())->getMorphClass())->pluck('id');
 
         return response()->json(['favorites' => $ids]);
     }
