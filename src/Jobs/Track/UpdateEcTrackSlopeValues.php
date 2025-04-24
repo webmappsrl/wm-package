@@ -13,10 +13,13 @@ class UpdateEcTrackSlopeValues extends BaseEcTrackJob
      */
     public function handle(GeometryComputationService $geometryComputationService)
     {
-        $geojson = $this->ecTrack->getTrackGeometryGeojson();
+        $geojson = $this->ecTrack->getGeojson();
         $trackSlope = $geometryComputationService->calculateSlopeValues($geojson);
         if (! is_null($trackSlope)) {
-            $this->ecTrack->fill(['slope' => $trackSlope])->saveQuietly();
+            $properties = $this->ecTrack->properties ?? [];
+            $properties['slope'] = $trackSlope;
+            $this->ecTrack->properties = $properties;
+            $this->ecTrack->saveQuietly();
         }
     }
 }

@@ -37,7 +37,7 @@ class ImportController extends Controller
 
             EcTrack::create([
                 'name' => $name,
-                'geometry' => GeometryComputationService::make()->get2dGeometryFromGeojsonRAW($geometryTracks),
+                'geometry' => GeometryComputationService::make()->getGeometryFromGeojsonRAW($geometryTracks),
                 'import_method' => 'massive_import',
             ]);
         }

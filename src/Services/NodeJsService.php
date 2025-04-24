@@ -24,54 +24,24 @@ class NodeJsService extends BaseService
             throw new Exception('The geojson id is not defined');
         }
 
-        // TODO: mv all to the storage service
-        $localDisk = $this->storageService->getLocalDisk();
-        $mediaDisk = $this->storageService->getMediaDisk();
-
-        if (! $localDisk->exists('elevation_charts')) {
-            $localDisk->makeDirectory('elevation_charts');
-        }
-        if (! $localDisk->exists('geojson')) {
-            $localDisk->makeDirectory('geojson');
-        }
-
         $id = $geojson['properties']['id'];
 
-        $localDisk->put("geojson/$id.geojson", json_encode($geojson));
+        $paths = $this->storageService->storeLocalElevationChartImage($id, $geojson);
 
-        $src = $localDisk->path("geojson/$id.geojson");
-        $dest = $localDisk->path("elevation_charts/$id.svg");
+        $src = $paths['src'];
+        $dest = $paths['dest'];
 
-        $cmd = config('wm-package.nodejs.node_executable')." node/jobs/build-elevation-chart.js --geojson=$src --dest=$dest --type=svg";
+        $packageServiceProvider = \Wm\WmPackage\WmPackageServiceProvider::getBasePath();
+
+        $cmd = config('wm-package.services.nodejs.executable')." {$packageServiceProvider}/node/jobs/build-elevation-chart.js --geojson=$src --dest=$dest --type=svg";
 
         // Log::info("Running node command: {$cmd}");
 
         $this->runNodeJsCommand($cmd);
 
-        // TODO: mv all to the storage service
+        $this->storageService->deleteLocalTempGeojsonForElavationChartImageGeneration($id);
 
-        $localDisk->delete("geojson/$id.geojson");
-
-        if ($mediaDisk->exists("ectrack/elevation_charts/$id.svg")) {
-            if ($mediaDisk->exists("ectrack/elevation_charts/{$id}_old.svg")) {
-                $mediaDisk->delete("ectrack/elevation_charts/{$id}_old.svg");
-            }
-            $mediaDisk->move("ectrack/elevation_charts/$id.svg", "ectrack/elevation_charts/{$id}_old.svg");
-        }
-        try {
-            $mediaDisk->writeStream("ectrack/elevation_charts/$id.svg", $localDisk->readStream("elevation_charts/$id.svg"));
-        } catch (Exception $e) {
-            Log::warning('The elevation chart image could not be written');
-            if ($mediaDisk->exists("ectrack/elevation_charts/{$id}_old.svg")) {
-                $mediaDisk->move("ectrack/elevation_charts/{$id}_old.svg", "ectrack/elevation_charts/$id.svg");
-            }
-        }
-
-        if ($mediaDisk->exists("ectrack/elevation_charts/{$id}_old.svg")) {
-            $mediaDisk->delete("ectrack/elevation_charts/{$id}_old.svg");
-        }
-
-        return $mediaDisk->path("ectrack/elevation_charts/{$id}.svg");
+        return $this->storageService->storeRemoteElevationChartImage($id);
     }
 
     /**
@@ -98,7 +68,7 @@ class NodeJsService extends BaseService
             }
 
             if ($s = fgets($pipes[2])) {
-                throw new Exception($s);
+                throw new Exception("Exception running command: {$cmd}.\n{$s}");
             }
         }
     }

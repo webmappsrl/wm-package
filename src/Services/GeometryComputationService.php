@@ -6,14 +6,18 @@ use Exception;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Query\Expression;
 use Illuminate\Support\Collection as SupportCollection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use stdClass;
 use Symm\Gisconverter\Exceptions\InvalidText;
 use Symm\Gisconverter\Gisconverter;
 use Wm\WmPackage\Models\Abstracts\GeometryModel;
+use Wm\WmPackage\Models\Abstracts\MultiLineString;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\Layer;
+use Wm\WmPackage\Models\Media;
 use Wm\WmPackage\Services\Models\MediaService;
 
 class GeometryComputationService extends BaseService
@@ -23,6 +27,13 @@ class GeometryComputationService extends BaseService
         return DB::select(
             "SELECT ST_AsText(ST_Force3D(ST_LineMerge(ST_GeomFromGeoJSON('".$geojson."')))) As wkt"
         )[0]->wkt;
+    }
+
+    public function getModelLineMergeGeojson(MultiLineString $model): string
+    {
+        return DB::select(
+            "SELECT ST_AsGeoJSON(ST_LineMerge(geometry::geometry)) As geojson FROM {$model->getTable()} WHERE id = {$model->id}"
+        )[0]->geojson;
     }
 
     public function getGeometryModelCoordinates(GeometryModel $ecPoi): stdClass
@@ -37,9 +48,10 @@ class GeometryComputationService extends BaseService
         return DB::select("SELECT ST_GeomFromGeoJSON('".$geojson."') As wkt")[0]->wkt;
     }
 
-    public function get3dGeometryFromGeojsonRAW(string $geojson): Expression
+    public function getGeometryFromGeojsonRAW(string $geojson): Expression
     {
-        return DB::raw("(ST_Force3D(ST_GeomFromGeoJSON('".$geojson."')))");
+
+        return DB::raw("ST_GeomFromGeoJSON('".$geojson."')");
     }
 
     public function get2dGeometryFromGeojsonRAW(string $geojson): Expression
@@ -72,7 +84,7 @@ class GeometryComputationService extends BaseService
         return $result[0]->val;
     }
 
-    public function getModelGeometryAsGeojson(GeometryModel $model): string
+    public function getModelGeometryAsGeojson(GeometryModel|Media $model): string
     {
         return $model::where('id', '=', $model->id)
             ->select(
@@ -92,7 +104,7 @@ class GeometryComputationService extends BaseService
 
             return $name.$formattedGeometry;
         } else {
-            return null;
+            return '{}';
         }
         // return $model::where('id', '=', $model->id)
         //     ->select(
@@ -102,7 +114,23 @@ class GeometryComputationService extends BaseService
         //     ->geom;
     }
 
-    public function getModelGeometryAsGpx(GeometryModel $model): string
+    public function getStartEndCoordinates(GeometryModel $m)
+    {
+        try {
+            $geom = $this->getModelGeometryAsGeojson($m);
+            $coordinates = json_decode($geom)->coordinates;
+            $coordinatesCount = count($coordinates);
+            $start = $coordinates[0];
+            $end = $coordinates[$coordinatesCount - 1];
+        } catch (Exception $e) {
+            $start = [];
+            $end = [];
+        }
+
+        return [[$start[0], $start[1]], [$end[0], $end[1]]];
+    }
+
+    public function getModelGeometryAsGpx(GeometryModel $model): ?string
     {
         $geom = $this->getModelGeometryAsGeojson($model);
 
@@ -149,7 +177,7 @@ class GeometryComputationService extends BaseService
     public function getEcTracksBboxByUserId(int $userId)
     {
         $query = '
-            SELECT ST_Extent(geometry) as bbox
+            SELECT ST_Extent(geometry::geometry) as bbox
             FROM ec_tracks
             WHERE user_id = ?
         ';
@@ -178,7 +206,7 @@ class GeometryComputationService extends BaseService
             }
         } else {
             $modelId = $model->id;
-            $rawResult = $model::where('id', $modelId)->selectRaw('ST_Extent(geometry) as bbox')->first();
+            $rawResult = $model::where('id', $modelId)->selectRaw('ST_Extent(geometry::geometry) as bbox')->first();
             $bboxString = $rawResult['bbox'];
         }
 
@@ -258,7 +286,7 @@ class GeometryComputationService extends BaseService
      *
      * @return array [lon, lat] of the point
      */
-    public function getCentroid(GeometryModel $model): array
+    public function getCentroid(GeometryModel|Media $model): array
     {
         $rawResult = $model::where('id', $model->id)
             ->selectRaw(
@@ -390,7 +418,7 @@ class GeometryComputationService extends BaseService
                 // }
             }
             $contentGeometry = $content->geometry;
-            $geometry = $this->get2dGeometryFromGeojsonRAW(json_encode($contentGeometry));
+            $geometry = $this->getGeometryFromGeojsonRAW(json_encode($contentGeometry));
         }
 
         return $geometry;
@@ -398,14 +426,37 @@ class GeometryComputationService extends BaseService
 
     public function isRoundtrip(array $coords): bool
     {
+
         $treshold = 0.001; // diff < 300 metri ref trackid:1592
-        $len = count($coords);
-        $firstCoord = $coords[0];
-        $lastCoord = $coords[$len - 1];
-        $firstX = $firstCoord[0];
-        $lastX = $lastCoord[0];
-        $firstY = $firstCoord[1];
-        $lastY = $lastCoord[1];
+
+        // Ensure we're working with a flat array of coordinates
+        $coordinates = [];
+        foreach ($coords as $coord) {
+            if (isset($coord[0]) && is_array($coord[0])) {
+                $coordinates[] = $coord[0];
+            } else {
+                $coordinates[] = $coord;
+            }
+        }
+
+        if (empty($coordinates)) {
+            return false;
+        }
+
+        $firstCoord = $coordinates[0];
+        $lastCoord = $coordinates[count($coordinates) - 1];
+
+        if (
+            ! is_array($firstCoord) || ! is_array($lastCoord) ||
+            count($firstCoord) < 2 || count($lastCoord) < 2
+        ) {
+            return false;
+        }
+
+        $firstX = (float) $firstCoord[0];
+        $firstY = (float) $firstCoord[1];
+        $lastX = (float) $lastCoord[0];
+        $lastY = (float) $lastCoord[1];
 
         return (abs($lastX - $firstX) < $treshold) && (abs($lastY - $firstY) < $treshold);
     }
@@ -418,7 +469,7 @@ class GeometryComputationService extends BaseService
      * @param [type] $zoom
      * @return void
      */
-    private function deg2num($lat_deg, $lon_deg, $zoom)
+    public function deg2num($lat_deg, $lon_deg, $zoom)
     {
         $lat_rad = deg2rad($lat_deg);
         $n = pow(2, $zoom);
@@ -439,7 +490,7 @@ class GeometryComputationService extends BaseService
         )->get();
     }
 
-    public function generateTiles($bbox, $zoom)
+    public function generateTiles($bbox, $zoom, $zoomTreshold, $app_id)
     {
         [$minLon, $minLat, $maxLon, $maxLat] = $bbox;
         [$minTileX, $minTileY] = $this->deg2num($maxLat, $minLon, $zoom);
@@ -448,11 +499,97 @@ class GeometryComputationService extends BaseService
         $tiles = [];
         for ($x = $minTileX; $x <= $maxTileX; $x++) {
             for ($y = $minTileY; $y <= $maxTileY; $y++) {
-                $tiles[] = [$x, $y, $zoom];
+                // Controlla se il tile corrente è in un quadrante vuoto a un livello di zoom inferiore
+                if ($this->isTileInEmptyParent($zoom, $x, $y, $zoomTreshold, $app_id)) {
+                    // Log::info($app_id.'/'.$zoom.'/'.$x.'/'.$y.'.pbf -> JUMP PARENT EMPTY');
+                } else {
+                    $tiles[] = [$x, $y, $zoom];
+                }
             }
         }
 
         return $tiles;
+    }
+
+    private function isTileInEmptyParent($zoom, $x, $y, $zoomTreshold, $app_id)
+    {
+        // Controlla i quadranti vuoti a livelli inferiori
+        for ($z = $zoom - 1; $z >= $zoomTreshold; $z--) {
+            $factor = 2 ** ($zoom - $z);
+            $parentX = intdiv($x, $factor);
+            $parentY = intdiv($y, $factor);
+
+            // Chiave della cache per il quadrante vuoto
+            $cacheKey = "empty_tile_{$app_id}_{$z}_{$parentX}_{$parentY}";
+
+            if (Cache::has($cacheKey)) {
+                return true; // Il tile è in un quadrante vuoto
+            }
+        }
+
+        return false; // Il tile non è in un quadrante vuoto
+    }
+
+    // Funzione per calcolare il fattore di semplificazione in base al livello di zoom
+    public function getSimplificationFactor($zoom, $zoomTreshold)
+    {
+        if ($zoom <= $zoomTreshold) {
+            // Maggiore semplificazione per zoom <= 8
+            return 4;  // Puoi regolare questo valore in base alle tue esigenze
+        }
+
+        return 0.1 / ($zoom + 1);  // Semplificazione inversamente proporzionale per altri zoom
+    }
+
+    public function tileToBoundingBox($tileCoordinates): array
+    {
+        $worldMercMax = 20037508.3427892;
+        $worldMercMin = -$worldMercMax;
+        $worldMercSize = $worldMercMax - $worldMercMin;
+        $worldTileSize = 2 ** $tileCoordinates['zoom'];
+        $tileMercSize = $worldMercSize / $worldTileSize;
+
+        $env = [];
+        $env['xmin'] = $worldMercMin + $tileMercSize * $tileCoordinates['x'];
+        $env['xmax'] = $worldMercMin + $tileMercSize * ($tileCoordinates['x'] + 1);
+        $env['ymin'] = $worldMercMax - $tileMercSize * ($tileCoordinates['y'] + 1);
+        $env['ymax'] = $worldMercMax - $tileMercSize * $tileCoordinates['y'];
+
+        return $env;
+    }
+
+    public function markTileAsEmpty($zoom, $x, $y, $app_id)
+    {
+        $cacheKey = "empty_tile_{$app_id}_{$zoom}_{$x}_{$y}";
+        Cache::put($cacheKey, true, now()->addHours(2));
+
+        // Aggiorna la lista delle chiavi tracciate
+        $trackedKeys = Cache::get('tiles_keys', []);
+        if (! in_array($cacheKey, $trackedKeys)) {
+            $trackedKeys[] = $cacheKey;
+            Cache::put('tiles_keys', $trackedKeys, 3600); // Salva la lista aggiornata
+        }
+    }
+
+    public function clearEmptyTileKeys($app_id, $zoom)
+    {
+        // Recupera tutte le chiavi tracciate
+        $trackedKeys = Cache::get('tiles_keys', []);
+
+        // Filtra le chiavi da cancellare
+        $keysToDelete = array_filter($trackedKeys, function ($key) use ($app_id, $zoom) {
+            return strpos($key, "empty_tile_{$app_id}_{$zoom}_") === 0;
+        });
+
+        // Elimina le chiavi dalla cache
+        foreach ($keysToDelete as $key) {
+            Cache::forget($key);
+        }
+
+        // Aggiorna la lista delle chiavi tracciate
+        $remainingKeys = array_diff($trackedKeys, $keysToDelete);
+        Cache::put('tiles_keys', $remainingKeys, 3600);
+        // Log::channel('pbf')->info($this->app_id . '/' . $zoom . '/' . " pbf -> DELETE " . count($keysToDelete) . " keys");
     }
 
     /**
@@ -662,5 +799,128 @@ GROUP BY
         }
 
         return $featureCollection;
+    }
+
+    /**
+     * Converts any geometry to a POINT.
+     * If the geometry is already a POINT, it returns it unchanged.
+     * If it's another type (LINESTRING, POLYGON, etc.) it calculates the centroid.
+     *
+     * @param  GeometryModel|Media  $model  The model to convert
+     * @return string The geometry in WKT format of type POINT
+     */
+    public function convertToPoint(GeometryModel|Media $model): string
+    {
+        // Verify that the model has a geometry
+        if (! isset($model->geometry) || empty($model->geometry)) {
+            throw new \InvalidArgumentException('The model must have a non-empty geometry property');
+        }
+
+        // Get the geometry type directly from PostGIS
+        $geometryType = DB::selectOne('SELECT ST_GeometryType(?) as type', [$model->geometry])->type;
+
+        // If it's already a point, return the geometry as is
+        if (strpos($geometryType, 'ST_Point') === 0) {
+            return $model->geometry;
+        }
+
+        // Otherwise calculate the centroid and make it 3D
+        $centroid = DB::selectOne('SELECT ST_AsText(ST_Force3D(ST_Centroid(?))) as point', [$model->geometry]);
+
+        // Check if it's necessary to force the SRID (4326)
+        if (strpos($model->geometry, 'SRID=') === 0) {
+            return 'SRID=4326;'.$centroid->point;
+        }
+
+        return $centroid->point;
+    }
+
+    private function sanitizeBbox(?string $bbox): ?array
+    {
+        $bbox = str_replace(['[', ']', '"'], '', $bbox);
+        $bbox = explode(',', $bbox);
+
+        if (count($bbox) !== 4) {
+            return null;
+        }
+
+        $bbox = array_map('trim', $bbox);
+
+        return $bbox;
+    }
+
+    public function geometryModelToBbox($query)
+    {
+        $table = $query->getModel()->getTable();
+
+        return $query->selectRaw('ST_Envelope('.$table.'.geometry::geometry) AS bbox')->value('bbox');
+    }
+
+    public function bboxToPolygon(?string $bbox): ?string
+    {
+        $bbox = $this->sanitizeBbox($bbox);
+
+        if (! $bbox) {
+            return null;
+        }
+
+        $query = DB::select('SELECT ST_AsText(ST_MakeEnvelope('.$bbox[0].', '.$bbox[1].', '.$bbox[2].', '.$bbox[3].', 4326)) as geometry');
+        $geometry = $query[0]->geometry;
+
+        return $geometry;
+    }
+
+    /**
+     * Returns a default 3D geometry based on the geometry type
+     */
+    public function getDefaultGeometry(string $geometryType): \Illuminate\Database\Query\Expression
+    {
+        $defaultCoordinates = [
+            'POINT' => '0 0 0',
+            'LINESTRING' => '0 0 0, 1 1 0',
+            'POLYGON' => '0 0 0, 0 1 0, 1 1 0, 1 0 0, 0 0 0',
+        ];
+
+        $coordinates = $defaultCoordinates[$geometryType] ?? $defaultCoordinates['POINT'];
+
+        return DB::raw("ST_GeomFromText('$geometryType ($coordinates)')");
+    }
+
+    /**
+     * Converts a geometry to 3D if it's not already
+     *
+     * @param  string|array  $geometry
+     */
+    public function convertTo3DGeometry($geometry): \Illuminate\Database\Query\Expression
+    {
+        if (is_string($geometry)) {
+            // Check if it's a WKB hex string (starts with 0x or just hex)
+            if (preg_match('/^(0x)?[0-9a-fA-F]+$/', $geometry)) {
+                return DB::raw("ST_Force3D(ST_GeomFromWKB(decode('$geometry', 'hex')))");
+            }
+
+            // If it's a WKT string
+            return DB::raw("ST_Force3D(ST_GeomFromText('$geometry'))");
+        }
+
+        // If it's already a DB expression, ensure it's 3D
+        if ($geometry instanceof \Illuminate\Database\Query\Expression) {
+            // Use reflection to access the protected 'value' property
+            $reflection = new \ReflectionProperty(get_class($geometry), 'value');
+            $reflection->setAccessible(true);
+            $sqlValue = $reflection->getValue($geometry);
+
+            // Now we can use the SQL value directly
+            return DB::raw("ST_Force3D($sqlValue)");
+        }
+
+        // Handle GeoJSON
+        if (is_array($geometry)) {
+            $geoJson = json_encode($geometry);
+
+            return DB::raw("ST_Force3D(ST_GeomFromGeoJSON('$geoJson'))");
+        }
+
+        throw new \InvalidArgumentException('Invalid geometry format provided');
     }
 }

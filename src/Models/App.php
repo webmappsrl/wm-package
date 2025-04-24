@@ -4,17 +4,18 @@ namespace Wm\WmPackage\Models;
 
 use chillerlan\QRCode\QRCode;
 use chillerlan\QRCode\QROptions;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Laravel\Scout\Searchable;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\Translatable\HasTranslations;
+use Whitecube\NovaFlexibleContent\Value\FlexibleCast;
 use Wm\WmPackage\Observers\AppObserver;
-use Wm\WmPackage\Services\Models\App\AppConfigService;
 use Wm\WmPackage\Services\StorageService;
+use Wm\WmPackage\Traits\HasPackageFactory;
 
 /**
  * Class App
@@ -23,15 +24,11 @@ use Wm\WmPackage\Services\StorageService;
  * @property string app_id
  * @property string available_languages
  */
-class App extends Model
+class App extends Model implements HasMedia
 {
-    use HasFactory, HasTranslations, Searchable;
+    use HasPackageFactory, HasTranslations, InteractsWithMedia;
 
-    protected $fillable = [
-        'welcome',
-        'classification_start_date',
-        'classification_end_date',
-    ];
+    protected $guarded = [];
 
     public array $translatable = ['welcome', 'tiles_label', 'overlays_label', 'data_label', 'pois_data_label', 'tracks_data_label', 'page_project', 'page_privacy', 'page_disclaimer', 'page_credits', 'filter_activity_label', 'filter_theme_label', 'filter_poi_type_label', 'filter_track_duration_label', 'filter_track_distance_label', 'social_share_text'];
 
@@ -42,19 +39,20 @@ class App extends Model
         'classification_start_date' => 'datetime',
         'classification_end_date' => 'datetime',
         'track_technical_details' => 'array',
+        'sku' => 'array',
+        'properties' => 'array',
+        'config_home' => FlexibleCast::class,
     ];
-
-    /**
-     * The accessors to append to the model's array form.
-     *
-     * @var array
-     */
-    protected $appends = ['user_email'];
 
     protected static function boot()
     {
         parent::boot();
         App::observe(AppObserver::class);
+    }
+
+    public function author(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 
     public function layers()
@@ -64,17 +62,7 @@ class App extends Model
 
     public function associatedLayers()
     {
-        return $this->morphToMany(Layer::class, 'layerable', 'app_layer', 'layerable_id', 'layer_id');
-    }
-
-    public function overlayLayers()
-    {
-        return $this->hasMany(OverlayLayer::class);
-    }
-
-    public function ugc_medias()
-    {
-        return $this->hasMany(UgcMedia::class);
+        return $this->belongsToMany(Layer::class, 'layer_associated_app');
     }
 
     public function ugc_pois()
@@ -87,21 +75,9 @@ class App extends Model
         return $this->hasMany(UgcTrack::class);
     }
 
-    public function taxonomyThemes(): MorphToMany
-    {
-        return $this->morphToMany(TaxonomyTheme::class, 'taxonomy_themeable');
-    }
-
-    public function getUserEmailById($user_id)
-    {
-        $user = User::find($user_id);
-
-        return $user->email;
-    }
-
     public function ecTracks(): HasMany
     {
-        return $this->author->ecTracks();
+        return $this->hasMany(EcTrack::class);
     }
 
     public function getGeojson()
@@ -144,69 +120,6 @@ class App extends Model
         }
     }
 
-    public function getUGCPoiGeojson($sku)
-    {
-        $pois = UgcPoi::where('sku', $sku)->get();
-
-        if ($pois->count() > 0) {
-            $geoJson = ['type' => 'FeatureCollection'];
-            $features = [];
-            foreach ($pois as $count => $poi) {
-                $feature = $poi->getEmptyGeojson();
-                if (isset($feature['properties'])) {
-                    $feature['properties']['view'] = '/resources/ugc-pois/'.$poi->id;
-                }
-
-                $features[] = $feature;
-            }
-            $geoJson['features'] = $features;
-
-            return json_encode($geoJson);
-        }
-    }
-
-    public function getUGCMediaGeojson($sku)
-    {
-        $medias = UgcMedia::where('sku', $sku)->get();
-
-        if ($medias->count() > 0) {
-            $geoJson = ['type' => 'FeatureCollection'];
-            $features = [];
-            foreach ($medias as $count => $media) {
-                $feature = $media->getEmptyGeojson();
-                if (isset($feature['properties'])) {
-                    $feature['properties']['view'] = '/resources/ugc-medias/'.$media->id;
-                }
-
-                $features[] = $feature;
-            }
-            $geoJson['features'] = $features;
-
-            return json_encode($geoJson);
-        }
-    }
-
-    public function getiUGCTrackGeojson($sku)
-    {
-        $tracks = UgcTrack::where('sku', $sku)->get();
-
-        if ($tracks->count() > 0) {
-            $geoJson = ['type' => 'FeatureCollection'];
-            $features = [];
-            foreach ($tracks as $count => $track) {
-                $feature = $track->getEmptyGeojson();
-                if (isset($feature['properties'])) {
-                    $feature['properties']['view'] = '/resources/ugc-tracks/'.$track->id;
-                }
-
-                $features[] = $feature;
-            }
-            $geoJson['features'] = $features;
-
-            return json_encode($geoJson);
-        }
-    }
-
     public function getAllPoisGeojson()
     {
         $themes = $this->taxonomyThemes()->get();
@@ -232,20 +145,6 @@ class App extends Model
             'features' => $this->getAllPoisGeojson(),
         ];
         StorageService::make()->storePois($this->id, json_encode($json));
-
-        return $json;
-    }
-
-    public function BuildConfJson()
-    {
-        $appConfigService = new AppConfigService($this);
-
-        $json = $appConfigService->config();
-        $jidoTime = $appConfigService->config_get_jido_time();
-        if (! is_null($jidoTime)) {
-            $json['JIDO_UPDATE_TIME'] = $jidoTime;
-        }
-        StorageService::make()->storeAppConfig($this->id, json_encode($json));
 
         return $json;
     }
@@ -383,23 +282,6 @@ class App extends Model
         return $tracks_array;
     }
 
-    public function buildAllRoutine()
-    {
-
-        $this->BuildPoisGeojson();
-        $this->BuildConfJson();
-    }
-
-    public function GenerateAppConfig()
-    {
-        $this->BuildConfJson();
-    }
-
-    public function GenerateAppPois()
-    {
-        $this->BuildPoisGeojson();
-    }
-
     /**
      * Returns array of all tracks'id in APP through layers deifinition
      *  $tracks = [
@@ -482,18 +364,18 @@ class App extends Model
         return $pois;
     }
 
-    /**
-     * Determine if the user is an administrator.
-     * TODO: refactor
-     *
-     * @return bool
-     */
-    public function getUserEmailAttribute()
-    {
-        $user = User::find($this->user_id);
+    // /**
+    //  * Determine if the user is an administrator.
+    //  * TODO: refactor
+    //  *
+    //  * @return bool
+    //  */
+    // public function getUserEmailAttribute()
+    // {
+    //     $user = User::find($this->user_id);
 
-        return $this->attributes['user_email'] = $user->email;
-    }
+    //     return $this->attributes['user_email'] = $user->email;
+    // }
 
     /**
      * generate a QR code for the app
@@ -550,4 +432,13 @@ class App extends Model
     {
         return 'App\\Models\\'.class_basename($this);
     }
+
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('icon');
+        $this->addMediaCollection('icon_small');
+        $this->addMediaCollection('splash');
+    }
+
+    // Le funzioni custom per config_home sono state spostate nel resolver layerBoxResolver
 }

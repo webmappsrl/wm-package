@@ -14,7 +14,7 @@ class UpdateEcTrack3DDemJob extends BaseEcTrackJob
      */
     public function handle(DemClient $demClient, GeometryComputationService $geometryComputationService)
     {
-        $geojson = $this->ecTrack->getTrackGeometryGeojson();
+        $geojson = $this->ecTrack->getGeojson();
         $responseData = $demClient->getTechData($geojson);
 
         // TODO: here we can set in the geometry a raw expression to execute only 1 query

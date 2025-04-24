@@ -28,7 +28,7 @@ class GenerateEcTrackPBFBatch extends BaseEcTrackJob
                 $app_id = $app->id;
 
                 for ($zoom = $min_zoom; $zoom <= $max_zoom; $zoom++) {
-                    $tiles = $geometryComputationService->generateTiles($bbox, $zoom);
+                    $tiles = $geometryComputationService->generateTiles($bbox, $zoom, 0, $this->ecTrack->app_id);
                     foreach ($tiles as $tile) {
                         [$x, $y, $z] = $tile;
                         $jobs[] = new GeneratePBFJob($z, $x, $y, $app_id);

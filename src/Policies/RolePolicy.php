@@ -2,9 +2,9 @@
 
 namespace Wm\WmPackage\Policies;
 
+use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 use Spatie\Permission\Models\Role;
-use Wm\WmPackage\Models\User;
 
 class RolePolicy
 {

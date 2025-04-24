@@ -20,11 +20,9 @@ use Wm\WmPackage\Jobs\Track\UpdateEcTrackGenerateElevationChartImage;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackManualDataJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackOrderRelatedPoi;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackSlopeValues;
-use Wm\WmPackage\Jobs\UpdateLayerTracksJob;
 use Wm\WmPackage\Jobs\UpdateModelWithGeometryTaxonomyWhere;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcTrack;
-use Wm\WmPackage\Models\User;
 use Wm\WmPackage\Services\BaseService;
 use Wm\WmPackage\Services\GeometryComputationService;
 
@@ -59,21 +57,30 @@ class EcTrackService extends BaseService
      */
     public function updateDemData(EcTrack $track)
     {
-        $geojson = $track->getTrackGeometryGeojson();
+        $geojson = $track->getGeojson();
 
         // Request was successful, handle the response data here
         $responseData = $this->demClient->getTechData($geojson);
         $demData = $responseData['properties'];
         $demData['duration_forward'] = $demData['duration_forward_hiking'];
         $demData['duration_backward'] = $demData['duration_backward_hiking'];
-        $oldDemData = json_decode($track->dem_data, true);
-        $track->dem_data = $demData;
-        $track->saveQuietly();
+
+        $oldDemData = $track->properties['dem_data'] ?? [];
+        $properties = $track->properties;
+        $properties['dem_data'] = $demData;
+        $track->properties = $properties;
+
         try {
             if (isset($demData)) {
-                foreach ($this->fields as $field) {
-                    if (isset($demData[$field]) && ! empty($demData[$field]) && is_null($track->$field)) {
-                        $track->$field = $this->updateFieldIfNecessary($track, $field, $demData, $oldDemData);
+                foreach ($this->getDemDataFields() as $field) {
+                    if (
+                        isset($demData[$field])
+                        && ! empty($demData[$field])
+                        && isset($track->properties['dem_data'][$field]) && is_null($track->properties['dem_data'][$field])
+                    ) {
+                        $properties = $track->properties;
+                        $properties['dem_data'][$field] = $this->updateFieldIfNecessary($track, $field, $demData, $oldDemData);
+                        $track->properties = $properties;
                     }
                 }
             }
@@ -89,7 +96,10 @@ class EcTrackService extends BaseService
         $result = ['success' => false, 'message' => '', 'track' => $track];
 
         try {
-            $osmId = trim($track->osmid);
+            $osmId = $track->properties['osmid'] ?? null;
+            if (is_null($osmId)) {
+                throw new Exception('No OSM ID found');
+            }
             $osmClient = new OsmClient;
             $geojson_content = $osmClient::getGeojson('relation/'.$osmId);
             $geojson_content = json_decode($geojson_content, true);
@@ -119,21 +129,25 @@ class EcTrackService extends BaseService
             $trackname = ! empty($name_array) ? implode(' - ', $name_array) : null;
             $trackname = str_replace('"', '', $trackname);
 
+            $properties = $track->properties;
             $track->name = ! empty($track->name) ? $track->name : $trackname;
+            $properties['name'] = $track->name;
             $track->geometry = $geometry ?? $track->geometry;
-            $track->ref = $track->ref ?? $osmData['ref'] ?? null;
+            $properties['ref'] = $properties['ref'] ?? $osmData['ref'] ?? null;
 
             // Update additional fields only if they are null
-            $oldOsmData = json_decode($track->osm_data, true);
-            $track->cai_scale = $this->updateFieldIfNecessary($track, 'cai_scale', $osmData, $oldOsmData);
-            $track->from = $this->updateFieldIfNecessary($track, 'from', $osmData, $oldOsmData);
-            $track->to = $this->updateFieldIfNecessary($track, 'to', $osmData, $oldOsmData);
-            $track->ascent = $this->updateFieldIfNecessary($track, 'ascent', $osmData, $oldOsmData);
-            $track->descent = $this->updateFieldIfNecessary($track, 'descent', $osmData, $oldOsmData);
-            $track->distance = $this->updateFieldIfNecessary($track, 'distance', $osmData, $oldOsmData, true);
-            $track->duration_forward = $this->updateFieldIfNecessary($track, 'duration_forward', $osmData, $oldOsmData);
-            $track->duration_backward = $this->updateFieldIfNecessary($track, 'duration_backward', $osmData, $oldOsmData);
-            $track->osm_data = $osmData;
+            $oldOsmData = isset($track->properties['osm_data']) ? json_decode($track->properties['osm_data'], true) : [];
+
+            $properties['cai_scale'] = $this->updateFieldIfNecessary($track, 'cai_scale', $osmData, $oldOsmData);
+            $properties['from'] = $this->updateFieldIfNecessary($track, 'from', $osmData, $oldOsmData);
+            $properties['to'] = $this->updateFieldIfNecessary($track, 'to', $osmData, $oldOsmData);
+            $properties['ascent'] = $this->updateFieldIfNecessary($track, 'ascent', $osmData, $oldOsmData);
+            $properties['descent'] = $this->updateFieldIfNecessary($track, 'descent', $osmData, $oldOsmData);
+            $properties['distance'] = $this->updateFieldIfNecessary($track, 'distance', $osmData, $oldOsmData, true);
+            $properties['duration_forward'] = $this->updateFieldIfNecessary($track, 'duration_forward', $osmData, $oldOsmData);
+            $properties['duration_backward'] = $this->updateFieldIfNecessary($track, 'duration_backward', $osmData, $oldOsmData);
+            $properties['osm_data'] = $osmData;
+            $track->properties = $properties;
             $track->saveQuietly();
 
             $result['success'] = true;
@@ -150,24 +164,26 @@ class EcTrackService extends BaseService
             $dirtyFields = $track->getDirty();
             $demDataFields = array_flip($track->getDemDataFields());
             $dirtyFields = array_intersect_key($dirtyFields, $demDataFields);
-            $manualData = json_decode($track->manual_data ?? null, true);
+            $manualData = json_decode($track->properties['manual_data'] ?? null, true);
 
+            $properties = $track->properties;
             foreach ($dirtyFields as $field => $newValue) {
                 $manualData[$field] = $newValue;
                 if (is_null($newValue)) {
-                    $demData = json_decode($track->dem_data, true);
-                    $osmData = json_decode($track->osm_data, true);
+                    $demData = isset($properties['dem_data']) ? json_decode($properties['dem_data'], true) : [];
+                    $osmData = isset($properties['osm_data']) ? json_decode($properties['osm_data'], true) : [];
                     if (isset($osmData[$field]) && ! is_null($osmData[$field])) {
-                        $track[$field] = $osmData[$field];
+                        $properties[$field] = $osmData[$field];
                         Log::info("Updated $field with OSM value: ".$osmData[$field]);
                     } elseif (isset($demData[$field]) && ! is_null($demData[$field])) {
-                        $track[$field] = $demData[$field];
+                        $properties[$field] = $demData[$field];
                         Log::info("Updated $field with DEM value: ".$demData[$field]);
                     }
                 }
             }
 
-            $track->manual_data = $manualData;
+            $properties['manual_data'] = $manualData;
+            $track->properties = $properties;
             $track->saveQuietly();
         } catch (\Exception $e) {
             Log::error($track->id.': HandlesData: An error occurred during a store operation: '.$e->getMessage());
@@ -178,20 +194,35 @@ class EcTrackService extends BaseService
     {
 
         $manualData = null;
-        $fieldsToCheck = $this->fields;
-        $demData = json_decode($track->dem_data, true);
-        $osmData = json_decode($track->osm_data, true);
+        $fieldsToCheck = $this->getDemDataFields();
+
+        $demData = isset($track->properties['dem_data']) ? (
+            is_array($track->properties['dem_data']) ?
+            $track->properties['dem_data']
+            : json_decode($track->properties['dem_data'], true)
+        )
+            : [];
+        $osmData = isset($track->properties['osm_data']) ? (
+            is_array($track->properties['osm_data']) ?
+            $track->properties['osm_data']
+            : json_decode($track->properties['osm_data'], true)
+        )
+            : [];
+        $properties = $track->properties;
         foreach ($fieldsToCheck as $field) {
             $osmValue = $osmData[$field] ?? null;
             $demValue = $demData[$field] ?? null;
-            $trackValue = $track->{$field};
+            $trackValue = $properties[$field] ?? null;
 
-            if ($trackValue !== null && $trackValue != $osmValue && $trackValue != $demValue) {
+            // Check if the track value is different from both OSM and DEM values
+            if (! in_array($trackValue, [null, $osmValue, $demValue])) {
                 $manualData[$field] = $trackValue;
             }
         }
 
-        $track->manual_data = $manualData;
+        $properties = $track->properties;
+        $properties['manual_data'] = $manualData;
+        $track->properties = $properties;
         $track->saveQuietly();
     }
 
@@ -239,39 +270,54 @@ class EcTrackService extends BaseService
      */
     protected function updateFieldIfNecessary(EcTrack $track, $field, $properties, $oldProperties, $isNumeric = false)
     {
-        if ($track->{$field} === null || (! is_null($oldProperties) && isset($oldProperties[$field]) && $track->{$field} == $oldProperties[$field])) {
-            if (isset($properties[$field])) {
-                return $isNumeric ? str_replace(',', '.', $properties[$field]) : $properties[$field];
-            }
+
+        $trackProperties = $track->properties;
+        if (
+            isset($properties[$field]) // se esiste una nuova proprietà da salvare
+            && // E
+            (
+                ! isset($trackProperties[$field]) // se non esiste la proprietà su track
+                || $trackProperties[$field] === null // se la proprietà esistente è null
+                || ( // o se esiste una vecchia proprietà e è uguale a quella salvata su track->properties
+                    isset($oldProperties[$field])
+                    && $trackProperties[$field] == $oldProperties[$field])
+            )
+        ) {
+            // allora restituisci il nuovo campo
+            return $isNumeric ? str_replace(',', '.', $properties[$field]) : $properties[$field];
         }
 
-        return $track->{$field};
+        // altrimenti la proprietà rimane invariata (niente cambia in track)
+        return $trackProperties[$field] ?? null;
     }
 
     public function updateDataChain(EcTrack $track)
     {
         $chain = [];
-        if ($track->osmid) {
+        if (isset($track->properties['osmid']) && $track->properties['osmid']) {
             $chain[] = new UpdateEcTrackFromOsmJob($track);
         }
-        $layers = $track->associatedLayers;
-        // Verifica se ci sono layers associati
-        if ($layers && $layers->count() > 0) {
-            foreach ($layers as $layer) {
-                $chain[] = new UpdateLayerTracksJob($layer);
-            }
+        // $layers = $track->associatedLayers;
+        // // Verifica se ci sono layers associati
+        // if ($layers && $layers->count() > 0) {
+        //     foreach ($layers as $layer) {
+        //         $chain[] = new UpdateLayerTracksJob($layer);
+        //     }
+        // }
+        if ($track->wasChanged('geometry')) {
+            $chain[] = new UpdateEcTrackDemJob($track);
+            $chain[] = new UpdateEcTrackManualDataJob($track);
+            $chain[] = new UpdateEcTrackCurrentDataJob($track);
+            $chain[] = new UpdateEcTrack3DDemJob($track);
+            $chain[] = new UpdateEcTrackSlopeValues($track);
+            $chain[] = new UpdateModelWithGeometryTaxonomyWhere($track);
+            $chain[] = new UpdateEcTrackGenerateElevationChartImage($track);
         }
-        $chain[] = new UpdateEcTrackDemJob($track);
-        $chain[] = new UpdateEcTrackManualDataJob($track);
-        $chain[] = new UpdateEcTrackCurrentDataJob($track);
-        $chain[] = new UpdateEcTrack3DDemJob($track);
-        $chain[] = new UpdateEcTrackSlopeValues($track);
-        $chain[] = new UpdateModelWithGeometryTaxonomyWhere($track);
-        $chain[] = new UpdateEcTrackGenerateElevationChartImage($track);
+
         $chain[] = new UpdateEcTrackAwsJob($track);
-        $chain[] = new UpdateEcTrackAppRelationsInfoJob($track);
-        $chain[] = new GenerateEcTrackPBFBatch($track);
+        // $chain[] = new UpdateEcTrackAppRelationsInfoJob($track);
         $chain[] = new UpdateEcTrackOrderRelatedPoi($track);
+        $chain[] = new GenerateEcTrackPBFBatch($track);
 
         Bus::chain($chain)->dispatch();
     }
@@ -308,7 +354,6 @@ class EcTrackService extends BaseService
             if (! empty($layer)) {
                 $updates['layers'][$layer->app_id] = $layer->id;
                 $updates['activities'][$layer->app_id] = $ecTrack->getTaxonomyArray($ecTrack->taxonomyActivities);
-                $updates['themes'][$layer->app_id] = $ecTrack->getTaxonomyArray($ecTrack->taxonomyThemes);
                 $updates['searchable'][$layer->app_id] = $ecTrack->getSearchableString($layer->app_id);
             }
         }
@@ -351,16 +396,26 @@ class EcTrackService extends BaseService
         return $featureCollection;
     }
 
-    public function getUpdatedAtTracks(?User $user = null): Collection
+    public function getUpdatedAtTracks(?int $app_id = null): Collection
     {
-        if ($user) {
-            $arr = EcTrack::where('user_id', $user->id)->pluck('updated_at', 'id');
+        if ($app_id) {
+            $arr = EcTrack::where('app_id', $app_id)->pluck('updated_at', 'id');
         } else {
 
-            $arr = DB::select('select id, updated_at from ec_tracks where user_id != 20548 and user_id != 17482');
+            $arr = DB::select('select id, updated_at from ec_tracks');
             $arr = collect($arr)->pluck('updated_at', 'id');
         }
 
         return $arr;
+    }
+
+    public function getTaxonomyArray($taxonomyCollection)
+    {
+        return $taxonomyCollection->count() > 0 ? $taxonomyCollection->pluck('identifier')->toArray() : [];
+    }
+
+    public function getTaxonomyWheres(EcTrack $track)
+    {
+        return $track->properties['taxonomy_where'] ?? [];
     }
 }

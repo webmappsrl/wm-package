@@ -9,14 +9,25 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Wm\WmPackage\Enums\AppTiles;
-use Wm\WmPackage\Models\EcMedia;
+use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcTrack;
+use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Models\OverlayLayer;
 use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Services\Models\MediaService;
+use Wm\WmPackage\Services\StorageService;
 
 class AppConfigService extends AppBaseService
 {
+    public function writeAppConfigOnAws()
+    {
+        $json = $this->config();
+
+        StorageService::make()->storeAppConfig($this->app->id, json_encode($json));
+
+        return $json;
+    }
+
     /**
      * Display the specified resource.
      *
@@ -25,7 +36,6 @@ class AppConfigService extends AppBaseService
      */
     public function config()
     {
-
         $data = [];
 
         $data = array_merge($data, $this->config_section_app());
@@ -152,7 +162,12 @@ class AppConfigService extends AppBaseService
         ];
 
         if (! empty($this->app->config_home)) {
-            $data = json_decode($this->app->config_home, true);
+            if (is_string($this->app->config_home)) {
+                $data = json_decode($this->app->config_home, true);
+            } elseif (is_array($this->app->config_home)) {
+                // Se config_home è già un array, lo usiamo direttamente
+                $data = $this->app->config_home;
+            }
         } elseif ($this->app->layers->count() > 0) {
             foreach ($this->app->layers()->orderBy('rank')->get() as $layer) {
                 $data['HOME'][] = [
@@ -229,14 +244,17 @@ class AppConfigService extends AppBaseService
 
     private function filter_taxonomy($taxonomy)
     {
-        return array_filter([
-            'id' => $taxonomy->id,
-            'identifier' => $taxonomy->identifier,
-            'name' => $taxonomy->getTranslations('name'),
-            'color' => $taxonomy->color ?? null,
-        ], function ($value) {
-            return ! is_null($value);
-        });
+        return array_filter(
+            [
+                'id' => $taxonomy->id,
+                'identifier' => $taxonomy->identifier,
+                'name' => $taxonomy->getTranslations('name'),
+                'color' => $taxonomy->color ?? null,
+            ],
+            function ($value) {
+                return ! is_null($value);
+            },
+        );
     }
 
     private function config_section_map(): array
@@ -252,120 +270,57 @@ class AppConfigService extends AppBaseService
             return json_decode($v);
         }, json_decode($this->app->tiles, true));
 
-        $bbox = GeometryComputationService::make()->getEcTracksBboxByUserId($this->app->user_id);
         if (is_null($this->app->map_bbox)) {
+            $bbox = GeometryComputationService::make()->getEcTracksBboxByAppId($this->app->id);
             $data['MAP']['bbox'] = $bbox;
         } else {
             $data['MAP']['bbox'] = json_decode($this->app->map_bbox, true);
-        }
-
-        // MAP section (bbox)
-        if (in_array($this->app->api, ['elbrus'])) {
-            $data['MAP']['bbox'] = $bbox;
-            // Map section layers
-            $data['MAP']['layers'][0]['label'] = 'Mappa';
-            $data['MAP']['layers'][0]['type'] = 'maptile';
-            $data['MAP']['layers'][0]['tilesUrl'] = 'https://api.webmapp.it/tiles/';
-            try {
-                $data['MAP']['overlays'] = json_decode($this->app->external_overlays);
-            } catch (\Exception $e) {
-                Log::warning('The overlays in the app '.$this->app->id.' are not correctly mapped. Error: '.$e->getMessage());
-            }
         }
 
         if ($this->app->layers->count() > 0) {
             $layers = [];
             foreach ($this->app->layers as $layer) {
                 $item = $layer->toArray();
+                if (isset($item['properties']) && is_array($item['properties'])) {
+                    foreach ($item['properties'] as $key => $value) {
+                        $item[$key] = $value;
+                    }
+                }
+                unset($item['properties']);
                 try {
-
                     if (isset($item['bbox'])) {
                         $item['bbox'] = array_map('floatval', json_decode(strval($item['bbox']), true));
+                    } elseif (isset($item['geometry'])) {
+                        $item['bbox'] = GeometryComputationService::make()->getGeometryModelBbox($layer);
                     }
-                } catch (\Exception  $e) {
+                } catch (\Exception $e) {
                     Log::warning('The bbox value '.$layer->id.' are not correct. Error: '.$e->getMessage());
                 }
                 // style
                 foreach (['color', 'fill_color', 'fill_opacity', 'stroke_width', 'stroke_opacity', 'zindex', 'line_dash'] as $field) {
-                    $item['style'][$field] = $item[$field];
-                    unset($item[$field]);
+                    if (isset($item[$field])) {
+                        $item['style'][$field] = $item[$field];
+                        unset($item[$field]);
+                    }
                 }
                 // behaviour
                 foreach (['noDetails', 'noInteraction', 'minZoom', 'maxZoom', 'preventFilter', 'invertPolygons', 'alert', 'show_label'] as $field) {
-                    $item['behaviour'][$field] = $item[$field];
+                    if (isset($item[$field])) {
+                        $item['behaviour'][$field] = $item[$field];
+                        unset($item[$field]);
+                    }
+                }
+                $removedFields = ['created_at', 'updated_at', 'sku', 'generate_edges', 'geometry', 'geohub_synced_at', 'geohub_id', 'feature_collection', 'configuration', 'color'];
+                foreach ($removedFields as $field) {
                     unset($item[$field]);
                 }
-                unset($item['created_at']);
-                unset($item['updated_at']);
-                unset($item['sku']);
-                unset($item['generate_edges']);
 
-                // FEATURE IMAGE:
-                $feature_image = null;
-                if (! empty($layer->featureImage) && $layer->featureImage->count() > 0) {
-                    $feature_image = MediaService::make()->thumbnail($layer->featureImage, '400x200');
-                    if (! is_null($feature_image)) {
-                        $item['feature_image'] = $feature_image;
-                    }
-                } else {
-                    if ($layer->taxonomyWheres->count() > 0) {
-                        foreach ($layer->taxonomyWheres as $term) {
-                            if (isset($term->feature_image) && ! empty($term->feature_image)) {
-                                $feature_image = $term->feature_image;
-                            }
-                        }
-                    }
-                    if ($feature_image == null && $layer->taxonomyThemes->count() > 0) {
-                        foreach ($layer->taxonomyThemes as $term) {
-                            if (isset($term->feature_image) && ! empty($term->feature_image)) {
-                                $feature_image = $term->feature_image;
-                            }
-                        }
-                    }
-
-                    if ($feature_image == null && $layer->taxonomyActivities->count() > 0) {
-                        foreach ($layer->taxonomyActivities as $term) {
-                            if (isset($term->feature_image) && ! empty($term->feature_image)) {
-                                $feature_image = $term->feature_image;
-                            }
-                        }
-                    }
-
-                    if ($feature_image == null && $layer->taxonomyWhens->count() > 0) {
-                        foreach ($layer->taxonomyWhens as $term) {
-                            if (isset($term->feature_image) && ! empty($term->feature_image)) {
-                                $feature_image = $term->feature_image;
-                            }
-                        }
-                    }
-
-                    if ($feature_image == null && $layer->taxonomyTargets->count() > 0) {
-                        foreach ($layer->taxonomyTargets as $term) {
-                            if (isset($term->feature_image) && ! empty($term->feature_image)) {
-                                $feature_image = $term->feature_image;
-                            }
-                        }
-                    }
-
-                    if ($feature_image == null && $layer->taxonomyPoiTypes->count() > 0) {
-                        foreach ($layer->taxonomyPoiTypes as $term) {
-                            if (isset($term->feature_image) && ! empty($term->feature_image)) {
-                                $feature_image = $term->feature_image;
-                            }
-                        }
-                    }
-
-                    // if ($feature_image != null) {
-                    //     // Retrieve proper image
-                    //     $image = EcMedia::find($feature_image);
-                    //     if (! is_null(($resizedImage = MediaService::make()->thumbnail($image, '400x200')))) {
-                    //         $item['feature_image'] = $resizedImage;
-                    //     }
-                    // }
+                $image = $layer->getMedia()->first();
+                if ($image) {
+                    $item['feature_image'] = MediaService::make()->getThumbnailUrl($image);
                 }
-
                 // remove useless attribute geometry from taxonomy where of layer
-                if ($item['taxonomy_wheres']) {
+                if (isset($item['taxonomy_wheres']) && ! empty($item['taxonomy_wheres'])) {
                     $unsetAttr = ['geometry', 'query_string'];
                     for ($i = 0; $i < count($item['taxonomy_wheres']); $i++) {
                         foreach ($unsetAttr as $attr) {
@@ -398,7 +353,7 @@ class AppConfigService extends AppBaseService
         $data['MAP']['pois']['poiIconRadius'] = $this->app->poi_icon_radius;
         $data['MAP']['pois']['poiMinZoom'] = $this->app->poi_min_zoom;
         $data['MAP']['pois']['poiLabelMinZoom'] = $this->app->poi_label_min_zoom;
-        $data['MAP']['pois']['taxonomies'] = $this->app->getAllPoiTaxonomies();
+        // $data['MAP']['pois']['taxonomies'] = $this->app->getAllPoiTaxonomies(); //TODO trovare le tassonomie non piu tramite tema ma tramite associazione layer
         $data['MAP']['pois']['poi_interaction'] = $this->app->poi_interaction;
 
         // Other Options
@@ -428,51 +383,52 @@ class AppConfigService extends AppBaseService
         }
 
         // Overlays
-        if ($this->app->overlayLayers->count() > 0) {
-            $data['MAP']['controls']['overlays'][] = ['label' => $this->app->getTranslations('overlays_label'), 'type' => 'title'];
-            $overlays = array_map(function ($overlay) {
-                $array = [];
-                $overlay = OverlayLayer::find($overlay['id']);
-                $array['label'] = $overlay->getTranslations('label');
-                if ($overlay['default']) {
-                    $array['default'] = $overlay['default'];
-                }
-                if (isset($overlay['icon'])) {
-                    $array['icon'] = $overlay['icon'];
-                }
-                if (isset($overlay['fill_color'])) {
-                    $array['fillColor'] = hexToRgba($overlay['fill_color']);
-                } else {
-                    $array['fillColor'] = hexToRgba($overlay->app->primary_color);
-                }
-                if (isset($overlay['stroke_color'])) {
-                    $array['strokeColor'] = hexToRgba($overlay['stroke_color']);
-                } else {
-                    $array['strokeColor'] = hexToRgba($overlay->app->primary_color);
-                }
-                if (isset($overlay['stroke_width'])) {
-                    $array['strokeWidth'] = $overlay['stroke_width'];
-                }
-                if (isset($overlay['feature_collection'])) {
-                    // if the feature collection is an external geojson URL then put it in the conf file
-                    if (strpos($overlay['feature_collection'], 'http') === 0 || strpos($overlay['feature_collection'], 'https') === 0) {
-                        $array['url'] = $overlay['feature_collection'];
-                    } else {
-                        $array['url'] = route('api.export.taxonomy.getOverlaysPath', explode('/', $overlay['feature_collection']));
-                    }
-                }
-                if (isset($overlay['configuration'])) {
-                    $configuration = json_decode($overlay['configuration'], true);
-                    if (is_array($configuration)) {
-                        $array = array_merge($array, $configuration);
-                    }
-                }
-                $array['type'] = 'button';
+        // TODO: refactor as layers
+        // if ($this->app->overlayLayers->count() > 0) {
+        //     $data['MAP']['controls']['overlays'][] = ['label' => $this->app->getTranslations('overlays_label'), 'type' => 'title'];
+        //     $overlays = array_map(function ($overlay) {
+        //         $array = [];
+        //         $overlay = OverlayLayer::find($overlay['id']);
+        //         $array['label'] = $overlay->getTranslations('label');
+        //         if ($overlay['default']) {
+        //             $array['default'] = $overlay['default'];
+        //         }
+        //         if (isset($overlay['icon'])) {
+        //             $array['icon'] = $overlay['icon'];
+        //         }
+        //         if (isset($overlay['fill_color'])) {
+        //             $array['fillColor'] = hexToRgba($overlay['fill_color']);
+        //         } else {
+        //             $array['fillColor'] = hexToRgba($overlay->app->primary_color);
+        //         }
+        //         if (isset($overlay['stroke_color'])) {
+        //             $array['strokeColor'] = hexToRgba($overlay['stroke_color']);
+        //         } else {
+        //             $array['strokeColor'] = hexToRgba($overlay->app->primary_color);
+        //         }
+        //         if (isset($overlay['stroke_width'])) {
+        //             $array['strokeWidth'] = $overlay['stroke_width'];
+        //         }
+        //         if (isset($overlay['feature_collection'])) {
+        //             // if the feature collection is an external geojson URL then put it in the conf file
+        //             if (strpos($overlay['feature_collection'], 'http') === 0 || strpos($overlay['feature_collection'], 'https') === 0) {
+        //                 $array['url'] = $overlay['feature_collection'];
+        //             } else {
+        //                 $array['url'] = route('api.export.taxonomy.getOverlaysPath', explode('/', $overlay['feature_collection']));
+        //             }
+        //         }
+        //         if (isset($overlay['configuration'])) {
+        //             $configuration = json_decode($overlay['configuration'], true);
+        //             if (is_array($configuration)) {
+        //                 $array = array_merge($array, $configuration);
+        //             }
+        //         }
+        //         $array['type'] = 'button';
 
-                return $array;
-            }, json_decode($this->app->overlayLayers, true));
-            array_push($data['MAP']['controls']['overlays'], ...$overlays);
-        }
+        //         return $array;
+        //     }, json_decode($this->app->overlayLayers, true));
+        //     array_push($data['MAP']['controls']['overlays'], ...$overlays);
+        // }
 
         // data => turn the layers (pois,tracks) off an on
         if ($this->app->app_pois_api_layer || $this->app->layers->count() > 0) {
@@ -630,10 +586,6 @@ class AppConfigService extends AppBaseService
     private function config_section_options(): array
     {
         $data = [];
-        if (in_array($this->app->api, ['elbrus'])) {
-            // OPTIONS section
-            $data['OPTIONS']['baseUrl'] = 'https://geohub.webmapp.it/api/app/elbrus/'.$this->app->id.'/';
-        }
 
         $data['OPTIONS']['startUrl'] = $this->app->start_url;
         $data['OPTIONS']['showEditLink'] = $this->app->show_edit_link;
@@ -649,9 +601,17 @@ class AppConfigService extends AppBaseService
         $data['OPTIONS']['showGeojsonDownload'] = (bool) $this->app->table_details_show_geojson_download;
         $data['OPTIONS']['showShapefileDownload'] = (bool) $this->app->table_details_show_shapefile_download;
 
-        foreach ($this->app->track_technical_details as $label => $value) {
-            $label = Str::camel($label);
-            $data['OPTIONS'][$label] = $value;
+        // Assicuriamoci che track_technical_details sia un array
+        $technical_details = $this->app->track_technical_details;
+        if (is_string($technical_details)) {
+            $technical_details = json_decode($technical_details, true);
+        }
+
+        if (is_array($technical_details)) {
+            foreach ($technical_details as $label => $value) {
+                $label = Str::camel($label);
+                $data['OPTIONS'][$label] = $value;
+            }
         }
 
         return $data;
@@ -731,21 +691,15 @@ class AppConfigService extends AppBaseService
     private function config_section_auth(): array
     {
         $data = [];
-        if (in_array($this->app->api, ['elbrus'])) {
-            // AUTH section
-            $data['AUTH']['showAtStartup'] = false;
-            if ($this->app->auth_show_at_startup) {
-                $data['AUTH']['showAtStartup'] = true;
-            }
+
+        if ($this->app->auth_show_at_startup) {
             $data['AUTH']['enable'] = true;
-            $data['AUTH']['loginToGeohub'] = true;
+            $data['AUTH']['showAtStartup'] = true;
         } else {
-            if ($this->app->auth_show_at_startup) {
-                $data['AUTH']['enable'] = true;
-                $data['AUTH']['showAtStartup'] = true;
-            } else {
-                $data['AUTH']['enable'] = false;
-            }
+            $data['AUTH']['enable'] = false;
+        }
+        if ($this->app->webapp_auth_show_at_startup) {
+            $data['AUTH']['webappEnable'] = true;
         }
 
         return $data;
@@ -774,43 +728,43 @@ class AppConfigService extends AppBaseService
     private function _getReportSection()
     {
         $json_string = <<<'EOT'
- {
-    "enable": true,
-    "url": "https://geohub.webmapp.it/api/usergenerateddata/store",
-    "items": [
-    {
-    "title": "Crea un nuovo waypoint",
-    "success": "Waypoint creato con successo",
-    "url": "https://geohub.webmapp.it/api/usergenerateddata/store",
-    "type": "geohub",
-    "fields": [
-    {
-    "label": "Nome",
-    "name": "title",
-    "mandatory": true,
-    "type": "text",
-    "placeholder": "Scrivi qua il nome del waypoint"
-    },
-    {
-    "label": "Descrizione",
-    "name": "description",
-    "mandatory": true,
-    "type": "textarea",
-    "placeholder": "Descrivi brevemente il waypoint"
-    },
-    {
-    "label": "Foto",
-    "name": "gallery",
-    "mandatory": false,
-    "type": "gallery",
-    "limit": 5,
-    "placeholder": "Aggiungi qualche foto descrittiva del waypoint"
-    }
-    ]
-    }
-    ]
-    }
-EOT;
+         {
+            "enable": true,
+            "url": "https://geohub.webmapp.it/api/usergenerateddata/store",
+            "items": [
+            {
+            "title": "Crea un nuovo waypoint",
+            "success": "Waypoint creato con successo",
+            "url": "https://geohub.webmapp.it/api/usergenerateddata/store",
+            "type": "geohub",
+            "fields": [
+            {
+            "label": "Nome",
+            "name": "title",
+            "mandatory": true,
+            "type": "text",
+            "placeholder": "Scrivi qua il nome del waypoint"
+            },
+            {
+            "label": "Descrizione",
+            "name": "description",
+            "mandatory": true,
+            "type": "textarea",
+            "placeholder": "Descrivi brevemente il waypoint"
+            },
+            {
+            "label": "Foto",
+            "name": "gallery",
+            "mandatory": false,
+            "type": "gallery",
+            "limit": 5,
+            "placeholder": "Aggiungi qualche foto descrittiva del waypoint"
+            }
+            ]
+            }
+            ]
+            }
+        EOT;
 
         return json_decode($json_string, true);
     }

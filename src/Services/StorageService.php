@@ -4,6 +4,7 @@ namespace Wm\WmPackage\Services;
 
 use Exception;
 use Illuminate\Contracts\Filesystem\Filesystem;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 class StorageService extends BaseService
@@ -12,26 +13,25 @@ class StorageService extends BaseService
     {
         $path = $this->getTrackPath($trackId);
 
-        return $this->getWmFeTracksDisk()->put($path, $contents) ? $path : false;
+        return $this->getRemoteWfeDisk()->put($path, $contents) ? $path : false;
     }
 
-    public function getTrackGeojson(int $trackId): ?string
+    public function getTrackGeojson(int $trackId, int $appId): ?string
     {
-
-        return $this->getWmFeTracksDisk()->get($this->getTrackPath($trackId));
+        return $this->getRemoteWfeDisk()->get($this->getTrackPath($trackId));
     }
 
     public function storePBF(int $appId, string $z, string $x, string $y, $pbfContent): string|false
     {
-        $path = "{$appId}/{$z}/{$x}/{$y}.pbf";
+        $path = $this->getShardBasePath($appId)."pbf/{$z}/{$x}/{$y}.pbf";
 
-        return $this->getPbfDisk()->put($path, $pbfContent) ? $path : false;
+        return $this->getRemoteWfeDisk()->put($path, $pbfContent) ? $path : false;
     }
 
     public function storeAppConfig(int $appId, string $contents): string|false
     {
         $path = $this->getAppConfigPath($appId);
-        $a = $this->getRemoteAppConfigDisk()->put($path, $contents);
+        $a = $this->getRemoteWfeDisk()->put($path, $contents);
         $b = $this->getLocalAppConfigDisk()->put($path, $contents);
 
         return $a && $b ? $path : false;
@@ -41,13 +41,13 @@ class StorageService extends BaseService
     {
         $path = $this->getAppConfigPath($appId);
 
-        return $this->getRemoteAppConfigDisk()->get($path) ?? $this->getLocalAppConfigDisk()->get($path);
+        return $this->getRemoteWfeDisk()->get($path) ?? $this->getLocalAppConfigDisk()->get($path);
     }
 
     public function storePois(int $appId, string $contents): string|false
     {
         $path = $this->getPoisPath($appId);
-        $a = $this->getRemotePoisDisk()->put($path, $contents);
+        $a = $this->getRemoteWfeDisk()->put($path, $contents);
         $b = $this->getLocalPoisDisk()->put($path, $contents);
 
         return $a && $b ? $path : false;
@@ -57,12 +57,12 @@ class StorageService extends BaseService
     {
         $path = $this->getPoisPath($appId);
 
-        return $this->getRemotePoisDisk()->get($path) ?? $this->getLocalPoisDisk()->get($path);
+        return $this->getRemoteWfeDisk()->get($path) ?? $this->getLocalPoisDisk()->get($path);
     }
 
     public function storeAppQrCode(int $appId, string $svg): string|false
     {
-        $path = "qrcode/{$appId}/webapp-qrcode.svg";
+        $path = $this->getShardBasePath($appId).'qrcode/webapp-qrcode.svg';
 
         return $this->getPublicDisk()->put($path, $svg) ? $path : false;
     }
@@ -147,24 +147,128 @@ class StorageService extends BaseService
     //     return $this->getEcMediaDisk()->url($cloudPath);
     // }
 
+    /**
+     * Store layer feature collection in AWS
+     *
+     * @param  int|null  $appId  The app ID
+     * @param  int  $layerId  The layer ID
+     * @param  string  $contents  The feature collection contents
+     * @return string|false The stored path or false on failure
+     */
+    public function storeLayerFeatureCollection(?int $appId, int $layerId, string $contents): string|false
+    {
+        try {
+            $path = $this->getShardBasePath($appId)."layers/{$layerId}.geojson";
+
+            $success = $this->getRemoteWfeDisk()->put($path, $contents);
+
+            if ($success) {
+                return $this->getRemoteWfeDisk()->url($path);
+            }
+
+            return false;
+        } catch (\Exception $e) {
+            \Log::error('Failed to store layer feature collection: '.$e->getMessage());
+            throw $e;
+        }
+    }
+
+    public function storeLocalElevationChartImage(int $id, array $geojson): array
+    {
+        $localDisk = $this->getLocalDisk();
+        $localGeojsonPath = $this->getTempGeojsonForElevationChartGeneration($id);
+
+        if (! $localDisk->exists('elevation_charts')) {
+            $localDisk->makeDirectory('elevation_charts');
+        }
+        if (! $localDisk->exists('geojson')) {
+            $localDisk->makeDirectory('geojson');
+        }
+
+        $localDestRelativePath = $this->getElevationChartLocalPath($id);
+
+        $localDisk->put($localGeojsonPath, json_encode($geojson));
+
+        $src = $localDisk->path($localGeojsonPath);
+        $dest = $localDisk->path($localDestRelativePath);
+
+        return ['src' => $src, 'dest' => $dest];
+    }
+
+    public function deleteLocalTempGeojsonForElavationChartImageGeneration(int $id): bool
+    {
+        return $this->getLocalDisk()->delete($this->getTempGeojsonForElevationChartGeneration($id));
+    }
+
+    public function storeRemoteElevationChartImage(int $id): string|false
+    {
+        $remoteDestRelativePath = $this->getElevationChartRemotePath($id);
+        $remoteOldDestRelativePath = $this->getElevationChartRemoteOldPath($id);
+        $localDestRelativePath = $this->getElevationChartLocalPath($id);
+
+        $mediaDisk = $this->getMediaDisk();
+        if ($mediaDisk->exists($remoteDestRelativePath)) {
+            if ($mediaDisk->exists($remoteOldDestRelativePath)) {
+                $mediaDisk->delete($remoteOldDestRelativePath);
+            }
+            $mediaDisk->move($remoteDestRelativePath, $remoteOldDestRelativePath);
+        }
+        try {
+            $mediaDisk->writeStream($remoteDestRelativePath, $this->getLocalDisk()->readStream($localDestRelativePath));
+        } catch (Exception $e) {
+            Log::warning('The elevation chart image could not be written');
+            if ($mediaDisk->exists($remoteOldDestRelativePath)) {
+                $mediaDisk->move($remoteOldDestRelativePath, $remoteDestRelativePath);
+            }
+        }
+
+        if ($mediaDisk->exists($remoteOldDestRelativePath)) {
+            $mediaDisk->delete($remoteOldDestRelativePath);
+        }
+
+        return $mediaDisk->path($remoteDestRelativePath);
+    }
+
     //
     // PATHS
     // TODO: move all paths here
     //
+
+    private function getElevationChartLocalPath(int $id): string
+    {
+        return "elevation_charts/{$id}.svg";
+    }
+
+    private function getTempGeojsonForElevationChartGeneration(int $id): string
+    {
+        return "geojson/{$id}.geojson";
+    }
+
+    private function getElevationChartRemotePath(int $id): string
+    {
+        return $this->getShardBasePath()."elevation_charts/ec_tracks/{$id}.svg";
+    }
+
+    private function getElevationChartRemoteOldPath(int $id): string
+    {
+        return $this->getShardBasePath()."elevation_charts/ec_tracks/{$id}_old.svg";
+    }
+
     private function getPoisPath(int $appId): string
     {
-        return "{$appId}.geojson";
+        return $this->getShardBasePath($appId).'pois.geojson';
     }
 
     private function getTrackPath(int $trackId): string
     {
-        return "{$trackId}.json";
+        return $this->getShardBasePath()."tracks/{$trackId}.json";
     }
 
     private function getAppConfigPath(int $appId): string
     {
-        return "{$appId}.json";
+        return $this->getShardBasePath($appId).'config.json';
     }
+
     //
     // PUBLIC GETTERS
     //
@@ -174,47 +278,19 @@ class StorageService extends BaseService
         return $this->getPublicDisk()->path($path);
     }
 
-    //
-    // PRIVATE GETTERS
-    //
-    private function getLocalPoisDisk(): Filesystem
-    {
-        return $this->getDisk('pois');
-    }
-
-    private function getRemotePoisDisk(): Filesystem
-    {
-        return $this->getDisk('wmfepois');
-    }
-
-    private function getLocalAppConfigDisk(): Filesystem
-    {
-        return $this->getDisk('conf');
-    }
-
-    private function getRemoteAppConfigDisk(): Filesystem
-    {
-        return $this->getDisk('wmfeconf');
-    }
-
-    private function getPbfDisk(): Filesystem
-    {
-        return $this->getDisk('s3-wmpbf');
-    }
-
-    private function getWmFeTracksDisk(): Filesystem
-    {
-        return $this->getDisk('wmfetracks');
-    }
-
     public function getMediaDisk(): Filesystem
     {
-        return $this->getDisk('s3');
+        return $this->getDisk('wmfe');
     }
 
-    private function getPublicDisk(): Filesystem
+    public function getPublicDisk(): Filesystem
     {
         return $this->getDisk('public');
+    }
+
+    public function getWmDumpsDisk(): Filesystem
+    {
+        return $this->getDisk('wmdumps');
     }
 
     public function getLocalDisk(): Filesystem
@@ -222,8 +298,47 @@ class StorageService extends BaseService
         return $this->getDisk('local');
     }
 
+    //
+    // PRIVATE GETTERS
+    //
+
+    private function getLocalPoisDisk(): Filesystem
+    {
+        return $this->getDisk('pois');
+    }
+
+    private function getRemoteWfeDisk(): Filesystem
+    {
+        return $this->getDisk('wmfe');
+    }
+
+    private function getLocalAppConfigDisk(): Filesystem
+    {
+        return $this->getDisk('conf');
+    }
+
     private function getDisk($disk): Filesystem
     {
-        return Storage::disk($disk);
+        try {
+            return Storage::disk($disk);
+        } catch (Exception $e) {
+            \Log::error("Failed to get disk {$disk}: ".$e->getMessage());
+            throw $e;
+        }
+    }
+
+    private function getShardName(): string
+    {
+        return config('wm-package.shard_name', 'webmapp');
+    }
+
+    public function getShardBasePath(?int $appId = null)
+    {
+        $basePath = '/'.$this->getShardName().'/';
+        if (is_int($appId)) {
+            $basePath .= $appId.'/';
+        }
+
+        return $basePath;
     }
 }

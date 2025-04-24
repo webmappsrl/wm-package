@@ -41,18 +41,25 @@ class ExportTo extends Action
         return __('Export to');
     }
 
+    /**
+     * @var array Columns to expand in the export (e.g. properties)
+     */
+    protected $expandJsonColumns = [];
+
     public function __construct(
         $columns = [],
         $relations = [],
         $fileName = 'export',
         $styles = ModelExporter::DEFAULT_STYLE,
-        $defaultFormat = ExportFormat::XLSX->value
+        $defaultFormat = ExportFormat::XLSX->value,
+        $expandJsonColumns = ['properties']
     ) {
         $this->columns = $columns;
         $this->relations = $relations;
         $this->fileName = $fileName;
         $this->styles = $styles;
         $this->defaultFormat = $defaultFormat;
+        $this->expandJsonColumns = $expandJsonColumns;
     }
 
     /**
@@ -66,8 +73,15 @@ class ExportTo extends Action
         $uniqueId = now()->timestamp;
         $fileName = $this->fileName.'_'.$uniqueId.'.'.ExportFormat::from($format)->extension();
 
+        $exporter = new ModelExporter($models, $this->columns, $this->relations, $this->styles);
+
+        // Enable JSON columns expansion (properties by default)
+        if (! empty($this->expandJsonColumns)) {
+            $exporter->expandJsonColumns($this->expandJsonColumns);
+        }
+
         Excel::store(
-            new ModelExporter($models, $this->columns, $this->relations, $this->styles),
+            $exporter,
             $fileName,
             'public',
             $format,

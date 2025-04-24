@@ -3,12 +3,15 @@
 namespace Wm\WmPackage\Observers;
 
 use Illuminate\Database\Eloquent\Model;
-use Wm\WmPackage\Jobs\UpdateLayerTracksJob;
+use Wm\WmPackage\Models\Abstracts\Taxonomy;
 use Wm\WmPackage\Models\Layer;
-use Wm\WmPackage\Services\LayerService;
+use Wm\WmPackage\Services\Models\LayerService;
+use Wm\WmPackage\Services\PBFGeneratorService;
 
 class LayerObserver extends AbstractObserver
 {
+    public function __construct(protected LayerService $layerService) {}
+
     /**
      * Handle the Layer "creating" event.
      *
@@ -16,7 +19,7 @@ class LayerObserver extends AbstractObserver
      */
     public function creating(Model $layer)
     {
-        $layer->rank = LayerService::make()->getLayerMaxRank($layer) + 1;
+        $layer->rank = $this->layerService->getLayerMaxRank() + 1;
     }
 
     /**
@@ -26,6 +29,22 @@ class LayerObserver extends AbstractObserver
      */
     public function saved(Layer $layer)
     {
-        dispatch(new UpdateLayerTracksJob($layer))->onQueue('layers');
+        // update layers properties on ec models if there are some taxonomy_where properties on layer
+        if (isset($layer->properties['taxonomy_where']) && count($layer->properties['taxonomy_where']) > 0) {
+            $this->layerService->updateLayersPropertyOnAllLayeredFeaturesWithJobs($layer);
+        }
+    }
+
+    public function saving($layer)
+    {
+        parent::saving($layer);
+        if (is_null($layer->properties)) {
+            $layer->properties = [];
+        }
+    }
+
+    public function deleted(Layer $layer)
+    {
+        PBFGeneratorService::make()->generateWholeAppPbfs($layer->app);
     }
 }

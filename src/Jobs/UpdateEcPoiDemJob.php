@@ -33,7 +33,9 @@ class UpdateEcPoiDemJob implements ShouldQueue
     public function handle(DemClient $demClient, GeometryComputationService $geometryComputationService)
     {
         $coordinates = $geometryComputationService->getGeometryModelCoordinates($this->ecPoi);
-        $this->ecPoi->ele = $demClient->getElevation($coordinates->x, $coordinates->y);
-        $this->ecPoi->saveQuetly();
+        $properties = $this->ecPoi->properties;
+        $properties['ele'] = $demClient->getElevation($coordinates->x, $coordinates->y);
+        $this->ecPoi->properties = $properties;
+        $this->ecPoi->saveQuietly();
     }
 }

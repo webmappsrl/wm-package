@@ -3,13 +3,13 @@
 namespace Wm\WmPackage\Http\Controllers\Api;
 
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Storage;
 use Wm\WmPackage\Http\Controllers\Controller;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Models\TaxonomyPoiType;
+use Wm\WmPackage\Services\Models\App\AppConfigService;
 use Wm\WmPackage\Services\StorageService;
 
 class AppController extends Controller
@@ -55,21 +55,16 @@ class AppController extends Controller
             return response()->json(['code' => 404, 'error' => 'Not Found'], 404);
         }
 
-        $pathInfo = pathinfo(parse_url($app->$type)['path']);
-        if (substr($app->$type, 0, 4) === 'http') {
-            // header("Content-disposition:attachment; filename=$type." . $pathInfo['extension']);
-            // header('Content-Type:' . CONTENT_TYPE_IMAGE_MAPPING[$pathInfo['extension']]);
-            // readfile($app->$type);
+        $mediaItem = $app->getMedia($type)->first();
+        $file = StorageService::make()->getMediaDisk()->readStream($mediaItem->getPath());
 
-            return response()->streamDownload(function () use ($app, $type) {
-                file_get_contents($app->$type);
-            }, $type.'.'.$pathInfo['extension']);
-        } else {
-            // Scaricare risorsa locale
-            //            if (Storage::disk('public')->exists($app->$type . '.' . $pathInfo['extension']))
-            return Storage::disk('public')->download($app->$type, $type.'.'.$pathInfo['extension']);
-            //            else return response()->json(['error' => 'File not found'], 404);
-        }
+        return response()->stream(function () use ($file) {
+            fpassthru($file);
+        }, 200, [
+            'Content-Type' => $mediaItem->getCustomProperty('mime-type'),
+            'Content-Disposition' => 'attachment; filename="'.$mediaItem->file_name.'"',
+            'Content-Length' => $mediaItem->size,
+        ]);
     }
 
     /**
@@ -345,7 +340,7 @@ EOF;
 
     public function baseConfig(App $app)
     {
-        $json = $app->BuildConfJson($app->id);
+        $json = (new AppConfigService($app))->writeAppConfigOnAws();
 
         return response()->json($json);
     }

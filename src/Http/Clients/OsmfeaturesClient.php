@@ -9,15 +9,19 @@ class OsmfeaturesClient extends JsonClient
 {
     public function getWheresByGeojson(array $geojson): array
     {
+
+        if (isset($geojson['properties'])) {
+            $geojson['properties'] = []; // unused on osmfeatures computation, this decrease the payload size
+        }
+
         $wheresGeojson = $this->getAdminAreasIntersected($geojson);
 
         // {"name": "Scalepranu/Escalaplano", "type": "boundary", "name:it": "Escalaplano", "name:sc": "Scalepranu", "website": "https://www.comune.escalaplano.ca.it/", "alt_name": "Iscalepranu", "boundary": "administrative", "wikidata": "Q179092", "ref:ISTAT": "111018", "wikipedia": "it:Escalaplano", "admin_level": "8", "postal_code": "08043", "ref:catasto": "D430", "wikipedia:sc": "Scalepranu"}
         $wheres = [];
         foreach ($wheresGeojson['features'] as $feature) {
-            $osmType = $feature['osm_type'];
-            $osmId = $feature['osm_id'];
-            $whereId = $osmType.$osmId;
-            $featureTags = $feature['tags'];
+            $properties = $feature['properties'];
+            $whereId = $properties['osmfeatures_id'];
+            $featureTags = $properties['osm_tags'];
             $name = null;
             foreach ($featureTags as $tagName => $tagValue) {
 
@@ -27,7 +31,9 @@ class OsmfeaturesClient extends JsonClient
                     // 5 = the length of "name:"
                     // 2 = the length of the language code, eg: "it", "en"
                     $language = substr($tagName, $pos + 5, 2);
-                    $wheres[$whereId][$language] = $tagValue;
+                    if (in_array($language, ['it', 'en', 'de', 'fr', 'es'])) {
+                        $wheres[$whereId][$language] = $tagValue;
+                    }
                 }
             }
 
@@ -45,9 +51,13 @@ class OsmfeaturesClient extends JsonClient
 
     protected function getAdminAreasIntersected(array $geojson)
     {
+
         $response = $this->getHttpClient()->post(
             $this->getAdminAreasIntersectsUrl(),
-            $geojson
+            [
+                'geojson' => $geojson,
+                'admin_level' => 8, // COMUNE
+            ]
         );
         // Check the response
         if (! $response->successful()) {
@@ -62,7 +72,7 @@ class OsmfeaturesClient extends JsonClient
 
     protected function getAdminAreasIntersectsUrl()
     {
-        return '/api/v1/features/admin-areas/geojson';
+        return $this->getHost().'/api/v1/features/admin-areas/geojson';
     }
 
     protected function getHost(): string

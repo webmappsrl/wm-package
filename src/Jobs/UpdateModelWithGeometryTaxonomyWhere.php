@@ -39,7 +39,9 @@ class UpdateModelWithGeometryTaxonomyWhere implements ShouldQueue
             return;
         }
 
-        $this->model->properties['taxonomy_where'] = $wheres;
-        $this->model->saveQuietly();
+        $properties = $this->model->properties;
+        $properties['taxonomy_where'] = $wheres;
+        $this->model->properties = $properties;
+        $this->model->save();
     }
 }

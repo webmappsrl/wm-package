@@ -2,9 +2,9 @@
 
 namespace Wm\WmPackage\Policies;
 
+use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 use Wm\WmPackage\Models\UgcTrack;
-use Wm\WmPackage\Models\User;
 
 class UgcTrackPolicy
 {
@@ -18,12 +18,14 @@ class UgcTrackPolicy
      */
     public function before(User $user, $ability)
     {
-        if ($user->hasRole('Admin')) {
-            return true;
-        }
-        if ($user->hasRole('Author') || $user->hasRole('Contributor')) {
-            return false;
-        }
+        // if ($user->hasRole('Admin')) {
+        //     return true;
+        // }
+        // if ($user->hasRole('Author') || $user->hasRole('Contributor')) {
+        //     return false;
+        // }
+
+        return true;
     }
 
     /**

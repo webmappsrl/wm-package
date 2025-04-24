@@ -3,19 +3,19 @@
 namespace Wm\WmPackage\Models;
 
 use Exception;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Support\Facades\Log;
 use Spatie\Translatable\HasTranslations;
+use Wm\WmPackage\Models\Abstracts\Polygon;
 use Wm\WmPackage\Observers\LayerObserver;
 use Wm\WmPackage\Services\GeometryComputationService;
+use Wm\WmPackage\Traits\HasPackageFactory;
 use Wm\WmPackage\Traits\TaxonomyAbleModel;
+use Wm\WmPackage\Traits\TaxonomyWhereAbleModel;
 
-class Layer extends Model
+class Layer extends Polygon
 {
-    use HasFactory, HasTranslations, TaxonomyAbleModel;
-    // protected $fillable = ['rank'];
+    use HasPackageFactory, HasTranslations, TaxonomyAbleModel, TaxonomyWhereAbleModel;
 
     protected static function boot()
     {
@@ -23,33 +23,53 @@ class Layer extends Model
         Layer::observe(LayerObserver::class);
     }
 
-    public array $translatable = ['title', 'subtitle', 'description', 'track_type'];
+    public array $translatable = ['name', 'properties->title', 'properties->subtitle', 'properties->description'];
+
+    protected $casts = [
+        'properties' => 'array',
+        'configuration' => 'array',
+    ];
+
+    protected $fillable = [
+        'name',
+        'properties',
+        'configuration',
+        'app_id',
+        'geometry',
+        'feature_collection',
+    ];
 
     /**
      * The accessors to append to the model's array form.
      *
      * @var array
      */
-    protected $appends = ['query_string'];
+    // protected $appends = ['query_string'];
 
-    public function app()
+    public function appOwner()
     {
-        return $this->belongsTo(App::class);
+        return $this->belongsTo(App::class, 'app_id');
     }
 
     public function associatedApps()
     {
-        return $this->morphedByMany(App::class, 'layerable', 'app_layer', 'layer_id', 'layerable_id');
+        return $this->belongsToMany(App::class, 'layer_associated_app');
     }
 
-    public function overlayLayers()
+    public function ecTracks(): MorphToMany
     {
-        return $this->morphToMany(OverlayLayer::class, 'layerable');
+        return $this->morphedByMany(EcTrack::class, 'layerable')->using(Layerable::class);
     }
 
-    public function ecTracks(): BelongsToMany
+    public function manualEcPois(): MorphToMany
     {
-        return $this->belongsToMany(EcTrack::class, 'ec_track_layer');
+        return $this->morphedByMany(EcPoi::class, 'layerable')->using(Layerable::class);
+    }
+
+    public function taxonomyActivities(): MorphToMany
+    {
+        return $this->morphToMany(TaxonomyActivity::class, 'taxonomy_activityable')
+            ->using(TaxonomyActivityable::class);
     }
 
     /**

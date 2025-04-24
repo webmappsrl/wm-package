@@ -1,118 +1,94 @@
 <?php
 
-namespace Wm\WmPackage\Services;
+namespace Wm\WmPackage\Services\Models;
 
-use Exception;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Wm\WmPackage\Jobs\UpdateLayeredFeaturesJob;
+use Wm\WmPackage\Jobs\UpdateLayerGeometryJob;
+use Wm\WmPackage\Models\Abstracts\GeometryModel;
+use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\Layer;
+use Wm\WmPackage\Services\BaseService;
+use Wm\WmPackage\Services\GeometryComputationService;
 
 class LayerService extends BaseService
 {
-    public function getLayerMaxRank(Layer $layer)
+    public function getLayerMaxRank()
     {
-        return DB::select(DB::raw('SELECT max(rank) from layers'))[0]->max;
+        return DB::table('layers')->selectRaw('max(rank)')->value('max') ?? 0;
     }
 
-    public function getTracks(Layer $layer, $collection = false)
+    public function hasRelatedManualModels(Layer $layer, string $model): bool
     {
-        $taxonomies = ['Themes', 'Activities', 'Wheres'];
+        // Log::info('RELATION', [
+        //     'model' => $model,
+        //     'relation' => (new $model)->getLayerRelationName()
+        // ]);
+        return $layer->{(new $model)->getLayerRelationName()}->first() !== null;
+    }
 
-        // Estrazione dei dati che possono essere elaborati fuori dal foreach
-        $user_id = $layer->getLayerUserID();
-        $associated_app_users = $layer->associatedApps()->pluck('user_id')->toArray();
+    public function getRelatedModels(Layer $layer, string $model, $count = false): Collection|int
+    {
+        $relationName = (new $model)->getLayerRelationName();
 
-        // Aggiungi l'utente corrente all'array degli utenti associati
-        array_push($associated_app_users, $user_id);
+        if ($this->hasRelatedManualModels($layer, $model)) {
+            return $count ? $layer->$relationName->count() : $layer->$relationName;
+        }
 
-        // Logga gli utenti associati
-        Log::channel('layer')->info('*************getTracks*****************');
-        Log::channel('layer')->info('id: '.$layer->id);
-        Log::channel('layer')->info('layer: '.$layer->name);
-        Log::channel('layer')->info('Utenti associati per il layer: ', ['associated_users' => $associated_app_users]);
+        return $this->getAllVisibleModels($model, $layer, $count);
+    }
 
-        // Partiamo recuperando tutte le tracce
-        $allEcTracks = collect();
+    private function getRelatedModelsQuery(string $geometryModelClass, Layer $layer): MorphToMany|Builder
+    {
 
-        // Utilizza il metodo chunk per processare i dati in blocchi più piccoli
-        EcTrack::whereIn('user_id', $associated_app_users)
-            ->whereNotNull('geometry')  // Controlla che la geometria non sia null
-            ->whereRaw('ST_Dimension(geometry) = 1')  // Assicura che la geometria sia di dimensione 1 (linea)
+        $relationName = (new $geometryModelClass)->getLayerRelationName();
+
+        if ($this->hasRelatedManualModels($layer, $geometryModelClass)) {
+            return $layer->$relationName();
+        }
+
+        return $this->getAllVisibleModelsQuery($geometryModelClass, $layer);
+    }
+
+    private function getAllVisibleModelsQuery(string $geometryModelClass, Layer $layer): Builder
+    {
+        return (new $geometryModelClass)
+            ->onLayer($layer) // Local scope in EcFeatureTrait
             ->orderBy('id')
-            ->orderBy('name')
-            ->chunk(1000, function ($chunk) use (&$allEcTracks) {
-                $allEcTracks = $allEcTracks->merge($chunk);
-                unset($chunk);  // Libera la memoria usata dal chunk attuale
-                gc_collect_cycles();  // Forza la garbage collection
-            });
+            ->orderBy('name');
+    }
 
-        // Logga il numero di tracce iniziali
-        Log::channel('layer')->info('Numero iniziale di tracce: '.$allEcTracks->count());
+    /**
+     * Get all visible models for a given layer.
+     * A visible model has:
+     *  - the same taxonomies of the layer
+     *  - a geometry
+     *  - an app_id column that matches the layer's app_id or one of the associated apps
+     *
+     * @param  string  $geometryModelClass  - The class name of the geometry model
+     * @param  bool  $count  - If true, returns the count of the models. Otherwise, returns the models themselves.
+     */
+    public function getAllVisibleModels(
+        string $geometryModelClass,
+        Layer $layer,
+        $count = false
+    ): Collection|int {
+        $features = $this->getAllVisibleModelsQuery($geometryModelClass, $layer);
 
-        // Per ogni tassonomia, applichiamo un filtro sulle tracce
-        foreach ($taxonomies as $taxonomy) {
-            $taxonomyField = 'taxonomy'.$taxonomy;
-
-            Log::channel('layer')->info("Inizio processamento tassonomia: $taxonomyField");
-
-            if ($layer->$taxonomyField->count() > 0) {
-                // Variabile per accumulare i termini della tassonomia corrente
-                $taxonomyTerms = $layer->$taxonomyField;
-
-                // Filtra le tracce per mantenere solo quelle che sono associate ai termini della tassonomia corrente
-                $allEcTracks = $allEcTracks->filter(function ($track) use ($taxonomyTerms, $taxonomyField) {
-                    try {
-
-                        // Verifica se la traccia ha la tassonomia corrente; se non ha tassonomia, la scarta
-                        if ($track->$taxonomyField->isEmpty()) {
-                            return false;
-                        }
-
-                        // Controlla se la traccia ha almeno un termine della tassonomia corrente
-                        return $track->$taxonomyField->intersect($taxonomyTerms)->isNotEmpty();
-                    } catch (Exception $e) {
-                        Log::channel('layer')->error("Errore durante il filtraggio delle tracce per la tassonomia $taxonomyField: ".$e->getMessage());
-
-                        return false;
-                    }
-                });
-
-                // Logga il numero di tracce rimanenti dopo il filtro per questa tassonomia
-                Log::channel('layer')->info("Tracce rimanenti dopo il filtro di $taxonomyField: ".$allEcTracks->count());
-
-                // Se non ci sono più tracce comuni, restituisci subito un array vuoto
-                if ($allEcTracks->isEmpty()) {
-                    Log::channel('layer')->info("Nessuna traccia comune trovata dopo l'applicazione di $taxonomyField. Restituzione array vuoto.");
-
-                    return [];
-                }
-            } else {
-                Log::channel('layer')->info("Nessun termine disponibile per la tassonomia $taxonomyField.");
-            }
-
-            unset($taxonomyTerms);  // Libera la memoria usata per i termini della tassonomia
-            gc_collect_cycles();  // Forza la garbage collection
+        if ($count) {
+            return $features->count();
         }
 
-        // Se collection è true, ritorna direttamente tutte le tracce raccolte
-        if ($collection) {
-            Log::channel('layer')->info('Ritorno tutte le tracce come collezione. Totale tracce: '.$allEcTracks->count());
+        $features = $features->get();
 
-            return $allEcTracks;
-        }
-
-        // Popola l'array dei track IDs fuori dal loop
-        $trackIds = $allEcTracks->pluck('id')->toArray();
-
-        // Logga il numero finale di track IDs raccolti
-        Log::channel('layer')->info('Numero totale di track IDs raccolti: '.count($trackIds));
-
-        // Libera la memoria utilizzata dalla collezione di tracce
-        unset($allEcTracks);
-        gc_collect_cycles();  // Forza la garbage collection
-
-        return $trackIds;
+        return $features;
     }
 
     public function getPbfTracks(Layer $layer)
@@ -122,13 +98,13 @@ class LayerService extends BaseService
 
         // Verifica che ci siano tracce disponibili
         if ($allEcTracks->isEmpty()) {
-            Log::channel('layer')->info('Nessuna traccia trovata da getTracks.');
+            // Log::channel('layer')->info('Nessuna traccia trovata da getTracks.');
 
             return collect(); // Restituisci una collezione vuota
         }
 
         // Logga il numero di tracce filtrate dalla geometria e dalle tassonomie
-        Log::channel('layer')->info('Numero di tracce finali filtrate da getTracks: '.$allEcTracks->count());
+        // Log::channel('layer')->info('Numero di tracce finali filtrate da getTracks: ' . $allEcTracks->count());
 
         // Restituisci tracce uniche in base all'ID
         return $allEcTracks->unique('id');
@@ -159,5 +135,161 @@ class LayerService extends BaseService
         }
 
         return $ids;
+    }
+
+    public function updateLayerGeometry(Layer $layer, $save = true): bool
+    {
+        $relatedFeaturesQuery = $this->getRelatedModelsQuery(EcTrack::class, $layer);
+        $geometry = GeometryComputationService::make()->geometryModelToBbox($relatedFeaturesQuery);
+
+        $saved = false;
+        if ($geometry !== $layer->geometry) {
+            $layer->geometry = $geometry;
+            if ($save) {
+                $saved = $layer->save();
+            }
+        }
+
+        return $saved;
+    }
+
+    // public function chainLayersFeaturedPropertiesUpdate($layers)
+    // {
+    //     $jobs = [];
+    //     foreach ($layers as $layer) {
+    //         foreach ($this->getModelsWithLayersInProperties() as $modelClass) {
+    //             $jobs[] = new UpdateLayeredFeaturesJob($layer, $modelClass);
+    //         }
+    //     }
+    //     Bus::chain($jobs)->delay($this->getUniqueJobDelay())->dispatch();
+    // }
+
+    public function updateLayerIdsPropertyOnLayeredFeature(GeometryModel $geometryModel, array $layerIds, bool $add)
+    {
+        $properties = $geometryModel->properties;
+
+        if (! isset($properties['layers'])) {
+            $properties['layers'] = [];
+        }
+
+        if ($add) {
+            $properties['layers'] = array_merge($properties['layers'], $layerIds);
+        } else {
+            $properties['layers'] = array_diff($properties['layers'], $layerIds);
+        }
+
+        $properties['layers'] = array_values($properties['layers']);
+
+        $geometryModel->properties = $properties;
+        $geometryModel->save();
+    }
+
+    public function updateLayersPropertyOnAllLayeredFeaturesWithJobs(Layer $layer, bool $delay = true)
+    {
+        // update all ecpoi and ectrack related to the layer
+        foreach ($this->getModelsWithLayersInProperties() as $modelClass) {
+            $this->updateLayersPropertyOnLayeredFeatureWithJob($layer, $modelClass, $delay);
+        }
+        // Bus::batch([$jobs])->name("Layer {$layer->id} features properties update")->dispatch(); //to avoid transactions errors
+    }
+
+    public function updateLayersPropertyOnLayeredFeatureWithJob(Layer $layer, string $ecModelClass, bool $delay = true)
+    {
+        UpdateLayeredFeaturesJob::dispatch($layer, $ecModelClass)
+            ->delay($delay ? $this->getUniqueJobDelay() : null);
+    }
+
+    public function updateLayerGeometryWithJob(Layer $layer)
+    {
+        UpdateLayerGeometryJob::dispatch($layer)
+            ->delay($this->getUniqueJobDelay());
+    }
+
+    /**
+     * Update the layers property on the features related to a specific layer
+     *
+     * @param  string  $ecModelClass  - the class string related to the layer
+     * @return array - ids of feature saved
+     *
+     * @throws Exception
+     */
+    public function updateLayersPropertyOnLayeredFeature(Layer $layer, string $ecModelClass): array
+    {
+        // https://neon.tech/postgresql/postgresql-json-functions/postgresql-jsonb-operators
+
+        // Features where add the layer
+        $newLayerFeatures = $this->getRelatedModelsQuery($ecModelClass, $layer)
+            ->whereRaw(
+                "(
+                    NOT \"properties\"->'layers' @> '[{$layer->id}]'::jsonb
+                    OR \"properties\"->'layers' is null
+                )" // where the feature doesn't have the layer
+            );
+
+        // Log::info($newLayerFeatures->toSql());
+        $newLayerFeatures = $newLayerFeatures->get();
+
+        // Features where remove the layer
+        $layerFeaturesIds = $this->getRelatedModels($layer, $ecModelClass)->pluck('id')->toArray();
+        $oldLayerFeatures = $ecModelClass::whereNotIn('id', $layerFeaturesIds)
+            ->whereRaw(
+                "\"properties\"->'layers' @> '[{$layer->id}]'::jsonb" // where the feature has the layer
+            );
+
+        // Log::info($oldLayerFeatures->toSql());
+        $oldLayerFeatures = $oldLayerFeatures->get();
+
+        $added = [];
+        $deleted = [];
+
+        DB::beginTransaction();
+        try {
+            // useful if in the past the feature was associated to the layer and now it's not
+            foreach ($oldLayerFeatures as $feature) {
+                $properties = $feature->properties;
+                // remove the layer from the properties
+                $properties['layers'] = array_diff($properties['layers'], [$layer->id]);
+                $properties['layers'] = array_values($properties['layers']);
+                $feature->properties = $properties;
+                $feature->save();
+                $deleted[] = $feature->id;
+            }
+            $oldLayerFeatures = null;
+
+            // Add the layer to the features that don't have it
+            foreach ($newLayerFeatures as $feature) {
+                // Save only features that don't have the layer
+                $properties = $feature->properties;
+                $properties['layers'][] = $layer->id;
+                $feature->properties = $properties;
+                $feature->save();
+                $added[] = $feature->id;
+            }
+
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            throw $e;
+        }
+
+        return [
+            'added' => $added,
+            'deleted' => $deleted,
+        ];
+    }
+
+    private function getUniqueJobDelay(): Carbon
+    {
+        return now()->addSeconds(
+            app()->isLocal() ? 5 : 60 * 5
+        );
+    }
+
+    public function getModelsWithLayersInProperties(): array
+    {
+        return [
+            EcPoi::class,
+            EcTrack::class,
+        ];
     }
 }

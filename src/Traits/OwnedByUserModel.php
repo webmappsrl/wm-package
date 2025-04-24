@@ -13,4 +13,17 @@ trait OwnedByUserModel
     {
         return $query->where('user_id', auth()->user()->id);
     }
+
+    /**
+     * Alias for the user relation
+     */
+    public function author()
+    {
+        return $this->user();
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }

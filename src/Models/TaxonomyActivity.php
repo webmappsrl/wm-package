@@ -2,6 +2,7 @@
 
 namespace Wm\WmPackage\Models;
 
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Wm\WmPackage\Models\Abstracts\Taxonomy;
 
 class TaxonomyActivity extends Taxonomy
@@ -11,25 +12,10 @@ class TaxonomyActivity extends Taxonomy
         return 'activityable';
     }
 
-    /**
-     * Create a json for the activity
-     */
-    public function getJson(): array
+    public function layers(): MorphToMany
     {
-        $json = $this->toArray();
-
-        unset($json['pivot']);
-        unset($json['import_method']);
-        unset($json['source']);
-        unset($json['source_id']);
-        unset($json['user_id']);
-
-        foreach (array_keys($json) as $key) {
-            if (is_null($json[$key])) {
-                unset($json[$key]);
-            }
-        }
-
-        return $json;
+        return $this->morphedByMany(Layer::class, 'taxonomy_'.$this->getRelationKey())
+            ->using(TaxonomyActivityable::class); // this is necessary to make events on pivot working
+        // https://github.com/chelout/laravel-relationship-events/issues/16
     }
 }

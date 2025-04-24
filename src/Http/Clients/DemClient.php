@@ -25,6 +25,9 @@ class DemClient extends JsonClient
             $this->getTechDataUrl(),
             $geojson
         );
+
+        $responseData = $response->json();
+
         // Check the response
         if (! $response->successful() || empty($responseData['geometry'])) {
             // Request failed, handle the error here

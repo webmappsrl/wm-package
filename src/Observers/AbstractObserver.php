@@ -2,22 +2,14 @@
 
 namespace Wm\WmPackage\Observers;
 
-use Illuminate\Database\Eloquent\Model;
-use Wm\WmPackage\Models\User;
-
 abstract class AbstractObserver
 {
-    /**
-     * Handle the Model "creating" event.
-     *
-     * @return void
-     */
-    public function creating(Model $model)
+    public function saving($model)
     {
-        $user = auth()->user();
-        if (is_null($user)) {
-            $user = User::where('email', '=', 'team@webmapp.it')->first();
+        if (in_array('name', $model->translatable ?? [])) {
+            $properties = $model->properties ?? [];
+            $properties['name'] = $model->getTranslations('name');
+            $model->setAttribute('properties', $properties);
         }
-        $model->author()->associate($user);
     }
 }

@@ -42,22 +42,46 @@ class Controller extends BaseController
 
     protected function validateGeojson(Request $request, $additionalRules = [])
     {
-        return $request->validate($request->get('properties'), [
-            'type' => 'required',
+        // Get data based on request type
+        $data = $request->all();
+
+        // If it's a store request, decode the feature field
+        if (str_contains($request->route()->getName(), 'store')) {
+            $data = json_decode($data['feature'], true);
+        }
+
+        // Set up validation rules
+        $rules = [
+            'type' => 'required|string',
             'properties' => 'required|array',
-            'properties.name' => 'required|max:255',
-            'properties.app_id' => 'integer|required|exists:apps,id',
+            'properties.name' => 'required|string|max:255',
+            'properties.app_id' => 'required|exists:apps,id',
             'geometry' => 'required|array',
-            'geometry.type' => 'required',
+            'geometry.type' => 'required|string',
             'geometry.coordinates' => 'required|array',
             ...$additionalRules,
-        ]);
+        ];
+
+        // Create validator instance
+        $validator = Validator::make($data, $rules);
+
+        // Return all validation errors when it fails
+        if ($validator->fails()) {
+            $errors = $validator->errors()->toArray();
+            $errorMessage = '';
+            foreach ($errors as $field => $messages) {
+                $errorMessage .= "$field: [".implode(', ', $messages)."]\n";
+            }
+            abort(400, trim($errorMessage));
+        }
+
+        return $data;
     }
 
     protected function validateUser(GeometryModel $model)
     {
         // TODO: skip this when there will be better model policies
-        $user = auth('api')->user();
+        $user = auth()->user();
         if ($model->user_id !== $user->id) {
             return response(['error' => 'Forbidden access to another user model'], 403);
         }

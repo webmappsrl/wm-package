@@ -14,13 +14,16 @@ class UpdateEcTrackGenerateElevationChartImage extends BaseEcTrackJob
      */
     public function handle(NodeJsService $nodeJsService)
     {
-        $geojson = $this->ecTrack->getTrackGeometryGeojson();
+        $geojson = $this->ecTrack->getGeojson();
         if (! isset($geojson['properties']['id'])) {
             throw new Exception('The geojson id is not defined');
         }
 
         $path = $nodeJsService->generateElevationChartImage($geojson);
-        $this->ecTrack->elevation_chart_image = $path;
+
+        $properties = $this->ecTrack->properties;
+        $properties['elevation_chart_image'] = $path;
+        $this->ecTrack->properties = $properties;
         $this->ecTrack->saveQuietly();
     }
 }

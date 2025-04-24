@@ -19,21 +19,35 @@
         "php": ">8.1",
         "chillerlan/php-qrcode": "^5.0",
         "christiankuri/laravel-favorite": "^1.4",
+        "cweagans/composer-patches": "^1.7",
+        "ebess/advanced-nova-media-library": "^5.0",
         "illuminate/contracts": "^10.0 || ^11.0",
         "intervention/image": "^2.5",
+        "jenssegers/agent": "^2.6",
         "kiritokatklian/nova-permission": "*",
+        "kongulov/nova-tab-translatable": "^2.1",
         "laravel/framework": "^10.0 || ^11.0",
+        "laravel/horizon": "^5.30",
         "laravel/nova": "^5.0",
         "laravel/sanctum": "*",
         "laravel/scout": "^10.11",
+        "league/flysystem-aws-s3-v3": "^3.0",
         "maatwebsite/excel": "^3.1",
+        "marshmallow/nova-tiptap": "^5.1",
         "matchish/laravel-scout-elasticsearch": "^7.10",
         "ndamiens/gisconverter": "^1.0",
+        "predis/predis": "^2.3",
+        "sentry/sentry-laravel": "^4.13",
+        "spatie/laravel-backup": "^9.2",
         "spatie/laravel-medialibrary": "^11.12",
         "spatie/laravel-package-tools": ">1.16",
         "spatie/laravel-permission": "*",
         "spatie/laravel-translatable": "^6.9",
-        "tymon/jwt-auth": ">2.0"
+        "tymon/jwt-auth": ">2.0",
+        "whitecube/nova-flexible-content": "^2.0.1",
+        "wm/map-multi-linestring": "^1.0",
+        "wm/map-multi-polygon": "^1.0",
+        "wm/map-point": "^1.0"
     },
     "require-dev": {
         "guzzlehttp/guzzle": "^7.9",
@@ -54,6 +68,7 @@
         ],
         "psr-4": {
             "Wm\\WmPackage\\": "src",
+            "Wm\\WmPackage\\Database\\Factories\\": "database/factories/",
             "Wm\\WmPackage\\Http\\Controllers\\": "src/Http/Controllers"
         },
         "classmap": [
@@ -73,6 +88,12 @@
             "@clear",
             "@prepare",
             "@php ./vendor/bin/testbench package:discover --ansi"
+        ],
+        "post-install-cmd": [
+            "npm install"
+        ],
+        "post-update-cmd": [
+            "npm install"
         ],
         "analyse": "vendor/bin/phpstan analyse",
         "test": "vendor/bin/pest",
@@ -94,6 +115,7 @@
     "config": {
         "sort-packages": true,
         "allow-plugins": {
+            "cweagans/composer-patches": true,
             "pestphp/pest-plugin": true,
             "php-http/discovery": true,
             "phpstan/extension-installer": true
