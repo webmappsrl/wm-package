@@ -3,17 +3,17 @@
 namespace Wm\WmPackage\Nova\Actions;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Queue\InteractsWithQueue;
+use Laravel\Nova\Fields\Select;
+use Laravel\Nova\Actions\Action;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\URL;
-use Laravel\Nova\Actions\Action;
-use Laravel\Nova\Actions\ActionResponse;
-use Laravel\Nova\Fields\ActionFields;
-use Laravel\Nova\Fields\Select;
-use Laravel\Nova\Http\Requests\NovaRequest;
 use Maatwebsite\Excel\Facades\Excel;
 use Wm\WmPackage\Enums\ExportFormat;
+use Laravel\Nova\Fields\ActionFields;
+use Illuminate\Queue\InteractsWithQueue;
+use Laravel\Nova\Actions\ActionResponse;
 use Wm\WmPackage\Exporters\ModelExporter;
+use Laravel\Nova\Http\Requests\NovaRequest;
 
 /**
  * Nova Action to export models to Excel/CSV formats.
@@ -45,6 +45,8 @@ class ExportTo extends Action
      * @var array Columns to expand in the export (e.g. properties)
      */
     protected $expandJsonColumns = [];
+
+    public static $chunkCount = 10000;
 
     public function __construct(
         $columns = [],
@@ -93,7 +95,7 @@ class ExportTo extends Action
             ['fileName' => $fileName]
         );
 
-        return ActionResponse::openInNewTab($signedUrl);
+        return Action::redirect($signedUrl);
     }
 
     public function fields(NovaRequest $request)
