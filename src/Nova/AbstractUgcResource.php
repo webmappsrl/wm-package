@@ -4,6 +4,7 @@ namespace Wm\WmPackage\Nova;
 
 use App\Nova\User;
 use Ebess\AdvancedNovaMediaLibrary\Fields\Images;
+use Kongulov\NovaTabTranslatable\NovaTabTranslatable;
 use Laravel\Nova\Fields\BelongsTo;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
@@ -23,6 +24,7 @@ abstract class AbstractUgcResource extends AbstractGeometryResource
     {
         return [
             ...parent::fields($request),
+            NovaTabTranslatable::make([Text::make('Name', 'name')])->hide(),
             Text::make('Name', 'properties->name'),
             BelongsTo::make('Author', 'author', User::class)->searchable()->filterable(),
             Images::make('Image', 'default')->onlyOnDetail(),
