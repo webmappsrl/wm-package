@@ -4,7 +4,6 @@ namespace Wm\WmPackage\Nova;
 
 use App\Nova\User;
 use Ebess\AdvancedNovaMediaLibrary\Fields\Images;
-use Kongulov\NovaTabTranslatable\NovaTabTranslatable;
 use Laravel\Nova\Fields\BelongsTo;
 use Laravel\Nova\Fields\ID;
 use Laravel\Nova\Fields\Text;
