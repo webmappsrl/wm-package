@@ -6,10 +6,12 @@ use App\Nova\User;
 use Ebess\AdvancedNovaMediaLibrary\Fields\Images;
 use Kongulov\NovaTabTranslatable\NovaTabTranslatable;
 use Laravel\Nova\Fields\BelongsTo;
+use Laravel\Nova\Fields\ID;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Wm\WmPackage\Nova\Actions\CopyUgc;
 use Wm\WmPackage\Nova\Actions\ExportTo;
+use Wm\WmPackage\Nova\Fields\PropertiesPanel;
 use Wm\WmPackage\Nova\Filters\SchemaFilter;
 use Wm\WmPackage\Nova\Filters\UgcCreationDateFilter;
 
@@ -23,9 +25,10 @@ abstract class AbstractUgcResource extends AbstractGeometryResource
     public function fields(NovaRequest $request): array
     {
         return [
-            ...parent::fields($request),
-            NovaTabTranslatable::make([Text::make('Name', 'name')])->hide(),
+            ID::make()->sortable(),
+            BelongsTo::make('App', 'app', App::class)->filterable(),
             Text::make('Name', 'properties->name'),
+            PropertiesPanel::make(ucwords($this->getPropertiesColumnName()), $this->getPropertiesModelKey())->collapsible(),
             BelongsTo::make('Author', 'author', User::class)->searchable()->filterable(),
             Images::make('Image', 'default')->onlyOnDetail(),
         ];
