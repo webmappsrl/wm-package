@@ -12,6 +12,8 @@ use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Traits\HasPackageFactory;
 use Wm\WmPackage\Traits\TaxonomyAbleModel;
 use Wm\WmPackage\Traits\TaxonomyWhereAbleModel;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Layer extends Polygon
 {
@@ -56,6 +58,14 @@ class Layer extends Polygon
         return $this->belongsToMany(App::class, 'layer_associated_app');
     }
 
+    /**
+     * Get the user that owns the Layer.
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
     public function ecTracks(): MorphToMany
     {
         return $this->morphedByMany(EcTrack::class, 'layerable')->using(Layerable::class);
@@ -86,7 +96,7 @@ class Layer extends Polygon
             $this->bbox = $bbox ?? $defaultBBOX;
             $this->save();
         } catch (Exception $e) {
-            Log::channel('layer')->error('computeBB of layer with id: '.$this->id);
+            Log::channel('layer')->error('computeBB of layer with id: ' . $this->id);
         }
     }
 

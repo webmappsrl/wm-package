@@ -87,6 +87,11 @@ class User extends Authenticatable implements JWTSubject
         return $this->hasMany(EcPoi::class);
     }
 
+    public function layers(): HasMany
+    {
+        return $this->hasMany(Layer::class);
+    }
+
     public function ugc_tracks(): HasMany
     {
         return $this->hasMany(UgcTrack::class);
