@@ -2,15 +2,16 @@
 
 namespace Wm\WmPackage\Nova;
 
-use Ebess\AdvancedNovaMediaLibrary\Fields\Images;
-use Kongulov\NovaTabTranslatable\NovaTabTranslatable;
-use Laravel\Nova\Fields\BelongsTo;
+use App\Nova\User;
 use Laravel\Nova\Fields\ID;
-use Laravel\Nova\Fields\MorphToMany;
-use Laravel\Nova\Fields\Number;
 use Laravel\Nova\Fields\Text;
+use Laravel\Nova\Fields\Number;
+use Laravel\Nova\Fields\BelongsTo;
+use Laravel\Nova\Fields\MorphToMany;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Wm\WmPackage\Nova\Fields\PropertiesPanel;
+use Ebess\AdvancedNovaMediaLibrary\Fields\Images;
+use Kongulov\NovaTabTranslatable\NovaTabTranslatable;
 use Wm\WmPackage\Nova\Traits\MultiPolygonResourceTrait;
 
 class Layer extends AbstractGeometryResource
@@ -41,6 +42,7 @@ class Layer extends AbstractGeometryResource
             })->onlyOnIndex()->sortable(),
 
             BelongsTo::make(__('App'), 'appOwner', App::class),
+            BelongsTo::make('User', 'user', User::class),
             Images::make(__('Image'), 'default'),
             PropertiesPanel::make(__('Properties'), 'layer')->collapsible(),
             MorphToMany::make(__('Activities'), 'taxonomyActivities', TaxonomyActivity::class),

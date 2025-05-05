@@ -9,6 +9,7 @@ use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Resource;
 use Wm\WmPackage\Nova\Fields\PropertiesPanel;
+use App\Nova\User;
 
 abstract class AbstractGeometryResource extends Resource
 {
@@ -40,6 +41,7 @@ abstract class AbstractGeometryResource extends Resource
             ID::make()->sortable(),
             NovaTabTranslatable::make([Text::make('Name', 'name')]),
             BelongsTo::make('App', 'app', App::class)->filterable(),
+            BelongsTo::make('User', 'user', User::class),
             PropertiesPanel::make(ucwords($this->getPropertiesColumnName()), $this->getPropertiesModelKey())->collapsible(),
         ];
     }
