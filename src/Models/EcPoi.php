@@ -30,6 +30,7 @@ class EcPoi extends Point implements LayerRelatedModel
         'contact_email',
         'related_url',
         'properties',
+        'user_id',
     ];
 
     public array $translatable = ['name', 'description', 'excerpt', 'audio', 'properties->description', 'properties->excerpt'];

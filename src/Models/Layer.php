@@ -39,6 +39,7 @@ class Layer extends Polygon
         'app_id',
         'geometry',
         'feature_collection',
+        'user_id',
     ];
 
     /**
