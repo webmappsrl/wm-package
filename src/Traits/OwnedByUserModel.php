@@ -2,6 +2,7 @@
 
 namespace Wm\WmPackage\Traits;
 
+use Wm\WmPackage\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 
 trait OwnedByUserModel
