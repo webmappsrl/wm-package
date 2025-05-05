@@ -2,14 +2,15 @@
 
 namespace Wm\WmPackage\Jobs\Import;
 
+use Wm\WmPackage\Models\App;
 use Illuminate\Bus\Batchable;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Queue\SerializesModels;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Bus\Dispatchable;
 use Wm\WmPackage\Services\Import\GeohubImportService;
 
 abstract class BaseImportJob implements ShouldQueue
@@ -108,7 +109,10 @@ abstract class BaseImportJob implements ShouldQueue
 
         $transformedData[$propertiesColumnName] = $this->geohubImportService->transformProperties($data, $this->getModelKey());
 
-        isset($this->data['app_id']) ? $transformedData['app_id'] = $this->data['app_id'] : null;
+        if (isset($this->data['app_id'])) {
+            $transformedData['app_id'] = $this->data['app_id'];
+            $transformedData['user_id'] = App::find($this->data['app_id'])->user_id ?? null;
+        }
 
         return $transformedData;
     }

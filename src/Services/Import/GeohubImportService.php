@@ -2,23 +2,25 @@
 
 namespace Wm\WmPackage\Services\Import;
 
-use Illuminate\Database\Connection;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Log\Logger;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Bus;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Str;
 use stdClass;
-use Wm\WmPackage\Jobs\Import\BaseImportJob;
+use Illuminate\Log\Logger;
+use Illuminate\Support\Str;
+use Wm\WmPackage\Models\User;
+use Illuminate\Support\Carbon;
 use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Models\EcTrack;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+use Spatie\Permission\Models\Role;
+use Illuminate\Database\Connection;
+use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\Eloquent\Model;
 use Wm\WmPackage\Models\TaxonomyActivity;
-use Wm\WmPackage\Models\User;
 use Wm\WmPackage\Services\StorageService;
+use Wm\WmPackage\Jobs\Import\BaseImportJob;
+use Wm\WmPackage\Services\RolesAndPermissionsService;
 
 /**
  * Service for importing data from Geohub to the local database
@@ -104,7 +106,7 @@ class GeohubImportService
             ->allowFailures()
             ->dispatch();
 
-        $this->logger->info("Dispatched batch {$batch->id} with ".count($jobs)." jobs for {$modelKey}s");
+        $this->logger->info("Dispatched batch {$batch->id} with " . count($jobs) . " jobs for {$modelKey}s");
     }
 
     /**
@@ -187,7 +189,7 @@ class GeohubImportService
 
             return $model;
         } catch (\Exception $e) {
-            $this->logger->error("Error importing {$modelName} with ID {$entityId}: ".$e->getMessage());
+            $this->logger->error("Error importing {$modelName} with ID {$entityId}: " . $e->getMessage());
             throw $e;
         }
     }
@@ -330,7 +332,25 @@ class GeohubImportService
             $shardUser = User::create($transformedData);
         }
 
+        $this->assignAdministratorRole($shardUser);
+
         return $shardUser;
+    }
+
+    /**
+     * Assign the Administrator role to the user
+     *
+     * @param  User  $user  The user to assign the role to
+     */
+    protected function assignAdministratorRole(User $user): void
+    {
+        $role = Role::where('name', 'Administrator')->first();
+        if (! $role) {
+            RolesAndPermissionsService::seedDatabase();
+            $role = Role::where('name', 'Administrator')->first();
+        }
+
+        $user->assignRole($role);
     }
 
     /**
@@ -589,7 +609,7 @@ class GeohubImportService
             }
             // Otherwise we need to download and upload to AWS
             else {
-                $fileUrl = config('wm-package.clients.geohub.host').'/storage/'.$featureCollection;
+                $fileUrl = config('wm-package.clients.geohub.host') . '/storage/' . $featureCollection;
                 $fileContent = $this->downloadFileContent($fileUrl);
 
                 if ($fileContent !== false) {
@@ -641,7 +661,7 @@ class GeohubImportService
                 $fileContent
             );
         } catch (\Exception $e) {
-            $this->logger->error('Error storing layer feature collection: '.$e->getMessage());
+            $this->logger->error('Error storing layer feature collection: ' . $e->getMessage());
         }
 
         if ($path) {
