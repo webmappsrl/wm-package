@@ -11,7 +11,7 @@ trait MultiLinestringResourceTrait
     {
         return [
             ...parent::fields($request),
-            MapMultiLinestring::make('Geometry', 'geometry')->hideFromIndex(),
+            MapMultiLinestring::make('Geometry', 'geometry')->hideFromIndex()->required(),
         ];
     }
 }
