@@ -2,18 +2,16 @@
 
 namespace Wm\WmPackage\Nova;
 
+use Ebess\AdvancedNovaMediaLibrary\Fields\Images;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Nova\Http\Requests\NovaRequest;
-use Ebess\AdvancedNovaMediaLibrary\Fields\Images;
 use Wm\WmPackage\Nova\Filters\FeaturesByLayerFilter;
 
 abstract class AbstractEcResource extends AbstractGeometryResource
 {
-
     /**
      * Build an "index" query for the given resource.
      *
-     * @param  \Laravel\Nova\Http\Requests\NovaRequest  $request
      * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
@@ -21,13 +19,12 @@ abstract class AbstractEcResource extends AbstractGeometryResource
     {
         $user = Auth::user();
 
-        if ($user && !$user->hasRole('Administrator')) {
+        if ($user && ! $user->hasRole('Administrator')) {
             return $query->where('user_id', $user->id);
         }
 
         return $query;
     }
-
 
     public function fields(NovaRequest $request): array
     {

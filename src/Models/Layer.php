@@ -2,7 +2,9 @@
 
 namespace Wm\WmPackage\Models;
 
+use App\Models\User;
 use Exception;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Support\Facades\Log;
 use Spatie\Translatable\HasTranslations;
@@ -12,8 +14,6 @@ use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Traits\HasPackageFactory;
 use Wm\WmPackage\Traits\TaxonomyAbleModel;
 use Wm\WmPackage\Traits\TaxonomyWhereAbleModel;
-use App\Models\User;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Layer extends Polygon
 {
@@ -97,7 +97,7 @@ class Layer extends Polygon
             $this->bbox = $bbox ?? $defaultBBOX;
             $this->save();
         } catch (Exception $e) {
-            Log::channel('layer')->error('computeBB of layer with id: ' . $this->id);
+            Log::channel('layer')->error('computeBB of layer with id: '.$this->id);
         }
     }
 

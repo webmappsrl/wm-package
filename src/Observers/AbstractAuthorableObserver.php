@@ -2,9 +2,9 @@
 
 namespace Wm\WmPackage\Observers;
 
+use Illuminate\Database\Eloquent\Model;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\User;
-use Illuminate\Database\Eloquent\Model;
 
 abstract class AbstractAuthorableObserver extends AbstractObserver
 {
@@ -21,9 +21,6 @@ abstract class AbstractAuthorableObserver extends AbstractObserver
 
     /**
      * Determine the user to associate with the model
-     *
-     * @param Model $model
-     * @return User|null
      */
     protected function determineUser(Model $model): ?User
     {
@@ -31,7 +28,7 @@ abstract class AbstractAuthorableObserver extends AbstractObserver
         $user = auth()->user();
 
         // If no authenticated user and model has app_id, try to get user from the app
-        if (!$user && !empty($model->app_id)) {
+        if (! $user && ! empty($model->app_id)) {
             $app = App::find($model->app_id);
 
             if ($app && isset($app->user_id)) {
@@ -47,10 +44,6 @@ abstract class AbstractAuthorableObserver extends AbstractObserver
 
     /**
      * Assign the user to the model
-     *
-     * @param Model $model
-     * @param User|null $user
-     * @return void
      */
     protected function assignUserToModel(Model $model, ?User $user): void
     {
