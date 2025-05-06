@@ -25,9 +25,7 @@ class PermissionPolicy
      */
     public function before(User $user, $ability)
     {
-        if ($user->hasRole('Administrator') || $user->hasPermissionTo('manage roles and permissions')) {
-            return true;
-        }
+        return $user->hasRole('Administrator') || $user->hasPermissionTo('manage roles and permissions');
     }
 
     public function viewAny(User $user): bool

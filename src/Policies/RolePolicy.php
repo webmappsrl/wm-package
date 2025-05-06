@@ -25,53 +25,48 @@ class RolePolicy
      */
     public function before(User $user, $ability)
     {
-        if ($user->hasRole('Admin')) {
-            return true;
-        }
-        if ($user->hasRole('Author') || $user->hasRole('Contributor')) {
-            return false;
-        }
+        return $user->hasRole('Administrator') || $user->hasPermissionTo('manage roles and permissions');
     }
 
     public function viewAny(User $user): bool
     {
 
-        return $user->can('view_role');
+        return false;
     }
 
     public function view(User $user, Role $model): bool
     {
 
-        return $user->can('view_role');
+        return false;
     }
 
     public function create(User $user): bool
     {
 
-        return $user->can('create_role');
+        return false;
     }
 
     public function update(User $user, Role $model): bool
     {
 
-        return $user->can('edit_role');
+        return false;
     }
 
     public function delete(User $user, Role $model): bool
     {
 
-        return $user->can('delete_role');
+        return false;
     }
 
     public function restore(User $user, Role $model): bool
     {
 
-        return $user->can('delete_role');
+        return false;
     }
 
     public function forceDelete(User $user, Role $model): bool
     {
 
-        return $user->can('delete_role');
+        return false;
     }
 }
