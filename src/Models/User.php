@@ -102,11 +102,6 @@ class User extends Authenticatable implements JWTSubject
         return $this->hasMany(TaxonomyTarget::class);
     }
 
-    public function roles(): MorphToMany
-    {
-        return $this->morphToMany(Role::class, 'model', 'model_has_roles');
-    }
-
     public function downloadableEcTracks(): BelongsToMany
     {
         return $this->belongsToMany(EcTrack::class, 'downloadable_ec_track_user');
