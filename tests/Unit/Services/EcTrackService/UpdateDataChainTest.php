@@ -38,7 +38,7 @@ class UpdateDataChainTest extends AbstractEcTrackServiceTest
         ];
 
         // Use a PURE mock, not makePartial()
-        $this->track = Mockery::mock(EcTrack::class);
+        $this->track = Mockery::mock(EcTrack::class)->makePartial();
 
         // --- Mock for Laravel queue serialization ---
         $this->track->shouldReceive('getKey')->andReturn(1); // Model ID
