@@ -18,36 +18,18 @@ class UpdateDataChainTest extends AbstractEcTrackServiceTest
 
     protected function setUp(): void
     {
-        Bus::fake();
-        parent::setUp();
+        parent::setUp(); // Call parent setup first
+        Bus::fake();     // Then fake the bus
 
-        // Mock ID
-        $this->track = Mockery::mock(EcTrack::class)->makePartial();
-        $this->track->shouldReceive('getAttribute')->with('id')->andReturn(1);
-        $this->track->id = 1; // For direct access if needed by partial mock aspects
-
-        // Initialize and manage properties state externally for the mock
-        $this->mockedTrackProperties = [];
-        $this->track->shouldReceive('getAttribute')->with('properties')->andReturnUsing(function () {
-            return $this->mockedTrackProperties;
-        });
-
-        $this->track->shouldReceive('setAttribute')->with('properties', Mockery::any())->andReturnUsing(function ($key, $value) {
-            $this->mockedTrackProperties = $value;
-        });
-
-        // If EcTrack uses ArrayAccess for properties (e.g., $track['osmid'])
-        // you might need to mock offsetExists, offsetGet, etc., for 'properties' itself if it's accessed like an array item,
-        // or ensure the 'properties' attribute itself is an array/ArrayAccess.
-        // The EcTrackService accesses $track->properties['osmid'], so getAttribute('properties') returning an array is key.
-
-        // Ensure properties contains both 'dem_data' and 'manual_data'
-        // for UpdateEcTrackDemJob and UpdateEcTrackManualDataJob to be chained respectively.
         $this->mockedTrackProperties = [
             'dem_data' => [],
             'manual_data' => []
         ];
 
+        $this->track = Mockery::mock(EcTrack::class)->makePartial();
+        $this->track->shouldReceive('getAttribute')->with('id')->andReturn(1);
+        $this->track->id = 1;
+
         $this->track->shouldReceive('getAttribute')->with('properties')->andReturnUsing(function () {
             return $this->mockedTrackProperties;
         });
@@ -55,6 +37,11 @@ class UpdateDataChainTest extends AbstractEcTrackServiceTest
         $this->track->shouldReceive('setAttribute')->with('properties', Mockery::any())->andReturnUsing(function ($key, $value) {
             $this->mockedTrackProperties = $value;
         });
+
+        // It's important that EcTrackService is resolved *after* Bus::fake() if it injects the dispatcher.
+        // The AbstractEcTrackServiceTest::setUp() already calls $this->ecTrackService = EcTrackService::make();
+        // after its own parent::setUp(), so EcTrackService should pick up the faked bus.
+        // If EcTrackService was resolved before Bus::fake(), it would have the real dispatcher.
     }
 
     public function test_update_data_chain_dispatches_at_least_one_job()

@@ -15,6 +15,27 @@ class GetUpdatedAtTracksTest extends AbstractEcTrackServiceTest
 {
     use DatabaseTransactions;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        config()->set('wm-package.shard_name', 'test_shard');
+
+        // Fake S3 and WMFE disks to avoid actual AWS calls and configuration issues
+        Storage::fake('s3');
+        Storage::fake('wmfe');
+
+        // Set minimal dummy S3 configuration to satisfy any direct config reads
+        config([
+            'filesystems.disks.s3.key'    => 'dummy_key',
+            'filesystems.disks.s3.secret' => 'dummy_secret',
+            'filesystems.disks.s3.region' => 'us-east-1',
+            'filesystems.disks.s3.bucket' => 'dummy_bucket',
+            'filesystems.disks.s3.url'    => '',
+            'filesystems.disks.wmfe.driver' => 'local', // Ensure wmfe uses local for tests if faked
+            'medialibrary.disk_name' => 'public', // Use a local disk for media library in tests
+        ]);
+    }
+
     public function test_get_updated_at_tracks_for_existing_user()
     {
         Queue::fake();
