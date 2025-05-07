@@ -10,6 +10,12 @@ use Wm\WmPackage\Jobs\Track\UpdateEcTrackDemJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackFromOsmJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackManualDataJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackOrderRelatedPoi;
+use Wm\WmPackage\Jobs\Track\UpdateEcTrackCurrentDataJob;
+use Wm\WmPackage\Jobs\Track\UpdateEcTrack3DDemJob;
+use Wm\WmPackage\Jobs\Track\UpdateEcTrackSlopeValues;
+use Wm\WmPackage\Jobs\UpdateModelWithGeometryTaxonomyWhere;
+use Wm\WmPackage\Jobs\Track\UpdateEcTrackGenerateElevationChartImage;
+use Wm\WmPackage\Jobs\Pbf\GenerateEcTrackPBFBatch;
 
 class UpdateDataChainTest extends AbstractEcTrackServiceTest
 {
@@ -43,12 +49,33 @@ class UpdateDataChainTest extends AbstractEcTrackServiceTest
 
     public function test_update_data_chain_dispatches_at_least_one_job()
     {
+        // Mock wasChanged('geometry') to return true to enter the conditional block
+        $this->track->shouldReceive('wasChanged')->with('geometry')->once()->andReturn(true);
+
+        // Ensure 'osmid' is not set in properties for this specific test case,
+        // so UpdateEcTrackFromOsmJob is not part of this chain.
+        // The default $this->mockedTrackProperties in setUp() does not include 'osmid'.
+        // If it could be set by other means, explicitly unset it or re-initialize:
+        // $this->mockedTrackProperties = [
+        //     'dem_data' => ['needs_processing' => true], // Though 'needs_processing' is no longer used by updateDataChain
+        //     'manual_data' => ['needs_processing' => true] // Same as above
+        // ];
+        // To be absolutely sure 'osmid' is not there for THIS test:
+        unset($this->mockedTrackProperties['osmid']);
 
         $this->ecTrackService->updateDataChain($this->track);
 
         Bus::assertChained([
+            UpdateEcTrackDemJob::class,
+            UpdateEcTrackManualDataJob::class,
+            UpdateEcTrackCurrentDataJob::class,
+            UpdateEcTrack3DDemJob::class,
+            UpdateEcTrackSlopeValues::class,
+            UpdateModelWithGeometryTaxonomyWhere::class,
+            UpdateEcTrackGenerateElevationChartImage::class,
             UpdateEcTrackAwsJob::class,
             UpdateEcTrackOrderRelatedPoi::class,
+            GenerateEcTrackPBFBatch::class,
         ]);
     }
 
