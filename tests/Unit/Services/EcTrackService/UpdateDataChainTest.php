@@ -28,11 +28,12 @@ class UpdateDataChainTest extends AbstractEcTrackServiceTest
 
         // Initialize and manage properties state externally for the mock
         $this->mockedTrackProperties = [];
-        $this->track->properties = &$this->mockedTrackProperties; // Allow test to modify $this->mockedTrackProperties directly
-
-        // Ensure getAttribute('properties') returns the managed state
         $this->track->shouldReceive('getAttribute')->with('properties')->andReturnUsing(function () {
             return $this->mockedTrackProperties;
+        });
+
+        $this->track->shouldReceive('setAttribute')->with('properties', Mockery::any())->andReturnUsing(function ($key, $value) {
+            $this->mockedTrackProperties = $value;
         });
 
         // If EcTrack uses ArrayAccess for properties (e.g., $track['osmid'])
