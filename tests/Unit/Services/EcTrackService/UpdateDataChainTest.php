@@ -45,6 +45,11 @@ class UpdateDataChainTest extends AbstractEcTrackServiceTest
         $this->track->shouldReceive('setAttribute')->with('properties', Mockery::any())->andReturnUsing(function ($key, $value) {
             $this->mockedTrackProperties = $value;
         });
+
+        // Need this to avoid model serialization issues with mocks
+        $this->track->shouldReceive('getMorphClass')->andReturn(EcTrack::class);
+        $this->track->shouldReceive('getKey')->andReturn($this->track->id); // Use the already set id
+        $this->track->shouldReceive('getConnectionName')->andReturn(null); // Or your test connection name
     }
 
     public function test_update_data_chain_dispatches_at_least_one_job()
