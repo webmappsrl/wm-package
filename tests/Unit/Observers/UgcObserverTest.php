@@ -43,6 +43,7 @@ class UgcObserverTest extends AbstractUgcObserverTest
         $this->actingAs($this->authUser);
         $testModel = $this->createTestModel();
 
+        $this->observer->creating($testModel);
         $this->observer->created($testModel);
         $this->assertEquals($this->authUser->id, $testModel->author->id, 'Author should be set to authenticated user');
         $this->assertTrue($this->has3dTransformation($testModel->geometry), 'Geometry should be transformed to 3D');
@@ -52,6 +53,7 @@ class UgcObserverTest extends AbstractUgcObserverTest
     public function it_sets_default_webmapp_user_as_author_when_no_user_authenticated()
     {
         $testModel = $this->createTestModel();
+        $this->observer->creating($testModel);
         $this->observer->created($testModel);
 
         $this->assertEquals($this->webmappUser->id, $testModel->author->id, 'Author should be set to authenticated user');

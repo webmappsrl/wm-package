@@ -45,7 +45,8 @@ class UpdateDataChainTest extends AbstractEcTrackServiceTest
     public function test_update_data_chain_dispatches_at_least_one_job()
     {
         // Ensure properties is at least an empty array for the service logic
-        $this->mockedTrackProperties = [];
+        // AND contains 'manual_data' for the UpdateEcTrackManualDataJob to be chained
+        $this->mockedTrackProperties = ['manual_data' => []];
 
         $this->ecTrackService->updateDataChain($this->track);
         Bus::assertChained([
