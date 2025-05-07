@@ -40,6 +40,9 @@ class UpdateDataChainTest extends AbstractEcTrackServiceTest
         // Use a PURE mock, not makePartial()
         $this->track = Mockery::mock(EcTrack::class);
 
+        // Allow the constructor to be called (for Bus::fake() deserialization edge cases)
+        $this->track->shouldReceive('__construct')->zeroOrMoreTimes();
+
         // --- Mock for property access from the service ---
         $this->track->shouldReceive('getAttribute')->with('properties')->andReturnUsing(function () {
             return $this->mockedTrackProperties;
