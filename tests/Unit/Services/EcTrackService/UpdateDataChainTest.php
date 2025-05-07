@@ -35,21 +35,27 @@ class UpdateDataChainTest extends AbstractEcTrackServiceTest
         ];
 
         $this->track = Mockery::mock(EcTrack::class)->makePartial();
-        $this->track->shouldReceive('getAttribute')->with('id')->andReturn(1);
-        $this->track->id = 1;
+        $this->track->id = 1; // Direct access for convenience, if used
 
+        // Mock for basic model behavior in the service
+        $this->track->shouldReceive('getAttribute')->with('id')->andReturn(1);
         $this->track->shouldReceive('getAttribute')->with('properties')->andReturnUsing(function () {
             return $this->mockedTrackProperties;
         });
-
-        $this->track->shouldReceive('setAttribute')->with('properties', Mockery::any())->andReturnUsing(function ($key, $value) {
-            $this->mockedTrackProperties = $value;
+        // It's a good idea to mock __get if you access ->properties directly
+        $this->track->shouldReceive('__get')->with('properties')->andReturnUsing(function () {
+            return $this->mockedTrackProperties;
         });
 
-        // Need this to avoid model serialization issues with mocks
-        $this->track->shouldReceive('getMorphClass')->andReturn(EcTrack::class);
-        $this->track->shouldReceive('getKey')->andReturn($this->track->id); // Use the already set id
-        $this->track->shouldReceive('getConnectionName')->andReturn(null); // Or your test connection name
+        // EXPLICIT mocks for methods used by Laravel Queue serialization
+        // These help ensure that ModelIdentifier is created with REAL model data.
+        $this->track->shouldReceive('getKey')->andReturn(1); // The model ID
+        $this->track->shouldReceive('getQueueableClass')->andReturn(EcTrack::class); // FORCE the real class for serialization
+        $this->track->shouldReceive('getConnectionName')->andReturn('test_connection_name'); // Or null for default, or your test connection
+        // getQueueableConnection() on Eloquent Model usually returns null, so it might not be necessary to mock it explicitly
+        // if the fallback logic to getConnectionName() is sufficient.
+        // For safety:
+        $this->track->shouldReceive('getQueueableConnection')->andReturn('test_connection_name');
     }
 
     public function test_update_data_chain_dispatches_at_least_one_job()
