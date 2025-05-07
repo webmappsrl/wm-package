@@ -52,6 +52,7 @@ class UpdateDataChainTest extends AbstractEcTrackServiceTest
         // --- Mock for Laravel queue serialization ---
         $this->track->shouldReceive('getKey')->andReturn(1); // Model ID
         $this->track->shouldReceive('getQueueableClass')->andReturn(EcTrack::class); // REAL class for serialization
+        $this->track->shouldReceive('getQueueableId')->andReturn(1); // Model ID for queueing
         $this->track->shouldReceive('getQueueableRelations')->andReturn([]); // Relations to serialize (none here)
         $this->track->shouldReceive('getQueueableConnection')->andReturn('test_connection_name'); // Test connection name or null
 
