@@ -29,16 +29,11 @@ class UpdateDataChainTest extends AbstractEcTrackServiceTest
         parent::setUp();
         Bus::fake();
 
-        $this->mockedTrackProperties = [
-            // Populate this array with properties you expect to be read,
-            // e.g. osmid will be set for specific tests.
-            // For the 'at_least_one_job' test, osmid should not be present here
-            // if you don't want UpdateEcTrackFromOsmJob to be added in that case.
-            // Your previous 'dem_data' and 'manual_data' are no longer used by updateDataChain.
-        ];
+        $this->mockedTrackProperties = [];
 
         // Use a PURE mock, not makePartial()
         $this->track = Mockery::mock(EcTrack::class)->makePartial();
+        $this->track->queueableClass = EcTrack::class; // Explicitly set the property for SerializesModels trait
 
         // --- Mock for Laravel queue serialization ---
         $this->track->shouldReceive('getKey')->andReturn(1); // Model ID
