@@ -2,12 +2,13 @@
 
 namespace Tests\Unit\Services\EcTrackService;
 
-use Illuminate\Support\Facades\Bus;
 use Mockery;
+use Wm\WmPackage\Models\EcTrack;
+use Illuminate\Support\Facades\Bus;
+use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackDemJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackFromOsmJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackManualDataJob;
-use Wm\WmPackage\Models\EcTrack;
 
 class UpdateDataChainTest extends AbstractEcTrackServiceTest
 {
@@ -22,8 +23,8 @@ class UpdateDataChainTest extends AbstractEcTrackServiceTest
         Bus::fake();     // Then fake the bus
 
         $this->mockedTrackProperties = [
-            'dem_data' => [],
-            'manual_data' => []
+            'dem_data' => ['needs_processing' => true],
+            'manual_data' => ['needs_processing' => true]
         ];
 
         $this->track = Mockery::mock(EcTrack::class)->makePartial();
@@ -37,16 +38,16 @@ class UpdateDataChainTest extends AbstractEcTrackServiceTest
         $this->track->shouldReceive('setAttribute')->with('properties', Mockery::any())->andReturnUsing(function ($key, $value) {
             $this->mockedTrackProperties = $value;
         });
-
-        // It's important that EcTrackService is resolved *after* Bus::fake() if it injects the dispatcher.
-        // The AbstractEcTrackServiceTest::setUp() already calls $this->ecTrackService = EcTrackService::make();
-        // after its own parent::setUp(), so EcTrackService should pick up the faked bus.
-        // If EcTrackService was resolved before Bus::fake(), it would have the real dispatcher.
     }
 
     public function test_update_data_chain_dispatches_at_least_one_job()
     {
+
+        // Mock wasChanged('geometry') to return true to enter the conditional block
+        $this->track->shouldReceive('wasChanged')->with('geometry')->once()->andReturn(true);
+
         $this->ecTrackService->updateDataChain($this->track);
+
         Bus::assertChained([
             UpdateEcTrackDemJob::class,
             UpdateEcTrackManualDataJob::class,
