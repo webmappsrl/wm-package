@@ -18,11 +18,11 @@ class UpdateDataChainTest extends AbstractEcTrackServiceTest
 
     protected function setUp(): void
     {
-        parent::setUp();
         Bus::fake();
-        $this->track = Mockery::mock(EcTrack::class)->makePartial();
+        parent::setUp();
 
         // Mock ID
+        $this->track = Mockery::mock(EcTrack::class)->makePartial();
         $this->track->shouldReceive('getAttribute')->with('id')->andReturn(1);
         $this->track->id = 1; // For direct access if needed by partial mock aspects
 
@@ -40,14 +40,25 @@ class UpdateDataChainTest extends AbstractEcTrackServiceTest
         // you might need to mock offsetExists, offsetGet, etc., for 'properties' itself if it's accessed like an array item,
         // or ensure the 'properties' attribute itself is an array/ArrayAccess.
         // The EcTrackService accesses $track->properties['osmid'], so getAttribute('properties') returning an array is key.
+
+        // Ensure properties contains both 'dem_data' and 'manual_data'
+        // for UpdateEcTrackDemJob and UpdateEcTrackManualDataJob to be chained respectively.
+        $this->mockedTrackProperties = [
+            'dem_data' => [],
+            'manual_data' => []
+        ];
+
+        $this->track->shouldReceive('getAttribute')->with('properties')->andReturnUsing(function () {
+            return $this->mockedTrackProperties;
+        });
+
+        $this->track->shouldReceive('setAttribute')->with('properties', Mockery::any())->andReturnUsing(function ($key, $value) {
+            $this->mockedTrackProperties = $value;
+        });
     }
 
     public function test_update_data_chain_dispatches_at_least_one_job()
     {
-        // Ensure properties is at least an empty array for the service logic
-        // AND contains 'manual_data' for the UpdateEcTrackManualDataJob to be chained
-        $this->mockedTrackProperties = ['manual_data' => []];
-
         $this->ecTrackService->updateDataChain($this->track);
         Bus::assertChained([
             UpdateEcTrackDemJob::class,

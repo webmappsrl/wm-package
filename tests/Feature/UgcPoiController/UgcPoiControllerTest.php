@@ -24,6 +24,7 @@ class UgcPoiControllerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        config()->set('wm-package.shard_name', 'test_shard');
         $this->withoutMiddleware('auth.jwt');
         $this->artisan('jwt:secret --always-no');
         // Registra il servizio di autenticazione
@@ -67,7 +68,7 @@ class UgcPoiControllerTest extends TestCase
     {
         $this->actingAs($this->user, 'api');
         // Effettua la chiamata DELETE all'endpoint destroy
-        $response = $this->json('GET', 'api/ugc/poi/delete/'.$this->poi->id);
+        $response = $this->json('GET', 'api/ugc/poi/delete/' . $this->poi->id);
 
         $response->assertStatus(200);
 
