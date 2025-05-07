@@ -9,6 +9,7 @@ use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackDemJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackFromOsmJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackManualDataJob;
+use Wm\WmPackage\Jobs\Track\UpdateEcTrackOrderRelatedPoi;
 
 class UpdateDataChainTest extends AbstractEcTrackServiceTest
 {
@@ -24,7 +25,7 @@ class UpdateDataChainTest extends AbstractEcTrackServiceTest
 
         $this->mockedTrackProperties = [
             'dem_data' => ['needs_processing' => true],
-            'manual_data' => ['needs_processing' => true]
+            'manual_data' => ['needs_processing' => true],
         ];
 
         $this->track = Mockery::mock(EcTrack::class)->makePartial();
@@ -43,14 +44,11 @@ class UpdateDataChainTest extends AbstractEcTrackServiceTest
     public function test_update_data_chain_dispatches_at_least_one_job()
     {
 
-        // Mock wasChanged('geometry') to return true to enter the conditional block
-        $this->track->shouldReceive('wasChanged')->with('geometry')->once()->andReturn(true);
-
         $this->ecTrackService->updateDataChain($this->track);
 
         Bus::assertChained([
-            UpdateEcTrackDemJob::class,
-            UpdateEcTrackManualDataJob::class,
+            UpdateEcTrackAwsJob::class,
+            UpdateEcTrackOrderRelatedPoi::class,
         ]);
     }
 

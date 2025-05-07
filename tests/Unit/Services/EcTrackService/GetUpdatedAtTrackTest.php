@@ -3,14 +3,14 @@
 namespace Tests\Unit\Services\EcTrackService;
 
 use Carbon\Carbon;
-use Wm\WmPackage\Models\App;
-use Wm\WmPackage\Models\EcTrack;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
+use Wm\WmPackage\Models\App;
+use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Services\Models\EcTrackService;
-use Illuminate\Foundation\Testing\DatabaseTransactions;
 
 class GetUpdatedAtTracksTest extends AbstractEcTrackServiceTest
 {
@@ -27,11 +27,11 @@ class GetUpdatedAtTracksTest extends AbstractEcTrackServiceTest
 
         // Set minimal dummy S3 configuration to satisfy any direct config reads
         config([
-            'filesystems.disks.s3.key'    => 'dummy_key',
+            'filesystems.disks.s3.key' => 'dummy_key',
             'filesystems.disks.s3.secret' => 'dummy_secret',
             'filesystems.disks.s3.region' => 'us-east-1',
             'filesystems.disks.s3.bucket' => 'dummy_bucket',
-            'filesystems.disks.s3.url'    => '',
+            'filesystems.disks.s3.url' => '',
             'filesystems.disks.wmfe.driver' => 'local', // Ensure wmfe uses local for tests if faked
             'medialibrary.disk_name' => 'public', // Use a local disk for media library in tests
         ]);
