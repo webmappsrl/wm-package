@@ -34,28 +34,34 @@ class UpdateDataChainTest extends AbstractEcTrackServiceTest
             'manual_data' => ['needs_processing' => true],
         ];
 
-        $this->track = Mockery::mock(EcTrack::class)->makePartial();
-        $this->track->id = 1; // Direct access for convenience, if used
+        // Use a PURE mock, not makePartial()
+        $this->track = Mockery::mock(EcTrack::class);
 
-        // Mock for basic model behavior in the service
-        $this->track->shouldReceive('getAttribute')->with('id')->andReturn(1);
+        // --- Mocks for EcTrackService method calls on $track ---
+        // For $track->properties['osmid'] or similar access:
         $this->track->shouldReceive('getAttribute')->with('properties')->andReturnUsing(function () {
             return $this->mockedTrackProperties;
         });
-        // It's a good idea to mock __get if you access ->properties directly
+        // If you access $track->properties directly in your service:
         $this->track->shouldReceive('__get')->with('properties')->andReturnUsing(function () {
             return $this->mockedTrackProperties;
         });
 
-        // EXPLICIT mocks for methods used by Laravel Queue serialization
-        // These help ensure that ModelIdentifier is created with REAL model data.
-        $this->track->shouldReceive('getKey')->andReturn(1); // The model ID
-        $this->track->shouldReceive('getQueueableClass')->andReturn(EcTrack::class); // FORCE the real class for serialization
-        $this->track->shouldReceive('getConnectionName')->andReturn('test_connection_name'); // Or null for default, or your test connection
-        // getQueueableConnection() on Eloquent Model usually returns null, so it might not be necessary to mock it explicitly
-        // if the fallback logic to getConnectionName() is sufficient.
-        // For safety:
-        $this->track->shouldReceive('getQueueableConnection')->andReturn('test_connection_name');
+        // Note: $track->wasChanged('geometry') will be mocked per-test as it varies.
+
+        // --- Mocks for Laravel Queue Serialization (ModelIdentifier) ---
+        // These are crucial for the BusFake inspection of jobs containing the model.
+        $this->track->shouldReceive('getKey')->andReturn(1); // The model's ID
+        $this->track->shouldReceive('getQueueableClass')->andReturn(EcTrack::class); // Force the REAL class name
+        $this->track->shouldReceive('getQueueableRelations')->andReturn([]); // Standard for no relations to serialize
+        $this->track->shouldReceive('getQueueableConnection')->andReturn('test_connection_name'); // Your test DB connection, or null for default
+
+        // Also mock getAttribute('id') as it's a common way to get ID and might be used by jobs indirectly
+        $this->track->shouldReceive('getAttribute')->with('id')->andReturn(1);
+
+        // It's good practice to set an ID for the track if it's ever accessed as a public property,
+        // but for pure mocks, rely on getKey() or getAttribute('id').
+        // $this->track->id = 1; // Avoid direct public property assignment on pure mocks if possible
     }
 
     public function test_update_data_chain_dispatches_at_least_one_job()
