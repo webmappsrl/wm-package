@@ -40,8 +40,12 @@ class UpdateDataChainTest extends AbstractEcTrackServiceTest
         // Use a PURE mock, not makePartial()
         $this->track = Mockery::mock(EcTrack::class);
 
-        // Allow the constructor to be called (for Bus::fake() deserialization edge cases)
-        $this->track->shouldReceive('__construct')->zeroOrMoreTimes();
+        // --- Mock for Laravel queue serialization ---
+        $this->track->shouldReceive('getKey')->andReturn(1); // Model ID
+        $this->track->shouldReceive('getQueueableClass')->andReturn(EcTrack::class); // REAL class for serialization
+        $this->track->shouldReceive('getQueueableId')->andReturn(1); // Model ID for queueing
+        $this->track->shouldReceive('getQueueableRelations')->andReturn([]); // Relations to serialize (none here)
+        $this->track->shouldReceive('getQueueableConnection')->andReturn('test_connection_name'); // Test connection name or null
 
         // --- Mock for property access from the service ---
         $this->track->shouldReceive('getAttribute')->with('properties')->andReturnUsing(function () {
@@ -51,13 +55,6 @@ class UpdateDataChainTest extends AbstractEcTrackServiceTest
         $this->track->shouldReceive('__get')->with('properties')->andReturnUsing(function () {
             return $this->mockedTrackProperties;
         });
-
-        // --- Mock for Laravel queue serialization ---
-        $this->track->shouldReceive('getKey')->andReturn(1); // Model ID
-        $this->track->shouldReceive('getQueueableClass')->andReturn(EcTrack::class); // REAL class for serialization
-        $this->track->shouldReceive('getQueueableId')->andReturn(1); // Model ID for queueing
-        $this->track->shouldReceive('getQueueableRelations')->andReturn([]); // Relations to serialize (none here)
-        $this->track->shouldReceive('getQueueableConnection')->andReturn('test_connection_name'); // Test connection name or null
 
         // Mock for getAttribute('id') (common)
         $this->track->shouldReceive('getAttribute')->with('id')->andReturn(1);
