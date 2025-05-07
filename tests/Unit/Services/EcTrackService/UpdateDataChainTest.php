@@ -26,43 +26,38 @@ class UpdateDataChainTest extends AbstractEcTrackServiceTest
 
     protected function setUp(): void
     {
-        parent::setUp(); // Call parent setup first
-        Bus::fake();     // Then fake the bus
+        parent::setUp();
+        Bus::fake();
 
         $this->mockedTrackProperties = [
             'dem_data' => ['needs_processing' => true],
             'manual_data' => ['needs_processing' => true],
         ];
 
-        // Use a PURE mock, not makePartial()
         $this->track = Mockery::mock(EcTrack::class);
 
-        // --- Mocks for EcTrackService method calls on $track ---
-        // For $track->properties['osmid'] or similar access:
-        $this->track->shouldReceive('getAttribute')->with('properties')->andReturnUsing(function () {
-            return $this->mockedTrackProperties;
-        });
-        // If you access $track->properties directly in your service:
+        // Simulate $track->properties
         $this->track->shouldReceive('__get')->with('properties')->andReturnUsing(function () {
             return $this->mockedTrackProperties;
         });
 
-        // Note: $track->wasChanged('geometry') will be mocked per-test as it varies.
+        // For isset($track['properties']) or array-like access
+        $this->track->shouldReceive('offsetExists')->andReturnUsing(function ($key) {
+            return isset($this->mockedTrackProperties[$key]);
+        });
 
-        // --- Mocks for Laravel Queue Serialization (ModelIdentifier) ---
-        // These are crucial for the BusFake inspection of jobs containing the model.
-        $this->track->shouldReceive('getKey')->andReturn(1); // The model's ID
-        $this->track->shouldReceive('getQueueableClass')->andReturn(EcTrack::class); // Force the REAL class name
-        $this->track->shouldReceive('getQueueableRelations')->andReturn([]); // Standard for no relations to serialize
-        $this->track->shouldReceive('getQueueableConnection')->andReturn('test_connection_name'); // Your test DB connection, or null for default
+        $this->track->shouldReceive('offsetGet')->andReturnUsing(function ($key) {
+            return $this->mockedTrackProperties[$key] ?? null;
+        });
 
-        // Also mock getAttribute('id') as it's a common way to get ID and might be used by jobs indirectly
+        // For serialization in Jobs
+        $this->track->shouldReceive('getKey')->andReturn(1);
+        $this->track->shouldReceive('getQueueableClass')->andReturn(EcTrack::class);
+        $this->track->shouldReceive('getQueueableRelations')->andReturn([]);
+        $this->track->shouldReceive('getQueueableConnection')->andReturn('test_connection_name');
         $this->track->shouldReceive('getAttribute')->with('id')->andReturn(1);
-
-        // It's good practice to set an ID for the track if it's ever accessed as a public property,
-        // but for pure mocks, rely on getKey() or getAttribute('id').
-        // $this->track->id = 1; // Avoid direct public property assignment on pure mocks if possible
     }
+
 
     public function test_update_data_chain_dispatches_at_least_one_job()
     {
