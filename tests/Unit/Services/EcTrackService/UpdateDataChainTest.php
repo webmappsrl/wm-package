@@ -2,20 +2,20 @@
 
 namespace Tests\Unit\Services\EcTrackService;
 
-use Mockery;
-use Wm\WmPackage\Models\EcTrack;
 use Illuminate\Support\Facades\Bus;
+use Mockery;
+use Wm\WmPackage\Jobs\Pbf\GenerateEcTrackPBFBatch;
+use Wm\WmPackage\Jobs\Track\UpdateEcTrack3DDemJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
+use Wm\WmPackage\Jobs\Track\UpdateEcTrackCurrentDataJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackDemJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackFromOsmJob;
+use Wm\WmPackage\Jobs\Track\UpdateEcTrackGenerateElevationChartImage;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackManualDataJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackOrderRelatedPoi;
-use Wm\WmPackage\Jobs\Track\UpdateEcTrackCurrentDataJob;
-use Wm\WmPackage\Jobs\Track\UpdateEcTrack3DDemJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackSlopeValues;
 use Wm\WmPackage\Jobs\UpdateModelWithGeometryTaxonomyWhere;
-use Wm\WmPackage\Jobs\Track\UpdateEcTrackGenerateElevationChartImage;
-use Wm\WmPackage\Jobs\Pbf\GenerateEcTrackPBFBatch;
+use Wm\WmPackage\Models\EcTrack;
 
 class UpdateDataChainTest extends AbstractEcTrackServiceTest
 {
@@ -60,9 +60,14 @@ class UpdateDataChainTest extends AbstractEcTrackServiceTest
             // Here you might want to be more specific if you know which keys are being checked.
             // For a generic mock, we return true for common keys if they exist in the mocked properties,
             // or for fundamental keys like 'id'. Otherwise false.
-            if ($key === 'id') return true;
+            if ($key === 'id') {
+                return true;
+            }
             // If the code happens to do isset($track->properties)
-            if ($key === 'properties') return true;
+            if ($key === 'properties') {
+                return true;
+            }
+
             // For other keys, check if they exist in mockedTrackProperties (to simulate isset on real properties)
             // This is useful if a job does isset($track->osmid) directly.
             return array_key_exists($key, $this->mockedTrackProperties);
@@ -75,7 +80,10 @@ class UpdateDataChainTest extends AbstractEcTrackServiceTest
         $this->track->shouldReceive('offsetGet')->byDefault()->andReturnUsing(function ($key) {
             // Similar to offsetExists, returns the value from mockedTrackProperties if the key exists,
             // otherwise null.
-            if ($key === 'id') return 1; // Already covered by getAttribute('id') but for safety
+            if ($key === 'id') {
+                return 1;
+            } // Already covered by getAttribute('id') but for safety
+
             return $this->mockedTrackProperties[$key] ?? null;
         });
 
