@@ -51,7 +51,7 @@ class EcPoiPolicy
      */
     public function create(User $user)
     {
-        return true;
+        return !$user->hasRole('Guest');
     }
 
     /**

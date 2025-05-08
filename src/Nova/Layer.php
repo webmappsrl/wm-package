@@ -42,7 +42,7 @@ class Layer extends AbstractGeometryResource
             })->onlyOnIndex()->sortable(),
 
             BelongsTo::make(__('App'), 'appOwner', App::class),
-            BelongsTo::make('User', 'user', User::class),
+            BelongsTo::make('Owner', 'layerOwner', User::class),
             Images::make(__('Image'), 'default'),
             PropertiesPanel::make(__('Properties'), 'layer')->collapsible(),
             MorphToMany::make(__('Activities'), 'taxonomyActivities', TaxonomyActivity::class),

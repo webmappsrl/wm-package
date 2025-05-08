@@ -62,9 +62,9 @@ class Layer extends Polygon
     /**
      * Get the user that owns the Layer.
      */
-    public function user(): BelongsTo
+    public function layerOwner(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class, 'user_id');
     }
 
     public function ecTracks(): MorphToMany
@@ -97,7 +97,7 @@ class Layer extends Polygon
             $this->bbox = $bbox ?? $defaultBBOX;
             $this->save();
         } catch (Exception $e) {
-            Log::channel('layer')->error('computeBB of layer with id: '.$this->id);
+            Log::channel('layer')->error('computeBB of layer with id: ' . $this->id);
         }
     }
 
