@@ -266,9 +266,11 @@ class AppConfigService extends AppBaseService
         $data['MAP']['minZoom'] = $this->app->map_min_zoom;
         $data['MAP']['maxStrokeWidth'] = $this->app->map_max_stroke_width;
         $data['MAP']['minStrokeWidth'] = $this->app->map_min_stroke_width;
+
+        $decoded_tiles = json_decode($this->app->tiles, true);
         $data['MAP']['tiles'] = array_map(function ($v) {
             return json_decode($v);
-        }, json_decode($this->app->tiles, true));
+        }, is_array($decoded_tiles) ? $decoded_tiles : []);
 
         if (is_null($this->app->map_bbox)) {
             $bbox = GeometryComputationService::make()->getEcTracksBboxByAppId($this->app->id);

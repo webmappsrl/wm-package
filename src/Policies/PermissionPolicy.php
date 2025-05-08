@@ -25,53 +25,48 @@ class PermissionPolicy
      */
     public function before(User $user, $ability)
     {
-        if ($user->hasRole('Admin')) {
-            return true;
-        }
-        if ($user->hasRole('Author') || $user->hasRole('Contributor')) {
-            return false;
-        }
+        return $user->hasRole('Administrator') || $user->hasPermissionTo('manage roles and permissions');
     }
 
     public function viewAny(User $user): bool
     {
 
-        return $user->can('view_permission');
+        return false;
     }
 
     public function view(User $user, Permission $model): bool
     {
 
-        return $user->can('view_permission');
+        return false;
     }
 
     public function create(User $user): bool
     {
 
-        return $user->can('create_permission');
+        return false;
     }
 
     public function update(User $user, Permission $model): bool
     {
 
-        return $user->can('edit_permission');
+        return false;
     }
 
     public function delete(User $user, Permission $model): bool
     {
 
-        return $user->can('delete_permission');
+        return false;
     }
 
     public function restore(User $user, Permission $model): bool
     {
 
-        return $user->can('delete_permission');
+        return false;
     }
 
     public function forceDelete(User $user, Permission $model): bool
     {
 
-        return $user->can('delete_permission');
+        return false;
     }
 }

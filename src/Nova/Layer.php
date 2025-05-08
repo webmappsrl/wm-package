@@ -2,6 +2,7 @@
 
 namespace Wm\WmPackage\Nova;
 
+use App\Nova\User;
 use Ebess\AdvancedNovaMediaLibrary\Fields\Images;
 use Kongulov\NovaTabTranslatable\NovaTabTranslatable;
 use Laravel\Nova\Fields\BelongsTo;
@@ -41,6 +42,7 @@ class Layer extends AbstractGeometryResource
             })->onlyOnIndex()->sortable(),
 
             BelongsTo::make(__('App'), 'appOwner', App::class),
+            BelongsTo::make('Owner', 'layerOwner', User::class),
             Images::make(__('Image'), 'default'),
             PropertiesPanel::make(__('Properties'), 'layer')->collapsible(),
             MorphToMany::make(__('Activities'), 'taxonomyActivities', TaxonomyActivity::class),

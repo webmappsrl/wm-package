@@ -2,6 +2,8 @@
 
 namespace Wm\WmPackage\Models;
 
+use App\Models\User;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Support\Facades\App;
@@ -28,6 +30,7 @@ class EcPoi extends Point implements LayerRelatedModel
         'contact_email',
         'related_url',
         'properties',
+        'user_id',
     ];
 
     public array $translatable = ['name', 'description', 'excerpt', 'audio', 'properties->description', 'properties->excerpt'];
@@ -54,6 +57,14 @@ class EcPoi extends Point implements LayerRelatedModel
     public function ecTracks(): BelongsToMany
     {
         return $this->belongsToMany(EcTrack::class);
+    }
+
+    /**
+     * Get the user that owns the EcPoi.
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 
     public function taxonomyActivities(): MorphToMany

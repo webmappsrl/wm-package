@@ -3,6 +3,7 @@
 namespace Wm\WmPackage\Tests\Feature;
 
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Facades\Storage;
 use Orchestra\Testbench\Attributes\WithMigration;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\UgcPoi;
@@ -24,6 +25,23 @@ class UgcPoiControllerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        config()->set('wm-package.shard_name', 'test_shard');
+
+        // Fake S3 and WMFE disks to avoid actual AWS calls and configuration issues
+        Storage::fake('s3');
+        Storage::fake('wmfe');
+
+        // Set minimal dummy S3 configuration to satisfy any direct config reads
+        config([
+            'filesystems.disks.s3.key' => 'dummy_key',
+            'filesystems.disks.s3.secret' => 'dummy_secret',
+            'filesystems.disks.s3.region' => 'us-east-1',
+            'filesystems.disks.s3.bucket' => 'dummy_bucket',
+            'filesystems.disks.s3.url' => '',
+            'filesystems.disks.wmfe.driver' => 'local', // Ensure wmfe uses local for tests if faked
+            'medialibrary.disk_name' => 'public', // Use a local disk for media library in tests
+        ]);
+
         $this->withoutMiddleware('auth.jwt');
         $this->artisan('jwt:secret --always-no');
         // Registra il servizio di autenticazione

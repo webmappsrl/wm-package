@@ -22,8 +22,8 @@ class AppFactory extends Factory
             'map_def_zoom' => $this->faker->numberBetween(12, 14),
             'font_family_header' => 'Roboto Slab',
             'font_family_content' => 'Roboto',
-            'default_feature_color' => '#'.$this->faker->hexColor(),
-            'primary_color' => '#'.$this->faker->hexColor(),
+            'default_feature_color' => '#' . $this->faker->hexColor(),
+            'primary_color' => '#' . $this->faker->hexColor(),
             'poi_min_radius' => $this->faker->randomFloat(1, 0.3, 0.8),
             'poi_max_radius' => $this->faker->randomFloat(1, 0.9, 1.5),
             'poi_icon_zoom' => $this->faker->randomFloat(1, 15, 17),
@@ -38,6 +38,7 @@ class AppFactory extends Factory
             'default_language' => 'it',
             'available_languages' => json_encode(['it', 'en']),
             'auth_show_at_startup' => $this->faker->boolean(),
+            'track_searchables' => json_encode(['name', 'description', 'excerpt']),
             'welcome' => [
                 'it' => $this->faker->paragraph(),
                 'en' => $this->faker->paragraph(),

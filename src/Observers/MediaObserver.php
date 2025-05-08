@@ -24,9 +24,6 @@ class MediaObserver extends AbstractAuthorableObserver
     public function creating(Model $media)
     {
         try {
-            // Executes the AbstractAuthorableObserver logic to set the author
-            parent::creating($media);
-
             // Sets app_id and geometry if needed
             $this->setAppIdAndGeometry($media);
         } catch (\Exception $e) {
@@ -36,6 +33,7 @@ class MediaObserver extends AbstractAuthorableObserver
 
     public function created(Model $media)
     {
+        parent::created($media);
         $this->removeGeometryFromCustomProperties($media);
     }
 

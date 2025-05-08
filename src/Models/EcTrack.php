@@ -2,6 +2,7 @@
 
 namespace Wm\WmPackage\Models;
 
+use App\Models\User;
 use ChristianKuri\LaravelFavorite\Traits\Favoriteable;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -27,6 +28,7 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
         'geometry',
         'app_id',
         'properties',
+        'user_id',
     ];
 
     protected $casts = [
@@ -66,6 +68,14 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
     public function app(): BelongsTo
     {
         return $this->belongsTo(App::class);
+    }
+
+    /**
+     * Get the user that owns the EcTrack.
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 
     //

@@ -6,11 +6,9 @@ namespace Wm\WmPackage\Models;
 use ChristianKuri\LaravelFavorite\Traits\Favoriteability;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
-use Spatie\Permission\Models\Role;
 use Spatie\Permission\Traits\HasRoles;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 use Wm\WmPackage\Traits\HasPackageFactory;
@@ -87,6 +85,11 @@ class User extends Authenticatable implements JWTSubject
         return $this->hasMany(EcPoi::class);
     }
 
+    public function layers(): HasMany
+    {
+        return $this->hasMany(Layer::class);
+    }
+
     public function ugc_tracks(): HasMany
     {
         return $this->hasMany(UgcTrack::class);
@@ -95,11 +98,6 @@ class User extends Authenticatable implements JWTSubject
     public function taxonomy_targets(): HasMany
     {
         return $this->hasMany(TaxonomyTarget::class);
-    }
-
-    public function roles(): MorphToMany
-    {
-        return $this->morphToMany(Role::class, 'model', 'model_has_roles');
     }
 
     public function downloadableEcTracks(): BelongsToMany

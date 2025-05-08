@@ -923,4 +923,27 @@ GROUP BY
 
         throw new \InvalidArgumentException('Invalid geometry format provided');
     }
+
+    public function getEcTracksBboxByAppId(int $appId): ?array
+    {
+        $res = DB::select('
+            SELECT ST_Extent(geometry::geometry) as bbox
+            FROM ec_tracks
+            WHERE app_id = ?
+        ', [$appId]);
+
+        if (empty($res) || is_null($res[0]->bbox)) {
+            return null;
+        }
+
+        // Extract the bbox coordinates from "BOX(minX minY,maxX maxY)"
+        preg_match('/BOX\(([-\d\.]+) ([-\d\.]+),([-\d\.]+) ([-\d\.]+)\)/', $res[0]->bbox, $matches);
+
+        return [
+            'min_lon' => (float) $matches[1],
+            'min_lat' => (float) $matches[2],
+            'max_lon' => (float) $matches[3],
+            'max_lat' => (float) $matches[4],
+        ];
+    }
 }

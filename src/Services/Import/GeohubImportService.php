@@ -12,12 +12,14 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+use Spatie\Permission\Models\Role;
 use stdClass;
 use Wm\WmPackage\Jobs\Import\BaseImportJob;
 use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\TaxonomyActivity;
 use Wm\WmPackage\Models\User;
+use Wm\WmPackage\Services\RolesAndPermissionsService;
 use Wm\WmPackage\Services\StorageService;
 
 /**
@@ -330,7 +332,25 @@ class GeohubImportService
             $shardUser = User::create($transformedData);
         }
 
+        $this->assignAdministratorRole($shardUser);
+
         return $shardUser;
+    }
+
+    /**
+     * Assign the Administrator role to the user
+     *
+     * @param  User  $user  The user to assign the role to
+     */
+    protected function assignAdministratorRole(User $user): void
+    {
+        $role = Role::where('name', 'Administrator')->first();
+        if (! $role) {
+            RolesAndPermissionsService::seedDatabase();
+            $role = Role::where('name', 'Administrator')->first();
+        }
+
+        $user->assignRole($role);
     }
 
     /**

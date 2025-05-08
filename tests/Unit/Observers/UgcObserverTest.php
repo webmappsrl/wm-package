@@ -3,16 +3,21 @@
 namespace Tests\Unit\Observers;
 
 use Illuminate\Database\Query\Expression;
+use Wm\WmPackage\Models\User;
 use Wm\WmPackage\Observers\UgcObserver;
 
 class UgcObserverTest extends AbstractUgcObserverTest
 {
     protected UgcObserver $observer;
 
+    protected User $webmappUser;
+
     protected function setUp(): void
     {
         parent::setUp();
         $this->observer = new UgcObserver;
+        $this->webmappUser = User::factory()->create();
+        $this->actingAs($this->webmappUser);
     }
 
     private function createTestModel(): TestModel
@@ -23,9 +28,13 @@ class UgcObserverTest extends AbstractUgcObserverTest
         return $testModel;
     }
 
-    private function has3dTransformation(Expression $query)
+    private function has3dTransformation($query)
     {
-        return str_contains($query->getValue($this->app->make('db')->getQueryGrammar()), 'ST_Force3D');
+        if ($query instanceof Expression) {
+            $query = $query->getValue($this->app->make('db')->getQueryGrammar());
+        }
+
+        return str_contains($query, 'ST_Force3D');
     }
 
     /** @test */
@@ -35,6 +44,7 @@ class UgcObserverTest extends AbstractUgcObserverTest
         $testModel = $this->createTestModel();
 
         $this->observer->creating($testModel);
+        $this->observer->created($testModel);
         $this->assertEquals($this->authUser->id, $testModel->author->id, 'Author should be set to authenticated user');
         $this->assertTrue($this->has3dTransformation($testModel->geometry), 'Geometry should be transformed to 3D');
     }
@@ -44,6 +54,7 @@ class UgcObserverTest extends AbstractUgcObserverTest
     {
         $testModel = $this->createTestModel();
         $this->observer->creating($testModel);
+        $this->observer->created($testModel);
 
         $this->assertEquals($this->webmappUser->id, $testModel->author->id, 'Author should be set to authenticated user');
         $this->assertTrue($this->has3dTransformation($testModel->geometry), 'Geometry should be transformed to 3D');

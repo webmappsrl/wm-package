@@ -18,14 +18,9 @@ class EcPoiPolicy
      */
     public function before(User $user, $ability)
     {
-        // if ($user->hasRole('Admin')) {
-        //     return true;
-        // }
-        // if ($user->hasRole('Author') || $user->hasRole('Contributor')) {
-        //     return false;
-        // }
-
-        return true;
+        if ($user->hasRole('Administrator')) {
+            return true;
+        }
     }
 
     /**
@@ -35,9 +30,7 @@ class EcPoiPolicy
      */
     public function viewAny(User $user)
     {
-        if ($user->hasRole('Editor')) {
-            return true;
-        }
+        return true;
     }
 
     /**
@@ -47,11 +40,8 @@ class EcPoiPolicy
      */
     public function view(User $user, EcPoi $ecPoi)
     {
-        if ($user->hasRole('Editor') && $user->id === $ecPoi->user_id) {
-            return true;
-        }
-
-        return false;
+        // Admins are handled by before(). Users can view their own POIs.
+        return $user->id === $ecPoi->user_id;
     }
 
     /**
@@ -61,26 +51,18 @@ class EcPoiPolicy
      */
     public function create(User $user)
     {
-        if ($user->hasRole('Editor')) {
-            return true;
-        }
-
-        return false;
+        return !$user->hasRole('Guest');
     }
 
     /**
      * Determine whether the user can update the model.
      *
-     * @param  \Wm\WmPackage\Models\EcPoi  $ecPoi
      * @return \Illuminate\Auth\Access\Response|bool
      */
-    public function update(User $user, EcPoi $model)
+    public function update(User $user, EcPoi $ecPoi)
     {
-        if ($user->hasRole('Editor') && $user->id === $model->user_id) {
-            return true;
-        }
-
-        return false;
+        // Admins are handled by before(). Users can update their own POIs.
+        return $user->id === $ecPoi->user_id;
     }
 
     /**
@@ -90,11 +72,8 @@ class EcPoiPolicy
      */
     public function delete(User $user, EcPoi $ecPoi)
     {
-        if ($user->hasRole('Editor') && $user->id === $ecPoi->user_id) {
-            return true;
-        }
-
-        return false;
+        // Admins are handled by before(). Users can delete their own POIs.
+        return $user->id === $ecPoi->user_id;
     }
 
     /**

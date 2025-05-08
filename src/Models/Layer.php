@@ -2,7 +2,9 @@
 
 namespace Wm\WmPackage\Models;
 
+use App\Models\User;
 use Exception;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Support\Facades\Log;
 use Spatie\Translatable\HasTranslations;
@@ -37,6 +39,7 @@ class Layer extends Polygon
         'app_id',
         'geometry',
         'feature_collection',
+        'user_id',
     ];
 
     /**
@@ -54,6 +57,14 @@ class Layer extends Polygon
     public function associatedApps()
     {
         return $this->belongsToMany(App::class, 'layer_associated_app');
+    }
+
+    /**
+     * Get the user that owns the Layer.
+     */
+    public function layerOwner(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id');
     }
 
     public function ecTracks(): MorphToMany
@@ -86,7 +97,7 @@ class Layer extends Polygon
             $this->bbox = $bbox ?? $defaultBBOX;
             $this->save();
         } catch (Exception $e) {
-            Log::channel('layer')->error('computeBB of layer with id: '.$this->id);
+            Log::channel('layer')->error('computeBB of layer with id: ' . $this->id);
         }
     }
 
