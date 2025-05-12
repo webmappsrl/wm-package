@@ -34,8 +34,8 @@ class UpdateDataChainTest extends AbstractEcTrackServiceTest
         // Create track first
         $track = EcTrack::factory()->createQuietly();
 
-        // Now update geometry to trigger wasChanged
-        $track->geometry = 'LINESTRING(1 1, 2 2)'; // New geometry
+        // Now update geometry to trigger wasChanged (use 3D coordinates)
+        $track->geometry = 'LINESTRING(1 1 0, 2 2 0)'; // New 3D geometry
         $track->saveQuietly(); // Use saveQuietly to avoid triggering observers if any
 
         // Fetch the updated track instance to ensure we have the latest state
@@ -75,7 +75,7 @@ class UpdateDataChainTest extends AbstractEcTrackServiceTest
 
         // Check that UpdateEcTrackFromOsmJob was dispatched (not necessarily chained)
         Bus::assertDispatched(UpdateEcTrackFromOsmJob::class, function ($job) use ($updatedTrack) {
-            return $job->track->id === $updatedTrack->id;
+            return $job->ecTrack->id === $updatedTrack->id;
         });
     }
 }
