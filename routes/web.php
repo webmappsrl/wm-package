@@ -1,7 +1,6 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Wm\WmPackage\Http\Controllers\ExportDownloadController;
 use Wm\WmPackage\Http\Controllers\ImportController;
 use Wm\WmPackage\Http\Controllers\RankingController;
 
@@ -23,3 +22,7 @@ Route::get('/user-ranking/{app}/{user}', [RankingController::class, 'showUserRan
 // TODO: security leak, use a middleware to check if the user is authenticated
 Route::post('import/geojson', [ImportController::class, 'importGeojson'])->name('import');
 Route::post('import/confirm', [ImportController::class, 'saveImport'])->name('save-import');
+
+Route::get('/password/reset', function () {
+    return redirect('/nova/password/reset');
+});
