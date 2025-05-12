@@ -30,61 +30,31 @@ class UpdateDataChainTest extends AbstractEcTrackServiceTest
 
         $this->mockedTrackProperties = [];
 
-        // Use a PURE mock, not makePartial()
-        $this->track = Mockery::mock(EcTrack::class)->makePartial();
-        $this->track->queueableClass = EcTrack::class; // Explicitly set the property for SerializesModels trait
+        // Use a SPY, not mock() or makePartial()
+        $this->track = Mockery::spy(EcTrack::class);
+        // No need to manually set queueableClass for a spy on a real class
 
-        // --- Mock for Laravel queue serialization ---
-        $this->track->shouldReceive('getKey')->andReturn(1); // Model ID
-        $this->track->shouldReceive('getQueueableClass')->andReturn(EcTrack::class); // REAL class for serialization
-        $this->track->shouldReceive('getQueueableId')->andReturn(1); // Model ID for queueing
-        $this->track->shouldReceive('getQueueableRelations')->andReturn([]); // Relations to serialize (none here)
-        $this->track->shouldReceive('getQueueableConnection')->andReturn('test_connection_name'); // Test connection name or null
+        // --- Mock for Laravel queue serialization (still needed for spy) ---
+        // Spies allow real method calls by default, but we can still override specific ones if needed.
+        // For serialization, Laravel might still call these internally, so let's keep them.
+        $this->track->shouldReceive('getKey')->andReturn(1);
+        $this->track->shouldReceive('getQueueableId')->andReturn(1);
+        $this->track->shouldReceive('getQueueableClass')->andReturn(EcTrack::class);
+        $this->track->shouldReceive('getQueueableRelations')->andReturn([]);
+        $this->track->shouldReceive('getQueueableConnection')->andReturn('test_connection_name');
 
         // --- Mock for property access from the service ---
+        // For spies, we need to explicitly tell them what to return for specific calls
+        // that the service makes, otherwise the real method would be called.
         $this->track->shouldReceive('getAttribute')->with('properties')->andReturnUsing(function () {
             return $this->mockedTrackProperties;
         });
-        // Mock for direct access to ->properties
+        // We also need to mock the magic __get for direct property access, if used.
         $this->track->shouldReceive('__get')->with('properties')->andReturnUsing(function () {
             return $this->mockedTrackProperties;
         });
-
-        // Mock for getAttribute('id') (common)
+        // Mock getAttribute('id')
         $this->track->shouldReceive('getAttribute')->with('id')->andReturn(1);
-
-        // Mock to handle isset($track->some_property) or empty($track->some_property)
-        // which internally call __isset -> offsetExists
-        $this->track->shouldReceive('offsetExists')->byDefault()->andReturnUsing(function ($key) {
-            // Here you might want to be more specific if you know which keys are being checked.
-            // For a generic mock, we return true for common keys if they exist in the mocked properties,
-            // or for fundamental keys like 'id'. Otherwise false.
-            if ($key === 'id') {
-                return true;
-            }
-            // If the code happens to do isset($track->properties)
-            if ($key === 'properties') {
-                return true;
-            }
-
-            // For other keys, check if they exist in mockedTrackProperties (to simulate isset on real properties)
-            // This is useful if a job does isset($track->osmid) directly.
-            return array_key_exists($key, $this->mockedTrackProperties);
-        });
-
-        // Mock to handle $track->some_property (direct access to properties not explicitly defined)
-        // which internally calls __get -> offsetGet (if the property is not a direct attribute)
-        // or __get -> getAttribute if it is an attribute.
-        // Since getAttribute is already mocked for 'id' and 'properties', this is a fallback.
-        $this->track->shouldReceive('offsetGet')->byDefault()->andReturnUsing(function ($key) {
-            // Similar to offsetExists, returns the value from mockedTrackProperties if the key exists,
-            // otherwise null.
-            if ($key === 'id') {
-                return 1;
-            } // Already covered by getAttribute('id') but for safety
-
-            return $this->mockedTrackProperties[$key] ?? null;
-        });
 
         // wasChanged will be mocked for each specific test
         // No need for shouldAllowMockingMethod with pure mocks if expectations are clear for tests.
@@ -92,7 +62,7 @@ class UpdateDataChainTest extends AbstractEcTrackServiceTest
 
     public function test_update_data_chain_dispatches_at_least_one_job()
     {
-        // Mock wasChanged('geometry') only here
+        // Mock wasChanged specifically for this test
         $this->track->shouldReceive('wasChanged')->with('geometry')->once()->andReturn(true);
 
         $this->ecTrackService->updateDataChain($this->track);
@@ -115,6 +85,12 @@ class UpdateDataChainTest extends AbstractEcTrackServiceTest
     {
         $this->mockedTrackProperties = ['osmid' => 123];
 
+        // Mock getAttribute('osmid') for the spy
+        $this->track->shouldReceive('getAttribute')->with('osmid')->andReturn(123);
+        // If the code accesses $track->osmid directly, mock __get as well
+        $this->track->shouldReceive('__get')->with('osmid')->andReturn(123);
+
+        // Mock wasChanged specifically for this test
         $this->track->shouldReceive('wasChanged')->with('geometry')->andReturn(false);
 
         $this->ecTrackService->updateDataChain($this->track);
