@@ -15,8 +15,8 @@ use Wm\WmPackage\Jobs\Track\UpdateEcTrackManualDataJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackOrderRelatedPoi;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackSlopeValues;
 use Wm\WmPackage\Jobs\UpdateModelWithGeometryTaxonomyWhere;
-use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\App;
+use Wm\WmPackage\Models\EcTrack;
 
 class UpdateDataChainTest extends AbstractEcTrackServiceTest
 {

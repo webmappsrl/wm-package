@@ -13,9 +13,6 @@ class BaseEcTrackJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    /**
-     * @var EcTrack
-     */
     protected EcTrack $ecTrack;
 
     /**
@@ -30,8 +27,6 @@ class BaseEcTrackJob implements ShouldQueue
 
     /**
      * Get the EcTrack instance associated with the job.
-     *
-     * @return EcTrack
      */
     public function getEcTrack(): EcTrack
     {
