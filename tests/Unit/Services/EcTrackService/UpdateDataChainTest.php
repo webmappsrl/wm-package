@@ -19,7 +19,6 @@ use Wm\WmPackage\Models\EcTrack;
 
 class UpdateDataChainTest extends AbstractEcTrackServiceTest
 {
-    /** @var EcTrack|Mockery\MockInterface */
     private $track;
 
     private array $mockedTrackProperties;
