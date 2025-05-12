@@ -31,8 +31,14 @@ class UpdateDataChainTest extends AbstractEcTrackServiceTest
 
     public function test_update_data_chain_dispatches_at_least_one_job()
     {
+        // Create track first
         $track = EcTrack::factory()->createQuietly();
 
+        // Now update geometry to trigger wasChanged
+        $track->geometry = 'LINESTRING(1 1, 2 2)'; // New geometry
+        $track->saveQuietly(); // Use saveQuietly to avoid triggering observers if any
+
+        // Fetch the updated track instance to ensure we have the latest state
         $updatedTrack = EcTrack::find($track->id);
 
         $this->ecTrackService->updateDataChain($updatedTrack);
@@ -53,14 +59,23 @@ class UpdateDataChainTest extends AbstractEcTrackServiceTest
 
     public function test_update_data_chain_dispatches_job_if_track_has_osm_data()
     {
-        $track = EcTrack::factory()->createQuietly();
-        $track->properties['osmid'] = 123;
-        $track->saveQuietly();
+        $track = EcTrack::factory()->createQuietly(); // Create without specific osmid initially
 
-        $this->ecTrackService->updateDataChain($track);
+        // Get properties, modify, and set back
+        $properties = $track->properties ?? []; // Get current properties or default to empty array
+        $properties['osmid'] = 123; // Add/update osmid
+        $track->properties = $properties; // Assign the modified array back
 
-        Bus::assertDispatched(UpdateEcTrackFromOsmJob::class, function ($job) use ($track) {
-            return $job->track->id === $track->id;
+        $track->saveQuietly(); // Save the changes
+
+        // Fetch the instance again to be sure, though $track should be updated
+        $updatedTrack = EcTrack::find($track->id);
+
+        $this->ecTrackService->updateDataChain($updatedTrack);
+
+        // Check that UpdateEcTrackFromOsmJob was dispatched (not necessarily chained)
+        Bus::assertDispatched(UpdateEcTrackFromOsmJob::class, function ($job) use ($updatedTrack) {
+            return $job->track->id === $updatedTrack->id;
         });
     }
 }
