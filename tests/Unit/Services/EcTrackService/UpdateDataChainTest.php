@@ -31,11 +31,7 @@ class UpdateDataChainTest extends AbstractEcTrackServiceTest
 
     public function test_update_data_chain_dispatches_at_least_one_job()
     {
-        $track = EcTrack::factory()->createQuietly([
-            'geometry' => null
-        ]);
-        $track->geometry = 'LINESTRING(1 1, 2 2)';
-        $track->save();
+        $track = EcTrack::factory()->createQuietly();
 
         $updatedTrack = EcTrack::find($track->id);
 
@@ -57,10 +53,9 @@ class UpdateDataChainTest extends AbstractEcTrackServiceTest
 
     public function test_update_data_chain_dispatches_job_if_track_has_osm_data()
     {
-        $track = EcTrack::factory()->createQuietly([
-            'properties' => json_encode(['osmid' => 123]),
-            'geometry' => 'LINESTRING(3 3, 4 4)'
-        ]);
+        $track = EcTrack::factory()->createQuietly();
+        $track->properties['osmid'] = 123;
+        $track->saveQuietly();
 
         $this->ecTrackService->updateDataChain($track);
 
