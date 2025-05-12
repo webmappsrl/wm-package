@@ -2,8 +2,8 @@
 
 namespace Tests\Unit\Services\EcTrackService;
 
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
-use Mockery;
 use Wm\WmPackage\Jobs\Pbf\GenerateEcTrackPBFBatch;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrack3DDemJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
@@ -16,87 +16,30 @@ use Wm\WmPackage\Jobs\Track\UpdateEcTrackOrderRelatedPoi;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackSlopeValues;
 use Wm\WmPackage\Jobs\UpdateModelWithGeometryTaxonomyWhere;
 use Wm\WmPackage\Models\EcTrack;
+use Wm\WmPackage\Models\App;
 
 class UpdateDataChainTest extends AbstractEcTrackServiceTest
 {
-    /** @var EcTrack|Mockery\MockInterface */
-    private $track;
-
-    private array $mockedTrackProperties;
+    use RefreshDatabase;
 
     protected function setUp(): void
     {
         parent::setUp();
         Bus::fake();
-
-        $this->mockedTrackProperties = [];
-
-        // Use a PURE mock, not makePartial()
-        $this->track = Mockery::mock(EcTrack::class)->makePartial();
-        $this->track->queueableClass = EcTrack::class; // Explicitly set the property for SerializesModels trait
-
-        // --- Mock for Laravel queue serialization ---
-        $this->track->shouldReceive('getKey')->andReturn(1); // Model ID
-        $this->track->shouldReceive('getQueueableClass')->andReturn(EcTrack::class); // REAL class for serialization
-        $this->track->shouldReceive('getQueueableId')->andReturn(1); // Model ID for queueing
-        $this->track->shouldReceive('getQueueableRelations')->andReturn([]); // Relations to serialize (none here)
-        $this->track->shouldReceive('getQueueableConnection')->andReturn('test_connection_name'); // Test connection name or null
-
-        // --- Mock for property access from the service ---
-        $this->track->shouldReceive('getAttribute')->with('properties')->andReturnUsing(function () {
-            return $this->mockedTrackProperties;
-        });
-        // Mock for direct access to ->properties
-        $this->track->shouldReceive('__get')->with('properties')->andReturnUsing(function () {
-            return $this->mockedTrackProperties;
-        });
-
-        // Mock for getAttribute('id') (common)
-        $this->track->shouldReceive('getAttribute')->with('id')->andReturn(1);
-
-        // Mock to handle isset($track->some_property) or empty($track->some_property)
-        // which internally call __isset -> offsetExists
-        $this->track->shouldReceive('offsetExists')->byDefault()->andReturnUsing(function ($key) {
-            // Here you might want to be more specific if you know which keys are being checked.
-            // For a generic mock, we return true for common keys if they exist in the mocked properties,
-            // or for fundamental keys like 'id'. Otherwise false.
-            if ($key === 'id') {
-                return true;
-            }
-            // If the code happens to do isset($track->properties)
-            if ($key === 'properties') {
-                return true;
-            }
-
-            // For other keys, check if they exist in mockedTrackProperties (to simulate isset on real properties)
-            // This is useful if a job does isset($track->osmid) directly.
-            return array_key_exists($key, $this->mockedTrackProperties);
-        });
-
-        // Mock to handle $track->some_property (direct access to properties not explicitly defined)
-        // which internally calls __get -> offsetGet (if the property is not a direct attribute)
-        // or __get -> getAttribute if it is an attribute.
-        // Since getAttribute is already mocked for 'id' and 'properties', this is a fallback.
-        $this->track->shouldReceive('offsetGet')->byDefault()->andReturnUsing(function ($key) {
-            // Similar to offsetExists, returns the value from mockedTrackProperties if the key exists,
-            // otherwise null.
-            if ($key === 'id') {
-                return 1;
-            } // Already covered by getAttribute('id') but for safety
-
-            return $this->mockedTrackProperties[$key] ?? null;
-        });
-
-        // wasChanged will be mocked for each specific test
-        // No need for shouldAllowMockingMethod with pure mocks if expectations are clear for tests.
+        App::factory()->createQuietly();
     }
 
     public function test_update_data_chain_dispatches_at_least_one_job()
     {
-        // Mock wasChanged('geometry') only here
-        $this->track->shouldReceive('wasChanged')->with('geometry')->once()->andReturn(true);
+        // Create track first
+        $track = EcTrack::factory()->createQuietly();
 
-        $this->ecTrackService->updateDataChain($this->track);
+        // Now update geometry to trigger wasChanged (use 3D coordinates)
+        $track->geometry = 'LINESTRING(1 1 0, 2 2 0)'; // New 3D geometry
+        $track->saveQuietly(); // Use saveQuietly to avoid triggering observers if any
+
+        // Pass the $track instance directly, preserving its wasChanged state
+        $this->ecTrackService->updateDataChain($track);
 
         Bus::assertChained([
             UpdateEcTrackDemJob::class,
@@ -114,12 +57,23 @@ class UpdateDataChainTest extends AbstractEcTrackServiceTest
 
     public function test_update_data_chain_dispatches_job_if_track_has_osm_data()
     {
-        $this->mockedTrackProperties = ['osmid' => 123];
+        $track = EcTrack::factory()->createQuietly(); // Create without specific osmid initially
 
-        $this->track->shouldReceive('wasChanged')->with('geometry')->andReturn(false);
+        // Get properties, modify, and set back
+        $properties = $track->properties ?? []; // Get current properties or default to empty array
+        $properties['osmid'] = 123; // Add/update osmid
+        $track->properties = $properties; // Assign the modified array back
 
-        $this->ecTrackService->updateDataChain($this->track);
+        $track->saveQuietly(); // Save the changes
 
-        Bus::assertDispatched(UpdateEcTrackFromOsmJob::class);
+        // Fetch the instance again to be sure, though $track should be updated
+        $updatedTrack = EcTrack::find($track->id);
+
+        $this->ecTrackService->updateDataChain($updatedTrack);
+
+        // Check that UpdateEcTrackFromOsmJob was dispatched (not necessarily chained)
+        Bus::assertDispatched(UpdateEcTrackFromOsmJob::class, function ($job) use ($updatedTrack) {
+            return $job->getEcTrack()->id === $updatedTrack->id;
+        });
     }
 }
