@@ -16,6 +16,7 @@ use Wm\WmPackage\Jobs\Track\UpdateEcTrackOrderRelatedPoi;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackSlopeValues;
 use Wm\WmPackage\Jobs\UpdateModelWithGeometryTaxonomyWhere;
 use Wm\WmPackage\Models\EcTrack;
+use Wm\WmPackage\Models\App;
 
 class UpdateDataChainTest extends AbstractEcTrackServiceTest
 {
@@ -25,6 +26,7 @@ class UpdateDataChainTest extends AbstractEcTrackServiceTest
     {
         parent::setUp();
         Bus::fake();
+        App::factory()->createQuietly();
     }
 
     public function test_update_data_chain_dispatches_at_least_one_job()
