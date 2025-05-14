@@ -10,5 +10,6 @@ class UgcObserver extends AbstractAuthorableObserver
     public function creating(Model $model)
     {
         $model->geometry = app(GeometryComputationService::class)->convertTo3DGeometry($model->geometry);
+        $model->name = $model->name ?? $model->properties['name'];
     }
 }

@@ -37,6 +37,7 @@ class UgcTrack extends MultiLineString
 
     protected static function booted()
     {
+        parent::booted();
         UgcTrack::observe(UgcObserver::class);
     }
 
