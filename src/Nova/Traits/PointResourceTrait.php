@@ -11,7 +11,7 @@ trait PointResourceTrait
     {
         return [
             ...parent::fields($request),
-            MapPoint::make('Geometry', 'geometry')->onlyOnDetail()->required(),
+            MapPoint::make('Geometry', 'geometry')->hideFromIndex()->required(),
         ];
     }
 }
