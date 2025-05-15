@@ -26,6 +26,7 @@ class MediaObserver extends AbstractAuthorableObserver
         try {
             // Sets app_id and geometry if needed
             $this->setAppIdAndGeometry($media);
+            parent::creating($media);
         } catch (\Exception $e) {
             $this->handleException($e, $media);
         }
@@ -33,7 +34,6 @@ class MediaObserver extends AbstractAuthorableObserver
 
     public function created(Model $media)
     {
-        parent::created($media);
         $this->removeGeometryFromCustomProperties($media);
     }
 
@@ -62,10 +62,7 @@ class MediaObserver extends AbstractAuthorableObserver
                     return;
                 }
 
-                // Sets app_id from parent model
-                if (is_null($media->app_id)) {
-                    $media->app_id = $model->app_id;
-                }
+                $media->app_id = $model->app_id;
 
                 if (isset($media->custom_properties['geometry']) && $media->custom_properties['geometry'] !== null) {
                     $media->geometry = $media->custom_properties['geometry'];
@@ -145,7 +142,7 @@ class MediaObserver extends AbstractAuthorableObserver
      */
     private function handleException(\Exception $e, Media $media)
     {
-        Log::error('Error in MediaObserver-creating: '.$e->getMessage());
+        Log::error('Error in MediaObserver-creating: ' . $e->getMessage());
         Log::error($e->getTraceAsString());
         // In case of error, set default values to avoid crashes
         $this->setDefaultValues($media);
@@ -166,7 +163,7 @@ class MediaObserver extends AbstractAuthorableObserver
 
             $this->setDefaultGeometry($media);
         } catch (\Exception $e) {
-            Log::error('Error setting default values: '.$e->getMessage());
+            Log::error('Error setting default values: ' . $e->getMessage());
             // Last resort fallback
             $media->app_id = 1;
             $media->geometry = 'POINT(10.4018624 43.7159395)';
@@ -184,7 +181,7 @@ class MediaObserver extends AbstractAuthorableObserver
             // Default point (Pisa, Italy)
             $media->geometry = 'POINTZ(10.4018624 43.7159395 0)';
         } catch (\Exception $e) {
-            Log::error('Error setting default geometry: '.$e->getMessage());
+            Log::error('Error setting default geometry: ' . $e->getMessage());
         }
     }
 

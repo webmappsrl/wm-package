@@ -8,12 +8,8 @@ use Wm\WmPackage\Models\User;
 
 abstract class AbstractAuthorableObserver extends AbstractObserver
 {
-    /**
-     * Handle the Model "created" event.
-     *
-     * @return void
-     */
-    public function created(Model $model)
+
+    public function creating(Model $model)
     {
         $user = $this->determineUser($model);
         $this->assignUserToModel($model, $user);
@@ -35,7 +31,7 @@ abstract class AbstractAuthorableObserver extends AbstractObserver
                 $user = User::find($app->user_id);
             } else {
                 // Fallback to webmapp team user
-                $user = User::where('email', '=', 'team@webmapp.it')->first();
+                $user = User::where('email', '=', 'team@webmapp.it')->orWhere('email', '=', 'admin@webmapp.it')->first();
             }
         }
 
@@ -49,8 +45,8 @@ abstract class AbstractAuthorableObserver extends AbstractObserver
     {
         if (method_exists($model, 'author')) {
             $model->author()->associate($user);
-        } elseif (property_exists($model, 'user_id') || isset($model->user_id)) {
-            $model->updateQuietly(['user_id' => $user->id]);
+        } elseif (property_exists($model, 'user_id') || isset($model->attributes['user_id'])) {
+            $model->user_id = $user->id;
         }
     }
 }
