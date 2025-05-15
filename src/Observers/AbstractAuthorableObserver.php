@@ -8,7 +8,6 @@ use Wm\WmPackage\Models\User;
 
 abstract class AbstractAuthorableObserver extends AbstractObserver
 {
-
     public function creating(Model $model)
     {
         $user = $this->determineUser($model);

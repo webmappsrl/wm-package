@@ -95,7 +95,7 @@ abstract class UgcController extends Controller
             'geometry' => GeometryComputationService::make()->getGeometryFromGeojsonRAW(json_encode($geometry)),
             'properties' => $properties,
             'name' => $properties['name'], // validated in the validateProperties method
-            'app_id' => $properties['app_id'] ?? $model->app_id //for those UGCs created from Nova, the app_id is not present in the properties, so we use the one from the model
+            'app_id' => $properties['app_id'] ?? $model->app_id, // for those UGCs created from Nova, the app_id is not present in the properties, so we use the one from the model
         ]);
 
         try {
@@ -127,7 +127,7 @@ abstract class UgcController extends Controller
             foreach ($features as $feature) {
                 $geojson = $feature->getGeojson();
 
-                $geojson['properties']['media'] = $feature->getMedia()->map(fn($media) => [
+                $geojson['properties']['media'] = $feature->getMedia()->map(fn ($media) => [
                     'id' => $media->id,
                     'name' => $media->name,
                     'webPath' => $media->getUrl(),

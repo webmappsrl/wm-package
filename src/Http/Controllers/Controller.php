@@ -62,7 +62,7 @@ class Controller extends BaseController
         ];
 
         // Add properties.app_id validation only if not an update request. This is to avoid validation error when updating from the app those UGCs that were created from Nova.
-        if (!str_contains($request->route()->getName(), 'update')) {
+        if (! str_contains($request->route()->getName(), 'update')) {
             $rules['properties.app_id'] = 'required|exists:apps,id';
         }
 
@@ -74,7 +74,7 @@ class Controller extends BaseController
             $errors = $validator->errors()->toArray();
             $errorMessage = '';
             foreach ($errors as $field => $messages) {
-                $errorMessage .= "$field: [" . implode(', ', $messages) . "]\n";
+                $errorMessage .= "$field: [".implode(', ', $messages)."]\n";
             }
             abort(400, trim($errorMessage));
         }
