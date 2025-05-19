@@ -2,9 +2,10 @@
 
 namespace Wm\WmPackage\Database\Factories;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
 use Wm\WmPackage\Models\App;
+use Wm\WmPackage\Models\User;
 use Wm\WmPackage\Models\UgcTrack;
+use Illuminate\Database\Eloquent\Factories\Factory;
 
 class UgcTrackFactory extends Factory
 {
@@ -35,6 +36,7 @@ class UgcTrackFactory extends Factory
 
         return [
             'app_id' => App::first()->id,
+            'user_id' => User::first()->id ?? User::factory()->create()->id,
             'properties' => [
                 'description' => $this->faker->paragraph,
                 'difficulty' => $this->faker->randomElement(['easy', 'medium', 'hard']),
