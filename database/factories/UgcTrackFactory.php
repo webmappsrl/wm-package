@@ -2,10 +2,10 @@
 
 namespace Wm\WmPackage\Database\Factories;
 
-use Wm\WmPackage\Models\App;
-use Wm\WmPackage\Models\User;
-use Wm\WmPackage\Models\UgcTrack;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Wm\WmPackage\Models\App;
+use Wm\WmPackage\Models\UgcTrack;
+use Wm\WmPackage\Models\User;
 
 class UgcTrackFactory extends Factory
 {

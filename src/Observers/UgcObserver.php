@@ -21,7 +21,7 @@ class UgcObserver extends AbstractAuthorableObserver
         $model->geometry = $service->convertTo3DGeometry($model->geometry);
         if ($model instanceof UgcTrack) {
             if ($service->isGeometryLinestring($model)) {
-                $model->geometry = $service->getMultilinestringFromLinestring($model); //DB is expecting a MultiLineString in ugc_tracks
+                $model->geometry = $service->getMultilinestringFromLinestring($model); // DB is expecting a MultiLineString in ugc_tracks
             }
         }
     }
