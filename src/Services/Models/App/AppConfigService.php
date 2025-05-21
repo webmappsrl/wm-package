@@ -483,8 +483,12 @@ class AppConfigService extends AppBaseService
         if ($this->app->filter_poi_type) {
             $app_user_id = $this->app->user_id;
             $options = [];
-
-            $poi_types = DB::select("SELECT distinct a.id, a.identifier, a.name, a.color, a.icon from taxonomy_poi_typeables as txa inner join ec_pois as t on t.id=txa.taxonomy_poi_typeable_id inner join taxonomy_poi_types as a on a.id=taxonomy_poi_type_id where txa.taxonomy_poi_typeable_type='App\Models\EcPoi' and t.user_id=$app_user_id ORDER BY a.name ASC;");
+            $poi_types = [];
+            try {
+                $poi_types = DB::select("SELECT distinct a.id, a.identifier, a.name, a.color, a.icon from taxonomy_poi_typeables as txa inner join ec_pois as t on t.id=txa.taxonomy_poi_typeable_id inner join taxonomy_poi_types as a on a.id=taxonomy_poi_type_id where txa.taxonomy_poi_typeable_type='App\Models\EcPoi' and t.user_id=$app_user_id ORDER BY a.name ASC;");
+            } catch (\Exception $e) {
+                Log::error('Error fetching poi types: '.$e->getMessage());
+            }
 
             foreach ($poi_types as $poi_type) {
                 $a = [
