@@ -44,7 +44,6 @@ class UgcObserverTest extends AbstractUgcObserverTest
         $testModel = $this->createTestModel();
 
         $this->observer->creating($testModel);
-        $this->observer->created($testModel);
         $this->assertEquals($this->authUser->id, $testModel->author->id, 'Author should be set to authenticated user');
         $this->assertTrue($this->has3dTransformation($testModel->geometry), 'Geometry should be transformed to 3D');
     }
@@ -54,7 +53,6 @@ class UgcObserverTest extends AbstractUgcObserverTest
     {
         $testModel = $this->createTestModel();
         $this->observer->creating($testModel);
-        $this->observer->created($testModel);
 
         $this->assertEquals($this->webmappUser->id, $testModel->author->id, 'Author should be set to authenticated user');
         $this->assertTrue($this->has3dTransformation($testModel->geometry), 'Geometry should be transformed to 3D');

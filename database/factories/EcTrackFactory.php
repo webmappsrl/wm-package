@@ -6,6 +6,7 @@ use DB;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcTrack;
+use Wm\WmPackage\Models\User;
 
 class EcTrackFactory extends Factory
 {
@@ -13,6 +14,9 @@ class EcTrackFactory extends Factory
 
     public function definition()
     {
+        // Ensure at least one App exists, or create one
+        $app = App::first() ?? App::factory()->create();
+
         // Dummy GeoJSON for a MultiLineString
         $geojson = json_encode([
             'type' => 'MultiLineString',
@@ -42,7 +46,7 @@ class EcTrackFactory extends Factory
                 'it' => $this->faker->sentence(3),
                 'en' => $this->faker->sentence(3),
             ],
-            'app_id' => App::first()->id,
+            'app_id' => $app->id,
             'geometry' => DB::raw("ST_GeomFromGeoJSON('{$geojson}')"),
             'osmid' => $this->faker->optional(0.7)->numberBetween(1000000, 9999999),
             'properties' => [
@@ -59,7 +63,7 @@ class EcTrackFactory extends Factory
                 'from' => $this->faker->city(),
                 'to' => $this->faker->city(),
                 'ref' => $this->faker->bothify('??-###'),
-                'color' => '#'.$this->faker->hexColor(),
+                'color' => '#' . $this->faker->hexColor(),
                 'created_at' => $this->faker->dateTimeThisYear->format('Y-m-d H:i:s'),
             ],
         ];
