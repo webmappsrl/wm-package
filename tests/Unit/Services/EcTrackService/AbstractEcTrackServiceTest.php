@@ -25,6 +25,8 @@ class AbstractEcTrackServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        // Ensure a default shard_name is set for tests
+        config(['wm-package.shard_name' => 'test_shard']);
         $this->bindDefaultDependencies();
     }
 
@@ -59,7 +61,7 @@ class AbstractEcTrackServiceTest extends TestCase
         foreach ($fields as $field => $expected) {
             $actualValue = $track->{$field};
             if ($field === 'geometry' && $actualValue instanceof \Illuminate\Database\Query\Expression) {
-                $expectedExpressionString = "ST_Force3D(ST_GeomFromGeoJSON(\'".json_encode(json_decode($expected))."\'))";
+                $expectedExpressionString = "ST_Force3D(ST_GeomFromGeoJSON(\'" . json_encode(json_decode($expected)) . "\'))";
                 if (str_starts_with(strtoupper($expected), 'LINESTRING') || str_starts_with(strtoupper($expected), 'POINT') || str_starts_with(strtoupper($expected), 'POLYGON')) {
                     $expectedExpressionString = "ST_Force3D(ST_GeomFromText(\'{$expected}\'))";
                 }
