@@ -12,6 +12,7 @@ use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Tymon\JWTAuth\Providers\LaravelServiceProvider;
 use Wm\WmPackage\Commands\WmBackupCommand;
+use Wm\WmPackage\Commands\WmDownloadDbBackupCommand;
 use Wm\WmPackage\Commands\WmGeneratePBFCommand;
 use Wm\WmPackage\Commands\WmImportFromGeohubCommand;
 use Wm\WmPackage\Commands\WmPackageCommand;
@@ -139,6 +140,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
                 // WmBackupCommand::class,//See in the boot() method
                 WmImportFromGeohubCommand::class,
                 WmGeneratePBFCommand::class,
+                WmDownloadDbBackupCommand::class,
             ])
             ->hasViews();
     }

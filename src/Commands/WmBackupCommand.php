@@ -12,7 +12,7 @@ class WmBackupCommand extends BackupCommand
      *
      * @var string
      */
-    protected $signature = 'wm-backup:run {--filename=} {--only-db} {--db-name=*} {--only-files} {--only-to-disk=} {--disable-notifications} {--timeout=} {--tries=}';
+    protected $signature = 'wm:backup-run{--filename=} {--only-db} {--db-name=*} {--only-files} {--only-to-disk=} {--disable-notifications} {--timeout=} {--tries=}';
 
     /**
      * The console command description.
