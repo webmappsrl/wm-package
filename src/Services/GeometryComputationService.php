@@ -926,8 +926,12 @@ GROUP BY
      *
      * @param  string|array  $geometry
      */
-    public function convertTo3DGeometry($geometry): \Illuminate\Database\Query\Expression
+    public function convertTo3DGeometry($geometry): ?\Illuminate\Database\Query\Expression
     {
+        if (is_null($geometry)) {
+            return null;
+        }
+
         if (is_string($geometry)) {
             // Check if it's a WKB hex string (starts with 0x or just hex)
             if (preg_match('/^(0x)?[0-9a-fA-F]+$/', $geometry)) {

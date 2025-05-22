@@ -61,9 +61,9 @@ class AbstractEcTrackServiceTest extends TestCase
         foreach ($fields as $field => $expected) {
             $actualValue = $track->{$field};
             if ($field === 'geometry' && $actualValue instanceof \Illuminate\Database\Query\Expression) {
-                $expectedExpressionString = "ST_Force3D(ST_GeomFromGeoJSON(\'" . json_encode(json_decode($expected)) . "\'))";
+                $expectedExpressionString = "ST_Force3D(ST_GeomFromGeoJSON('".json_encode(json_decode($expected))."'))";
                 if (str_starts_with(strtoupper($expected), 'LINESTRING') || str_starts_with(strtoupper($expected), 'POINT') || str_starts_with(strtoupper($expected), 'POLYGON')) {
-                    $expectedExpressionString = "ST_Force3D(ST_GeomFromText(\'{$expected}\'))";
+                    $expectedExpressionString = "ST_Force3D(ST_GeomFromText('".$expected."'))";
                 }
                 $actualValueString = $actualValue->getValue(DB::connection()->getQueryGrammar());
 

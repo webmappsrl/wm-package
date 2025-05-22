@@ -29,6 +29,7 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
         'app_id',
         'properties',
         'user_id',
+        'osmid',
     ];
 
     protected $casts = [
