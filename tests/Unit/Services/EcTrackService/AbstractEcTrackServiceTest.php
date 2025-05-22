@@ -91,7 +91,7 @@ class AbstractEcTrackServiceTest extends TestCase
 
     public function createTrackWithFields(array $fields = [], array $properties = []): EcTrack
     {
-        $track = EcTrack::factory()->create($fields);
+        $track = EcTrack::factory()->createQuietly($fields);
         // Ensure properties is an array
         $existingProperties = is_array($track->properties) ? $track->properties : (is_object($track->properties) ? (array) $track->properties : []);
         $track->properties = array_merge($existingProperties, $properties);
