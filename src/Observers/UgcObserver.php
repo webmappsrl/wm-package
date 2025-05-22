@@ -12,7 +12,7 @@ class UgcObserver extends AbstractAuthorableObserver
     {
         parent::creating($model);
         $this->normalizeGeometry($model);
-        $model->name = $model->name ?? $model->properties['name'];
+        $model->name = $model->name ?? $model->properties['name'] ?? '';
     }
 
     private function normalizeGeometry(Model $model)
