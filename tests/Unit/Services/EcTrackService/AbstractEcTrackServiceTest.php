@@ -135,7 +135,10 @@ class AbstractEcTrackServiceTest extends TestCase
 
     public function prepareTrackWithOsmData($track): void
     {
-        $track->shouldReceive('saveQuietly')->once();
+        // Only call shouldReceive if it's a Mockery mock object
+        if ($track instanceof \Mockery\LegacyMockInterface || $track instanceof \Mockery\MockInterface) {
+            $track->shouldReceive('saveQuietly')->once();
+        }
     }
 
     public function getManualData($track): array

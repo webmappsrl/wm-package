@@ -25,8 +25,8 @@ class UpdateOsmDataTest extends AbstractEcTrackServiceTest
         'should_remain_unchanged' => 'should remain unchanged',
         'should_be_updated' => 'should be updated',
         'unmatched_properties' => 'does not match expected value',
-        'missing_properties' => 'Undefined array key "properties"',
-        'wrong_osm_id' => 'Wrong OSM ID',
+        'missing_properties' => 'No OSM ID found',
+        'wrong_osm_id' => 'No OSM ID found',
     ];
 
     const UNCHANGED_FIELDS = [
