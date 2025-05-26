@@ -4,7 +4,9 @@ namespace Tests\Unit\Services\EcTrackService;
 
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Mockery;
+use Mockery\MockInterface;
 use Wm\WmPackage\Http\Clients\DemClient;
 use Wm\WmPackage\Http\Clients\OsmClient;
 use Wm\WmPackage\Models\App;
@@ -23,6 +25,8 @@ class AbstractEcTrackServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        // Ensure a default shard_name is set for tests
+        config(['wm-package.shard_name' => 'test_shard']);
         $this->bindDefaultDependencies();
     }
 
@@ -55,27 +59,47 @@ class AbstractEcTrackServiceTest extends TestCase
     public function assertFields($track, array $fields, string $messageSuffix): void
     {
         foreach ($fields as $field => $expected) {
-            $this->assertEquals(
-                $expected,
-                $field === 'geometry' ? $track->geometry : $track->properties[$field] ?? null,
-                "Field '{$field}' {$messageSuffix}."
-            );
+            $actualValue = $track->{$field};
+            if ($field === 'geometry' && $actualValue instanceof \Illuminate\Database\Query\Expression) {
+                $expectedExpressionString = "ST_Force3D(ST_GeomFromGeoJSON('".json_encode(json_decode($expected))."'))";
+                if (str_starts_with(strtoupper($expected), 'LINESTRING') || str_starts_with(strtoupper($expected), 'POINT') || str_starts_with(strtoupper($expected), 'POLYGON')) {
+                    $expectedExpressionString = "ST_Force3D(ST_GeomFromText('".$expected."'))";
+                }
+                $actualValueString = $actualValue->getValue(DB::connection()->getQueryGrammar());
+
+                $this->assertEquals(
+                    $expectedExpressionString,
+                    $actualValueString,
+                    "Field '{$field}' {$messageSuffix}."
+                );
+            } elseif (array_key_exists($field, $track->properties ?? [])) {
+                $actualValue = $track->properties[$field];
+                $this->assertEquals(
+                    $expected,
+                    $actualValue,
+                    "Field '{$field}' {$messageSuffix}."
+                );
+            } else {
+                $this->assertEquals(
+                    $expected,
+                    $actualValue,
+                    "Field '{$field}' {$messageSuffix}."
+                );
+            }
         }
     }
 
-    public function createTrackWithFields(?array $fields = [])
+    public function createTrackWithFields(array $fields = [], array $properties = []): EcTrack
     {
-        $track = Mockery::mock(EcTrack::class)->makePartial();
-        $properties = [];
-        foreach ($fields as $field => $value) {
-            $properties[$field] = $value;
-        }
-        $track->properties = $properties;
+        $track = EcTrack::factory()->createQuietly($fields);
+        // Ensure properties is an array
+        $existingProperties = is_array($track->properties) ? $track->properties : (is_object($track->properties) ? (array) $track->properties : []);
+        $track->properties = array_merge($existingProperties, $properties);
 
         return $track;
     }
 
-    public function prepareTrackWithDirtyFields(array $dirtyFields, array $demDataFields, ?string $manualData = '{}', ?string $osmData = '{}', ?string $demData = '{}'): EcTrack
+    public function prepareTrackWithDirtyFields(array $dirtyFields, array $demDataFields, ?string $manualData = '{}', ?string $osmData = '{}', ?string $demData = '{}'): EcTrack|MockInterface
     {
         $track = Mockery::mock(EcTrack::class)->makePartial();
 
@@ -111,7 +135,10 @@ class AbstractEcTrackServiceTest extends TestCase
 
     public function prepareTrackWithOsmData($track): void
     {
-        $track->shouldReceive('saveQuietly')->once();
+        // Only call shouldReceive if it's a Mockery mock object
+        if ($track instanceof \Mockery\LegacyMockInterface || $track instanceof \Mockery\MockInterface) {
+            $track->shouldReceive('saveQuietly')->once();
+        }
     }
 
     public function getManualData($track): array

@@ -49,8 +49,19 @@ class UpdateOsmDataTest extends AbstractEcTrackServiceTest
     {
         parent::setUp();
         $this->track = $this->createTrackWithFields([
-            'osmid' => self::OSM_ID,
+            'properties' => [
+                'osmid' => self::OSM_ID,
+            ],
         ]);
+        $this->track->osmid = self::OSM_ID;
+
+        // Set the Eloquent attribute 'name' to null to force update from OSM data
+        $this->track->name = null;
+
+        // Also ensure properties['name'] is null if it exists, for consistency before the service call
+        $properties = $this->track->properties ?? [];
+        $properties['name'] = null;
+        $this->track->properties = $properties;
     }
 
     /** @test */
@@ -90,7 +101,6 @@ class UpdateOsmDataTest extends AbstractEcTrackServiceTest
     /** @test */
     public function updates_only_null_fields_are_updated()
     {
-
         $this->track->name = self::UNCHANGED_FIELDS['name'];
         $this->track->geometry = null;
 

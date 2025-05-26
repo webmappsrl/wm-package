@@ -13,37 +13,32 @@ class EcTrackFactory extends Factory
 
     public function definition()
     {
-        // Dummy GeoJSON for a MultiLineString
-        $geojson = json_encode([
-            'type' => 'MultiLineString',
-            'coordinates' => [
-                [
-                    [
-                        $this->faker->randomFloat(6, 10, 20),
-                        $this->faker->randomFloat(6, 40, 50),
-                        $this->faker->randomFloat(2, 0, 1000),
-                    ],
-                    [
-                        $this->faker->randomFloat(6, 10, 20),
-                        $this->faker->randomFloat(6, 40, 50),
-                        $this->faker->randomFloat(2, 0, 1000),
-                    ],
-                    [
-                        $this->faker->randomFloat(6, 10, 20),
-                        $this->faker->randomFloat(6, 40, 50),
-                        $this->faker->randomFloat(2, 0, 1000),
-                    ],
-                ],
-            ],
-        ]);
+        // Ensure at least one App exists, or create one
+        $app = App::first() ?? App::factory()->create();
+
+        // Generate a random MultiLineString WKT and use PostGIS to create the geometry
+        $lines = [];
+        $numLines = $this->faker->numberBetween(1, 3);
+        for ($i = 0; $i < $numLines; $i++) {
+            $points = [];
+            $numPoints = $this->faker->numberBetween(2, 5);
+            for ($j = 0; $j < $numPoints; $j++) {
+                $lon = $this->faker->randomFloat(6, 10, 20);
+                $lat = $this->faker->randomFloat(6, 40, 50);
+                $ele = $this->faker->randomFloat(2, 0, 1000);
+                $points[] = "{$lon} {$lat} {$ele}";
+            }
+            $lines[] = '('.implode(', ', $points).')';
+        }
+        $wkt = 'MULTILINESTRING Z('.implode(', ', $lines).')';
 
         return [
             'name' => [
                 'it' => $this->faker->sentence(3),
                 'en' => $this->faker->sentence(3),
             ],
-            'app_id' => App::first()->id,
-            'geometry' => DB::raw("ST_GeomFromGeoJSON('{$geojson}')"),
+            'app_id' => $app->id,
+            'geometry' => DB::raw("ST_GeomFromText('{$wkt}', 4326)"),
             'osmid' => $this->faker->optional(0.7)->numberBetween(1000000, 9999999),
             'properties' => [
                 'description' => $this->faker->paragraph(),

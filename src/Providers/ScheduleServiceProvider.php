@@ -15,17 +15,21 @@ class ScheduleServiceProvider extends ServiceProvider
 
             if (App::environment('production')) {
 
-                $schedule->command('wm-backup:run --only-db')
+                $schedule->command('wm:backup-run--only-db')
                     ->daily()
                     ->at('20:00');
 
-                $schedule->command('wm-backup:run --only-files')
+                $schedule->command('wm:backup-run--only-files')
                     ->fridays()
                     ->at('18:00');
 
                 $schedule->command('backup:clean')
                     ->sundays()
                     ->at('03:00');
+            } else {
+                $schedule->command('wm:download-db-backup --latest')
+                    ->daily()
+                    ->at('20:10');
             }
         });
     }
