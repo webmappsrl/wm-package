@@ -496,7 +496,7 @@ class AppConfigService extends AppBaseService
                     'identifier' => 'poi_type_'.$poi_type->identifier,
                     'name' => json_decode($poi_type->name, true),
                     'id' => $poi_type->id,
-                    //'icon' => $poi_type->icon,
+                    // 'icon' => $poi_type->icon,
                 ];
                 // if ($poi_type->color) {
                 //     $a['color'] = $poi_type->color;
