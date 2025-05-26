@@ -178,7 +178,7 @@ class App extends Model implements HasMedia
                             $new_array[$key] = json_decode($val, true);
                         }
                         if ($key == 'identifier') {
-                            $new_array[$key] = 'poi_type_' . $val;
+                            $new_array[$key] = 'poi_type_'.$val;
                         }
                         if (! empty($val) && $key != 'name' && $key != 'identifier') {
                             $new_array[$key] = $val;
@@ -202,7 +202,7 @@ class App extends Model implements HasMedia
                             $new_array[$key] = json_decode($val, true);
                         }
                         if ($key == 'identifier') {
-                            $new_array[$key] = 'poi_type_' . $val;
+                            $new_array[$key] = 'poi_type_'.$val;
                         }
                         if (! empty($val) && $key != 'name' && $key != 'identifier') {
                             $new_array[$key] = $val;
@@ -267,7 +267,7 @@ class App extends Model implements HasMedia
                     });
                 break;
             default:
-                throw new \Exception('Wrong taxonomy name: ' . $taxonomy_name);
+                throw new \Exception('Wrong taxonomy name: '.$taxonomy_name);
         }
 
         $tracks = $query->orderBy('name')->get();
@@ -388,7 +388,7 @@ class App extends Model implements HasMedia
         if (isset($customUrl) && $customUrl != null) {
             $url = $customUrl;
         } else {
-            $url = 'https://' . $this->id . '.app.webmapp.it';
+            $url = 'https://'.$this->id.'.app.webmapp.it';
         }
         // create the svg code for the QR code
 
@@ -430,7 +430,7 @@ class App extends Model implements HasMedia
      */
     public function getMorphClass()
     {
-        return 'App\\Models\\' . class_basename($this);
+        return 'App\\Models\\'.class_basename($this);
     }
 
     public function registerMediaCollections(): void
@@ -450,6 +450,7 @@ class App extends Model implements HasMedia
         // Se il valore è null, settalo direttamente
         if (is_null($value)) {
             $this->attributes['welcome'] = null;
+
             return;
         }
 
@@ -457,9 +458,10 @@ class App extends Model implements HasMedia
         if (is_array($value)) {
             // Pulisci eventuali valori null dalle lingue non utilizzate
             $cleaned = array_filter($value, function ($v) {
-                return !is_null($v) && $v !== '';
+                return ! is_null($v) && $v !== '';
             });
             $this->attributes['welcome'] = json_encode($cleaned);
+
             return;
         }
 
@@ -467,6 +469,7 @@ class App extends Model implements HasMedia
         if (is_string($value) && $this->isDoubleEncodedJson($value)) {
             $fixed = $this->fixDoubleEncoding($value);
             $this->attributes['welcome'] = $fixed;
+
             return;
         }
 
@@ -480,7 +483,9 @@ class App extends Model implements HasMedia
     private function isDoubleEncodedJson(string $value): bool
     {
         $decoded = json_decode($value, true);
-        if (!is_array($decoded)) return false;
+        if (! is_array($decoded)) {
+            return false;
+        }
 
         // Controlla se qualche valore è una stringa JSON
         foreach ($decoded as $content) {
@@ -523,8 +528,11 @@ class App extends Model implements HasMedia
      */
     private function isJson($string): bool
     {
-        if (!is_string($string)) return false;
+        if (! is_string($string)) {
+            return false;
+        }
         json_decode($string);
+
         return json_last_error() === JSON_ERROR_NONE;
     }
 }
