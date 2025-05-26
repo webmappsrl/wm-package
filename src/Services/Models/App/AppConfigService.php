@@ -485,8 +485,8 @@ class AppConfigService extends AppBaseService
             $options = [];
             $poi_types = [];
             try {
-                //TODO removed a.color from taxonomy_poi_types because it does not exists in the database. Check if needed
-                $poi_types = DB::select("SELECT distinct a.id, a.identifier, a.name, a.icon from taxonomy_poi_typeables as txa inner join ec_pois as t on t.id=txa.taxonomy_poi_typeable_id inner join taxonomy_poi_types as a on a.id=taxonomy_poi_type_id where txa.taxonomy_poi_typeable_type='App\Models\EcPoi' and t.user_id=$app_user_id ORDER BY a.name ASC;");
+                //TODO removed a.color and a.icon from taxonomy_poi_types because it does not exists in the database. Check if needed
+                $poi_types = DB::select("SELECT distinct a.id, a.identifier, a.name from taxonomy_poi_typeables as txa inner join ec_pois as t on t.id=txa.taxonomy_poi_typeable_id inner join taxonomy_poi_types as a on a.id=taxonomy_poi_type_id where txa.taxonomy_poi_typeable_type='App\Models\EcPoi' and t.user_id=$app_user_id ORDER BY a.name ASC;");
             } catch (\Exception $e) {
                 Log::error('Error fetching poi types: ' . $e->getMessage());
             }
