@@ -443,35 +443,61 @@ class App extends Model implements HasMedia
     // Le funzioni custom per config_home sono state spostate nel resolver layerBoxResolver
 
     /**
-     * Mutator for welcome field to prevent double encoding from NovaTabTranslatable
+     * Mutators for translatable fields to prevent double encoding from NovaTabTranslatable
+     * Applies to: welcome, page_disclaimer, page_project, page_credits, page_privacy
      */
     public function setWelcomeAttribute($value)
     {
-        // Se il valore è null, settalo direttamente
+        $this->setTranslatableJsonField('welcome', $value);
+    }
+
+    public function setPageDisclaimerAttribute($value)
+    {
+        $this->setTranslatableJsonField('page_disclaimer', $value);
+    }
+
+    public function setPageProjectAttribute($value)
+    {
+        $this->setTranslatableJsonField('page_project', $value);
+    }
+
+    public function setPageCreditsAttribute($value)
+    {
+        $this->setTranslatableJsonField('page_credits', $value);
+    }
+
+    public function setPagePrivacyAttribute($value)
+    {
+        $this->setTranslatableJsonField('page_privacy', $value);
+    }
+
+    /**
+     * Helper for setting translatable JSON fields with double-encoding protection
+     */
+    private function setTranslatableJsonField(string $field, $value): void
+    {
+        // If value is null, set directly
         if (is_null($value)) {
-            $this->attributes['welcome'] = null;
+            $this->attributes[$field] = null;
             return;
         }
 
-        // Se è un array (da NovaTabTranslatable), codifica come JSON
+        // If array (from NovaTabTranslatable), encode as JSON after cleaning
         if (is_array($value)) {
-            // Pulisci eventuali valori null dalle lingue non utilizzate
-            $cleaned = array_filter($value, function ($v) {
-                return !is_null($v) && $v !== '';
-            });
-            $this->attributes['welcome'] = json_encode($cleaned);
+            $cleaned = array_filter($value, fn($v) => !is_null($v) && $v !== '');
+            $this->attributes[$field] = json_encode($cleaned);
             return;
         }
 
-        // Se è una stringa e sembra JSON doppio-encodato, sistema
+        // If string and looks like double-encoded JSON, fix it
         if (is_string($value) && $this->isDoubleEncodedJson($value)) {
             $fixed = $this->fixDoubleEncoding($value);
-            $this->attributes['welcome'] = $fixed;
+            $this->attributes[$field] = $fixed;
             return;
         }
 
-        // Altrimenti, usa il valore così com'è
-        $this->attributes['welcome'] = $value;
+        // Otherwise, use as is
+        $this->attributes[$field] = $value;
     }
 
     /**
@@ -482,7 +508,6 @@ class App extends Model implements HasMedia
         $decoded = json_decode($value, true);
         if (!is_array($decoded)) return false;
 
-        // Controlla se qualche valore è una stringa JSON
         foreach ($decoded as $content) {
             if (is_string($content) && $this->isJson($content)) {
                 return true;
@@ -502,10 +527,8 @@ class App extends Model implements HasMedia
 
         foreach ($decoded as $lang => $content) {
             if (is_string($content) && $this->isJson($content)) {
-                // È doppio encodato - decodifica il contenuto interno
                 $innerDecoded = json_decode($content, true);
                 if (is_array($innerDecoded) && isset($innerDecoded[$lang])) {
-                    // Prendi solo il contenuto della lingua corretta
                     $fixed[$lang] = $innerDecoded[$lang];
                 } else {
                     $fixed[$lang] = $content;
