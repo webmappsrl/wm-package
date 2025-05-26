@@ -178,7 +178,7 @@ class App extends Model implements HasMedia
                             $new_array[$key] = json_decode($val, true);
                         }
                         if ($key == 'identifier') {
-                            $new_array[$key] = 'poi_type_'.$val;
+                            $new_array[$key] = 'poi_type_' . $val;
                         }
                         if (! empty($val) && $key != 'name' && $key != 'identifier') {
                             $new_array[$key] = $val;
@@ -202,7 +202,7 @@ class App extends Model implements HasMedia
                             $new_array[$key] = json_decode($val, true);
                         }
                         if ($key == 'identifier') {
-                            $new_array[$key] = 'poi_type_'.$val;
+                            $new_array[$key] = 'poi_type_' . $val;
                         }
                         if (! empty($val) && $key != 'name' && $key != 'identifier') {
                             $new_array[$key] = $val;
@@ -267,7 +267,7 @@ class App extends Model implements HasMedia
                     });
                 break;
             default:
-                throw new \Exception('Wrong taxonomy name: '.$taxonomy_name);
+                throw new \Exception('Wrong taxonomy name: ' . $taxonomy_name);
         }
 
         $tracks = $query->orderBy('name')->get();
@@ -388,7 +388,7 @@ class App extends Model implements HasMedia
         if (isset($customUrl) && $customUrl != null) {
             $url = $customUrl;
         } else {
-            $url = 'https://'.$this->id.'.app.webmapp.it';
+            $url = 'https://' . $this->id . '.app.webmapp.it';
         }
         // create the svg code for the QR code
 
@@ -430,7 +430,7 @@ class App extends Model implements HasMedia
      */
     public function getMorphClass()
     {
-        return 'App\\Models\\'.class_basename($this);
+        return 'App\\Models\\' . class_basename($this);
     }
 
     public function registerMediaCollections(): void
@@ -441,4 +441,90 @@ class App extends Model implements HasMedia
     }
 
     // Le funzioni custom per config_home sono state spostate nel resolver layerBoxResolver
+
+    /**
+     * Mutator for welcome field to prevent double encoding from NovaTabTranslatable
+     */
+    public function setWelcomeAttribute($value)
+    {
+        // Se il valore è null, settalo direttamente
+        if (is_null($value)) {
+            $this->attributes['welcome'] = null;
+            return;
+        }
+
+        // Se è un array (da NovaTabTranslatable), codifica come JSON
+        if (is_array($value)) {
+            // Pulisci eventuali valori null dalle lingue non utilizzate
+            $cleaned = array_filter($value, function ($v) {
+                return !is_null($v) && $v !== '';
+            });
+            $this->attributes['welcome'] = json_encode($cleaned);
+            return;
+        }
+
+        // Se è una stringa e sembra JSON doppio-encodato, sistema
+        if (is_string($value) && $this->isDoubleEncodedJson($value)) {
+            $fixed = $this->fixDoubleEncoding($value);
+            $this->attributes['welcome'] = $fixed;
+            return;
+        }
+
+        // Altrimenti, usa il valore così com'è
+        $this->attributes['welcome'] = $value;
+    }
+
+    /**
+     * Check if string is double encoded JSON
+     */
+    private function isDoubleEncodedJson(string $value): bool
+    {
+        $decoded = json_decode($value, true);
+        if (!is_array($decoded)) return false;
+
+        // Controlla se qualche valore è una stringa JSON
+        foreach ($decoded as $content) {
+            if (is_string($content) && $this->isJson($content)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Fix double encoded JSON
+     */
+    private function fixDoubleEncoding(string $value): string
+    {
+        $decoded = json_decode($value, true);
+        $fixed = [];
+
+        foreach ($decoded as $lang => $content) {
+            if (is_string($content) && $this->isJson($content)) {
+                // È doppio encodato - decodifica il contenuto interno
+                $innerDecoded = json_decode($content, true);
+                if (is_array($innerDecoded) && isset($innerDecoded[$lang])) {
+                    // Prendi solo il contenuto della lingua corretta
+                    $fixed[$lang] = $innerDecoded[$lang];
+                } else {
+                    $fixed[$lang] = $content;
+                }
+            } else {
+                $fixed[$lang] = $content;
+            }
+        }
+
+        return json_encode($fixed);
+    }
+
+    /**
+     * Check if string is valid JSON
+     */
+    private function isJson($string): bool
+    {
+        if (!is_string($string)) return false;
+        json_decode($string);
+        return json_last_error() === JSON_ERROR_NONE;
+    }
 }
