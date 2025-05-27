@@ -479,13 +479,15 @@ class App extends Model implements HasMedia
         // If value is null, set directly
         if (is_null($value)) {
             $this->attributes[$field] = null;
+
             return;
         }
 
         // If array (from NovaTabTranslatable), encode as JSON after cleaning
         if (is_array($value)) {
-            $cleaned = array_filter($value, fn($v) => !is_null($v) && $v !== '');
+            $cleaned = array_filter($value, fn ($v) => ! is_null($v) && $v !== '');
             $this->attributes[$field] = json_encode($cleaned);
+
             return;
         }
 
@@ -493,6 +495,7 @@ class App extends Model implements HasMedia
         if (is_string($value) && $this->isDoubleEncodedJson($value)) {
             $fixed = $this->fixDoubleEncoding($value);
             $this->attributes[$field] = $fixed;
+
             return;
         }
 

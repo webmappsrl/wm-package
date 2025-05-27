@@ -56,13 +56,15 @@ class MediaObserver extends AbstractAuthorableObserver
                     return;
                 }
 
-                if ($model instanceof App) {
+                if (isset($model->app_id)) {
+                    $media->app_id = $model->app_id;
+                } elseif ($model instanceof App) {
                     $media->app_id = $model->id;
-                } elseif (! $this->validateModelHasAppId($model)) {
+                } else {
+                    $this->validateModelHasAppId($model);
+
                     return;
                 }
-
-                $media->app_id = $model->app_id;
 
                 if (isset($media->custom_properties['geometry']) && $media->custom_properties['geometry'] !== null) {
                     $media->geometry = $media->custom_properties['geometry'];
