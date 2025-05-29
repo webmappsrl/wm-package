@@ -10,6 +10,10 @@ use Illuminate\Support\Str;
 use Jenssegers\Agent\Facades\Agent;
 use Wm\WmPackage\Http\Controllers\Controller;
 use Wm\WmPackage\Models\User;
+use Illuminate\Support\Facades\log;
+use Tymon\JWTAuth\Facades\JWTAuth;
+use Tymon\JWTAuth\Exceptions\TokenExpiredException;
+use Tymon\JWTAuth\Exceptions\JWTException;
 
 class AppAuthController extends Controller
 {
@@ -153,16 +157,29 @@ class AppAuthController extends Controller
      */
     public function me(): JsonResponse
     {
-        $user = auth('api')->user();
-        if (! $user) {
-            return response()->json(['error' => 'Utente non autenticato.'], 401);
+        try {
+            $user = auth('api')->user();
+            if (!$user) {
+                return response()->json(['error' => 'Utente non autenticato.'], 401);
+            }
+
+            // Prova a refreshare il token
+            try {
+                $newToken = JWTAuth::parseToken()->refresh();
+            } catch (TokenExpiredException $e) {
+                return response()->json(['error' => 'Token scaduto. Riconnettersi.'], 401);
+            } catch (JWTException $e) {
+                return response()->json(['error' => 'Errore nel refresh del token.'], 500);
+            }
+
+            $userData = $user->toArray();
+            $userData['access_token'] = $newToken;
+
+            return response()->json($userData, 200);
+        } catch (\Exception $e) {
+            \Log::error('Errore nel metodo me: ' . $e->getMessage());
+            return response()->json(['error' => 'Errore interno.'], 500);
         }
-
-        $result = $user->toArray();
-
-        unset($result['referrer'], $result['password']);
-
-        return response()->json($result);
     }
 
     /**
