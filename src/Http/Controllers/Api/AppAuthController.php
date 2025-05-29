@@ -5,15 +5,15 @@ namespace Wm\WmPackage\Http\Controllers\Api;
 use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Jenssegers\Agent\Facades\Agent;
+use Tymon\JWTAuth\Exceptions\JWTException;
+use Tymon\JWTAuth\Exceptions\TokenExpiredException;
+use Tymon\JWTAuth\Facades\JWTAuth;
 use Wm\WmPackage\Http\Controllers\Controller;
 use Wm\WmPackage\Models\User;
-use Illuminate\Support\Facades\log;
-use Tymon\JWTAuth\Facades\JWTAuth;
-use Tymon\JWTAuth\Exceptions\TokenExpiredException;
-use Tymon\JWTAuth\Exceptions\JWTException;
 
 class AppAuthController extends Controller
 {
@@ -159,7 +159,7 @@ class AppAuthController extends Controller
     {
         try {
             $user = auth('api')->user();
-            if (!$user) {
+            if (! $user) {
                 return response()->json(['error' => 'Utente non autenticato.'], 401);
             }
 
@@ -177,7 +177,8 @@ class AppAuthController extends Controller
 
             return response()->json($userData, 200);
         } catch (\Exception $e) {
-            \Log::error('Errore nel metodo me: ' . $e->getMessage());
+            \Log::error('Errore nel metodo me: '.$e->getMessage());
+
             return response()->json(['error' => 'Errore interno.'], 500);
         }
     }
