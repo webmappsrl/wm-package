@@ -3,7 +3,10 @@
 namespace Wm\WmPackage;
 
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Laravel\Nova\Menu\MenuItem;
+use Laravel\Nova\Menu\MenuSection;
 use Laravel\Nova\Nova;
 use Matchish\ScoutElasticSearch\ElasticSearch\HitsIteratorAggregate;
 use Matchish\ScoutElasticSearch\ElasticSearchServiceProvider;
@@ -61,6 +64,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
         // Register Nova CSS assets
         Nova::serving(function () {
             Nova::style('wm-flexible-field', __DIR__.'/../resources/css/flexible-field.css');
+            $this->addDownloadDbMenuItem();
         });
 
         // Register routes as Laravel does with RouteServiceProvider
@@ -335,5 +339,69 @@ class WmPackageServiceProvider extends PackageServiceProvider
         $appConfig['cleanup'] = $packageConfig['cleanup'];
 
         return $appConfig;
+    }
+
+    protected function addDownloadDbMenuItem()
+    {
+        $createDownloadDbMenuItem = function () {
+            $menuItem = MenuItem::externalLink(__('Download DB'), route('download.db'))
+                ->canSee(fn () => optional(auth()->user())->hasRole('Administrator'))
+                ->openInNewTab();
+
+            return $menuItem;
+        };
+
+        if (Nova::$mainMenuCallback) {
+            $originalCallback = Nova::$mainMenuCallback;
+
+            Nova::mainMenu(function (Request $request) use ($originalCallback, $createDownloadDbMenuItem) {
+                $menuItems = call_user_func($originalCallback, $request);
+                $downloadDbMenuItem = $createDownloadDbMenuItem();
+
+                foreach ($menuItems as $index => &$sectionOrGroup) {
+                    if (
+                        $sectionOrGroup instanceof MenuSection &&
+                        $sectionOrGroup->name === __('Tools')
+                    ) {
+                        try {
+                            $reflection = new \ReflectionObject($sectionOrGroup);
+
+                            $itemsProperty = $reflection->getProperty('items');
+                            $itemsProperty->setAccessible(true);
+                            $currentItems = $itemsProperty->getValue($sectionOrGroup);
+                            $currentItems[] = $downloadDbMenuItem;
+
+                            $icon = $reflection->getProperty('icon');
+                            $icon->setAccessible(true);
+                            $iconValue = $icon->getValue($sectionOrGroup);
+
+                            $collapsable = $reflection->getProperty('collapsable');
+                            $collapsable->setAccessible(true);
+                            $collapsableValue = $collapsable->getValue($sectionOrGroup);
+
+                            $menuItems[$index] = MenuSection::make($sectionOrGroup->name, $currentItems)
+                                ->icon($iconValue)
+                                ->collapsable($collapsableValue);
+                        } catch (\ReflectionException $e) {
+                            logger()->error(
+                                'WM-Package: Failed to modify Nova Tools menu section via reflection. Exception: '.$e->getMessage()
+                            );
+                        }
+                        break;
+                    }
+                }
+                unset($sectionOrGroup);
+
+                return $menuItems;
+            });
+        } else {
+            Nova::mainMenu(function (Request $request) use ($createDownloadDbMenuItem) {
+                return [
+                    MenuSection::make(__('Tools'), [$createDownloadDbMenuItem()])
+                        ->icon('color-swatch')
+                        ->collapsable(),
+                ];
+            });
+        }
     }
 }

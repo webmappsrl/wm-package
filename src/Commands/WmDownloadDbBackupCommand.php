@@ -5,7 +5,6 @@ namespace Wm\WmPackage\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Config;
-use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\Finder\Finder;
@@ -16,7 +15,7 @@ final class WmDownloadDbBackupCommand extends Command
 {
     protected $signature = 'wm:download-db-backup {--file= : Specify a direct backup file path on wmdumps disk to restore from.} {--latest : Restore the latest available DB backup (default behavior if no --file is specified)}';
 
-    protected $description = 'Downloads a database dump (.zip) from wmdumps and extracts the .sql.gz file from db-dumps/ to storage/db-dumps/last_dump.sql.gz for later import. Only runs if the environment is not production.';
+    protected $description = 'Downloads a database dump (.zip) from wmdumps, extracts the .sql.gz file, and saves it to the \'backups\' disk as last_dump.sql.gz.';
 
     public function handle(): int
     {
@@ -28,29 +27,27 @@ final class WmDownloadDbBackupCommand extends Command
 
         $this->info('Starting database backup download and extraction process...');
 
-        $localTempStorage = Storage::disk('local');
-        $tempBaseDir = 'temp';
+        $localTempStorage = Storage::disk('local'); // For temporary operations
+        $backupStorageDisk = Storage::disk('backups'); // Target disk for the final .sql.gz
+
+        $tempBaseDir = 'temp_db_download'; // More specific temp dir name
         $tempExtractDir = $tempBaseDir.'/sql_extract';
         $zipBackupFilename = 'latest_db_dump_for_restore.sql.zip';
         $localZipBackupPath = $tempBaseDir.'/'.$zipBackupFilename;
-        $outputSqlGzFilename = 'last_dump.sql.gz';
-        $outputSqlGzStorageDir = 'db-dumps';
-        $outputSqlGzStoragePath = $outputSqlGzStorageDir.'/'.$outputSqlGzFilename;
 
-        // Absolute path for storage/db-dumps/last_dump.sql.gz (not storage/app/db-dumps)
-        $absoluteOutputSqlGzPath = base_path('storage/'.$outputSqlGzStoragePath);
+        $outputSqlGzFilenameOnBackupDisk = 'last_dump.sql.gz'; // Filename on the 'backups' disk
 
         try {
             $this->prepareTempDirectories($localTempStorage, $tempBaseDir, $tempExtractDir);
 
-            $backupDisk = Storage::disk('wmdumps');
-            $remoteBackupPath = $this->resolveBackupPath($backupDisk);
+            $remoteBackupDisk = Storage::disk('wmdumps');
+            $remoteBackupPath = $this->resolveBackupPath($remoteBackupDisk);
 
             if ($remoteBackupPath === null) {
                 return Command::FAILURE;
             }
 
-            if (! $this->downloadBackup($backupDisk, $remoteBackupPath, $localTempStorage, $localZipBackupPath)) {
+            if (! $this->downloadBackup($remoteBackupDisk, $remoteBackupPath, $localTempStorage, $localZipBackupPath)) {
                 return Command::FAILURE;
             }
 
@@ -58,18 +55,21 @@ final class WmDownloadDbBackupCommand extends Command
                 return Command::FAILURE;
             }
 
-            $sqlGzPath = $this->findSqlGzFile($localTempStorage, $tempExtractDir);
+            $extractedSqlGzPath = $this->findSqlGzFile($localTempStorage, $tempExtractDir);
 
-            if ($sqlGzPath === null) {
+            if ($extractedSqlGzPath === null) {
                 return Command::FAILURE;
             }
 
-            if (! $this->moveSqlGzToStorage($sqlGzPath, $absoluteOutputSqlGzPath)) {
+            // Pass the target disk and desired filename to moveSqlGzToStorage
+            if (! $this->moveSqlGzToBackupDisk($extractedSqlGzPath, $backupStorageDisk, $outputSqlGzFilenameOnBackupDisk)) {
                 return Command::FAILURE;
             }
 
             $this->info('Database download and extraction process completed successfully!');
-            $this->comment("You can now run the command 'bash wm-package/src/scripts/restore_db.sh' to wipe and import 'storage/{$outputSqlGzStoragePath}' into your Docker container. Make sure to run the script from the project root outside of Docker.");
+            $finalPathOnBackupDisk = $backupStorageDisk->path($outputSqlGzFilenameOnBackupDisk);
+            $this->comment("The extracted .sql.gz has been saved to the 'backups' disk at: {$outputSqlGzFilenameOnBackupDisk} (Resolves to: {$finalPathOnBackupDisk})");
+            $this->comment("You can now use this file (e.g., 'storage/backups/{$outputSqlGzFilenameOnBackupDisk}') for your restore script.");
 
             return Command::SUCCESS;
         } catch (\Throwable $e) {
@@ -92,10 +92,14 @@ final class WmDownloadDbBackupCommand extends Command
 
     private function prepareTempDirectories($storage, string $baseDir, string $extractDir): void
     {
+        $this->info("Preparing temporary directories: base='{$storage->path($baseDir)}', extract='{$storage->path($extractDir)}'");
         if (! $storage->exists($baseDir)) {
             $storage->makeDirectory($baseDir);
         }
-        $storage->deleteDirectory($extractDir);
+        // Ensure the extract directory is clean and exists
+        if ($storage->exists($extractDir)) {
+            $storage->deleteDirectory($extractDir);
+        }
         $storage->makeDirectory($extractDir);
     }
 
@@ -115,26 +119,36 @@ final class WmDownloadDbBackupCommand extends Command
         }
 
         $this->info('Searching for the latest database backup (.zip) on wmdumps disk...');
-        $backupDirName = preg_replace('/dev$/', '', Config::get('backup.backup.name', Config::get('app.name')));
+        // Use app.name as the primary source for the backup directory (folder name on S3 for spatie backup)
+        $backupDirName = Config::get('app.name', 'default_app_name');
+        // Fallback to backup.backup.name if app.name is not set, and remove /dev suffix if present
+        if ($backupDirName === 'default_app_name' || empty($backupDirName)) {
+            $backupDirName = Config::get('backup.backup.name');
+        }
+        $backupDirName = preg_replace('/dev$/', '', $backupDirName);
+
         if (empty($backupDirName)) {
-            $this->error('Backup directory name (app name) could not be determined from config(\'backup.backup.name\') or config(\'app.name\').');
+            $this->error('Backup directory name (app name) could not be determined from config(\'app.name\') or config(\'backup.backup.name\').');
 
             return null;
         }
+        $this->info("Searching in wmdumps disk under directory: {$backupDirName}");
 
         $allFiles = $backupDisk->files($backupDirName);
         $dbBackups = array_filter($allFiles, static function ($file) {
+            // The file path from $backupDisk->files($backupDirName) might be like "appName/only_db_....zip"
             return preg_match('/only_db_\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}\.zip$/', basename($file));
         });
 
         if (empty($dbBackups)) {
             $this->error("No database backups found in '{$backupDirName}' on wmdumps disk matching the pattern 'only_db_*.zip'.");
-            Log::error("No .zip database backups found in '{$backupDirName}' on wmdumps disk.");
+            Log::error("No .zip database backups found in '{$backupDirName}' on wmdumps disk.", ['searched_directory' => $backupDirName]);
 
             return null;
         }
 
-        usort($dbBackups, static fn ($a, $b) => strcmp(basename($b), basename($a)));
+        // Sort by the full path as returned by S3 (which includes directory) to ensure correct order if multiple files exist
+        usort($dbBackups, static fn ($a, $b) => strcmp($b, $a)); // Sorts descending Z-A
         $latest = $dbBackups[0];
         $this->info("Latest database backup found: {$latest}");
 
@@ -143,7 +157,7 @@ final class WmDownloadDbBackupCommand extends Command
 
     private function downloadBackup($backupDisk, string $remotePath, $localStorage, string $localPath): bool
     {
-        $this->info("Downloading '{$remotePath}' to '{$localStorage->path($localPath)}'...");
+        $this->info("Downloading '{$remotePath}' from wmdumps to temporary path '{$localStorage->path($localPath)}'...");
         $fileContents = $backupDisk->get($remotePath);
         if ($fileContents === null) {
             $this->error("Failed to read database backup '{$remotePath}' from wmdumps disk.");
@@ -152,14 +166,14 @@ final class WmDownloadDbBackupCommand extends Command
             return false;
         }
         $localStorage->put($localPath, $fileContents);
-        $this->info('Database backup downloaded successfully.');
+        $this->info('Database backup downloaded successfully to temp path.');
 
         return true;
     }
 
     private function extractBackup($localStorage, string $localZipPath, string $extractDir): bool
     {
-        $this->info("Extracting SQL dump from '{$localStorage->path($localZipPath)}' to '{$localStorage->path($extractDir)}'...");
+        $this->info("Extracting SQL dump from '{$localStorage->path($localZipPath)}' to temporary directory '{$localStorage->path($extractDir)}'...");
         $unzipCommand = sprintf(
             'unzip -qo %s -d %s',
             escapeshellarg($localStorage->path($localZipPath)),
@@ -177,7 +191,7 @@ final class WmDownloadDbBackupCommand extends Command
                     Log::warning('Zip extraction (stderr): '.trim($buffer));
                 }
             });
-            $this->info('Archive extracted successfully.');
+            $this->info('Archive extracted successfully to temp directory.');
 
             return true;
         } catch (ProcessFailedException $exception) {
@@ -190,57 +204,77 @@ final class WmDownloadDbBackupCommand extends Command
 
     private function findSqlGzFile($localStorage, string $extractDir): ?string
     {
-        $dbDumpsDir = $localStorage->path($extractDir.'/db-dumps');
-        $finder = new Finder;
-        $finder->files()->in($dbDumpsDir)->name('*.sql.gz')->sortByModifiedTime()->reverseSorting();
+        // Path to where `unzip` extracts the `db-dumps` folder from the archive
+        $dbDumpsInExtractDir = $localStorage->path($extractDir.'/db-dumps');
+        $this->info("Searching for .sql.gz file in extracted path: {$dbDumpsInExtractDir}");
 
-        if (! $finder->hasResults()) {
-            $this->error("No .sql.gz file found in the extracted archive at '{$dbDumpsDir}'.");
-            Log::error('No .sql.gz file found in extracted archive.', ['extract_path' => $dbDumpsDir]);
+        $finder = new Finder;
+        // Ensure the directory exists before searching
+        if (! is_dir($dbDumpsInExtractDir)) {
+            $this->error("The directory 'db-dumps' was not found inside the extracted archive at path: {$dbDumpsInExtractDir}. Archive structure might be unexpected.");
+            Log::error("Directory 'db-dumps' not found in extracted archive.", ['expected_db_dumps_path' => $dbDumpsInExtractDir]);
 
             return null;
         }
 
+        $finder->files()->in($dbDumpsInExtractDir)->name('*.sql.gz')->sortByModifiedTime()->reverseSorting();
+
+        if (! $finder->hasResults()) {
+            $this->error("No .sql.gz file found in the extracted archive at '{$dbDumpsInExtractDir}'.");
+            Log::error('No .sql.gz file found in extracted archive.', ['extract_path' => $dbDumpsInExtractDir]);
+
+            return null;
+        }
+
+        // Get the first result (latest by modified time due to reverseSorting)
+        $sqlGzFile = null;
         foreach ($finder as $file) {
-            $sqlGzFile = $file;
+            $sqlGzFile = $file; // Assigns the SplFileInfo object
             break;
         }
 
-        $extractedSqlGzPath = $sqlGzFile->getRealPath();
+        $extractedSqlGzPath = $sqlGzFile->getRealPath(); // Path to the .sql.gz file in the temp extract directory
         $this->info("Found SQL GZ file: {$extractedSqlGzPath}");
 
         return $extractedSqlGzPath;
     }
 
     /**
-     * Move the .sql.gz file to storage/db-dumps/last_dump.sql.gz (not storage/app/db-dumps).
+     * Move the .sql.gz file to the target backup disk.
      */
-    private function moveSqlGzToStorage(string $from, string $absoluteToPath): bool
+    private function moveSqlGzToBackupDisk(string $sourceExtractedSqlGzPath, $targetBackupDisk, string $targetFilenameOnDisk): bool
     {
-        $storageDir = dirname($absoluteToPath);
+        $this->info("Attempting to move extracted SQL GZ from '{$sourceExtractedSqlGzPath}' to disk '{$targetBackupDisk->getConfig()['driver']}:{$targetBackupDisk->path('')}' as '{$targetFilenameOnDisk}'...");
 
-        if (! is_dir($storageDir)) {
-            if (! mkdir($storageDir, 0777, true) && ! is_dir($storageDir)) {
-                $this->error("Failed to create directory: {$storageDir}");
-                Log::error('Failed to create directory for SQL GZ file.', ['dir' => $storageDir]);
+        // Delete if already exists on the target disk
+        if ($targetBackupDisk->exists($targetFilenameOnDisk)) {
+            $this->warn("File '{$targetFilenameOnDisk}' already exists on disk '{$targetBackupDisk->getConfig()['driver']}'. Deleting old version.");
+            $targetBackupDisk->delete($targetFilenameOnDisk);
+        }
 
-                return false;
+        // Stream the file to the target disk
+        $fileStream = fopen($sourceExtractedSqlGzPath, 'r');
+        if (! $fileStream) {
+            $this->error("Failed to open stream for source file: {$sourceExtractedSqlGzPath}");
+            Log::error('Failed to open stream for source SQL GZ file.', ['path' => $sourceExtractedSqlGzPath]);
+
+            return false;
+        }
+
+        if ($targetBackupDisk->put($targetFilenameOnDisk, $fileStream)) {
+            if (is_resource($fileStream)) {
+                fclose($fileStream);
             }
-        }
-
-        // Remove if already exists
-        if (file_exists($absoluteToPath)) {
-            unlink($absoluteToPath);
-        }
-
-        // Move the file into storage/db-dumps/last_dump.sql.gz
-        if (File::move($from, $absoluteToPath)) {
-            $this->info("Database dump successfully moved to: {$absoluteToPath}");
+            $this->info("Database dump successfully saved to disk '{$targetBackupDisk->getConfig()['driver']}' as '{$targetFilenameOnDisk}'.");
 
             return true;
         }
-        $this->error("Failed to move SQL GZ file from '{$from}' to '{$absoluteToPath}'.");
-        Log::error('Failed to move SQL GZ file.', ['from' => $from, 'to' => $absoluteToPath]);
+
+        if (is_resource($fileStream)) {
+            fclose($fileStream);
+        }
+        $this->error("Failed to save SQL GZ file to disk '{$targetBackupDisk->getConfig()['driver']}' as '{$targetFilenameOnDisk}'.");
+        Log::error('Failed to save SQL GZ file to target disk.', ['target_disk' => $targetBackupDisk->getConfig()['driver'], 'target_filename' => $targetFilenameOnDisk]);
 
         return false;
     }
@@ -250,9 +284,13 @@ final class WmDownloadDbBackupCommand extends Command
         if (! $localStorage) {
             return;
         }
-        $this->info('Cleaning up temporary files...');
-        $localStorage->delete($zipPath);
-        $localStorage->deleteDirectory($extractDir);
-        $this->info('Cleanup complete.');
+        $this->info('Cleaning up temporary files from local storage...');
+        if ($localStorage->exists($zipPath)) {
+            $localStorage->delete($zipPath);
+        }
+        if ($localStorage->exists($extractDir)) {
+            $localStorage->deleteDirectory($extractDir);
+        }
+        $this->info('Temporary files cleanup complete.');
     }
 }
