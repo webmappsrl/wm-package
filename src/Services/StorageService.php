@@ -298,6 +298,11 @@ class StorageService extends BaseService
         return $this->getDisk('local');
     }
 
+    public function getBackupsDisk(): Filesystem
+    {
+        return $this->getDisk('backups');
+    }
+
     //
     // PRIVATE GETTERS
     //
