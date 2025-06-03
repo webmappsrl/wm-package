@@ -201,6 +201,45 @@ class ElasticsearchController extends Controller
 
         // results are formatted in wm-package/src/ElasticSearch/HitsIteratorAggregate.php
         // return collect($query->orderBy('name.keyword', 'asc')->take(10000)->get()['hits'])->pluck('name');
-        return $query->orderBy('name.keyword', 'asc')->take(10000)->get();
+        $results = $query->orderBy('name.keyword', 'asc')->take(10000)->get();
+        
+        // Convert to array to allow modification
+        $resultsArray = $results->toArray();
+        
+        // Fix aggregations structure to match expected format
+        if (isset($resultsArray['aggregations'])) {
+            $resultsArray['aggregations'] = $this->normalizeAggregations($resultsArray['aggregations']);
+        }
+        
+        return $resultsArray;
+    }
+
+    /**
+     * Normalize aggregations structure to have consistent format with count wrapper
+     */
+    private function normalizeAggregations(array $aggregations): array
+    {
+        foreach ($aggregations as $aggName => $aggData) {
+            if (is_array($aggData) && !isset($aggData['count']) && isset($aggData['buckets'])) {
+                // Calculate total doc_count from buckets
+                $totalDocCount = 0;
+                if (is_array($aggData['buckets'])) {
+                    foreach ($aggData['buckets'] as $bucket) {
+                        $totalDocCount += $bucket['doc_count'] ?? 0;
+                    }
+                }
+                
+                $aggregations[$aggName] = [
+                    'doc_count' => $totalDocCount,
+                    'count' => [
+                        'doc_count_error_upper_bound' => $aggData['doc_count_error_upper_bound'] ?? 0,
+                        'sum_other_doc_count' => $aggData['sum_other_doc_count'] ?? 0,
+                        'buckets' => $aggData['buckets'] ?? []
+                    ]
+                ];
+            }
+        }
+        
+        return $aggregations;
     }
 }
