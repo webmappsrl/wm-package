@@ -162,8 +162,13 @@ class ElasticsearchController extends Controller
             $activitiesAggregation = new TermsAggregation('taxonomyActivities');
             $activitiesAggregation->setField('taxonomyActivities');
 
+            $layersAggregation = new TermsAggregation('layers');
+            $layersAggregation->setField('layers');
+            $layersAggregation->addParameter('size', 150);
+
             $body->addAggregation($activitiesAggregation);
             $body->addAggregation($themesAggregation);
+            $body->addAggregation($layersAggregation);
 
             // dd($body->toArray()); // #DEBUG the whole es query body
 
