@@ -202,15 +202,15 @@ class ElasticsearchController extends Controller
         // results are formatted in wm-package/src/ElasticSearch/HitsIteratorAggregate.php
         // return collect($query->orderBy('name.keyword', 'asc')->take(10000)->get()['hits'])->pluck('name');
         $results = $query->orderBy('name.keyword', 'asc')->take(10000)->get();
-        
+
         // Convert to array to allow modification
         $resultsArray = $results->toArray();
-        
+
         // Fix aggregations structure to match expected format
         if (isset($resultsArray['aggregations'])) {
             $resultsArray['aggregations'] = $this->normalizeAggregations($resultsArray['aggregations']);
         }
-        
+
         return $resultsArray;
     }
 
@@ -220,7 +220,7 @@ class ElasticsearchController extends Controller
     private function normalizeAggregations(array $aggregations): array
     {
         foreach ($aggregations as $aggName => $aggData) {
-            if (is_array($aggData) && !isset($aggData['count']) && isset($aggData['buckets'])) {
+            if (is_array($aggData) && ! isset($aggData['count']) && isset($aggData['buckets'])) {
                 // Calculate total doc_count from buckets
                 $totalDocCount = 0;
                 if (is_array($aggData['buckets'])) {
@@ -228,18 +228,18 @@ class ElasticsearchController extends Controller
                         $totalDocCount += $bucket['doc_count'] ?? 0;
                     }
                 }
-                
+
                 $aggregations[$aggName] = [
                     'doc_count' => $totalDocCount,
                     'count' => [
                         'doc_count_error_upper_bound' => $aggData['doc_count_error_upper_bound'] ?? 0,
                         'sum_other_doc_count' => $aggData['sum_other_doc_count'] ?? 0,
-                        'buckets' => $aggData['buckets'] ?? []
-                    ]
+                        'buckets' => $aggData['buckets'] ?? [],
+                    ],
                 ];
             }
         }
-        
+
         return $aggregations;
     }
 }
