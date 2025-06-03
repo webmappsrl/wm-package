@@ -26,7 +26,6 @@ class ScheduleServiceProvider extends ServiceProvider
                 $schedule->command('backup:clean')
                     ->sundays()
                     ->at('03:00');
-            } else {
                 $schedule->command('wm:download-db-backup --latest')
                     ->daily()
                     ->at('20:10');
