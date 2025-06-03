@@ -541,7 +541,7 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
             'duration_forward' => isset($this->properties['duration_forward']) ? $this->setEmptyValueToZero($this->properties['duration_forward']) : 0,
             'ascent' => isset($this->properties['ascent']) ? $this->setEmptyValueToZero($this->properties['ascent']) : 0,
             'taxonomyActivities' => $ecTrackService->getTaxonomyArray($this->taxonomyActivities),
-            'layers' => $this->properties['layers'] ?? [],
+            'layers' => $this->layers->pluck('id')->toArray(),
             'searchable' => $this->getSearchableString(),
         ];
 
