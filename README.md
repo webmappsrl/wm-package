@@ -89,9 +89,9 @@ at last you can install the package with `compose require wm/wm-package`
 
 ## JWT
 
-JWT verrà installato automaticamente come dipendenza. Gli utenti dovranno solo configurare le variabili d'ambiente JWT nel file .env utilizzando il comando `php artisan jwt:secret`
+JWT will be installed automatically as a dependency. Users only need to configure the JWT environment variables in the `.env` file using the command `php artisan jwt:secret`.
 
-Il pacchetto JWT sarà gestito come dipendenza del wm-package invece che dover essere installato separatamente nell'applicazione principale.
+The JWT package is managed as a dependency of wm-package and does not need to be installed separately in the main application.
 
 ## Elasticsearch
 
@@ -103,6 +103,158 @@ config/wm-elasticsearch.php
 
 elasticsearch controller:
 src/Http/Controllers/Api/ElasticsearchController.php
+
+## Geohub Import
+
+This package provides an Artisan command to import data from Geohub. To ensure data integrity and correctly process all relationships, **the import process must start from an `app` entity.** The command will then import all related data in a cascading manner.
+
+The import architecture is structured around a pattern of services, jobs, and a central configuration, with an Artisan command as the entry point.
+
+### Architecture Overview
+The main components are:
+1.  **CLI Command (`WmImportFromGeohubCommand`):** The entry point to initiate imports.
+2.  **Services (`GeohubImportService`, `EcMediaImportService`):** Handle the core business logic, data transformation, and orchestration.
+3.  **Jobs (e.g., `ImportAppJob`, `ImportEcTrackJob`):** Perform specific import operations for different entities in the background.
+4.  **Configuration (`config/wm-geohub-import.php`):** Contains mappings, database connections for Geohub, and other settings that define how the import process behaves.
+
+### Command Usage
+
+The main command is `wm:import-from-geohub`.
+
+1.  **Import a specific application and its related data:**
+    This is the standard way to import a complete set of data related to a specific application.
+    ```bash
+    php artisan wm:import-from-geohub app <geohub_app_id>
+    ```
+    Replace `<geohub_app_id>` with the ID of the application in Geohub.
+
+2.  **Import all applications and their related data:**
+    If no model or ID is specified (or if `app` is specified without an ID), the command will import all `app` entities from Geohub, subsequently triggering the import for all their related data.
+    ```bash
+    php artisan wm:import-from-geohub
+    ```
+    Or:
+    ```bash
+    php artisan wm:import-from-geohub app
+    ```
+
+### Import Process Deep Dive
+
+The import process is orchestrated by `GeohubImportService`.
+
+#### 1. `GeohubImportService` - The Core Orchestrator
+This service is central to the import system and manages:
+*   **Geohub Database Connection:** Connects to the Geohub source database using credentials and settings defined in `config/wm-geohub-import.php`.
+*   **Orchestration:** Coordinates the import of different entities. While the primary flow starts with an `app` and cascades, the service internally might respect a specific order for fetching or processing, defined by constants like `MODEL_IMPORT_ORDER` if applicable for broad imports.
+    ```php
+    // Example:
+    // protected const MODEL_IMPORT_ORDER = [ 
+    //  'app', 
+    //  'ec_poi', 
+    //  // ... other models
+    // ];
+    ```
+*   **Data Transformation:** Converts data from Geohub's format to the local application's format, often leveraging the `DataTransformer` utility.
+*   **Relationship Management:** Ensures that associations between entities are correctly established and maintained during the import.
+
+#### 2. Data Mapping and Configuration (`config/wm-geohub-import.php`)
+This crucial configuration file defines how different entities are handled. For each entity type, it specifies:
+*   `namespace`: The local Eloquent model's namespace.
+*   `job`: The dedicated import Job class for that entity.
+*   `geohub_table`: The source table name in the Geohub database.
+*   `identifier`: The field used as a unique identifier (e.g., `custom_properties->geohub_id`).
+*   `fields`: Mapping of source fields to target fields.
+*   `properties`: Mapping for JSON properties.
+*   `relations`: Definitions for handling relationships with other entities.
+
+**Example: `ec_media` configuration snippet:**
+```php
+'ec_media' => [ 
+    'namespace' => 'Wm\WmPackage\Models\Media', 
+    'job' => ImportEcMediaJob::class, 
+    'geohub_table' => 'ec_media', 
+    'identifier' => 'custom_properties->geohub_id', 
+    'fields' => [
+        // 'local_field_name' => 'geohub_field_name',
+    ], 
+    'properties' => [
+        // 'local_property_name' => 'geohub_property_name',
+    ],
+    'relations' => [
+        // 'relation_name' => [...]
+    ], 
+],
+```
+
+#### 3. Job Hierarchy and Structure
+Import jobs are organized hierarchically to share common logic:
+*   **`BaseImportJob`:** The base class for all import jobs. It manages the general import workflow (fetch, transform, import, process dependencies) and provides common data transformation utilities.
+*   **`BaseEcImportJob`:** Extends `BaseImportJob` specifically for "EC" entities (e.g., `EcTrack`, `EcPoi`). It handles common tasks like converting 2D geometries from Geohub to 3D and setting default values for missing geometries.
+*   **Specific Jobs (e.g., `ImportAppJob`, `ImportEcPoiJob`, `ImportEcTrackJob`, `ImportLayerJob`, `ImportTaxonomyJob` and its derivatives):** Implement logic tailored to each entity type.
+
+Each job typically follows a structure with these key methods:
+*   `fetchData()`: Retrieves raw data from the Geohub database for the specific entity.
+*   `transformData()`: Converts the fetched data into the format required by the local models, often using `DataTransformer`.
+*   `importData()`: Creates or updates the entity in the local database.
+*   `processDependencies()`: Handles the import or linking of related entities.
+
+#### 4. Data Transformation (`DataTransformer`)
+The `DataTransformer` class is a utility responsible for converting data types and structures.
+*   **Key Features:**
+    *   Format Conversion: Transforms data between JSON, arrays, booleans, dates, etc.
+    *   Normalization: Standardizes incoming data.
+    *   Multilingual Data Handling: Converts JSON strings containing translations (e.g., `{"it":"Nome","en":"Name"}`) into associative arrays for translatable model attributes.
+    *   Implicit Validation: Manages null or empty values appropriately.
+*   **Core Methods:**
+    *   `jsonToArray()`: Converts JSON strings to PHP arrays.
+    *   `stringToBoolean()`: Converts string representations of booleans to actual boolean values.
+    *   `stringToDate()` / `dateToString()`: Handles date conversions.
+    *   `geojsonToGeometry()`: Processes GeoJSON data into geometry objects.
+*   **Integration:** `DataTransformer` methods are typically invoked from the mapping configuration within `config/wm-geohub-import.php` or directly within job transformation logic.
+
+**Example: Transforming a translatable `name` field:**
+Mapping in `wm-geohub-import.php`:
+```php
+'name' => [ 
+    'field' => 'name', // Source field in Geohub data
+    'transformer' => [DataTransformer::class, 'jsonToArray'] 
+]
+```
+If Geohub `name` is `{"it":"Sentiero del Monte","en":"Mountain Trail"}`, it's transformed to `['it' => 'Sentiero del Monte', 'en' => 'Mountain Trail']`.
+
+#### 5. Special Case: Media Import (`ImportEcMediaJob` & `EcMediaImportService`)
+Media import (images, files) involves `ImportEcMediaJob` and potentially `EcMediaImportService` for more complex scenarios:
+1.  **Data Retrieval:** Fetches media metadata from Geohub.
+2.  **Relationship Identification:** Determines which local entity the media is associated with.
+3.  **Download & Upload:** Downloads the actual file from Geohub's storage and uploads it to the configured local storage (e.g., AWS S3 via Spatie Media Library).
+4.  **Metadata Storage:** Saves relevant metadata, including custom properties.
+
+#### 6. Queues, Batching, and Error Handling
+*   **Asynchronous Processing:** All import operations are dispatched as jobs to a configurable queue (default: `geohub-import`) for background processing, which is essential for handling large datasets.
+*   **Batching:** Jobs are often grouped into batches. Batches can be configured with failure tolerance, allowing the overall import to continue even if some individual jobs fail.
+*   **Logging:** Comprehensive logging is implemented. Operations are logged to a dedicated channel (configurable via `wm-geohub-import.import_log_channel`, e.g., `storage/logs/wm-package-failed-jobs.log`).
+*   **Exceptions:** Specific exceptions are used to provide detailed error messages, aiding in debugging.
+
+#### 7. Performance Considerations
+The system is designed to handle potentially large volumes of data:
+*   **Queues & Jobs:** Laravel's queue system distributes the workload.
+*   **Batching:** Efficiently processes groups of jobs.
+*   **Horizon:** Laravel Horizon can be used to monitor and manage the queues.
+
+### Summary of Import Flow
+When an import is initiated (typically for an `app`):
+1.  `WmImportFromGeohubCommand` delegates to `GeohubImportService`.
+2.  `GeohubImportService` connects to the Geohub DB and identifies entities to import (starting with the specified `app` or all `app`s).
+3.  It creates and dispatches a batch of jobs (e.g., `ImportAppJob`).
+4.  Each job in the sequence:
+    a.  Fetches data from Geohub (`fetchData`).
+    b.  Transforms data using mappings and `DataTransformer` (`transformData`).
+    c.  Creates or updates the entity in the local database (`importData`).
+    d.  Queues further jobs for dependent entities (`processDependencies`).
+5.  Media imports handle file downloads/uploads separately.
+6.  The process is logged, and errors are managed to ensure robustness.
+
+This architecture provides a modular, robust, configurable, and scalable process for synchronizing data from Geohub.
 
 ## Testing
 
