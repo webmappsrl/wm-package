@@ -21,9 +21,8 @@ DB_NAME="${DB_DATABASE}"
 DB_CONTAINER_NAME="${DB_CONTAINER_NAME:-postgres_${DOCKER_PROJECT_DIR_NAME}}"
 PHP_CONTAINER_NAME="${PHP_CONTAINER_NAME}"
 
-# Update: .sql.gz is now in storage/db-dumps in the project root
-SQL_DUMP_GZ_PATH="${PROJECT_ROOT}/storage/db-dumps/${SQL_DUMP_GZ_FILE}"
-SQL_DUMP_PATH="${PROJECT_ROOT}/storage/db-dumps/${SQL_DUMP_FILE_NAME}"
+SQL_DUMP_GZ_PATH="${PROJECT_ROOT}/storage/backups/${SQL_DUMP_GZ_FILE}"
+SQL_DUMP_PATH="${PROJECT_ROOT}/storage/backups/${SQL_DUMP_FILE_NAME}"
 
 # Auto-detect PHP container if not set
 if [ -z "$PHP_CONTAINER_NAME" ] && [ -n "$DOCKER_PROJECT_DIR_NAME" ]; then
