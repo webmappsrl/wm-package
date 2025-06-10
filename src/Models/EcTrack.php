@@ -522,7 +522,13 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
         $mediaService = MediaService::make();
         $firstMedia = $this->getMedia()->first();
 
-        [$start, $end] = GeometryComputationService::make()->getStartEndCoordinates($this);
+        try {
+
+            [$start, $end] = GeometryComputationService::make()->getStartEndCoordinates($this);
+        } catch (\Exception $e) {
+            $start = [0, 0];
+            $end = [0, 0];
+        }
 
         $arr = [
             'id' => $this->id,

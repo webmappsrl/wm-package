@@ -38,11 +38,14 @@ class Layer extends AbstractGeometryResource
             ]),
 
             Number::make(__('Rank'), 'rank', function () {
-                return (int) $this->properties['rank'] ?? 0;
+                if (is_array($this->properties) && isset($this->properties['rank'])) {
+                    return (int) $this->properties['rank'];
+                }
+                return $this->rank ?? 0;
             })->onlyOnIndex()->sortable(),
 
             BelongsTo::make(__('App'), 'appOwner', App::class),
-            BelongsTo::make('Owner', 'layerOwner', User::class),
+            BelongsTo::make('Owner', 'layerOwner', User::class)->nullable(),
             Images::make(__('Image'), 'default'),
             PropertiesPanel::make(__('Properties'), 'layer')->collapsible(),
             MorphToMany::make(__('Activities'), 'taxonomyActivities', TaxonomyActivity::class),
