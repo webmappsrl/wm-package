@@ -40,7 +40,7 @@ class ImportAppJob extends BaseImportJob
         // $this->queueEntityImport('ec_poi', $data['user_id'], 'user_id', $model->id); //TODO: da riabilitare a chiusura feature
         // $this->queueEntityImport('ec_track', $data['user_id'], 'user_id', $model->id);//TODO: da riabilitare a chiusura feature
         $this->queueEntityImport('taxonomy_activity', $data['user_id'], 'user_id', $model->id);
-        $this->queueEntityImport('layer', $data['user_id'], 'app_id', $model->id);
+        //  $this->queueEntityImport('layer', $data['user_id'], 'app_id', $model->id);
         // $this->queueEntityImport('ec_media', $data['user_id'], 'user_id', $model->id);//TODO: da riabilitare a chiusura feature
     }
 
