@@ -50,6 +50,11 @@ class App extends Model implements HasMedia
         App::observe(AppObserver::class);
     }
 
+    public function getGeohubIdAttribute()
+    {
+        return $this->properties['geohub_id'] ?? null;
+    }
+
     public function author(): BelongsTo
     {
         return $this->belongsTo(User::class);
