@@ -41,6 +41,7 @@ class Layer extends AbstractGeometryResource
                 if (is_array($this->properties) && isset($this->properties['rank'])) {
                     return (int) $this->properties['rank'];
                 }
+
                 return $this->rank ?? 0;
             })->onlyOnIndex()->sortable(),
 

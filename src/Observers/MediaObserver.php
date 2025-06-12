@@ -191,7 +191,7 @@ class MediaObserver extends AbstractAuthorableObserver
     {
         $customProperties = $media->custom_properties;
         unset($customProperties['geometry']);
-        $media->update([
+        $media->updateQuietly([
             'custom_properties' => $customProperties,
         ]);
     }
