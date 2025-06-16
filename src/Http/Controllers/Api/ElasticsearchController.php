@@ -14,12 +14,19 @@ use ONGR\ElasticsearchDSL\Query\TermLevel\RegexpQuery;
 use ONGR\ElasticsearchDSL\Search;
 use Wm\WmPackage\Http\Controllers\Controller;
 use Wm\WmPackage\Models\EcTrack;
+use Wm\WmPackage\Services\Models\EcTrackService;
 
 class ElasticsearchController extends Controller
 {
+    protected $ecTrackService;
+
+    public function __construct(EcTrackService $ecTrackService)
+    {
+        $this->ecTrackService = $ecTrackService;
+    }
+
     public function index(Request $request)
     {
-
         try {
             $validated = $request->validate([
                 'query' => 'string',
@@ -46,7 +53,7 @@ class ElasticsearchController extends Controller
                         }
                     }
                 }],
-
+                           
             ]);
         } catch (Exception $e) {
             return response()->json([
@@ -83,7 +90,9 @@ class ElasticsearchController extends Controller
         // dd($queryString);
         // https://github.com/matchish/laravel-scout-elasticsearch?tab=readme-ov-file#conditions
         // base query
-        $query = EcTrack::search($search, function (\Elastic\Elasticsearch\Client $client, Search $body) use ($layer, $search, $ids) {
+        $index = $this->ecTrackService->getTableName();
+
+        $query = EcTrack::search($search, function (\Elastic\Elasticsearch\Client $client, Search $body) use ($layer, $search, $ids, $index) {
 
             // # The es driver for Laravel Scout
             // # https://github.com/matchish/laravel-scout-elasticsearch?tab=readme-ov-file#search
@@ -172,7 +181,7 @@ class ElasticsearchController extends Controller
 
             // dd($body->toArray()); // #DEBUG the whole es query body
 
-            return $client->search(['index' => 'ec_tracks', 'body' => $body->toArray()])->asArray();
+            return $client->search(['index' => $index, 'body' => $body->toArray()])->asArray();
         })
             ->where('app_id', $appId); // #AND
 
