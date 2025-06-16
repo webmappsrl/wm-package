@@ -16,16 +16,17 @@ use Wm\WmPackage\Models\Abstracts\GeometryModel;
 use Wm\WmPackage\Models\Abstracts\MultiLineString;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcTrack;
-use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Models\Media;
 use Wm\WmPackage\Services\Models\MediaService;
+use Wm\WmPackage\Services\Models\EcTrackService;
 
 class GeometryComputationService extends BaseService
 {
+
     public function get3dLineMergeWktFromGeojson(string $geojson): string
     {
         return DB::select(
-            "SELECT ST_AsText(ST_Force3D(ST_LineMerge(ST_GeomFromGeoJSON('".$geojson."')))) As wkt"
+            "SELECT ST_AsText(ST_Force3D(ST_LineMerge(ST_GeomFromGeoJSON('" . $geojson . "')))) As wkt"
         )[0]->wkt;
     }
 
@@ -60,7 +61,7 @@ class GeometryComputationService extends BaseService
 
             return ! empty($result) && isset($result[0]->type) && $result[0]->type === 'ST_LineString';
         } catch (\Illuminate\Database\QueryException $e) {
-            Log::error('Error in isGeometryLinestring: '.$e->getMessage(), [
+            Log::error('Error in isGeometryLinestring: ' . $e->getMessage(), [
                 'sql' => $sql,
                 'bindings' => $bindings,
                 'model_id' => $model->id ?? 'N/A',
@@ -80,25 +81,25 @@ class GeometryComputationService extends BaseService
 
     public function getWktFromGeojson(string $geojson): string
     {
-        return DB::select("SELECT ST_GeomFromGeoJSON('".$geojson."') As wkt")[0]->wkt;
+        return DB::select("SELECT ST_GeomFromGeoJSON('" . $geojson . "') As wkt")[0]->wkt;
     }
 
     public function getGeometryFromGeojsonRAW(string $geojson): Expression
     {
 
-        return DB::raw("ST_GeomFromGeoJSON('".$geojson."')");
+        return DB::raw("ST_GeomFromGeoJSON('" . $geojson . "')");
     }
 
     public function get2dGeometryFromGeojsonRAW(string $geojson): Expression
     {
-        return DB::raw("(ST_Force2D(ST_GeomFromGeoJSON('".$geojson."')))");
+        return DB::raw("(ST_Force2D(ST_GeomFromGeoJSON('" . $geojson . "')))");
     }
 
     protected function getNeighoursByGeometryAndTable($geometry, $table): array
     {
         return DB::select(
             "SELECT id, St_Distance(geometry,?) as dist FROM {$table}
-                WHERE St_DWithin(geometry, ?, ".config('wm-package.services.neighbours_distance').')
+                WHERE St_DWithin(geometry, ?, " . config('wm-package.services.neighbours_distance') . ')
                 order by St_Linelocatepoint(St_Geomfromgeojson(St_Asgeojson(?)),St_Geomfromgeojson(St_Asgeojson(geometry)));',
             [
                 $geometry,
@@ -111,15 +112,15 @@ class GeometryComputationService extends BaseService
     public function getLineLocatePointFloat(string $trackGeojson, string $poiGeojson): float
     {
         // POI VAL along track https://postgis.net/docs/ST_LineLocatePoint.html
-        $line = "ST_GeomFromGeoJSON('".$trackGeojson."')";
-        $point = "ST_GeomFromGeoJSON('".$poiGeojson."')";
+        $line = "ST_GeomFromGeoJSON('" . $trackGeojson . "')";
+        $point = "ST_GeomFromGeoJSON('" . $poiGeojson . "')";
         $sql = DB::raw("SELECT ST_LineLocatePoint($line,$point) as val;");
         $result = DB::select($sql);
 
         return $result[0]->val;
     }
 
-    public function getModelGeometryAsGeojson(GeometryModel|Media $model): string
+    public function getModelGeometryAsGeojson($model): string
     {
         return $model::where('id', '=', $model->id)
             ->select(
@@ -135,9 +136,9 @@ class GeometryComputationService extends BaseService
         if (isset($geom)) {
             $formattedGeometry = Gisconverter::geojsonToKml($geom);
 
-            $name = '<name>'.($this->name ?? '').'</name>';
+            $name = '<name>' . ($this->name ?? '') . '</name>';
 
-            return $name.$formattedGeometry;
+            return $name . $formattedGeometry;
         } else {
             return '{}';
         }
@@ -195,8 +196,9 @@ class GeometryComputationService extends BaseService
 
         $tracksIds = $tracks->pluck('id')->toArray();
 
-        $res = DB::select('select ST_Extent(geometry::geometry)
-             as bbox from ec_tracks where id IN ('.implode(',', $tracksIds).');');
+        $tableName = app(EcTrackService::class)->getTableName();
+        $res = DB::select("select ST_Extent(geometry::geometry)
+             as bbox from {$tableName} where id IN (" . implode(',', $tracksIds) . ');');
 
         if (count($res) > 0) {
             if (! is_null($res[0]->bbox)) {
@@ -211,11 +213,12 @@ class GeometryComputationService extends BaseService
 
     public function getEcTracksBboxByUserId(int $userId)
     {
-        $query = '
+        $tableName = app(EcTrackService::class)->getTableName();
+        $query = "
             SELECT ST_Extent(geometry::geometry) as bbox
-            FROM ec_tracks
+            FROM {$tableName}
             WHERE user_id = ?
-        ';
+        ";
 
         $result = DB::select($query, [$userId]);
 
@@ -321,7 +324,7 @@ class GeometryComputationService extends BaseService
      *
      * @return array [lon, lat] of the point
      */
-    public function getCentroid(GeometryModel|Media $model): array
+    public function getCentroid($model): array
     {
         $rawResult = $model::where('id', $model->id)
             ->selectRaw(
@@ -374,12 +377,12 @@ class GeometryComputationService extends BaseService
         foreach ($classes as $class => $table) {
             $result = DB::select(
                 'SELECT id FROM '
-                    .$table
-                    .' WHERE user_id = ?'
-                    ." AND ABS(EXTRACT(EPOCH FROM created_at) - EXTRACT(EPOCH FROM TIMESTAMP '"
-                    .$model->created_at
-                    ."')) < 5400"
-                    .' AND St_DWithin(geometry, ?, 400);',
+                    . $table
+                    . ' WHERE user_id = ?'
+                    . " AND ABS(EXTRACT(EPOCH FROM created_at) - EXTRACT(EPOCH FROM TIMESTAMP '"
+                    . $model->created_at
+                    . "')) < 5400"
+                    . ' AND St_DWithin(geometry, ?, 400);',
                 [
                     $model->user_id,
                     $model->geometry,
@@ -518,10 +521,10 @@ class GeometryComputationService extends BaseService
     {
         return $targetModelClass::whereRaw(
             'public.ST_Intersects('
-                .'public.ST_Force2D('
-                ."(SELECT geometry from {$model->getTable()} where id = {$model->id})"
-                .'::geometry)'
-                .', geometry)'
+                . 'public.ST_Force2D('
+                . "(SELECT geometry from {$model->getTable()} where id = {$model->id})"
+                . '::geometry)'
+                . ', geometry)'
         )->get();
     }
 
@@ -675,7 +678,7 @@ class GeometryComputationService extends BaseService
      */
     public function getDistanceComp(array $geometry): float
     {
-        $distanceQuery = "SELECT ST_Length(ST_GeomFromGeoJSON('".json_encode($geometry)."')::geography)/1000 as length";
+        $distanceQuery = "SELECT ST_Length(ST_GeomFromGeoJSON('" . json_encode($geometry) . "')::geography)/1000 as length";
         $distance = DB::select(DB::raw($distanceQuery));
 
         return $distance[0]->length;
@@ -704,8 +707,9 @@ class GeometryComputationService extends BaseService
             $validTrackIds = $app->ecTracks->pluck('id')->toArray() ?? [];
         }
 
+        $tableName = app(EcTrackService::class)->getTableName();
         if (! is_null($validTrackIds)) {
-            $where .= 'ec_tracks.id IN ('.implode(',', $validTrackIds).') AND ';
+            $where .= "{$tableName}.id IN (" . implode(',', $validTrackIds) . ') AND ';
         }
 
         if (
@@ -715,16 +719,16 @@ class GeometryComputationService extends BaseService
             $track = EcTrack::find($trackId);
 
             if (isset($track)) {
-                $from = ', (SELECT geometry as geom FROM ec_tracks WHERE id = ?) as track';
+                $from = ", (SELECT geometry as geom FROM {$tableName} WHERE id = ?) as track";
                 $params[] = $trackId;
-                $where = 'ST_Distance(ST_Transform(ST_SetSRID(ec_tracks.geometry, 4326), 3857), ST_Transform(ST_SetSRID(track.geom, 4326), 3857)) <= ? AND ';
+                $where = "ST_Distance(ST_Transform(ST_SetSRID({$tableName}.geometry, 4326), 3857), ST_Transform(ST_SetSRID(track.geom, 4326), 3857)) <= ? AND ";
                 $params[] = $distanceLimit;
             }
         }
 
         if (isset($searchString) && ! empty($searchString)) {
             $escapedSearchString = preg_replace('/[^0-9a-z\s]/', '', strtolower($searchString));
-            $where .= "to_tsvector(regexp_replace(LOWER(((ec_tracks.name::json))->>'$language'), '[^0-9a-z\s]', '', 'g')) @@ to_tsquery('$escapedSearchString') AND ";
+            $where .= "to_tsvector(regexp_replace(LOWER((({$tableName}.name::json))->>'$language'), '[^0-9a-z\s]', '', 'g')) @@ to_tsquery('$escapedSearchString') AND ";
         }
 
         $where .= 'geometry && ST_SetSRID(ST_MakeBox2D(ST_Point(?, ?), ST_Point(?, ?)), 4326)';
@@ -746,7 +750,7 @@ FROM (
 		ST_Centroid(geometry) as centroid,
 	    geometry
 	FROM
-		ec_tracks
+		{$tableName}
 	    $from
     WHERE $where
     ) clusters
@@ -844,7 +848,7 @@ GROUP BY
      * @param  GeometryModel|Media  $model  The model to convert
      * @return string The geometry in WKT format of type POINT
      */
-    public function convertToPoint(GeometryModel|Media $model): string
+    public function convertToPoint($model): string
     {
         // Verify that the model has a geometry
         if (! isset($model->geometry) || empty($model->geometry)) {
@@ -864,7 +868,7 @@ GROUP BY
 
         // Check if it's necessary to force the SRID (4326)
         if (strpos($model->geometry, 'SRID=') === 0) {
-            return 'SRID=4326;'.$centroid->point;
+            return 'SRID=4326;' . $centroid->point;
         }
 
         return $centroid->point;
@@ -888,7 +892,7 @@ GROUP BY
     {
         $table = $query->getModel()->getTable();
 
-        return $query->selectRaw('ST_Envelope('.$table.'.geometry::geometry) AS bbox')->value('bbox');
+        return $query->selectRaw('ST_Envelope(' . $table . '.geometry::geometry) AS bbox')->value('bbox');
     }
 
     public function bboxToPolygon(?string $bbox): ?string
@@ -899,7 +903,7 @@ GROUP BY
             return null;
         }
 
-        $query = DB::select('SELECT ST_AsText(ST_MakeEnvelope('.$bbox[0].', '.$bbox[1].', '.$bbox[2].', '.$bbox[3].', 4326)) as geometry');
+        $query = DB::select('SELECT ST_AsText(ST_MakeEnvelope(' . $bbox[0] . ', ' . $bbox[1] . ', ' . $bbox[2] . ', ' . $bbox[3] . ', 4326)) as geometry');
         $geometry = $query[0]->geometry;
 
         return $geometry;
@@ -965,11 +969,12 @@ GROUP BY
 
     public function getEcTracksBboxByAppId(int $appId): ?array
     {
-        $res = DB::select('
+        $tableName = app(EcTrackService::class)->getTableName();
+        $res = DB::select("
             SELECT ST_Extent(geometry::geometry) as bbox
-            FROM ec_tracks
+            FROM {$tableName}
             WHERE app_id = ?
-        ', [$appId]);
+        ", [$appId]);
 
         if (empty($res) || is_null($res[0]->bbox)) {
             return null;
@@ -1014,7 +1019,7 @@ GROUP BY
                 'type' => gettype($geometryInput),
                 'model_id' => $model->id ?? 'N/A',
             ]);
-            throw new \InvalidArgumentException('Invalid geometry type for SQL representation. Expected string (WKT), array (GeoJSON), or Expression. Got: '.gettype($geometryInput));
+            throw new \InvalidArgumentException('Invalid geometry type for SQL representation. Expected string (WKT), array (GeoJSON), or Expression. Got: ' . gettype($geometryInput));
         }
     }
 }

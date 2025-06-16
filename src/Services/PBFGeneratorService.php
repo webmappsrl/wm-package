@@ -5,10 +5,10 @@ namespace Wm\WmPackage\Services;
 use Exception;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Wm\WmPackage\Jobs\Pbf\GeneratePBFByZoomJob;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcTrack;
+use Wm\WmPackage\Services\Models\EcTrackService;
 
 class PBFGeneratorService extends BaseService
 {
@@ -18,7 +18,21 @@ class PBFGeneratorService extends BaseService
 
     protected $format;
 
-    public function __construct(protected StorageService $cloudStorageService, protected GeometryComputationService $geometryComputationService) {}
+    protected StorageService $cloudStorageService;
+
+    protected GeometryComputationService $geometryComputationService;
+
+    protected EcTrackService $ecTrackService;
+
+    public function __construct(
+        StorageService $cloudStorageService,
+        GeometryComputationService $geometryComputationService,
+        EcTrackService $ecTrackService
+    ) {
+        $this->cloudStorageService = $cloudStorageService;
+        $this->geometryComputationService = $geometryComputationService;
+        $this->ecTrackService = $ecTrackService;
+    }
 
     public function getZoomTreshold(): int
     {
@@ -67,10 +81,13 @@ class PBFGeneratorService extends BaseService
             $boundingBox['ymax']
         );
 
+        // Recupera il nome della tabella dal modello
+        $tableName = $this->ecTrackService->getTableName();
+
         // Costruisci la query parametrizzata
         $sql = <<<SQL
             SELECT COUNT(DISTINCT ec.id) AS total_tracks
-            FROM ec_tracks ec
+            FROM {$tableName} ec
             JOIN layerable etl ON ec.id = etl.layerable_id AND etl.layerable_type LIKE '%EcTrack'
             WHERE etl.layer_id = ANY(:layer_ids) -- Usa un parametro per i layer
             AND ST_Intersects(
@@ -83,7 +100,7 @@ class PBFGeneratorService extends BaseService
         SQL;
 
         $result = DB::select($sql, [
-            'layer_ids' => '{'.implode(',', $layerIds).'}', // Converti in array PostgreSQL
+            'layer_ids' => '{' . implode(',', $layerIds) . '}', // Converti in array PostgreSQL
         ]);
 
         return $result[0]->total_tracks ?? 0;
@@ -140,6 +157,9 @@ class PBFGeneratorService extends BaseService
         // // Interpola gli ID dei layer
         // $layerIdsSQL = implode(', ', $layerIds);
 
+        // Recupera il nome della tabella dal modello
+        $tableName = $this->ecTrackService->getTableName();
+
         // TODO: add activities and wheres to match layers of the tracks
         $sql = <<<SQL
     WITH 
@@ -156,7 +176,6 @@ class PBFGeneratorService extends BaseService
                 bounds.b2d
             ) AS geom,
             ec.id,
-            ec.name,
             ec.properties ->> 'ref' as ref,
             ec.properties ->> 'cai_scale' as cai_scale,
             ec.properties ->> 'distance' as distance,
@@ -164,7 +183,7 @@ class PBFGeneratorService extends BaseService
             ec.properties ->> 'layers' AS layers, -- text
             ec.properties ->> 'searchable' as searchable,
             ec.properties ->> 'color' as stroke_color
-        FROM ec_tracks ec
+        FROM {$tableName} ec
         CROSS JOIN bounds
         WHERE 
             ec.app_id = $app_id -- Filtra per i layer associati all'app
@@ -174,7 +193,7 @@ class PBFGeneratorService extends BaseService
             )
             AND ST_Dimension(ST_Transform(ec.geometry::geometry,3857)) = 1
     )
-    SELECT ST_AsMVT(ecTracks.*, 'ec_tracks') FROM ecTracks;
+    SELECT ST_AsMVT(ecTracks.*, '{$tableName}') FROM ecTracks;
     SQL;
 
         // Log::info($sql);
