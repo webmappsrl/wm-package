@@ -7,16 +7,15 @@ use chillerlan\QRCode\QROptions;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\Translatable\HasTranslations;
 use Whitecube\NovaFlexibleContent\Value\FlexibleCast;
 use Wm\WmPackage\Observers\AppObserver;
+use Wm\WmPackage\Services\Models\EcTrackService;
 use Wm\WmPackage\Services\StorageService;
 use Wm\WmPackage\Traits\HasPackageFactory;
-use Wm\WmPackage\Services\Models\EcTrackService;
 
 /**
  * Class App
@@ -84,6 +83,7 @@ class App extends Model implements HasMedia
     public function ecTracks(): HasMany
     {
         $modelClass = app(EcTrackService::class)->getModelClass();
+
         return $this->hasMany($modelClass);
     }
 
@@ -185,7 +185,7 @@ class App extends Model implements HasMedia
                             $new_array[$key] = json_decode($val, true);
                         }
                         if ($key == 'identifier') {
-                            $new_array[$key] = 'poi_type_' . $val;
+                            $new_array[$key] = 'poi_type_'.$val;
                         }
                         if (! empty($val) && $key != 'name' && $key != 'identifier') {
                             $new_array[$key] = $val;
@@ -209,7 +209,7 @@ class App extends Model implements HasMedia
                             $new_array[$key] = json_decode($val, true);
                         }
                         if ($key == 'identifier') {
-                            $new_array[$key] = 'poi_type_' . $val;
+                            $new_array[$key] = 'poi_type_'.$val;
                         }
                         if (! empty($val) && $key != 'name' && $key != 'identifier') {
                             $new_array[$key] = $val;
@@ -265,7 +265,7 @@ class App extends Model implements HasMedia
                     });
                 break;
             default:
-                throw new \Exception('Wrong taxonomy name: ' . $taxonomy_name);
+                throw new \Exception('Wrong taxonomy name: '.$taxonomy_name);
         }
 
         $tracks = $query->orderBy('name')->get();
@@ -386,7 +386,7 @@ class App extends Model implements HasMedia
         if (isset($customUrl) && $customUrl != null) {
             $url = $customUrl;
         } else {
-            $url = 'https://' . $this->id . '.app.webmapp.it';
+            $url = 'https://'.$this->id.'.app.webmapp.it';
         }
         // create the svg code for the QR code
 
@@ -428,7 +428,7 @@ class App extends Model implements HasMedia
      */
     public function getMorphClass()
     {
-        return 'App\\Models\\' . class_basename($this);
+        return 'App\\Models\\'.class_basename($this);
     }
 
     public function registerMediaCollections(): void
@@ -483,7 +483,7 @@ class App extends Model implements HasMedia
 
         // If array (from NovaTabTranslatable), encode as JSON after cleaning
         if (is_array($value)) {
-            $cleaned = array_filter($value, fn($v) => ! is_null($v) && $v !== '');
+            $cleaned = array_filter($value, fn ($v) => ! is_null($v) && $v !== '');
             $this->attributes[$field] = json_encode($cleaned);
 
             return;
