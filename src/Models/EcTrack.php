@@ -545,7 +545,7 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
 
         $ecTrackService = EcTrackService::make();
         $mediaService = MediaService::make();
-        $firstMedia = $this->getMedia()->first();
+        $firstMedia = $this->getMedia("*")->first();
 
         try {
 
