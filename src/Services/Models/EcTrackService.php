@@ -39,40 +39,10 @@ class EcTrackService extends BaseService
         'duration_backward',
     ];
 
-    protected $model;
-
     public function __construct(
         protected GeometryComputationService $geometryComputationService,
         protected DemClient $demClient
-    ) {
-        $this->model = new EcTrack;
-    }
-
-    /**
-     * Imposta il modello da usare
-     */
-    public function setModel($model): self
-    {
-        $this->model = $model;
-
-        return $this;
-    }
-
-    /**
-     * Recupera il nome della tabella dal modello iniettato
-     */
-    public function getTableName(): string
-    {
-        return $this->model->getTable();
-    }
-
-    /**
-     * Recupera la classe del modello configurato
-     */
-    public function getModelClass(): string
-    {
-        return get_class($this->model);
-    }
+    ) {}
 
     public function getDemDataFields()
     {
@@ -115,7 +85,7 @@ class EcTrackService extends BaseService
             }
 
             $track->saveQuietly();
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('An error occurred during DEM operation: '.$e->getMessage());
         }
     }
@@ -214,14 +184,13 @@ class EcTrackService extends BaseService
             $properties['manual_data'] = $manualData;
             $track->properties = $properties;
             $track->saveQuietly();
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error($track->id.': HandlesData: An error occurred during a store operation: '.$e->getMessage());
         }
     }
 
     public function updateManualData(EcTrack $track)
     {
-
         $manualData = null;
         $fieldsToCheck = $this->getDemDataFields();
 
@@ -299,7 +268,6 @@ class EcTrackService extends BaseService
      */
     protected function updateFieldIfNecessary(EcTrack $track, $field, $properties, $oldProperties, $isNumeric = false)
     {
-
         $trackProperties = $track->properties;
         if (
             isset($properties[$field]) // se esiste una nuova proprietà da salvare
@@ -376,7 +344,6 @@ class EcTrackService extends BaseService
 
     public function updateTrackAppRelationsInfo(EcTrack $ecTrack)
     {
-
         $updates = null;
         $ecTrackLayers = $ecTrack->associatedLayers;
         foreach ($ecTrackLayers as $layer) {
@@ -431,7 +398,7 @@ class EcTrackService extends BaseService
             $arr = EcTrack::where('app_id', $app_id)->pluck('updated_at', 'id');
         } else {
             // Recupera il nome della tabella dal modello
-            $tableName = $this->getTableName();
+            $tableName = config('wm-package.ec_track_table_name');
             $arr = DB::select("select id, updated_at from {$tableName}");
             $arr = collect($arr)->pluck('updated_at', 'id');
         }
@@ -447,14 +414,5 @@ class EcTrackService extends BaseService
     public function getTaxonomyWheres(EcTrack $track)
     {
         return $track->properties['taxonomy_where'] ?? [];
-    }
-
-    /**
-     * Recupera i tracks di un'app senza usare la relazione Eloquent
-     */
-    public function getTracksByAppId(int $appId): Collection
-    {
-        // Usa il modello configurato per fare la query
-        return $this->model->where('app_id', $appId)->get();
     }
 }

@@ -6,24 +6,15 @@ use Exception;
 use Illuminate\Http\Request;
 use ONGR\ElasticsearchDSL\Aggregation\Bucketing\TermsAggregation;
 use ONGR\ElasticsearchDSL\Query\Compound\BoolQuery;
-use ONGR\ElasticsearchDSL\Query\FullText\MatchPhraseQuery;
-use ONGR\ElasticsearchDSL\Query\FullText\MatchQuery;
 use ONGR\ElasticsearchDSL\Query\FullText\QueryStringQuery;
 use ONGR\ElasticsearchDSL\Query\TermLevel\RangeQuery;
-use ONGR\ElasticsearchDSL\Query\TermLevel\RegexpQuery;
 use ONGR\ElasticsearchDSL\Search;
 use Wm\WmPackage\Http\Controllers\Controller;
 use Wm\WmPackage\Models\EcTrack;
-use Wm\WmPackage\Services\Models\EcTrackService;
 
 class ElasticsearchController extends Controller
 {
-    protected $ecTrackService;
-
-    public function __construct(EcTrackService $ecTrackService)
-    {
-        $this->ecTrackService = $ecTrackService;
-    }
+    public function __construct() {}
 
     public function index(Request $request)
     {
@@ -53,7 +44,7 @@ class ElasticsearchController extends Controller
                         }
                     }
                 }],
-                           
+
             ]);
         } catch (Exception $e) {
             return response()->json([
@@ -90,10 +81,9 @@ class ElasticsearchController extends Controller
         // dd($queryString);
         // https://github.com/matchish/laravel-scout-elasticsearch?tab=readme-ov-file#conditions
         // base query
-        $index = $this->ecTrackService->getTableName();
+        $index = config('wm-package.ec_track_table');
 
         $query = EcTrack::search($search, function (\Elastic\Elasticsearch\Client $client, Search $body) use ($layer, $search, $ids, $index) {
-
             // # The es driver for Laravel Scout
             // # https://github.com/matchish/laravel-scout-elasticsearch?tab=readme-ov-file#search
 
@@ -188,7 +178,6 @@ class ElasticsearchController extends Controller
         // handle filters
         if (count($filters) > 0) {
             foreach ($filters as $filter) {
-
                 if (! array_key_exists('identifier', $filter)) {
                     continue;
                 } // skip filters without identifier
