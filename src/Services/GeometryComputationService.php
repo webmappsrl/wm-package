@@ -17,7 +17,6 @@ use Wm\WmPackage\Models\Abstracts\MultiLineString;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\Media;
-use Wm\WmPackage\Services\Models\EcTrackService;
 use Wm\WmPackage\Services\Models\MediaService;
 
 class GeometryComputationService extends BaseService
@@ -85,7 +84,6 @@ class GeometryComputationService extends BaseService
 
     public function getGeometryFromGeojsonRAW(string $geojson): Expression
     {
-
         return DB::raw("ST_GeomFromGeoJSON('".$geojson."')");
     }
 
@@ -195,7 +193,7 @@ class GeometryComputationService extends BaseService
 
         $tracksIds = $tracks->pluck('id')->toArray();
 
-        $tableName = app(EcTrackService::class)->getTableName();
+        $tableName = config('wm-package.ec_track_table');
         $res = DB::select("select ST_Extent(geometry::geometry)
              as bbox from {$tableName} where id IN (".implode(',', $tracksIds).');');
 
@@ -212,7 +210,7 @@ class GeometryComputationService extends BaseService
 
     public function getEcTracksBboxByUserId(int $userId)
     {
-        $tableName = app(EcTrackService::class)->getTableName();
+        $tableName = config('wm-package.ec_track_table');
         $query = "
             SELECT ST_Extent(geometry::geometry) as bbox
             FROM {$tableName}
@@ -222,7 +220,6 @@ class GeometryComputationService extends BaseService
         $result = DB::select($query, [$userId]);
 
         if (! empty($result)) {
-
             return $this->bboxArrayFromString($result[0]->bbox);
         }
 
@@ -234,7 +231,6 @@ class GeometryComputationService extends BaseService
      */
     protected function bbox($geometry = false, GeometryModel|false $model = false): array
     {
-
         $bboxString = '';
         if ($geometry) {
             $b = DB::select('SELECT ST_Extent(?) as bbox', [$geometry]);
@@ -463,7 +459,6 @@ class GeometryComputationService extends BaseService
 
     public function isRoundtrip(array $coords): bool
     {
-
         $treshold = 0.001; // diff < 300 metri ref trackid:1592
 
         // Ensure we're working with a flat array of coordinates
@@ -706,9 +701,9 @@ class GeometryComputationService extends BaseService
             $validTrackIds = $app->ecTracks->pluck('id')->toArray() ?? [];
         }
 
-        $tableName = app(EcTrackService::class)->getTableName();
+        $tableName = config('wm-package.ec_track_table');
         if (! is_null($validTrackIds)) {
-            $where.="{$tableName}.id IN (".implode(',', $validTrackIds).') AND ';
+            $where .= "{$tableName}.id IN (".implode(',', $validTrackIds).') AND ';
         }
 
         if (
@@ -727,10 +722,10 @@ class GeometryComputationService extends BaseService
 
         if (isset($searchString) && ! empty($searchString)) {
             $escapedSearchString = preg_replace('/[^0-9a-z\s]/', '', strtolower($searchString));
-            $where.="to_tsvector(regexp_replace(LOWER((({$tableName}.name::json))->>'$language'), '[^0-9a-z\s]', '', 'g')) @@ to_tsquery('$escapedSearchString') AND ";
+            $where .= "to_tsvector(regexp_replace(LOWER((({$tableName}.name::json))->>'$language'), '[^0-9a-z\s]', '', 'g')) @@ to_tsquery('$escapedSearchString') AND ";
         }
 
-        $where.='geometry && ST_SetSRID(ST_MakeBox2D(ST_Point(?, ?), ST_Point(?, ?)), 4326)';
+        $where .= 'geometry && ST_SetSRID(ST_MakeBox2D(ST_Point(?, ?), ST_Point(?, ?)), 4326)';
         $params = array_merge($params, $bbox);
 
         $query = "
@@ -911,7 +906,7 @@ GROUP BY
     /**
      * Returns a default 3D geometry based on the geometry type
      */
-    public function getDefaultGeometry(string $geometryType): \Illuminate\Database\Query\Expression
+    public function getDefaultGeometry(string $geometryType): Expression
     {
         $defaultCoordinates = [
             'POINT' => '0 0 0',
@@ -929,7 +924,7 @@ GROUP BY
      *
      * @param  string|array  $geometry
      */
-    public function convertTo3DGeometry($geometry): ?\Illuminate\Database\Query\Expression
+    public function convertTo3DGeometry($geometry): ?Expression
     {
         if (is_null($geometry)) {
             return null;
@@ -946,7 +941,7 @@ GROUP BY
         }
 
         // If it's already a DB expression, ensure it's 3D
-        if ($geometry instanceof \Illuminate\Database\Query\Expression) {
+        if ($geometry instanceof Expression) {
             // Use reflection to access the protected 'value' property
             $reflection = new \ReflectionProperty(get_class($geometry), 'value');
             $reflection->setAccessible(true);
@@ -968,7 +963,7 @@ GROUP BY
 
     public function getEcTracksBboxByAppId(int $appId): ?array
     {
-        $tableName = app(EcTrackService::class)->getTableName();
+        $tableName = config('wm-package.ec_track_table');
         $res = DB::select("
             SELECT ST_Extent(geometry::geometry) as bbox
             FROM {$tableName}

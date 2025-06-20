@@ -82,7 +82,7 @@ class PBFGeneratorService extends BaseService
         );
 
         // Recupera il nome della tabella dal modello
-        $tableName = $this->ecTrackService->getTableName();
+        $tableName = config('wm-package.ec_track_table');
 
         // Costruisci la query parametrizzata
         $sql = <<<SQL
@@ -158,7 +158,7 @@ class PBFGeneratorService extends BaseService
         // $layerIdsSQL = implode(', ', $layerIds);
 
         // Recupera il nome della tabella dal modello
-        $tableName = $this->ecTrackService->getTableName();
+        $tableName = config('wm-package.ec_track_table');
 
         // TODO: add activities and wheres to match layers of the tracks
         $sql = <<<SQL
