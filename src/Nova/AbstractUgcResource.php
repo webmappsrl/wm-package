@@ -11,7 +11,8 @@ use Laravel\Nova\Http\Requests\NovaRequest;
 use Wm\WmPackage\Nova\Actions\CopyUgc;
 use Wm\WmPackage\Nova\Actions\ExportTo;
 use Wm\WmPackage\Nova\Fields\PropertiesPanel;
-use Wm\WmPackage\Nova\Filters\SchemaFilter;
+use Wm\WmPackage\Nova\Filters\AppFilter;
+use Wm\WmPackage\Nova\Filters\FormSchemaFilter;
 use Wm\WmPackage\Nova\Filters\UgcCreationDateFilter;
 
 abstract class AbstractUgcResource extends AbstractGeometryResource
@@ -26,9 +27,9 @@ abstract class AbstractUgcResource extends AbstractGeometryResource
         return [
             ID::make()->sortable(),
             BelongsTo::make('App', 'app', App::class)->filterable(),
+            BelongsTo::make('Author', 'author', User::class)->searchable()->filterable()->hideWhenUpdating()->hideWhenCreating(),
             Text::make('Name', 'properties->name'),
             PropertiesPanel::make(ucwords($this->getPropertiesColumnName()), $this->getPropertiesModelKey())->collapsible(),
-            BelongsTo::make('Author', 'author', User::class)->searchable()->filterable()->hideWhenUpdating()->hideWhenCreating(),
             Images::make('Image', 'default')->onlyOnDetail(),
         ];
     }
@@ -45,8 +46,9 @@ abstract class AbstractUgcResource extends AbstractGeometryResource
     public function filters(NovaRequest $request): array
     {
         return [
-            (new UgcCreationDateFilter),
-            (new SchemaFilter($this->model())),
+            new AppFilter,
+            new FormSchemaFilter($this->model()),
+            new UgcCreationDateFilter,
         ];
     }
 }
