@@ -33,7 +33,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
         // Error handler
         $this->app->singleton(
             \Illuminate\Contracts\Debug\ExceptionHandler::class,
-            \Wm\WmPackage\Exceptions\Handler::class,
+            Exceptions\Handler::class,
 
         );
 
@@ -108,9 +108,9 @@ class WmPackageServiceProvider extends PackageServiceProvider
         // Questo verrà eseguito dopo che tutti i provider sono stati registrati e avviati
         if (! $this->app->runningUnitTests()) {
             $this->app->booted(function () {
-                if (class_exists(\Spatie\Backup\Config\Config::class)) {
+                if (class_exists(BackupConfig::class)) {
                     $this->app->config['backup'] = $this->setDefaultBackupSettings();
-                    \Spatie\Backup\Config\Config::rebind();
+                    BackupConfig::rebind();
                     $this->commands([WmBackupCommand::class]);
                 }
             });
@@ -136,6 +136,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
                 'wm-horizon',
                 'wm-form-schema',
                 'wm-tab-translatable',
+                'layer-schema',
             ])
             // ->hasRoutes(['api', 'web'])// Check the boot method, routes are registered there
             ->discoversMigrations()
@@ -151,7 +152,6 @@ class WmPackageServiceProvider extends PackageServiceProvider
 
     public function packageRegistered()
     {
-
         // #######
         // ####### REGISTER PROVIDERS
         // #######
@@ -177,12 +177,12 @@ class WmPackageServiceProvider extends PackageServiceProvider
 
         // Register the morphMap for polymorphic relationships
         Relation::morphMap([
-            'App\Models\UgcPoi' => \Wm\WmPackage\Models\UgcPoi::class,
-            'App\Models\UgcTrack' => \Wm\WmPackage\Models\UgcTrack::class,
-            'App\Models\EcPoi' => \Wm\WmPackage\Models\EcPoi::class,
-            'App\Models\EcTrack' => \Wm\WmPackage\Models\EcTrack::class,
-            'App\Models\Layer' => \Wm\WmPackage\Models\Layer::class,
-            'App\Models\App' => \Wm\WmPackage\Models\App::class,
+            'App\Models\UgcPoi' => Models\UgcPoi::class,
+            'App\Models\UgcTrack' => Models\UgcTrack::class,
+            'App\Models\EcPoi' => Models\EcPoi::class,
+            'App\Models\EcTrack' => Models\EcTrack::class,
+            'App\Models\Layer' => Models\Layer::class,
+            'App\Models\App' => Models\App::class,
         ]);
 
         // #######
@@ -301,7 +301,6 @@ class WmPackageServiceProvider extends PackageServiceProvider
      */
     protected function resources()
     {
-
         Nova::resourcesIn($this->getPackageBaseDir().'/Nova');
     }
 
