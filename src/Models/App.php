@@ -13,7 +13,6 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\Translatable\HasTranslations;
 use Whitecube\NovaFlexibleContent\Value\FlexibleCast;
 use Wm\WmPackage\Observers\AppObserver;
-use Wm\WmPackage\Services\Models\EcTrackService;
 use Wm\WmPackage\Services\StorageService;
 use Wm\WmPackage\Traits\HasPackageFactory;
 
@@ -82,7 +81,7 @@ class App extends Model implements HasMedia
 
     public function ecTracks(): HasMany
     {
-        $modelClass = app(EcTrackService::class)->getModelClass();
+        $modelClass = config('wm-package.models.ec_track');
 
         return $this->hasMany($modelClass);
     }
