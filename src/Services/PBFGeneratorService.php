@@ -202,7 +202,7 @@ class PBFGeneratorService extends BaseService
 
     public function generateWholeAppPbfs(App $app, $minZoom = null, $maxZoom = null, $noPbfLayer = false)
     {
-        $bbox = GeometryComputationService::make()->getTracksBbox($app->ecTracks);
+        $bbox = GeometryComputationService::make()->getTracksBboxFromQuery($app->ecTracks());
         if (empty($bbox)) {
             $bbox = json_decode($app->map_bbox);
         }

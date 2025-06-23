@@ -81,7 +81,7 @@ class App extends Model implements HasMedia
 
     public function ecTracks(): HasMany
     {
-        $modelClass = config('wm-package.models.ec_track');
+        $modelClass = config('wm-package.ec_track_model');
 
         return $this->hasMany($modelClass);
     }

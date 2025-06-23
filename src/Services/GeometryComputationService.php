@@ -208,6 +208,17 @@ class GeometryComputationService extends BaseService
         return false;
     }
 
+    public function getTracksBboxFromQuery($tracksQuery): array|false
+    {
+        $res = $tracksQuery->selectRaw('ST_Extent(geometry::geometry) as bbox')->first();
+
+        if ($res && !is_null($res->bbox)) {
+            return $this->bboxArrayFromString($res->bbox);
+        }
+
+        return false;
+    }
+
     public function getEcTracksBboxByUserId(int $userId)
     {
         $tableName = config('wm-package.ec_track_table');
