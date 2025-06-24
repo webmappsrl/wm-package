@@ -306,28 +306,31 @@ class PropertiesPanel extends Panel
             case 'number':
             case 'integer':
                 $field = Number::make($label, $jsonPath)
-                    ->rules($rules);
+                    ->rules($rules)
+                    ->onlyOnDetail();
 
                 if (! $isEditable) {
-                    $field->onlyOnDetail();
+                    $field->readonly();
                 }
                 break;
 
             case 'email':
                 $field = Email::make($label, $jsonPath)
-                    ->rules($rules);
+                    ->rules($rules)
+                    ->onlyOnDetail();
 
                 if (! $isEditable) {
-                    $field->onlyOnDetail();
+                    $field->readonly();
                 }
                 break;
 
             case 'password':
                 $field = Password::make($label, $jsonPath)
-                    ->rules($rules);
+                    ->rules($rules)
+                    ->onlyOnDetail();
 
                 if (! $isEditable) {
-                    $field->onlyOnDetail();
+                    $field->readonly();
                 }
                 break;
 
@@ -337,50 +340,54 @@ class PropertiesPanel extends Panel
                     $field = NovaTabTranslatable::make([
                         Textarea::make($label, $jsonPath)
                             ->rules($rules),
-                    ]);
+                    ])->onlyOnDetail();
 
                     if (! $isEditable) {
-                        $field->onlyOnDetail();
+                        $field->readonly();
                     }
                 } else {
                     // Altrimenti usa un campo Textarea normale
                     $field = Textarea::make($label, $jsonPath)
                         ->rules($rules)
+                        ->onlyOnDetail()
                         ->displayUsing(function ($value) {
                             return $value;
                         });
 
                     if (! $isEditable) {
-                        $field->onlyOnDetail();
+                        $field->readonly();
                     }
                 }
                 break;
 
             case 'date':
                 $field = Date::make($label, $jsonPath)
-                    ->rules($rules);
+                    ->rules($rules)
+                    ->onlyOnDetail();
 
                 if (! $isEditable) {
-                    $field->onlyOnDetail();
+                    $field->readonly();
                 }
                 break;
 
             case 'datetime':
                 $field = DateTime::make($label, $jsonPath)
-                    ->rules($rules);
+                    ->rules($rules)
+                    ->onlyOnDetail();
 
                 if (! $isEditable) {
-                    $field->onlyOnDetail();
+                    $field->readonly();
                 }
                 break;
 
             case 'boolean':
             case 'checkbox':
                 $field = Boolean::make($label, $jsonPath)
-                    ->rules($rules);
+                    ->rules($rules)
+                    ->onlyOnDetail();
 
                 if (! $isEditable) {
-                    $field->onlyOnDetail();
+                    $field->readonly();
                 }
                 break;
 
@@ -415,29 +422,31 @@ class PropertiesPanel extends Panel
                     }
 
                     return $value;
-                });
+                })->onlyOnDetail();
 
                 if (! $isEditable) {
-                    $field->onlyOnDetail();
+                    $field->readonly();
                 }
                 break;
 
             case 'json':
                 $field = Code::make($label, $jsonPath)
                     ->json()
-                    ->rules($rules);
+                    ->rules($rules)
+                    ->onlyOnDetail();
 
                 if (! $isEditable) {
-                    $field->onlyOnDetail();
+                    $field->readonly();
                 }
                 break;
 
             case 'color':
                 $field = Color::make($label, $jsonPath)
-                    ->rules($rules);
+                    ->rules($rules)
+                    ->onlyOnDetail();
 
                 if (! $isEditable) {
-                    $field->onlyOnDetail();
+                    $field->readonly();
                 }
                 break;
 
@@ -448,15 +457,16 @@ class PropertiesPanel extends Panel
                     $field = NovaTabTranslatable::make([
                         Text::make($label, $jsonPath)
                             ->rules($rules),
-                    ]);
+                    ])->onlyOnDetail();
 
                     if (! $isEditable) {
-                        $field->onlyOnDetail();
+                        $field->readonly();
                     }
                 } else {
                     // Altrimenti usa un campo Text normale
                     $field = Text::make($label, $jsonPath)
                         ->rules($rules)
+                        ->onlyOnDetail()
                         ->displayUsing(function ($value) {
                             // Se il valore è un array, convertilo in JSON per la visualizzazione
                             if (is_array($value)) {
@@ -467,7 +477,7 @@ class PropertiesPanel extends Panel
                         });
 
                     if (! $isEditable) {
-                        $field->onlyOnDetail();
+                        $field->readonly();
                     }
                 }
                 break;
