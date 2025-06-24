@@ -17,8 +17,6 @@ class ImportAppJob extends BaseImportJob
     protected function transformData(array $data): array
     {
 
-        $this->handleTranslatableAttributes($data);
-
         // make a diff between data keys and apps columns in database
         $diff = array_diff(array_keys($data), Schema::getColumnListing('apps'));
         $transformedData = array_diff_key($data, array_flip($diff));
@@ -85,24 +83,6 @@ class ImportAppJob extends BaseImportJob
         } catch (\Exception $e) {
             $logger->error("Error queuing {$entityModelKey} imports for app {$this->entityId}: " . $e->getMessage());
             throw $e;
-        }
-    }
-
-    private function handleTranslatableAttributes(array &$data): void
-    {
-        $translatableAttributes = $this->getModelInstance()->getTranslatableAttributes();
-
-        if (empty($translatableAttributes)) {
-            return;
-        }
-
-        foreach ($translatableAttributes as $attribute) {
-            if (isset($data[$attribute]) && is_string($data[$attribute])) {
-                $decoded = json_decode($data[$attribute], true);
-                if (json_last_error() === JSON_ERROR_NONE) {
-                    $data[$attribute] = $decoded;
-                }
-            }
         }
     }
 }
