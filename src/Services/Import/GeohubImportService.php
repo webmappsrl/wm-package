@@ -189,9 +189,16 @@ class GeohubImportService
 
             return $model;
         } catch (\Exception $e) {
-            $this->logger->error("Error importing {$modelName} with ID {$entityId}: ".$e->getMessage());
+            $this->logger->error("Error importing {$modelName} with ID {$entityId}: " . $e->getMessage());
             throw $e;
         }
+    }
+
+    public function getModelInstance(string $modelKey): Model
+    {
+        $modelClass = $this->importMapping[$modelKey]['namespace'];
+
+        return new $modelClass();
     }
 
     // ------------------------------------------------------------------
