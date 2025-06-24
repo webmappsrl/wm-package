@@ -16,6 +16,7 @@ class ImportAppJob extends BaseImportJob
 
     protected function transformData(array $data): array
     {
+
         // make a diff between data keys and apps columns in database
         $diff = array_diff(array_keys($data), Schema::getColumnListing('apps'));
         $transformedData = array_diff_key($data, array_flip($diff));
