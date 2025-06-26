@@ -226,7 +226,7 @@ class AppAuthController extends Controller
     {
         $tokenArray = $this->respondWithToken($token);
 
-        return response()->json(array_merge($this->me()->getData(true), $tokenArray->getData(true)));
+        return response()->json($tokenArray->getData(true));
     }
 
     /**
