@@ -9,9 +9,6 @@ use Illuminate\Support\Facades\log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Jenssegers\Agent\Facades\Agent;
-use Tymon\JWTAuth\Exceptions\JWTException;
-use Tymon\JWTAuth\Exceptions\TokenExpiredException;
-use Tymon\JWTAuth\Facades\JWTAuth;
 use Wm\WmPackage\Http\Controllers\Controller;
 use Wm\WmPackage\Models\User;
 
@@ -163,19 +160,7 @@ class AppAuthController extends Controller
                 return response()->json(['error' => 'Utente non autenticato.'], 401);
             }
 
-            // Prova a refreshare il token
-            try {
-                $newToken = JWTAuth::parseToken()->refresh();
-            } catch (TokenExpiredException $e) {
-                return response()->json(['error' => 'Token scaduto. Riconnettersi.'], 401);
-            } catch (JWTException $e) {
-                return response()->json(['error' => 'Errore nel refresh del token.'], 500);
-            }
-
-            $userData = $user->toArray();
-            $userData['access_token'] = $newToken;
-
-            return response()->json($userData, 200);
+            return response()->json($user);
         } catch (\Exception $e) {
             \Log::error('Errore nel metodo me: '.$e->getMessage());
 
