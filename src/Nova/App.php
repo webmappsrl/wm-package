@@ -3,6 +3,7 @@
 namespace Wm\WmPackage\Nova;
 
 use Ebess\AdvancedNovaMediaLibrary\Fields\Images;
+use Illuminate\Support\Facades\Config;
 use Kongulov\NovaTabTranslatable\NovaTabTranslatable;
 use Laravel\Nova\Fields\Boolean;
 use Laravel\Nova\Fields\Code;
@@ -40,6 +41,7 @@ class App extends Resource
                 Tab::make('app', $this->app_tab()),
                 Tab::make('release_data', $this->app_release_data_tab()),
                 Tab::make('pages', $this->pages_tab()),
+                Tab::make('acquisition_form', $this->acquisition_form_tab()),
             ]),
 
             // TODO: implement fields
@@ -157,6 +159,36 @@ class App extends Resource
                 ->help(__('Required size is :widthx:heightpx', ['width' => 512, 'height' => 512]))
                 ->hideFromIndex(),
         ];
+    }
+
+    protected function acquisition_form_tab(): array
+    {
+        return [
+            Code::Make(__('POI acquisition forms'), 'poi_acquisition_form')
+                ->language('json')
+                ->rules('json')
+                ->default($this->getDefaultPoiForm())
+                ->help(__('This JSON structures the acquisition form for UGC POIs. Knowledge of JSON format required.').view('wm-package::poi-forms')->render()),
+            Code::Make(__('TRACK acquisition forms'), 'track_acquisition_form')
+                ->language('json')
+                ->rules('json')
+                ->default($this->getDefaultTrackForm())
+                ->help(__('This JSON structures the acquisition form for UGC Tracks. Knowledge of JSON format required.').view('wm-package::track-forms')->render()),
+        ];
+    }
+
+    protected function getDefaultPoiForm(): string
+    {
+        $form = Config::get('wm-acquisiotion-form-default.poi');
+
+        return json_encode($form, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+    }
+
+    protected function getDefaultTrackForm(): string
+    {
+        $form = Config::get('wm-acquisiotion-form-default.track');
+
+        return json_encode($form, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
     }
 
     protected function title_layout(): array

@@ -56,7 +56,23 @@ class AppController extends Controller
         }
 
         $mediaItem = $app->getMedia($type)->first();
-        $file = StorageService::make()->getMediaDisk()->readStream($mediaItem->getPath());
+        $disk = StorageService::make()->getMediaDisk();
+        $path = $mediaItem->getPath();
+
+        if ($disk->getConfig()['driver'] === 'local') {
+            // Per disco locale: converti path assoluto in relativo e pulisci doppi slash
+            $diskRoot = rtrim($disk->path(''), '/');
+            $relativePath = str_replace($diskRoot, '', $path);
+            $relativePath = ltrim($relativePath, '/');
+            $relativePath = preg_replace('/\/+/', '/', $relativePath);
+            $path = $relativePath;
+        }
+
+        $file = $disk->readStream($path);
+
+        if (! $file) {
+            return response()->json(['code' => 404, 'error' => 'File not found'], 404);
+        }
 
         return response()->stream(function () use ($file) {
             fpassthru($file);

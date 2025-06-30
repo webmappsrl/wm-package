@@ -190,8 +190,8 @@ class WmPackageServiceProvider extends PackageServiceProvider
         // #######
 
         $this->app->config['filesystems.disks'] = [
-            ...$this->app->config['filesystems.disks'],
             ...config('wm-filesystems.disks', []),
+            ...$this->app->config['filesystems.disks'],
         ];
 
         $this->app->config['tab-translatable'] = config('wm-tab-translatable', []);
