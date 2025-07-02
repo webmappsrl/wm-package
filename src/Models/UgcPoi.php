@@ -4,6 +4,7 @@ namespace Wm\WmPackage\Models;
 
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Wm\WmPackage\Models\Abstracts\Point;
+use Wm\WmPackage\Models\Interfaces\UserOwnedModelInterface;
 use Wm\WmPackage\Observers\UgcObserver;
 use Wm\WmPackage\Traits\OwnedByUserModel;
 
@@ -20,7 +21,7 @@ use Wm\WmPackage\Traits\OwnedByUserModel;
  * @property string raw_data
  * @property mixed  ugc_media
  */
-class UgcPoi extends Point
+class UgcPoi extends Point implements UserOwnedModelInterface
 {
     use OwnedByUserModel;
 

@@ -47,6 +47,9 @@ Route::name('ugc.')->prefix('ugc')->middleware('auth:api')->group(function () {
         Route::post('edit', [UgcTrackController::class, 'legacyUpdate'])->name('update.legacy');
         Route::get('delete/{track}', [UgcTrackController::class, 'destroy'])->name('destroy.legacy');
     });
+    Route::prefix('media')->name('media.')->group(function () {
+        Route::get('delete/{media}', [MediaController::class, 'destroy'])->name('destroy.legacy');
+    });
 });
 
 // ####################  ###########################

@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller as BaseController;
 use Illuminate\Support\Facades\Validator;
 use Wm\WmPackage\Models\Abstracts\GeometryModel;
+use Wm\WmPackage\Models\Interfaces\UserOwnedModelInterface;
 
 /**
  * @OA\Info(
@@ -82,7 +83,7 @@ class Controller extends BaseController
         return $data;
     }
 
-    protected function validateUser(GeometryModel $model)
+    protected function validateUser(UserOwnedModelInterface $model)
     {
         // TODO: skip this when there will be better model policies
         $user = auth()->user();
