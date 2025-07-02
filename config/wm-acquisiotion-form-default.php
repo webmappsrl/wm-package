@@ -6,11 +6,11 @@ return [
             'id' => 'poi',
             'helper' => [
                 'it' => 'sono helper di Punto di interesse',
-                'en' => 'helper of Point of interest'
+                'en' => 'helper of Point of interest',
             ],
             'label' => [
                 'it' => 'Punto di interesse',
-                'en' => 'Point of interest'
+                'en' => 'Point of interest',
             ],
             'fields' => [
                 [
@@ -18,13 +18,13 @@ return [
                     'type' => 'text',
                     'placeholder' => [
                         'it' => 'Inserisci un titolo',
-                        'en' => 'Add a title'
+                        'en' => 'Add a title',
                     ],
                     'required' => true,
                     'label' => [
                         'it' => 'Titolo',
-                        'en' => 'Title'
-                    ]
+                        'en' => 'Title',
+                    ],
                 ],
                 [
                     'name' => 'waypointtype',
@@ -32,79 +32,79 @@ return [
                     'required' => true,
                     'label' => [
                         'it' => 'Tipo punto di interesse',
-                        'en' => 'Point of interest type'
+                        'en' => 'Point of interest type',
                     ],
                     'values' => [
                         [
                             'value' => 'landscape',
                             'label' => [
                                 'it' => 'Panorama',
-                                'en' => 'Landscape'
-                            ]
+                                'en' => 'Landscape',
+                            ],
                         ],
                         [
                             'value' => 'place_to_eat',
                             'label' => [
                                 'it' => 'Luogo dove mangiare',
-                                'en' => 'Place to eat'
-                            ]
+                                'en' => 'Place to eat',
+                            ],
                         ],
                         [
                             'value' => 'place_to_sleep',
                             'label' => [
                                 'it' => 'Luogo dove dormire',
-                                'en' => 'Place to sleep'
-                            ]
+                                'en' => 'Place to sleep',
+                            ],
                         ],
                         [
                             'value' => 'natural',
                             'label' => [
                                 'it' => 'Luogo di interesse naturalistico',
-                                'en' => 'Place of naturalistic interest'
-                            ]
+                                'en' => 'Place of naturalistic interest',
+                            ],
                         ],
                         [
                             'value' => 'cultural',
                             'label' => [
                                 'it' => 'Luogo di interesse culturale',
-                                'en' => 'Place of cultural interest'
-                            ]
+                                'en' => 'Place of cultural interest',
+                            ],
                         ],
                         [
                             'value' => 'other',
                             'label' => [
                                 'it' => 'Altri tipi di luoghi di interesse',
-                                'en' => 'Other types of Point of interest'
-                            ]
-                        ]
-                    ]
+                                'en' => 'Other types of Point of interest',
+                            ],
+                        ],
+                    ],
                 ],
                 [
                     'name' => 'description',
                     'type' => 'textarea',
                     'placeholder' => [
                         'it' => 'Se vuoi puoi aggiungere una descrizione',
-                        'en' => 'You can add a description if you want'
+                        'en' => 'You can add a description if you want',
                     ],
                     'required' => false,
                     'label' => [
                         'it' => 'Descrizione',
-                        'en' => 'Description'
-                    ]
-                ]
-            ]
-        ]
+                        'en' => 'Description',
+                    ],
+                ],
+            ],
+        ],
     ],
     'track' => [
         [
             'id' => 'track',
             'helper' => [
                 'it' => 'sono helper di track',
-                'en' => 'helper of track'
+                'en' => 'helper of track',
             ],
             'label' => [
                 'it' => 'traccia',
-                'en' => 'track'
+                'en' => 'track',
             ],
             'fields' => [
                 [
@@ -112,13 +112,13 @@ return [
                     'type' => 'text',
                     'placeholder' => [
                         'it' => 'Inserisci un titolo',
-                        'en' => 'Add a title'
+                        'en' => 'Add a title',
                     ],
                     'required' => true,
                     'label' => [
                         'it' => 'Titolo',
-                        'en' => 'Title'
-                    ]
+                        'en' => 'Title',
+                    ],
                 ],
                 [
                     'name' => 'tracktype',
@@ -126,53 +126,53 @@ return [
                     'required' => true,
                     'label' => [
                         'it' => 'Tipo traccia',
-                        'en' => 'Track type'
+                        'en' => 'Track type',
                     ],
                     'values' => [
                         [
                             'value' => 'hiking',
                             'label' => [
                                 'it' => 'Escursionismo',
-                                'en' => 'Hiking'
-                            ]
+                                'en' => 'Hiking',
+                            ],
                         ],
                         [
                             'value' => 'cycling',
                             'label' => [
                                 'it' => 'Ciclismo',
-                                'en' => 'Cycling'
-                            ]
+                                'en' => 'Cycling',
+                            ],
                         ],
                         [
                             'value' => 'running',
                             'label' => [
                                 'it' => 'Corsa',
-                                'en' => 'Running'
-                            ]
+                                'en' => 'Running',
+                            ],
                         ],
                         [
                             'value' => 'other',
                             'label' => [
                                 'it' => 'Altri tipi di traccia',
-                                'en' => 'Other types of track'
-                            ]
-                        ]
-                    ]
+                                'en' => 'Other types of track',
+                            ],
+                        ],
+                    ],
                 ],
                 [
                     'name' => 'description',
                     'type' => 'textarea',
                     'placeholder' => [
                         'it' => 'Se vuoi puoi aggiungere una descrizione',
-                        'en' => 'You can add a description if you want'
+                        'en' => 'You can add a description if you want',
                     ],
                     'required' => false,
                     'label' => [
                         'it' => 'Descrizione',
-                        'en' => 'Description'
-                    ]
-                ]
-            ]
-        ]
-    ]
+                        'en' => 'Description',
+                    ],
+                ],
+            ],
+        ],
+    ],
 ];

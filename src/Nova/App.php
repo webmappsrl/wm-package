@@ -180,12 +180,14 @@ class App extends Resource
     protected function getDefaultPoiForm(): string
     {
         $form = Config::get('wm-acquisiotion-form-default.poi');
+
         return json_encode($form, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
     }
 
     protected function getDefaultTrackForm(): string
     {
         $form = Config::get('wm-acquisiotion-form-default.track');
+
         return json_encode($form, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
     }
 
