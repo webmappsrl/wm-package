@@ -305,95 +305,47 @@ class PropertiesPanel extends Panel
         switch ($fieldType) {
             case 'number':
             case 'integer':
-                $field = Number::make($label, $jsonPath)
-                    ->rules($rules)
-                    ->onlyOnDetail();
-
-                if (! $isEditable) {
-                    $field->readonly();
-                }
+                $field = Number::make($label, $jsonPath);
                 break;
 
             case 'email':
-                $field = Email::make($label, $jsonPath)
-                    ->rules($rules)
-                    ->onlyOnDetail();
-
-                if (! $isEditable) {
-                    $field->readonly();
-                }
+                $field = Email::make($label, $jsonPath);
                 break;
 
             case 'password':
-                $field = Password::make($label, $jsonPath)
-                    ->rules($rules)
-                    ->onlyOnDetail();
-
-                if (! $isEditable) {
-                    $field->readonly();
-                }
+                $field = Password::make($label, $jsonPath);
                 break;
 
             case 'textarea':
                 if ($isTranslatable) {
                     // Se il campo è translatable, usa NovaTabTranslatable
                     $field = NovaTabTranslatable::make([
-                        Textarea::make($label, $jsonPath)
-                            ->rules($rules),
-                    ])->onlyOnDetail();
-
-                    if (! $isEditable) {
-                        $field->readonly();
-                    }
+                        Textarea::make($label, $jsonPath),
+                    ]);
                 } else {
                     // Altrimenti usa un campo Textarea normale
                     $field = Textarea::make($label, $jsonPath)
-                        ->rules($rules)
-                        ->onlyOnDetail()
                         ->displayUsing(function ($value) {
                             return $value;
                         });
-
-                    if (! $isEditable) {
-                        $field->readonly();
-                    }
                 }
                 break;
 
             case 'date':
-                $field = Date::make($label, $jsonPath)
-                    ->rules($rules)
-                    ->onlyOnDetail();
-
-                if (! $isEditable) {
-                    $field->readonly();
-                }
+                $field = Date::make($label, $jsonPath);
                 break;
 
             case 'datetime':
-                $field = DateTime::make($label, $jsonPath)
-                    ->rules($rules)
-                    ->onlyOnDetail();
-
-                if (! $isEditable) {
-                    $field->readonly();
-                }
+                $field = DateTime::make($label, $jsonPath);
                 break;
 
             case 'boolean':
             case 'checkbox':
-                $field = Boolean::make($label, $jsonPath)
-                    ->rules($rules)
-                    ->onlyOnDetail();
-
-                if (! $isEditable) {
-                    $field->readonly();
-                }
+                $field = Boolean::make($label, $jsonPath);
                 break;
 
             case 'select':
-                $field = Select::make($label, $jsonPath)
-                    ->rules($rules);
+                $field = Select::make($label, $jsonPath);
 
                 // Se ci sono options nello schema, aggiungile
                 if (isset($fieldSchema['values']) && is_array($fieldSchema['values'])) {
@@ -422,32 +374,16 @@ class PropertiesPanel extends Panel
                     }
 
                     return $value;
-                })->onlyOnDetail();
-
-                if (! $isEditable) {
-                    $field->readonly();
-                }
+                });
                 break;
 
             case 'json':
                 $field = Code::make($label, $jsonPath)
-                    ->json()
-                    ->rules($rules)
-                    ->onlyOnDetail();
-
-                if (! $isEditable) {
-                    $field->readonly();
-                }
+                    ->json();
                 break;
 
             case 'color':
-                $field = Color::make($label, $jsonPath)
-                    ->rules($rules)
-                    ->onlyOnDetail();
-
-                if (! $isEditable) {
-                    $field->readonly();
-                }
+                $field = Color::make($label, $jsonPath);
                 break;
 
             case 'text':
@@ -455,18 +391,11 @@ class PropertiesPanel extends Panel
                 if ($isTranslatable) {
                     // Se il campo è translatable, usa NovaTabTranslatable
                     $field = NovaTabTranslatable::make([
-                        Text::make($label, $jsonPath)
-                            ->rules($rules),
-                    ])->onlyOnDetail();
-
-                    if (! $isEditable) {
-                        $field->readonly();
-                    }
+                        Text::make($label, $jsonPath),
+                    ]);
                 } else {
                     // Altrimenti usa un campo Text normale
                     $field = Text::make($label, $jsonPath)
-                        ->rules($rules)
-                        ->onlyOnDetail()
                         ->displayUsing(function ($value) {
                             // Se il valore è un array, convertilo in JSON per la visualizzazione
                             if (is_array($value)) {
@@ -475,12 +404,16 @@ class PropertiesPanel extends Panel
 
                             return $value;
                         });
-
-                    if (! $isEditable) {
-                        $field->readonly();
-                    }
                 }
                 break;
+        }
+
+        // Applicazione centralizzata di rules e hideFromIndex
+        $field->rules($rules)->hideFromIndex();
+
+        // Gestione isEditable centralizzata - nasconde i campi dalle viste edit se non editabili
+        if ($field && ! $isEditable) {
+            $field->hideWhenUpdating();
         }
 
         return $field;
