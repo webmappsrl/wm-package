@@ -220,6 +220,17 @@ Route::name('api.')->group(function () {
         });
     });
 
+    Route::prefix('v3')->group(function () {
+        Route::name('ugc.v3.')->prefix('ugc')->middleware('auth:api')->group(function () {
+            Route::prefix('poi')->name('poi.v3.')->group(function () {
+                Route::post('edit', [UgcPoiController::class, 'updateV3'])->name('update');
+            });
+            Route::prefix('track')->name('track.v3.')->group(function () {
+                Route::post('edit', [UgcTrackController::class, 'updateV3'])->name('update');
+            });
+        });
+    });
+
     // // Export API
     // Route::prefix('export')->name('export.')->group(function () {
     //     Route::get('/layers', [LayerAPIController::class, 'index'])->name('export_layers');

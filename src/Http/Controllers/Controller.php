@@ -46,8 +46,8 @@ class Controller extends BaseController
         // Get data based on request type
         $data = $request->all();
 
-        // If it's a store request, decode the feature field
-        if (str_contains($request->route()->getName(), 'store')) {
+        // If it's a store request or v3 update request, decode the feature field
+        if (str_contains($request->route()->getName(), 'store') || str_contains($request->route()->getName(), 'v3.update')) {
             $data = json_decode($data['feature'], true);
         }
 

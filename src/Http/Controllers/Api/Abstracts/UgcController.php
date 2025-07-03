@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Log;
 use Wm\WmPackage\Http\Controllers\Controller;
 use Wm\WmPackage\Models\Abstracts\GeometryModel;
 use Wm\WmPackage\Services\GeometryComputationService;
+use Illuminate\Support\Facades\Validator;
 
 abstract class UgcController extends Controller
 {
@@ -65,6 +66,17 @@ abstract class UgcController extends Controller
         $model = $this->getModelIstance()->find($validated['properties']['id']);
 
         return $this->_update($request, $model);
+    }
+
+    public function updateV3(Request $request): JsonResponse
+    {
+        $validated = $this->validateGeojson($request, ['properties.id' => 'required|exists:'.$this->getModelIstance()->getTable().',id']);
+        $model = $this->getModelIstance()->find($validated['properties']['id']);
+        $this->validateUser($model);
+
+        $model = $this->fillModelWithRequest($model, $request, $validated);
+
+        return response()->json(['id' => $model->id, 'message' => 'Updated successfully'], 200);
     }
 
     /**
