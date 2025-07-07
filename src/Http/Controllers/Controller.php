@@ -8,7 +8,6 @@ use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller as BaseController;
 use Illuminate\Support\Facades\Validator;
-use Wm\WmPackage\Models\Abstracts\GeometryModel;
 use Wm\WmPackage\Models\Interfaces\UserOwnedModelInterface;
 
 /**
@@ -45,7 +44,7 @@ class Controller extends BaseController
     {
         // Get data based on request type
         $data = $request->all();
-        if(isset($data['feature'])) {
+        if (isset($data['feature'])) {
             $data = json_decode($data['feature'], true);
         }
 
