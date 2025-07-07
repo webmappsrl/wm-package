@@ -67,6 +67,17 @@ abstract class UgcController extends Controller
         return $this->_update($request, $model);
     }
 
+    public function updateV3(Request $request): JsonResponse
+    {
+        $validated = $this->validateGeojson($request, ['properties.id' => 'required|exists:'.$this->getModelIstance()->getTable().',id']);
+        $model = $this->getModelIstance()->find($validated['properties']['id']);
+        $this->validateUser($model);
+
+        $model = $this->fillModelWithRequest($model, $request, $validated);
+
+        return response()->json(['id' => $model->id, 'message' => 'Updated successfully'], 200);
+    }
+
     /**
      * Remove the specified resource from storage.
      */

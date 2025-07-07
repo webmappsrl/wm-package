@@ -3,6 +3,7 @@
 namespace Wm\WmPackage\Traits;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Wm\WmPackage\Models\User;
 
 trait OwnedByUserModel
@@ -18,12 +19,12 @@ trait OwnedByUserModel
     /**
      * Alias for the user relation
      */
-    public function author()
+    public function author(): BelongsTo
     {
         return $this->user();
     }
 
-    public function user()
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }

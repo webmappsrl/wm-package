@@ -47,6 +47,9 @@ Route::name('ugc.')->prefix('ugc')->middleware('auth:api')->group(function () {
         Route::post('edit', [UgcTrackController::class, 'legacyUpdate'])->name('update.legacy');
         Route::get('delete/{track}', [UgcTrackController::class, 'destroy'])->name('destroy.legacy');
     });
+    Route::prefix('media')->name('media.')->group(function () {
+        Route::get('delete/{media}', [MediaController::class, 'destroy'])->name('destroy.legacy');
+    });
 });
 
 // ####################  ###########################
@@ -213,6 +216,17 @@ Route::name('api.')->group(function () {
                 Route::get('/{id}/resources/feature_image.png', [AppController::class, 'featureImage'])->name('feature_image');
                 Route::get('/{id}/resources/icon_notify.png', [AppController::class, 'iconNotify'])->name('icon_notify');
                 Route::get('/{id}/resources/logo_homepage.svg', [AppController::class, 'logoHomepage'])->name('logo_homepage');
+            });
+        });
+    });
+
+    Route::prefix('v3')->group(function () {
+        Route::name('ugc.')->prefix('ugc')->middleware('auth:api')->group(function () {
+            Route::prefix('poi')->name('poi.')->group(function () {
+                Route::post('edit', [UgcPoiController::class, 'updateV3'])->name('update');
+            });
+            Route::prefix('track')->name('track.')->group(function () {
+                Route::post('edit', [UgcTrackController::class, 'updateV3'])->name('update');
             });
         });
     });
