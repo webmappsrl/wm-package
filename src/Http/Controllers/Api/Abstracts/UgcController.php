@@ -9,7 +9,6 @@ use Illuminate\Support\Facades\Log;
 use Wm\WmPackage\Http\Controllers\Controller;
 use Wm\WmPackage\Models\Abstracts\GeometryModel;
 use Wm\WmPackage\Services\GeometryComputationService;
-use Illuminate\Support\Facades\Validator;
 
 abstract class UgcController extends Controller
 {
