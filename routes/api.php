@@ -221,11 +221,11 @@ Route::name('api.')->group(function () {
     });
 
     Route::prefix('v3')->group(function () {
-        Route::name('ugc.v3.')->prefix('ugc')->middleware('auth:api')->group(function () {
-            Route::prefix('poi')->name('poi.v3.')->group(function () {
+        Route::name('ugc.')->prefix('ugc')->middleware('auth:api')->group(function () {
+            Route::prefix('poi')->name('poi.')->group(function () {
                 Route::post('edit', [UgcPoiController::class, 'updateV3'])->name('update');
             });
-            Route::prefix('track')->name('track.v3.')->group(function () {
+            Route::prefix('track')->name('track.')->group(function () {
                 Route::post('edit', [UgcTrackController::class, 'updateV3'])->name('update');
             });
         });
