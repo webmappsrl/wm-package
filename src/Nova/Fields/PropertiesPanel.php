@@ -215,9 +215,22 @@ class PropertiesPanel extends Panel
                     }
                 }
             } else {
+                $fieldsArray =[];
                 // Initialize the fields with data from the JSON column
                 // Se formSchema ha una chiave 'fields', usala, altrimenti usa direttamente formSchema
-                $fieldsArray = isset($formSchema['fields']) ? $formSchema['fields'] : $formSchema;
+                if(isset($formSchema['id']) ) {
+                    $fieldsArray[] = [
+                    'name' => 'id',
+                    'type' => 'select',
+                    'required' => true,
+                    'values' => $this->getFormIdOptions($model),
+                    'label' => [
+                        'it' => 'Form ID',
+                        'en' => 'Form ID',
+                    ],
+                  ];
+                }
+                $fieldsArray = array_merge($fieldsArray, isset($formSchema['fields']) ? $formSchema['fields'] : $formSchema);
 
                 foreach ($fieldsArray as $fieldSchema) {
                     $fieldName = $fieldSchema['name'] ?? null;
@@ -525,5 +538,38 @@ class PropertiesPanel extends Panel
         json_decode($string);
 
         return json_last_error() === JSON_ERROR_NONE;
+    }
+
+    public function getFormIdOptions(object $model): array
+    {
+        $app = $model->app;
+        // Se non c'è un'app associata, restituisci un array vuoto
+        if (! $app) {
+            return [];
+        }
+
+        // Ottieni tutti i form di acquisizione dall'app associata
+        $forms = $app->acquisitionForms();
+
+        if (! $forms) {
+            return [];
+        }
+
+        $options = [];
+        foreach ($forms as $form) {
+            if (isset($form['id'])) {
+                // Usa il label multilingua se disponibile, altrimenti fallback su id
+                $label = $form['label'] ?? [
+                    'it' => $form['id'],
+                    'en' => $form['id'],
+                ];
+                $options[] = [
+                    'value' => $form['id'],
+                    'label' => $label,
+                ];
+            }
+        }
+
+        return $options;
     }
 }
