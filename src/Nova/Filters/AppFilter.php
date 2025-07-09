@@ -41,6 +41,6 @@ class AppFilter extends Filter
             $apps = App::whereIn('sku', $appIds)->get();
         }
 
-        return $apps->pluck('name', 'id')->toArray();
+        return $apps->pluck('id', 'name')->toArray();
     }
 }
