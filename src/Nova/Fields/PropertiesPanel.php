@@ -184,6 +184,23 @@ class PropertiesPanel extends Panel
 
             if (is_null($formSchema) || empty($formSchema)) {
                 // If no form schema is provided, use the form data directly
+                $values = $this->getFormIdOptions($model);
+                if(count($values) > 0) {
+                $formIdSchema = [
+                    'name' => 'id',
+                    'type' => 'select',
+                    'required' => true,
+                    'values' => $this->getFormIdOptions($model),
+                    'label' => [
+                        'it' => 'Form ID',
+                        'en' => 'Form ID',
+                    ],
+                  ];
+                  $novaField = $this->createFieldFromSchema($formIdSchema, $columnName, $attribute, $isEditable);
+                  if ($novaField) {
+                      $fields[] = $novaField;
+                  }
+                }
                 foreach ($formData as $key => $value) {
                     $fieldType = 'text'; // Default
 
