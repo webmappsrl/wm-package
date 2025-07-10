@@ -7,16 +7,7 @@ return [
             'en' => 'Layer Properties',
         ],
         'fields' => [
-            [
-                'name' => 'name',
-                'type' => 'text',
-                'required' => true,
-                'translatable' => true,
-                'label' => [
-                    'it' => 'Nome',
-                    'en' => 'Name',
-                ],
-            ],
+
             [
                 'name' => 'description',
                 'type' => 'textarea',
