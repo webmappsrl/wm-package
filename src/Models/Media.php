@@ -6,12 +6,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Spatie\MediaLibrary\MediaCollections\Models\Media as SpatieMedia;
+use Wm\WmPackage\Models\Interfaces\UserOwnedModelInterface;
 use Wm\WmPackage\Observers\MediaObserver;
 use Wm\WmPackage\Services\GeoJsonService;
 use Wm\WmPackage\Traits\HasPackageFactory;
 use Wm\WmPackage\Traits\OwnedByUserModel;
 
-class Media extends SpatieMedia
+class Media extends SpatieMedia implements UserOwnedModelInterface
 {
     use HasPackageFactory, OwnedByUserModel;
 

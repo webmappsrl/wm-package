@@ -43,6 +43,7 @@ class AppAuthController extends Controller
         }
 
         $credentials = $request->only(['email', 'password', 'name']);
+        $credentials['email'] = strtolower($credentials['email']);
 
         try {
             $user = $this->createUser($credentials);
@@ -86,6 +87,7 @@ class AppAuthController extends Controller
         }
 
         $credentials = $request->only(['email', 'password']);
+        $credentials['email'] = strtolower($credentials['email']);
 
         // check if email exists
         $user = User::where('email', $credentials['email'])->first();
