@@ -194,7 +194,7 @@ class GeohubImportService
 
             return $model;
         } catch (\Exception $e) {
-            $this->logger->error("Error importing {$modelName} with ID {$entityId}: " . $e->getMessage());
+            $this->logger->error("Error importing {$modelName} with ID {$entityId}: ".$e->getMessage());
             throw $e;
         }
     }
@@ -203,7 +203,7 @@ class GeohubImportService
     {
         $modelClass = collect($this->importMapping)->firstWhere('geohub_table', $tableName)['namespace'];
 
-        return new $modelClass();
+        return new $modelClass;
     }
 
     // ------------------------------------------------------------------

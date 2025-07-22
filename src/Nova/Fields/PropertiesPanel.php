@@ -184,7 +184,7 @@ class PropertiesPanel extends Panel
 
             if (is_null($formSchema) || empty($formSchema)) {
                 // If no form schema is provided, use the form data directly
-                if($attribute === 'form') {
+                if ($attribute === 'form') {
                     $formIdSchema = [
                         'name' => 'id',
                         'type' => 'select',
@@ -231,20 +231,20 @@ class PropertiesPanel extends Panel
                     }
                 }
             } else {
-                $fieldsArray =[];
+                $fieldsArray = [];
                 // Initialize the fields with data from the JSON column
                 // Se formSchema ha una chiave 'fields', usala, altrimenti usa direttamente formSchema
-                if(isset($formSchema['id']) ) {
+                if (isset($formSchema['id'])) {
                     $fieldsArray[] = [
-                    'name' => 'id',
-                    'type' => 'select',
-                    'required' => true,
-                    'values' => $this->getFormIdOptions($model),
-                    'label' => [
-                        'it' => 'Form ID',
-                        'en' => 'Form ID',
-                    ],
-                  ];
+                        'name' => 'id',
+                        'type' => 'select',
+                        'required' => true,
+                        'values' => $this->getFormIdOptions($model),
+                        'label' => [
+                            'it' => 'Form ID',
+                            'en' => 'Form ID',
+                        ],
+                    ];
                 }
                 $fieldsArray = array_merge($fieldsArray, isset($formSchema['fields']) ? $formSchema['fields'] : $formSchema);
 

@@ -40,22 +40,22 @@ class LayerObserver extends AbstractObserver
     private function hasTaxonomyWhereChanged(Layer $layer): bool
     {
         // If this is a new record, always update
-        if (!$layer->wasRecentlyCreated && $layer->wasChanged('properties')) {
+        if (! $layer->wasRecentlyCreated && $layer->wasChanged('properties')) {
             $original = $layer->getOriginal('properties') ?? [];
             $current = $layer->properties ?? [];
-            
+
             $originalTaxonomyWhere = $original['taxonomy_where'] ?? [];
             $currentTaxonomyWhere = $current['taxonomy_where'] ?? [];
-            
+
             // Check if taxonomy_where has actually changed
             return $originalTaxonomyWhere !== $currentTaxonomyWhere;
         }
-        
+
         // For new records, only update if there are taxonomy_where properties
         if ($layer->wasRecentlyCreated) {
             return isset($layer->properties['taxonomy_where']) && count($layer->properties['taxonomy_where']) > 0;
         }
-        
+
         return false;
     }
 

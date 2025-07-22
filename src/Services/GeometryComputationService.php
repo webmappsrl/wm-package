@@ -212,7 +212,7 @@ class GeometryComputationService extends BaseService
     {
         $res = $tracksQuery->selectRaw('ST_Extent(geometry::geometry) as bbox')->first();
 
-        if ($res && !is_null($res->bbox)) {
+        if ($res && ! is_null($res->bbox)) {
             return $this->bboxArrayFromString($res->bbox);
         }
 
