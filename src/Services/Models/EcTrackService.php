@@ -11,7 +11,6 @@ use Wm\WmPackage\Facades\OsmClient;
 use Wm\WmPackage\Http\Clients\DemClient;
 use Wm\WmPackage\Jobs\Pbf\GenerateEcTrackPBFBatch;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrack3DDemJob;
-use Wm\WmPackage\Jobs\Track\UpdateEcTrackAppRelationsInfoJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackCurrentDataJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackDemJob;
@@ -86,7 +85,7 @@ class EcTrackService extends BaseService
             }
 
             $track->saveQuietly();
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('An error occurred during DEM operation: '.$e->getMessage());
         }
     }
@@ -185,14 +184,13 @@ class EcTrackService extends BaseService
             $properties['manual_data'] = $manualData;
             $track->properties = $properties;
             $track->saveQuietly();
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error($track->id.': HandlesData: An error occurred during a store operation: '.$e->getMessage());
         }
     }
 
     public function updateManualData(EcTrack $track)
     {
-
         $manualData = null;
         $fieldsToCheck = $this->getDemDataFields();
 
@@ -270,7 +268,6 @@ class EcTrackService extends BaseService
      */
     protected function updateFieldIfNecessary(EcTrack $track, $field, $properties, $oldProperties, $isNumeric = false)
     {
-
         $trackProperties = $track->properties;
         if (
             isset($properties[$field]) // se esiste una nuova proprietà da salvare
@@ -347,7 +344,6 @@ class EcTrackService extends BaseService
 
     public function updateTrackAppRelationsInfo(EcTrack $ecTrack)
     {
-
         $updates = null;
         $ecTrackLayers = $ecTrack->associatedLayers;
         foreach ($ecTrackLayers as $layer) {
@@ -401,8 +397,9 @@ class EcTrackService extends BaseService
         if ($app_id) {
             $arr = EcTrack::where('app_id', $app_id)->pluck('updated_at', 'id');
         } else {
-
-            $arr = DB::select('select id, updated_at from ec_tracks');
+            // Recupera il nome della tabella dal modello
+            $tableName = config('wm-package.ec_track_table_name');
+            $arr = DB::select("select id, updated_at from {$tableName}");
             $arr = collect($arr)->pluck('updated_at', 'id');
         }
 

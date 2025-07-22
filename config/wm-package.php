@@ -51,4 +51,6 @@ return [
             'host' => env('GEOHUB_HOST', 'https://geohub.webmapp.it'),
         ],
     ],
+    'ec_track_table' => env('EC_TRACK_TABLE', 'ec_tracks'),
+    'ec_track_model' => env('EC_TRACK_MODEL', 'App\Models\EcTrack'),
 ];

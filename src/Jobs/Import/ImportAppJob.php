@@ -16,6 +16,7 @@ class ImportAppJob extends BaseImportJob
 
     protected function transformData(array $data): array
     {
+
         // make a diff between data keys and apps columns in database
         $diff = array_diff(array_keys($data), Schema::getColumnListing('apps'));
         $transformedData = array_diff_key($data, array_flip($diff));
@@ -37,11 +38,11 @@ class ImportAppJob extends BaseImportJob
         // foreach ($this->getRelations() as $modelKey => $relationData) {
         //     $this->queueEntityImport($modelKey, $userId, $relationData['foreign_key']);
         // }
-        $this->queueEntityImport('ec_poi', $data['user_id'], 'user_id', $model->id);
-        $this->queueEntityImport('ec_track', $data['user_id'], 'user_id', $model->id);
+        // $this->queueEntityImport('ec_poi', $data['user_id'], 'user_id', $model->id); //TODO: da riabilitare a chiusura feature
+        // $this->queueEntityImport('ec_track', $data['user_id'], 'user_id', $model->id);//TODO: da riabilitare a chiusura feature
         $this->queueEntityImport('taxonomy_activity', $data['user_id'], 'user_id', $model->id);
-        $this->queueEntityImport('layer', $data['user_id'], 'app_id', $model->id);
-        $this->queueEntityImport('ec_media', $data['user_id'], 'user_id', $model->id);
+        //  $this->queueEntityImport('layer', $data['user_id'], 'app_id', $model->id);
+        // $this->queueEntityImport('ec_media', $data['user_id'], 'user_id', $model->id);//TODO: da riabilitare a chiusura feature
     }
 
     /**
@@ -80,7 +81,7 @@ class ImportAppJob extends BaseImportJob
                 $batch->dispatch();
             }
         } catch (\Exception $e) {
-            $logger->error("Error queuing {$entityModelKey} imports for app {$this->entityId}: ".$e->getMessage());
+            $logger->error("Error queuing {$entityModelKey} imports for app {$this->entityId}: " . $e->getMessage());
             throw $e;
         }
     }

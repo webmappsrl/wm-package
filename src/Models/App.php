@@ -7,7 +7,6 @@ use chillerlan\QRCode\QROptions;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
@@ -47,7 +46,7 @@ class App extends Model implements HasMedia
     protected static function boot()
     {
         parent::boot();
-        App::observe(AppObserver::class);
+        self::observe(AppObserver::class);
     }
 
     public function getGeohubIdAttribute()
@@ -82,7 +81,82 @@ class App extends Model implements HasMedia
 
     public function ecTracks(): HasMany
     {
-        return $this->hasMany(EcTrack::class);
+        $modelClass = config('wm-package.ec_track_model');
+
+        return $this->hasMany($modelClass);
+    }
+
+    public function poiAcquisitionForm($formId = null)
+    {
+        $forms = json_decode($this->poi_acquisition_form, true) ?? null;
+        if ($forms == null) {
+            return null;
+        }
+        if ($formId !== null) {
+            foreach ($forms as $form) {
+                if (isset($form['id']) && $form['id'] === $formId) {
+                    return $form;
+                }
+            }
+
+            return null;
+        }
+
+        return $forms;
+    }
+
+    public function trackAcquisitionForm($formId = null)
+    {
+        $forms = json_decode($this->track_acquisition_form, true) ?? null;
+        if ($forms == null) {
+            return null;
+        }
+        if ($formId !== null) {
+            foreach ($forms as $form) {
+                if (isset($form['id']) && $form['id'] === $formId) {
+                    return $form;
+                }
+            }
+
+            return null;
+        }
+
+        return $forms;
+    }
+
+    public function acquisitionForms($formId = null)
+    {
+        $poiForms = $this->poiAcquisitionForm();
+        $trackForms = $this->trackAcquisitionForm();
+
+        // Unisco i due array di form
+        $allForms = [];
+
+        if ($poiForms !== null) {
+            $allForms = array_merge($allForms, $poiForms);
+        }
+
+        if ($trackForms !== null) {
+            $allForms = array_merge($allForms, $trackForms);
+        }
+
+        // Se non ci sono form, restituisco null
+        if (empty($allForms)) {
+            return null;
+        }
+
+        // Se è richiesto un form specifico
+        if ($formId !== null) {
+            foreach ($allForms as $form) {
+                if (isset($form['id']) && $form['id'] === $formId) {
+                    return $form;
+                }
+            }
+
+            return null;
+        }
+
+        return $allForms;
     }
 
     public function getGeojson()
@@ -223,15 +297,6 @@ class App extends Model implements HasMedia
         }
 
         return $res;
-    }
-
-    public function getEcTracks(): Collection
-    {
-        if ($this->api == 'webmapp') {
-            return EcTrack::all();
-        }
-
-        return EcTrack::where('user_id', $this->user_id)->get();
     }
 
     /**

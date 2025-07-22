@@ -154,12 +154,17 @@ class GeohubImportService
             ->where('id', $entityId)
             ->first();
 
+        $data = (array) $element;
+
+        // handle translatable attributes
+        $this->handleTranslatableAttributes($this->getModelInstance($tableName), $data);
+
         if (! $element) {
             $this->logger->warning("{$tableName} with ID {$entityId} not found in geohub");
             throw new \Exception("{$tableName} with ID {$entityId} not found in geohub");
         }
 
-        return (array) $element;
+        return $data;
     }
 
     /**
@@ -189,9 +194,16 @@ class GeohubImportService
 
             return $model;
         } catch (\Exception $e) {
-            $this->logger->error("Error importing {$modelName} with ID {$entityId}: ".$e->getMessage());
+            $this->logger->error("Error importing {$modelName} with ID {$entityId}: " . $e->getMessage());
             throw $e;
         }
+    }
+
+    public function getModelInstance(string $tableName): Model
+    {
+        $modelClass = collect($this->importMapping)->firstWhere('geohub_table', $tableName)['namespace'];
+
+        return new $modelClass();
     }
 
     // ------------------------------------------------------------------
@@ -592,6 +604,24 @@ class GeohubImportService
             } else {
                 // TODO: If no association is found, create a new layer from the overlay layer. !IMPORTANT: handle the missing geometry in overlay_layers
                 // $this->createNewLayerFromOverlayLayer($model, $overlayLayer);
+            }
+        }
+    }
+
+    protected function handleTranslatableAttributes(Model $model, array &$data): void
+    {
+        $translatableAttributes = $model->getTranslatableAttributes();
+
+        if (empty($translatableAttributes)) {
+            return;
+        }
+
+        foreach ($translatableAttributes as $attribute) {
+            if (isset($data[$attribute]) && is_string($data[$attribute])) {
+                $decoded = json_decode($data[$attribute], true);
+                if (json_last_error() === JSON_ERROR_NONE) {
+                    $data[$attribute] = $decoded;
+                }
             }
         }
     }

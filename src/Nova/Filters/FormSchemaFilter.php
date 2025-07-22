@@ -8,14 +8,14 @@ use Laravel\Nova\Filters\Filter;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\UgcPoi; // Importa il modello App se non già fatto
 
-class SchemaFilter extends Filter
+class FormSchemaFilter extends Filter
 {
     /**
      * The displayable name of the filter.
      *
      * @var string
      */
-    public $name = 'Filter by Form Schema';
+    public $name = 'Form Schema';
 
     protected $type = 'ugc_pois';
 

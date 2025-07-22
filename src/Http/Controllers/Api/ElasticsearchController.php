@@ -6,20 +6,18 @@ use Exception;
 use Illuminate\Http\Request;
 use ONGR\ElasticsearchDSL\Aggregation\Bucketing\TermsAggregation;
 use ONGR\ElasticsearchDSL\Query\Compound\BoolQuery;
-use ONGR\ElasticsearchDSL\Query\FullText\MatchPhraseQuery;
-use ONGR\ElasticsearchDSL\Query\FullText\MatchQuery;
 use ONGR\ElasticsearchDSL\Query\FullText\QueryStringQuery;
 use ONGR\ElasticsearchDSL\Query\TermLevel\RangeQuery;
-use ONGR\ElasticsearchDSL\Query\TermLevel\RegexpQuery;
 use ONGR\ElasticsearchDSL\Search;
 use Wm\WmPackage\Http\Controllers\Controller;
 use Wm\WmPackage\Models\EcTrack;
 
 class ElasticsearchController extends Controller
 {
+    public function __construct() {}
+
     public function index(Request $request)
     {
-
         try {
             $validated = $request->validate([
                 'query' => 'string',
@@ -83,8 +81,9 @@ class ElasticsearchController extends Controller
         // dd($queryString);
         // https://github.com/matchish/laravel-scout-elasticsearch?tab=readme-ov-file#conditions
         // base query
-        $query = EcTrack::search($search, function (\Elastic\Elasticsearch\Client $client, Search $body) use ($layer, $search, $ids) {
+        $index = config('wm-package.ec_track_table');
 
+        $query = EcTrack::search($search, function (\Elastic\Elasticsearch\Client $client, Search $body) use ($layer, $search, $ids, $index) {
             // # The es driver for Laravel Scout
             // # https://github.com/matchish/laravel-scout-elasticsearch?tab=readme-ov-file#search
 
@@ -172,14 +171,13 @@ class ElasticsearchController extends Controller
 
             // dd($body->toArray()); // #DEBUG the whole es query body
 
-            return $client->search(['index' => 'ec_tracks', 'body' => $body->toArray()])->asArray();
+            return $client->search(['index' => $index, 'body' => $body->toArray()])->asArray();
         })
             ->where('app_id', $appId); // #AND
 
         // handle filters
         if (count($filters) > 0) {
             foreach ($filters as $filter) {
-
                 if (! array_key_exists('identifier', $filter)) {
                     continue;
                 } // skip filters without identifier

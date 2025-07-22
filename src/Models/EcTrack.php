@@ -382,13 +382,38 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
         return $geojson;
     }
 
-    public function setEmptyValueToZero($value)
+    /**
+     * Converts a duration value into a consistent float representation in hours.
+     * Handles numeric values (assumed to be seconds) and string formats (HH:MM:SS).
+     *
+     * @param  mixed  $duration
+     */
+    public function convertDurationToHours($duration): float
     {
-        if (empty($value)) {
-            $value = 0;
+        if (empty($duration)) {
+            return 0.0;
         }
 
-        return $value;
+        // If it's already a number, assume it's in seconds and convert to hours.
+        if (is_numeric($duration)) {
+            return (float) $duration / 3600;
+        }
+
+        // If it's a string, try to parse it.
+        if (is_string($duration)) {
+            $parts = explode(':', $duration);
+            $hours = 0;
+            if (count($parts) === 3) { // HH:MM:SS
+                $hours = (int) $parts[0] + ((int) $parts[1] / 60) + ((int) $parts[2] / 3600);
+            } elseif (count($parts) === 2) { // HH:MM
+                $hours = (int) $parts[0] + ((int) $parts[1] / 60);
+            }
+
+            return (float) $hours;
+        }
+
+        // Fallback for unknown types
+        return 0.0;
     }
 
     public function cleanTrackNameSpecialChar()
@@ -520,7 +545,7 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
 
         $ecTrackService = EcTrackService::make();
         $mediaService = MediaService::make();
-        $firstMedia = $this->getMedia()->first();
+        $firstMedia = $this->getMedia("*")->first();
 
         try {
 
@@ -540,12 +565,12 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
             // 'from' => $this->getActualOrOSFValue('from'),
             // 'to' => $this->getActualOrOSFValue('to'),
             'name' => $this->getTranslation('name', 'it'),
-            'taxonomyWheres' => collect($ecTrackService->getTaxonomyWheres($this))->map(fn ($item) => $item['it'] ?? false)->values()->filter()->toArray(),
+            'taxonomyWheres' => collect($ecTrackService->getTaxonomyWheres($this))->map(fn($item) => $item['it'] ?? false)->values()->filter()->toArray(),
             'feature_image' => $firstMedia ? $mediaService->getThumbnailUrl($firstMedia) : '',
             'strokeColor' => isset($this->properties['color']) ? hexToRgba($this->properties['color']) : '',
-            'distance' => isset($this->properties['distance']) ? $this->setEmptyValueToZero($this->properties['distance']) : 0,
-            'duration_forward' => isset($this->properties['duration_forward']) ? $this->setEmptyValueToZero($this->properties['duration_forward']) : 0,
-            'ascent' => isset($this->properties['ascent']) ? $this->setEmptyValueToZero($this->properties['ascent']) : 0,
+            'distance' => isset($this->properties['distance']) ? (float) ($this->properties['distance']) : 0,
+            'duration_forward' => $this->convertDurationToHours($this->properties['duration_forward'] ?? null),
+            'ascent' => isset($this->properties['ascent']) ? (int) ($this->properties['ascent']) : 0,
             'taxonomyActivities' => $ecTrackService->getTaxonomyArray($this->taxonomyActivities),
             'layers' => $this->layers->pluck('id')->toArray(),
             'searchable' => $this->getSearchableString(),

@@ -16,7 +16,6 @@ use Wm\WmPackage\Models\Abstracts\GeometryModel;
 use Wm\WmPackage\Models\Abstracts\MultiLineString;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcTrack;
-use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Models\Media;
 use Wm\WmPackage\Services\Models\MediaService;
 
@@ -85,7 +84,6 @@ class GeometryComputationService extends BaseService
 
     public function getGeometryFromGeojsonRAW(string $geojson): Expression
     {
-
         return DB::raw("ST_GeomFromGeoJSON('".$geojson."')");
     }
 
@@ -195,8 +193,9 @@ class GeometryComputationService extends BaseService
 
         $tracksIds = $tracks->pluck('id')->toArray();
 
-        $res = DB::select('select ST_Extent(geometry::geometry)
-             as bbox from ec_tracks where id IN ('.implode(',', $tracksIds).');');
+        $tableName = config('wm-package.ec_track_table');
+        $res = DB::select("select ST_Extent(geometry::geometry)
+             as bbox from {$tableName} where id IN (".implode(',', $tracksIds).');');
 
         if (count($res) > 0) {
             if (! is_null($res[0]->bbox)) {
@@ -209,18 +208,29 @@ class GeometryComputationService extends BaseService
         return false;
     }
 
+    public function getTracksBboxFromQuery($tracksQuery): array|false
+    {
+        $res = $tracksQuery->selectRaw('ST_Extent(geometry::geometry) as bbox')->first();
+
+        if ($res && !is_null($res->bbox)) {
+            return $this->bboxArrayFromString($res->bbox);
+        }
+
+        return false;
+    }
+
     public function getEcTracksBboxByUserId(int $userId)
     {
-        $query = '
+        $tableName = config('wm-package.ec_track_table');
+        $query = "
             SELECT ST_Extent(geometry::geometry) as bbox
-            FROM ec_tracks
+            FROM {$tableName}
             WHERE user_id = ?
-        ';
+        ";
 
         $result = DB::select($query, [$userId]);
 
         if (! empty($result)) {
-
             return $this->bboxArrayFromString($result[0]->bbox);
         }
 
@@ -232,7 +242,6 @@ class GeometryComputationService extends BaseService
      */
     protected function bbox($geometry = false, GeometryModel|false $model = false): array
     {
-
         $bboxString = '';
         if ($geometry) {
             $b = DB::select('SELECT ST_Extent(?) as bbox', [$geometry]);
@@ -461,7 +470,6 @@ class GeometryComputationService extends BaseService
 
     public function isRoundtrip(array $coords): bool
     {
-
         $treshold = 0.001; // diff < 300 metri ref trackid:1592
 
         // Ensure we're working with a flat array of coordinates
@@ -704,8 +712,9 @@ class GeometryComputationService extends BaseService
             $validTrackIds = $app->ecTracks->pluck('id')->toArray() ?? [];
         }
 
+        $tableName = config('wm-package.ec_track_table');
         if (! is_null($validTrackIds)) {
-            $where .= 'ec_tracks.id IN ('.implode(',', $validTrackIds).') AND ';
+            $where .= "{$tableName}.id IN (".implode(',', $validTrackIds).') AND ';
         }
 
         if (
@@ -715,16 +724,16 @@ class GeometryComputationService extends BaseService
             $track = EcTrack::find($trackId);
 
             if (isset($track)) {
-                $from = ', (SELECT geometry as geom FROM ec_tracks WHERE id = ?) as track';
+                $from = ", (SELECT geometry as geom FROM {$tableName} WHERE id = ?) as track";
                 $params[] = $trackId;
-                $where = 'ST_Distance(ST_Transform(ST_SetSRID(ec_tracks.geometry, 4326), 3857), ST_Transform(ST_SetSRID(track.geom, 4326), 3857)) <= ? AND ';
+                $where = "ST_Distance(ST_Transform(ST_SetSRID({$tableName}.geometry, 4326), 3857), ST_Transform(ST_SetSRID(track.geom, 4326), 3857)) <= ? AND ";
                 $params[] = $distanceLimit;
             }
         }
 
         if (isset($searchString) && ! empty($searchString)) {
             $escapedSearchString = preg_replace('/[^0-9a-z\s]/', '', strtolower($searchString));
-            $where .= "to_tsvector(regexp_replace(LOWER(((ec_tracks.name::json))->>'$language'), '[^0-9a-z\s]', '', 'g')) @@ to_tsquery('$escapedSearchString') AND ";
+            $where .= "to_tsvector(regexp_replace(LOWER((({$tableName}.name::json))->>'$language'), '[^0-9a-z\s]', '', 'g')) @@ to_tsquery('$escapedSearchString') AND ";
         }
 
         $where .= 'geometry && ST_SetSRID(ST_MakeBox2D(ST_Point(?, ?), ST_Point(?, ?)), 4326)';
@@ -746,7 +755,7 @@ FROM (
 		ST_Centroid(geometry) as centroid,
 	    geometry
 	FROM
-		ec_tracks
+		{$tableName}
 	    $from
     WHERE $where
     ) clusters
@@ -908,7 +917,7 @@ GROUP BY
     /**
      * Returns a default 3D geometry based on the geometry type
      */
-    public function getDefaultGeometry(string $geometryType): \Illuminate\Database\Query\Expression
+    public function getDefaultGeometry(string $geometryType): Expression
     {
         $defaultCoordinates = [
             'POINT' => '0 0 0',
@@ -926,7 +935,7 @@ GROUP BY
      *
      * @param  string|array  $geometry
      */
-    public function convertTo3DGeometry($geometry): ?\Illuminate\Database\Query\Expression
+    public function convertTo3DGeometry($geometry): ?Expression
     {
         if (is_null($geometry)) {
             return null;
@@ -943,7 +952,7 @@ GROUP BY
         }
 
         // If it's already a DB expression, ensure it's 3D
-        if ($geometry instanceof \Illuminate\Database\Query\Expression) {
+        if ($geometry instanceof Expression) {
             // Use reflection to access the protected 'value' property
             $reflection = new \ReflectionProperty(get_class($geometry), 'value');
             $reflection->setAccessible(true);
@@ -965,11 +974,12 @@ GROUP BY
 
     public function getEcTracksBboxByAppId(int $appId): ?array
     {
-        $res = DB::select('
+        $tableName = config('wm-package.ec_track_table');
+        $res = DB::select("
             SELECT ST_Extent(geometry::geometry) as bbox
-            FROM ec_tracks
+            FROM {$tableName}
             WHERE app_id = ?
-        ', [$appId]);
+        ", [$appId]);
 
         if (empty($res) || is_null($res[0]->bbox)) {
             return null;

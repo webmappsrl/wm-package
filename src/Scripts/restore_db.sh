@@ -15,21 +15,20 @@ SQL_DUMP_FILE_NAME="${SQL_DUMP_FILE_NAME:-last_dump.sql}"
 WIPE_DATABASE="${WIPE_DATABASE:-true}"
 PHP_ARTISAN_COMMAND="${PHP_ARTISAN_COMMAND:-php artisan}"
 CLEANUP_DUMP_FILES="${CLEANUP_DUMP_FILES:-true}"
-DOCKER_PROJECT_DIR_NAME="${DOCKER_PROJECT_DIR_NAME:-}"
 DB_USER="${DB_USERNAME}"
 DB_NAME="${DB_DATABASE}"
-DB_CONTAINER_NAME="${DB_CONTAINER_NAME:-postgres_${DOCKER_PROJECT_DIR_NAME}}"
+DB_CONTAINER_NAME="${DB_CONTAINER_NAME:-postgres_${APP_NAME}}"
 PHP_CONTAINER_NAME="${PHP_CONTAINER_NAME}"
 
 SQL_DUMP_GZ_PATH="${PROJECT_ROOT}/storage/backups/${SQL_DUMP_GZ_FILE}"
 SQL_DUMP_PATH="${PROJECT_ROOT}/storage/backups/${SQL_DUMP_FILE_NAME}"
 
 # Auto-detect PHP container if not set
-if [ -z "$PHP_CONTAINER_NAME" ] && [ -n "$DOCKER_PROJECT_DIR_NAME" ]; then
+if [ -z "$PHP_CONTAINER_NAME" ] && [ -n "$APP_NAME" ]; then
   for cn in \
-    "php_${DOCKER_PROJECT_DIR_NAME}" "php81_${DOCKER_PROJECT_DIR_NAME}" "php82_${DOCKER_PROJECT_DIR_NAME}" \
-    "php83_${DOCKER_PROJECT_DIR_NAME}" "${DOCKER_PROJECT_DIR_NAME}_php_1" "${DOCKER_PROJECT_DIR_NAME}-php-1" \
-    "${DOCKER_PROJECT_DIR_NAME}_php-fpm_1" "${DOCKER_PROJECT_DIR_NAME}-php-fpm-1" "php"
+    "php_${APP_NAME}" "php81_${APP_NAME}" "php82_${APP_NAME}" \
+    "php83_${APP_NAME}" "${APP_NAME}_php_1" "${APP_NAME}-php-1" \
+    "${APP_NAME}_php-fpm_1" "${APP_NAME}-php-fpm-1" "php"
   do
     if docker ps --filter "name=^/${cn}$" --format "{{.Names}}" | grep -q "^${cn}$"; then
       PHP_CONTAINER_NAME=$cn; break

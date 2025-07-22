@@ -83,7 +83,8 @@ class GetUpdatedAtTracksTest extends AbstractEcTrackServiceTest
             $track = EcTrack::createQuietly((array) $row);
         }
 
-        $query = 'select id, updated_at from ec_tracks';
+        $tableName = config('wm-package.ec_track_table_name');
+        $query = "select id, updated_at from {$tableName}";
         DB::shouldReceive('select')
             ->with($query)
             ->once()
