@@ -4,6 +4,7 @@ namespace Wm\WmPackage;
 
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Laravel\Nova\Menu\MenuItem;
 use Laravel\Nova\Menu\MenuSection;
@@ -344,7 +345,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
     {
         $createDownloadDbMenuItem = function () {
             $menuItem = MenuItem::externalLink(__('Download DB'), route('download.db'))
-                ->canSee(fn () => optional(auth()->user())->hasRole('Administrator'))
+                ->canSee(fn () => optional(Auth::user())->hasRole('Administrator'))
                 ->openInNewTab();
 
             return $menuItem;
