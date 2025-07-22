@@ -144,7 +144,7 @@ class PropertiesPanel extends Panel
 
         // Gestione speciale per Layer model - carica sempre il layer schema
         if (class_basename($model) === 'Layer') {
-            $layerSchema = config('layer-schema');
+            $layerSchema = config('wm-layer-schema');
             if ($layerSchema && isset($layerSchema[$columnName])) {
                 $formSchema = $layerSchema[$columnName];
             }

@@ -117,11 +117,6 @@ abstract class BaseImportJob implements ShouldQueue
         return $transformedData;
     }
 
-    public function getModelInstance(): Model
-    {
-        return $this->geohubImportService->getModelInstance($this->getModelKey());
-    }
-
     /**
      * Get the model key for this job.
      */

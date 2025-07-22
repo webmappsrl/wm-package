@@ -117,7 +117,7 @@ class GeometryComputationService extends BaseService
         return $result[0]->val;
     }
 
-    public function getModelGeometryAsGeojson($model): string
+    public function getModelGeometryAsGeojson(GeometryModel|Media $model): string
     {
         return $model::where('id', '=', $model->id)
             ->select(
@@ -330,7 +330,7 @@ class GeometryComputationService extends BaseService
      *
      * @return array [lon, lat] of the point
      */
-    public function getCentroid($model): array
+    public function getCentroid(GeometryModel|Media $model): array
     {
         $rawResult = $model::where('id', $model->id)
             ->selectRaw(
@@ -853,7 +853,7 @@ GROUP BY
      * @param  GeometryModel|Media  $model  The model to convert
      * @return string The geometry in WKT format of type POINT
      */
-    public function convertToPoint($model): string
+    public function convertToPoint(GeometryModel|Media $model): string
     {
         // Verify that the model has a geometry
         if (! isset($model->geometry) || empty($model->geometry)) {
