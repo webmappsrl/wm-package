@@ -226,7 +226,7 @@ class PropertiesPanel extends Panel
                         'value' => $value,
                     ];
                     $novaField = $this->createFieldFromSchema($fieldSchema, $columnName, $attribute, $isEditable);
-                    if ($novaField && !($attribute == 'form' && $key == 'id')) {
+                    if ($novaField && ! ($attribute == 'form' && $key == 'id')) {
                         $fields[] = $novaField;
                     }
                 }
