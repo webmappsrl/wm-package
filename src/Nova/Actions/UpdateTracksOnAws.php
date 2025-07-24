@@ -23,12 +23,13 @@ class UpdateTracksOnAws extends Action
     public function handle(ActionFields $fields, Collection $models)
     {
         $count = 0;
+        $modelClass = config('wm-package.ec_track_model');
         foreach ($models as $model) {
             if ($model instanceof App) {
-                $tracks = EcTrack::where('app_id', $model->id)->get();
+                $tracks = $modelClass::where('app_id', $model->id)->get();
                 $count += $tracks->count();
                 $this->writeOnAws($tracks);
-            } elseif ($model instanceof EcTrack) {
+            } elseif ($model instanceof $modelClass) {
                 $this->writeOnAws([$model]);
                 $count++;
             }
