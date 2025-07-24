@@ -9,7 +9,6 @@ use Laravel\Nova\Actions\Action;
 use Laravel\Nova\Fields\ActionFields;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
 use Wm\WmPackage\Models\App;
-use Wm\WmPackage\Models\EcTrack;
 
 class UpdateTracksOnAws extends Action
 {
