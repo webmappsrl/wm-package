@@ -30,11 +30,25 @@ class EcTrackResource extends JsonResource
             'roundtrip' => $geojson['properties']['dem_data']['round_trip'] ?? $geometryComputationService->isRoundtrip($geojson['geometry']['coordinates']),
             'feature_image' => new MediaResource($this->getMedia()->first()),
             'image_gallery' => MediaResource::collection($this->getMedia()),
-            'related_pois' => $this->ecPois->map(function (EcPoi $ecPoi) {
-                return EcPoiResource::make($ecPoi);
-            }),
+            'related_pois' => $this->getRelatedPois(),
         ];
 
         return $geojson;
+    }
+
+    /**
+     * Gestisce la relazione ecPois con fallback per modelli diversi
+     * Se la tabella pivot non esiste, ritorna array vuoto
+     */
+    private function getRelatedPois()
+    {
+        try {
+            return $this->ecPois->map(function (EcPoi $ecPoi) {
+                return EcPoiResource::make($ecPoi);
+            });
+        } catch (\Exception $e) {
+            // Se la relazione fallisce (es: tabella pivot non esiste), ritorna array vuoto
+            return [];
+        }
     }
 }
