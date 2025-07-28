@@ -48,11 +48,11 @@ class UpdateEcTrackAwsJob extends BaseEcTrackJob
     {
         // Ottieni il modello dalla configurazione per essere consistente
         $ecTrackModelClass = config('wm-package.ec_track_model', \Wm\WmPackage\Models\EcTrack::class);
-        
+
         // Ricarica il modello usando la classe configurata per assicurarsi che sia della classe corretta
         $ecTrack = $ecTrackModelClass::find($this->ecTrack->id);
-        
-        if (!$ecTrack) {
+
+        if (! $ecTrack) {
             throw new \Exception("EcTrack with ID {$this->ecTrack->id} not found");
         }
 
