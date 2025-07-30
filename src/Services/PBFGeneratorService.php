@@ -189,7 +189,6 @@ class PBFGeneratorService extends BaseService
             validGeometries AS (
         SELECT 
             ec.id,
-            ec.name,
             ec.properties,
             ST_Force2D(ST_Transform(ec.geometry::geometry,3857)) as geom_mercator
         FROM {$tableName} ec
@@ -207,7 +206,6 @@ class PBFGeneratorService extends BaseService
         SELECT 
             id,
             properties,
-            name,
             ST_SimplifyPreserveTopology(geom_mercator, $simplificationFactor) as simplified_geom
         FROM validGeometries
     ),
@@ -216,7 +214,6 @@ class PBFGeneratorService extends BaseService
             ST_AsMVTGeom(simplified_geom, bounds.b2d) AS geom,
             id,
             properties ->> 'ref' as ref,
-            name,
             properties ->> 'cai_scale' as cai_scale,
             properties ->> 'distance' as distance,
             properties ->> 'duration_forward' as duration_forward,
@@ -340,7 +337,8 @@ class PBFGeneratorService extends BaseService
         App $app, 
         $minZoom = null, 
         $maxZoom = null, 
-        $noPbfLayer = false
+        $noPbfLayer = false,
+        float $maxClusterDistance = 10000
     ) {
         // Verifica che l'app abbia tracce
         $trackCount = $app->ecTracks()->count();
@@ -356,7 +354,8 @@ class PBFGeneratorService extends BaseService
             'app_name' => $app->name,
             'track_count' => $trackCount,
             'min_zoom' => $minZoom,
-            'max_zoom' => $maxZoom
+            'max_zoom' => $maxZoom,
+            'cluster_distance' => $maxClusterDistance
         ]);
 
         // Ottieni tutte le tracce dell'app
@@ -372,6 +371,7 @@ class PBFGeneratorService extends BaseService
             $maxZoom, // startZoom (dal più alto)
             $minZoom, // minZoom
             $noPbfLayer,
+            $maxClusterDistance,
             $trackIds // Passa le track IDs già recuperate
         );
 

@@ -27,7 +27,7 @@ class WmGeneratePBFCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'pbf:generate {app_id} {--min= : custom min_zoom} {--max= : custom max_zoom} {--no_pbf_layer : do not generate pbf layer} {--optimized : use optimized bottom-up approach with clustering} {--test-tracks : test track retrieval and bottom-up approach without generating PBF} {--test-generate : test the generate method directly with specific parameters}';
+    protected $signature = 'pbf:generate {app_id} {--min= : custom min_zoom} {--max= : custom max_zoom} {--no_pbf_layer : do not generate pbf layer} {--optimized : use optimized bottom-up approach with clustering} {--cluster-distance=10000 : max distance for clustering (meters)} {--test-tracks : test track retrieval and bottom-up approach without generating PBF} {--test-generate : test the generate method directly with specific parameters}';
 
     /**
      * The console command description.
@@ -69,15 +69,18 @@ class WmGeneratePBFCommand extends Command
         }
 
         $optimized = $this->option('optimized');
+        $clusterDistance = (float) $this->option('cluster-distance');
 
         if ($optimized) {
             $this->info("🚀 Utilizzo approccio ottimizzato con clustering geografico");
+            $this->line("   - Distanza clustering: {$clusterDistance}m");
 
             PBFGeneratorService::make()->generateWholeAppPbfsOptimized(
                 $app,
                 $this->option('min'),
                 $this->option('max'),
-                $this->no_pbf_layer
+                $this->no_pbf_layer,
+                $clusterDistance
             );
         } else {
             $this->info("🔄 Utilizzo approccio tradizionale");

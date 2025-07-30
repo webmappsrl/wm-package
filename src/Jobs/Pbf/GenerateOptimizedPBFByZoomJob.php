@@ -28,6 +28,7 @@ class GenerateOptimizedPBFByZoomJob implements ShouldQueue
     private $zoom;
     private $zoomTreshold;
     private $no_pbf_layer = false;
+    private $maxClusterDistance;
     private $trackIds;
 
     /**
@@ -35,11 +36,12 @@ class GenerateOptimizedPBFByZoomJob implements ShouldQueue
      *
      * @return void
      */
-    public function __construct($app_id, $zoom, $no_pbf_layer = false, $trackIds = null)
+    public function __construct($app_id, $zoom, $no_pbf_layer = false, $maxClusterDistance = 10000, $trackIds = null)
     {
         $this->app_id = $app_id;
         $this->zoom = $zoom;
         $this->no_pbf_layer = $no_pbf_layer;
+        $this->maxClusterDistance = $maxClusterDistance;
         $this->trackIds = $trackIds;
         $this->zoomTreshold = PBFGeneratorService::make()->getZoomTreshold();
     }
@@ -49,7 +51,8 @@ class GenerateOptimizedPBFByZoomJob implements ShouldQueue
         try {
             Log::info("Avvio generazione PBF ottimizzata per zoom {$this->zoom}", [
                 'app_id' => $this->app_id,
-                'zoom' => $this->zoom
+                'zoom' => $this->zoom,
+                'cluster_distance' => $this->maxClusterDistance
             ]);
 
             // Pulisci le chiavi cache per questo zoom
