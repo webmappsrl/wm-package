@@ -8,6 +8,7 @@ use Wm\WmPackage\Services\Models\LayerService;
 
 class TaxonomyActivityablesObserver
 {
+
     public function __construct(protected LayerService $layerService) {}
 
     public function created(TaxonomyActivityable $taxonomyActivityable)
@@ -23,6 +24,8 @@ class TaxonomyActivityablesObserver
     private function handleRelatedFeaturesUpdate(TaxonomyActivityable $taxonomyActivityable, $add)
     {
         $relatedTypeClass = $taxonomyActivityable->taxonomy_activityable_type;
+        $ecTrackModelClass = config('wm-package.ec_track_model', 'App\Models\EcTrack');
+        
         if (
             str_contains($relatedTypeClass, '\Layer')
 
@@ -33,7 +36,7 @@ class TaxonomyActivityablesObserver
                 $this->layerService->updateLayerGeometryWithJob($layer);
             }
         } elseif (
-            str_contains($relatedTypeClass, '\EcTrack')
+            $relatedTypeClass === $ecTrackModelClass
             || str_contains($relatedTypeClass, '\EcPoi')
         ) {
 

@@ -554,6 +554,120 @@ class GeometryComputationService extends BaseService
         return $tiles;
     }
 
+    /**
+     * Genera tutti i tile parent (zoom minori) che contengono la geometria data
+     * Utile per ricalcolare solo i tile impattati quando si modifica una singola traccia
+     * 
+     * @param array $bbox Bounding box della geometria [minLon, minLat, maxLon, maxLat]
+     * @param int $startZoom Zoom di partenza (es. 13)
+     * @param int $minZoom Zoom minimo da calcolare (es. 5)
+     * @return array Array di tile [x, y, zoom] ordinati per zoom crescente
+     */
+    public function generateParentTiles(array $bbox, int $startZoom, int $minZoom = 0): array
+    {
+        [$minLon, $minLat, $maxLon, $maxLat] = $bbox;
+        $tiles = [];
+
+        // Partiamo dal zoom di partenza e scendiamo fino al zoom minimo
+        for ($zoom = $startZoom; $zoom >= $minZoom; $zoom--) {
+            // Calcola le coordinate tile per questo livello di zoom
+            [$minTileX, $minTileY] = $this->deg2num($maxLat, $minLon, $zoom);
+            [$maxTileX, $maxTileY] = $this->deg2num($minLat, $maxLon, $zoom);
+
+            // Aggiungi tutti i tile di questo livello che contengono la geometria
+            for ($x = $minTileX; $x <= $maxTileX; $x++) {
+                for ($y = $minTileY; $y <= $maxTileY; $y++) {
+                    $tiles[] = [$x, $y, $zoom];
+                }
+            }
+        }
+
+        // Ordina per zoom crescente (dal più basso al più alto)
+        usort($tiles, function($a, $b) {
+            if ($a[2] !== $b[2]) {
+                return $a[2] - $b[2]; // Ordina per zoom
+            }
+            if ($a[0] !== $b[0]) {
+                return $a[0] - $b[0]; // Poi per x
+            }
+            return $a[1] - $b[1]; // Infine per y
+        });
+
+        return $tiles;
+    }
+
+    /**
+     * Genera i tile impattati per una singola traccia modificata
+     * Calcola solo i tile che devono essere ricalcolati quando si modifica una traccia
+     * 
+     * @param GeometryModel $model Il modello della traccia modificata
+     * @param int $startZoom Zoom di partenza (es. 13)
+     * @param int $minZoom Zoom minimo da calcolare (es. 5)
+     * @return array Array di tile [x, y, zoom] da ricalcolare
+     */
+    public function generateImpactedTilesForTrack(GeometryModel $model, int $startZoom, int $minZoom = 0): array
+    {
+        // Ottieni il bounding box della traccia
+        $bbox = $this->getGeometryModelBbox($model);
+        
+        // Genera tutti i tile parent che contengono questa traccia
+        return $this->generateParentTiles($bbox, $startZoom, $minZoom);
+    }
+
+    /**
+     * Genera i tile impattati per una lista di tracce modificate
+     * Utile quando si modificano più tracce contemporaneamente
+     * 
+     * @param array $trackIds Array di ID delle tracce modificate
+     * @param int $startZoom Zoom di partenza
+     * @param int $minZoom Zoom minimo da calcolare
+     * @return array Array di tile [x, y, zoom] da ricalcolare
+     */
+    public function generateImpactedTilesForMultipleTracks(array $trackIds, int $startZoom, int $minZoom = 0): array
+    {
+        if (empty($trackIds)) {
+            return [];
+        }
+
+        $tableName = config('wm-package.ec_track_table');
+        
+        // Calcola il bounding box complessivo di tutte le tracce modificate
+        $res = DB::select("
+            SELECT ST_Extent(geometry::geometry) as bbox
+            FROM {$tableName}
+            WHERE id IN (" . implode(',', $trackIds) . ")
+        ");
+
+        if (empty($res) || is_null($res[0]->bbox)) {
+            return [];
+        }
+
+        // Estrai le coordinate del bounding box
+        preg_match('/BOX\(([-\d\.]+) ([-\d\.]+),([-\d\.]+) ([-\d\.]+)\)/', $res[0]->bbox, $matches);
+        $bbox = [
+            (float) $matches[1], // minLon
+            (float) $matches[2], // minLat
+            (float) $matches[3], // maxLon
+            (float) $matches[4]  // maxLat
+        ];
+
+        return $this->generateParentTiles($bbox, $startZoom, $minZoom);
+    }
+
+    /**
+     * Genera tutti i tile parent (zoom minori) che contengono una geometria di un modello
+     * 
+     * @param GeometryModel $model Il modello con la geometria
+     * @param int $startZoom Zoom di partenza
+     * @param int $minZoom Zoom minimo da calcolare
+     * @return array Array di tile [x, y, zoom] ordinati per zoom crescente
+     */
+    public function generateParentTilesFromModel(GeometryModel $model, int $startZoom, int $minZoom = 0): array
+    {
+        $bbox = $this->getGeometryModelBbox($model);
+        return $this->generateParentTiles($bbox, $startZoom, $minZoom);
+    }
+
     private function isTileInEmptyParent($zoom, $x, $y, $zoomTreshold, $app_id)
     {
         // Controlla i quadranti vuoti a livelli inferiori

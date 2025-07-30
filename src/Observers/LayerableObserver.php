@@ -22,8 +22,9 @@ class LayerableObserver
     private function handleRelatedFeaturesUpdate(Layerable $layerable, $add)
     {
         $relatedTypeClass = $layerable->layerable_type;
+        $ecTrackModelClass = config('wm-package.ec_track_model', 'App\Models\EcTrack'); 
         if (
-            str_contains($relatedTypeClass, '\EcTrack')
+            $relatedTypeClass === $ecTrackModelClass
             || str_contains($relatedTypeClass, '\EcPoi')
         ) {
             $this->layerService->updateLayerIdsPropertyOnLayeredFeature($layerable->model, [$layerable->layer->id], $add);

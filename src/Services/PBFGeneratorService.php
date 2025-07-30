@@ -5,7 +5,10 @@ namespace Wm\WmPackage\Services;
 use Exception;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Wm\WmPackage\Jobs\Pbf\GenerateOptimizedPBFChainJob;
 use Wm\WmPackage\Jobs\Pbf\GeneratePBFByZoomJob;
+use Wm\WmPackage\Jobs\Pbf\RegeneratePBFForTrackJob;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Services\Models\EcTrackService;
@@ -166,34 +169,45 @@ class PBFGeneratorService extends BaseService
     bounds AS (
         SELECT {$boundingBoxSQL} AS geom, {$boundingBoxSQL}::box2d AS b2d
     ),
-    ecTracks AS (
+            validGeometries AS (
         SELECT 
-            ST_AsMVTGeom(
-                ST_SimplifyPreserveTopology(
-                    ST_Transform(ec.geometry::geometry,3857), --indexed
-                    $simplificationFactor
-                ), 
-                bounds.b2d
-            ) AS geom,
             ec.id,
-            ec.properties ->> 'ref' as ref,
-            ec.properties ->> 'cai_scale' as cai_scale,
-            ec.properties ->> 'distance' as distance,
-            ec.properties ->> 'duration_forward' as duration_forward,
-            ec.properties ->> 'layers' AS layers, -- text
-            ec.properties ->> 'searchable' as searchable,
-            ec.properties ->> 'color' as stroke_color
+            ec.properties,
+            ST_Force2D(ST_Transform(ec.geometry::geometry,3857)) as geom_mercator
         FROM {$tableName} ec
         CROSS JOIN bounds
         WHERE 
             ec.app_id = $app_id -- Filtra per i layer associati all'app
+            AND ec.geometry IS NOT NULL -- Filtra geometrie NULL
+            AND ST_IsValid(ec.geometry::geometry) -- Filtra geometrie non valide
             AND ST_Intersects(
                 ST_Transform(ec.geometry::geometry,3857), --indexed
                 bounds.geom
             )
-            AND ST_Dimension(ST_Transform(ec.geometry::geometry,3857)) = 1
+    ),
+    processedGeometries AS (
+        SELECT 
+            id,
+            properties,
+            ST_SimplifyPreserveTopology(geom_mercator, $simplificationFactor) as simplified_geom
+        FROM validGeometries
+    ),
+    ecTracks AS (
+        SELECT 
+            ST_AsMVTGeom(simplified_geom, bounds.b2d) AS geom,
+            id,
+            properties ->> 'ref' as ref,
+            properties ->> 'cai_scale' as cai_scale,
+            properties ->> 'distance' as distance,
+            properties ->> 'duration_forward' as duration_forward,
+            properties ->> 'layers' AS layers, -- text
+            properties ->> 'searchable' as searchable,
+            properties ->> 'color' as stroke_color
+        FROM processedGeometries
+        CROSS JOIN bounds
     )
-    SELECT ST_AsMVT(ecTracks.*, '{$tableName}') FROM ecTracks;
+    SELECT ST_AsMVT(ecTracks.*, '{$tableName}') FROM ecTracks
+    WHERE EXISTS (SELECT 1 FROM ecTracks WHERE geom IS NOT NULL AND ST_IsValid(geom)); -- Controllo finale che ci siano geometrie valide
     SQL;
 
         // Log::info($sql);
@@ -221,4 +235,284 @@ class PBFGeneratorService extends BaseService
         }
         Bus::chain($chain)->onConnection('redis')->onQueue('pbf')->dispatch();
     }
+
+    /**
+     * Genera i PBF per tutta l'app usando l'approccio bottom-up ottimizzato
+     * Parte dal zoom più alto e risale la piramide dei tile
+     * 
+     * @param App $app L'app per cui generare i PBF
+     * @param int|null $minZoom Zoom minimo (default: dalla config)
+     * @param int|null $maxZoom Zoom massimo (default: dalla config)
+     * @param bool $noPbfLayer Se non generare layer PBF
+     * @param float $maxClusterDistance Distanza massima per clustering (metri, default: 10km)
+     * @return void
+     * @throws Exception Se l'app non ha tracce
+     */
+    public function generateWholeAppPbfsOptimized(
+        App $app, 
+        $minZoom = null, 
+        $maxZoom = null, 
+        $noPbfLayer = false,
+        float $maxClusterDistance = 10000
+    ) {
+        // Verifica che l'app abbia tracce
+        $trackCount = $app->ecTracks()->count();
+        if ($trackCount === 0) {
+            throw new Exception("App {$app->id} non ha tracce associate!");
+        }
+
+        $minZoom = $minZoom ?? config('wm-package.services.pbf.min_zoom');
+        $maxZoom = $maxZoom ?? config('wm-package.services.pbf.max_zoom');
+
+        Log::info("Avvio generazione PBF ottimizzata per app", [
+            'app_id' => $app->id,
+            'app_name' => $app->name,
+            'track_count' => $trackCount,
+            'min_zoom' => $minZoom,
+            'max_zoom' => $maxZoom,
+            'cluster_distance' => $maxClusterDistance
+        ]);
+
+        // Ottieni tutte le tracce dell'app
+        $trackIds = $this->getAllTrackIds($app->id);
+        
+        if (empty($trackIds)) {
+            throw new Exception("App {$app->id} non ha tracce valide!");
+        }
+
+        // Dispatch del job chain che gestisce l'intero processo bottom-up
+        GenerateOptimizedPBFChainJob::dispatch(
+            $app->id,
+            $maxZoom, // startZoom (dal più alto)
+            $minZoom, // minZoom
+            $noPbfLayer,
+            $maxClusterDistance,
+            $trackIds // Passa le track IDs già recuperate
+        );
+
+        Log::info("Job chain di generazione PBF ottimizzata avviato", [
+            'app_id' => $app->id,
+            'zoom_range' => "{$maxZoom} → {$minZoom} (bottom-up)"
+        ]);
+    }
+
+    /**
+     * Genera i tile PBF solo per una traccia specifica modificata
+     * Ottimizzato per rigenerare solo i tile impattati dalla modifica
+     * 
+     * @param \Wm\WmPackage\Models\Abstracts\GeometryModel $track Il modello della traccia modificata
+     * @param int|null $startZoom Zoom di partenza (default: max_zoom dalla config)
+     * @param int|null $minZoom Zoom minimo (default: min_zoom dalla config)
+     * @return void
+     * @throws \Exception Se la traccia non ha un bounding box valido
+     */
+    public function generatePbfsForTrack($track, $startZoom = null, $minZoom = null)
+    {
+        // Verifica che la traccia abbia una geometria valida
+        if (empty($track->geometry)) {
+            throw new Exception('Track does not have a valid geometry!');
+        }
+
+        // Ottieni i livelli di zoom dalla configurazione se non specificati
+        $startZoom = $startZoom ?? config('wm-package.services.pbf.max_zoom');
+        $minZoom = $minZoom ?? config('wm-package.services.pbf.min_zoom');
+
+        // Verifica che l'app sia associata alla traccia
+        if (empty($track->app_id)) {
+            throw new Exception('Track does not have an associated app_id!');
+        }
+
+        // Dispatch del job ottimizzato per la singola traccia
+        RegeneratePBFForTrackJob::dispatchForTrack(
+            $track,
+            $startZoom,
+            $minZoom,
+            $track->app_id
+        );
+    }
+
+        /**
+     * Ottieni tutti gli ID delle tracce dell'app
+     * 
+     * @param int $app_id ID dell'app
+     * @return array Array di track IDs
+     */
+    public function getAllTrackIds(int $app_id): array
+    {
+        $tableName = config('wm-package.ec_track_table');
+        
+        // Query per ottenere tutte le tracce valide dell'app
+        $sql = "
+            SELECT id
+            FROM {$tableName}
+            WHERE app_id = ?
+            AND geometry IS NOT NULL
+            AND ST_IsValid(geometry::geometry)
+            AND ST_Dimension(geometry::geometry) = 1
+            AND NOT ST_IsEmpty(geometry::geometry)
+            AND ST_GeometryType(geometry::geometry) IN ('ST_LineString', 'ST_MultiLineString')
+            ORDER BY id
+        ";
+        
+        $results = DB::select($sql, [$app_id]);
+        return array_column($results, 'id');
+    }
+
+        /**
+     * Calcola i tile che contengono le geometrie delle tracce usando PostGIS
+     * 
+     * @param array $trackIds Array di track IDs
+     * @param int $zoom Livello di zoom
+     * @return array Array di tile [x, y, zoom]
+     */
+    private function calculateTilesFromGeometries(array $trackIds, int $zoom): array
+    {
+        if (empty($trackIds)) {
+            return [];
+        }
+
+        $tableName = config('wm-package.ec_track_table');
+        
+        // Query per ottenere le coordinate delle geometrie (approccio sicuro)
+        $sql = "
+            SELECT 
+                id,
+                ST_X(ST_PointOnSurface(ST_Transform(geometry::geometry, 4326))) as lon,
+                ST_Y(ST_PointOnSurface(ST_Transform(geometry::geometry, 4326))) as lat
+            FROM {$tableName}
+            WHERE id = ANY(:track_ids)
+            AND geometry IS NOT NULL
+            AND ST_IsValid(geometry::geometry)
+            AND ST_Dimension(geometry::geometry) = 1
+            AND NOT ST_IsEmpty(geometry::geometry)
+            AND ST_GeometryType(geometry::geometry) IN ('ST_LineString', 'ST_MultiLineString')
+        ";
+        
+        $results = DB::select($sql, [
+            'track_ids' => '{'.implode(',', $trackIds).'}'
+        ]);
+        
+        $tiles = [];
+        $seen = [];
+        
+        foreach ($results as $result) {
+            // Calcola le coordinate tile dalle coordinate geografiche
+            $tileCoords = $this->deg2num($result->lat, $result->lon, $zoom);
+            $tileX = $tileCoords[0];
+            $tileY = $tileCoords[1];
+            
+            $key = "{$zoom}_{$tileX}_{$tileY}";
+            
+            if (!isset($seen[$key])) {
+                $seen[$key] = true;
+                $tiles[] = [$tileX, $tileY, $zoom];
+            }
+        }
+        
+        return $tiles;
+    }
+
+       /**
+     * Converte coordinate geografiche in coordinate tile
+     * 
+     * @param float $lat_deg Latitudine in gradi
+     * @param float $lon_deg Longitudine in gradi
+     * @param int $zoom Livello di zoom
+     * @return array [x, y] coordinate tile
+     */
+    private function deg2num($lat_deg, $lon_deg, $zoom)
+    {
+        $lat_rad = deg2rad($lat_deg);
+        $n = pow(2, $zoom);
+        $xtile = floor(($lon_deg + 180.0) / 360.0 * $n);
+        $ytile = floor((1.0 - asinh(tan($lat_rad)) / M_PI) / 2.0 * $n);
+        return [$xtile, $ytile];
+    }
+
+        /**
+     * Genera i tile ottimizzati per un determinato zoom usando approccio bottom-up
+     * 
+     * @param array $trackIds Array di track IDs
+     * @param int $zoom Livello di zoom
+     * @param float $maxClusterDistance Distanza massima per clustering (non usato in questo approccio)
+     * @return array Array di tile [x, y, zoom]
+     */
+    public function generateOptimizedTilesForZoom(array $trackIds, int $zoom): array
+    {
+        if (empty($trackIds)) {
+            return [];
+        }
+
+        // Per zoom alti (>= 10), usa approccio bottom-up dalle geometrie
+        if ($zoom >= 10) {
+            return $this->generateTilesBottomUp($trackIds, $zoom);
+        } else {
+            // Per zoom bassi, usa approccio tradizionale ma ottimizzato
+            return $this->generateTilesWithoutClustering($trackIds, $zoom);
+        }
+    }
+
+      /**
+     * Genera tile usando approccio bottom-up dalle geometrie
+     * Parte dalle geometrie delle tracce e calcola i quadranti che le contengono
+     * 
+     * @param array $trackIds Array di track IDs
+     * @param int $zoom Livello di zoom di partenza
+     * @return array Array di tile [x, y, zoom]
+     */
+    private function generateTilesBottomUp(array $trackIds, int $zoom): array
+    {
+        Log::info("Avvio generazione bottom-up per zoom {$zoom}", [
+            'total_tracks' => count($trackIds),
+            'zoom' => $zoom
+        ]);
+
+        // 1. Calcola i tile di livello zoom che contengono le geometrie delle tracce
+        $tilesAtZoom = $this->calculateTilesFromGeometries($trackIds, $zoom);
+        
+        Log::info("Calcolati " . count($tilesAtZoom) . " tile al livello zoom {$zoom}", [
+            'zoom' => $zoom,
+            'tiles_count' => count($tilesAtZoom)
+        ]);
+
+        return $tilesAtZoom;
+    }
+
+       /**
+     * Genera tile senza clustering (per zoom bassi)
+     */
+    private function generateTilesWithoutClustering(array $trackIds, int $zoom): array
+    {
+        $tableName = config('wm-package.ec_track_table');
+        
+        // Calcola il bounding box complessivo delle tracce
+        $res = DB::select("
+            SELECT ST_Extent(ST_Transform(geometry::geometry, 4326)) as bbox
+            FROM {$tableName}
+            WHERE id = ANY(:track_ids)
+            AND geometry IS NOT NULL
+            AND ST_IsValid(geometry::geometry)
+        ", [
+            'track_ids' => '{'.implode(',', $trackIds).'}'
+        ]);
+
+        if (empty($res) || is_null($res[0]->bbox)) {
+            return [];
+        }
+
+        // Estrai le coordinate del bounding box
+        preg_match('/BOX\(([-\d\.]+) ([-\d\.]+),([-\d\.]+) ([-\d\.]+)\)/', $res[0]->bbox, $matches);
+        $bbox = [
+            (float) $matches[1], // minLon
+            (float) $matches[2], // minLat
+            (float) $matches[3], // maxLon
+            (float) $matches[4]  // maxLat
+        ];
+
+        // Genera i tile per questo bounding box
+        $geometryService = new GeometryComputationService();
+        return $geometryService->generateTiles($bbox, $zoom, $this->getZoomTreshold(), $this->app_id);
+    }
+
+
 }
