@@ -189,6 +189,7 @@ class PBFGeneratorService extends BaseService
             validGeometries AS (
         SELECT 
             ec.id,
+            ec.name,
             ec.properties,
             ST_Force2D(ST_Transform(ec.geometry::geometry,3857)) as geom_mercator
         FROM {$tableName} ec
@@ -206,6 +207,7 @@ class PBFGeneratorService extends BaseService
         SELECT 
             id,
             properties,
+            name,
             ST_SimplifyPreserveTopology(geom_mercator, $simplificationFactor) as simplified_geom
         FROM validGeometries
     ),
@@ -214,7 +216,7 @@ class PBFGeneratorService extends BaseService
             ST_AsMVTGeom(simplified_geom, bounds.b2d) AS geom,
             id,
             properties ->> 'ref' as ref,
-            properties ->> 'name' as name,
+            name,
             properties ->> 'cai_scale' as cai_scale,
             properties ->> 'distance' as distance,
             properties ->> 'duration_forward' as duration_forward,
