@@ -243,13 +243,17 @@ class PBFGeneratorService extends BaseService
         if (empty($layerIds)) {
             throw new \Exception("No layers associated with app: {$app_id}");
         }
-
-        // simplifies geometry by a factor of 4 for zoom levels <= 8
-        $simplificationFactor = $this->geometryComputationService->getSimplificationFactor($z, $this->getZoomTreshold());
-
         // Genera l'elenco degli ID layer come stringa SQL
         $layerIdsSQL = implode(', ', $layerIds);
 
+        $tbl = [
+            'srid' => '4326',
+            'geomColumn' => 'geometry',
+            'attrColumns' => 'JSON_BUILD_ARRAY(l.id) AS layers,                -- Usa ARRAY per garantire un array anche con un solo elemento
+                 l.properties ->> \'color\' AS stroke_color',
+        ];
+
+        // Trasforma il bounding box in una stringa SQL valida
         $boundingBoxSQL = sprintf(
             'ST_MakeEnvelope(%f, %f, %f, %f, 3857)',
             $boundingBox['xmin'],
@@ -264,55 +268,34 @@ class PBFGeneratorService extends BaseService
         return <<<SQL
         WITH 
         bounds AS (
-            SELECT {$boundingBoxSQL} AS geom, {$boundingBoxSQL}::box2d AS b2d
-        ),
-        validGeometries AS (
-            SELECT 
-                ec.id,
-                ec.properties,
-                ST_Force2D(ST_Transform(ec.geometry::geometry, 3857)) as geom_mercator
-            FROM {$tableName} ec
-            CROSS JOIN bounds
-            WHERE 
-                ec.app_id = $app_id
-                AND ec.geometry IS NOT NULL
-                AND ST_IsValid(ec.geometry::geometry)
-                AND ST_Intersects(
-                    ST_Transform(ec.geometry::geometry, 3857),
-                    bounds.geom
-                )
-        ),
-        processedGeometries AS (
-            SELECT 
-                id,
-                properties,
-                ST_SimplifyPreserveTopology(geom_mercator, $simplificationFactor) as simplified_geom
-            FROM validGeometries
-        ),
-        layerGeometries AS (
-            SELECT 
-                l.id as layer_id,
-                l.name as layer_name,
-                l.properties ->> 'color' as layer_color,
-                ST_Union(simplified_geom) as unified_geom
-            FROM layers l
-            JOIN layerables etl ON l.id = etl.layer_id AND etl.layerable_type LIKE '%{$this->getTrackModelClassName()}'
-            JOIN processedGeometries pg ON etl.layerable_id = pg.id
-            WHERE l.id IN ({$layerIdsSQL})
-            GROUP BY l.id, l.name, l.properties ->> 'color'
-        ),
+            SELECT {$boundingBoxSQL} AS geom, {$boundingBoxSQL}::box2d AS b2d ),
         mvtgeom AS (
             SELECT 
-                ST_AsMVTGeom(unified_geom, bounds.b2d) AS geom,
-                layer_id,
-                layer_name,
-                layer_color as stroke_color
-            FROM layerGeometries
+                ST_AsMVTGeom(
+                    ST_SimplifyPreserveTopology(
+                        ST_Force2D(ST_Transform(ec.{$tbl['geomColumn']}::geometry, 3857)), 4
+                    ), 
+                    bounds.b2d
+                ) AS geom,
+                {$tbl['attrColumns']}
+            FROM layers l
+            JOIN layerables etl ON l.id = etl.layer_id
+            JOIN {$tableName} ec ON etl.layerable_id = ec.id
             CROSS JOIN bounds
-            WHERE unified_geom IS NOT NULL AND ST_IsValid(unified_geom)
+            WHERE l.id IN ({$layerIdsSQL}) -- Filtra per i layer associati all'app
+                AND etl.layerable_type LIKE '%{$this->getTrackModelClassName()}'
+                AND ec.app_id = $app_id -- Filtra per app_id
+                AND 
+                ST_Intersects(
+                    ST_Force2D(ST_Transform(ec.{$tbl['geomColumn']}::geometry, 3857)),
+                    bounds.geom
+                )
+                AND ST_IsValid(ec.{$tbl['geomColumn']}::geometry) 
+                AND ST_Dimension(ec.{$tbl['geomColumn']}::geometry) > 0
+                AND NOT ST_IsEmpty(ec.{$tbl['geomColumn']}::geometry)
+                AND ec.{$tbl['geomColumn']} IS NOT NULL
         )
-        SELECT ST_AsMVT(mvtgeom.*, 'layers') FROM mvtgeom
-        WHERE EXISTS (SELECT 1 FROM mvtgeom WHERE geom IS NOT NULL AND ST_IsValid(geom));
+        SELECT ST_AsMVT(mvtgeom.*, 'layers') FROM mvtgeom;
         SQL;
     }
 
