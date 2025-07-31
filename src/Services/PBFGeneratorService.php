@@ -214,6 +214,7 @@ class PBFGeneratorService extends BaseService
             ST_AsMVTGeom(simplified_geom, bounds.b2d) AS geom,
             id,
             properties ->> 'ref' as ref,
+            properties ->> 'name' as name,
             properties ->> 'cai_scale' as cai_scale,
             properties ->> 'distance' as distance,
             properties ->> 'duration_forward' as duration_forward,
