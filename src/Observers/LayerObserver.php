@@ -91,7 +91,6 @@ class LayerObserver extends AbstractObserver
                     5,  // minZoom
                     13, // minZoom
                     false,
-                    null,
                     $trackIds // Passa le track IDs già recuperate
                 );
 
