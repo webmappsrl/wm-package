@@ -3,7 +3,7 @@
 namespace Wm\WmPackage\Jobs\Pbf;
 
 use Illuminate\Queue\Middleware\WithoutOverlapping;
-
+use Wm\WmPackage\Services\PBFGeneratorService;
 class GenerateLayerPBFJob extends GeneratePBFJob
 {
     /**
@@ -28,5 +28,15 @@ class GenerateLayerPBFJob extends GeneratePBFJob
     {
         // Utilizza un identificatore unico per ogni tile
         return 'generate-layer-pbf-job-'.$this->z.'-'.$this->x.'-'.$this->y;
+    }
+
+    /**
+     * Execute the job.
+     *
+     * @return void
+     */
+    public function handle(PBFGeneratorService $PBFGeneratorService)
+    {
+        $PBFGeneratorService->generate($this->app_id, $this->z, $this->x, $this->y, true);
     }
 }

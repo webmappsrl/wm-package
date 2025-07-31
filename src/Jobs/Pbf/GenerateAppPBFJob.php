@@ -38,7 +38,7 @@ class GenerateAppPBFJob implements ShouldQueue
 
                 // Iterazione attraverso i livelli di zoom
                 for ($zoom = $min_zoom; $zoom <= $max_zoom; $zoom++) {
-                    $tiles = $geometryComputationService->generateTiles($this->bbox, $zoom);
+                    $tiles = $geometryComputationService->generateTiles($this->bbox, $zoom, 10, $app_id);
                     foreach ($tiles as $c => $tile) {
                         [$x, $y, $z] = $tile;
                         if ($z <= 6) {

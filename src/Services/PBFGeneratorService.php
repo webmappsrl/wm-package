@@ -42,11 +42,28 @@ class PBFGeneratorService extends BaseService
         return config('wm-package.services.pbf.zoom_treshold', 6);
     }
 
-    public function generate($app_id, $z, $x, $y)
+    /**
+     * Ottiene il nome della classe del modello delle tracce dalla configurazione
+     * 
+     * @return string Nome della classe (es. 'EcTrack', 'HikingRoute')
+     */
+    private function getTrackModelClassName(): string
+    {
+        $modelClass = config('wm-package.ec_track_model', 'App\Models\EcTrack');
+        return class_basename($modelClass);
+    }
+
+    public function generate($app_id, $z, $x, $y, $isLayerJob = false)
     {
         $boundingBox = $this->geometryComputationService->tileToBoundingBox(['zoom' => $z, 'x' => $x, 'y' => $y]);
 
-        $sql = $this->generateSQL($boundingBox, $app_id, $z);
+        // Scegli la query appropriata in base al tipo di job
+        if ($isLayerJob) {
+            $sql = $this->generateLayerSQL($boundingBox, $app_id, $z);
+        } else {
+            $sql = $this->generateSQL($boundingBox, $app_id, $z);
+        }
+
         $pbf = DB::select($sql);
         $path = false;
         $pbfContent = stream_get_contents($pbf[0]->st_asmvt) ?? null;
@@ -214,6 +231,91 @@ class PBFGeneratorService extends BaseService
         return $sql;
     }
 
+    protected function generateLayerSQL($boundingBox, $app_id, $z): string
+    {
+        // Recupera l'app con i layer associati
+        $app = App::with('layers')->find($app_id);
+        if (! $app) {
+            throw new \Exception("App not found: {$app_id}");
+        }
+
+        $layerIds = $app->layers->pluck('id')->toArray();
+        if (empty($layerIds)) {
+            throw new \Exception("No layers associated with app: {$app_id}");
+        }
+
+        // simplifies geometry by a factor of 4 for zoom levels <= 8
+        $simplificationFactor = $this->geometryComputationService->getSimplificationFactor($z, $this->getZoomTreshold());
+
+        // Genera l'elenco degli ID layer come stringa SQL
+        $layerIdsSQL = implode(', ', $layerIds);
+
+        $boundingBoxSQL = sprintf(
+            'ST_MakeEnvelope(%f, %f, %f, %f, 3857)',
+            $boundingBox['xmin'],
+            $boundingBox['ymin'],
+            $boundingBox['xmax'],
+            $boundingBox['ymax']
+        );
+
+        // Recupera il nome della tabella dal modello
+        $tableName = config('wm-package.ec_track_table');
+
+        return <<<SQL
+        WITH 
+        bounds AS (
+            SELECT {$boundingBoxSQL} AS geom, {$boundingBoxSQL}::box2d AS b2d
+        ),
+        validGeometries AS (
+            SELECT 
+                ec.id,
+                ec.properties,
+                ST_Force2D(ST_Transform(ec.geometry::geometry, 3857)) as geom_mercator
+            FROM {$tableName} ec
+            CROSS JOIN bounds
+            WHERE 
+                ec.app_id = $app_id
+                AND ec.geometry IS NOT NULL
+                AND ST_IsValid(ec.geometry::geometry)
+                AND ST_Intersects(
+                    ST_Transform(ec.geometry::geometry, 3857),
+                    bounds.geom
+                )
+        ),
+        processedGeometries AS (
+            SELECT 
+                id,
+                properties,
+                ST_SimplifyPreserveTopology(geom_mercator, $simplificationFactor) as simplified_geom
+            FROM validGeometries
+        ),
+        layerGeometries AS (
+            SELECT 
+                l.id as layer_id,
+                l.name as layer_name,
+                l.properties ->> 'color' as layer_color,
+                ST_Union(simplified_geom) as unified_geom
+            FROM layers l
+            JOIN layerables etl ON l.id = etl.layer_id AND etl.layerable_type LIKE '%{$this->getTrackModelClassName()}'
+            JOIN processedGeometries pg ON etl.layerable_id = pg.id
+            WHERE l.id IN ({$layerIdsSQL})
+            GROUP BY l.id, l.name, l.properties ->> 'color'
+        ),
+        mvtgeom AS (
+            SELECT 
+                ST_AsMVTGeom(unified_geom, bounds.b2d) AS geom,
+                layer_id,
+                layer_name,
+                layer_color as stroke_color
+            FROM layerGeometries
+            CROSS JOIN bounds
+            WHERE unified_geom IS NOT NULL AND ST_IsValid(unified_geom)
+        )
+        SELECT ST_AsMVT(mvtgeom.*, 'layers') FROM mvtgeom
+        WHERE EXISTS (SELECT 1 FROM mvtgeom WHERE geom IS NOT NULL AND ST_IsValid(geom));
+        SQL;
+    }
+
     public function generateWholeAppPbfs(App $app, $minZoom = null, $maxZoom = null, $noPbfLayer = false)
     {
         $bbox = GeometryComputationService::make()->getTracksBboxFromQuery($app->ecTracks());
@@ -252,8 +354,7 @@ class PBFGeneratorService extends BaseService
         App $app, 
         $minZoom = null, 
         $maxZoom = null, 
-        $noPbfLayer = false,
-        float $maxClusterDistance = 10000
+        $noPbfLayer = false
     ) {
         // Verifica che l'app abbia tracce
         $trackCount = $app->ecTracks()->count();
@@ -269,8 +370,7 @@ class PBFGeneratorService extends BaseService
             'app_name' => $app->name,
             'track_count' => $trackCount,
             'min_zoom' => $minZoom,
-            'max_zoom' => $maxZoom,
-            'cluster_distance' => $maxClusterDistance
+            'max_zoom' => $maxZoom
         ]);
 
         // Ottieni tutte le tracce dell'app
@@ -286,7 +386,6 @@ class PBFGeneratorService extends BaseService
             $maxZoom, // startZoom (dal più alto)
             $minZoom, // minZoom
             $noPbfLayer,
-            $maxClusterDistance,
             $trackIds // Passa le track IDs già recuperate
         );
 

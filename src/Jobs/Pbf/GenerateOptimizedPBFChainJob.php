@@ -28,7 +28,6 @@ class GenerateOptimizedPBFChainJob implements ShouldQueue
     private $startZoom;
     private $minZoom;
     private $no_pbf_layer = false;
-    private $maxClusterDistance;
     private $trackIds;
 
     /**
@@ -36,13 +35,12 @@ class GenerateOptimizedPBFChainJob implements ShouldQueue
      *
      * @return void
      */
-    public function __construct($app_id, $startZoom, $minZoom, $no_pbf_layer = false, $maxClusterDistance = 10000, $trackIds = null)
+    public function __construct($app_id, $startZoom, $minZoom, $no_pbf_layer = false, $trackIds = null)
     {
         $this->app_id = $app_id;
         $this->startZoom = $startZoom;
         $this->minZoom = $minZoom;
         $this->no_pbf_layer = $no_pbf_layer;
-        $this->maxClusterDistance = $maxClusterDistance;
         $this->trackIds = $trackIds;
     }
 
@@ -75,7 +73,6 @@ class GenerateOptimizedPBFChainJob implements ShouldQueue
                     $this->app_id,
                     $zoom,
                     $this->no_pbf_layer,
-                    $this->maxClusterDistance,
                     $trackIds  // Passa le tracce già reperite
                 );
             }
