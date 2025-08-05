@@ -7,6 +7,7 @@ use ChristianKuri\LaravelFavorite\Traits\Favoriteable;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
+use Illuminate\Support\Facades\DB;
 use Laravel\Scout\Searchable;
 use Spatie\Translatable\HasTranslations;
 use Wm\WmPackage\Models\Abstracts\MultiLineString;
@@ -626,5 +627,43 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
         }
 
         return html_entity_decode($string);
+    }
+
+    /**
+     * Get track as GeoJSON feature collection for map widget
+     *
+     * @return array GeoJSON feature collection
+     */
+    public function getFeatureCollectionMap(): array
+    {
+        if (! $this->geometry) {
+            return [
+                'type' => 'FeatureCollection',
+                'features' => []
+            ];
+        }
+
+        // Converti WKB in GeoJSON usando PostGIS
+        $geojson = DB::select("SELECT ST_AsGeoJSON(ST_GeomFromWKB(decode(?, 'hex'))) as geojson", [$this->geometry]);
+        
+        if (empty($geojson)) {
+            return [
+                'type' => 'FeatureCollection',
+                'features' => []
+            ];
+        }
+
+        $geometry = json_decode($geojson[0]->geojson, true);
+
+        $feature = [
+            'type' => 'Feature',
+            'geometry' => $geometry,
+            'properties' => $this->properties
+        ];
+
+        return [
+            'type' => 'FeatureCollection',
+            'features' => [$feature]
+        ];
     }
 }
