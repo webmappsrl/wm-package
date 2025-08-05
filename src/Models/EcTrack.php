@@ -660,18 +660,25 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
                 'features' => []
             ];
         }
-
-        $geometry = json_decode($geojson[0]->geojson, true);
-
-        $feature = [
-            'type' => 'Feature',
-            'geometry' => $geometry,
-            'properties' => $this->properties
-        ];
+        $feature = $this->getFeatureMap();
+        $feature['properties'] = $this->properties;
 
         return [
             'type' => 'FeatureCollection',
             'features' => [$feature]
+        ];
+    }
+
+    public function getFeatureMap($geometry = null) {
+        if ($geometry === null) {
+            $geometry = $this->geometry;
+        }
+        $geojson = DB::select("SELECT ST_AsGeoJSON(ST_GeomFromWKB(decode(?, 'hex'))) as geojson", [$geometry]);
+        $geometry = json_decode($geojson[0]->geojson, true);
+
+        return [
+            'type' => 'Feature',
+            'geometry' => $geometry,
         ];
     }
 }
