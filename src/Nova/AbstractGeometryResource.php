@@ -40,8 +40,16 @@ abstract class AbstractGeometryResource extends Resource
         return [
             ID::make()->sortable(),
             NovaTabTranslatable::make([Text::make('Name', 'name')]),
-            BelongsTo::make('App', 'app', App::class)->filterable(),
-            BelongsTo::make('User', 'user', User::class),
+            BelongsTo::make('App', 'app', App::class)->filterable()->default(function () {
+                $appCount = \Wm\WmPackage\Models\App::count();
+                if ($appCount === 1) {
+                    return \Wm\WmPackage\Models\App::first()->id;
+                }
+                return null;
+            }),
+            BelongsTo::make('User', 'user', User::class)->default(function () {
+                return auth()->id();
+            }),
             PropertiesPanel::make(ucwords($this->getPropertiesColumnName()), $this->getPropertiesModelKey())->collapsible(),
         ];
     }
