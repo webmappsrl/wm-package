@@ -37,8 +37,6 @@ class EcTrack extends AbstractEcResource
     {
         return [
             ...$this->fieldsTrait($request),
-            // Campo nascosto per assicurarsi che properties sia sempre presente
-            Hidden::make('Properties', 'properties')->default('{}'),
             BelongsToMany::make('EcPois', 'ecPois', EcPoi::class),
             MorphToMany::make('Layers', 'layers', Layer::class),
             MorphToMany::make('Activities', 'taxonomyActivities', TaxonomyActivity::class)->display('name'),

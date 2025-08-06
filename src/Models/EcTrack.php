@@ -43,6 +43,13 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
     protected static function booted()
     {
         EcTrack::observe(EcTrackObserver::class);
+        
+        // Imposta un default per properties se è null
+        static::creating(function ($model) {
+            if (is_null($model->properties)) {
+                $model->properties = [];
+            }
+        });
     }
 
     // TODO FIX MAP MULTILINESTRING NOVA FIELD BUG 3D GEOMETRY
