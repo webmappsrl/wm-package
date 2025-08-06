@@ -45,6 +45,7 @@ abstract class AbstractGeometryResource extends Resource
                 if ($appCount === 1) {
                     return \Wm\WmPackage\Models\App::first()->id;
                 }
+
                 return null;
             }),
             BelongsTo::make('User', 'user', User::class)->default(function () {
