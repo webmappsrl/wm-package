@@ -30,7 +30,7 @@ abstract class AbstractEcResource extends AbstractGeometryResource
     {
         return [
             ...parent::fields($request),
-            Images::make('Image', 'default')->onlyOnDetail(),
+            Images::make('Image', 'default'),
         ];
     }
 
