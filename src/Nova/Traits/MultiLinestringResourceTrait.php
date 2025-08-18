@@ -11,7 +11,7 @@ trait MultiLinestringResourceTrait
     {
         return [
             ...parent::fields($request),
-            MapMultiLinestring::make('Geometry', 'geometry')->hideFromIndex()->required(),
+            MapMultiLinestring::make('Geometry', 'geometry')->withMeta(['tiles' => 'https://api.webmapp.it/tiles/{z}/{x}/{y}.png'])->hideFromIndex()->required(),
         ];
     }
 }
