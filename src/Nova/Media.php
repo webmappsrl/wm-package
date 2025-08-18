@@ -17,6 +17,16 @@ class Media extends AbstractGeometryResource
 
     public static $model = \Wm\WmPackage\Models\Media::class;
 
+    public static function label(): string
+    {
+        return __('Media');
+    }
+
+    public static function singularLabel(): string
+    {
+        return __('Media');
+    }
+
     public function fields(NovaRequest $request): array
     {
 
