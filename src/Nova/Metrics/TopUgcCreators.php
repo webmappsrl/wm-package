@@ -45,7 +45,6 @@ class TopUgcCreators extends Table
             ->limit(5)
             ->pluck('user_id');
 
-        // passo 2: join solo per quei 5 utenti
         $topUsers = DB::table("{$ugcTable} as ugc")
             ->select(
                 'ugc.user_id',
@@ -82,7 +81,7 @@ class TopUgcCreators extends Table
                 ->icon($iconClass == 'none' ? 'minus' : 'trophy')
                 ->iconClass($iconClass)
                 ->title($title)
-                ->actions(function () use ($baseUrl, $row) {
+                ->actions(function () use ($baseUrl, $row, $ugcTable) {
                     return [
                         [
                             'name' => __('Open User Details: :name', ['name' => $row->name]),
@@ -91,11 +90,24 @@ class TopUgcCreators extends Table
                             'target' => '_blank',
                             'method' => 'GET',
                         ],
+                        [
+                            'name' => __('Filter by User: :name', ['name' => $row->name]),
+                            'path' => $this->getUgcPath($ugcTable, $row->user_id),
+                            'method' => 'GET',
+                        ],
                     ];
                 });
         }
 
         return $rows;
+    }
+
+    protected function getUgcPath(string $ugcTable, int $userId)
+    {
+        $resource = str_replace('_', '-', $ugcTable);
+        $filter = base64_encode(json_encode([['resource:users:author' => $userId]]));
+
+        return url(Nova::path()."/resources/{$resource}?{$resource}_filter={$filter}");
     }
 
     /**
