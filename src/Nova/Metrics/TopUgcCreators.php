@@ -37,6 +37,15 @@ class TopUgcCreators extends Table
         $ugcTable = (new $this->ugcModelClass)->getTable();
         $userTable = (new AppUser)->getTable();
 
+        $bestUserIds = DB::table("{$ugcTable}")
+            ->select('user_id', DB::raw('COUNT(*) as total'))
+            ->whereNotNull('user_id')
+            ->groupBy('user_id')
+            ->orderByDesc('total')
+            ->limit(5)
+            ->pluck('user_id');
+
+        // passo 2: join solo per quei 5 utenti
         $topUsers = DB::table("{$ugcTable} as ugc")
             ->select(
                 'ugc.user_id',
@@ -45,10 +54,9 @@ class TopUgcCreators extends Table
                 'u.email'
             )
             ->join("{$userTable} as u", 'u.id', '=', 'ugc.user_id')
-            ->whereNotNull('ugc.user_id')
+            ->whereIn('ugc.user_id', $bestUserIds)
             ->groupBy('ugc.user_id', 'u.name', 'u.email')
             ->orderByDesc('total')
-            ->limit(5)
             ->get();
 
         if ($topUsers->isEmpty()) {
