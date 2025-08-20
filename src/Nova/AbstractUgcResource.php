@@ -14,6 +14,7 @@ use Wm\WmPackage\Nova\Fields\PropertiesPanel;
 use Wm\WmPackage\Nova\Filters\AppFilter;
 use Wm\WmPackage\Nova\Filters\FormSchemaFilter;
 use Wm\WmPackage\Nova\Filters\UgcCreationDateFilter;
+use Wm\WmPackage\Nova\Metrics\TopUgcCreators;
 
 abstract class AbstractUgcResource extends AbstractGeometryResource
 {
@@ -49,6 +50,21 @@ abstract class AbstractUgcResource extends AbstractGeometryResource
             new AppFilter,
             new FormSchemaFilter($this->model()),
             new UgcCreationDateFilter,
+        ];
+    }
+
+    /**
+     * Get the cards available for the resource.
+     *
+     * @return array<int, \Laravel\Nova\Card>
+     */
+    public function cards(NovaRequest $request): array
+    {
+        $ugcModelClass = get_class(static::newModel());
+
+        return [
+            new TopUgcCreators($ugcModelClass)
+                ->width('full'),
         ];
     }
 }
