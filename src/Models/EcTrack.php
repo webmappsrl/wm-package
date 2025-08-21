@@ -24,6 +24,8 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
 {
     use EcFeatureTrait, Favoriteable, HasTranslations, Searchable, TaxonomyAbleModel, TaxonomyWhereAbleModel;
 
+    protected $table;
+
     protected $fillable = [
         'name',
         'geometry',
@@ -32,6 +34,12 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
         'user_id',
         'osmid',
     ];
+
+    public function __construct(array $attributes = [])
+    {
+        $this->table = config('wm-package.ec_track_table', 'ec_tracks');
+        parent::__construct($attributes);
+    }
 
     protected $casts = [
         'properties' => 'array',

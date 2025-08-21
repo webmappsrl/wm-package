@@ -137,7 +137,8 @@ class WmPackageServiceProvider extends PackageServiceProvider
                 'wm-horizon',
                 'wm-form-schema',
                 'wm-tab-translatable',
-                'layer-schema',
+                'wm-layer-schema',
+                'wm-ec-track-schema',
             ])
             // ->hasRoutes(['api', 'web'])// Check the boot method, routes are registered there
             ->discoversMigrations()

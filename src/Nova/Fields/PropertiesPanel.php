@@ -138,6 +138,7 @@ class PropertiesPanel extends Panel
     public function jsonForm(object $model, string $columnName, ?string $attribute, ?array $formSchema = null, $editable = null): array
     {
         $fields = [];
+        xdebug_break();
 
         // Determina se i campi devono essere editabili
         $isEditable = static::determineEditability($editable, $model, request());
@@ -149,6 +150,14 @@ class PropertiesPanel extends Panel
                 $formSchema = $layerSchema[$columnName];
             }
         }
+
+        if (class_basename($model) === 'EcTrack') {
+            $ecTrackSchema = config('wm-ec-track-schema');
+            if ($ecTrackSchema && isset($ecTrackSchema[$columnName])) {
+                $formSchema = $ecTrackSchema[$columnName];
+            }
+        }
+
 
         if ($columnName && Schema::hasColumn($model->getTable(), $columnName)) {
             // Fetch the JSON data from the column

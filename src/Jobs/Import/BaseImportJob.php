@@ -79,7 +79,7 @@ abstract class BaseImportJob implements ShouldQueue
      */
     protected function getTableName(): string
     {
-        return (new ($this->getModelName()))->getTable();
+        return config('wm-geohub-import.import_mapping.'.$this->getModelKey().'.geohub_table');
     }
 
     /**

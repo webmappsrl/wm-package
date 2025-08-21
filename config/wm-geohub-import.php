@@ -131,6 +131,32 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Default Dependencies Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Configure which dependencies should be imported by default for each model.
+    | This serves as a fallback when no specific dependencies are specified.
+    | 
+    | Available dependencies for 'app' model:
+    | - 'ec_poi': Import POI data
+    | - 'ec_track': Import track data  
+    | - 'taxonomy_activity': Import taxonomy activity data
+    | - 'layer': Import layer data
+    | - 'ec_media': Import media data
+    |
+    | Examples:
+    | 'default_dependencies' => [
+    |     'app' => ['taxonomy_activity', 'layer'], // Import only these by default
+    |     'app' => [], // Import no dependencies by default
+    | ],
+    |
+    */
+    'default_dependencies' => [
+        'app' => ['ec_poi', 'ec_track', 'taxonomy_activity', 'layer', 'ec_media'], // Import all dependencies by default
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Import Mapping Configuration
     |--------------------------------------------------------------------------
     |

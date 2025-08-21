@@ -35,14 +35,52 @@ class ImportAppJob extends BaseImportJob
 
     protected function processDependencies(array $data, Model $model): void
     {
+        // Get the list of allowed dependencies from configuration or job data
+        $allowedDependencies = $this->getAllowedDependencies();
+        
         // foreach ($this->getRelations() as $modelKey => $relationData) {
         //     $this->queueEntityImport($modelKey, $userId, $relationData['foreign_key']);
         // }
-        // $this->queueEntityImport('ec_poi', $data['user_id'], 'user_id', $model->id); //TODO: da riabilitare a chiusura feature
-        // $this->queueEntityImport('ec_track', $data['user_id'], 'user_id', $model->id);//TODO: da riabilitare a chiusura feature
-        $this->queueEntityImport('taxonomy_activity', $data['user_id'], 'user_id', $model->id);
-        //  $this->queueEntityImport('layer', $data['user_id'], 'app_id', $model->id);
-        // $this->queueEntityImport('ec_media', $data['user_id'], 'user_id', $model->id);//TODO: da riabilitare a chiusura feature
+        
+        // Import only allowed dependencies
+        if (in_array('ec_poi', $allowedDependencies)) {
+            $this->queueEntityImport('ec_poi', $data['user_id'], 'user_id', $model->id);
+        }
+        
+        if (in_array('ec_track', $allowedDependencies)) {
+            $this->queueEntityImport('ec_track', $data['user_id'], 'user_id', $model->id);
+        }
+        
+        if (in_array('taxonomy_activity', $allowedDependencies)) {
+            $this->queueEntityImport('taxonomy_activity', $data['user_id'], 'user_id', $model->id);
+        }
+        
+        if (in_array('layer', $allowedDependencies)) {
+            $this->queueEntityImport('layer', $data['user_id'], 'app_id', $model->id);
+        }
+        
+        if (in_array('ec_media', $allowedDependencies)) {
+            $this->queueEntityImport('ec_media', $data['user_id'], 'user_id', $model->id);
+        }
+    }
+
+    /**
+     * Get the list of allowed dependencies
+     */
+    protected function getAllowedDependencies(): array
+    {
+        // All available dependencies
+        $allDependencies = ['ec_poi', 'ec_track', 'taxonomy_activity', 'layer', 'ec_media'];
+
+        // First check if allowed_dependencies is passed in job data
+        if (isset($this->data['allowed_dependencies']) && is_array($this->data['allowed_dependencies'])) {
+            return $this->data['allowed_dependencies'];
+        }
+        
+        // Fallback to configuration
+        $configDependencies = config('wm-geohub-import.default_dependencies.app', $allDependencies);
+        
+        return is_array($configDependencies) ? $configDependencies : $allDependencies;
     }
 
     /**

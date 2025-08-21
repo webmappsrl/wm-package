@@ -89,9 +89,10 @@ class GeohubImportService
     /**
      * Import all entities of a specific model type
      *
-     * @param  string  $model  The model type to import
+     * @param  string  $modelKey  The model type to import
+     * @param  array  $data  Additional data to pass to the jobs
      */
-    public function importAllByModel(string $modelKey): void
+    public function importAllByModel(string $modelKey, array $data = []): void
     {
         $this->validateModelExists($modelKey);
 
@@ -99,7 +100,7 @@ class GeohubImportService
 
         $ids = $this->getGeohubIdsToImport($modelKey, null);
 
-        $jobs = $this->createJobsForIds($modelKey, $ids);
+        $jobs = $this->createJobsForIds($modelKey, $ids, $data);
 
         $batch = Bus::batch($jobs)
             ->name("Import {$modelKey}s from geohub")
@@ -201,7 +202,13 @@ class GeohubImportService
 
     public function getModelInstance(string $tableName): Model
     {
-        $modelClass = collect($this->importMapping)->firstWhere('geohub_table', $tableName)['namespace'];
+        $mapping = collect($this->importMapping)->firstWhere('geohub_table', $tableName);
+        
+        if (!$mapping) {
+            throw new \InvalidArgumentException("No model mapping found for table: {$tableName}");
+        }
+        
+        $modelClass = $mapping['namespace'];
 
         return new $modelClass;
     }
