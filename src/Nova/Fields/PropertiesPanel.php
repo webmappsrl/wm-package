@@ -381,7 +381,7 @@ class PropertiesPanel extends Panel
                     $options = [];
                     foreach ($fieldSchema['values'] as $option) {
                         // Salta se non è una vera option di select
-                        if (!is_array($option) || !array_key_exists('value', $option)) {
+                        if (! is_array($option) || ! array_key_exists('value', $option)) {
                             continue;
                         }
                         $optionValue = $option['value'];
