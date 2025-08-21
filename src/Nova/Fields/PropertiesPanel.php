@@ -380,7 +380,11 @@ class PropertiesPanel extends Panel
                 if (isset($fieldSchema['values']) && is_array($fieldSchema['values'])) {
                     $options = [];
                     foreach ($fieldSchema['values'] as $option) {
-                        $optionValue = $option['value'] ?? $option;
+                        // Salta se non è una vera option di select
+                        if (!is_array($option) || !array_key_exists('value', $option)) {
+                            continue;
+                        }
+                        $optionValue = $option['value'];
                         $optionLabel = isset($option['label'])
                             ? static::resolveMultilingualLabel($option['label'])
                             : $optionValue;
