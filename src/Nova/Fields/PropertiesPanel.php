@@ -138,7 +138,6 @@ class PropertiesPanel extends Panel
     public function jsonForm(object $model, string $columnName, ?string $attribute, ?array $formSchema = null, $editable = null): array
     {
         $fields = [];
-        xdebug_break();
 
         // Determina se i campi devono essere editabili
         $isEditable = static::determineEditability($editable, $model, request());
