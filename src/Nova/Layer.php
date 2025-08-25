@@ -12,6 +12,7 @@ use Laravel\Nova\Fields\Number;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Wm\WmPackage\Nova\Fields\PropertiesPanel;
+use Wm\WmPackage\Nova\Filters\AppFilter;
 use Wm\WmPackage\Nova\Traits\MultiPolygonResourceTrait;
 
 class Layer extends AbstractGeometryResource
@@ -59,6 +60,14 @@ class Layer extends AbstractGeometryResource
         return [
             ...parent::actions($request),
             new Actions\UpdateLayerPbfAction,
+        ];
+    }
+
+    public function filters(NovaRequest $request): array
+    {
+        return [
+            ...parent::filters($request),
+            new AppFilter,
         ];
     }
 }
