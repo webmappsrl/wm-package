@@ -12,6 +12,7 @@ use Laravel\Nova\Http\Requests\NovaRequest;
 use Spatie\Permission\Models\Permission;
 use Vyuldashev\NovaPermission\PermissionBooleanGroup;
 use Vyuldashev\NovaPermission\RoleBooleanGroup;
+use Wm\WmPackage\Nova\Filters\AppFilter;
 
 abstract class AbstractUserResource extends Resource
 {
@@ -86,6 +87,18 @@ abstract class AbstractUserResource extends Resource
                         return $permissions->toArray();
                     });
                 }),
+        ];
+    }
+
+    /**
+     * Get the filters available for the resource.
+     *
+     * @return array<int, \Laravel\Nova\Filters\Filter>
+     */
+    public function filters(NovaRequest $request): array
+    {
+        return [
+            new AppFilter,
         ];
     }
 }
