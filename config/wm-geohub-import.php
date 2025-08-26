@@ -117,7 +117,7 @@ return [
                     'queue' => ['geohub-import'],
                     'balance' => 'auto',
                     'autoScalingStrategy' => 'time',
-                    'maxProcesses' => 3,
+                    'maxProcesses' => 10, // Aumentato da 3 a 10
                     'maxTime' => 0,
                     'maxJobs' => 0,
                     'memory' => 128,

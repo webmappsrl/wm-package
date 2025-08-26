@@ -10,27 +10,53 @@ class DataTransformer
     /**
      * Convert a JSON string to an array.
      */
-    public function jsonToArray(?string $json): array
+    public function jsonToArray($json): array
     {
-        if (! $json) {
+        // Se è già un array, restituiscilo direttamente
+        if (is_array($json)) {
+            return array_filter($json, fn ($value) => $value !== null && $value !== '');
+        }
+
+        // Se è null o vuoto, restituisci array vuoto
+        if (!$json) {
             return [];
         }
 
-        $arr = json_decode($json, true);
+        // Se è una stringa, decodifica JSON
+        if (is_string($json)) {
+            $arr = json_decode($json, true);
+            return array_filter($arr, fn ($value) => $value !== null && $value !== '');
+        }
 
-        return array_filter($arr, fn ($value) => $value !== null && $value !== '');
+        // Per altri tipi, restituisci array vuoto
+        return [];
     }
 
     /**
      * Convert a JSON string to an array.
      */
-    public function nullableJsonToArray(?string $json): ?array
+    public function nullableJsonToArray($json): ?array
     {
-        if (! $json) {
+        // Se è già un array, restituiscilo direttamente
+        if (is_array($json)) {
+            $filtered = array_filter($json, fn ($value) => $value !== null && $value !== '');
+            return empty($filtered) ? null : $filtered;
+        }
+
+        // Se è null o vuoto, restituisci null
+        if (!$json) {
             return null;
         }
 
-        return $this->jsonToArray($json);
+        // Se è una stringa, decodifica JSON
+        if (is_string($json)) {
+            $arr = json_decode($json, true);
+            $filtered = array_filter($arr, fn ($value) => $value !== null && $value !== '');
+            return empty($filtered) ? null : $filtered;
+        }
+
+        // Per altri tipi, restituisci null
+        return null;
     }
 
     /**
