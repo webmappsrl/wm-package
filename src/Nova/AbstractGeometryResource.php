@@ -51,7 +51,7 @@ abstract class AbstractGeometryResource extends Resource
             BelongsTo::make('User', 'user', User::class)->default(function () {
                 return auth()->id();
             }),
-            PropertiesPanel::make(ucwords($this->getPropertiesColumnName()), $this->getPropertiesModelKey())->collapsible(),
+            PropertiesPanel::makeWithModel(__('Properties'), $this->getPropertiesColumnName(), $this, true)->collapsible(),
         ];
     }
 
