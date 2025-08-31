@@ -8,18 +8,37 @@ class GeoJsonService extends BaseService
 {
     public function getModelAsGeojson(Model $model)
     {
-        $properties = $model->properties ?? [];
-        $properties['id'] = $model->id;
-        $geom = GeometryComputationService::make()->getModelGeometryAsGeojson($model);
+        try {
+            $properties = is_array($model->properties) ? $model->properties : [];
+            $properties['id'] = $model->id;
+            
+            // Verifica che il modello abbia una geometria valida
+            if (!$model->geometry || empty($model->geometry)) {
+                return null;
+            }
+            
+            $geom = GeometryComputationService::make()->getModelGeometryAsGeojson($model);
+            
+            if (!$geom) {
+                return null;
+            }
 
-        $decodedGeom = isset($geom) ? json_decode($geom, true) : null;
+            $decodedGeom = json_decode($geom, true);
+            
+            if (!$decodedGeom) {
+                return null;
+            }
 
-        return [
-            'type' => 'Feature',
-            // remove empty arrays from properties
-            'properties' => $this->removeInvalidProperties($properties),
-            'geometry' => $decodedGeom,
-        ];
+            return [
+                'type' => 'Feature',
+                // remove empty arrays from properties
+                'properties' => $this->removeInvalidProperties($properties),
+                'geometry' => $decodedGeom,
+            ];
+        } catch (\Exception $e) {
+            \Log::warning("Errore nel generare GeoJSON per modello ID {$model->id}: " . $e->getMessage());
+            return null;
+        }
     }
 
     public function removeInvalidProperties(array $properties): array

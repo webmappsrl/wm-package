@@ -15,6 +15,7 @@ use Whitecube\NovaFlexibleContent\Value\FlexibleCast;
 use Wm\WmPackage\Observers\AppObserver;
 use Wm\WmPackage\Services\StorageService;
 use Wm\WmPackage\Traits\HasPackageFactory;
+use Wm\WmPackage\Traits\TaxonomyAbleModel;
 
 /**
  * Class App
@@ -25,7 +26,7 @@ use Wm\WmPackage\Traits\HasPackageFactory;
  */
 class App extends Model implements HasMedia
 {
-    use HasPackageFactory, HasTranslations, InteractsWithMedia;
+    use HasPackageFactory, HasTranslations, InteractsWithMedia, TaxonomyAbleModel;
 
     protected $guarded = [];
 
@@ -84,6 +85,11 @@ class App extends Model implements HasMedia
         $modelClass = config('wm-package.ec_track_model');
 
         return $this->hasMany($modelClass);
+    }
+    
+    public function ecPois(): HasMany
+    {
+        return $this->hasMany(EcPoi::class);
     }
 
     public function poiAcquisitionForm($formId = null)
@@ -201,16 +207,31 @@ class App extends Model implements HasMedia
 
     public function getAllPoisGeojson()
     {
-        $themes = $this->taxonomyThemes()->get();
-
         $pois = [];
-        foreach ($themes as $theme) {
-            foreach ($theme->ecPois()->orderBy('name')->get() as $poi) {
-                $item = $poi->getGeojson(false, $this->id);
-                $item['properties']['related'] = false;
-                unset($item['properties']['pivot']);
-
-                array_push($pois, $item);
+        
+        // Usa la relazione diretta come per le tracks
+        $appPois = $this->ecPois()->get();
+        
+        if (count($appPois) > 0) {
+            foreach ($appPois as $poi) {
+                try {
+                    // Verifica che il POI abbia una geometria valida
+                    if ($poi->geometry && !empty($poi->geometry)) {
+                        $item = $poi->getGeojson(false, $this->id);
+                        
+                        // Verifica che il geojson sia valido e non null
+                        if ($item && isset($item['geometry']) && $item['geometry'] !== null) {
+                            $item['properties']['related'] = false;
+                            unset($item['properties']['pivot']);
+                            
+                            array_push($pois, $item);
+                        }
+                    }
+                } catch (\Exception $e) {
+                    // Log dell'errore ma continua con gli altri POI
+                    \Log::warning("Errore nel processare POI ID {$poi->id}: " . $e->getMessage());
+                    continue;
+                }
             }
         }
 
@@ -422,12 +443,23 @@ class App extends Model implements HasMedia
      */
     public function getPOIsUpdatedAtFromApp(): array
     {
-        $themes = $this->taxonomyThemes()->get();
-
         $pois = [];
-        foreach ($themes as $theme) {
-            foreach ($theme->ecPois()->orderBy('name')->get() as $poi) {
-                $pois[$poi->id] = $poi->updated_at;
+        
+        // Usa la relazione diretta come per le tracks
+        $appPois = $this->ecPois()->get();
+        
+        if (count($appPois) > 0) {
+            foreach ($appPois as $poi) {
+                try {
+                    // Verifica che il POI abbia una geometria valida
+                    if ($poi->geometry && !empty($poi->geometry)) {
+                        $pois[$poi->id] = $poi->updated_at;
+                    }
+                } catch (\Exception $e) {
+                    // Log dell'errore ma continua con gli altri POI
+                    \Log::warning("Errore nel processare POI ID {$poi->id} per updated_at: " . $e->getMessage());
+                    continue;
+                }
             }
         }
 
