@@ -117,14 +117,24 @@ class GeometryComputationService extends BaseService
         return $result[0]->val;
     }
 
-    public function getModelGeometryAsGeojson(GeometryModel|Media $model): string
+    public function getModelGeometryAsGeojson(GeometryModel|Media $model): ?string
     {
-        return $model::where('id', '=', $model->id)
-            ->select(
-                DB::raw('ST_AsGeoJSON(geometry) as geom')
-            )
-            ->first()
-            ->geom;
+        try {
+            $result = $model::where('id', '=', $model->id)
+                ->select(
+                    DB::raw('ST_AsGeoJSON(geometry) as geom')
+                )
+                ->first();
+            
+            if ($result && $result->geom) {
+                return $result->geom;
+            }
+            
+            return null;
+        } catch (\Exception $e) {
+            \Log::warning("Errore nel convertire geometria per modello ID {$model->id}: " . $e->getMessage());
+            return null;
+        }
     }
 
     public function getModelGeometryAsKml(GeometryModel $model): string
