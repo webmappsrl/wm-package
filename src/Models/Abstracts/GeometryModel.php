@@ -4,6 +4,7 @@ namespace Wm\WmPackage\Models\Abstracts;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\DB;
 use Spatie\Image\Enums\Fit;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
@@ -178,5 +179,51 @@ abstract class GeometryModel extends Model implements HasMedia
         // add options
         // you can define as many collections as needed
         $this->addMediaCollection('default');
+    }
+
+    /**
+     * Get track as GeoJSON feature collection for map widget
+     *
+     * @return array GeoJSON feature collection
+     */
+    public function getFeatureCollectionMap(): array
+    {
+        if (! $this->geometry) {
+            return [
+                'type' => 'FeatureCollection',
+                'features' => [],
+            ];
+        }
+
+        // Converti WKB in GeoJSON usando PostGIS
+        $geojson = DB::select("SELECT ST_AsGeoJSON(ST_GeomFromWKB(decode(?, 'hex'))) as geojson", [$this->geometry]);
+
+        if (empty($geojson)) {
+            return [
+                'type' => 'FeatureCollection',
+                'features' => [],
+            ];
+        }
+        $feature = $this->getFeatureMap();
+        $feature['properties'] = $this->properties;
+
+        return [
+            'type' => 'FeatureCollection',
+            'features' => [$feature],
+        ];
+    }
+
+    public function getFeatureMap($geometry = null)
+    {
+        if ($geometry === null) {
+            $geometry = $this->geometry;
+        }
+        $geojson = DB::select("SELECT ST_AsGeoJSON(ST_GeomFromWKB(decode(?, 'hex'))) as geojson", [$geometry]);
+        $geometry = json_decode($geojson[0]->geojson, true);
+
+        return [
+            'type' => 'Feature',
+            'geometry' => $geometry,
+        ];
     }
 }

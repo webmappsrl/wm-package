@@ -51,7 +51,7 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
 
     protected static function booted()
     {
-        EcTrack::observe(EcTrackObserver::class);
+        self::observe(EcTrackObserver::class);
 
         // Imposta un default per properties se è null
         static::creating(function ($model) {
@@ -558,13 +558,11 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
 
     public function toSearchableArray()
     {
-
         $ecTrackService = EcTrackService::make();
         $mediaService = MediaService::make();
         $firstMedia = $this->getMedia('*')->first();
 
         try {
-
             [$start, $end] = GeometryComputationService::make()->getStartEndCoordinates($this);
         } catch (\Exception $e) {
             $start = [0, 0];
@@ -624,7 +622,6 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
             $string .= $this->properties['ref'].' ';
         }
         if (isset($this->properties['osmid']) && empty($searchables) || (in_array('osmid', $searchables) && ! empty($this->properties['osmid']))) {
-
             $string .= $this->properties['osmid'].' ';
         }
 
@@ -635,50 +632,5 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
         }
 
         return html_entity_decode($string);
-    }
-
-    /**
-     * Get track as GeoJSON feature collection for map widget
-     *
-     * @return array GeoJSON feature collection
-     */
-    public function getFeatureCollectionMap(): array
-    {
-        if (! $this->geometry) {
-            return [
-                'type' => 'FeatureCollection',
-                'features' => []
-            ];
-        }
-
-        // Converti WKB in GeoJSON usando PostGIS
-        $geojson = DB::select("SELECT ST_AsGeoJSON(ST_GeomFromWKB(decode(?, 'hex'))) as geojson", [$this->geometry]);
-        
-        if (empty($geojson)) {
-            return [
-                'type' => 'FeatureCollection',
-                'features' => []
-            ];
-        }
-        $feature = $this->getFeatureMap();
-        $feature['properties'] = $this->properties;
-
-        return [
-            'type' => 'FeatureCollection',
-            'features' => [$feature]
-        ];
-    }
-
-    public function getFeatureMap($geometry = null) {
-        if ($geometry === null) {
-            $geometry = $this->geometry;
-        }
-        $geojson = DB::select("SELECT ST_AsGeoJSON(ST_GeomFromWKB(decode(?, 'hex'))) as geojson", [$geometry]);
-        $geometry = json_decode($geojson[0]->geojson, true);
-
-        return [
-            'type' => 'Feature',
-            'geometry' => $geometry,
-        ];
     }
 }
