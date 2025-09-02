@@ -26,6 +26,7 @@ use Wm\WmPackage\Providers\EventServiceProvider;
 use Wm\WmPackage\Providers\ScheduleServiceProvider;
 use Wm\WmPackage\Services\Import\EcMediaImportService;
 use Wm\WmPackage\Services\Import\GeohubImportService;
+use Wm\WmPackage\GlobalFileServiceProvider;
 
 class WmPackageServiceProvider extends PackageServiceProvider
 {
@@ -41,6 +42,9 @@ class WmPackageServiceProvider extends PackageServiceProvider
         parent::register();
 
         $this->app->bind(HitsIteratorAggregate::class, ElasticSearchHitsIteratorAggregate::class);
+
+        // Registra il GlobalFileServiceProvider
+        $this->app->register(GlobalFileServiceProvider::class);
     }
 
     public static function getBasePath(): string
