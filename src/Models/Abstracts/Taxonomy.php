@@ -23,6 +23,7 @@ abstract class Taxonomy extends Polygon
         'properties',
         'description',
         'excerpt',
+        'icon',
     ];
 
     protected $casts = [

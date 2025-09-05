@@ -69,7 +69,8 @@
         "psr-4": {
             "Wm\\WmPackage\\": "src",
             "Wm\\WmPackage\\Database\\Factories\\": "database/factories/",
-            "Wm\\WmPackage\\Http\\Controllers\\": "src/Http/Controllers"
+            "Wm\\WmPackage\\Http\\Controllers\\": "src/Http/Controllers",
+            "Wm\\WmPackage\\Nova\\Components\\IconSelect\\": "nova-components/IconSelect/src/"
         },
         "classmap": [
             "src/Exceptions/"

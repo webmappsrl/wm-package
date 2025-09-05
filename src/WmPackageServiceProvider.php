@@ -173,6 +173,9 @@ class WmPackageServiceProvider extends PackageServiceProvider
 
         // Schedule
         $this->app->register(ScheduleServiceProvider::class);
+        
+        // IconSelect FieldServiceProvider
+        $this->app->register(\Wm\WmPackage\Nova\Components\IconSelect\FieldServiceProvider::class);
 
         // Register the correct import service for the ImportEcMediaJob
         $this->app->when(ImportEcMediaJob::class)
