@@ -1,86 +1,220 @@
 <?php
 
-namespace Wm\WmPackage;
+namespace Wm\WmPackage\Http\Controllers;
 
-use Illuminate\Support\ServiceProvider;
-use Illuminate\Support\Facades\Route;
-use Wm\WmPackage\Http\Controllers\GlobalFileController;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
+use Wm\WmPackage\Services\StorageService;
+use Illuminate\Support\Facades\Auth;
 
-class GlobalFileServiceProvider extends ServiceProvider
+class GlobalFileController extends Controller
 {
-    /**
-     * Register services.
-     */
-    public function register(): void
+    protected StorageService $storageService;
+
+    public function __construct(StorageService $storageService)
     {
-        // Registra l'helper
-        $this->app->singleton('global-file-helper', function ($app) {
-            return new \Wm\WmPackage\Helpers\GlobalFileHelper();
-        });
+        $this->storageService = $storageService;
     }
 
     /**
-     * Bootstrap services.
+     * Mostra la pagina di upload per un tipo specifico di file
      */
-    public function boot(): void
+    public function show()
     {
-        // Carica le viste del package
-        $this->loadViewsFrom(__DIR__ . '/../resources/views', 'wm-package');
-
-        // Pubblica le viste se necessario
-        $this->publishes([
-            __DIR__ . '/../resources/views' => resource_path('views/vendor/wm-package'),
-        ], 'wm-package-views');
-
-        // Pubblica la configurazione
-        $this->publishes([
-            __DIR__ . '/../config/global-files.php' => config_path('global-files.php'),
-        ], 'wm-package-config');
-
-        // Registra le routes del package
-        $this->registerRoutes();
-    }
-
-    /**
-     * Registra le routes del package
-     */
-    protected function registerRoutes(): void
-    {
-        $config = config('global-files', require __DIR__ . '/../config/global-files.php');
-        $middleware = $config['middleware'] ?? ['auth', 'nova'];
-
-        Route::middleware($middleware)->group(function () use ($config) {
-            foreach ($config['file_types'] as $fileType => $settings) {
-                $routePrefix = $settings['route_prefix'];
-                $filename = $settings['filename'];
-
-                // Route per visualizzare l'interfaccia
-                Route::get("/{$routePrefix}", [GlobalFileController::class, 'show'])
-                    ->name("{$fileType}.upload.show")
-                    ->defaults('fileType', $fileType)
-                    ->defaults('filename', $filename);
-
-                // Route per caricare il file
-                Route::post("/{$routePrefix}", [GlobalFileController::class, 'upload'])
-                    ->name("{$fileType}.upload.store")
-                    ->defaults('fileType', $fileType)
-                    ->defaults('filename', $filename);
-
-                // Route per visualizzare il file
-                Route::get("/{$routePrefix}/view/{filename}", [GlobalFileController::class, 'view'])
-                    ->name("{$fileType}.upload.view")
-                    ->defaults('fileType', $fileType);
-
-                // Route per scaricare il file
-                Route::get("/{$routePrefix}/download/{filename}", [GlobalFileController::class, 'download'])
-                    ->name("{$fileType}.upload.download")
-                    ->defaults('fileType', $fileType);
-
-                // Route per eliminare il file
-                Route::delete("/{$routePrefix}/{filename}", [GlobalFileController::class, 'delete'])
-                    ->name("{$fileType}.upload.delete")
-                    ->defaults('fileType', $fileType);
+        // Verifica che l'utente sia autenticato
+        $this->middleware('auth');
+        
+        // Ottieni parametri dalle routes (obbligatori)
+        $fileType = request()->route('fileType');
+        $filename = request()->route('filename');
+        
+        // Verifica che i parametri siano stati passati
+        if (!$fileType || !$filename) {
+            abort(500, 'Parametri fileType e filename obbligatori nelle routes');
+        }
+        
+        // Lista dei file esistenti per il tipo specificato
+        $existingFiles = [];
+        $filePath = $this->getFilePathByType($fileType);
+        
+        try {
+            // Verifica se la cartella esiste, se non esiste la crea
+            if (!Storage::disk('wmfe')->exists($filePath)) {
+                // Crea la cartella se non esiste
+                Storage::disk('wmfe')->makeDirectory($filePath);
+                Log::info('Cartella file globali creata', ['filePath' => $filePath]);
             }
-        });
+            
+            $files = Storage::disk('wmfe')->files($filePath);
+            foreach ($files as $file) {
+                $fileName = basename($file);
+                // Filtra solo i file che corrispondono al tipo specificato
+                if (str_contains($fileName, $fileType) || $fileName === $filename) {
+                    $existingFiles[] = [
+                        'name' => $fileName,
+                        'size' => Storage::disk('wmfe')->size($file),
+                        'modified' => Storage::disk('wmfe')->lastModified($file),
+                        'path' => $file
+                    ];
+                }
+            }
+        } catch (\Exception $e) {
+            // Se non riesce a creare la cartella o accedere ai file, continua con una lista vuota
+            Log::warning('Impossibile accedere alla cartella dei file globali', [
+                'filePath' => $filePath,
+                'error' => $e->getMessage()
+            ]);
+        }
+        
+        return view('wm-package::global-file-upload', compact('existingFiles', 'fileType', 'filename'));
+    }
+
+    /**
+     * Ottiene il percorso base per i file JSON
+     */
+    private function getFilePathByType(string $fileType): string
+    {
+        return $this->storageService->getShardBasePath() . 'json/';
+    }
+
+    /**
+     * Gestisce l'upload di file per un tipo specifico
+     */
+    public function upload(Request $request)
+    {
+        // Verifica che l'utente sia autenticato
+        $this->middleware('auth');
+        
+        $request->validate([
+            'json_file' => 'required|file|mimes:json|max:10240', // 10MB max
+        ]);
+
+        try {
+            $file = $request->file('json_file');
+            
+            // Usa il nome file definito nella route
+            $fileType = request()->route('fileType');
+            $filename = request()->route('filename');
+            
+            // Verifica che i parametri siano stati passati
+            if (!$fileType || !$filename) {
+                abort(500, 'Parametri fileType e filename obbligatori nelle routes');
+            }
+            $filePath = $this->getFilePathByType($fileType);
+            $path = $file->storeAs($filePath, $filename, 'wmfe');
+            
+
+            
+            Log::info('File caricato con successo', [
+                'user_id' => Auth::user()->id,
+                'filename' => $filename,
+                'file_type' => $fileType,
+                'path' => $path
+            ]);
+            
+            // Redirect dinamico in base al tipo
+            $routeName = $fileType . '.upload.show';
+            return redirect()->route($routeName)
+                ->with('success', 'File salvato come: ' . $filename);
+                
+        } catch (\Exception $e) {
+            $fileType = request()->route('fileType');
+            Log::error('Errore durante il caricamento del file', [
+                'user_id' => Auth::user()->id,
+                'file_type' => $fileType,
+                'error' => $e->getMessage()
+            ]);
+            
+            // Redirect dinamico in base al tipo
+            $routeName = $fileType . '.upload.show';
+            return redirect()->route($routeName)
+                ->with('error', 'Errore durante il caricamento: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Scarica un file esistente
+     */
+    public function download($filename)
+    {
+        $this->middleware('auth');
+        
+        $fileType = request()->route('fileType');
+        $filePath = $this->getFilePathByType($fileType) . $filename;
+        
+        if (!Storage::disk('wmfe')->exists($filePath)) {
+            abort(404, 'File non trovato');
+        }
+        
+        return Storage::disk('wmfe')->download($filePath);
+    }
+
+    /**
+     * Visualizza un file JSON nel browser
+     */
+    public function view($filename)
+    {
+        $this->middleware('auth');
+        
+        $fileType = request()->route('fileType');
+        $filePath = $this->getFilePathByType($fileType) . $filename;
+        
+        if (!Storage::disk('wmfe')->exists($filePath)) {
+            abort(404, 'File non trovato');
+        }
+        
+        $content = Storage::disk('wmfe')->get($filePath);
+        $jsonData = json_decode($content, true);
+        
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            abort(400, 'File JSON non valido');
+        }
+        
+        return response()->json($jsonData, 200, [
+            'Content-Type' => 'application/json',
+            'Content-Disposition' => 'inline; filename="' . $filename . '"'
+        ]);
+    }
+
+    /**
+     * Elimina un'icona esistente
+     */
+    public function delete($filename)
+    {
+        $this->middleware('auth');
+        
+        $fileType = request()->route('fileType');
+        $filePath = $this->getFilePathByType($fileType) . $filename;
+        
+        try {
+            if (Storage::disk('wmfe')->exists($filePath)) {
+                Storage::disk('wmfe')->delete($filePath);
+            }
+            
+            Log::info('File eliminato', [
+                'user_id' => Auth::user()->id,
+                'filename' => $filename,
+                'file_type' => $fileType
+            ]);
+            
+            // Redirect dinamico in base al tipo
+            $routeName = $fileType . '.upload.show';
+            return redirect()->route($routeName)
+                ->with('success', 'File eliminato con successo');
+                
+        } catch (\Exception $e) {
+            Log::error('Errore durante l\'eliminazione del file', [
+                'user_id' => Auth::user()->id,
+                'filename' => $filename,
+                'file_type' => $fileType,
+                'error' => $e->getMessage()
+            ]);
+            
+            // Redirect dinamico in base al tipo
+            $routeName = $fileType . '.upload.show';
+            return redirect()->route($routeName)
+                ->with('error', 'Errore durante l\'eliminazione: ' . $e->getMessage());
+        }
     }
 }
