@@ -37,7 +37,15 @@ class GlobalFileController extends Controller
         // Lista dei file esistenti per il tipo specificato
         $existingFiles = [];
         $filePath = $this->getFilePathByType($fileType);
-        if (Storage::disk('wmfe')->exists($filePath)) {
+        
+        try {
+            // Verifica se la cartella esiste, se non esiste la crea
+            if (!Storage::disk('wmfe')->exists($filePath)) {
+                // Crea la cartella se non esiste
+                Storage::disk('wmfe')->makeDirectory($filePath);
+                Log::info('Cartella file globali creata', ['filePath' => $filePath]);
+            }
+            
             $files = Storage::disk('wmfe')->files($filePath);
             foreach ($files as $file) {
                 $fileName = basename($file);
@@ -51,6 +59,12 @@ class GlobalFileController extends Controller
                     ];
                 }
             }
+        } catch (\Exception $e) {
+            // Se non riesce a creare la cartella o accedere ai file, continua con una lista vuota
+            Log::warning('Impossibile accedere alla cartella dei file globali', [
+                'filePath' => $filePath,
+                'error' => $e->getMessage()
+            ]);
         }
         
         return view('wm-package::global-file-upload', compact('existingFiles', 'fileType', 'filename'));
