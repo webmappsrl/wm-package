@@ -8,7 +8,7 @@ use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Fields\Textarea;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Resource;
-use Wm\WmPackage\Nova\Components\IconSelect\IconSelect;
+use Wm\WmPackage\Nova\Fields\IconSelect\IconSelect;
 
 abstract class AbstractTaxonomyResource extends Resource
 {

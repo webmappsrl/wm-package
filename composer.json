@@ -70,7 +70,7 @@
             "Wm\\WmPackage\\": "src",
             "Wm\\WmPackage\\Database\\Factories\\": "database/factories/",
             "Wm\\WmPackage\\Http\\Controllers\\": "src/Http/Controllers",
-            "Wm\\WmPackage\\Nova\\Components\\IconSelect\\": "nova-components/IconSelect/src/"
+            "Wm\\WmPackage\\Nova\\Fields\\IconSelect\\": "src/Nova/Fields/IconSelect/src/"
         },
         "classmap": [
             "src/Exceptions/"

@@ -45,6 +45,9 @@ class WmPackageServiceProvider extends PackageServiceProvider
 
         // Registra il GlobalFileServiceProvider
         $this->app->register(GlobalFileServiceProvider::class);
+        
+        // Registra IconSelect FieldServiceProvider
+        $this->app->register(\Wm\WmPackage\Nova\Fields\IconSelect\FieldServiceProvider::class);
     }
 
     public static function getBasePath(): string
@@ -71,6 +74,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
             Nova::style('wm-flexible-field', __DIR__.'/../resources/css/flexible-field.css');
             $this->addDownloadDbMenuItem();
         });
+
 
         // Register routes as Laravel does with RouteServiceProvider
         // assign the correct group and prefix set on Laravel instance
@@ -174,8 +178,6 @@ class WmPackageServiceProvider extends PackageServiceProvider
         // Schedule
         $this->app->register(ScheduleServiceProvider::class);
         
-        // IconSelect FieldServiceProvider
-        $this->app->register(\Wm\WmPackage\Nova\Components\IconSelect\FieldServiceProvider::class);
 
         // Register the correct import service for the ImportEcMediaJob
         $this->app->when(ImportEcMediaJob::class)

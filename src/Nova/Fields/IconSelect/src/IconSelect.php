@@ -1,6 +1,6 @@
 <?php
 
-namespace Wm\WmPackage\Nova\Components\IconSelect;
+namespace Wm\WmPackage\Nova\Fields\IconSelect;
 
 use Laravel\Nova\Fields\Field;
 use Illuminate\Support\Facades\Log;
