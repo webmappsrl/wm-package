@@ -1,6 +1,6 @@
 <?php
 
-namespace Wm\WmPackage\Nova\Components\IconSelect;
+namespace Wm\WmPackage\Nova\Fields\IconSelect;
 
 use Illuminate\Support\ServiceProvider;
 use Laravel\Nova\Events\ServingNova;
