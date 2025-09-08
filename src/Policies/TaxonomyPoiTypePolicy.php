@@ -18,12 +18,7 @@ class TaxonomyPoiTypePolicy
      */
     public function before(User $user, $ability)
     {
-        if ($user->hasRole('Admin')) {
-            return true;
-        }
-        if ($user->hasRole('Author') || $user->hasRole('Contributor')) {
-            return false;
-        }
+        return true;
     }
 
     /**
@@ -33,10 +28,9 @@ class TaxonomyPoiTypePolicy
      */
     public function viewAny(User $user)
     {
-        if ($user->hasRole('Editor')) {
-            return true;
-        }
+        return true;
     }
+
 
     /**
      * Determine whether the user can view the model.
