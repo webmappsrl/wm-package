@@ -39,7 +39,6 @@ class App extends Model implements HasMedia
         'classification_start_date' => 'datetime',
         'classification_end_date' => 'datetime',
         'track_technical_details' => 'array',
-        'sku' => 'array',
         'properties' => 'array',
         'config_home' => FlexibleCast::class,
     ];
