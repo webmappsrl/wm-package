@@ -51,7 +51,7 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
 
     protected static function booted()
     {
-        self::observe(EcTrackObserver::class);
+        EcTrack::observe(EcTrackObserver::class);
 
         // Imposta un default per properties se è null
         static::creating(function ($model) {
