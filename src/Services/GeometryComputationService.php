@@ -1009,12 +1009,44 @@ GROUP BY
         return $bbox;
     }
 
-    public function geometryModelToBbox($query)
+    public function geometryModelToBbox($query, $useConvexHull = true)
     {
         $table = $query->getModel()->getTable();
+        
+        try {
+            // Controlla se ci sono record nella query
+            $count = $query->count();
+            
+            if ($count === 0) {
+                return null;
+            }
 
-        return $query->selectRaw('ST_Envelope('.$table.'.geometry::geometry) AS bbox')->value('bbox');
+            // Controlla quante feature hanno geometria valida
+            $validGeometryCount = $query->whereNotNull('geometry')->count();
+
+            if ($validGeometryCount === 0) {
+                return null;
+            }
+
+            // Calcola il bounding box solo per le feature con geometria valida
+            if ($useConvexHull) {
+                // Usa ST_ConvexHull per un bounding box più aderente alle geometrie lineari
+                $bbox = $query->whereNotNull('geometry')
+                    ->selectRaw('ST_Envelope(ST_ConvexHull(ST_Collect('.$table.'.geometry::geometry))) AS bbox')
+                    ->value('bbox');
+            } else {
+                // Metodo tradizionale con ST_Envelope
+                $bbox = $query->whereNotNull('geometry')
+                    ->selectRaw('ST_Envelope(ST_Collect('.$table.'.geometry::geometry)) AS bbox')
+                    ->value('bbox');
+            }
+
+            return $bbox;
+        } catch (\Exception $e) {
+            return null;
+        }
     }
+
 
     public function bboxToPolygon(?string $bbox): ?string
     {
