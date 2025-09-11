@@ -493,6 +493,7 @@ return [
                 'identifier' => 'properties->geohub_id',
                 'created_at' => 'created_at',
                 'updated_at' => 'updated_at',
+                'icon' => ['field' => 'icon', 'transformer' => [DataTransformer::class, 'svgIconToNameIcon']],
             ],
             'properties' => [
                 'column_name' => 'properties',

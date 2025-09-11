@@ -16,6 +16,13 @@ class StorageService extends BaseService
         return $this->getRemoteWfeDisk()->put($path, $contents) ? $path : false;
     }
 
+    public function storeIcons(string $contents): string|false
+    {
+        $path = $this->getIconsPath();
+
+        return $this->getRemoteWfeDisk()->put($path, $contents) ? $path : false;
+    }
+
     public function getTrackGeojson(int $trackId, int $appId): ?string
     {
         return $this->getRemoteWfeDisk()->get($this->getTrackPath($trackId));
@@ -262,6 +269,11 @@ class StorageService extends BaseService
     private function getTrackPath(int $trackId): string
     {
         return $this->getShardBasePath()."tracks/{$trackId}.json";
+    }
+
+    private function getIconsPath(): string
+    {
+        return $this->getShardBasePath().'json/icons.json';
     }
 
     private function getAppConfigPath(int $appId): string
