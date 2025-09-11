@@ -35,6 +35,10 @@ class LayerObserver extends AbstractObserver
         if ($this->hasTaxonomyWhereChanged($layer)) {
             $this->layerService->updateLayersPropertyOnAllLayeredFeaturesWithJobs($layer);
         }
+        
+        // Aggiorna sempre la geometria del layer quando viene salvato
+        $this->layerService->updateLayerGeometryWithJob($layer);
+        
         $this->updatePbfsForLayer($layer);
     }
 
