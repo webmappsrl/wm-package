@@ -79,6 +79,7 @@ class LayerObserver extends AbstractObserver
         $this->updatePbfsForLayer($layer);
     }
 
+
     public function updatePbfsForLayer(Layer $layer)
     {
         return;
@@ -95,7 +96,7 @@ class LayerObserver extends AbstractObserver
                     13, // minZoom
                     false,
                     $trackIds // Passa le track IDs già recuperate
-                );
+                )->onConnection('redis')->onQueue('pbf');
 
                 Log::info('PBF rigenerati per tracce multiple del layer', [
                     'layer_id' => $layer->id,

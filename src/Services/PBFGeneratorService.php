@@ -375,7 +375,7 @@ class PBFGeneratorService extends BaseService
             $minZoom, // minZoom
             $noPbfLayer,
             $trackIds // Passa le track IDs già recuperate
-        );
+        )->onConnection('redis')->onQueue('pbf');
 
         Log::info('Job chain di generazione PBF ottimizzata avviato', [
             'app_id' => $app->id,
