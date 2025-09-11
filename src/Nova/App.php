@@ -207,7 +207,7 @@ class App extends Resource
                         ->get()
                         ->map(function ($layer) {
                             // Accesso al titolo translatable in modo più pulito
-                            $title = $layer->properties['title'] ?? $layer->properties['name'] ?? $layer->name ?? null;
+                            $title = $layer->getStringName();
                             if (is_array($title)) {
                                 // Se è un array, prendi prima la versione italiana, poi quella inglese, altrimenti usa l'ID
                                 $title = $title['it'] ?? $title['en'] ?? ('Layer #'.$layer->id);

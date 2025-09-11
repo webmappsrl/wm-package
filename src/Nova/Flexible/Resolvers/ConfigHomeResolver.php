@@ -90,8 +90,9 @@ class ConfigHomeResolver implements ResolverInterface
                 $layer = Layer::find($layerId);
 
                 if ($layer) {
-                    $title = $layer->name ?? $layer->properties['title'] ?? $layer->properties['name'] ?? null;
-                    if (is_null($title)) {
+                    $title = $layer->getStringName();
+                    
+                    if (empty($title)) {
                         $title = 'Layer #'.$layer->id;
                     }
 

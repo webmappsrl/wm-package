@@ -104,6 +104,79 @@ class Layer extends Polygon
     }
 
     /**
+     * Get the name as a string with fallback logic.
+     * Priority: Current locale -> Italian -> English -> First available language
+     *
+     * @return string
+     */
+    public function getStringName(): string
+    {
+        $value = $this->getRawOriginal('name');
+        
+        // Se il valore è una stringa JSON, decodificalo
+        if (is_string($value) && $this->isJsonString($value)) {
+            $value = json_decode($value, true);
+        }
+        
+        // Se il valore è già una stringa (non tradotto), restituiscilo
+        if (is_string($value) && !$this->isJsonString($value)) {
+            return $value;
+        }
+
+        // Se è un array/oggetto con chiavi di lingua
+        if (is_array($value)) {
+            $currentLocale = app()->getLocale();
+
+            // Prima priorità: lingua corrente
+            if (isset($value[$currentLocale]) && !empty($value[$currentLocale])) {
+                return $value[$currentLocale];
+            }
+
+            // Seconda priorità: italiano
+            if (isset($value['it']) && !empty($value['it'])) {
+                return $value['it'];
+            }
+
+            // Terza priorità: inglese
+            if (isset($value['en']) && !empty($value['en'])) {
+                return $value['en'];
+            }
+
+            // Quarta priorità: prima lingua disponibile (non vuota)
+            foreach ($value as $translation) {
+                if (!empty($translation)) {
+                    return $translation;
+                }
+            }
+        }
+
+        // Fallback finale
+        return '';
+    }
+
+    /**
+     * Controlla se una stringa è un JSON valido
+     *
+     * @param  string  $string  La stringa da controllare
+     * @return bool True se è un JSON valido
+     */
+    private function isJsonString(string $string): bool
+    {
+        if (empty($string)) {
+            return false;
+        }
+
+        // Deve iniziare con { o [
+        $trimmed = trim($string);
+        if (! str_starts_with($trimmed, '{') && ! str_starts_with($trimmed, '[')) {
+            return false;
+        }
+
+        json_decode($string);
+        return json_last_error() === JSON_ERROR_NONE;
+    }
+
+    /**
      * Determine if the user is an administrator.
      *
      * @return bool
