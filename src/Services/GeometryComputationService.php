@@ -1012,11 +1012,11 @@ GROUP BY
     public function geometryModelToBbox($query, $useConvexHull = true)
     {
         $table = $query->getModel()->getTable();
-        
+
         try {
             // Controlla se ci sono record nella query
             $count = $query->count();
-            
+
             if ($count === 0) {
                 return null;
             }
@@ -1046,7 +1046,6 @@ GROUP BY
             return null;
         }
     }
-
 
     public function bboxToPolygon(?string $bbox): ?string
     {

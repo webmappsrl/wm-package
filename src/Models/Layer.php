@@ -106,20 +106,18 @@ class Layer extends Polygon
     /**
      * Get the name as a string with fallback logic.
      * Priority: Current locale -> Italian -> English -> First available language
-     *
-     * @return string
      */
     public function getStringName(): string
     {
         $value = $this->getRawOriginal('name');
-        
+
         // Se il valore è una stringa JSON, decodificalo
         if (is_string($value) && $this->isJsonString($value)) {
             $value = json_decode($value, true);
         }
-        
+
         // Se il valore è già una stringa (non tradotto), restituiscilo
-        if (is_string($value) && !$this->isJsonString($value)) {
+        if (is_string($value) && ! $this->isJsonString($value)) {
             return $value;
         }
 
@@ -128,23 +126,23 @@ class Layer extends Polygon
             $currentLocale = app()->getLocale();
 
             // Prima priorità: lingua corrente
-            if (isset($value[$currentLocale]) && !empty($value[$currentLocale])) {
+            if (isset($value[$currentLocale]) && ! empty($value[$currentLocale])) {
                 return $value[$currentLocale];
             }
 
             // Seconda priorità: italiano
-            if (isset($value['it']) && !empty($value['it'])) {
+            if (isset($value['it']) && ! empty($value['it'])) {
                 return $value['it'];
             }
 
             // Terza priorità: inglese
-            if (isset($value['en']) && !empty($value['en'])) {
+            if (isset($value['en']) && ! empty($value['en'])) {
                 return $value['en'];
             }
 
             // Quarta priorità: prima lingua disponibile (non vuota)
             foreach ($value as $translation) {
-                if (!empty($translation)) {
+                if (! empty($translation)) {
                     return $translation;
                 }
             }
@@ -173,6 +171,7 @@ class Layer extends Polygon
         }
 
         json_decode($string);
+
         return json_last_error() === JSON_ERROR_NONE;
     }
 

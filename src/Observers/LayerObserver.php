@@ -79,7 +79,6 @@ class LayerObserver extends AbstractObserver
         $this->updatePbfsForLayer($layer);
     }
 
-
     public function updatePbfsForLayer(Layer $layer)
     {
         return;
