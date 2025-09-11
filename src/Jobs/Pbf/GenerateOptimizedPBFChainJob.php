@@ -25,9 +25,13 @@ class GenerateOptimizedPBFChainJob implements ShouldQueue
     public $timeout = 1800; // 30 minuti
 
     private $app_id;
+
     private $startZoom;
+
     private $minZoom;
+
     private $no_pbf_layer = false;
+
     private $trackIds;
 
     /**
@@ -47,27 +51,28 @@ class GenerateOptimizedPBFChainJob implements ShouldQueue
     public function handle(GeometryComputationService $geometryService, PBFGeneratorService $pbfService)
     {
         try {
-            Log::info("Avvio catena di generazione PBF ottimizzata", [
+            Log::info('Avvio catena di generazione PBF ottimizzata', [
                 'app_id' => $this->app_id,
                 'start_zoom' => $this->startZoom,
-                'min_zoom' => $this->minZoom
+                'min_zoom' => $this->minZoom,
             ]);
 
             // Usa le track IDs passate come parametro o recuperale se non fornite
             $trackIds = $this->trackIds ?? $pbfService->getAllTrackIds($this->app_id);
-            
+
             if (empty($trackIds)) {
                 Log::info("Nessuna traccia trovata per app_id {$this->app_id}");
+
                 return;
             }
 
-            Log::info("Trovate " . count($trackIds) . " tracce per la generazione ottimizzata", [
-                'app_id' => $this->app_id
+            Log::info('Trovate '.count($trackIds).' tracce per la generazione ottimizzata', [
+                'app_id' => $this->app_id,
             ]);
 
             // Genera la catena di job per ogni livello di zoom (dal più alto al più basso)
             $jobs = [];
-            
+
             for ($zoom = $this->startZoom; $zoom >= $this->minZoom; $zoom--) {
                 $jobs[] = new GenerateOptimizedPBFByZoomJob(
                     $this->app_id,
@@ -83,22 +88,20 @@ class GenerateOptimizedPBFChainJob implements ShouldQueue
                 ->onQueue('pbf')
                 ->dispatch();
 
-            Log::info("Catena di generazione PBF ottimizzata avviata", [
+            Log::info('Catena di generazione PBF ottimizzata avviata', [
                 'app_id' => $this->app_id,
                 'total_zoom_levels' => count($jobs),
-                'zoom_range' => "{$this->startZoom} → {$this->minZoom}"
+                'zoom_range' => "{$this->startZoom} → {$this->minZoom}",
             ]);
 
         } catch (Throwable $e) {
-            Log::error("Errore nella catena di generazione PBF ottimizzata: " . $e->getMessage(), [
+            Log::error('Errore nella catena di generazione PBF ottimizzata: '.$e->getMessage(), [
                 'app_id' => $this->app_id,
                 'start_zoom' => $this->startZoom,
                 'min_zoom' => $this->minZoom,
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
             throw $e;
         }
     }
-
-
-} 
+}

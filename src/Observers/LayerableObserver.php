@@ -22,7 +22,7 @@ class LayerableObserver
     private function handleRelatedFeaturesUpdate(Layerable $layerable, $add)
     {
         $relatedTypeClass = $layerable->layerable_type;
-        $ecTrackModelClass = config('wm-package.ec_track_model', 'App\Models\EcTrack'); 
+        $ecTrackModelClass = config('wm-package.ec_track_model', 'App\Models\EcTrack');
         if (
             $relatedTypeClass === $ecTrackModelClass
             || str_contains($relatedTypeClass, '\EcPoi')

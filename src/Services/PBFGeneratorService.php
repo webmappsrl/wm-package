@@ -44,12 +44,13 @@ class PBFGeneratorService extends BaseService
 
     /**
      * Ottiene il nome della classe del modello delle tracce dalla configurazione
-     * 
+     *
      * @return string Nome della classe (es. 'EcTrack', 'HikingRoute')
      */
     private function getTrackModelClassName(): string
     {
         $modelClass = config('wm-package.ec_track_model', 'App\Models\EcTrack');
+
         return class_basename($modelClass);
     }
 
@@ -327,19 +328,20 @@ class PBFGeneratorService extends BaseService
     /**
      * Genera i PBF per tutta l'app usando l'approccio bottom-up ottimizzato
      * Parte dal zoom più alto e risale la piramide dei tile
-     * 
-     * @param App $app L'app per cui generare i PBF
-     * @param int|null $minZoom Zoom minimo (default: dalla config)
-     * @param int|null $maxZoom Zoom massimo (default: dalla config)
-     * @param bool $noPbfLayer Se non generare layer PBF
-     * @param float $maxClusterDistance Distanza massima per clustering (metri, default: 10km)
+     *
+     * @param  App  $app  L'app per cui generare i PBF
+     * @param  int|null  $minZoom  Zoom minimo (default: dalla config)
+     * @param  int|null  $maxZoom  Zoom massimo (default: dalla config)
+     * @param  bool  $noPbfLayer  Se non generare layer PBF
+     * @param  float  $maxClusterDistance  Distanza massima per clustering (metri, default: 10km)
      * @return void
+     *
      * @throws Exception Se l'app non ha tracce
      */
     public function generateWholeAppPbfsOptimized(
-        App $app, 
-        $minZoom = null, 
-        $maxZoom = null, 
+        App $app,
+        $minZoom = null,
+        $maxZoom = null,
         $noPbfLayer = false
     ) {
         // Verifica che l'app abbia tracce
@@ -351,17 +353,17 @@ class PBFGeneratorService extends BaseService
         $minZoom = $minZoom ?? config('wm-package.services.pbf.min_zoom');
         $maxZoom = $maxZoom ?? config('wm-package.services.pbf.max_zoom');
 
-        Log::info("Avvio generazione PBF ottimizzata per app", [
+        Log::info('Avvio generazione PBF ottimizzata per app', [
             'app_id' => $app->id,
             'app_name' => $app->name,
             'track_count' => $trackCount,
             'min_zoom' => $minZoom,
-            'max_zoom' => $maxZoom
+            'max_zoom' => $maxZoom,
         ]);
 
         // Ottieni tutte le tracce dell'app
         $trackIds = $this->getAllTrackIds($app->id);
-        
+
         if (empty($trackIds)) {
             throw new Exception("App {$app->id} non ha tracce valide!");
         }
@@ -375,20 +377,21 @@ class PBFGeneratorService extends BaseService
             $trackIds // Passa le track IDs già recuperate
         );
 
-        Log::info("Job chain di generazione PBF ottimizzata avviato", [
+        Log::info('Job chain di generazione PBF ottimizzata avviato', [
             'app_id' => $app->id,
-            'zoom_range' => "{$maxZoom} → {$minZoom} (bottom-up)"
+            'zoom_range' => "{$maxZoom} → {$minZoom} (bottom-up)",
         ]);
     }
 
     /**
      * Genera i tile PBF solo per una traccia specifica modificata
      * Ottimizzato per rigenerare solo i tile impattati dalla modifica
-     * 
-     * @param \Wm\WmPackage\Models\Abstracts\GeometryModel $track Il modello della traccia modificata
-     * @param int|null $startZoom Zoom di partenza (default: max_zoom dalla config)
-     * @param int|null $minZoom Zoom minimo (default: min_zoom dalla config)
+     *
+     * @param  \Wm\WmPackage\Models\Abstracts\GeometryModel  $track  Il modello della traccia modificata
+     * @param  int|null  $startZoom  Zoom di partenza (default: max_zoom dalla config)
+     * @param  int|null  $minZoom  Zoom minimo (default: min_zoom dalla config)
      * @return void
+     *
      * @throws \Exception Se la traccia non ha un bounding box valido
      */
     public function generatePbfsForTrack($track, $startZoom = null, $minZoom = null)
@@ -416,16 +419,16 @@ class PBFGeneratorService extends BaseService
         );
     }
 
-        /**
+    /**
      * Ottieni tutti gli ID delle tracce dell'app
-     * 
-     * @param int $app_id ID dell'app
+     *
+     * @param  int  $app_id  ID dell'app
      * @return array Array di track IDs
      */
     public function getAllTrackIds(int $app_id): array
     {
         $tableName = config('wm-package.ec_track_table');
-        
+
         // Query per ottenere tutte le tracce valide dell'app
         $sql = "
             SELECT id
@@ -438,16 +441,17 @@ class PBFGeneratorService extends BaseService
             AND ST_GeometryType(geometry::geometry) IN ('ST_LineString', 'ST_MultiLineString')
             ORDER BY id
         ";
-        
+
         $results = DB::select($sql, [$app_id]);
+
         return array_column($results, 'id');
     }
 
-        /**
+    /**
      * Calcola i tile che contengono le geometrie delle tracce usando PostGIS
-     * 
-     * @param array $trackIds Array di track IDs
-     * @param int $zoom Livello di zoom
+     *
+     * @param  array  $trackIds  Array di track IDs
+     * @param  int  $zoom  Livello di zoom
      * @return array Array di tile [x, y, zoom]
      */
     private function calculateTilesFromGeometries(array $trackIds, int $zoom): array
@@ -457,7 +461,7 @@ class PBFGeneratorService extends BaseService
         }
 
         $tableName = config('wm-package.ec_track_table');
-        
+
         // Query per ottenere le coordinate delle geometrie (approccio sicuro)
         $sql = "
             SELECT 
@@ -472,37 +476,37 @@ class PBFGeneratorService extends BaseService
             AND NOT ST_IsEmpty(geometry::geometry)
             AND ST_GeometryType(geometry::geometry) IN ('ST_LineString', 'ST_MultiLineString')
         ";
-        
+
         $results = DB::select($sql, [
-            'track_ids' => '{'.implode(',', $trackIds).'}'
+            'track_ids' => '{'.implode(',', $trackIds).'}',
         ]);
-        
+
         $tiles = [];
         $seen = [];
-        
+
         foreach ($results as $result) {
             // Calcola le coordinate tile dalle coordinate geografiche
             $tileCoords = $this->deg2num($result->lat, $result->lon, $zoom);
             $tileX = $tileCoords[0];
             $tileY = $tileCoords[1];
-            
+
             $key = "{$zoom}_{$tileX}_{$tileY}";
-            
-            if (!isset($seen[$key])) {
+
+            if (! isset($seen[$key])) {
                 $seen[$key] = true;
                 $tiles[] = [$tileX, $tileY, $zoom];
             }
         }
-        
+
         return $tiles;
     }
 
-       /**
+    /**
      * Converte coordinate geografiche in coordinate tile
-     * 
-     * @param float $lat_deg Latitudine in gradi
-     * @param float $lon_deg Longitudine in gradi
-     * @param int $zoom Livello di zoom
+     *
+     * @param  float  $lat_deg  Latitudine in gradi
+     * @param  float  $lon_deg  Longitudine in gradi
+     * @param  int  $zoom  Livello di zoom
      * @return array [x, y] coordinate tile
      */
     private function deg2num($lat_deg, $lon_deg, $zoom)
@@ -511,15 +515,16 @@ class PBFGeneratorService extends BaseService
         $n = pow(2, $zoom);
         $xtile = floor(($lon_deg + 180.0) / 360.0 * $n);
         $ytile = floor((1.0 - asinh(tan($lat_rad)) / M_PI) / 2.0 * $n);
+
         return [$xtile, $ytile];
     }
 
-        /**
+    /**
      * Genera i tile ottimizzati per un determinato zoom usando approccio bottom-up
-     * 
-     * @param array $trackIds Array di track IDs
-     * @param int $zoom Livello di zoom
-     * @param float $maxClusterDistance Distanza massima per clustering (non usato in questo approccio)
+     *
+     * @param  array  $trackIds  Array di track IDs
+     * @param  int  $zoom  Livello di zoom
+     * @param  float  $maxClusterDistance  Distanza massima per clustering (non usato in questo approccio)
      * @return array Array di tile [x, y, zoom]
      */
     public function generateOptimizedTilesForZoom(array $trackIds, int $zoom): array
@@ -537,39 +542,39 @@ class PBFGeneratorService extends BaseService
         }
     }
 
-      /**
+    /**
      * Genera tile usando approccio bottom-up dalle geometrie
      * Parte dalle geometrie delle tracce e calcola i quadranti che le contengono
-     * 
-     * @param array $trackIds Array di track IDs
-     * @param int $zoom Livello di zoom di partenza
+     *
+     * @param  array  $trackIds  Array di track IDs
+     * @param  int  $zoom  Livello di zoom di partenza
      * @return array Array di tile [x, y, zoom]
      */
     private function generateTilesBottomUp(array $trackIds, int $zoom): array
     {
         Log::info("Avvio generazione bottom-up per zoom {$zoom}", [
             'total_tracks' => count($trackIds),
-            'zoom' => $zoom
+            'zoom' => $zoom,
         ]);
 
         // 1. Calcola i tile di livello zoom che contengono le geometrie delle tracce
         $tilesAtZoom = $this->calculateTilesFromGeometries($trackIds, $zoom);
-        
-        Log::info("Calcolati " . count($tilesAtZoom) . " tile al livello zoom {$zoom}", [
+
+        Log::info('Calcolati '.count($tilesAtZoom)." tile al livello zoom {$zoom}", [
             'zoom' => $zoom,
-            'tiles_count' => count($tilesAtZoom)
+            'tiles_count' => count($tilesAtZoom),
         ]);
 
         return $tilesAtZoom;
     }
 
-       /**
+    /**
      * Genera tile senza clustering (per zoom bassi)
      */
     private function generateTilesWithoutClustering(array $trackIds, int $zoom): array
     {
         $tableName = config('wm-package.ec_track_table');
-        
+
         // Calcola il bounding box complessivo delle tracce
         $res = DB::select("
             SELECT ST_Extent(ST_Transform(geometry::geometry, 4326)) as bbox
@@ -578,7 +583,7 @@ class PBFGeneratorService extends BaseService
             AND geometry IS NOT NULL
             AND ST_IsValid(geometry::geometry)
         ", [
-            'track_ids' => '{'.implode(',', $trackIds).'}'
+            'track_ids' => '{'.implode(',', $trackIds).'}',
         ]);
 
         if (empty($res) || is_null($res[0]->bbox)) {
@@ -591,13 +596,12 @@ class PBFGeneratorService extends BaseService
             (float) $matches[1], // minLon
             (float) $matches[2], // minLat
             (float) $matches[3], // maxLon
-            (float) $matches[4]  // maxLat
+            (float) $matches[4],  // maxLat
         ];
 
         // Genera i tile per questo bounding box
-        $geometryService = new GeometryComputationService();
+        $geometryService = new GeometryComputationService;
+
         return $geometryService->generateTiles($bbox, $zoom, $this->getZoomTreshold(), $this->app_id);
     }
-
-
 }

@@ -136,10 +136,10 @@ return [
     |
     | Configure which dependencies should be imported by default for each model.
     | This serves as a fallback when no specific dependencies are specified.
-    | 
+    |
     | Available dependencies for 'app' model:
     | - 'ec_poi': Import POI data
-    | - 'ec_track': Import track data  
+    | - 'ec_track': Import track data
     | - 'taxonomy_activity': Import taxonomy activity data
     | - 'layer': Import layer data
     | - 'ec_media': Import media data

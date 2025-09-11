@@ -25,9 +25,13 @@ class GenerateOptimizedPBFByZoomJob implements ShouldQueue
     public $timeout = 900; // 15 minuti (più lungo per il clustering)
 
     private $app_id;
+
     private $zoom;
+
     private $zoomTreshold;
+
     private $no_pbf_layer = false;
+
     private $trackIds;
 
     /**
@@ -49,7 +53,7 @@ class GenerateOptimizedPBFByZoomJob implements ShouldQueue
         try {
             Log::info("Avvio generazione PBF ottimizzata per zoom {$this->zoom}", [
                 'app_id' => $this->app_id,
-                'zoom' => $this->zoom
+                'zoom' => $this->zoom,
             ]);
 
             // Pulisci le chiavi cache per questo zoom
@@ -61,38 +65,40 @@ class GenerateOptimizedPBFByZoomJob implements ShouldQueue
             } else {
                 $trackIds = $this->trackIds;
             }
-            
+
             if (empty($trackIds)) {
                 Log::info("Nessuna traccia trovata per app_id {$this->app_id} al zoom {$this->zoom}");
+
                 return;
             }
 
-            Log::info("Trovate " . count($trackIds) . " tracce per zoom {$this->zoom}", [
+            Log::info('Trovate '.count($trackIds)." tracce per zoom {$this->zoom}", [
                 'app_id' => $this->app_id,
-                'zoom' => $this->zoom
+                'zoom' => $this->zoom,
             ]);
 
             // Genera i tile ottimizzati per questo zoom
             $tiles = $pbfService->generateOptimizedTilesForZoom($trackIds, $this->zoom);
-            
+
             if (empty($tiles)) {
                 Log::info("Nessun tile da generare per zoom {$this->zoom}", [
                     'app_id' => $this->app_id,
-                    'zoom' => $this->zoom
+                    'zoom' => $this->zoom,
                 ]);
+
                 return;
             }
 
-            Log::info("Generati " . count($tiles) . " tile ottimizzati per zoom {$this->zoom}", [
+            Log::info('Generati '.count($tiles)." tile ottimizzati per zoom {$this->zoom}", [
                 'app_id' => $this->app_id,
-                'zoom' => $this->zoom
+                'zoom' => $this->zoom,
             ]);
 
             // Crea i job per ogni tile
             $jobs = [];
             foreach ($tiles as $tile) {
                 [$x, $y, $z] = $tile;
-                if ($z <= $this->zoomTreshold && !$this->no_pbf_layer) {
+                if ($z <= $this->zoomTreshold && ! $this->no_pbf_layer) {
                     $jobs[] = new GenerateLayerPBFJob($z, $x, $y, $this->app_id);
                 } else {
                     $jobs[] = new GeneratePBFJob($z, $x, $y, $this->app_id);
@@ -100,31 +106,28 @@ class GenerateOptimizedPBFByZoomJob implements ShouldQueue
             }
 
             // Dispatch del batch
-            if (!empty($jobs)) {
+            if (! empty($jobs)) {
                 $batch = Bus::batch($jobs)
-                    ->name("Optimized PBF batch: {$this->app_id}/{$this->zoom} (" . count($jobs) . " jobs)")
+                    ->name("Optimized PBF batch: {$this->app_id}/{$this->zoom} (".count($jobs).' jobs)')
                     ->onConnection('redis')
                     ->onQueue('pbf')
                     ->dispatch();
 
-                Log::info("Batch di generazione PBF ottimizzata avviato", [
+                Log::info('Batch di generazione PBF ottimizzata avviato', [
                     'app_id' => $this->app_id,
                     'zoom' => $this->zoom,
                     'total_jobs' => count($jobs),
-                    'batch_id' => $batch->id ?? 'unknown'
+                    'batch_id' => $batch->id ?? 'unknown',
                 ]);
             }
 
         } catch (Throwable $e) {
-            Log::error("Errore nel Job PBF ottimizzato per zoom {$this->zoom}: " . $e->getMessage(), [
+            Log::error("Errore nel Job PBF ottimizzato per zoom {$this->zoom}: ".$e->getMessage(), [
                 'app_id' => $this->app_id,
                 'zoom' => $this->zoom,
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
             throw $e;
         }
     }
-
- 
-
-} 
+}

@@ -37,28 +37,28 @@ class ImportAppJob extends BaseImportJob
     {
         // Get the list of allowed dependencies from configuration or job data
         $allowedDependencies = $this->getAllowedDependencies();
-        
+
         // foreach ($this->getRelations() as $modelKey => $relationData) {
         //     $this->queueEntityImport($modelKey, $userId, $relationData['foreign_key']);
         // }
-        
+
         // Import only allowed dependencies
         if (in_array('ec_poi', $allowedDependencies)) {
             $this->queueEntityImport('ec_poi', $data['user_id'], 'user_id', $model->id);
         }
-        
+
         if (in_array('ec_track', $allowedDependencies)) {
             $this->queueEntityImport('ec_track', $data['user_id'], 'user_id', $model->id);
         }
-        
+
         if (in_array('taxonomy_activity', $allowedDependencies)) {
             $this->queueEntityImport('taxonomy_activity', $data['user_id'], 'user_id', $model->id);
         }
-        
+
         if (in_array('layer', $allowedDependencies)) {
             $this->queueEntityImport('layer', $data['user_id'], 'app_id', $model->id);
         }
-        
+
         if (in_array('ec_media', $allowedDependencies)) {
             $this->queueEntityImport('ec_media', $data['user_id'], 'user_id', $model->id);
         }
@@ -76,10 +76,10 @@ class ImportAppJob extends BaseImportJob
         if (isset($this->data['allowed_dependencies']) && is_array($this->data['allowed_dependencies'])) {
             return $this->data['allowed_dependencies'];
         }
-        
+
         // Fallback to configuration
         $configDependencies = config('wm-geohub-import.default_dependencies.app', $allDependencies);
-        
+
         return is_array($configDependencies) ? $configDependencies : $allDependencies;
     }
 

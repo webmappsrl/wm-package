@@ -4,6 +4,7 @@ namespace Wm\WmPackage\Jobs\Pbf;
 
 use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Wm\WmPackage\Services\PBFGeneratorService;
+
 class GenerateLayerPBFJob extends GeneratePBFJob
 {
     /**

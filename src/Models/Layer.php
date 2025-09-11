@@ -70,6 +70,7 @@ class Layer extends Polygon
     public function ecTracks(): MorphToMany
     {
         $ecTrackModelClass = config('wm-package.ec_track_model', 'Wm\WmPackage\Models\EcTrack');
+
         return $this->morphedByMany($ecTrackModelClass, 'layerable')->using(Layerable::class);
     }
 

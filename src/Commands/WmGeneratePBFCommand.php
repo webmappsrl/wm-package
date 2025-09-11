@@ -63,7 +63,7 @@ class WmGeneratePBFCommand extends Command
     {
         $app = App::where('id', $this->argument('app_id'))->first();
         if (! $app) {
-            $this->error('App with id ' . $this->argument('app_id') . ' not found!');
+            $this->error('App with id '.$this->argument('app_id').' not found!');
 
             return;
         }
@@ -71,7 +71,7 @@ class WmGeneratePBFCommand extends Command
         $optimized = $this->option('optimized');
 
         if ($optimized) {
-            $this->info("🚀 Utilizzo approccio ottimizzato con clustering geografico");
+            $this->info('🚀 Utilizzo approccio ottimizzato con clustering geografico');
 
             PBFGeneratorService::make()->generateWholeAppPbfsOptimized(
                 $app,
@@ -80,7 +80,7 @@ class WmGeneratePBFCommand extends Command
                 $this->no_pbf_layer
             );
         } else {
-            $this->info("🔄 Utilizzo approccio tradizionale");
+            $this->info('🔄 Utilizzo approccio tradizionale');
 
             PBFGeneratorService::make()->generateWholeAppPbfs(
                 $app,
@@ -94,5 +94,4 @@ class WmGeneratePBFCommand extends Command
 
         return 0;
     }
-
 }

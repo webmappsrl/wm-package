@@ -18,13 +18,14 @@ class DataTransformer
         }
 
         // Se è null o vuoto, restituisci array vuoto
-        if (!$json) {
+        if (! $json) {
             return [];
         }
 
         // Se è una stringa, decodifica JSON
         if (is_string($json)) {
             $arr = json_decode($json, true);
+
             return array_filter($arr, fn ($value) => $value !== null && $value !== '');
         }
 
@@ -40,11 +41,12 @@ class DataTransformer
         // Se è già un array, restituiscilo direttamente
         if (is_array($json)) {
             $filtered = array_filter($json, fn ($value) => $value !== null && $value !== '');
+
             return empty($filtered) ? null : $filtered;
         }
 
         // Se è null o vuoto, restituisci null
-        if (!$json) {
+        if (! $json) {
             return null;
         }
 
@@ -52,6 +54,7 @@ class DataTransformer
         if (is_string($json)) {
             $arr = json_decode($json, true);
             $filtered = array_filter($arr, fn ($value) => $value !== null && $value !== '');
+
             return empty($filtered) ? null : $filtered;
         }
 

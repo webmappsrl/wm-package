@@ -107,7 +107,7 @@ class TopUgcCreators extends Table
         $resource = str_replace('_', '-', $ugcTable);
         $filter = base64_encode(json_encode([['resource:users:author' => $userId]]));
 
-        return request()->getSchemeAndHttpHost() . rtrim(Nova::path(), '/') . "/resources/{$resource}?{$resource}_filter={$filter}";
+        return request()->getSchemeAndHttpHost().rtrim(Nova::path(), '/')."/resources/{$resource}?{$resource}_filter={$filter}";
     }
 
     /**

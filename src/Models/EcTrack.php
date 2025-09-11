@@ -647,17 +647,17 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
         if (! $this->geometry) {
             return [
                 'type' => 'FeatureCollection',
-                'features' => []
+                'features' => [],
             ];
         }
 
         // Converti WKB in GeoJSON usando PostGIS
         $geojson = DB::select("SELECT ST_AsGeoJSON(ST_GeomFromWKB(decode(?, 'hex'))) as geojson", [$this->geometry]);
-        
+
         if (empty($geojson)) {
             return [
                 'type' => 'FeatureCollection',
-                'features' => []
+                'features' => [],
             ];
         }
         $feature = $this->getFeatureMap();
@@ -665,11 +665,12 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
 
         return [
             'type' => 'FeatureCollection',
-            'features' => [$feature]
+            'features' => [$feature],
         ];
     }
 
-    public function getFeatureMap($geometry = null) {
+    public function getFeatureMap($geometry = null)
+    {
         if ($geometry === null) {
             $geometry = $this->geometry;
         }

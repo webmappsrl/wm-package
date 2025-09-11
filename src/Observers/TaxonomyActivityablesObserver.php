@@ -8,7 +8,6 @@ use Wm\WmPackage\Services\Models\LayerService;
 
 class TaxonomyActivityablesObserver
 {
-
     public function __construct(protected LayerService $layerService) {}
 
     public function created(TaxonomyActivityable $taxonomyActivityable)
@@ -25,7 +24,7 @@ class TaxonomyActivityablesObserver
     {
         $relatedTypeClass = $taxonomyActivityable->taxonomy_activityable_type;
         $ecTrackModelClass = config('wm-package.ec_track_model', 'App\Models\EcTrack');
-        
+
         if (
             str_contains($relatedTypeClass, '\Layer')
 

@@ -157,7 +157,6 @@ class PropertiesPanel extends Panel
             }
         }
 
-
         if ($columnName && Schema::hasColumn($model->getTable(), $columnName)) {
             // Fetch the JSON data from the column
             $column = $model->$columnName ?? '';

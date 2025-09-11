@@ -203,11 +203,11 @@ class GeohubImportService
     public function getModelInstance(string $tableName): Model
     {
         $mapping = collect($this->importMapping)->firstWhere('geohub_table', $tableName);
-        
-        if (!$mapping) {
+
+        if (! $mapping) {
             throw new \InvalidArgumentException("No model mapping found for table: {$tableName}");
         }
-        
+
         $modelClass = $mapping['namespace'];
 
         return new $modelClass;
