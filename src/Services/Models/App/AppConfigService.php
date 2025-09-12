@@ -289,7 +289,7 @@ class AppConfigService extends AppBaseService
                     }
                 }
                 unset($item['properties']);
-                if(isset($item['name'])){
+                if (isset($item['name'])) {
                     $item['title'] = $item['name'];
                 }
                 try {
