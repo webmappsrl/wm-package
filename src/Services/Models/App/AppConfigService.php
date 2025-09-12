@@ -289,6 +289,9 @@ class AppConfigService extends AppBaseService
                     }
                 }
                 unset($item['properties']);
+                if(isset($item['name'])){
+                    $item['title'] = $item['name'];
+                }
                 try {
                     if (isset($item['bbox'])) {
                         $item['bbox'] = array_map('floatval', json_decode(strval($item['bbox']), true));
