@@ -8,6 +8,7 @@ use Kongulov\NovaTabTranslatable\NovaTabTranslatable;
 use Laravel\Nova\Fields\Boolean;
 use Laravel\Nova\Fields\Code;
 use Laravel\Nova\Fields\ID;
+use Laravel\Nova\Fields\Number;
 use Laravel\Nova\Fields\Select;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
@@ -39,6 +40,7 @@ class App extends Resource
                 Tab::make('home', $this->home_tab()),
                 Tab::make('webapp', $this->webapp_tab()),
                 Tab::make('app', $this->app_tab()),
+                Tab::make('pois', $this->pois_tab()),
                 Tab::make('release_data', $this->app_release_data_tab()),
                 Tab::make('pages', $this->pages_tab()),
                 Tab::make('acquisition_form', $this->acquisition_form_tab()),
@@ -83,6 +85,62 @@ class App extends Resource
                 ->hideFromIndex()
                 ->help(__('Enables user geolocation recording on tracks')),
 
+        ];
+    }
+
+    protected function pois_tab(): array
+    {
+        return [
+            Boolean::make(__('App POIs API Layer'), 'app_pois_api_layer')
+                ->default(false)
+                ->hideFromIndex()
+                ->help(__('Enable POIs API layer for the app')),
+            
+            Number::make(__('POI Min Radius'), 'poi_min_radius')
+                ->step(0.1)
+                ->default(0.5)
+                ->hideFromIndex()
+                ->help(__('Minimum radius for POI clustering')),
+            
+            Number::make(__('POI Max Radius'), 'poi_max_radius')
+                ->step(0.1)
+                ->default(1.2)
+                ->hideFromIndex()
+                ->help(__('Maximum radius for POI clustering')),
+            
+            Number::make(__('POI Icon Zoom'), 'poi_icon_zoom')
+                ->step(0.1)
+                ->default(16)
+                ->hideFromIndex()
+                ->help(__('Zoom level for POI icons')),
+            
+            Number::make(__('POI Icon Radius'), 'poi_icon_radius')
+                ->step(0.1)
+                ->default(1)
+                ->hideFromIndex()
+                ->help(__('Radius for POI icons')),
+            
+            Number::make(__('POI Min Zoom'), 'poi_min_zoom')
+                ->step(0.1)
+                ->default(5)
+                ->hideFromIndex()
+                ->help(__('Minimum zoom level to show POIs')),
+            
+            Number::make(__('POI Label Min Zoom'), 'poi_label_min_zoom')
+                ->step(0.1)
+                ->default(10.5)
+                ->hideFromIndex()
+                ->help(__('Minimum zoom level to show POI labels')),
+            
+            Select::make(__('POI Interaction'), 'poi_interaction')
+                ->options([
+                    'popup' => __('Popup'),
+                    'modal' => __('Modal'),
+                    'none' => __('None'),
+                ])
+                ->default('popup')
+                ->hideFromIndex()
+                ->help(__('Type of interaction when clicking on POIs')),
         ];
     }
 
