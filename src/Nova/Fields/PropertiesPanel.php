@@ -18,6 +18,8 @@ use Laravel\Nova\Fields\Select;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Fields\Textarea;
 use Laravel\Nova\Panel;
+use Wm\WmPackage\Models\UgcPoi;
+use Wm\WmPackage\Models\User;
 
 class PropertiesPanel extends Panel
 {
@@ -522,7 +524,7 @@ class PropertiesPanel extends Panel
                     ->resolveUsing(function ($value, $resource, $attribute) {
                         // Se il valore è un ID utente, crea un link cliccabile
                         if (is_numeric($value)) {
-                            $user = \App\Models\User::find($value);
+                            $user = User::find($value);
                             if ($user) {
                                 $url = "/resources/users/{$user->id}";
                                 return "<a href='{$url}' class='link-default'>{$user->name}</a>";
@@ -537,7 +539,7 @@ class PropertiesPanel extends Panel
                 $field = Text::make($label, $jsonPath)
                     ->resolveUsing(function ($value, $resource, $attribute) {
                         if (is_numeric($value)) {
-                            $ugcPoi = \App\Models\UgcPoi::find($value);
+                            $ugcPoi = UgcPoi::find($value);
                             if ($ugcPoi) {
                                 $url = "/resources/ugc-pois/{$ugcPoi->id}";
                                 return "<a href='{$url}' class='link-default'>{$ugcPoi->name}</a>";
