@@ -11,6 +11,8 @@ use Laravel\Nova\Fields\MorphToMany;
 use Laravel\Nova\Fields\Number;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
+use Laravel\Nova\Panel;
+use Wm\WmPackage\Nova\Fields\LayerFeatures\LayerFeatures;
 use Wm\WmPackage\Nova\Fields\PropertiesPanel;
 use Wm\WmPackage\Nova\Filters\AppFilter;
 use Wm\WmPackage\Nova\Traits\MultiPolygonResourceTrait;
@@ -49,6 +51,9 @@ class Layer extends AbstractGeometryResource
             BelongsTo::make(__('App'), 'appOwner', App::class),
             BelongsTo::make('Owner', 'layerOwner', User::class)->nullable(),
             Images::make(__('Image'), 'default'),
+            Panel::make('Ec Tracks', [
+                LayerFeatures::make('ecTracks', $this->resource, EcTrack::class)->hideWhenCreating(),
+            ]),
             PropertiesPanel::make(__('Properties'), 'layer')->collapsible(),
             MorphToMany::make(__('Activities'), 'taxonomyActivities', TaxonomyActivity::class),
             ...$this->fieldsTrait($request),

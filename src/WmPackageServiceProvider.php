@@ -48,6 +48,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
         
         // Registra IconSelect FieldServiceProvider
         $this->app->register(\Wm\WmPackage\Nova\Fields\IconSelect\FieldServiceProvider::class);
+        $this->app->register(\Wm\WmPackage\Nova\Fields\LayerFeatures\FieldServiceProvider::class);
     }
 
     public static function getBasePath(): string
