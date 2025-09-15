@@ -56,7 +56,10 @@ class FormSchemaFilter extends Filter
             $schemas = json_decode($acquisition_form, true);
             foreach ($schemas as $schema) {
                 $label = reset($schema['label']);
-                $options[$label] = $schema['id'];
+                // Salta se il label è vuoto per evitare chiavi vuote
+                if (!empty($label)) {
+                    $options[$label] = $schema['id'];
+                }
             }
         }
 

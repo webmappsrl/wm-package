@@ -4,6 +4,7 @@ namespace Wm\WmPackage\Nova;
 
 use Laravel\Nova\Fields\BelongsToMany;
 use Laravel\Nova\Http\Requests\NovaRequest;
+use Wm\WmPackage\Nova\Fields\PropertiesPanel;
 use Wm\WmPackage\Nova\Traits\PointResourceTrait;
 
 class EcPoi extends AbstractEcResource
@@ -23,6 +24,8 @@ class EcPoi extends AbstractEcResource
     {
         return [
             ...$this->fieldsTrait($request),
+            PropertiesPanel::makeWithModel(__('Converted from UGC'), 'properties->ugc', $this, false),
+            PropertiesPanel::makeWithModel('Form', 'properties->form', $this, false),
             BelongsToMany::make('EcTracks', 'ecTracks', EcTrack::class),
         ];
     }
