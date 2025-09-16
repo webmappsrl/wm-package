@@ -6,8 +6,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\MessageBag;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
-use Wm\WmPackage\Models\App;
-use Wm\WmPackage\Services\AppIconsService;
 
 class TaxonomyObserver extends AbstractObserver
 {
@@ -35,30 +33,6 @@ class TaxonomyObserver extends AbstractObserver
     {
         if ($taxonomy->identifier !== null) {
             $taxonomy->identifier = Str::slug($taxonomy->identifier, '-');
-        }
-    }
-
-    public function saved(Model $taxonomy)
-    {
-        if ($taxonomy->icon != null) {
-            $apps = App::all();
-            $appIconsService = new AppIconsService;
-
-            foreach ($apps as $app) {
-                $appIconsService->writeIconsOnAws($app->id);
-            }
-        }
-    }
-
-    public function deleted(Model $taxonomy)
-    {
-        if ($taxonomy->icon != null) {
-            $apps = App::all();
-            $appIconsService = new AppIconsService;
-
-            foreach ($apps as $app) {
-                $appIconsService->writeIconsOnAws($app->id);
-            }
         }
     }
 

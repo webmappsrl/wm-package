@@ -6,13 +6,20 @@ use Illuminate\Support\Facades\DB;
 
 class AppIconsService extends BaseService
 {
+    private $icons = [];
+
+    public function __construct()
+    {
+        $this->icons = $this->icons();
+    }
+
     public function writeIconsOnAws(int $appId)
     {
-        $icons = $this->icons();
+        $this->icons = $this->icons();
 
-        StorageService::make()->storeAppIcons($appId, json_encode($icons));
+        StorageService::make()->storeAppIcons($appId, json_encode($this->icons));
 
-        return $icons;
+        return $this->icons;
     }
 
     public function icons(): array
@@ -49,6 +56,11 @@ class AppIconsService extends BaseService
         }
 
         return $icons;
+    }
+
+    public function existIcon(string $iconName): bool
+    {
+        return isset($this->icons[$iconName]);
     }
 
     private function getIconsFromTable(string $tableName): array
