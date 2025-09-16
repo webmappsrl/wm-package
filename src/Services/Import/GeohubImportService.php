@@ -38,6 +38,7 @@ class GeohubImportService
         'ec_poi',
         'ec_track',
         'taxonomy_activity',
+        'taxonomy_poi_types',
         'layer',
         'ec_media',
     ];

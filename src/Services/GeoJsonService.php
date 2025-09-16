@@ -11,20 +11,43 @@ class GeoJsonService extends BaseService
         try {
             $properties = is_array($model->properties) ? $model->properties : [];
             $properties['id'] = $model->id;
-            
+
             // Verifica che il modello abbia una geometria valida
             if (!$model->geometry || empty($model->geometry)) {
                 return null;
             }
-            
+
+            // Aggiungo le tassonomie se presenti
+            $taxonomyPoiTypes = [];
+            if ($model->taxonomyPoiTypes) {
+                foreach ($model->taxonomyPoiTypes as $taxonomyPoiType) {
+                    $taxonomyPoiTypes[] = $taxonomyPoiType->getJson();
+                }
+            }
+            $taxonomyActivities = [];
+            if ($model->taxonomyActivities) {
+                foreach ($model->taxonomyActivities as $taxonomyActivity) {
+                    $taxonomyActivities[] = $taxonomyActivity->getJson();
+                }
+            }
+            //TODO: manca taxonomy where?
+            $taxonomy = [
+                'activity' => $taxonomyActivities,
+                'theme' => $model->taxonomyThemes()->pluck('taxonomy_themes.id')->toArray(),
+                'when' => $model->taxonomyWhens()->pluck('taxonomy_whens.id')->toArray(),
+                'poi_type' => isset($taxonomyPoiTypes[0]) ? $taxonomyPoiTypes[0] : null,
+                'poi_types' => $taxonomyPoiTypes,
+            ];
+            $properties['taxonomy'] = $taxonomy;
+
             $geom = GeometryComputationService::make()->getModelGeometryAsGeojson($model);
-            
+
             if (!$geom) {
                 return null;
             }
 
             $decodedGeom = json_decode($geom, true);
-            
+
             if (!$decodedGeom) {
                 return null;
             }

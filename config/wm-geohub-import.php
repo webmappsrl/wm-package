@@ -6,6 +6,7 @@ use Wm\WmPackage\Jobs\Import\ImportEcPoiJob;
 use Wm\WmPackage\Jobs\Import\ImportEcTrackJob;
 use Wm\WmPackage\Jobs\Import\ImportLayerJob;
 use Wm\WmPackage\Jobs\Import\ImportTaxonomyActivityJob;
+use Wm\WmPackage\Jobs\Import\ImportTaxonomyPoiTypeJob;
 use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Services\Import\DataTransformer;
 
@@ -490,7 +491,7 @@ return [
                 'name' => ['field' => 'name', 'transformer' => [DataTransformer::class, 'jsonToArray']],
                 'description' => ['field' => 'description', 'transformer' => [DataTransformer::class, 'jsonToArray']],
                 'excerpt' => ['field' => 'excerpt', 'transformer' => [DataTransformer::class, 'jsonToArray']],
-                'identifier' => 'properties->geohub_id',
+                'identifier' => 'identifier',
                 'created_at' => 'created_at',
                 'updated_at' => 'updated_at',
                 'icon' => ['field' => 'icon', 'transformer' => [DataTransformer::class, 'svgIconToNameIcon']],
@@ -522,7 +523,7 @@ return [
         | Taxonomy POI Type Entity Mapping
         |----------------------------------------------------------------------
         */
-        'taxonomy_poi_type' => [
+        'taxonomy_poi_types' => [
             'namespace' => 'Wm\\WmPackage\\Models\\TaxonomyPoiType',
             'job' => ImportTaxonomyPoiTypeJob::class,
             'geohub_table' => 'taxonomy_poi_types',
@@ -531,11 +532,15 @@ return [
                 'name' => ['field' => 'name', 'transformer' => [DataTransformer::class, 'jsonToArray']],
                 'description' => ['field' => 'description', 'transformer' => [DataTransformer::class, 'jsonToArray']],
                 'excerpt' => ['field' => 'excerpt', 'transformer' => [DataTransformer::class, 'jsonToArray']],
-                'identifier' => 'properties->geohub_id',
+                'identifier' => 'identifier',
                 'created_at' => 'created_at',
                 'updated_at' => 'updated_at',
+                'icon' => ['field' => 'icon', 'transformer' => [DataTransformer::class, 'svgIconToNameIcon']],
             ],
-            'properties' => [],
+            'properties' => [
+                'column_name' => 'properties',
+                'mapping' => [],
+            ],
             'relations' => [
                 'morphable_table' => 'taxonomy_poi_typeables',
                 'foreign_key' => 'taxonomy_poi_type_id',
@@ -544,7 +549,7 @@ return [
                 'morphable_models' => [
                     'ec_poi' => 'Wm\\WmPackage\\Models\\EcPoi',
                     'ec_track' => 'Wm\\WmPackage\\Models\\EcTrack',
-                    'ec_media' => 'Wm\\WmPackage\\Models\\EcMedia',
+                    'media' => 'Wm\\WmPackage\\Models\\Media',
                     'layer' => 'Wm\\WmPackage\\Models\\Layer',
                 ],
             ],

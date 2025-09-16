@@ -55,6 +55,10 @@ class ImportAppJob extends BaseImportJob
             $this->queueEntityImport('taxonomy_activity', $data['user_id'], 'user_id', $model->id);
         }
 
+        if (in_array('taxonomy_poi_types', $allowedDependencies)) {
+            $this->queueEntityImport('taxonomy_poi_types', $data['user_id'], 'user_id', $model->id);
+        }
+
         if (in_array('layer', $allowedDependencies)) {
             $this->queueEntityImport('layer', $data['user_id'], 'app_id', $model->id);
         }
@@ -70,7 +74,7 @@ class ImportAppJob extends BaseImportJob
     protected function getAllowedDependencies(): array
     {
         // All available dependencies
-        $allDependencies = ['ec_poi', 'ec_track', 'taxonomy_activity', 'layer', 'ec_media'];
+        $allDependencies = ['ec_poi', 'ec_track', 'taxonomy_activity', 'taxonomy_poi_types', 'layer', 'ec_media'];
 
         // First check if allowed_dependencies is passed in job data
         if (isset($this->data['allowed_dependencies']) && is_array($this->data['allowed_dependencies'])) {

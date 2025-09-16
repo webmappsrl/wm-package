@@ -8,7 +8,7 @@ use Wm\WmPackage\Services\Import\GeohubImportService;
 
 class WmImportFromGeohubCommand extends Command
 {
-    protected $signature = 'wm:import-from-geohub 
+    protected $signature = 'wm:import-from-geohub
                             {model? : The model to import (e.g. app, ec_media, ec_track, ec_poi). If not specified, imports all}
                             {id? : Specific ID to import. If not specified, imports all}
                             {--skip-dependencies : Skip importing all dependencies}
@@ -75,7 +75,7 @@ class WmImportFromGeohubCommand extends Command
     protected function prepareJobData(bool $skipDependencies, array $dependencies): array
     {
         // All available dependencies
-        $allDependencies = ['ec_poi', 'ec_track', 'taxonomy_activity', 'layer', 'ec_media'];
+        $allDependencies = ['ec_poi', 'ec_track', 'taxonomy_activity', 'taxonomy_poi_types', 'layer', 'ec_media'];
 
         if ($skipDependencies) {
             // Skip all dependencies
