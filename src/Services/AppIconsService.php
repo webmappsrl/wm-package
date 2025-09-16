@@ -44,11 +44,20 @@ class AppIconsService extends BaseService
                     $prevSize = isset($icon['properties']['prevSize']) ? $icon['properties']['prevSize'] : 32;
                     $paths = $icon['icon']['paths'];
 
-                    $svg = "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 {$height} {$height}' width='{$prevSize}' height='{$prevSize}'><circle fill=\"darkorange\"  cx='{$height2}' cy='{$height2}' r='{$height2}'/><g fill=\"white\" transform='scale(0.8 0.8) translate(100, 100)'>";
+                    $svg =
+                    <<<SVG
+                        <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 {$height} {$height}' width='{$prevSize}' height='{$prevSize}'>
+                            <circle fill="darkorange" cx='{$height2}' cy='{$height2}' r='{$height2}'/>
+                            <g fill="white" transform='scale(0.8 0.8) translate(100, 100)'>
+                    SVG;
                     foreach ($paths as $path) {
                         $svg .= "<path d='{$path}'/>";
                     }
-                    $svg .= '</g></svg>';
+                    $svg .=
+                    <<<SVG
+                            </g>
+                        </svg>
+                    SVG;
 
                     $icons[$name] = $svg;
                 }
