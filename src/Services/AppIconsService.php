@@ -29,7 +29,6 @@ class AppIconsService extends BaseService
         $iconNames = array_merge(
             $this->getIconsFromTable('taxonomy_poi_types'),
             $this->getIconsFromTable('taxonomy_activities'),
-            $this->getIconsFromTable('taxonomy_themes'),
         );
 
         $iconsData = \Wm\WmPackage\Helpers\GlobalFileHelper::getJsonContent('icons.json', 'icons');
