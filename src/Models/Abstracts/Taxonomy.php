@@ -55,4 +55,32 @@ abstract class Taxonomy extends Polygon
     {
         return $this->morphedByMany(EcPoi::class, 'taxonomy_'.$this->getRelationKey());
     }
+
+    public function getJson(): array
+    {
+        $json = $this->removeUnnecessaryFields($this->toArray());
+
+        if (isset($json['icon'])) {
+            $json['icon_name'] = $json['icon'];
+            unset($json['icon']);
+        }
+
+        return $json;
+    }
+
+    private function removeUnnecessaryFields(array $json): array
+    {
+        unset($json['pivot']);
+        unset($json['import_method']);
+        unset($json['source']);
+        unset($json['source_id']);
+        unset($json['user_id']);
+        unset($json['created_at']);
+        unset($json['updated_at']);
+        unset($json['deleted_at']);
+        unset($json['excerpt']);
+        unset($json['properties']);
+
+        return $json;
+    }
 }
