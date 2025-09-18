@@ -23,6 +23,13 @@ class Layer extends Polygon
     {
         parent::boot();
         Layer::observe(LayerObserver::class);
+        
+        // Imposta un default per properties se è null
+        static::creating(function ($model) {
+            if (is_null($model->properties)) {
+                $model->properties = [];
+            }
+        });
     }
 
     public array $translatable = ['name', 'properties->title', 'properties->subtitle', 'properties->description'];
