@@ -9,7 +9,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Support\Facades\DB;
 use Laravel\Scout\Searchable;
-use Spatie\Translatable\HasTranslations;
 use Wm\WmPackage\Models\Abstracts\MultiLineString;
 use Wm\WmPackage\Models\Interfaces\LayerRelatedModel;
 use Wm\WmPackage\Observers\EcTrackObserver;
@@ -22,7 +21,7 @@ use Wm\WmPackage\Traits\TaxonomyWhereAbleModel;
 
 class EcTrack extends MultiLineString implements LayerRelatedModel
 {
-    use EcFeatureTrait, Favoriteable, HasTranslations, Searchable, TaxonomyAbleModel, TaxonomyWhereAbleModel;
+    use EcFeatureTrait, Favoriteable, Searchable, TaxonomyAbleModel, TaxonomyWhereAbleModel;
 
     protected $table;
 
@@ -51,12 +50,45 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
 
     protected static function booted()
     {
+        parent::booted();
+        
         EcTrack::observe(EcTrackObserver::class);
 
         // Imposta un default per properties se è null
         static::creating(function ($model) {
             if (is_null($model->properties)) {
                 $model->properties = [];
+            }
+        });
+
+        // Gestisci il caso in cui properties sia null, stringa vuota o stringa JSON
+        static::retrieved(function ($model) {
+            // Se properties è null o stringa vuota, imposta un array vuoto
+            if (is_null($model->properties) || $model->properties === '') {
+                $model->properties = [];
+                return;
+            }
+            
+            // Se properties è una stringa JSON, decodificala
+            if (is_string($model->properties)) {
+                $decoded = json_decode($model->properties, true);
+                if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                    // Controlla se ci sono campi traducibili e converte le stringhe in array di traduzioni
+                    if (isset($model->translatable)) {
+                        foreach ($model->translatable as $field) {
+                            if (strpos($field, 'properties->') === 0) {
+                                $translationKey = str_replace('properties->', '', $field);
+                                if (isset($decoded[$translationKey]) && is_string($decoded[$translationKey]) && $decoded[$translationKey] !== '') {
+                                    $decoded[$translationKey] = ['it' => $decoded[$translationKey]];
+                                }
+                            }
+                        }
+                    }
+                    $model->properties = $decoded;
+                } else {
+                    // Se la decodifica fallisce, imposta un array vuoto
+                    $model->properties = [];
+                }
             }
         });
     }
