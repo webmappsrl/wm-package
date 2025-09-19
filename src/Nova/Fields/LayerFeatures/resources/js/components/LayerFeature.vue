@@ -246,7 +246,7 @@ export default defineComponent({
         };
 
         const loadingTemplate =
-            '<span class="ag-overlay-loading-center">Caricamento dati...</span>';
+            '<span class="ag-overlay-no-rows-center">Caricamento dati...</span>';
         const noRowsTemplate =
             '<span class="ag-overlay-no-rows-center">Nessun dato disponibile</span>';
 

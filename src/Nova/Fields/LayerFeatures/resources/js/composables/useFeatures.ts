@@ -93,6 +93,11 @@ export function useFeatures(props: LayerFeatureProps) {
         try {
             isLoading.value = true;
             
+            // Mostra l'overlay di caricamento
+            if (gridApi.value) {
+                gridApi.value.showLoadingOverlay();
+            }
+            
             if (!props.field?.modelName || !props.field?.layerId) {
                 throw new Error('Required field properties are missing');
             }
@@ -161,6 +166,15 @@ export function useFeatures(props: LayerFeatureProps) {
             throw error;
         } finally {
             isLoading.value = false;
+            
+            // Nasconde l'overlay di caricamento e mostra quello appropriato
+            if (gridApi.value) {
+                gridApi.value.hideOverlay();
+                if (gridData.value.length === 0) {
+                    gridApi.value.showNoRowsOverlay();
+                }
+            }
+            
             updateSelectedNodes();
             setTimeout(() => {
                 sortBySelection(gridApi.value);

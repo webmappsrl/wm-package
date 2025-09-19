@@ -162,7 +162,7 @@ export function useGrid(props: UseGridProps) {
                 const resourcePath = props.modelName ? camelToKebabCase(props.modelName) : 'ec-tracks';
                 
                 return `
-                    <a href="/nova/resources/${resourcePath}/${params.data.id}"
+                    <a href="/resources/${resourcePath}/${params.data.id}"
                        target="_blank"
                        class="flex items-center justify-center"
                        style="color: rgb(var(--colors-gray-500))">
