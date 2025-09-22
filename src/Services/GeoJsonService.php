@@ -40,6 +40,35 @@ class GeoJsonService extends BaseService
             ];
             $properties['taxonomy'] = $taxonomy;
 
+            // Aggiungo la feature_image se presente
+            $firstMedia = $model->getMedia()->first();
+            if ($firstMedia) {
+                $properties['feature_image'] = [
+                    'id' => $firstMedia->id,
+                    'name' => $firstMedia->custom_properties['name'] ?? ['it' => $firstMedia->name],
+                    'url' => $firstMedia->getUrl(),
+                    'caption' => $firstMedia->custom_properties['caption'] ?? null,
+                    'thumbnail' => $firstMedia->getUrl('thumbnail_400_200'),
+                    'api_url' => route('default.api.media.geojson', $firstMedia->id),
+                ];
+            }
+            
+            $allMedia = $model->getMedia();
+            if ($allMedia) {
+                $imageGallery = [];
+                foreach ($allMedia as $media) {
+                    $imageGallery[] = [
+                        'id' => $media->id,
+                        'name' => $media->custom_properties['name'] ?? ['it' => $media->name],
+                        'url' => $media->getUrl(),
+                        'caption' => $media->custom_properties['caption'] ?? null,
+                        'thumbnail' => $media->getUrl('thumbnail_400_200'),
+                        'api_url' => route('default.api.media.geojson', $media->id),
+                    ];
+                }
+                $properties['image_gallery'] = $imageGallery;
+            }
+
             $geom = GeometryComputationService::make()->getModelGeometryAsGeojson($model);
 
             if (!$geom) {
