@@ -574,47 +574,31 @@ class GeohubImportService
      */
     public function associateLayersWithEcTrack(string $taxonomyKey, Model $model): void
     {
-        $this->logger->info("🔍 ASSOCIATE LAYERS WITH EC TRACK - Layer ID: {$model->id}, Geohub ID: {$model->properties['geohub_id']}");
-        
-        // Recupera direttamente le track associate al layer nel Geohub
-        $geohubLayerTracks = $this->dbConnection->table('layerables')
-            ->where('layerable_type', 'App\\Models\\EcTrack')
-            ->where('layer_id', $model->properties['geohub_id'])
+        $config = $this->getRelationConfig('layer', $taxonomyKey);
+        $relationTable = $config['pivot_table'];
+        $key = $config['key'];
+        $foreignKey = $config['foreign_key'];
+        $morphableTypeKey = $config['morphable_type']['key'];
+        $morphableTypeValue = $config['morphable_type']['value'];
+        $layerTaxonomyRelations = $this->dbConnection->table($relationTable)
+            ->where($foreignKey, $model->properties['geohub_id'])
+            ->where($morphableTypeKey, $morphableTypeValue)
             ->get();
 
-        $this->logger->info("📊 Track associations found in Geohub: " . $geohubLayerTracks->count());
+        foreach ($layerTaxonomyRelations as $relation) {
+            $trackTaxonomyRelations = $this->dbConnection->table($relationTable)
+                ->where($key, $relation->{$key})
+                ->where($morphableTypeKey, 'App\\Models\\EcTrack')
+                ->get();
 
-        $totalTracksAssigned = 0;
-        $totalTracksAlreadyAssigned = 0;
-        $totalTracksNotFound = 0;
-
-        foreach ($geohubLayerTracks as $geohubTrack) {
-            // Trova la track locale corrispondente
-            $ecTrack = EcTrack::where('properties->geohub_id', $geohubTrack->layerable_id)->first();
-            
-            if ($ecTrack) {
-                $alreadyExists = $model->ecTracks()->where('layerable_type', 'App\\Models\\EcTrack')->where('layerable_id', $ecTrack->id)->exists();
-                
-                if (!$alreadyExists) {
+            foreach ($trackTaxonomyRelations as $relation) {
+                $ecTrackModelClass = config('wm-package.ec_track_model', 'App\Models\EcTrack');
+                $ecTrack = $ecTrackModelClass::where('properties->geohub_id', $relation->{$foreignKey})->first();
+                if ($ecTrack && ! $model->ecTracks()->where('layerable_type', 'App\\Models\\EcTrack')->where('layerable_id', $ecTrack->id)->exists()) {
                     $model->ecTracks()->attach($ecTrack->id, ['created_at' => now(), 'updated_at' => now()]);
-                    $totalTracksAssigned++;
-                    $this->logger->info("✅ Track assigned: Geohub ID {$geohubTrack->layerable_id} -> Local ID {$ecTrack->id}");
-                } else {
-                    $totalTracksAlreadyAssigned++;
-                    $this->logger->info("⚠️ Track already assigned: Geohub ID {$geohubTrack->layerable_id} -> Local ID {$ecTrack->id}");
                 }
-            } else {
-                $totalTracksNotFound++;
-                $this->logger->warning("❌ Track not found locally: Geohub ID {$geohubTrack->layerable_id}");
             }
         }
-
-        $this->logger->info("📊 ASSOCIATION SUMMARY for Layer {$model->id}:");
-        $this->logger->info("   • Total tracks in Geohub layer: " . $geohubLayerTracks->count());
-        $this->logger->info("   • Tracks assigned: {$totalTracksAssigned}");
-        $this->logger->info("   • Tracks already assigned: {$totalTracksAlreadyAssigned}");
-        $this->logger->info("   • Tracks not found locally: {$totalTracksNotFound}");
-        $this->logger->info("   • Final layer track count: " . $model->ecTracks()->count());
     }
 
     public function handleOverlayLayers(Model $model): void
