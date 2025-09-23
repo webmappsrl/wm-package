@@ -25,7 +25,7 @@ class Layer extends Polygon
         Layer::observe(LayerObserver::class);
     }
 
-    public array $translatable = ['name', 'properties->title', 'properties->subtitle', 'properties->description'];
+    public array $translatable = ['name', 'properties->name', 'properties->title', 'properties->subtitle', 'properties->description'];
 
     protected $casts = [
         'properties' => 'array',
@@ -173,6 +173,37 @@ class Layer extends Polygon
         json_decode($string);
 
         return json_last_error() === JSON_ERROR_NONE;
+    }
+
+    /**
+     * Mutator per sincronizzare il campo name con properties->name
+     *
+     * @param mixed $value
+     * @return void
+     */
+    public function setNameAttribute($value)
+    {
+        $this->attributes['name'] = $value;
+        
+        // Sincronizza anche con properties->name
+        $properties = $this->properties ?? [];
+        $properties['name'] = $value;
+        $this->attributes['properties'] = json_encode($properties);
+    }
+
+    /**
+     * Override del metodo save per sincronizzare name con properties->name
+     */
+    public function save(array $options = [])
+    {
+        // Se il campo name è stato modificato, sincronizza con properties->name
+        if ($this->isDirty('name')) {
+            $properties = $this->properties ?? [];
+            $properties['name'] = $this->name;
+            $this->properties = $properties;
+        }
+        
+        return parent::save($options);
     }
 
     /**
