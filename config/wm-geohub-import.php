@@ -507,7 +507,7 @@ return [
                 'morphable_type' => 'taxonomy_activityable_type',
                 'morphable_models' => [
                     'ec_poi' => 'Wm\\WmPackage\\Models\\EcPoi',
-                    'ec_track' => 'Wm\\WmPackage\\Models\\EcTrack',
+                    'ec_track' => config('wm-package.ec_track_model', 'App\\Models\\EcTrack'),
                     'media' => 'Wm\\WmPackage\\Models\\Media',
                     'layer' => 'Wm\\WmPackage\\Models\\Layer',
                 ],
@@ -548,7 +548,7 @@ return [
                 'morphable_type' => 'taxonomy_poi_typeable_type',
                 'morphable_models' => [
                     'ec_poi' => 'Wm\\WmPackage\\Models\\EcPoi',
-                    'ec_track' => 'Wm\\WmPackage\\Models\\EcTrack',
+                    'ec_track' => config('wm-package.ec_track_model', 'App\\Models\\EcTrack'),
                     'media' => 'Wm\\WmPackage\\Models\\Media',
                     'layer' => 'Wm\\WmPackage\\Models\\Layer',
                 ],
@@ -581,7 +581,7 @@ return [
                 'morphable_type' => 'taxonomy_targetable_type',
                 'morphable_models' => [
                     'ec_poi' => 'Wm\\WmPackage\\Models\\EcPoi',
-                    'ec_track' => 'Wm\\WmPackage\\Models\\EcTrack',
+                    'ec_track' => config('wm-package.ec_track_model', 'App\\Models\\EcTrack'),
                     'ec_media' => 'Wm\\WmPackage\\Models\\EcMedia',
                     'layer' => 'Wm\\WmPackage\\Models\\Layer',
                 ],
@@ -614,7 +614,7 @@ return [
                 'morphable_type' => 'taxonomy_whenable_type',
                 'morphable_models' => [
                     'ec_poi' => 'Wm\\WmPackage\\Models\\EcPoi',
-                    'ec_track' => 'Wm\\WmPackage\\Models\\EcTrack',
+                    'ec_track' => config('wm-package.ec_track_model', 'App\\Models\\EcTrack'),
                     'ec_media' => 'Wm\\WmPackage\\Models\\EcMedia',
                     'layer' => 'Wm\\WmPackage\\Models\\Layer',
                 ],
@@ -640,7 +640,7 @@ return [
                 'morphable_type' => 'taxonomy_themeable_type',
                 'morphable_models' => [
                     'ec_poi' => 'Wm\\WmPackage\\Models\\EcPoi',
-                    'ec_track' => 'Wm\\WmPackage\\Models\\EcTrack',
+                    'ec_track' => config('wm-package.ec_track_model', 'App\\Models\\EcTrack'),
                     'media' => 'Wm\\WmPackage\\Models\\Media',
                     'layer' => 'Wm\\WmPackage\\Models\\Layer',
                 ],

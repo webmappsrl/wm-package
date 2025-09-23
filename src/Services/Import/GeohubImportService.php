@@ -574,31 +574,65 @@ class GeohubImportService
      */
     public function associateLayersWithEcTrack(string $taxonomyKey, Model $model): void
     {
+        $this->logger->info("🔍 ASSOCIATE LAYERS WITH EC TRACK - Layer ID: {$model->id}, Geohub ID: {$model->properties['geohub_id']}, Taxonomy: {$taxonomyKey}");
+        
         $config = $this->getRelationConfig('layer', $taxonomyKey);
         $relationTable = $config['pivot_table'];
         $key = $config['key'];
         $foreignKey = $config['foreign_key'];
         $morphableTypeKey = $config['morphable_type']['key'];
         $morphableTypeValue = $config['morphable_type']['value'];
+        
+        $this->logger->info("📊 Using relation table: {$relationTable}, key: {$key}, foreignKey: {$foreignKey}");
+        
         $layerTaxonomyRelations = $this->dbConnection->table($relationTable)
             ->where($foreignKey, $model->properties['geohub_id'])
             ->where($morphableTypeKey, $morphableTypeValue)
             ->get();
 
+        $this->logger->info("📋 Layer taxonomy relations found: " . $layerTaxonomyRelations->count());
+
+        $totalTracksAssigned = 0;
+        $totalTracksAlreadyAssigned = 0;
+        $totalTracksNotFound = 0;
+
         foreach ($layerTaxonomyRelations as $relation) {
+            $this->logger->info("🔗 Processing taxonomy relation: {$relation->{$key}}");
+            
             $trackTaxonomyRelations = $this->dbConnection->table($relationTable)
                 ->where($key, $relation->{$key})
                 ->where($morphableTypeKey, 'App\\Models\\EcTrack')
                 ->get();
 
-            foreach ($trackTaxonomyRelations as $relation) {
+            $this->logger->info("📋 Track taxonomy relations for {$relation->{$key}}: " . $trackTaxonomyRelations->count());
+
+            foreach ($trackTaxonomyRelations as $trackRelation) {
                 $ecTrackModelClass = config('wm-package.ec_track_model', 'App\Models\EcTrack');
-                $ecTrack = $ecTrackModelClass::where('properties->geohub_id', $relation->{$foreignKey})->first();
-                if ($ecTrack && ! $model->ecTracks()->where('layerable_type', 'App\\Models\\EcTrack')->where('layerable_id', $ecTrack->id)->exists()) {
-                    $model->ecTracks()->attach($ecTrack->id, ['created_at' => now(), 'updated_at' => now()]);
+                $ecTrack = $ecTrackModelClass::where('properties->geohub_id', $trackRelation->{$foreignKey})->first();
+                
+                if ($ecTrack) {
+                    $alreadyExists = $model->ecTracks()->where('layerable_type', 'App\\Models\\EcTrack')->where('layerable_id', $ecTrack->id)->exists();
+                    
+                    if (!$alreadyExists) {
+                        $model->ecTracks()->attach($ecTrack->id, ['created_at' => now(), 'updated_at' => now()]);
+                        $totalTracksAssigned++;
+                        $this->logger->info("✅ Track assigned: Geohub ID {$trackRelation->{$foreignKey}} -> Local ID {$ecTrack->id}");
+                    } else {
+                        $totalTracksAlreadyAssigned++;
+                        $this->logger->info("⚠️ Track already assigned: Geohub ID {$trackRelation->{$foreignKey}} -> Local ID {$ecTrack->id}");
+                    }
+                } else {
+                    $totalTracksNotFound++;
+                    $this->logger->warning("❌ Track not found locally: Geohub ID {$trackRelation->{$foreignKey}}");
                 }
             }
         }
+
+        $this->logger->info("📊 ASSOCIATION SUMMARY for Layer {$model->id} (Taxonomy: {$taxonomyKey}):");
+        $this->logger->info("   • Tracks assigned: {$totalTracksAssigned}");
+        $this->logger->info("   • Tracks already assigned: {$totalTracksAlreadyAssigned}");
+        $this->logger->info("   • Tracks not found locally: {$totalTracksNotFound}");
+        $this->logger->info("   • Final layer track count: " . $model->ecTracks()->count());
     }
 
     public function handleOverlayLayers(Model $model): void
