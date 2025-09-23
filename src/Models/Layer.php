@@ -25,7 +25,7 @@ class Layer extends Polygon
         Layer::observe(LayerObserver::class);
     }
 
-    public array $translatable = ['name', 'properties->name', 'properties->title', 'properties->subtitle', 'properties->description'];
+    public array $translatable = ['name', 'properties->title', 'properties->subtitle', 'properties->description'];
 
     protected $casts = [
         'properties' => 'array',
