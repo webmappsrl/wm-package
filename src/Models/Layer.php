@@ -178,13 +178,13 @@ class Layer extends Polygon
     /**
      * Mutator per sincronizzare il campo name con properties->name
      *
-     * @param mixed $value
+     * @param  mixed  $value
      * @return void
      */
     public function setNameAttribute($value)
     {
         $this->attributes['name'] = $value;
-        
+
         // Sincronizza anche con properties->name
         $properties = $this->properties ?? [];
         $properties['name'] = $value;
@@ -202,7 +202,7 @@ class Layer extends Polygon
             $properties['name'] = $this->name;
             $this->properties = $properties;
         }
-        
+
         return parent::save($options);
     }
 
