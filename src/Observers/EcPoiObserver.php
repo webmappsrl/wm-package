@@ -2,6 +2,7 @@
 
 namespace Wm\WmPackage\Observers;
 
+use Illuminate\Support\Facades\Artisan;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Services\Models\EcPoiService;
@@ -34,5 +35,11 @@ class EcPoiObserver extends AbstractEcObserver
         }
 
         // UserService::make()->assigUserAppIdIfNeeded(null, null, $ecPoi->app_id);
+        $app = $ecPoi->app;
+        if ($app) {
+            Artisan::queue('wm:build-pois-geojson', [
+                'app_id' => $app->id,
+            ]);
+        }
     }
 }
