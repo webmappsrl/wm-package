@@ -47,7 +47,5 @@ class WmBuildAppPoisGeojsonCommand extends Command
         $this->info('📊 Features generate: '.count($geojson['features']));
 
         return 0;
-
-        return 0;
     }
 }
