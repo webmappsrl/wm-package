@@ -16,6 +16,7 @@ use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Tymon\JWTAuth\Providers\LaravelServiceProvider;
 use Wm\WmPackage\Commands\WmBackupCommand;
+use Wm\WmPackage\Commands\WmBuildAppPoisGeojsonCommand;
 use Wm\WmPackage\Commands\WmDownloadDbBackupCommand;
 use Wm\WmPackage\Commands\WmGeneratePBFCommand;
 use Wm\WmPackage\Commands\WmImportFromGeohubCommand;
@@ -26,7 +27,6 @@ use Wm\WmPackage\Providers\EventServiceProvider;
 use Wm\WmPackage\Providers\ScheduleServiceProvider;
 use Wm\WmPackage\Services\Import\EcMediaImportService;
 use Wm\WmPackage\Services\Import\GeohubImportService;
-use Wm\WmPackage\GlobalFileServiceProvider;
 
 class WmPackageServiceProvider extends PackageServiceProvider
 {
@@ -45,7 +45,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
 
         // Registra il GlobalFileServiceProvider
         $this->app->register(GlobalFileServiceProvider::class);
-        
+
         // Registra IconSelect FieldServiceProvider
         $this->app->register(\Wm\WmPackage\Nova\Fields\IconSelect\FieldServiceProvider::class);
         $this->app->register(\Wm\WmPackage\Nova\Fields\LayerFeatures\FieldServiceProvider::class);
@@ -75,7 +75,6 @@ class WmPackageServiceProvider extends PackageServiceProvider
             Nova::style('wm-flexible-field', __DIR__.'/../resources/css/flexible-field.css');
             $this->addDownloadDbMenuItem();
         });
-
 
         // Register routes as Laravel does with RouteServiceProvider
         // assign the correct group and prefix set on Laravel instance
@@ -158,6 +157,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
                 WmImportFromGeohubCommand::class,
                 WmGeneratePBFCommand::class,
                 WmDownloadDbBackupCommand::class,
+                WmBuildAppPoisGeojsonCommand::class,
             ])
             ->hasViews();
     }
@@ -179,7 +179,6 @@ class WmPackageServiceProvider extends PackageServiceProvider
 
         // Schedule
         $this->app->register(ScheduleServiceProvider::class);
-        
 
         // Register the correct import service for the ImportEcMediaJob
         $this->app->when(ImportEcMediaJob::class)
