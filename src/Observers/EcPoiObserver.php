@@ -37,7 +37,7 @@ class EcPoiObserver extends AbstractEcObserver
         // UserService::make()->assigUserAppIdIfNeeded(null, null, $ecPoi->app_id);
         $app = $ecPoi->app;
         if ($app) {
-            Artisan::queue('app:build-pois-geojson', [
+            Artisan::queue('wm:build-pois-geojson', [
                 'app_id' => $app->id,
             ]);
         }
