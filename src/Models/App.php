@@ -85,7 +85,7 @@ class App extends Model implements HasMedia
 
         return $this->hasMany($modelClass);
     }
-    
+
     public function ecPois(): HasMany
     {
         return $this->hasMany(EcPoi::class);
@@ -207,22 +207,31 @@ class App extends Model implements HasMedia
     public function getAllPoisGeojson()
     {
         $pois = [];
-        
+
         // Usa la relazione diretta come per le tracks
         $appPois = $this->ecPois()->get();
-        
+
         if (count($appPois) > 0) {
             foreach ($appPois as $poi) {
                 try {
                     // Verifica che il POI abbia una geometria valida
                     if ($poi->geometry && !empty($poi->geometry)) {
                         $item = $poi->getGeojson(false, $this->id);
-                        
+
+                        // Aggiungo le taxonomy identifiers necessari per filtri
+                        $taxonomiesidentifiers = array_merge(
+                            $poi->taxonomyActivities()->pluck('identifier')->toArray(),
+                            $poi->addPrefix($poi->taxonomyWhens()->pluck('identifier')->toArray(), 'when'),
+                            $poi->addPrefix($poi->taxonomyTargets()->pluck('identifier')->toArray(), 'who'),
+                            $poi->addTaxonomyPoiTypes()
+                        );
+                        $item['properties']['taxonomyIdentifiers'] = $taxonomiesidentifiers;
+
                         // Verifica che il geojson sia valido e non null
                         if ($item && isset($item['geometry']) && $item['geometry'] !== null) {
                             $item['properties']['related'] = false;
                             unset($item['properties']['pivot']);
-                            
+
                             array_push($pois, $item);
                         }
                     }
@@ -250,71 +259,54 @@ class App extends Model implements HasMedia
 
     public function getAllPoiTaxonomies()
     {
-        $themes = $this->taxonomyThemes()->get();
-        $res = [
-            'activity' => [],
-            'theme' => [],
-            'when' => [],
-            'where' => [],
-            'who' => [],
-            'poi_type' => [],
-        ];
 
-        foreach ($themes as $theme) {
-            $theme_id = $theme->id;
-            // NEW CODE
-            $where_result = [];
-            $where_ids = DB::select("select distinct taxonomy_where_id from taxonomy_whereables where taxonomy_whereable_type LIKE '%EcPoi%' AND taxonomy_whereable_id in (select taxonomy_themeable_id from taxonomy_themeables where taxonomy_theme_id=$theme_id and taxonomy_themeable_type LIKE '%EcPoi%');");
-            if (! empty($where_ids)) {
-                $where_ids_implode = implode(',', collect($where_ids)->pluck('taxonomy_where_id')->toArray());
-                $where_db = DB::select("select id, identifier, name, color, icon from taxonomy_wheres where id in ($where_ids_implode)");
-                $where_array = json_decode(json_encode($where_db), true);
+        $where_result = [];
+        // TODO: nel db attualmente non esistono le taxonomy_wheres
+        // $where_data = DB::select("
+        //     SELECT DISTINCT tw.id, tw.identifier, tw.name, tw.color, tw.icon
+        //     FROM taxonomy_wheres tw
+        //     INNER JOIN taxonomy_whereables twa ON tw.id = twa.taxonomy_where_id
+        //     INNER JOIN ec_pois ep ON twa.taxonomy_whereable_id = ep.id
+        //     WHERE twa.taxonomy_whereable_type LIKE '%EcPoi%'
+        //     AND ep.app_id = ?
+        // ", [$this->id]);
 
-                foreach ($where_array as $akey => $aval) {
-                    $new_array = [];
-                    foreach ($aval as $key => $val) {
-                        if ($key == 'name') {
-                            $new_array[$key] = json_decode($val, true);
-                        }
-                        if ($key == 'identifier') {
-                            $new_array[$key] = 'poi_type_'.$val;
-                        }
-                        if (! empty($val) && $key != 'name' && $key != 'identifier') {
-                            $new_array[$key] = $val;
-                        }
-                    }
-                    array_push($where_result, $new_array);
-                }
-            }
+        // foreach ($where_data as $item) {
+        //     $new_array = [
+        //         'id' => $item->id,
+        //         'identifier' => 'poi_type_'.$item->identifier,
+        //         'name' => json_decode($item->name, true),
+        //         'color' => $item->color,
+        //         'icon' => $item->icon,
+        //     ];
+        //     array_push($where_result, $new_array);
+        // }
 
-            $poi_result = [];
-            $poi_type_ids = DB::select("select distinct taxonomy_poi_type_id from taxonomy_poi_typeables where taxonomy_poi_typeable_type LIKE '%EcPoi%' AND taxonomy_poi_typeable_id in (select taxonomy_themeable_id from taxonomy_themeables where taxonomy_theme_id=$theme_id and taxonomy_themeable_type LIKE '%EcPoi%');");
-            if (! empty($poi_type_ids)) {
-                $poi_type_ids_implode = implode(',', collect($poi_type_ids)->pluck('taxonomy_poi_type_id')->toArray());
-                $poi_db = DB::select("select id, identifier, name, color, icon from taxonomy_poi_types where id in ($poi_type_ids_implode)");
-                $poi_array = json_decode(json_encode($poi_db), true);
+        $poi_result = [];
+        $poi_data = DB::select("
+            SELECT DISTINCT tpt.id, tpt.identifier, tpt.name, tpt.icon
+            FROM taxonomy_poi_types tpt
+            INNER JOIN taxonomy_poi_typeables tpta ON tpt.id = tpta.taxonomy_poi_type_id
+            INNER JOIN ec_pois ep ON tpta.taxonomy_poi_typeable_id = ep.id
+            WHERE tpta.taxonomy_poi_typeable_type LIKE '%EcPoi%'
+            AND ep.app_id = ?
+        ", [$this->id]);
 
-                foreach ($poi_array as $akey => $aval) {
-                    $new_array = [];
-                    foreach ($aval as $key => $val) {
-                        if ($key == 'name') {
-                            $new_array[$key] = json_decode($val, true);
-                        }
-                        if ($key == 'identifier') {
-                            $new_array[$key] = 'poi_type_'.$val;
-                        }
-                        if (! empty($val) && $key != 'name' && $key != 'identifier') {
-                            $new_array[$key] = $val;
-                        }
-                    }
-                    array_push($poi_result, $new_array);
-                }
-            }
-            $res = [
-                'where' => $this->unique_multidim_array(array_merge($res['where'], $where_result), 'id'),
-                'poi_type' => $this->unique_multidim_array(array_merge($res['poi_type'], $poi_result), 'id'),
+        foreach ($poi_data as $item) {
+            $new_array = [
+                'id' => $item->id,
+                'identifier' => 'poi_type_'.$item->identifier,
+                'name' => json_decode($item->name, true),
+                'icon_name' => $item->icon,
+                // 'color' => $item->color, // TODO: manca color nella tabella taxonomy_poi_types (aggiungere in properties?)
             ];
+            array_push($poi_result, $new_array);
         }
+
+        $res = [
+            'where' => $this->unique_multidim_array($where_result, 'id'),
+            'poi_type' => $this->unique_multidim_array($poi_result, 'id'),
+        ];
 
         return $res;
     }
@@ -443,10 +435,10 @@ class App extends Model implements HasMedia
     public function getPOIsUpdatedAtFromApp(): array
     {
         $pois = [];
-        
+
         // Usa la relazione diretta come per le tracks
         $appPois = $this->ecPois()->get();
-        
+
         if (count($appPois) > 0) {
             foreach ($appPois as $poi) {
                 try {

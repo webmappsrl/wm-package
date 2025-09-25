@@ -196,14 +196,14 @@ class EcPoi extends Point implements LayerRelatedModel
     //     return $array;
     // }
 
-    private function addPrefix($array, $prefix)
+    public function addPrefix($array, $prefix)
     {
         return array_map(function ($elem) use ($prefix) {
             return $prefix.'_'.$elem;
         }, $array);
     }
 
-    private function addTaxonomyPoiTypes()
+    public function addTaxonomyPoiTypes()
     {
         $taxonomyPoiTypes = $this->taxonomyPoiTypes()->pluck('identifier')->toArray();
         if (count($taxonomyPoiTypes) > 1 && in_array('poi', $taxonomyPoiTypes) == true) {
@@ -272,7 +272,6 @@ class EcPoi extends Point implements LayerRelatedModel
 
     public function getSearchableString($app_id = 0)
     {
-
         $string = '';
         $searchables = '';
         if ($app_id) {

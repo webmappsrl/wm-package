@@ -30,10 +30,9 @@ class GeoJsonService extends BaseService
                     $taxonomyActivities[] = $taxonomyActivity->getJson();
                 }
             }
-            //TODO: manca taxonomy where?
+            // TODO: manca taxonomy where?
             $taxonomy = [
                 'activity' => $taxonomyActivities,
-                'theme' => $model->taxonomyThemes()->pluck('taxonomy_themes.id')->toArray(),
                 'when' => $model->taxonomyWhens()->pluck('taxonomy_whens.id')->toArray(),
                 'poi_type' => isset($taxonomyPoiTypes[0]) ? $taxonomyPoiTypes[0] : null,
                 'poi_types' => $taxonomyPoiTypes,
@@ -52,7 +51,7 @@ class GeoJsonService extends BaseService
                     'api_url' => route('default.api.media.geojson', $firstMedia->id),
                 ];
             }
-            
+
             $allMedia = $model->getMedia();
             if ($allMedia) {
                 $imageGallery = [];
