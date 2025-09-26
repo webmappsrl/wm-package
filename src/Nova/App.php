@@ -341,7 +341,7 @@ class App extends Resource
     protected function slug_layout(): array
     {
         return [
-            Text::make('Title', 'title')->rules('required'),
+            Text::make('Title', 'title'),
             Text::make('Slug', 'slug')
                 ->rules('required')
                 ->resolveUsing(function ($value) {
@@ -354,7 +354,7 @@ class App extends Resource
     protected function external_url_layout(): array
     {
         return [
-            Text::make('Title', 'title')->rules('required'),
+            Text::make('Title', 'title'),
             Text::make('Url', 'url')->rules('required'),
             Text::make('Image url', 'image_url'), // TODO: fare in modo di usare Media caricando un immagine e restituendo l'url
         ];
