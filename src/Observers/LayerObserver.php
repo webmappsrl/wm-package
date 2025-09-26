@@ -35,6 +35,11 @@ class LayerObserver extends AbstractObserver
             $this->layerService->updateLayersPropertyOnAllLayeredFeaturesWithJobs($layer);
         }
 
+        // Se il layer ha tassonomie di attività associate, assegna automaticamente le track
+        if ($this->hasTaxonomyActivitiesChanged($layer)) {
+            $this->assignTracksByTaxonomy($layer);
+        }
+
         // Aggiorna sempre la geometria del layer quando viene salvato
         $this->layerService->updateLayerGeometryWithJob($layer);
 
@@ -64,6 +69,63 @@ class LayerObserver extends AbstractObserver
         }
 
         return false;
+    }
+
+    /**
+     * Check if taxonomy activities have changed
+     */
+    private function hasTaxonomyActivitiesChanged(Layer $layer): bool
+    {
+        // Se è un nuovo record e ha tassonomie di attività
+        if ($layer->wasRecentlyCreated) {
+            return $layer->taxonomyActivities()->count() > 0;
+        }
+
+        // Se le tassonomie di attività sono cambiate
+        return $layer->wasChanged() && $layer->taxonomyActivities()->count() > 0;
+    }
+
+    /**
+     * Assegna automaticamente le track che hanno le stesse tassonomie del layer
+     */
+    private function assignTracksByTaxonomy(Layer $layer): void
+    {
+        // Ottieni le tassonomie di attività del layer
+        $layerTaxonomyIds = $layer->taxonomyActivities->pluck('id')->toArray();
+        
+        if (empty($layerTaxonomyIds)) {
+            return;
+        }
+
+        // Ottieni tutte le track dell'app che hanno le stesse tassonomie
+        $ecTrackModelClass = config('wm-package.ec_track_model', 'App\Models\EcTrack');
+        $tracksWithSameTaxonomy = $ecTrackModelClass::whereIn('app_id', [
+            $layer->app_id,
+            ...$layer->associatedApps->pluck('id')->toArray(),
+        ])
+        ->whereHas('taxonomyActivities', function ($query) use ($layerTaxonomyIds) {
+            $query->whereIn('taxonomy_activities.id', $layerTaxonomyIds);
+        })
+        ->whereNotNull('geometry')
+        ->get();
+
+        // Assegna le track al layer se non sono già assegnate
+        foreach ($tracksWithSameTaxonomy as $track) {
+            $alreadyAssigned = $layer->ecTracks()->where('layerable_id', $track->id)->exists();
+            
+            if (!$alreadyAssigned) {
+                $layer->ecTracks()->attach($track->id, [
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ]);
+                
+                Log::info('Track assegnata automaticamente al layer per tassonomia', [
+                    'layer_id' => $layer->id,
+                    'track_id' => $track->id,
+                    'taxonomy_ids' => $layerTaxonomyIds
+                ]);
+            }
+        }
     }
 
     public function saving($layer)
