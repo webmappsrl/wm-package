@@ -8,7 +8,7 @@ use Wm\WmPackage\Services\Import\GeohubImportService;
 
 class WmImportFromGeohubCommand extends Command
 {
-    protected $signature = 'wm:import-from-geohub
+    protected $signature = 'wm:import-from-geohub 
                             {model? : The model to import (e.g. app, ec_media, ec_track, ec_poi). If not specified, imports all}
                             {id? : Specific ID to import. If not specified, imports all}
                             {--skip-dependencies : Skip importing all dependencies}
@@ -31,24 +31,23 @@ class WmImportFromGeohubCommand extends Command
         $this->info('Starting import from geohub...');
 
         // Validate conflicting options
-        if ($skipDependencies && ! empty($dependencies)) {
+        if ($skipDependencies && !empty($dependencies)) {
             $this->error('Cannot use both --skip-dependencies and --dependencies options together.');
-
             return 1;
         }
 
         // Log dependency configuration
         if ($skipDependencies) {
             $this->info('Skipping all dependencies');
-        } elseif (! empty($dependencies)) {
-            $this->info('Importing only dependencies: '.implode(', ', $dependencies));
+        } elseif (!empty($dependencies)) {
+            $this->info('Importing only dependencies: ' . implode(', ', $dependencies));
         } else {
             $this->info('Importing all dependencies (default behavior)');
         }
 
         try {
             $jobData = $this->prepareJobData($skipDependencies, $dependencies);
-
+            
             if ($modelKey && $id) {
                 $this->importService->importSingle($modelKey, $id, $jobData);
                 $this->logAndOutput("Job dispatched for {$modelKey} with ID {$id}");
@@ -75,16 +74,16 @@ class WmImportFromGeohubCommand extends Command
     protected function prepareJobData(bool $skipDependencies, array $dependencies): array
     {
         // All available dependencies
-        $allDependencies = ['ec_poi', 'ec_track', 'taxonomy_activity', 'taxonomy_poi_types', 'layer', 'ec_media'];
+        $allDependencies = [ 'taxonomy_activity', 'taxonomy_poi_types', 'ec_poi', 'ec_track','layer', 'ec_media'];
 
         if ($skipDependencies) {
             // Skip all dependencies
             return [
-                'allowed_dependencies' => [],
+                'allowed_dependencies' => []
             ];
         }
 
-        if (! empty($dependencies)) {
+        if (!empty($dependencies)) {
             // Parse comma-separated values and flatten the array
             $parsedDependencies = [];
             foreach ($dependencies as $dependency) {
@@ -95,19 +94,19 @@ class WmImportFromGeohubCommand extends Command
             $validDependencies = array_intersect($parsedDependencies, $allDependencies);
             $invalidDependencies = array_diff($parsedDependencies, $allDependencies);
 
-            if (! empty($invalidDependencies)) {
-                $this->warn('Invalid dependencies ignored: '.implode(', ', $invalidDependencies));
-                $this->info('Valid dependencies are: '.implode(', ', $allDependencies));
+            if (!empty($invalidDependencies)) {
+                $this->warn('Invalid dependencies ignored: ' . implode(', ', $invalidDependencies));
+                $this->info('Valid dependencies are: ' . implode(', ', $allDependencies));
             }
 
             return [
-                'allowed_dependencies' => array_unique($validDependencies),
+                'allowed_dependencies' => array_unique($validDependencies)
             ];
         }
 
         // Default: import all dependencies
         return [
-            'allowed_dependencies' => $allDependencies,
+            'allowed_dependencies' => $allDependencies
         ];
     }
 
