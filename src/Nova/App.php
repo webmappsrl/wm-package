@@ -191,6 +191,8 @@ class App extends Resource
                 ->help("Configurazione della home page dell'app")
                 ->addLayout('Titolo', 'title', $this->title_layout())
                 ->addLayout('Layer', 'layer', $this->layer_layout())
+                ->addLayout('Slug', 'slug', $this->slug_layout())
+                ->addLayout('External URL', 'external_url', $this->external_url_layout())
                 ->confirmRemove('Sei sicuro di voler eliminare questo elemento?', 'Elimina', 'Annulla'),
         ];
     }
@@ -333,6 +335,37 @@ class App extends Resource
     {
         return [
             Text::make('Titolo', 'title')->rules('required'),
+        ];
+    }
+
+    protected function slug_layout(): array
+    {
+        return [
+            Text::make('Title', 'title'),
+            Text::make('Slug', 'slug')
+                ->rules('required')
+                ->resolveUsing(function ($value) {
+                    return $value ?: 'project';
+                }),
+            Text::make('Image url', 'image_url'), // TODO: fare in modo di usare Media caricando un immagine e restituendo l'url
+        ];
+    }
+
+    protected function external_url_layout(): array
+    {
+        return [
+            Text::make('Title', 'title'),
+            Text::make('Url', 'url')->rules('required'),
+            Text::make('Image url', 'image_url'), // TODO: fare in modo di usare Media caricando un immagine e restituendo l'url
+        ];
+    }
+
+    protected function base_layout(): array
+    {
+        return [
+            Text::make('Title', 'title')->rules('required'),
+            Text::make('Url', 'url')->rules('required'),
+            // TODO: Items è un array, dove ogni elemento ha un titolo un image_url e un track_id (o poi_id)
         ];
     }
 
