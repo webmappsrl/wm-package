@@ -243,7 +243,7 @@ class App extends Resource
                 <<<'HTML'
                 <h2><strong>FILTERS ACTIVATION</strong></h2>
                 HTML
-            )->asHtml(),
+            )->asHtml()->hideFromIndex(),
             Boolean::make(__('Activity Filter'), 'filter_activity')
                 ->default(false)
                 ->hideFromIndex()
@@ -276,32 +276,41 @@ class App extends Resource
                     <li><p><strong>Distance Filter Label</strong>: Text to be displayed for the tracks distance filter.</p></li>
                 </ul>
                 HTML
-            )->asHtml(),
+            )->asHtml()->hideFromIndex(),
             NovaTabTranslatable::make([
                 Text::make('Activity Filter Label', 'filter_activity_label'),
                 Text::make('Theme Filter Label', 'filter_theme_label'),
                 Text::make('Poi Type Filter Label', 'filter_poi_type_label'),
                 Text::make('Duration Filter Label', 'filter_track_duration_label'),
                 Text::make('Distance Filter Label', 'filter_track_distance_label'),
-            ]),
+            ])->hideFromIndex(),
 
             Text::make('Activity Exclude Filter', 'filter_activity_exclude')
+                ->hideFromIndex()
                 ->help(__('Insert the activities you want to exclude from the filter, separated by commas')),
             Text::make('Theme Exclude Filter', 'filter_theme_exclude')
+                ->hideFromIndex()
                 ->help(__('Insert the themes you want to exclude from the filter, separated by commas')),
             Text::make('Poi Type Exclude Filter', 'filter_poi_type_exclude')
+                ->hideFromIndex()
                 ->help(__('Insert the poi types you want to exclude from the filter, separated by commas')),
             Number::make('Track Min Duration Filter', 'filter_track_duration_min')
+                ->hideFromIndex()
                 ->help(__('Set the minimum duration of the duration filter')),
             Number::make('Track Max Duration Filter', 'filter_track_duration_max')
+                ->hideFromIndex()
                 ->help(__('Set the maximum duration of the duration filter')),
             Number::make('Track Duration Steps Filter', 'filter_track_duration_steps')
+                ->hideFromIndex()
                 ->help(__('Set the steps of the duration filter')),
             Number::make('Track Min Distance Filter', 'filter_track_distance_min')
+                ->hideFromIndex()
                 ->help(__('Set the minimum distance of the distance filter')),
             Number::make('Track Max Distance Filter', 'filter_track_distance_max')
+                ->hideFromIndex()
                 ->help(__('Set the maximum distance of the distance filter')),
             Number::make('Track Distance Step Filter', 'filter_track_distance_steps')
+                ->hideFromIndex()
                 ->help(__('Set the steps of the distance filter')),
         ];
     }
