@@ -3,6 +3,7 @@
 namespace Wm\WmPackage\Commands;
 
 use Illuminate\Console\Command;
+use Wm\WmPackage\Jobs\BuildAppPoisGeojsonJob;
 use Wm\WmPackage\Models\App;
 
 class WmBuildAppPoisGeojsonCommand extends Command
@@ -41,10 +42,9 @@ class WmBuildAppPoisGeojsonCommand extends Command
         $this->info("App trovata: {$app->name}");
 
         // Genera il geojson usando il metodo dell'App
-        $geojson = $app->BuildPoisGeojson();
+        BuildAppPoisGeojsonJob::dispatch($app->id);
 
-        $this->info("✅ File pois.geojson generato con successo per App {$appId}");
-        $this->info('📊 Features generate: '.count($geojson['features']));
+        $this->info("✅ Job per la generazione del file pois.geojson lanciato con successo per App {$appId}");
 
         return 0;
     }
