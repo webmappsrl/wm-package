@@ -200,8 +200,14 @@ class GeohubImportService
                 $model = new $modelName($transformedData);
             }
             
+            // Temporarily disable observers during import to avoid triggering PBF jobs
+            $model::unsetEventDispatcher();
+            
             // Save quietly to avoid triggering observers during Geohub import
             $model->saveQuietly();
+            
+            // Re-enable observers after save
+            $model::setEventDispatcher(app('events'));
 
             $this->logger->info("{$modelName} with ID {$entityId} imported successfully. Local ID: {$model->id}");
 

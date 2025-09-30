@@ -3,6 +3,7 @@
 namespace Wm\WmPackage\Observers;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Wm\WmPackage\Jobs\Pbf\GenerateOptimizedPBFChainJob;
 use Wm\WmPackage\Models\Layer;
@@ -92,33 +93,42 @@ class LayerObserver extends AbstractObserver
     {
         // Ottieni le tassonomie di attività del layer
         $layerTaxonomyIds = $layer->taxonomyActivities->pluck('id')->toArray();
-        
-        if (empty($layerTaxonomyIds)) {
+        $layerAppIds = [
+            $layer->app_id,
+            ...$layer->associatedApps->pluck('id')->toArray(),
+        ];
+
+        if (empty($layerTaxonomyIds) || empty($layerAppIds)) {
             return;
         }
 
+
         // Ottieni tutte le track dell'app che hanno le stesse tassonomie
         $ecTrackModelClass = config('wm-package.ec_track_model', 'App\Models\EcTrack');
-        $tracksWithSameTaxonomy = $ecTrackModelClass::whereIn('app_id', [
-            $layer->app_id,
-            ...$layer->associatedApps->pluck('id')->toArray(),
-        ])
-        ->whereHas('taxonomyActivities', function ($query) use ($layerTaxonomyIds) {
-            $query->whereIn('taxonomy_activities.id', $layerTaxonomyIds);
-        })
-        ->whereNotNull('geometry')
-        ->get();
+        $trackTable = (new $ecTrackModelClass)->getTable();
+
+        // Usa una query con join diretto
+        $trackIds = \DB::table('taxonomy_activityables')
+            ->join($trackTable, 'taxonomy_activityables.taxonomy_activityable_id', '=', $trackTable . '.id')
+            ->whereIn($trackTable . '.app_id', $layerAppIds)
+            ->where('taxonomy_activityables.taxonomy_activityable_type', 'App\\Models\\EcTrack')
+            ->whereIn('taxonomy_activityables.taxonomy_activity_id', $layerTaxonomyIds)
+            ->whereNotNull($trackTable . '.geometry')
+            ->pluck($trackTable . '.id')
+            ->toArray();
+
+        $tracksWithSameTaxonomy = $ecTrackModelClass::whereIn('id', $trackIds)->get();
 
         // Assegna le track al layer se non sono già assegnate
         foreach ($tracksWithSameTaxonomy as $track) {
             $alreadyAssigned = $layer->ecTracks()->where('layerable_id', $track->id)->exists();
-            
+
             if (!$alreadyAssigned) {
                 $layer->ecTracks()->attach($track->id, [
                     'created_at' => now(),
                     'updated_at' => now()
                 ]);
-                
+
                 Log::info('Track assegnata automaticamente al layer per tassonomia', [
                     'layer_id' => $layer->id,
                     'track_id' => $track->id,

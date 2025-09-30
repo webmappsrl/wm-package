@@ -38,43 +38,33 @@ class ImportAppJob extends BaseImportJob
         // Get the list of allowed dependencies from configuration or job data
         $allowedDependencies = $this->getAllowedDependencies();
 
-        // Collect all batch jobs to be executed sequentially
-        $batchJobs = [];
+        // foreach ($this->getRelations() as $modelKey => $relationData) {
+        //     $this->queueEntityImport($modelKey, $userId, $relationData['foreign_key']);
+        // }
 
         // Import only allowed dependencies
-
-
         if (in_array('taxonomy_activity', $allowedDependencies)) {
-            $batchJobs[] = $this->createBatchJob('taxonomy_activity', $data['user_id'], 'user_id', $model->id);
+            $this->queueEntityImport('taxonomy_activity', $data['user_id'], 'user_id', $model->id);
         }
 
         if (in_array('taxonomy_poi_types', $allowedDependencies)) {
-            $batchJobs[] = $this->createBatchJob('taxonomy_poi_types', $data['user_id'], 'user_id', $model->id);
+            $this->queueEntityImport('taxonomy_poi_types', $data['user_id'], 'user_id', $model->id);
         }
 
         if (in_array('ec_poi', $allowedDependencies)) {
-            $batchJobs[] = $this->createBatchJob('ec_poi', $data['user_id'], 'user_id', $model->id);
+            $this->queueEntityImport('ec_poi', $data['user_id'], 'user_id', $model->id);
         }
 
         if (in_array('ec_track', $allowedDependencies)) {
-            $batchJobs[] = $this->createBatchJob('ec_track', $data['user_id'], 'user_id', $model->id);
+            $this->queueEntityImport('ec_track', $data['user_id'], 'user_id', $model->id);
         }
 
         if (in_array('layer', $allowedDependencies)) {
-            $batchJobs[] = $this->createBatchJob('layer', $data['user_id'], 'app_id', $model->id);
+            $this->queueEntityImport('layer', $data['user_id'], 'app_id', $model->id);
         }
 
         if (in_array('ec_media', $allowedDependencies)) {
-            $batchJobs[] = $this->createBatchJob('ec_media', $data['user_id'], 'user_id', $model->id);
-        }
-
-        // Filter out null batches and execute all batches sequentially with resilience
-        $validBatchJobs = array_filter($batchJobs, function($batch) {
-            return $batch !== null;
-        });
-        
-        if (!empty($validBatchJobs)) {
-            $this->executeSequentialBatches($validBatchJobs);
+            $this->queueEntityImport('ec_media', $data['user_id'], 'user_id', $model->id);
         }
     }
 
@@ -84,7 +74,7 @@ class ImportAppJob extends BaseImportJob
     protected function getAllowedDependencies(): array
     {
         // All available dependencies
-        $allDependencies = ['taxonomy_activity', 'taxonomy_poi_types','ec_poi', 'ec_track',  'layer', 'ec_media'];
+        $allDependencies = ['taxonomy_activity', 'taxonomy_poi_types', 'ec_poi', 'ec_track',  'layer', 'ec_media'];
 
         // First check if allowed_dependencies is passed in job data
         if (isset($this->data['allowed_dependencies']) && is_array($this->data['allowed_dependencies'])) {
@@ -98,58 +88,9 @@ class ImportAppJob extends BaseImportJob
     }
 
     /**
-     * Execute batches sequentially with resilience - if one fails, continue with the next.
+     * Queue imports for entities associated with this app.
      */
-    protected function executeSequentialBatches(array $batches): void
-    {
-        $logger = Log::channel('wm-package-failed-jobs');
-        
-        foreach ($batches as $index => $batch) {
-            try {
-                $logger->info("Starting sequential batch " . ($index + 1) . " of " . count($batches));
-                
-                // Dispatch the batch and get the batch instance
-                $dispatchedBatch = $batch->dispatch();
-                
-                // Wait for the batch to complete
-                $this->waitForBatchCompletion($dispatchedBatch);
-                
-                $logger->info("Completed sequential batch " . ($index + 1) . " of " . count($batches));
-            } catch (\Exception $e) {
-                $logger->error("Sequential batch " . ($index + 1) . " failed, continuing with next batch: " . $e->getMessage());
-                // Continue with the next batch even if this one failed
-            }
-        }
-    }
-
-    /**
-     * Wait for a batch to complete by polling its status.
-     */
-    protected function waitForBatchCompletion(\Illuminate\Bus\Batch $batch): void
-    {
-        $maxWaitTime = 300; // 5 minutes max wait
-        $pollInterval = 5; // Check every 5 seconds
-        $elapsed = 0;
-        
-        while ($elapsed < $maxWaitTime) {
-            $batchStatus = $batch->fresh();
-            
-            if ($batchStatus && $batchStatus->finished()) {
-                return;
-            }
-            
-            sleep($pollInterval);
-            $elapsed += $pollInterval;
-        }
-        
-        Log::warning("Batch did not complete within {$maxWaitTime} seconds, continuing with next batch");
-    }
-
-    /**
-     * Create a batch job for entities associated with this app.
-     * Returns a batch that can be chained with other batches.
-     */
-    protected function createBatchJob(string $entityModelKey, ?int $userId, string $entityForeignKey, int $appId): ?\Illuminate\Bus\PendingBatch
+    protected function queueEntityImport(string $entityModelKey, ?int $userId, string $entityForeignKey, int $appId): void
     {
         $logger = Log::channel('wm-package-failed-jobs');
 
@@ -177,13 +118,12 @@ class ImportAppJob extends BaseImportJob
                 foreach ($ids as $id) {
                     $jobs[] = $this->geohubImportService->createJob($entityModelKey, $id, $data);
                 }
-                // create a batch and return it (don't dispatch yet)
-                return Bus::batch($jobs)->name("app-dependencies-{$entityModelKey}-import-batch")->onQueue(config('wm-geohub-import.queue.queue', 'geohub-import'));
+                // create a batch and add the jobs to it
+                $batch = Bus::batch($jobs)->name("app-dependencies-{$entityModelKey}-import-batch")->onQueue(config('wm-geohub-import.queue.queue', 'geohub-import'));
+                $batch->dispatch();
             }
-            
-            return null;
         } catch (\Exception $e) {
-            $logger->error("Error creating batch for {$entityModelKey} imports for app {$this->entityId}: ".$e->getMessage());
+            $logger->error("Error queuing {$entityModelKey} imports for app {$this->entityId}: " . $e->getMessage());
             throw $e;
         }
     }
