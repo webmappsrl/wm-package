@@ -30,10 +30,14 @@ class GeoJsonService extends BaseService
                     $taxonomyActivities[] = $taxonomyActivity->getJson();
                 }
             }
-            // TODO: manca taxonomy where?
+            $taxonomyWhens = [];
+            if ($model->taxonomyWhens) {
+                $taxonomyWhens = $model->taxonomyWhens()->pluck('taxonomy_whens.id')->toArray();
+            }
+            // TODO: manca taxonomy where? Taxonomy whens serve?
             $taxonomy = [
                 'activity' => $taxonomyActivities,
-                'when' => $model->taxonomyWhens()->pluck('taxonomy_whens.id')->toArray(),
+                'when' => $taxonomyWhens,
                 'poi_type' => isset($taxonomyPoiTypes[0]) ? $taxonomyPoiTypes[0] : null,
                 'poi_types' => $taxonomyPoiTypes,
             ];
