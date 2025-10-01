@@ -300,7 +300,7 @@ return [
                     'pivot_table' => 'ec_media_ec_track',
                     'foreign_key' => 'ec_media_id',
                     'key' => 'ec_track_id',
-                    'model' => 'Wm\\WmPackage\\Models\\EcTrack',
+                    'model' => config('wm-package.ec_track_model', 'Wm\\WmPackage\\Models\\EcTrack'),
                 ],
                 'layers' => [
                     'pivot_table' => 'ec_media_layer',

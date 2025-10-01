@@ -209,7 +209,7 @@ class GeohubImportService
             // Re-enable observers after save
             $model::setEventDispatcher(app('events'));
 
-            $this->logger->info("{$modelName} with ID {$entityId} imported successfully. Local ID: {$model->id}");
+            $this->logger->info("{$modelName} with ID {$entityId} imported successfully. Local ID: {$model->id} {$model->name}");
 
             return $model;
         } catch (\Exception $e) {
@@ -510,29 +510,55 @@ class GeohubImportService
             ->where($foreignKey, $modelId)
             ->get();
 
-        return $morphableRecords->map(function ($record) use ($morphableModels, $morphableTypeKey, $morphableIdKey, $pivotColumns) {
-            $modelName = Str::snake(class_basename($record->{$morphableTypeKey}));
+        if ($morphableRecords->isEmpty()) {
+            return collect();
+        }
+
+        // Group records by model type for batch queries
+        $groupedRecords = $morphableRecords->groupBy($morphableTypeKey);
+        $results = collect();
+
+        foreach ($groupedRecords as $modelType => $records) {
+            $modelName = Str::snake(class_basename($modelType));
 
             if (! isset($morphableModels[$modelName])) {
-                return null;
+                continue;
             }
 
             $modelClass = $morphableModels[$modelName];
-            $morphableId = $record->{$morphableIdKey};
+            $morphableIds = $records->pluck($morphableIdKey)->toArray();
+
+            // Batch query: get all models at once
             $whereCondition = str_contains($modelName, 'media')
-                ? ['custom_properties->geohub_id' => $morphableId]
-                : ['properties->geohub_id' => $morphableId];
+                ? ['custom_properties->geohub_id' => $morphableIds]
+                : ['properties->geohub_id' => $morphableIds];
 
-            $model = $modelClass::where($whereCondition)->first();
+            $models = $modelClass::whereIn(
+                str_contains($modelName, 'media') ? 'custom_properties->geohub_id' : 'properties->geohub_id',
+                $morphableIds
+            )->get();
 
-            if ($model && ! empty($pivotColumns)) {
-                $model->pivot_data = $this->extractPivotData($record, $pivotColumns);
+            // Map records to their corresponding models
+            foreach ($records as $record) {
+                $morphableId = $record->{$morphableIdKey};
+                $model = $models->first(function ($m) use ($morphableId, $modelName) {
+                    $geohubId = $modelName === 'ec_media'
+                        ? $m->custom_properties['geohub_id'] ?? null
+                        : $m->properties['geohub_id'] ?? null;
+                    return $geohubId == $morphableId;
+                });
+
+                if ($model && ! empty($pivotColumns)) {
+                    $model->pivot_data = $this->extractPivotData($record, $pivotColumns);
+                }
+
+                if ($model) {
+                    $results->push($model);
+                }
             }
+        }
 
-            return $model;
-        })
-            ->filter()
-            ->values();
+        return $results;
     }
 
     /**
