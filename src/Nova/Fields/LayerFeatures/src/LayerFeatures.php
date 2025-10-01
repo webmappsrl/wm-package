@@ -20,7 +20,7 @@ class LayerFeatures extends Field
     {
 
         parent::__construct($name, $attribute, $resolveCallback);
-        
+
         // Salva il modello come proprietà del campo
         $this->modelClass = $modelClass;
 
@@ -31,11 +31,11 @@ class LayerFeatures extends Field
             return;
         }
         if (! class_exists($modelClass)) {
-            Log::error('LayerFeatures: Il modello specificato non esiste: '.$modelClass);
+            Log::error('LayerFeatures: Il modello specificato non esiste: ' . $modelClass);
 
             return;
         }
-        
+
         // Carica automaticamente le entità associate
         $this->loadEcFeatures($layer, $name, $modelClass);
     }
@@ -48,11 +48,17 @@ class LayerFeatures extends Field
     public function loadEcFeatures($layer, $name, $modelClass)
     {
         $selectedFeatureIds = [];
-        
+
         // Ottieni il nome corretto della relazione dal modello
         $model = new $modelClass;
-        $relationName = $model->getLayerRelationName();
-        
+        if (! method_exists($model, 'getLayerRelationName')) {
+            Log::error('LayerFeatures: Il modello specificato non implementa l\'interfaccia LayerRelatedModel.');
+
+            $relationName = 'ecTracks';
+        } else {
+            $relationName = $model->getLayerRelationName();
+        }
+
         // Carica esplicitamente la relazione per assicurarsi che sia disponibile
         if ($layer->relationLoaded($relationName)) {
             $selectedFeatureIds = $layer->{$relationName}->pluck('id')->toArray();
@@ -68,9 +74,9 @@ class LayerFeatures extends Field
         $modelName = $model->getLayerRelationName();
 
         $this->withMeta([
-            'selectedEcFeaturesIds' => $selectedFeatureIds, 
-            'model' => $modelClass, 
-            'modelName' => $modelName, 
+            'selectedEcFeaturesIds' => $selectedFeatureIds,
+            'model' => $modelClass,
+            'modelName' => $modelName,
             'layerId' => $layer->id,
             'modelClass' => $modelClass,  // Aggiungiamo anche modelClass per essere sicuri
             'model_class' => $modelClass  // Aggiungiamo anche model_class per essere sicuri

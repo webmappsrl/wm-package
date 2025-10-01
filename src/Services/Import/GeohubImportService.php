@@ -108,7 +108,7 @@ class GeohubImportService
             ->allowFailures()
             ->dispatch();
 
-        $this->logger->info("Dispatched batch {$batch->id} with ".count($jobs)." jobs for {$modelKey}s");
+        $this->logger->info("Dispatched batch {$batch->id} with " . count($jobs) . " jobs for {$modelKey}s");
     }
 
     /**
@@ -191,7 +191,7 @@ class GeohubImportService
 
             // Find existing model or create new one
             $model = $modelName::where($identifier)->first();
-            
+
             if ($model) {
                 // Update existing model
                 $model->fill($transformedData);
@@ -199,13 +199,13 @@ class GeohubImportService
                 // Create new model
                 $model = new $modelName($transformedData);
             }
-            
+
             // Temporarily disable observers during import to avoid triggering PBF jobs
             $model::unsetEventDispatcher();
-            
+
             // Save quietly to avoid triggering observers during Geohub import
             $model->saveQuietly();
-            
+
             // Re-enable observers after save
             $model::setEventDispatcher(app('events'));
 
@@ -213,7 +213,7 @@ class GeohubImportService
 
             return $model;
         } catch (\Exception $e) {
-            $this->logger->error("Error importing {$modelName} with ID {$entityId}: ".$e->getMessage());
+            $this->logger->error("Error importing {$modelName} with ID {$entityId}: " . $e->getMessage());
             throw $e;
         }
     }
@@ -581,16 +581,16 @@ class GeohubImportService
     public function associateLayersWithEcTrack(string $taxonomyKey, Model $model): void
     {
         $this->logger->info("🔍 ASSOCIATE LAYERS WITH EC TRACK - Layer ID: {$model->id}, Geohub ID: {$model->properties['geohub_id']}, Taxonomy: {$taxonomyKey}");
-        
+
         $config = $this->getRelationConfig('layer', $taxonomyKey);
         $relationTable = $config['pivot_table'];
         $key = $config['key'];
         $foreignKey = $config['foreign_key'];
         $morphableTypeKey = $config['morphable_type']['key'];
         $morphableTypeValue = $config['morphable_type']['value'];
-        
+
         $this->logger->info("📊 Using relation table: {$relationTable}, key: {$key}, foreignKey: {$foreignKey}");
-        
+
         $layerTaxonomyRelations = $this->dbConnection->table($relationTable)
             ->where($foreignKey, $model->properties['geohub_id'])
             ->where($morphableTypeKey, $morphableTypeValue)
@@ -604,7 +604,7 @@ class GeohubImportService
 
         foreach ($layerTaxonomyRelations as $relation) {
             $this->logger->info("🔗 Processing taxonomy relation: {$relation->{$key}}");
-            
+
             $trackTaxonomyRelations = $this->dbConnection->table($relationTable)
                 ->where($key, $relation->{$key})
                 ->where($morphableTypeKey, 'App\\Models\\EcTrack')
@@ -615,10 +615,10 @@ class GeohubImportService
             foreach ($trackTaxonomyRelations as $trackRelation) {
                 $ecTrackModelClass = config('wm-package.ec_track_model', 'App\Models\EcTrack');
                 $ecTrack = $ecTrackModelClass::where('properties->geohub_id', $trackRelation->{$foreignKey})->first();
-                
+
                 if ($ecTrack) {
                     $alreadyExists = $model->ecTracks()->where('layerable_type', 'App\\Models\\EcTrack')->where('layerable_id', $ecTrack->id)->exists();
-                    
+
                     if (!$alreadyExists) {
                         $model->ecTracks()->attach($ecTrack->id, ['created_at' => now(), 'updated_at' => now()]);
                         $totalTracksAssigned++;
@@ -670,6 +670,11 @@ class GeohubImportService
 
     protected function handleTranslatableAttributes(Model $model, array &$data): void
     {
+        // Check if the model has the getTranslatableAttributes method
+        if (!method_exists($model, 'getTranslatableAttributes')) {
+            return;
+        }
+
         $translatableAttributes = $model->getTranslatableAttributes();
 
         if (empty($translatableAttributes)) {
@@ -699,7 +704,7 @@ class GeohubImportService
             }
             // Otherwise we need to download and upload to AWS
             else {
-                $fileUrl = config('wm-package.clients.geohub.host').'/storage/'.$featureCollection;
+                $fileUrl = config('wm-package.clients.geohub.host') . '/storage/' . $featureCollection;
                 $fileContent = $this->downloadFileContent($fileUrl);
 
                 if ($fileContent !== false) {
@@ -751,7 +756,7 @@ class GeohubImportService
                 $fileContent
             );
         } catch (\Exception $e) {
-            $this->logger->error('Error storing layer feature collection: '.$e->getMessage());
+            $this->logger->error('Error storing layer feature collection: ' . $e->getMessage());
         }
 
         if ($path) {
