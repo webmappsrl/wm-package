@@ -16,7 +16,6 @@ use Spatie\Permission\Models\Role;
 use stdClass;
 use Wm\WmPackage\Jobs\Import\BaseImportJob;
 use Wm\WmPackage\Models\EcPoi;
-use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\TaxonomyActivity;
 use Wm\WmPackage\Models\User;
 use Wm\WmPackage\Services\RolesAndPermissionsService;
@@ -598,6 +597,99 @@ class GeohubImportService
         }
     }
 
+    public function associateLayersWithMedia(Model $model): void
+    {
+        \Log::info("🖼️ ASSOCIATE LAYERS WITH MEDIA - Layer ID: {$model->id}, Geohub ID: {$model->properties['geohub_id']}");
+
+        // 1. Controlla se il layer ha già una feature_image associata nel database Geohub
+        $layerFeatureImage = $this->dbConnection->table('layers')
+            ->where('id', $model->properties['geohub_id'])
+            ->whereNotNull('feature_image')
+            ->first();
+
+        if ($layerFeatureImage && $layerFeatureImage->feature_image) {
+            \Log::info("✅ Layer already has feature_image in Geohub: {$layerFeatureImage->feature_image}");
+
+            return;
+        }
+
+        // 2. Se non ha feature_image, controlla taxonomy_activity con feature_image
+        $featureImageMedia = $this->getFeatureImageFromTaxonomy($model, 'taxonomy_activity');
+
+        // 3. Se nemmeno taxonomy_activity ha feature_image, controlla taxonomy_theme
+        if (! $featureImageMedia) {
+            $featureImageMedia = $this->getFeatureImageFromTaxonomy($model, 'taxonomy_theme');
+        }
+    }
+
+    /**
+     * Get feature image from taxonomy associated with the layer
+     */
+    private function getFeatureImageFromTaxonomy(Model $model, string $taxonomyKey): ?object
+    {
+        \Log::info("🔍 Checking {$taxonomyKey} for feature_image");
+
+        $taxonomyConfig = $this->getRelationConfig('layer', $taxonomyKey);
+        $relationTable = $taxonomyConfig['pivot_table'];
+        $primaryKey = $taxonomyConfig['key'];
+        $foreignKey = $taxonomyConfig['foreign_key'];
+        $morphableTypeKey = $taxonomyConfig['morphable_type']['key'];
+        $morphableTypeValue = $taxonomyConfig['morphable_type']['value'];
+
+        // Ottieni le relazioni taxonomy per questo layer
+        $taxonomyRelations = $this->dbConnection->table($relationTable)
+            ->where($foreignKey, $model->properties['geohub_id'])
+            ->where($morphableTypeKey, $morphableTypeValue)
+            ->get();
+
+        foreach ($taxonomyRelations as $relation) {
+            // Ottieni il nome della tabella e della colonna ID dalla configurazione
+            $taxonomyTable = Str::plural($taxonomyKey);
+
+            // Cerca taxonomy con feature_image nel database Geohub
+            $taxonomy = $this->dbConnection->table($taxonomyTable)
+                ->where('id', $relation->{$primaryKey})
+                ->whereNotNull('feature_image')
+                ->first();
+
+            if ($taxonomy && $taxonomy->feature_image) {
+                $ecMedia = $this->dbConnection->table('ec_media')
+                    ->where('id', $taxonomy->feature_image)
+                    ->first();
+
+                if ($ecMedia && $ecMedia->url) {
+                    return $this->addMediaFromUrlToLayer($model, $ecMedia);
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Add media from URL to layer using Spatie Media Library
+     */
+    private function addMediaFromUrlToLayer(Model $model, object $ecMedia): ?object
+    {
+        try {
+            // Usa addMediaFromUrl di Spatie per aggiungere il media direttamente al layer
+            $media = $model->addMediaFromUrl($ecMedia->url)
+                ->usingName($ecMedia->name ?? 'Feature Image')
+                ->withCustomProperties([
+                    'geohub_id' => $ecMedia->id,
+                ])
+                ->toMediaCollection('default');
+
+            \Log::info("✅ Added media from URL to layer: {$media->id}");
+
+            return $media;
+        } catch (\Exception $e) {
+            \Log::error("❌ Failed to add media from URL {$ecMedia->url}: ".$e->getMessage());
+
+            return null;
+        }
+    }
+
     /**
      * Associate layers with ec_track through taxonomy
      *
@@ -622,7 +714,7 @@ class GeohubImportService
             ->where($morphableTypeKey, $morphableTypeValue)
             ->get();
 
-        $this->logger->info("📋 Layer taxonomy relations found: " . $layerTaxonomyRelations->count());
+        $this->logger->info('📋 Layer taxonomy relations found: '.$layerTaxonomyRelations->count());
 
         $totalTracksAssigned = 0;
         $totalTracksAlreadyAssigned = 0;
@@ -636,7 +728,7 @@ class GeohubImportService
                 ->where($morphableTypeKey, 'App\\Models\\EcTrack')
                 ->get();
 
-            $this->logger->info("📋 Track taxonomy relations for {$relation->{$key}}: " . $trackTaxonomyRelations->count());
+            $this->logger->info("📋 Track taxonomy relations for {$relation->{$key}}: ".$trackTaxonomyRelations->count());
 
             foreach ($trackTaxonomyRelations as $trackRelation) {
                 $ecTrackModelClass = config('wm-package.ec_track_model', 'App\Models\EcTrack');
@@ -664,7 +756,7 @@ class GeohubImportService
         $this->logger->info("   • Tracks assigned: {$totalTracksAssigned}");
         $this->logger->info("   • Tracks already assigned: {$totalTracksAlreadyAssigned}");
         $this->logger->info("   • Tracks not found locally: {$totalTracksNotFound}");
-        $this->logger->info("   • Final layer track count: " . $model->ecTracks()->count());
+        $this->logger->info('   • Final layer track count: '.$model->ecTracks()->count());
     }
 
     public function handleOverlayLayers(Model $model): void
