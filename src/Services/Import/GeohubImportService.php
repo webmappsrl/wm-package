@@ -684,7 +684,7 @@ class GeohubImportService
 
             return $media;
         } catch (\Exception $e) {
-            \Log::error("❌ Failed to add media from URL {$ecMedia->url}: ".$e->getMessage());
+            \Log::error("❌ Failed to add media from URL {$ecMedia->url}: " . $e->getMessage());
 
             return null;
         }
@@ -714,7 +714,7 @@ class GeohubImportService
             ->where($morphableTypeKey, $morphableTypeValue)
             ->get();
 
-        $this->logger->info('📋 Layer taxonomy relations found: '.$layerTaxonomyRelations->count());
+        $this->logger->info('📋 Layer taxonomy relations found: ' . $layerTaxonomyRelations->count());
 
         $totalTracksAssigned = 0;
         $totalTracksAlreadyAssigned = 0;
@@ -728,14 +728,14 @@ class GeohubImportService
                 ->where($morphableTypeKey, 'App\\Models\\EcTrack')
                 ->get();
 
-            $this->logger->info("📋 Track taxonomy relations for {$relation->{$key}}: ".$trackTaxonomyRelations->count());
+            $this->logger->info("📋 Track taxonomy relations for {$relation->{$key}}: " . $trackTaxonomyRelations->count());
 
             foreach ($trackTaxonomyRelations as $trackRelation) {
                 $ecTrackModelClass = config('wm-package.ec_track_model', 'App\Models\EcTrack');
                 $ecTrack = $ecTrackModelClass::where('properties->geohub_id', $trackRelation->{$foreignKey})->first();
 
                 if ($ecTrack) {
-                    $alreadyExists = $model->ecTracks()->where('layerable_type', 'App\\Models\\EcTrack')->where('layerable_id', $ecTrack->id)->exists();
+                    $alreadyExists = $model->ecTracks()->where('layerable_type', $ecTrackModelClass)->where('layerable_id', $ecTrack->id)->exists();
 
                     if (!$alreadyExists) {
                         $model->ecTracks()->attach($ecTrack->id, ['created_at' => now(), 'updated_at' => now()]);
@@ -756,7 +756,7 @@ class GeohubImportService
         $this->logger->info("   • Tracks assigned: {$totalTracksAssigned}");
         $this->logger->info("   • Tracks already assigned: {$totalTracksAlreadyAssigned}");
         $this->logger->info("   • Tracks not found locally: {$totalTracksNotFound}");
-        $this->logger->info('   • Final layer track count: '.$model->ecTracks()->count());
+        $this->logger->info('   • Final layer track count: ' . $model->ecTracks()->count());
     }
 
     public function handleOverlayLayers(Model $model): void
