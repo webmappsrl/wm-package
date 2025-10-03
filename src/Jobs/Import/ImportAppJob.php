@@ -103,6 +103,11 @@ class ImportAppJob extends BaseImportJob
                     $whereCondition = [$entityForeignKey => $this->entityId];
                     $data = ['app_id' => $appId];
                     break;
+                case 'ec_media':
+                    // Per ec_media, importiamo i media associati ai track dell'app, non solo quelli dell'utente
+                    $whereCondition = null; // Gestiremo i media tramite relazioni
+                    $data = ['app_id' => $appId, 'app_user_id' => $userId];
+                    break;
                 case strpos($entityModelKey, 'taxonomy') !== false: // import all taxonomy entities
                     $whereCondition = null;
                     break;
@@ -111,7 +116,7 @@ class ImportAppJob extends BaseImportJob
                     $data = ['app_id' => $appId];
                     break;
             }
-            $ids = $this->geohubImportService->getGeohubIdsToImport($entityModelKey, $whereCondition);
+            $ids = $this->geohubImportService->getGeohubIdsToImport($entityModelKey, $whereCondition, $data);
 
             if (count($ids) > 0) {
                 $jobs = [];

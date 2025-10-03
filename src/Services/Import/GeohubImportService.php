@@ -34,10 +34,10 @@ class GeohubImportService
      */
     protected const MODEL_IMPORT_ORDER = [
         'app',
-        'ec_poi',
-        'ec_track',
         'taxonomy_activity',
         'taxonomy_poi_types',
+        'ec_poi',
+        'ec_track',
         'layer',
         'ec_media',
     ];
@@ -65,6 +65,14 @@ class GeohubImportService
         $this->dbConnection = DB::connection('geohub');
         $this->logger = Log::channel('wm-package-failed-jobs');
         $this->importMapping = config('wm-geohub-import.import_mapping', []);
+    }
+
+    /**
+     * Get the database connection to Geohub
+     */
+    public function getDbConnection(): Connection
+    {
+        return $this->dbConnection;
     }
 
     // ------------------------------------------------------------------
@@ -286,15 +294,23 @@ class GeohubImportService
      *
      * @param  string  $model  The model type
      * @param  ?array  $wheres  The where conditions to apply
+     * @param  ?array  $data  Additional data (e.g., app_user_id for ec_media)
      * @return array The IDs to import
      *
      * @throws \InvalidArgumentException If the model is not supported
      */
-    public function getGeohubIdsToImport(string $modelKey, ?array $wheres): array
+    public function getGeohubIdsToImport(string $modelKey, ?array $wheres, ?array $data = null): array
     {
+        $this->logger->info("🔍 getGeohubIdsToImport called for model: {$modelKey}, wheres: " . json_encode($wheres) . ", data: " . json_encode($data));
+
         $connection = $this->dbConnection->table($this->importMapping[$modelKey]['geohub_table']);
 
         if (! $wheres) {
+            // Caso speciale per ec_media: importiamo solo i media associati ai track dell'app
+            if ($modelKey === 'ec_media' && isset($data['app_user_id'])) {
+                $this->logger->info("🔍 Calling getEcMediaIdsForApp with app_user_id: {$data['app_user_id']}");
+                return $this->getEcMediaIdsForApp($data['app_user_id']);
+            }
             return $connection->pluck('id')->toArray();
         }
 
@@ -304,6 +320,38 @@ class GeohubImportService
 
         return $connection->pluck('id')->toArray();
     }
+
+    /**
+     * Get the IDs of ec_media associated with tracks of the current app
+     *
+     * @param  int  $appUserId  The user ID of the app
+     * @return array The IDs of ec_media to import
+     */
+    private function getEcMediaIdsForApp(int $appUserId): array
+    {
+        // Trova tutti i track dell'app corrente
+        $appTracks = $this->dbConnection->table('ec_tracks')
+            ->where('user_id', $appUserId)
+            ->whereNotNull('feature_image')
+            ->pluck('feature_image')
+            ->toArray();
+
+        if (empty($appTracks)) {
+            $this->logger->info("No tracks with feature_image found for app user {$appUserId}");
+            return [];
+        }
+
+        // Trova tutti i media associati a questi track
+        $mediaIds = $this->dbConnection->table('ec_media')
+            ->whereIn('id', $appTracks)
+            ->pluck('id')
+            ->toArray();
+
+        $this->logger->info("Found " . count($mediaIds) . " ec_media associated with app tracks (user_id: {$appUserId})");
+
+        return $mediaIds;
+    }
+
 
     /**
      * Get the identifier for the updateOrCreate method.
