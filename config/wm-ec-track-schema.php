@@ -97,6 +97,16 @@ return [
                     'en' => 'Duration Backward',
                 ],
             ],
+            [
+                'name' => 'taxonomy_where',
+                'type' => 'json',
+                'required' => false,
+                'translatable' => false,
+                'label' => [
+                    'it' => 'Tassonomia Dove',
+                    'en' => 'Taxonomy Where',
+                ],
+            ],
         ],
     ],
 ];
