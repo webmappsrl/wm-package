@@ -98,6 +98,18 @@ return [
                 ],
             ],
             [
+                'name' => 'geohub_id',
+                'type' => 'number',
+                'required' => false,
+                'translatable' => false,
+                'label' => [
+                    'it' => 'Geohub ID',
+                    'en' => 'Geohub ID',
+                ],
+                'help' => 'This field is automatically generated',
+                'readonly' => true,
+            ],
+            [
                 'name' => 'taxonomy_where',
                 'type' => 'json',
                 'required' => false,
