@@ -329,27 +329,91 @@ class GeohubImportService
      */
     private function getEcMediaIdsForApp(int $appUserId): array
     {
-        // Trova tutti i track dell'app corrente
+        // Prima trova l'app nel database geohub per ottenere l'user_id corretto
+        $app = $this->dbConnection->table('apps')->where('user_id', $appUserId)->first();
+        if (!$app) {
+            $this->logger->info("App not found for user {$appUserId} in geohub database");
+            return [];
+        }
+
+        $this->logger->info("Found app {$app->id} with geohub user_id: {$appUserId}");
+
+        // Trova tutti i track dell'app corrente (sia quelli dell'user dell'app che quelli associati all'app)
         $appTracks = $this->dbConnection->table('ec_tracks')
             ->where('user_id', $appUserId)
             ->whereNotNull('feature_image')
             ->pluck('feature_image')
             ->toArray();
 
-        if (empty($appTracks)) {
+        // Trova anche i track associati all'app tramite la tabella di relazione
+        $appTracksViaRelation = $this->dbConnection->table('ec_track_layer')
+            ->join('layers', 'ec_track_layer.layer_id', '=', 'layers.id')
+            ->where('layers.app_id', $app->id)
+            ->join('ec_tracks', 'ec_track_layer.ec_track_id', '=', 'ec_tracks.id')
+            ->whereNotNull('ec_tracks.feature_image')
+            ->pluck('ec_tracks.feature_image')
+            ->toArray();
+
+        // Combina i due array
+        $allAppTracks = array_unique(array_merge($appTracks, $appTracksViaRelation));
+
+        if (empty($allAppTracks)) {
             $this->logger->info("No tracks with feature_image found for app user {$appUserId}");
             return [];
         }
 
-        // Trova tutti i media associati a questi track
+        // Trova tutti i media associati a questi track (feature_image)
         $mediaIds = $this->dbConnection->table('ec_media')
-            ->whereIn('id', $appTracks)
+            ->whereIn('id', $allAppTracks)
             ->pluck('id')
             ->toArray();
 
-        $this->logger->info("Found " . count($mediaIds) . " ec_media associated with app tracks (user_id: {$appUserId})");
+        // Trova anche i media associati tramite la tabella di relazione ec_media_ec_track
+        $mediaViaRelation = $this->dbConnection->table('ec_media_ec_track')
+            ->whereIn('ec_track_id', $this->getTrackIdsFromMediaIds($allAppTracks))
+            ->pluck('ec_media_id')
+            ->toArray();
 
-        return $mediaIds;
+        // Trova anche i media che sono feature_image dei track associati all'app
+        // (indipendentemente dal loro user_id)
+        $trackIds = $this->dbConnection->table('ec_track_layer')
+            ->join('layers', 'ec_track_layer.layer_id', '=', 'layers.id')
+            ->where('layers.app_id', $app->id)
+            ->pluck('ec_track_layer.ec_track_id')
+            ->toArray();
+
+        $featureImageMedia = $this->dbConnection->table('ec_tracks')
+            ->whereIn('id', $trackIds)
+            ->whereNotNull('feature_image')
+            ->pluck('feature_image')
+            ->toArray();
+
+        // Combina tutti i media
+        $allMediaIds = array_unique(array_merge($mediaIds, $mediaViaRelation, $featureImageMedia));
+
+        $this->logger->info("Found " . count($allMediaIds) . " ec_media associated with app tracks (geohub user_id: {$appUserId})");
+
+        return $allMediaIds;
+    }
+
+    /**
+     * Get app ID from user ID
+     */
+    private function getAppIdFromUserId(int $userId): ?int
+    {
+        $app = $this->dbConnection->table('apps')->where('user_id', $userId)->first();
+        return $app ? $app->id : null;
+    }
+
+    /**
+     * Get track IDs from media IDs (feature_image)
+     */
+    private function getTrackIdsFromMediaIds(array $mediaIds): array
+    {
+        return $this->dbConnection->table('ec_tracks')
+            ->whereIn('feature_image', $mediaIds)
+            ->pluck('id')
+            ->toArray();
     }
 
 

@@ -39,7 +39,7 @@ class EcMediaImportService extends GeohubImportService
         // Get the URL and prepare it
         $url = $transformedData['url'];
         if (! filter_var($url, FILTER_VALIDATE_URL)) {
-            $url = config('wm-package.clients.geohub.host').'/storage/'.ltrim($url, '/');
+            $url = config('wm-package.clients.geohub.host') . '/storage/' . ltrim($url, '/');
 
             // validate if the url returns an image content type
             $contentType = get_headers($url, 1)[0];
@@ -166,6 +166,7 @@ class EcMediaImportService extends GeohubImportService
         // Check each relationship
         // TODO: this should be a while
         foreach ($relations as $relatedTableName => $relation) {
+            $featuredImageModels = collect(); // Initialize as empty collection
             try {
                 // check if the media is a feature image
                 $featuredImageModels = $this->dbConnection
@@ -174,6 +175,7 @@ class EcMediaImportService extends GeohubImportService
                     ->get();
             } catch (\Exception $e) {
                 // If the related table does not have a properties column, skip the check
+                $featuredImageModels = collect(); // Ensure it's still a collection
             }
 
             // handle features image
@@ -181,8 +183,17 @@ class EcMediaImportService extends GeohubImportService
             foreach ($featuredImageModels as $featuredImageModel) {
                 $relatedId = $featuredImageModel->id;
                 $model = $relation['model']::where('properties->geohub_id', $relatedId)->first();
-                $models[] = $this->getImportMediaData($model, true);
-                $featureImagedModelsIds[] = $model->id;
+                if ($model && $model instanceof Model) {
+                    $models[] = $this->getImportMediaData($model, true);
+                    $featureImagedModelsIds[] = $model->id;
+                } else {
+                    // Log when model is not found for debugging
+                    \Log::warning("Model not found for featured image", [
+                        'related_id' => $relatedId,
+                        'model_class' => $relation['model'],
+                        'media_id' => $mediaId
+                    ]);
+                }
             }
 
             // handle other relations
@@ -194,9 +205,19 @@ class EcMediaImportService extends GeohubImportService
             foreach ($pivotRelation as $pivot) {
                 $relatedId = $pivot->{$relation['key']};
                 $model = $relation['model']::where('properties->geohub_id', $relatedId)->first();
-                // dont import media in gallery if they already are feature image
-                if (! in_array($model->id, $featureImagedModelsIds)) {
-                    $models[] = $this->getImportMediaData($model, false);
+                if ($model && $model instanceof Model) {
+                    // dont import media in gallery if they already are feature image
+                    if (! in_array($model->id, $featureImagedModelsIds)) {
+                        $models[] = $this->getImportMediaData($model, false);
+                    }
+                } else {
+                    // Log when model is not found for debugging
+                    \Log::warning("Model not found for pivot relation", [
+                        'related_id' => $relatedId,
+                        'model_class' => $relation['model'],
+                        'media_id' => $mediaId,
+                        'pivot_key' => $relation['key']
+                    ]);
                 }
             }
         }
@@ -206,6 +227,10 @@ class EcMediaImportService extends GeohubImportService
 
     private function getImportMediaData(Model $model, bool $featuredImageModel = false): array
     {
+        // Additional safety check to prevent null values
+        if ($model === null) {
+            throw new \InvalidArgumentException('Model cannot be null in getImportMediaData method');
+        }
 
         $data = [
             'model_type' => get_class($model),
