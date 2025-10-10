@@ -217,7 +217,7 @@ return [
             'geohub_table' => 'layers',
             'identifier' => 'properties->geohub_id',
             'fields' => [
-                'name' => 'name',
+                'name' => 'title',
                 'geometry' => ['field' => 'bbox', 'transformer' => [GeometryComputationService::class, 'bboxToPolygon']],
                 'app_id' => 'app_id',
                 'rank' => 'rank',
