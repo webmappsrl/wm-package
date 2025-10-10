@@ -43,9 +43,13 @@ class EcTrackResource extends JsonResource
     private function getRelatedPois()
     {
         try {
-            return $this->ecPois->map(function (EcPoi $ecPoi) {
-                return EcPoiResource::make($ecPoi);
-            });
+            return $this->resource->belongsToMany(EcPoi::class, 'ec_poi_ec_track', 'ec_track_id', 'ec_poi_id')
+                ->withPivot('order')
+                ->orderByPivot('order')
+                ->get()
+                ->map(function (EcPoi $ecPoi) {
+                    return EcPoiResource::make($ecPoi);
+                });
         } catch (\Exception $e) {
             // Se la relazione fallisce (es: tabella pivot non esiste), ritorna array vuoto
             return [];
