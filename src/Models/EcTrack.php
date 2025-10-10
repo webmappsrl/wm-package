@@ -51,7 +51,7 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
     protected static function booted()
     {
         parent::booted();
-        
+
         EcTrack::observe(EcTrackObserver::class);
 
         // Imposta un default per properties se è null
@@ -68,7 +68,7 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
                 $model->properties = [];
                 return;
             }
-            
+
             // Se properties è una stringa JSON, decodificala
             if (is_string($model->properties)) {
                 $decoded = json_decode($model->properties, true);
@@ -620,6 +620,7 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
             'duration_forward' => $this->convertDurationToHours($this->properties['duration_forward'] ?? null),
             'ascent' => isset($this->properties['ascent']) ? (int) ($this->properties['ascent']) : 0,
             'taxonomyActivities' => $ecTrackService->getTaxonomyArray($this->taxonomyActivities),
+            'taxonomyIcons' => $ecTrackService->getTaxonomyIcons($this),
             'layers' => $this->layers->pluck('id')->toArray(),
             'searchable' => $this->getSearchableString(),
         ];

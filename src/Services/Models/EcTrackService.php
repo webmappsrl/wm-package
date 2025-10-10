@@ -415,4 +415,24 @@ class EcTrackService extends BaseService
     {
         return $track->properties['taxonomy_where'] ?? [];
     }
+
+    public function getTaxonomyIcons(EcTrack $track)
+    {
+        $taxonomyIcons = [];
+
+        // Ottieni le attività della track
+        $activities = $track->taxonomyActivities;
+
+        foreach ($activities as $activity) {
+            $activityIdentifier = $activity->identifier;
+
+            // Crea la struttura per ogni attività
+            $taxonomyIcons[$activityIdentifier] = [
+                'label' => $activity->getTranslations('name'),
+                'icon_name' => $activity->icon,
+            ];
+        }
+
+        return $taxonomyIcons;
+    }
 }
