@@ -15,6 +15,7 @@ use Illuminate\Support\Str;
 use Spatie\Permission\Models\Role;
 use stdClass;
 use Wm\WmPackage\Jobs\Import\BaseImportJob;
+use Wm\WmPackage\Jobs\UpdateAppConfigHomeLayerIdsJob;
 use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Models\TaxonomyActivity;
 use Wm\WmPackage\Models\User;
@@ -92,6 +93,33 @@ class GeohubImportService
         }
 
         $this->logger->info('Completed full import from geohub');
+    }
+
+    /**
+     * Aggiorna la config_home per una o tutte le app
+     *
+     * @param  int|null  $appId  Se specificato, aggiorna solo quella app. Se null, aggiorna tutte le app importate
+     */
+    public function updateConfigHome(?int $id = null): void
+    {
+        if ($id) {
+            // Singola app
+            $this->logger->info("Dispatching config_home update for app {$id}");
+            dispatch(new UpdateAppConfigHomeLayerIdsJob($id));
+        } else {
+            // Tutte le app
+            $this->logger->info('Updating config_home for all imported apps');
+
+            // Get all apps that have been imported from Geohub
+            $apps = \Wm\WmPackage\Models\App::whereNotNull('properties->geohub_id')->get();
+
+            foreach ($apps as $app) {
+                $this->logger->info("Dispatching config_home update for app {$app->id}");
+                dispatch(new UpdateAppConfigHomeLayerIdsJob($app->id));
+            }
+
+            $this->logger->info('Dispatched config_home updates for '.$apps->count().' apps');
+        }
     }
 
     /**

@@ -58,6 +58,11 @@ class WmImportFromGeohubCommand extends Command
                 $this->importService->importAll();
                 $this->logAndOutput('Jobs dispatched for all data');
             }
+
+            if (! $modelKey || $modelKey === 'app') {
+                $this->logAndOutput($id ? "Updating config_home for app {$id}" : 'Updating config_home for all apps');
+                $this->importService->updateConfigHome($id);
+            }
         } catch (\Exception $e) {
             $errorMessage = 'Import failed: '.$e->getMessage();
             $this->logAndOutput($errorMessage, 'error');
