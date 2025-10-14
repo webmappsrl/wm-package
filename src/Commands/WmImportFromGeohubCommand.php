@@ -47,7 +47,7 @@ class WmImportFromGeohubCommand extends Command
 
         try {
             $jobData = $this->prepareJobData($skipDependencies, $dependencies);
-            
+
             if ($modelKey && $id) {
                 $this->importService->importSingle($modelKey, $id, $jobData);
                 $this->logAndOutput("Job dispatched for {$modelKey} with ID {$id}");
@@ -59,7 +59,7 @@ class WmImportFromGeohubCommand extends Command
                 $this->logAndOutput('Jobs dispatched for all data');
             }
         } catch (\Exception $e) {
-            $errorMessage = 'Import failed: '.$e->getMessage();
+            $errorMessage = 'Import failed: ' . $e->getMessage();
             $this->logAndOutput($errorMessage, 'error');
 
             return 1;
@@ -74,7 +74,7 @@ class WmImportFromGeohubCommand extends Command
     protected function prepareJobData(bool $skipDependencies, array $dependencies): array
     {
         // All available dependencies
-        $allDependencies = [ 'taxonomy_activity', 'taxonomy_poi_types', 'ec_poi', 'ec_track','layer', 'ec_media'];
+        $allDependencies = ['taxonomy_activity', 'taxonomy_poi_types', 'ec_poi', 'ec_track', 'layer', 'ec_media'];
 
         if ($skipDependencies) {
             // Skip all dependencies
