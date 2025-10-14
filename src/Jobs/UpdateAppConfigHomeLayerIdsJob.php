@@ -10,44 +10,44 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Wm\WmPackage\Models\App;
+use Wm\WmPackage\Services\Import\GeohubImportService;
 
 class UpdateAppConfigHomeLayerIdsJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    protected int $geohubAppId;
+    protected int $appId;
 
     protected int $maxAttempts = 5; // Massimo 5 tentativi (10 minuti)
 
-    public function __construct(int $geohubAppId)
+    public function __construct(int $appId)
     {
-        $this->geohubAppId = $geohubAppId;
-        // $this->afterCommit(true);
+        $this->appId = $appId;
     }
 
     public function handle(): void
     {
-        $app = App::where('properties->geohub_id', $this->geohubAppId)->first();
-        if (! $app) {
-            Log::warning("App non trovata per geohub_id {$this->geohubAppId}");
-
-            return;
-        }
-
-        // Verifica se l'app ha layer importati, se non li ha aspetta
-        $layers = $app->layers()->get()->concat($app->associatedLayers()->get());
-        if ($layers->isEmpty()) {
+        // Prima di tutto, aspetta che la coda 'geohub-import' sia vuota
+        $geohubImportService = app(GeohubImportService::class);
+        $geohubImportQueue = config('wm-geohub-import.queue.queue', 'geohub-import');
+        if (!$geohubImportService->isQueueEmpty($geohubImportQueue)) {
             $currentAttempt = $this->attempts();
             if ($currentAttempt >= $this->maxAttempts) {
-                Log::warning("App ID {$app->id} (geohub_id: {$this->geohubAppId}) non ha layer dopo {$this->maxAttempts} tentativi, abbandono");
-
+                Log::warning("Coda '{$geohubImportQueue}' non vuota dopo {$this->maxAttempts} tentativi, abbandono");
                 return;
             }
-            Log::info("App ID {$app->id} (geohub_id: {$this->geohubAppId}) non ha layer importati, riprovo tra 2 minuti (tentativo {$currentAttempt}/{$this->maxAttempts})");
+            Log::info("Coda '{$geohubImportQueue}' non vuota, riprovo tra 2 minuti (tentativo {$currentAttempt}/{$this->maxAttempts})");
             $this->release(120);
+            return;
+        }
+
+        $app = App::where('id', $this->appId)->first();
+        if (! $app) {
+            Log::warning("App non trovata per app id {$this->appId}");
 
             return;
         }
+
 
         // Usa getRawOriginal per evitare il cast FlexibleCast
         $configHome = $app->getRawOriginal('config_home');

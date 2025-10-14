@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Wm\WmPackage\Jobs\UpdateAppConfigHomeLayerIdsJob;
 
 class ImportAppJob extends BaseImportJob
 {
@@ -126,6 +127,12 @@ class ImportAppJob extends BaseImportJob
                 // create a batch and add the jobs to it
                 $batch = Bus::batch($jobs)->name("app-dependencies-{$entityModelKey}-import-batch")->onQueue(config('wm-geohub-import.queue.queue', 'geohub-import'));
                 $batch->dispatch();
+
+                // Dopo aver dispatchato tutti i job dei layer, lancia l'aggiornamento di config_home
+                if ($entityModelKey === 'layer') {
+                    dispatch((new UpdateAppConfigHomeLayerIdsJob($appId))
+                        ->onQueue(config('wm-geohub-import.queue.queue', 'geohub-import')));
+                }
             }
         } catch (\Exception $e) {
             $logger->error("Error queuing {$entityModelKey} imports for app {$this->entityId}: " . $e->getMessage());

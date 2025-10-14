@@ -10,12 +10,14 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Spatie\Permission\Models\Role;
 use stdClass;
 use Wm\WmPackage\Jobs\Import\BaseImportJob;
 use Wm\WmPackage\Jobs\UpdateAppConfigHomeLayerIdsJob;
+use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Models\TaxonomyActivity;
 use Wm\WmPackage\Models\User;
@@ -95,32 +97,7 @@ class GeohubImportService
         $this->logger->info('Completed full import from geohub');
     }
 
-    /**
-     * Aggiorna la config_home per una o tutte le app
-     *
-     * @param  int|null  $appId  Se specificato, aggiorna solo quella app. Se null, aggiorna tutte le app importate
-     */
-    public function updateConfigHome(?int $id = null): void
-    {
-        if ($id) {
-            // Singola app
-            $this->logger->info("Dispatching config_home update for app {$id}");
-            dispatch(new UpdateAppConfigHomeLayerIdsJob($id));
-        } else {
-            // Tutte le app
-            $this->logger->info('Updating config_home for all imported apps');
 
-            // Get all apps that have been imported from Geohub
-            $apps = \Wm\WmPackage\Models\App::whereNotNull('properties->geohub_id')->get();
-
-            foreach ($apps as $app) {
-                $this->logger->info("Dispatching config_home update for app {$app->id}");
-                dispatch(new UpdateAppConfigHomeLayerIdsJob($app->id));
-            }
-
-            $this->logger->info('Dispatched config_home updates for '.$apps->count().' apps');
-        }
-    }
 
     /**
      * Import all entities of a specific model type
@@ -134,9 +111,9 @@ class GeohubImportService
 
         $this->logger->info("Starting import of all {$modelKey}s");
 
-        $ids = $this->getGeohubIdsToImport($modelKey, null);
+        $geohubModelIds = $this->getGeohubIdsToImport($modelKey, null);
 
-        $jobs = $this->createJobsForIds($modelKey, $ids, $data);
+        $jobs = $this->createJobsForIds($modelKey, $geohubModelIds, $data);
 
         $batch = Bus::batch($jobs)
             ->name("Import {$modelKey}s from geohub")
@@ -278,11 +255,11 @@ class GeohubImportService
      * @param  array  $data  Additional data to pass to the job
      * @return BaseImportJob The job instance
      */
-    public function createJob(string $modelKey, int $id, array $data = []): BaseImportJob
+    public function createJob(string $modelKey, int $geohubModelId, array $data = []): BaseImportJob
     {
         $jobClass = $this->importMapping[$modelKey]['job'];
 
-        return new $jobClass($id, $data);
+        return new $jobClass($geohubModelId, $data);
     }
 
     /**
@@ -293,12 +270,13 @@ class GeohubImportService
      * @param  array  $data  Additional data to pass to the jobs
      * @return array Array of job instances
      */
-    protected function createJobsForIds(string $modelKey, array $ids, array $data = []): array
+    protected function createJobsForIds(string $modelKey, array $geohubModelIds, array $data = []): array
     {
         $jobs = [];
-        foreach ($ids as $id) {
-            $jobs[] = $this->createJob($modelKey, $id, $data);
+        foreach ($geohubModelIds as $geohubModelId) {
+            $jobs[] = $this->createJob($modelKey, $geohubModelId, $data);
         }
+
 
         return $jobs;
     }
@@ -739,7 +717,7 @@ class GeohubImportService
 
     public function associateLayersWithMedia(Model $model): void
     {
-        \Log::info("🖼️ ASSOCIATE LAYERS WITH MEDIA - Layer ID: {$model->id}, Geohub ID: {$model->properties['geohub_id']}");
+        Log::info("🖼️ ASSOCIATE LAYERS WITH MEDIA - Layer ID: {$model->id}, Geohub ID: {$model->properties['geohub_id']}");
 
         // 1. Controlla se il layer ha già una feature_image associata nel database Geohub
         $layerFeatureImage = $this->dbConnection->table('layers')
@@ -748,7 +726,7 @@ class GeohubImportService
             ->first();
 
         if ($layerFeatureImage && $layerFeatureImage->feature_image) {
-            \Log::info("✅ Layer already has feature_image in Geohub: {$layerFeatureImage->feature_image}");
+            Log::info("✅ Layer already has feature_image in Geohub: {$layerFeatureImage->feature_image}");
 
             return;
         }
@@ -767,7 +745,7 @@ class GeohubImportService
      */
     private function getFeatureImageFromTaxonomy(Model $model, string $taxonomyKey): ?object
     {
-        \Log::info("🔍 Checking {$taxonomyKey} for feature_image");
+        Log::info("🔍 Checking {$taxonomyKey} for feature_image");
 
         $taxonomyConfig = $this->getRelationConfig('layer', $taxonomyKey);
         $relationTable = $taxonomyConfig['pivot_table'];
@@ -820,11 +798,11 @@ class GeohubImportService
                 ])
                 ->toMediaCollection('default');
 
-            \Log::info("✅ Added media from URL to layer: {$media->id}");
+            Log::info("✅ Added media from URL to layer: {$media->id}");
 
             return $media;
         } catch (\Exception $e) {
-            \Log::error("❌ Failed to add media from URL {$ecMedia->url}: " . $e->getMessage());
+            Log::error("❌ Failed to add media from URL {$ecMedia->url}: " . $e->getMessage());
 
             return null;
         }
@@ -978,7 +956,7 @@ class GeohubImportService
         // Update the layer with the merged data if there's anything to update
         if (! empty($updateData)) {
             $model->update($updateData);
-            \Log::info("Layer {$model->id} updated with overlay layer {$overlayLayer->id} data");
+            Log::info("Layer {$model->id} updated with overlay layer {$overlayLayer->id} data");
         }
     }
 
@@ -1052,5 +1030,69 @@ class GeohubImportService
     protected function getRelationConfig(string $modelKey, string $relationKey): array
     {
         return $this->importMapping[$modelKey]['relations'][$relationKey];
+    }
+
+    /**
+     * Controlla se una coda specifica è vuota
+     * Verifica sia Redis che Horizon per assicurarsi che non ci siano job in attesa o in esecuzione
+     * 
+     * @param string $queueName Nome della coda da controllare
+     * @return bool True se la coda è vuota, false altrimenti
+     */
+    public function isQueueEmpty(string $queueName): bool
+    {
+        try {
+            $appName = config('app.name', 'wm-package');
+            $redis = Redis::connection();
+
+            $queueKeyPrefix = "{$appName}_database_queues:{$queueName}";
+            $horizonPrefix = "{$appName}_horizon:";
+
+            $checkQueues = function () use ($redis, $queueKeyPrefix, $horizonPrefix, $queueName) {
+                // Code Redis: attesa, delayed, reserved
+                $pendingSize = (int) $redis->llen($queueKeyPrefix);
+                $delayedSize = (int) $redis->zcard($queueKeyPrefix . ':delayed');
+                $reservedSize = (int) $redis->zcard($queueKeyPrefix . ':reserved');
+
+                if (($pendingSize + $delayedSize + $reservedSize) > 0) {
+                    Log::info("Coda '{$queueName}' non vuota (pending={$pendingSize}, delayed={$delayedSize}, reserved={$reservedSize})");
+                    return false;
+                }
+
+                // Horizon processing (job in esecuzione)
+                $processingSize = (int) $redis->zcard($horizonPrefix . 'processing');
+                if ($processingSize > 0) {
+                    $processingData = $redis->zrange($horizonPrefix . 'processing', 0, -1);
+                    foreach ($processingData as $jobData) {
+                        $job = json_decode($jobData, true);
+                        if (isset($job['queue']) && $job['queue'] === $queueName) {
+                            Log::info("Coda '{$queueName}' ha job in processing su Horizon");
+                            return false;
+                        }
+                    }
+                }
+
+                return true;
+            };
+
+            // Primo controllo
+            if (! $checkQueues()) {
+                return false;
+            }
+
+            // Breve attesa e secondo controllo per mitigare race conditions
+            usleep(1500000); // 1.5 secondi
+
+            if (! $checkQueues()) {
+                return false;
+            }
+
+            Log::info("Coda '{$queueName}' è vuota (doppio check)");
+            return true;
+        } catch (\Exception $e) {
+            Log::error("Errore nel controllo della coda '{$queueName}': " . $e->getMessage());
+            // In caso di errore, assumiamo che la coda non sia vuota per sicurezza
+            return false;
+        }
     }
 }
