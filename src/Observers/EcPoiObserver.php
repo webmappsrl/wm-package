@@ -30,9 +30,7 @@ class EcPoiObserver extends AbstractEcObserver
     public function saved($ecPoi)
     {
         parent::saved($ecPoi);
-        if (! empty($ecPoi->geometry)) {
-            EcPoiService::make()->updateDataChain($ecPoi);
-        }
+        EcPoiService::make()->updateDataChain($ecPoi);
 
         // UserService::make()->assigUserAppIdIfNeeded(null, null, $ecPoi->app_id);
         $app = $ecPoi->app;
