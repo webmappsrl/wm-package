@@ -73,9 +73,12 @@ class ImportEcTrackJob extends BaseEcImportJob
                 if (!$existingRelation) {
                     // Crea la relazione
                     \Log::info("🔄 SYNC TAXONOMIES - Creating relation for track ID: {$model->id} with taxonomy ID: {$taxonomy->id}");
+                    $ecTrackModelClass = config('wm-package.ec_track_model', 'App\Models\EcTrack');
+
                     $model->taxonomyActivities()->attach($taxonomy->id, [
                         'duration_forward' => 0,
                         'duration_backward' => 0,
+                        'taxonomy_activityable_type' => $ecTrackModelClass,
                     ]);
                     \Log::info("🔄 SYNC TAXONOMIES - Relation created successfully for track ID: {$model->id}");
                 } else {
@@ -95,14 +98,14 @@ class ImportEcTrackJob extends BaseEcImportJob
         try {
 
             // Cerca la tassonomia per nome in modo dinamico
-            $taxonomy = \Wm\WmPackage\Models\TaxonomyActivity::where('name', 'like', '%' . $activityType . '%')
-                ->orWhere('name', 'like', '%' . ucfirst($activityType) . '%')
-                ->orWhere('name', 'like', '%' . strtoupper($activityType) . '%')
+            $taxonomy = \Wm\WmPackage\Models\TaxonomyActivity::where('identifier', 'like', '%'.$activityType.'%')
+                ->orWhere('identifier', 'like', '%'.ucfirst($activityType).'%')
+                ->orWhere('identifier', 'like', '%'.strtoupper($activityType).'%')
                 ->first();
 
             if (!$taxonomy) {
                 // Se non trova per nome, cerca per geohub_id se disponibile
-                $taxonomy = \Wm\WmPackage\Models\TaxonomyActivity::where('geohub_id', $activityType)->first();
+                $taxonomy = \Wm\WmPackage\Models\TaxonomyActivity::where('properties->geohub_id', $activityType)->first();
             }
 
             return $taxonomy;
