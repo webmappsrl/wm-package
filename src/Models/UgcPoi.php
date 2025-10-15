@@ -34,6 +34,7 @@ class UgcPoi extends Point implements UserOwnedModelInterface
         'name',
         'geometry',
         'properties',
+        'created_by',
     ];
 
     protected $casts = [
