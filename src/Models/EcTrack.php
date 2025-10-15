@@ -590,8 +590,6 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
 
     public function toSearchableArray()
     {
-        // Carica le relazioni necessarie per l'indicizzazione
-        $this->load(['taxonomyActivities', 'layers']);
 
         $ecTrackService = EcTrackService::make();
         $mediaService = MediaService::make();
