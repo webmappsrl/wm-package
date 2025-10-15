@@ -30,6 +30,7 @@ class UgcTrack extends MultiLineString implements UserOwnedModelInterface
         'name',
         'geometry',
         'properties',
+        'created_by',
     ];
 
     protected $casts = [
