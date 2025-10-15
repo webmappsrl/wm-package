@@ -51,7 +51,7 @@ return [
                     ],
                     'taxonomyIcons' => [
                         'type' => 'object',
-                        'enabled' => true,
+                        'enabled' => false,
                     ],
                 ],
             ],
