@@ -3,6 +3,7 @@
 namespace Wm\WmPackage\Jobs\Import;
 
 use Illuminate\Database\Eloquent\Model;
+use Wm\WmPackage\Models\TaxonomyActivity;
 
 class ImportEcTrackJob extends BaseEcImportJob
 {
@@ -73,7 +74,7 @@ class ImportEcTrackJob extends BaseEcImportJob
                 if (!$existingRelation) {
                     // Crea la relazione
                     \Log::info("🔄 SYNC TAXONOMIES - Creating relation for track ID: {$model->id} with taxonomy ID: {$taxonomy->id}");
-                    $ecTrackModelClass = config('wm-package.ec_track_model', 'App\Models\EcTrack');
+                    $ecTrackModelClass = config('wm-package.ec_track_model');
 
                     $model->taxonomyActivities()->attach($taxonomy->id, [
                         'duration_forward' => 0,
@@ -93,19 +94,19 @@ class ImportEcTrackJob extends BaseEcImportJob
     /**
      * Trova la tassonomia per tipo di attività in modo dinamico
      */
-    private function findTaxonomyByActivityType(string $activityType): ?\Wm\WmPackage\Models\TaxonomyActivity
+    private function findTaxonomyByActivityType(string $activityType): ?TaxonomyActivity
     {
         try {
 
             // Cerca la tassonomia per nome in modo dinamico
-            $taxonomy = \Wm\WmPackage\Models\TaxonomyActivity::where('identifier', 'like', '%'.$activityType.'%')
+            $taxonomy = TaxonomyActivity::where('identifier', 'like', '%'.$activityType.'%')
                 ->orWhere('identifier', 'like', '%'.ucfirst($activityType).'%')
                 ->orWhere('identifier', 'like', '%'.strtoupper($activityType).'%')
                 ->first();
 
             if (!$taxonomy) {
                 // Se non trova per nome, cerca per geohub_id se disponibile
-                $taxonomy = \Wm\WmPackage\Models\TaxonomyActivity::where('properties->geohub_id', $activityType)->first();
+                $taxonomy = TaxonomyActivity::where('properties->geohub_id', $activityType)->first();
             }
 
             return $taxonomy;
