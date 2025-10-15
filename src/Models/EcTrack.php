@@ -633,10 +633,15 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
         $app_id = $this->app_id;
         $string = '';
         $searchables = '';
+        if (is_null($app_id)) {
+            return $string;
+        }
 
         $app = App::find($app_id);
-        if ($app->track_searchables) {
+        if ($app && $app->track_searchables) {
             $searchables = json_decode($app->track_searchables);
+        } else {
+            $searchables = ["name"];
         }
 
         if (empty($searchables) || (in_array('name', $searchables) && ! empty($this->name))) {
