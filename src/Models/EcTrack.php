@@ -51,7 +51,7 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
     protected static function booted()
     {
         parent::booted();
-        
+
         EcTrack::observe(EcTrackObserver::class);
 
         // Imposta un default per properties se è null
@@ -68,7 +68,7 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
                 $model->properties = [];
                 return;
             }
-            
+
             // Se properties è una stringa JSON, decodificala
             if (is_string($model->properties)) {
                 $decoded = json_decode($model->properties, true);
@@ -358,7 +358,7 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
     {
         $geojson = $this->getGeojson();
         // MAPPING
-        $geojson['properties']['id'] = 'ec_track_'.$this->id;
+        $geojson['properties']['id'] = 'ec_track_' . $this->id;
         $geojson = $this->_mapElbrusGeojsonProperties($geojson);
 
         if ($this->ecPois) {
@@ -393,9 +393,9 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
 
         $fields = ['kml', 'gpx'];
         foreach ($fields as $field) {
-            if (isset($geojson['properties'][$field.'_url'])) {
-                $geojson['properties'][$field] = $geojson['properties'][$field.'_url'];
-                unset($geojson['properties'][$field.'_url']);
+            if (isset($geojson['properties'][$field . '_url'])) {
+                $geojson['properties'][$field] = $geojson['properties'][$field . '_url'];
+                unset($geojson['properties'][$field . '_url']);
             }
         }
 
@@ -405,13 +405,13 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
 
                 if ($taxonomy === 'activity') {
                     $geojson['properties']['taxonomy'][$name] = array_map(function ($item) use ($name) {
-                        return $name.'_'.$item;
+                        return $name . '_' . $item;
                     }, array_map(function ($item) {
                         return $item['id'];
                     }, $values));
                 } else {
                     $geojson['properties']['taxonomy'][$name] = array_map(function ($item) use ($name) {
-                        return $name.'_'.$item;
+                        return $name . '_' . $item;
                     }, $values);
                 }
             }
@@ -613,13 +613,14 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
             // 'from' => $this->getActualOrOSFValue('from'),
             // 'to' => $this->getActualOrOSFValue('to'),
             'name' => $this->getTranslation('name', 'it'),
-            'taxonomyWheres' => collect($ecTrackService->getTaxonomyWheres($this))->map(fn ($item) => $item['it'] ?? false)->values()->filter()->toArray(),
+            'taxonomyWheres' => collect($ecTrackService->getTaxonomyWheres($this))->map(fn($item) => $item['it'] ?? false)->values()->filter()->toArray(),
             'feature_image' => $firstMedia ? $mediaService->getThumbnailUrl($firstMedia) : '',
             'strokeColor' => isset($this->properties['color']) ? hexToRgba($this->properties['color']) : '',
             'distance' => isset($this->properties['distance']) ? (float) ($this->properties['distance']) : 0,
             'duration_forward' => $this->convertDurationToHours($this->properties['duration_forward'] ?? null),
             'ascent' => isset($this->properties['ascent']) ? (int) ($this->properties['ascent']) : 0,
             'taxonomyActivities' => $ecTrackService->getTaxonomyArray($this->taxonomyActivities),
+            'taxonomyIcons' => $ecTrackService->getTaxonomyIcons($this),
             'layers' => $this->layers->pluck('id')->toArray(),
             'searchable' => $this->getSearchableString(),
         ];
@@ -639,30 +640,30 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
         }
 
         if (empty($searchables) || (in_array('name', $searchables) && ! empty($this->name))) {
-            $string .= str_replace('"', '', json_encode($this->getTranslations('name'))).' ';
+            $string .= str_replace('"', '', json_encode($this->getTranslations('name'))) . ' ';
         }
         if (empty($searchables) || (in_array('description', $searchables) && ! empty($this->properties['description']))) {
             $description = is_array($this->properties['description']) ? json_encode($this->properties['description']) : $this->properties['description'];
             $description = str_replace('"', '', $description);
             $description = str_replace('\\', '', $description);
-            $string .= strip_tags($description).' ';
+            $string .= strip_tags($description) . ' ';
         }
         if (empty($searchables) || (in_array('excerpt', $searchables) && ! empty($this->properties['excerpt']))) {
             $excerpt = str_replace('"', '', json_encode($this->properties['excerpt']));
             $excerpt = str_replace('\\', '', $excerpt);
-            $string .= strip_tags($excerpt).' ';
+            $string .= strip_tags($excerpt) . ' ';
         }
         if (isset($this->properties['ref']) && empty($searchables) || (in_array('ref', $searchables) && ! empty($this->properties['ref']))) {
-            $string .= $this->properties['ref'].' ';
+            $string .= $this->properties['ref'] . ' ';
         }
         if (isset($this->properties['osmid']) && empty($searchables) || (in_array('osmid', $searchables) && ! empty($this->properties['osmid']))) {
 
-            $string .= $this->properties['osmid'].' ';
+            $string .= $this->properties['osmid'] . ' ';
         }
 
         if (empty($searchables) || (in_array('taxonomyActivities', $searchables) && ! empty($this->taxonomyActivities))) {
             foreach ($this->taxonomyActivities as $tax) {
-                $string .= str_replace('"', '', json_encode($tax->getTranslations('name'))).' ';
+                $string .= str_replace('"', '', json_encode($tax->getTranslations('name'))) . ' ';
             }
         }
 
