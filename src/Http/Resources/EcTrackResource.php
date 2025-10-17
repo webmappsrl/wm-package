@@ -49,9 +49,12 @@ class EcTrackResource extends JsonResource
     private function getRelatedPois()
     {
         try {
-            return $this->ecPois->map(function (EcPoi $ecPoi) {
-                return EcPoiResource::make($ecPoi);
-            });
+            return $this->ecPois
+                ->whereNull('osmfeatures_id') // TODO: da rimuovere, aggiunto per osm2cai, evita che i poi presi da osm vengano aggiunti ai related
+                ->map(function (EcPoi $ecPoi) {
+                    return EcPoiResource::make($ecPoi);
+                })
+                ->toArray();
         } catch (\Exception $e) {
             // Se la relazione fallisce (es: tabella pivot non esiste), ritorna array vuoto
             return [];
