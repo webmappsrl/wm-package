@@ -241,7 +241,7 @@ class GeometryComputationService extends BaseService
         $result = DB::select($query, [$userId]);
 
         if (! empty($result)) {
-            return $this->bboxArrayFromString($result[0]->bbox);
+            return $this->bboxArrayFromString($result[0]->bbox ?? '');
         }
 
         return null;
