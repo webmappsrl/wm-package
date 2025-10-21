@@ -3,9 +3,9 @@
 namespace Wm\WmPackage\Observers;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Wm\WmPackage\Jobs\Pbf\GenerateOptimizedPBFChainJob;
+use Wm\WmPackage\Jobs\UpdateAppConfigJob;
 use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Services\Models\LayerService;
 use Wm\WmPackage\Services\PBFGeneratorService;
@@ -39,6 +39,11 @@ class LayerObserver extends AbstractObserver
         // Se il layer ha tassonomie di attività associate, assegna automaticamente le track
         if ($this->hasTaxonomyActivitiesChanged($layer)) {
             $this->assignTracksByTaxonomy($layer);
+        }
+
+        // Update App conf when layer properties change
+        if ($layer->wasChanged('properties')) {
+            $this->updateAppConf($layer);
         }
 
         // Aggiorna sempre la geometria del layer quando viene salvato
@@ -102,19 +107,18 @@ class LayerObserver extends AbstractObserver
             return;
         }
 
-
         // Ottieni tutte le track dell'app che hanno le stesse tassonomie
         $ecTrackModelClass = config('wm-package.ec_track_model', 'App\Models\EcTrack');
         $trackTable = (new $ecTrackModelClass)->getTable();
 
         // Usa una query con join diretto
         $trackIds = \DB::table('taxonomy_activityables')
-            ->join($trackTable, 'taxonomy_activityables.taxonomy_activityable_id', '=', $trackTable . '.id')
-            ->whereIn($trackTable . '.app_id', $layerAppIds)
+            ->join($trackTable, 'taxonomy_activityables.taxonomy_activityable_id', '=', $trackTable.'.id')
+            ->whereIn($trackTable.'.app_id', $layerAppIds)
             ->where('taxonomy_activityables.taxonomy_activityable_type', 'App\\Models\\EcTrack')
             ->whereIn('taxonomy_activityables.taxonomy_activity_id', $layerTaxonomyIds)
-            ->whereNotNull($trackTable . '.geometry')
-            ->pluck($trackTable . '.id')
+            ->whereNotNull($trackTable.'.geometry')
+            ->pluck($trackTable.'.id')
             ->toArray();
 
         $tracksWithSameTaxonomy = $ecTrackModelClass::whereIn('id', $trackIds)->get();
@@ -123,19 +127,27 @@ class LayerObserver extends AbstractObserver
         foreach ($tracksWithSameTaxonomy as $track) {
             $alreadyAssigned = $layer->ecTracks()->where('layerable_id', $track->id)->exists();
 
-            if (!$alreadyAssigned) {
+            if (! $alreadyAssigned) {
                 $layer->ecTracks()->attach($track->id, [
                     'created_at' => now(),
-                    'updated_at' => now()
+                    'updated_at' => now(),
                 ]);
 
                 Log::info('Track assegnata automaticamente al layer per tassonomia', [
                     'layer_id' => $layer->id,
                     'track_id' => $track->id,
-                    'taxonomy_ids' => $layerTaxonomyIds
+                    'taxonomy_ids' => $layerTaxonomyIds,
                 ]);
             }
         }
+    }
+
+    private function updateAppConf(Layer $layer): void
+    {
+        // Dispatches il job con ritardo di 10 secondi per permettere ai media di essere processati
+        UpdateAppConfigJob::dispatch($layer->app_id)
+            ->delay(now()->addSeconds(10))
+            ->onQueue('default');
     }
 
     public function saving($layer)
@@ -149,6 +161,8 @@ class LayerObserver extends AbstractObserver
     public function deleted(Layer $layer)
     {
         $this->updatePbfsForLayer($layer);
+
+        $this->updateAppConf($layer);
     }
 
     public function updatePbfsForLayer(Layer $layer)

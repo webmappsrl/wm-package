@@ -161,12 +161,17 @@ class AppConfigService extends AppBaseService
             'title' => $this->app->name,
         ];
 
-        if (! empty($this->app->config_home)) {
-            if (is_string($this->app->config_home)) {
-                $data = json_decode($this->app->config_home, true);
-            } elseif (is_array($this->app->config_home)) {
+        // se chiamato dal job $this->app->config_home è di tipo Whitecube\NovaFlexibleContent\Layouts\Collection
+        $configHome = $this->app->getRawOriginal('config_home');
+        if (! empty($configHome)) {
+            Log::info('Config home found', [
+                'config_home' => $configHome,
+            ]);
+            if (is_string($configHome)) {
+                $data = json_decode($configHome, true);
+            } elseif (is_array($configHome)) {
                 // Se config_home è già un array, lo usiamo direttamente
-                $data = $this->app->config_home;
+                $data = $configHome;
             }
         } elseif ($this->app->layers->count() > 0) {
             foreach ($this->app->layers()->orderBy('rank')->get() as $layer) {
@@ -177,6 +182,10 @@ class AppConfigService extends AppBaseService
                 ];
             }
         }
+
+        Log::info('Config home data', [
+            'data' => $data,
+        ]);
 
         return $data;
     }
