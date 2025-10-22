@@ -35,6 +35,7 @@ class User extends Authenticatable implements JWTSubject
         'email',
         'password',
         'app_id',
+        'properties',
     ];
 
     protected $guard_name = 'web';
@@ -56,6 +57,7 @@ class User extends Authenticatable implements JWTSubject
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'properties' => 'array',
     ];
 
     /**
@@ -126,10 +128,10 @@ class User extends Authenticatable implements JWTSubject
     /**
      * Get the current logged User
      */
-    public static function getLoggedUser(): ?User
+    public static function getLoggedUser(): ?self
     {
         return isset(auth()->user()->id)
-            ? User::find(auth()->user()->id)
+            ? self::find(auth()->user()->id)
             : null;
     }
 
@@ -138,7 +140,7 @@ class User extends Authenticatable implements JWTSubject
      *
      * @param  User|null  $user
      */
-    public static function isInDefaultRoles(User $user)
+    public static function isInDefaultRoles(self $user)
     {
         if ($user->hasRole('Author') || $user->hasRole('Contributor')) {
             return true;
@@ -224,5 +226,28 @@ class User extends Authenticatable implements JWTSubject
     public function getMorphClass()
     {
         return 'App\\Models\\User';
+    }
+
+    /**
+     * Return the user as array with privacy filtered by provided app id.
+     */
+    public function toAppArray($appId): array
+    {
+        $userArray = $this->toArray();
+
+        if (! isset($userArray['properties'])) {
+            $userArray['properties'] = [];
+        }
+
+        if (isset($userArray['properties']['privacy'])) {
+            $privacy = $userArray['properties']['privacy'];
+            $userArray['properties']['privacy'] = isset($privacy[$appId]) ? array_values($privacy[$appId]) : [];
+        } else {
+            $userArray['properties']['privacy'] = [];
+        }
+
+        unset($userArray['password']);
+
+        return $userArray;
     }
 }
