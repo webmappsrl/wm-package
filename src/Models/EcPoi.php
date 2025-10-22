@@ -11,6 +11,7 @@ use Spatie\Translatable\HasTranslations;
 use Wm\WmPackage\Models\Abstracts\Point;
 use Wm\WmPackage\Models\Interfaces\LayerRelatedModel;
 use Wm\WmPackage\Observers\EcPoiObserver;
+use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Traits\EcFeatureTrait;
 use Wm\WmPackage\Traits\TaxonomyAbleModel;
 use Wm\WmPackage\Traits\TaxonomyWhereAbleModel;
@@ -52,6 +53,14 @@ class EcPoi extends Point implements LayerRelatedModel
     {
         parent::boot();
         EcPoi::observe(EcPoiObserver::class);
+    }
+
+    /**
+     * Convert 2D geometry to 3D when setting geometry attribute
+     */
+    public function setGeometryAttribute($value)
+    {
+        $this->attributes['geometry'] = GeometryComputationService::make()->convertTo3DGeometry($value);
     }
 
     public function ecTracks(): BelongsToMany
