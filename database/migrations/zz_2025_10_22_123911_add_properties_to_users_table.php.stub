@@ -8,27 +8,21 @@ return new class extends Migration
 {
     /**
      * Run the migrations.
-     *
-     * @return void
      */
-    public function up()
+    public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->float('balance', 0, 0)->default(0);
-            $table->string('fiscal_code', 16)->nullable()->unique();
-            $table->integer('app_id')->nullable();
-
-            $table->index('app_id');
+            $table->jsonb('properties')->nullable();
         });
     }
 
     /**
      * Reverse the migrations.
-     *
-     * @return void
      */
-    public function down()
+    public function down(): void
     {
-        
+        Schema::table('users', function (Blueprint $table) {
+            $table->dropColumn('properties');
+        });
     }
 };
