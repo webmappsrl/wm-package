@@ -25,7 +25,6 @@ class AppAuthController extends Controller
                 'email' => 'required|email|unique:users,email',
                 'password' => 'required',
                 'name' => 'required|string|max:255',
-                'privacy_agree' => 'sometimes|boolean',
             ], $this->getPrivacyRules()),
             array_merge([
                 'email.email' => 'Il campo email deve essere un indirizzo email valido.',
