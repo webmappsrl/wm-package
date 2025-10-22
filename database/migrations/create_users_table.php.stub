@@ -17,6 +17,7 @@ return new class extends Migration
             $table->float('balance', 0, 0)->default(0);
             $table->string('fiscal_code', 16)->nullable()->unique();
             $table->integer('app_id')->nullable();
+            $table->jsonb('properties')->nullable();
 
             $table->index('app_id');
         });
