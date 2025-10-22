@@ -20,6 +20,7 @@ class EcPoiObserver extends AbstractEcObserver
         if ($ecPoi->ecTracks()->exists()) {
             throw new HttpException(500, 'Cannot delete this POI because it is linked to one or more tracks.');
         }
+        $ecPoi->cleanRelations();
     }
 
     /**
