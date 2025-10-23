@@ -35,6 +35,9 @@ class TaxonomyActivityablesObserver
         if (str_contains($relatedTypeClass, '\Layer')) {
             $layer = Layer::find($taxonomyActivityable->taxonomy_activityable_id);
             if ($layer !== null) {
+                // Ricalcola le track associate al layer in base alle tassonomie
+                $this->layerService->assignTracksByTaxonomy($layer);
+
                 // Aggiorna le features correlate
                 $this->layerService->updateLayersPropertyOnAllLayeredFeaturesWithJobs($layer);
                 $this->layerService->updateLayerGeometryWithJob($layer);
