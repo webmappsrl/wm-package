@@ -288,6 +288,25 @@ class EcTrackService extends BaseService
         return $trackProperties[$field] ?? null;
     }
 
+    public function initDataChain(EcTrack $track)
+    {
+        $chain = [];
+        if (isset($track->properties['osmid']) && $track->properties['osmid']) {
+            $chain[] = new UpdateEcTrackFromOsmJob($track);
+        }
+        $chain[] = new UpdateEcTrackDemJob($track);
+        $chain[] = new UpdateEcTrackManualDataJob($track);
+        $chain[] = new UpdateEcTrackCurrentDataJob($track);
+        $chain[] = new UpdateEcTrack3DDemJob($track);
+        $chain[] = new UpdateEcTrackSlopeValues($track);
+        $chain[] = new UpdateModelWithGeometryTaxonomyWhere($track);
+        $chain[] = new UpdateEcTrackGenerateElevationChartImage($track);
+        $chain[] = new UpdateEcTrackAwsJob($track);
+        $chain[] = new UpdateEcTrackOrderRelatedPoi($track);
+
+        Bus::chain($chain)->dispatch();
+    }
+
     public function updateDataChain(EcTrack $track)
     {
         $chain = [];
