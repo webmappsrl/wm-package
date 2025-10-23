@@ -317,7 +317,7 @@ return [
         |----------------------------------------------------------------------
         */
         'ec_track' => [
-            'namespace' => 'Wm\\WmPackage\\Models\\EcTrack',
+            'namespace' => config('wm-package.ec_track_model'),
             'job' => ImportEcTrackJob::class,
             'geohub_table' => 'ec_tracks',
             'identifier' => 'properties->geohub_id',

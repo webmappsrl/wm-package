@@ -74,12 +74,9 @@ class ImportEcTrackJob extends BaseEcImportJob
                 if (!$existingRelation) {
                     // Crea la relazione
                     \Log::info("🔄 SYNC TAXONOMIES - Creating relation for track ID: {$model->id} with taxonomy ID: {$taxonomy->id}");
-                    $ecTrackModelClass = config('wm-package.ec_track_model');
-
                     $model->taxonomyActivities()->attach($taxonomy->id, [
                         'duration_forward' => 0,
                         'duration_backward' => 0,
-                        'taxonomy_activityable_type' => $ecTrackModelClass,
                     ]);
                     \Log::info("🔄 SYNC TAXONOMIES - Relation created successfully for track ID: {$model->id}");
                 } else {
