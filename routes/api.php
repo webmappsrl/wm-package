@@ -24,6 +24,7 @@ Route::prefix('auth')->middleware('auth:api')->group(function () {
     Route::post('logout', [AppAuthController::class, 'logout'])->name('auth.logout');
     Route::post('refresh', [AppAuthController::class, 'refresh'])->name('auth.refresh');
     Route::post('me', [AppAuthController::class, 'me'])->name('auth.me');
+    Route::post('user', [AppAuthController::class, 'update'])->name('auth.user');
     Route::post('delete', [AppAuthController::class, 'delete'])->name('auth.delete');
 });
 
