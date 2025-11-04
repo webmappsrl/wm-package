@@ -254,5 +254,19 @@ return [
                 'balance' => 'simple',
             ],
         ],
+        'staging' => [
+            'supervisor-default' => [
+                'maxProcesses' => 3,
+                'balance' => 'simple',
+            ],
+            'supervisor-pbf' => [
+                'maxProcesses' => 1,
+                'balance' => 'simple',
+            ],
+            'supervisor-layers' => [
+                'maxProcesses' => 1,
+                'balance' => 'simple',
+            ],
+        ],
     ],
 ];
