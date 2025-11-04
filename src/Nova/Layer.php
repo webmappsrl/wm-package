@@ -11,6 +11,7 @@ use Laravel\Nova\Fields\MorphToMany;
 use Laravel\Nova\Fields\Number;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
+use Wm\WmPackage\Nova\Actions\ExecuteEcTrackDataChainAction;
 use Laravel\Nova\Panel;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Nova\Fields\LayerFeatures\LayerFeatures;
@@ -68,6 +69,10 @@ class Layer extends AbstractGeometryResource
         return [
             ...parent::actions($request),
             new Actions\UpdateLayerPbfAction,
+            ExecuteEcTrackDataChainAction::make()
+                ->confirmText(__('Are you sure you want to process all tracks of this layer?'))
+                ->confirmButtonText(__('Yes, process'))
+                ->cancelButtonText(__('No, cancel')),
         ];
     }
 

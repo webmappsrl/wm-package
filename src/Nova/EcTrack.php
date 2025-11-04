@@ -5,8 +5,9 @@ namespace Wm\WmPackage\Nova;
 use Laravel\Nova\Fields\BelongsToMany;
 use Laravel\Nova\Fields\MorphToMany;
 use Laravel\Nova\Http\Requests\NovaRequest;
-use Wm\WmPackage\Nova\Actions\RegenerateTaxonomyWhere;
-use Wm\WmPackage\Nova\Actions\UpdateTracksOnAws;
+use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
+use Wm\WmPackage\Jobs\UpdateModelWithGeometryTaxonomyWhere;
+use Wm\WmPackage\Nova\Actions\ExecuteEcTrackDataChainAction;
 use Wm\WmPackage\Nova\Filters\FeaturesByLayerFilter;
 use Wm\WmPackage\Nova\Filters\FeaturesExcludeByIds;
 use Wm\WmPackage\Nova\Filters\FeaturesIncludeByIds;
@@ -63,10 +64,16 @@ class EcTrack extends AbstractEcResource
      */
     public function actions(NovaRequest $request): array
     {
-        return array_merge(parent::actions($request), [
+        return [
             new Actions\ReindexSearchableAction,
-            new UpdateTracksOnAws,
-            new RegenerateTaxonomyWhere,
-        ]);
+            new ExecuteEcTrackDataChainAction([
+                fn ($ecTrack) => new UpdateEcTrackAwsJob($ecTrack),
+            ], __('Update Tracks on AWS')),
+            new ExecuteEcTrackDataChainAction([
+                fn ($ecTrack) => new UpdateModelWithGeometryTaxonomyWhere($ecTrack),
+                fn ($ecTrack) => new UpdateEcTrackAwsJob($ecTrack),
+            ], __('Regenerate Taxonomy Where')),
+            new ExecuteEcTrackDataChainAction,
+        ];
     }
 }

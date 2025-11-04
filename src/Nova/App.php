@@ -17,8 +17,9 @@ use Laravel\Nova\Resource;
 use Laravel\Nova\Tabs\Tab;
 use Marshmallow\Tiptap\Tiptap;
 use Whitecube\NovaFlexibleContent\Flexible;
+use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
 use Wm\WmPackage\Models\Layer;
-use Wm\WmPackage\Nova\Actions\UpdateTracksOnAws;
+use Wm\WmPackage\Nova\Actions\ExecuteEcTrackDataChainAction;
 use Wm\WmPackage\Nova\Flexible\Resolvers\ConfigHomeResolver;
 
 class App extends Resource
@@ -55,11 +56,18 @@ class App extends Resource
     public function actions(NovaRequest $request): array
     {
         return [
-            UpdateTracksOnAws::make()
+            ExecuteEcTrackDataChainAction::make([
+                fn ($track) => new UpdateEcTrackAwsJob($track),
+            ], __('Update Tracks on AWS'))
                 ->onlyOnDetail()
-                ->confirmText('Sei sicuro di voler aggiornare tutte le tracks di questa app su AWS?')
-                ->confirmButtonText('Sì, aggiorna')
-                ->cancelButtonText('No, annulla'),
+                ->confirmText(__('Are you sure you want to update all tracks of this app on AWS?'))
+                ->confirmButtonText(__('Yes, update'))
+                ->cancelButtonText(__('No, cancel')),
+            ExecuteEcTrackDataChainAction::make()
+                ->onlyOnDetail()
+                ->confirmText(__('Are you sure you want to process all tracks of this app?'))
+                ->confirmButtonText(__('Yes, process'))
+                ->cancelButtonText(__('No, cancel')),
         ];
     }
 
@@ -397,7 +405,7 @@ class App extends Resource
                 })
                 ->searchable()
                 ->rules('required')
-                ->help(__('Seleziona un layer esistente'))
+                ->help(__('Select an existing layer'))
                 ->displayUsingLabels(),
         ];
     }
