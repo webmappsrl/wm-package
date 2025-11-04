@@ -12,10 +12,12 @@ use Laravel\Nova\Fields\Number;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Panel;
+use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Nova\Fields\LayerFeatures\LayerFeatures;
 use Wm\WmPackage\Nova\Fields\PropertiesPanel;
 use Wm\WmPackage\Nova\Filters\AppFilter;
 use Wm\WmPackage\Nova\Traits\MultiPolygonResourceTrait;
+use Wm\WmPackage\Nova\Fields\FeatureCollectionMap\src\FeatureCollectionMap;
 
 class Layer extends AbstractGeometryResource
 {
@@ -52,6 +54,7 @@ class Layer extends AbstractGeometryResource
             BelongsTo::make('Owner', 'layerOwner', User::class)->nullable(),
             Images::make(__('Image'), 'default'),
             Panel::make('Ec Tracks', [
+                FeatureCollectionMap::make(__('Geometry'), 'geometry')->onlyOnDetail(),
                 LayerFeatures::make('ecTracks', $this->resource, EcTrack::class)->hideWhenCreating(),
             ]),
             PropertiesPanel::make(__('Properties'), 'layer')->collapsible(),

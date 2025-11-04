@@ -65,9 +65,8 @@ class LayerFeatures extends Field
         } else {
             // Se la relazione non è caricata, caricala esplicitamente
             // Specifica esplicitamente la tabella per evitare ambiguità nella colonna 'id'
-            $relation = $layer->{$relationName}();
             $tableName = (new $modelClass)->getTable();
-            $selectedFeatureIds = $relation->select($tableName . '.id')->pluck('id')->toArray();
+            $selectedFeatureIds = $layer->{$relationName}()->select($tableName . '.id')->pluck('id')->toArray();
         }
 
         $model = new $modelClass;

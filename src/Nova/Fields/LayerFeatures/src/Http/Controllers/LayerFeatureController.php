@@ -6,14 +6,17 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Wm\WmPackage\Models\Layer;
-use Wm\WmPackage\Models\EcPoi;
-use Wm\WmPackage\Models\EcTrack;
-use App\Models\HikingRoute;
+use Illuminate\Support\Facades\Log;
 use Wm\WmPackage\Services\Models\LayerService;
 
 class LayerFeatureController
 {
-    public function __construct(private LayerService $layerService) {}
+    private LayerService $layerService;
+
+    public function __construct(LayerService $layerService)
+    {
+        $this->layerService = $layerService;
+    }
 
     public function index(Request $request, $layerId): JsonResponse
     {
@@ -49,7 +52,7 @@ class LayerFeatureController
                 'count' => $count
             ]);
         } catch (\Exception $e) {
-            \Log::error('LayerFeatureController::index error', [
+            Log::error('LayerFeatureController::index error', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
@@ -159,7 +162,7 @@ class LayerFeatureController
                 ]
             ]);
         } catch (\Exception $e) {
-            \Log::error('LayerFeatureController::getFeatures error', [
+            Log::error('LayerFeatureController::getFeatures error', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
