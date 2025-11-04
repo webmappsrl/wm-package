@@ -219,6 +219,10 @@ class App extends Resource
                 // ->rules('image', 'mimes:png', 'dimensions:width=512,height=512')
                 ->help(__('Required size is :widthx:heightpx', ['width' => 512, 'height' => 512]))
                 ->hideFromIndex(),
+            Boolean::make(__('Force to Release Update'), 'properties->force_to_release_update')
+                ->default(false)
+                ->hideFromIndex()
+                ->help(__('If enabled, the app will check for updates and show a popup when a new version is available.')),
         ];
     }
 

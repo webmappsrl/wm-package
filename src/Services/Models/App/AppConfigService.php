@@ -105,6 +105,10 @@ class AppConfigService extends AppBaseService
             $data['APP']['iosStore'] = $this->app->ios_store_link;
         }
 
+        if (isset($this->app->properties['force_to_release_update']) && $this->app->properties['force_to_release_update']) {
+            $data['APP']['forceToReleaseUpdate'] = true;
+        }
+
         if ($this->app->social_track_text) {
             $data['APP']['socialTrackText'] = $this->app->social_track_text;
         }
