@@ -35,7 +35,7 @@ abstract class AbstractUgcResource extends AbstractGeometryResource
             PropertiesPanel::makeWithModel('Device', 'properties->device', $this, false)->collapsible()->collapsedByDefault(),
             PropertiesPanel::makeWithModel('Nominatim', 'properties->nominatim', $this, false)->collapsible()->collapsedByDefault(),
             PropertiesPanel::makeWithModel('Properties', 'properties', $this, false)->collapsible()->collapsedByDefault(),
-            Images::make('Image', 'default')->onlyOnDetail(),
+            Images::make('Image', 'default')->hideFromIndex(),
         ];
     }
 
