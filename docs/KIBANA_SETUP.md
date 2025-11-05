@@ -2,6 +2,20 @@
 
 Questo documento descrive tutte le modifiche necessarie per configurare Kibana con accesso tramite Apache reverse proxy in produzione.
 
+## Script di Configurazione Automatica
+
+È disponibile uno script per automatizzare la configurazione di Apache:
+
+```bash
+sudo bash wm-package/scripts/configure_apache_kibana.sh
+```
+
+Lo script configura automaticamente:
+- Moduli Apache necessari
+- Proxy HTTP (porta 80)
+- Proxy HTTPS (porta 443)
+- Header CORS e configurazioni di sicurezza
+
 ## Indice
 
 1. [Modifiche Docker Compose](#modifiche-docker-compose)
