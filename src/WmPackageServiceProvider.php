@@ -481,6 +481,9 @@ class WmPackageServiceProvider extends PackageServiceProvider
                     if ($minioMenuItem !== null) {
                         $toolsItems[] = $minioMenuItem;
                     }
+                    if ($kibanaMenuItem !== null) {
+                        $toolsItems[] = $kibanaMenuItem;
+                    }
                     $toolsItems[] = $downloadDbMenuItem;
 
                     $menuItems[] = MenuSection::make(__('Tools'), $toolsItems)->icon('briefcase')
@@ -490,11 +493,19 @@ class WmPackageServiceProvider extends PackageServiceProvider
                 return $menuItems;
             });
         } else {
-            Nova::mainMenu(function (Request $request) use ($createDownloadDbMenuItem, $createMinioMenuItem) {
+            Nova::mainMenu(function (Request $request) use ($createDownloadDbMenuItem, $createMinioMenuItem, $createHorizonMenuItem, $createKibanaMenuItem) {
                 $toolsItems = [$createDownloadDbMenuItem()];
                 $minioMenuItem = $createMinioMenuItem();
                 if ($minioMenuItem !== null) {
                     $toolsItems[] = $minioMenuItem;
+                }
+                $horizonMenuItem = $createHorizonMenuItem();
+                if ($horizonMenuItem !== null) {
+                    $toolsItems[] = $horizonMenuItem;
+                }
+                $kibanaMenuItem = $createKibanaMenuItem();
+                if ($kibanaMenuItem !== null) {
+                    $toolsItems[] = $kibanaMenuItem;
                 }
 
                 return [
