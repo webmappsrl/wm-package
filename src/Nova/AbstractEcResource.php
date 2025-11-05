@@ -4,6 +4,7 @@ namespace Wm\WmPackage\Nova;
 
 use Ebess\AdvancedNovaMediaLibrary\Fields\Images;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Wm\WmPackage\Nova\Filters\FeaturesByLayerFilter;
 
@@ -20,7 +21,10 @@ abstract class AbstractEcResource extends AbstractGeometryResource
         $user = Auth::user();
 
         if ($user && ! $user->hasRole('Administrator')) {
-            return $query->where('user_id', $user->id);
+            $table = $query->getModel()->getTable();
+            if (Schema::hasColumn($table, 'user_id')) {
+                return $query->where('user_id', $user->id);
+            }
         }
 
         return $query;
