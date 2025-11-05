@@ -74,7 +74,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
         // Register Nova CSS assets
         Nova::serving(function () {
             Nova::style('wm-flexible-field', __DIR__.'/../resources/css/flexible-field.css');
-            $this->addDownloadDbMenuItem();
+            $this->addWmpackageToolsMenuItem();
         });
 
         // Register routes as Laravel does with RouteServiceProvider
@@ -353,10 +353,35 @@ class WmPackageServiceProvider extends PackageServiceProvider
         return $appConfig;
     }
 
-    protected function addDownloadDbMenuItem()
+    protected function addWmpackageToolsMenuItem()
     {
+        $createHorizonMenuItem = function () {
+            $menuItem = MenuItem::externalLink(__('Horizon'), url('/horizon'))
+                ->canSee(fn () => optional(Auth::user())->hasRole('Administrator'))
+                ->openInNewTab();
+            return $menuItem;
+        };
         $createDownloadDbMenuItem = function () {
             $menuItem = MenuItem::externalLink(__('Download DB'), route('download.db'))
+                ->canSee(fn () => optional(Auth::user())->hasRole('Administrator'))
+                ->openInNewTab();
+
+            return $menuItem;
+        };
+        $createMinioMenuItem = function () {
+            // Determina l'URL in base all'ambiente
+            $environment = app()->environment();
+            if ($environment === 'local') {
+                $url = 'http://0.0.0.0:8900';
+            } elseif ($environment === 'production') {
+                // Non mostrare in produzione
+                return null;
+            } else {
+                // Staging, testing, ecc.
+                $url = url('/minio');
+            }
+
+            $menuItem = MenuItem::externalLink(__('Minio'), $url)
                 ->canSee(fn () => optional(Auth::user())->hasRole('Administrator'))
                 ->openInNewTab();
 
@@ -366,21 +391,31 @@ class WmPackageServiceProvider extends PackageServiceProvider
         if (Nova::$mainMenuCallback) {
             $originalCallback = Nova::$mainMenuCallback;
 
-            Nova::mainMenu(function (Request $request) use ($originalCallback, $createDownloadDbMenuItem) {
+            Nova::mainMenu(function (Request $request) use ($originalCallback, $createDownloadDbMenuItem, $createMinioMenuItem, $createHorizonMenuItem) {
                 $menuItems = call_user_func($originalCallback, $request);
                 $downloadDbMenuItem = $createDownloadDbMenuItem();
+                $minioMenuItem = $createMinioMenuItem();
+                $horizonMenuItem = $createHorizonMenuItem();
 
+                $toolsSectionFound = false;
                 foreach ($menuItems as $index => &$sectionOrGroup) {
                     if (
                         $sectionOrGroup instanceof MenuSection &&
                         $sectionOrGroup->name === __('Tools')
                     ) {
+                        $toolsSectionFound = true;
                         try {
                             $reflection = new \ReflectionObject($sectionOrGroup);
 
                             $itemsProperty = $reflection->getProperty('items');
                             $itemsProperty->setAccessible(true);
                             $currentItems = $itemsProperty->getValue($sectionOrGroup);
+                            if ($horizonMenuItem !== null) {
+                                $currentItems[] = $horizonMenuItem;
+                            }
+                            if ($minioMenuItem !== null) {
+                                $currentItems[] = $minioMenuItem;
+                            }
                             $currentItems[] = $downloadDbMenuItem;
 
                             $icon = $reflection->getProperty('icon');
@@ -404,12 +439,33 @@ class WmPackageServiceProvider extends PackageServiceProvider
                 }
                 unset($sectionOrGroup);
 
+                // Se la sezione Tools non esiste, la creiamo
+                if (! $toolsSectionFound) {
+                    $toolsItems = [];
+                    if ($horizonMenuItem !== null) {
+                        $toolsItems[] = $horizonMenuItem;
+                    }
+                    if ($minioMenuItem !== null) {
+                        $toolsItems[] = $minioMenuItem;
+                    }
+                    $toolsItems[] = $downloadDbMenuItem;
+
+                    $menuItems[] = MenuSection::make(__('Tools'), $toolsItems)->icon('briefcase')
+                        ->collapsable();
+                }
+
                 return $menuItems;
             });
         } else {
-            Nova::mainMenu(function (Request $request) use ($createDownloadDbMenuItem) {
+            Nova::mainMenu(function (Request $request) use ($createDownloadDbMenuItem, $createMinioMenuItem) {
+                $toolsItems = [$createDownloadDbMenuItem()];
+                $minioMenuItem = $createMinioMenuItem();
+                if ($minioMenuItem !== null) {
+                    $toolsItems[] = $minioMenuItem;
+                }
+
                 return [
-                    MenuSection::make(__('Tools'), [$createDownloadDbMenuItem()])
+                    MenuSection::make(__('Tools'), $toolsItems)
                         ->icon('color-swatch')
                         ->collapsable(),
                 ];
