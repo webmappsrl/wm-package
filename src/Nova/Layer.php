@@ -12,7 +12,6 @@ use Laravel\Nova\Fields\Number;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Panel;
-use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Nova\Fields\LayerFeatures\LayerFeatures;
 use Wm\WmPackage\Nova\Fields\PropertiesPanel;
 use Wm\WmPackage\Nova\Filters\AppFilter;
@@ -41,7 +40,6 @@ class Layer extends AbstractGeometryResource
             NovaTabTranslatable::make([
                 Text::make(__('Name'), 'name')->required(),
             ]),
-
             Number::make(__('Rank'), 'rank', function () {
                 if (is_array($this->properties) && isset($this->properties['rank'])) {
                     return (int) $this->properties['rank'];
@@ -49,17 +47,19 @@ class Layer extends AbstractGeometryResource
 
                 return $this->rank ?? 0;
             })->onlyOnIndex()->sortable(),
-
             BelongsTo::make(__('App'), 'appOwner', App::class),
-            BelongsTo::make('Owner', 'layerOwner', User::class)->nullable(),
+            BelongsTo::make(__('Owner'), 'layerOwner', User::class)
+                ->nullable()
+                ->searchable(),
             Images::make(__('Image'), 'default'),
+            PropertiesPanel::makeWithModel(__('Properties'), 'properties', $this, true)->collapsible(),
+            MorphToMany::make(__('Activities'), 'taxonomyActivities', TaxonomyActivity::class),
             Panel::make('Ec Tracks', [
                 FeatureCollectionMap::make(__('Geometry'), 'geometry')->onlyOnDetail(),
-                LayerFeatures::make('ecTracks', $this->resource, EcTrack::class)->hideWhenCreating(),
+                LayerFeatures::make(__('tracks'), $this->resource, config('wm-package.ec_track_model', 'Wm\WmPackage\Models\EcTrack'))
+                    ->hideWhenCreating()
+                    ->withMeta(['model_class' => config('wm-package.ec_track_model', 'Wm\WmPackage\Models\EcTrack')]),
             ]),
-            PropertiesPanel::make(__('Properties'), 'layer')->collapsible(),
-            MorphToMany::make(__('Activities'), 'taxonomyActivities', TaxonomyActivity::class),
-            ...$this->fieldsTrait($request),
         ];
     }
 
