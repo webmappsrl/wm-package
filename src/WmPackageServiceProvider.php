@@ -209,6 +209,29 @@ class WmPackageServiceProvider extends PackageServiceProvider
 
         $this->app->config['tab-translatable'] = config('wm-tab-translatable', []);
 
+        // Merge elasticsearch configuration from wm-elasticsearch
+        $wmElasticsearchConfig = config('wm-elasticsearch', []);
+        if (isset($wmElasticsearchConfig['host'])) {
+            $this->app->config['elasticsearch.host'] = $wmElasticsearchConfig['host'];
+        }
+        if (isset($wmElasticsearchConfig['user'])) {
+            $this->app->config['elasticsearch.user'] = $wmElasticsearchConfig['user'];
+        }
+        if (isset($wmElasticsearchConfig['password'])) {
+            $this->app->config['elasticsearch.password'] = $wmElasticsearchConfig['password'];
+        }
+        if (isset($wmElasticsearchConfig['cloud_id'])) {
+            $this->app->config['elasticsearch.cloud_id'] = $wmElasticsearchConfig['cloud_id'];
+        }
+        if (isset($wmElasticsearchConfig['api_key'])) {
+            $this->app->config['elasticsearch.api_key'] = $wmElasticsearchConfig['api_key'];
+        }
+        if (isset($wmElasticsearchConfig['ssl_verification'])) {
+            $this->app->config['elasticsearch.ssl_verification'] = $wmElasticsearchConfig['ssl_verification'];
+        }
+        if (isset($wmElasticsearchConfig['queue'])) {
+            $this->app->config['elasticsearch.queue'] = $wmElasticsearchConfig['queue'];
+        }
         $this->app->config['elasticsearch.indices'] =
             config('wm-elasticsearch.indices', []);
 
@@ -387,15 +410,22 @@ class WmPackageServiceProvider extends PackageServiceProvider
 
             return $menuItem;
         };
+        $createKibanaMenuItem = function () {
+            $menuItem = MenuItem::externalLink(__('Kibana'), url('/kibana'))
+                ->canSee(fn () => optional(Auth::user())->hasRole('Administrator'))
+                ->openInNewTab();
+            return $menuItem;
+        };          
 
         if (Nova::$mainMenuCallback) {
             $originalCallback = Nova::$mainMenuCallback;
 
-            Nova::mainMenu(function (Request $request) use ($originalCallback, $createDownloadDbMenuItem, $createMinioMenuItem, $createHorizonMenuItem) {
+            Nova::mainMenu(function (Request $request) use ($originalCallback, $createDownloadDbMenuItem, $createMinioMenuItem, $createHorizonMenuItem, $createKibanaMenuItem) {
                 $menuItems = call_user_func($originalCallback, $request);
                 $downloadDbMenuItem = $createDownloadDbMenuItem();
                 $minioMenuItem = $createMinioMenuItem();
                 $horizonMenuItem = $createHorizonMenuItem();
+                $kibanaMenuItem = $createKibanaMenuItem();
 
                 $toolsSectionFound = false;
                 foreach ($menuItems as $index => &$sectionOrGroup) {
@@ -416,6 +446,9 @@ class WmPackageServiceProvider extends PackageServiceProvider
                             if ($minioMenuItem !== null) {
                                 $currentItems[] = $minioMenuItem;
                             }
+                            if ($kibanaMenuItem !== null) {
+                                $currentItems[] = $kibanaMenuItem;
+                            }   
                             $currentItems[] = $downloadDbMenuItem;
 
                             $icon = $reflection->getProperty('icon');

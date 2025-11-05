@@ -28,18 +28,22 @@ kibana:
     - elasticsearch
   environment:
     - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
-    - xpack.security.enabled=false
+    - ELASTICSEARCH_USERNAME=kibana_system
+    - ELASTICSEARCH_PASSWORD=${ELASTICSEARCH_PASSWORD:-changeme}
+    - xpack.security.enabled=true
     - xpack.security.http.ssl.enabled=false
     - SERVER_NAME=kibana
     - SERVER_HOST=0.0.0.0
-    - SERVER_BASEPATH=${KIBANA_BASEPATH:-/kibana}
+    - SERVER_BASEPATH=/kibana
   ports:
     - ${DOCKER_KIBANA_PORT:-5601}:5601
 ```
 
 **Nota**: 
 - La porta di default è `5601` (configurabile tramite `DOCKER_KIBANA_PORT`)
-- Il base path di default è `/kibana` (configurabile tramite `KIBANA_BASEPATH` nel file `.env`)
+- Il base path è sempre `/kibana` (fisso, non configurabile)
+- La password per Elasticsearch è configurabile tramite `ELASTICSEARCH_PASSWORD` nel file `.env`
+- La security è abilitata di default (richiesta per vedere gli indici in Kibana)
 
 ---
 
@@ -50,9 +54,7 @@ I moduli Apache necessari sono gli stessi già utilizzati per MinIO:
 ```bash
 sudo a2enmod proxy
 sudo a2enmod proxy_http
-sudo a2enmod proxy_wstunnel
 sudo a2enmod rewrite
-sudo a2enmod substitute
 sudo a2enmod headers
 
 sudo systemctl restart apache2
@@ -61,9 +63,7 @@ sudo systemctl restart apache2
 **Moduli richiesti**:
 - `proxy` - Per il reverse proxy
 - `proxy_http` - Per proxy HTTP
-- `proxy_wstunnel` - Per supporto WebSocket (usato da Kibana per alcune funzionalità)
 - `rewrite` - Per riscrittura URL
-- `substitute` - Per modificare i path relativi nell'HTML
 - `headers` - Per gestire header HTTP e CORS
 
 ---
@@ -82,8 +82,8 @@ Aggiungere il proxy per Kibana:
     
     # Proxy per Kibana
     ProxyPreserveHost On
-    ProxyPass /kibana/ http://localhost:5601/kibana/
-    ProxyPassReverse /kibana/ http://localhost:5601/kibana/
+    ProxyPass /kibana/ http://localhost:5601/
+    ProxyPassReverse /kibana/ http://localhost:5601/
     
     # Redirect /kibana a /kibana/ per gestire entrambi i casi
     RewriteEngine On
@@ -110,39 +110,32 @@ RewriteEngine On
 RewriteRule ^/kibana$ /kibana/ [R=301,L]
 ```
 
-#### 2. Supporto WebSocket per Kibana
-
-**IMPORTANTE**: Queste regole devono essere PRIMA del proxy HTTP normale.
+#### 2. Proxy HTTP per Kibana
 
 ```apache
-# WebSocket support per Kibana (DEVE essere prima del proxy normale)
-RewriteCond %{HTTP:Upgrade} =websocket [NC]
-RewriteCond %{HTTP:Connection} =upgrade [NC]
-RewriteRule ^/kibana/(.*) ws://localhost:5601/kibana/$1 [P,L]
-```
-
-#### 3. Proxy HTTP per Kibana
-
-```apache
-# Proxy HTTP normale per Kibana
+# Proxy per Kibana
 ProxyPreserveHost On
-ProxyPass /kibana/ http://localhost:5601/kibana/
-ProxyPassReverse /kibana/ http://localhost:5601/kibana/
+ProxyPass /kibana/ http://localhost:5601/
+ProxyPassReverse /kibana/ http://localhost:5601/
 ```
 
-#### 4. Configurazione Header e CORS per Kibana
+#### 3. Configurazione Header e CORS per Kibana
 
 ```apache
 # Configurazioni specifiche per Kibana
 <LocationMatch "^/kibana">
-    # Header CORS
+    # Rimuovi header che potrebbero interferire
+    Header unset X-Frame-Options
+    Header unset X-Content-Type-Options
+    
+    # Permetti iframe embedding
+    Header always set X-Frame-Options "SAMEORIGIN"
+    
+    # CORS headers per Kibana
     Header always set Access-Control-Allow-Origin "*"
     Header always set Access-Control-Allow-Methods "*"
     Header always set Access-Control-Allow-Headers "*"
     Header always set Access-Control-Allow-Credentials "true"
-    
-    # Permetti iframe embedding se necessario
-    Header always set X-Frame-Options "SAMEORIGIN"
 </LocationMatch>
 ```
 
@@ -159,28 +152,25 @@ ProxyPassReverse /kibana/ http://localhost:5601/kibana/
     RewriteEngine On
     RewriteRule ^/kibana$ /kibana/ [R=301,L]
     
-    # Proxy per Kibana con supporto WebSocket
+    # Proxy per Kibana
     ProxyPreserveHost On
-    
-    # WebSocket support per Kibana (DEVE essere prima del proxy normale)
-    RewriteCond %{HTTP:Upgrade} =websocket [NC]
-    RewriteCond %{HTTP:Connection} =upgrade [NC]
-    RewriteRule ^/kibana/(.*) ws://localhost:5601/kibana/$1 [P,L]
-    
-    # Proxy HTTP normale per Kibana
-    ProxyPass /kibana/ http://localhost:5601/kibana/
-    ProxyPassReverse /kibana/ http://localhost:5601/kibana/
+    ProxyPass /kibana/ http://localhost:5601/
+    ProxyPassReverse /kibana/ http://localhost:5601/
     
     # Configurazioni specifiche per Kibana
     <LocationMatch "^/kibana">
-        # Header CORS
+        # Rimuovi header che potrebbero interferire
+        Header unset X-Frame-Options
+        Header unset X-Content-Type-Options
+        
+        # Permetti iframe embedding
+        Header always set X-Frame-Options "SAMEORIGIN"
+        
+        # CORS headers per Kibana
         Header always set Access-Control-Allow-Origin "*"
         Header always set Access-Control-Allow-Methods "*"
         Header always set Access-Control-Allow-Headers "*"
         Header always set Access-Control-Allow-Credentials "true"
-        
-        # Permetti iframe embedding se necessario
-        Header always set X-Frame-Options "SAMEORIGIN"
     </LocationMatch>
     
     # ... configurazione SSL ...
@@ -245,24 +235,7 @@ Controllare la console del browser (F12) per eventuali errori.
 
 **Soluzione**: Verificare che la variabile `SERVER_BASEPATH` sia impostata correttamente nel docker-compose:
 ```yaml
-- SERVER_BASEPATH=${KIBANA_BASEPATH:-/kibana}
-```
-
-### Problema: WebSocket non funziona
-
-**Sintomi**: Alcune funzionalità di Kibana si bloccano o mostrano errori.
-
-**Causa**: Le regole WebSocket non sono configurate correttamente.
-
-**Soluzione**: Assicurarsi che le regole WebSocket siano PRIMA di `ProxyPass`:
-```apache
-# CORRETTO: WebSocket PRIMA
-RewriteCond %{HTTP:Upgrade} =websocket [NC]
-RewriteCond %{HTTP:Connection} =upgrade [NC]
-RewriteRule ^/kibana/(.*) ws://localhost:5601/kibana/$1 [P,L]
-
-# Poi il proxy HTTP normale
-ProxyPass /kibana/ http://localhost:5601/kibana/
+- SERVER_BASEPATH=/kibana
 ```
 
 ### Problema: Errore 500 Internal Server Error
@@ -312,6 +285,7 @@ ProxyPass /kibana/ http://localhost:5601/kibana/
 **Soluzione**: 
 1. Verificare che `SERVER_BASEPATH` in Kibana corrisponda al path in Apache (`/kibana`)
 2. Verificare che il path in Apache finisca con `/` sia in `ProxyPass` che in `RewriteRule`
+3. Verificare che il ProxyPass punti a `http://localhost:5601/` (senza `/kibana` nel target, perché Kibana gestisce il base path internamente)
 
 ---
 
@@ -328,26 +302,35 @@ ProxyPass /kibana/ http://localhost:5601/kibana/
 ### Variabili d'Ambiente Kibana
 
 - `ELASTICSEARCH_HOSTS`: `http://elasticsearch:9200` (URL interno Elasticsearch)
+- `ELASTICSEARCH_USERNAME`: `kibana_system` (utente per connettersi a Elasticsearch)
+- `ELASTICSEARCH_PASSWORD`: `${ELASTICSEARCH_PASSWORD:-changeme}` (password da file `.env`)
 - `SERVER_BASEPATH`: `/kibana` (base path per l'accesso pubblico)
-- `xpack.security.enabled`: `false` (security disabilitata per sviluppo)
+- `xpack.security.enabled`: `true` (security abilitata - richiesta per vedere gli indici)
 - `SERVER_HOST`: `0.0.0.0` (ascolta su tutte le interfacce)
+
+### Credenziali di Accesso
+
+**Per accedere a Kibana via browser:**
+- URL: `https://camminiditalia.dev.maphub.it/kibana/`
+- Username: `elastic`
+- Password: valore di `ELASTICSEARCH_PASSWORD` nel file `.env` (default: `changeme`)
+
+**Nota**: La password di `elastic` e `kibana_system` in Elasticsearch viene impostata automaticamente usando `ELASTICSEARCH_PASSWORD` dal file `.env`.
 
 ### Moduli Apache Abilitati
 
 - `proxy`
 - `proxy_http`
-- `proxy_wstunnel`
 - `rewrite`
-- `substitute`
 - `headers`
 
 ---
 
 ## Note Importanti
 
-1. **Ordine delle regole**: Le regole WebSocket devono essere PRIMA del proxy HTTP normale.
+1. **Ordine delle configurazioni**: La configurazione Kibana deve essere PRIMA della configurazione SSL (come MinIO).
 
-2. **BasePath**: Il `SERVER_BASEPATH` in Kibana deve corrispondere al path configurato in Apache.
+2. **BasePath**: Il `SERVER_BASEPATH` in Kibana deve corrispondere al path configurato in Apache (`/kibana`). Il ProxyPass deve puntare a `http://localhost:5601/` (senza `/kibana` nel target) perché Kibana gestisce il base path internamente.
 
 3. **Porte**: Verificare che la porta mappata nel docker-compose (`DOCKER_KIBANA_PORT`) corrisponda a quella usata nella configurazione Apache (default: `5601`).
 
@@ -361,14 +344,80 @@ ProxyPass /kibana/ http://localhost:5601/kibana/
    - Log Apache access: `/var/log/apache2/camminiditalia.dev.access.log`
    - Log Kibana: `docker logs kibana-${APP_NAME}`
 
-6. **Security**: In produzione, considerare di abilitare la sicurezza di Elasticsearch e Kibana:
-   ```yaml
-   - xpack.security.enabled=true
-   - xpack.security.http.ssl.enabled=true
-   ```
+6. **Security**: La sicurezza è abilitata di default in Elasticsearch e Kibana. Per cambiare la password:
+   - Modificare `ELASTICSEARCH_PASSWORD` nel file `.env`
+   - Aggiornare le password in Elasticsearch:
+     ```bash
+     # Password per utente elastic
+     docker exec elasticsearch-${APP_NAME} curl -X POST -u elastic:vecchia_password \
+       "http://localhost:9200/_security/user/elastic/_password" \
+       -H "Content-Type: application/json" -d '{"password":"nuova_password"}'
+     
+     # Password per utente kibana_system
+     docker exec elasticsearch-${APP_NAME} curl -X POST -u elastic:nuova_password \
+       "http://localhost:9200/_security/user/kibana_system/_password" \
+       -H "Content-Type: application/json" -d '{"password":"nuova_password"}'
+     ```
+   - Riavviare Kibana: `docker compose restart kibana`
+   - Aggiornare la cache di configurazione Laravel: `php artisan config:clear && php artisan config:cache`
 
 ---
 
 **Data creazione**: 2025-11-05  
 **Ultima modifica**: 2025-11-05
+
+## Configurazione Password Elasticsearch
+
+### Variabile d'Ambiente
+
+La password per Elasticsearch è configurabile tramite la variabile `ELASTICSEARCH_PASSWORD` nel file `.env`:
+
+```env
+ELASTICSEARCH_PASSWORD=webmapp123
+```
+
+### Password Minime
+
+**Importante**: Elasticsearch richiede password di almeno 6 caratteri.
+
+### Aggiornamento Password
+
+Se si cambia `ELASTICSEARCH_PASSWORD` nel `.env`, è necessario:
+
+1. Aggiornare la password dell'utente `elastic` in Elasticsearch
+2. Aggiornare la password dell'utente `kibana_system` in Elasticsearch
+3. Riavviare Kibana
+4. Aggiornare la cache di configurazione Laravel
+
+Esempio completo:
+```bash
+# 1. Modificare .env (es. ELASTICSEARCH_PASSWORD=nuova_password)
+
+# 2. Aggiornare password in Elasticsearch
+docker exec elasticsearch-camminiditaliadev curl -X POST -u elastic:vecchia_password \
+  "http://localhost:9200/_security/user/elastic/_password" \
+  -H "Content-Type: application/json" -d '{"password":"nuova_password"}'
+
+docker exec elasticsearch-camminiditaliadev curl -X POST -u elastic:nuova_password \
+  "http://localhost:9200/_security/user/kibana_system/_password" \
+  -H "Content-Type: application/json" -d '{"password":"nuova_password"}'
+
+# 3. Riavviare Kibana
+docker compose restart kibana
+
+# 4. Aggiornare configurazione Laravel
+docker exec php-camminiditaliadev php artisan config:clear
+docker exec php-camminiditaliadev php artisan config:cache
+```
+
+### Configurazione Laravel Scout
+
+Laravel Scout è configurato per usare `ELASTICSEARCH_USER` e `ELASTICSEARCH_PASSWORD` dal file `.env`:
+
+```env
+ELASTICSEARCH_USER=elastic
+ELASTICSEARCH_PASSWORD=webmapp123
+```
+
+La configurazione è in `config/elasticsearch.php` e viene utilizzata automaticamente da Laravel Scout.
 

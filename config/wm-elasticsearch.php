@@ -1,6 +1,17 @@
 <?php
 
 return [
+    'host' => env('ELASTICSEARCH_PORT') && env('ELASTICSEARCH_SCHEME')
+        ? env('ELASTICSEARCH_SCHEME').'://'.env('ELASTICSEARCH_HOST').':'.env('ELASTICSEARCH_PORT')
+        : env('ELASTICSEARCH_HOST', 'elasticsearch:9200'),
+    'user' => env('ELASTICSEARCH_USER', 'elastic'),
+    'password' => env('ELASTICSEARCH_PASSWORD', env('ELASTICSEARCH_PASS', 'changeme')),
+    'cloud_id' => env('ELASTICSEARCH_CLOUD_ID', env('ELASTICSEARCH_API_ID')),
+    'api_key' => env('ELASTICSEARCH_API_KEY'),
+    'ssl_verification' => env('ELASTICSEARCH_SSL_VERIFICATION', false),
+    'queue' => [
+        'timeout' => env('SCOUT_QUEUE_TIMEOUT'),
+    ],
     'indices' => [
         'mappings' => [
             'default' => [
