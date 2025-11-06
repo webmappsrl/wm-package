@@ -46,7 +46,6 @@ class LayerObserver extends AbstractObserver
         // Update App conf when layer properties change
         if ($layer->wasChanged('properties')) {
             $this->updateAppConf($layer);
-            $this->layerService->updateLayerGeometryWithJob($layer);
         }
 
         // Aggiorna sempre la geometria del layer quando viene salvato
