@@ -7,44 +7,44 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Wm\WmPackage\Models\Layer;
 use Illuminate\Support\Facades\Log;
-use Wm\WmPackage\Services\Models\LayerService;
+use Wm\WmPackage\Services\PBFGeneratorService;
 
 class LayerFeatureController
 {
-    private LayerService $layerService;
+    private PBFGeneratorService $pbfGeneratorService;
 
-    public function __construct(LayerService $layerService)
+    public function __construct(PBFGeneratorService $pbfGeneratorService)
     {
-        $this->layerService = $layerService;
+        $this->pbfGeneratorService = $pbfGeneratorService;
     }
 
     public function index(Request $request, $layerId): JsonResponse
     {
         try {
             $layer = Layer::findOrFail($layerId);
-            
+
             // Ottieni il modello dalla query string
             $modelClass = $request->query('model');
-            
+
             if (!$modelClass) {
                 return response()->json([
                     'error' => 'Parametro model mancante'
                 ], 400);
             }
-            
+
             // Verifica che il modello esista
             if (!class_exists($modelClass)) {
                 return response()->json([
                     'error' => "Modello '{$modelClass}' non trovato"
                 ], 400);
             }
-            
+
             // Query ottimizzata per ottenere il count per il modello specifico
             $count = DB::table('layerables')
                 ->where('layer_id', $layerId)
                 ->where('layerable_type', $modelClass)
                 ->count();
-            
+
             return response()->json([
                 'layer_id' => $layerId,
                 'layer_name' => $layer->name,
@@ -56,7 +56,7 @@ class LayerFeatureController
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            
+
             return response()->json([
                 'error' => 'Errore interno del server: ' . $e->getMessage()
             ], 500);
@@ -91,16 +91,16 @@ class LayerFeatureController
             }
 
             // Funzione helper per caricare le features associate
-            $getAssociatedFeatures = function() use ($model, $layerId, $search) {
+            $getAssociatedFeatures = function () use ($model, $layerId, $search) {
                 $query = $model->newQuery();
                 $query->whereHas('associatedLayers', function ($q) use ($layerId) {
                     $q->where('layer_id', $layerId);
                 });
-                
+
                 if ($search) {
                     $query->where('name', 'like', "%{$search}%");
                 }
-                
+
                 return $query->select(['id', 'name'])->orderBy('name', 'ASC');
             };
 
@@ -108,40 +108,39 @@ class LayerFeatureController
             if ($viewMode === 'details') {
                 // In modalità details, mostra solo le features associate al layer
                 $features = $getAssociatedFeatures()->paginate($perPage, ['*'], 'page', $page);
-                    
             } else {
                 // In modalità edit, fai due chiamate separate
-                
+
                 // 1. Carica le features associate al layer
                 $associatedFeatures = $getAssociatedFeatures()->get();
-                
+
                 // 2. Carica le altre features dell'app (non associate)
                 $otherQuery = $model->newQuery();
                 if ($layer->app_id) {
                     $otherQuery->where('app_id', $layer->app_id);
                 }
-                
+
                 // Escludi quelle già associate
                 if ($associatedFeatures->isNotEmpty()) {
                     $otherQuery->whereNotIn('id', $associatedFeatures->pluck('id'));
                 }
-                
+
                 if ($search) {
                     $otherQuery->where('name', 'like', "%{$search}%");
                 }
-                
+
                 $otherFeatures = $otherQuery->select(['id', 'name'])
                     ->orderBy('name', 'ASC')
                     ->get();
-                
+
                 // 3. Concatenazione: prima le associate, poi le altre
                 $allFeatures = $associatedFeatures->concat($otherFeatures);
-                
+
                 // 4. Paginazione manuale
                 $total = $allFeatures->count();
                 $offset = ($page - 1) * $perPage;
                 $paginatedFeatures = $allFeatures->slice($offset, $perPage);
-                
+
                 // Crea un oggetto paginazione manuale
                 $features = new \Illuminate\Pagination\LengthAwarePaginator(
                     $paginatedFeatures,
@@ -166,7 +165,7 @@ class LayerFeatureController
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            
+
             return response()->json([
                 'error' => 'Errore interno del server: ' . $e->getMessage()
             ], 500);
@@ -200,6 +199,7 @@ class LayerFeatureController
         }
 
         $layer->{$relationName}()->sync($validatedData['features']);
+        $this->pbfGeneratorService->regeneratePbfsForLayer($layer);
 
         return response()->json([
             'message' => 'Features sincronizzate con successo',
