@@ -73,7 +73,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
 
         // Register Nova CSS assets
         Nova::serving(function () {
-            Nova::style('wm-flexible-field', __DIR__.'/../resources/css/flexible-field.css');
+            Nova::style('wm-flexible-field', __DIR__ . '/../resources/css/flexible-field.css');
             $this->addWmpackageToolsMenuItem();
         });
 
@@ -83,15 +83,15 @@ class WmPackageServiceProvider extends PackageServiceProvider
             Route::name('v2.')
                 ->middleware('api')
                 ->prefix('api/v2')
-                ->group($packageDirPath.'routes/api.php');
+                ->group($packageDirPath . 'routes/api.php');
 
             Route::name('default.')
                 ->middleware('api')
                 ->prefix('api')
-                ->group($packageDirPath.'routes/api.php');
+                ->group($packageDirPath . 'routes/api.php');
 
             Route::middleware('web')
-                ->group($packageDirPath.'routes/web.php');
+                ->group($packageDirPath . 'routes/web.php');
         });
 
         // Register policies
@@ -337,7 +337,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
      */
     protected function resources()
     {
-        Nova::resourcesIn($this->getPackageBaseDir().'/Nova');
+        Nova::resourcesIn($this->getPackageBaseDir() . '/Nova');
     }
 
     /**
@@ -380,13 +380,13 @@ class WmPackageServiceProvider extends PackageServiceProvider
     {
         $createHorizonMenuItem = function () {
             $menuItem = MenuItem::externalLink(__('Horizon'), url('/horizon'))
-                ->canSee(fn () => optional(Auth::user())->hasRole('Administrator'))
+                ->canSee(fn() => optional(Auth::user())->hasRole('Administrator'))
                 ->openInNewTab();
             return $menuItem;
         };
         $createDownloadDbMenuItem = function () {
             $menuItem = MenuItem::externalLink(__('Download DB'), route('download.db'))
-                ->canSee(fn () => optional(Auth::user())->hasRole('Administrator'))
+                ->canSee(fn() => optional(Auth::user())->hasRole('Administrator'))
                 ->openInNewTab();
 
             return $menuItem;
@@ -405,17 +405,28 @@ class WmPackageServiceProvider extends PackageServiceProvider
             }
 
             $menuItem = MenuItem::externalLink(__('Minio'), $url)
-                ->canSee(fn () => optional(Auth::user())->hasRole('Administrator'))
+                ->canSee(fn() => optional(Auth::user())->hasRole('Administrator'))
                 ->openInNewTab();
 
             return $menuItem;
         };
         $createKibanaMenuItem = function () {
-            $menuItem = MenuItem::externalLink(__('Kibana'), url('/kibana'))
-                ->canSee(fn () => optional(Auth::user())->hasRole('Administrator'))
+            // Determina l'URL in base all'ambiente
+            $environment = app()->environment();
+            if ($environment === 'local') {
+                $url = 'http://0.0.0.0:5601/kibana';
+            } elseif ($environment === 'production') {
+                // Non mostrare in produzione
+                return null;
+            } else {
+                // Staging, testing, ecc.
+                $url = url('/kibana');
+            }
+            $menuItem = MenuItem::externalLink(__('Kibana'), $url)
+                ->canSee(fn() => optional(Auth::user())->hasRole('Administrator'))
                 ->openInNewTab();
             return $menuItem;
-        };          
+        };
 
         if (Nova::$mainMenuCallback) {
             $originalCallback = Nova::$mainMenuCallback;
@@ -448,7 +459,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
                             }
                             if ($kibanaMenuItem !== null) {
                                 $currentItems[] = $kibanaMenuItem;
-                            }   
+                            }
                             $currentItems[] = $downloadDbMenuItem;
 
                             $icon = $reflection->getProperty('icon');
@@ -464,7 +475,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
                                 ->collapsable($collapsableValue);
                         } catch (\ReflectionException $e) {
                             logger()->error(
-                                'WM-Package: Failed to modify Nova Tools menu section via reflection. Exception: '.$e->getMessage()
+                                'WM-Package: Failed to modify Nova Tools menu section via reflection. Exception: ' . $e->getMessage()
                             );
                         }
                         break;
