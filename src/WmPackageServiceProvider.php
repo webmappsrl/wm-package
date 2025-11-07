@@ -414,7 +414,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
             // Determina l'URL in base all'ambiente
             $environment = app()->environment();
             if ($environment === 'local') {
-                $url = 'http://0.0.0.0:5601/kibana';
+                $url = 'http://0.0.0.0:5601';
             } elseif ($environment === 'production') {
                 // Non mostrare in produzione
                 return null;
