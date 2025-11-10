@@ -620,6 +620,12 @@ class AppConfigService extends AppBaseService
         $data['OPTIONS']['showGeojsonDownload'] = (bool) $this->app->table_details_show_geojson_download;
         $data['OPTIONS']['showShapefileDownload'] = (bool) $this->app->table_details_show_shapefile_download;
 
+        if (isset($this->app->properties['show_download_tiles'])) {
+            // TODO: opzione usata solo dalla 3.1.6, rimuovere showDownloadTilesButton al prossimo rilascio
+            $data['OPTIONS']['showDownloadTilesButton'] = $this->app->properties['show_download_tiles'];
+            $data['OPTIONS']['showDownloadTiles'] = $this->app->properties['show_download_tiles'];
+        }
+
         // Assicuriamoci che track_technical_details sia un array
         $technical_details = $this->app->track_technical_details;
         if (is_string($technical_details)) {
