@@ -6,23 +6,32 @@ use App\Models\User;
 use Exception;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Spatie\Translatable\HasTranslations;
 use Wm\WmPackage\Models\Abstracts\Polygon;
 use Wm\WmPackage\Observers\LayerObserver;
 use Wm\WmPackage\Services\GeometryComputationService;
+use Wm\WmPackage\Nova\Fields\FeatureCollectionMap\src\FeatureCollectionMapTrait;
 use Wm\WmPackage\Traits\HasPackageFactory;
 use Wm\WmPackage\Traits\TaxonomyAbleModel;
 use Wm\WmPackage\Traits\TaxonomyWhereAbleModel;
 
 class Layer extends Polygon
 {
-    use HasPackageFactory, HasTranslations, TaxonomyAbleModel, TaxonomyWhereAbleModel;
+    use HasPackageFactory, HasTranslations, TaxonomyAbleModel, TaxonomyWhereAbleModel, FeatureCollectionMapTrait;
 
     protected static function boot()
     {
         parent::boot();
         Layer::observe(LayerObserver::class);
+        
+        // Imposta un default per properties se è null
+        static::creating(function ($model) {
+            if (is_null($model->properties)) {
+                $model->properties = [];
+            }
+        });
     }
 
     public array $translatable = ['name', 'properties->title', 'properties->subtitle', 'properties->description'];
@@ -233,4 +242,68 @@ class Layer extends Polygon
 
         return $this->attributes['query_string'] = $query_string;
     }
+
+    public function getFeatureCollectionMap(): array
+    {
+        $this->clearAdditionalFeaturesForMap();
+
+        $EcTracks = DB::select($this->getFeaturesQuery(), [$this->id, EcTrack::class]);
+        // Nova resource name per EcTrack - usa kebab-case del nome del modello
+        $novaResourceName = 'ec-tracks';
+
+        foreach ($EcTracks as $ecTrack) {
+            $geometry = json_decode($ecTrack->geometry, true);
+
+            // Decodifica il JSON del nome e estrai la traduzione italiana o la prima disponibile
+            $nameData = json_decode($ecTrack->name, true);
+
+            // Priorità: 1) Italiano, 2) Prima disponibile, 3) Nome non disponibile
+            $ecTrackName = $nameData['it'] ?? (is_array($nameData) && ! empty($nameData) ? reset($nameData) : 'Nome non disponibile');
+
+            if ($geometry) {
+                $routeFeature = [
+                    'type' => 'Feature',
+                    'geometry' => $geometry,
+                    'properties' => [
+                        'tooltip' => $ecTrackName,
+                        'link' => url('nova'.'/resources/'.$novaResourceName.'/'.$ecTrack->id),
+                        'strokeColor' => 'red',
+                        'strokeWidth' => 2,
+                    ],
+                ];
+                $this->addFeaturesForMap([$routeFeature]);
+            }
+        }
+
+        
+
+        return [
+            'type' => 'FeatureCollection',
+            'features' => $this->getAdditionalFeaturesForMap(),
+        ];
+    }
+
+    private function getFeaturesQuery()
+    {
+        // Ottieni il nome della tabella dalla configurazione, default è 'ec_tracks'
+        $tableName = config('wm-package.ec_track_table', 'ec_tracks');
+        
+        $sql = "
+        SELECT 
+            hr.id,
+            hr.name,
+            hr.properties,
+            ST_AsGeoJSON(hr.geometry) as geometry
+        FROM {$tableName} hr
+        INNER JOIN layerables l ON hr.id = l.layerable_id
+        WHERE l.layer_id = ?
+            AND l.layerable_type = ?
+            AND hr.geometry IS NOT NULL
+            AND hr.geometry != ''
+        ORDER BY hr.id
+    ";
+
+        return $sql;
+    }
+
 }

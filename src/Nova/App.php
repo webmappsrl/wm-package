@@ -7,7 +7,9 @@ use Illuminate\Support\Facades\Config;
 use Kongulov\NovaTabTranslatable\NovaTabTranslatable;
 use Laravel\Nova\Fields\Boolean;
 use Laravel\Nova\Fields\Code;
+use Laravel\Nova\Fields\Heading;
 use Laravel\Nova\Fields\ID;
+use Laravel\Nova\Fields\Number;
 use Laravel\Nova\Fields\Select;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
@@ -39,9 +41,11 @@ class App extends Resource
                 Tab::make('home', $this->home_tab()),
                 Tab::make('webapp', $this->webapp_tab()),
                 Tab::make('app', $this->app_tab()),
+                Tab::make('pois', $this->pois_tab()),
                 Tab::make('release_data', $this->app_release_data_tab()),
                 Tab::make('pages', $this->pages_tab()),
                 Tab::make('acquisition_form', $this->acquisition_form_tab()),
+                Tab::make('filters', $this->filters_tab()),
             ]),
 
             // TODO: implement fields
@@ -61,7 +65,6 @@ class App extends Resource
 
     protected function webapp_tab(): array
     {
-
         return [
             Boolean::make(__('Show Auth at startup'), 'webapp_auth_show_at_startup')
                 ->default(false)
@@ -83,6 +86,62 @@ class App extends Resource
                 ->hideFromIndex()
                 ->help(__('Enables user geolocation recording on tracks')),
 
+        ];
+    }
+
+    protected function pois_tab(): array
+    {
+        return [
+            Boolean::make(__('App POIs API Layer'), 'app_pois_api_layer')
+                ->default(false)
+                ->hideFromIndex()
+                ->help(__('Enable POIs API layer for the app')),
+
+            Number::make(__('POI Min Radius'), 'poi_min_radius')
+                ->step(0.1)
+                ->default(0.5)
+                ->hideFromIndex()
+                ->help(__('Minimum radius for POI clustering')),
+
+            Number::make(__('POI Max Radius'), 'poi_max_radius')
+                ->step(0.1)
+                ->default(1.2)
+                ->hideFromIndex()
+                ->help(__('Maximum radius for POI clustering')),
+
+            Number::make(__('POI Icon Zoom'), 'poi_icon_zoom')
+                ->step(0.1)
+                ->default(16)
+                ->hideFromIndex()
+                ->help(__('Zoom level for POI icons')),
+
+            Number::make(__('POI Icon Radius'), 'poi_icon_radius')
+                ->step(0.1)
+                ->default(1)
+                ->hideFromIndex()
+                ->help(__('Radius for POI icons')),
+
+            Number::make(__('POI Min Zoom'), 'poi_min_zoom')
+                ->step(0.1)
+                ->default(5)
+                ->hideFromIndex()
+                ->help(__('Minimum zoom level to show POIs')),
+
+            Number::make(__('POI Label Min Zoom'), 'poi_label_min_zoom')
+                ->step(0.1)
+                ->default(10.5)
+                ->hideFromIndex()
+                ->help(__('Minimum zoom level to show POI labels')),
+
+            Select::make(__('POI Interaction'), 'poi_interaction')
+                ->options([
+                    'popup' => __('Popup'),
+                    'modal' => __('Modal'),
+                    'none' => __('None'),
+                ])
+                ->default('popup')
+                ->hideFromIndex()
+                ->help(__('Type of interaction when clicking on POIs')),
         ];
     }
 
@@ -132,6 +191,8 @@ class App extends Resource
                 ->help("Configurazione della home page dell'app")
                 ->addLayout('Titolo', 'title', $this->title_layout())
                 ->addLayout('Layer', 'layer', $this->layer_layout())
+                ->addLayout('Slug', 'slug', $this->slug_layout())
+                ->addLayout('External URL', 'external_url', $this->external_url_layout())
                 ->confirmRemove('Sei sicuro di voler eliminare questo elemento?', 'Elimina', 'Annulla'),
         ];
     }
@@ -177,6 +238,85 @@ class App extends Resource
         ];
     }
 
+    protected function filters_tab(): array
+    {
+        return [
+            Heading::make(
+                <<<'HTML'
+                <h2><strong>FILTERS ACTIVATION</strong></h2>
+                HTML
+            )->asHtml()->hideFromIndex(),
+            Boolean::make(__('Activity Filter'), 'filter_activity')
+                ->default(false)
+                ->hideFromIndex()
+                ->help(__('Activates the activity filter for tracks')),
+            Boolean::make(__('POI Type Filter'), 'filter_poi_type')
+                ->default(false)
+                ->hideFromIndex()
+                ->help(__('Activates the POI type filter for points of interest')),
+            Boolean::make(__('Track Duration Filter'), 'filter_track_duration')
+                ->default(false)
+                ->hideFromIndex()
+                ->help(__('Enables filtering of tracks by duration')),
+            Boolean::make(__('Track Distance Filter'), 'filter_track_distance')
+                ->default(false)
+                ->hideFromIndex()
+                ->help(__('Enables filtering of tracks by distance')),
+            Boolean::make(__('Track Difficulty Filter'), 'filter_track_difficulty')
+                ->default(false)
+                ->hideFromIndex()
+                ->help(__('Enables filtering of tracks by difficulty level')),
+            Heading::make(
+                <<<'HTML'
+                <h2><strong>FILTERS LABELS</strong></h2>
+                <br/>
+                <ul>
+                    <li><p><strong>Activity Filter Label</strong>: Text to be displayed for the Activity filter.</p></li>
+                    <li><p><strong>Theme Filter Label</strong>: Text to be displayed for the Theme filter.</p></li>
+                    <li><p><strong>Poi Type Filter Label</strong>: Text to be displayed for the Poi Type filter.</p></li>
+                    <li><p><strong>Duration Filter Label</strong>: Text to be displayed for the tracks duration filter.</p></li>
+                    <li><p><strong>Distance Filter Label</strong>: Text to be displayed for the tracks distance filter.</p></li>
+                </ul>
+                HTML
+            )->asHtml()->hideFromIndex(),
+            NovaTabTranslatable::make([
+                Text::make('Activity Filter Label', 'filter_activity_label'),
+                Text::make('Theme Filter Label', 'filter_theme_label'),
+                Text::make('Poi Type Filter Label', 'filter_poi_type_label'),
+                Text::make('Duration Filter Label', 'filter_track_duration_label'),
+                Text::make('Distance Filter Label', 'filter_track_distance_label'),
+            ])->hideFromIndex(),
+
+            Text::make('Activity Exclude Filter', 'filter_activity_exclude')
+                ->hideFromIndex()
+                ->help(__('Insert the activities you want to exclude from the filter, separated by commas')),
+            Text::make('Theme Exclude Filter', 'filter_theme_exclude')
+                ->hideFromIndex()
+                ->help(__('Insert the themes you want to exclude from the filter, separated by commas')),
+            Text::make('Poi Type Exclude Filter', 'filter_poi_type_exclude')
+                ->hideFromIndex()
+                ->help(__('Insert the poi types you want to exclude from the filter, separated by commas')),
+            Number::make('Track Min Duration Filter', 'filter_track_duration_min')
+                ->hideFromIndex()
+                ->help(__('Set the minimum duration of the duration filter')),
+            Number::make('Track Max Duration Filter', 'filter_track_duration_max')
+                ->hideFromIndex()
+                ->help(__('Set the maximum duration of the duration filter')),
+            Number::make('Track Duration Steps Filter', 'filter_track_duration_steps')
+                ->hideFromIndex()
+                ->help(__('Set the steps of the duration filter')),
+            Number::make('Track Min Distance Filter', 'filter_track_distance_min')
+                ->hideFromIndex()
+                ->help(__('Set the minimum distance of the distance filter')),
+            Number::make('Track Max Distance Filter', 'filter_track_distance_max')
+                ->hideFromIndex()
+                ->help(__('Set the maximum distance of the distance filter')),
+            Number::make('Track Distance Step Filter', 'filter_track_distance_steps')
+                ->hideFromIndex()
+                ->help(__('Set the steps of the distance filter')),
+        ];
+    }
+
     protected function getDefaultPoiForm(): string
     {
         $form = Config::get('wm-acquisiotion-form-default.poi');
@@ -195,6 +335,37 @@ class App extends Resource
     {
         return [
             Text::make('Titolo', 'title')->rules('required'),
+        ];
+    }
+
+    protected function slug_layout(): array
+    {
+        return [
+            Text::make('Title', 'title'),
+            Text::make('Slug', 'slug')
+                ->rules('required')
+                ->resolveUsing(function ($value) {
+                    return $value ?: 'project';
+                }),
+            Text::make('Image url', 'image_url'), // TODO: fare in modo di usare Media caricando un immagine e restituendo l'url
+        ];
+    }
+
+    protected function external_url_layout(): array
+    {
+        return [
+            Text::make('Title', 'title'),
+            Text::make('Url', 'url')->rules('required'),
+            Text::make('Image url', 'image_url'), // TODO: fare in modo di usare Media caricando un immagine e restituendo l'url
+        ];
+    }
+
+    protected function base_layout(): array
+    {
+        return [
+            Text::make('Title', 'title')->rules('required'),
+            Text::make('Url', 'url')->rules('required'),
+            // TODO: Items è un array, dove ogni elemento ha un titolo un image_url e un track_id (o poi_id)
         ];
     }
 

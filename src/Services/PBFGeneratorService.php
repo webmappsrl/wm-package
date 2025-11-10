@@ -11,6 +11,7 @@ use Wm\WmPackage\Jobs\Pbf\GeneratePBFByZoomJob;
 use Wm\WmPackage\Jobs\Pbf\RegeneratePBFForTrackJob;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcTrack;
+use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Services\Models\EcTrackService;
 
 class PBFGeneratorService extends BaseService
@@ -121,7 +122,7 @@ class PBFGeneratorService extends BaseService
         SQL;
 
         $result = DB::select($sql, [
-            'layer_ids' => '{'.implode(',', $layerIds).'}', // Converti in array PostgreSQL
+            'layer_ids' => '{' . implode(',', $layerIds) . '}', // Converti in array PostgreSQL
         ]);
 
         return $result[0]->total_tracks ?? 0;
@@ -420,6 +421,58 @@ class PBFGeneratorService extends BaseService
     }
 
     /**
+     * Rigenera i PBF per un layer dopo la modifica della composizione
+     *
+     * @param  Layer  $layer  Il layer per cui rigenerare i PBF
+     * @param  int|null  $minZoom  Zoom minimo (default: dalla config)
+     * @param  int|null  $maxZoom  Zoom massimo (default: dalla config)
+     * @return void
+     */
+    public function regeneratePbfsForLayer(Layer $layer, $minZoom = null, $maxZoom = null): void
+    {
+        try {
+            $trackIds = $layer->layerables()
+                ->where('layerable_type', config('wm-package.ec_track_model', 'App\Models\EcTrack'))
+                ->pluck('layerable_id')
+                ->toArray();
+
+            $minZoom = $minZoom ?? config('wm-package.services.pbf.min_zoom');
+            $maxZoom = $maxZoom ?? config('wm-package.services.pbf.max_zoom');
+
+            if (!empty($trackIds)) {
+                GenerateOptimizedPBFChainJob::dispatch(
+                    $layer->app->id,
+                    $maxZoom,
+                    $minZoom,
+                    false,
+                    $trackIds
+                )->onConnection('redis')->onQueue('pbf');
+
+                Log::info('PBF rigenerati per tracce multiple del layer', [
+                    'layer_id' => $layer->id,
+                    'track_count' => count($trackIds),
+                    'app_id' => $layer->app->id,
+                ]);
+            } else {
+                // Se non ci sono tracce, usa il metodo originale
+                $this->generateWholeAppPbfsOptimized($layer->app, $minZoom, $maxZoom);
+
+                Log::info('PBF rigenerati per app completa dopo sync (nessuna traccia nel layer)', [
+                    'layer_id' => $layer->id,
+                    'app_id' => $layer->app->id,
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::warning('Fallback a generateWholeAppPbfs per errore nella rigenerazione multipla dopo sync', [
+                'layer_id' => $layer->id,
+                'error' => $e->getMessage(),
+            ]);
+            // Fallback al metodo originale
+            $this->generateWholeAppPbfs($layer->app, $minZoom, $maxZoom);
+        }
+    }
+
+    /**
      * Ottieni tutti gli ID delle tracce dell'app
      *
      * @param  int  $app_id  ID dell'app
@@ -478,7 +531,7 @@ class PBFGeneratorService extends BaseService
         ";
 
         $results = DB::select($sql, [
-            'track_ids' => '{'.implode(',', $trackIds).'}',
+            'track_ids' => '{' . implode(',', $trackIds) . '}',
         ]);
 
         $tiles = [];
@@ -560,7 +613,7 @@ class PBFGeneratorService extends BaseService
         // 1. Calcola i tile di livello zoom che contengono le geometrie delle tracce
         $tilesAtZoom = $this->calculateTilesFromGeometries($trackIds, $zoom);
 
-        Log::info('Calcolati '.count($tilesAtZoom)." tile al livello zoom {$zoom}", [
+        Log::info('Calcolati ' . count($tilesAtZoom) . " tile al livello zoom {$zoom}", [
             'zoom' => $zoom,
             'tiles_count' => count($tilesAtZoom),
         ]);
@@ -583,7 +636,7 @@ class PBFGeneratorService extends BaseService
             AND geometry IS NOT NULL
             AND ST_IsValid(geometry::geometry)
         ", [
-            'track_ids' => '{'.implode(',', $trackIds).'}',
+            'track_ids' => '{' . implode(',', $trackIds) . '}',
         ]);
 
         if (empty($res) || is_null($res[0]->bbox)) {

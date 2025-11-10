@@ -53,7 +53,6 @@ class ConvertUgcPoiToEcPoi extends Action
                     foreach ($medias as $media) {
                         try {
                             $duplicatedMedia = $media->replicate();
-                            $duplicatedMedia->uuid = (string) Str::uuid();
                             $duplicatedMedia->model()->associate($ecPoi);
                             $duplicatedMedia->save();
                             Log::info('Media copied successfully: '.$media->id.' from UgcPoi '.$model->id.' to EcPoi '.$ecPoi->id);

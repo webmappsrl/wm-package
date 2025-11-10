@@ -47,7 +47,7 @@ class UpdateEcTrackAwsJob extends BaseEcTrackJob
     public function handle(StorageService $cloudStorageService)
     {
         // Ottieni il modello dalla configurazione per essere consistente
-        $ecTrackModelClass = config('wm-package.ec_track_model', \Wm\WmPackage\Models\EcTrack::class);
+        $ecTrackModelClass = config('wm-package.ec_track_model');
 
         // Ricarica il modello usando la classe configurata per assicurarsi che sia della classe corretta
         $ecTrack = $ecTrackModelClass::find($this->ecTrack->id);

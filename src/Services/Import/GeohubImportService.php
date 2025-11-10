@@ -10,13 +10,15 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Spatie\Permission\Models\Role;
 use stdClass;
 use Wm\WmPackage\Jobs\Import\BaseImportJob;
+use Wm\WmPackage\Jobs\UpdateAppConfigHomeLayerIdsJob;
+use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcPoi;
-use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\TaxonomyActivity;
 use Wm\WmPackage\Models\User;
 use Wm\WmPackage\Services\RolesAndPermissionsService;
@@ -35,9 +37,10 @@ class GeohubImportService
      */
     protected const MODEL_IMPORT_ORDER = [
         'app',
+        'taxonomy_activity',
+        'taxonomy_poi_types',
         'ec_poi',
         'ec_track',
-        'taxonomy_activity',
         'layer',
         'ec_media',
     ];
@@ -67,6 +70,14 @@ class GeohubImportService
         $this->importMapping = config('wm-geohub-import.import_mapping', []);
     }
 
+    /**
+     * Get the database connection to Geohub
+     */
+    public function getDbConnection(): Connection
+    {
+        return $this->dbConnection;
+    }
+
     // ------------------------------------------------------------------
     // Public Import Methods
     // ------------------------------------------------------------------
@@ -86,6 +97,8 @@ class GeohubImportService
         $this->logger->info('Completed full import from geohub');
     }
 
+
+
     /**
      * Import all entities of a specific model type
      *
@@ -98,16 +111,16 @@ class GeohubImportService
 
         $this->logger->info("Starting import of all {$modelKey}s");
 
-        $ids = $this->getGeohubIdsToImport($modelKey, null);
+        $geohubModelIds = $this->getGeohubIdsToImport($modelKey, null);
 
-        $jobs = $this->createJobsForIds($modelKey, $ids, $data);
+        $jobs = $this->createJobsForIds($modelKey, $geohubModelIds, $data);
 
         $batch = Bus::batch($jobs)
             ->name("Import {$modelKey}s from geohub")
             ->allowFailures()
             ->dispatch();
 
-        $this->logger->info("Dispatched batch {$batch->id} with ".count($jobs)." jobs for {$modelKey}s");
+        $this->logger->info("Dispatched batch {$batch->id} with " . count($jobs) . " jobs for {$modelKey}s");
     }
 
     /**
@@ -188,14 +201,31 @@ class GeohubImportService
 
             $identifier = $this->getIdentifier($modelKey, $entityId);
 
-            // Create or update the app
-            $model = $modelName::updateOrCreate($identifier, $transformedData);
+            // Find existing model or create new one
+            $model = $modelName::where($identifier)->first();
 
-            $this->logger->info("{$modelName} with ID {$entityId} imported successfully. Local ID: {$model->id}");
+            if ($model) {
+                // Update existing model
+                $model->fill($transformedData);
+            } else {
+                // Create new model
+                $model = new $modelName($transformedData);
+            }
+
+            // Temporarily disable observers during import to avoid triggering PBF jobs
+            $model::unsetEventDispatcher();
+
+            // Save quietly to avoid triggering observers during Geohub import
+            $model->saveQuietly();
+
+            // Re-enable observers after save
+            $model::setEventDispatcher(app('events'));
+
+            $this->logger->info("{$modelName} with ID {$entityId} imported successfully. Local ID: {$model->id} {$model->name}");
 
             return $model;
         } catch (\Exception $e) {
-            $this->logger->error("Error importing {$modelName} with ID {$entityId}: ".$e->getMessage());
+            $this->logger->error("Error importing {$modelName} with ID {$entityId}: " . $e->getMessage());
             throw $e;
         }
     }
@@ -225,11 +255,11 @@ class GeohubImportService
      * @param  array  $data  Additional data to pass to the job
      * @return BaseImportJob The job instance
      */
-    public function createJob(string $modelKey, int $id, array $data = []): BaseImportJob
+    public function createJob(string $modelKey, int $geohubModelId, array $data = []): BaseImportJob
     {
         $jobClass = $this->importMapping[$modelKey]['job'];
 
-        return new $jobClass($id, $data);
+        return new $jobClass($geohubModelId, $data);
     }
 
     /**
@@ -240,12 +270,13 @@ class GeohubImportService
      * @param  array  $data  Additional data to pass to the jobs
      * @return array Array of job instances
      */
-    protected function createJobsForIds(string $modelKey, array $ids, array $data = []): array
+    protected function createJobsForIds(string $modelKey, array $geohubModelIds, array $data = []): array
     {
         $jobs = [];
-        foreach ($ids as $id) {
-            $jobs[] = $this->createJob($modelKey, $id, $data);
+        foreach ($geohubModelIds as $geohubModelId) {
+            $jobs[] = $this->createJob($modelKey, $geohubModelId, $data);
         }
+
 
         return $jobs;
     }
@@ -269,15 +300,23 @@ class GeohubImportService
      *
      * @param  string  $model  The model type
      * @param  ?array  $wheres  The where conditions to apply
+     * @param  ?array  $data  Additional data (e.g., app_user_id for ec_media)
      * @return array The IDs to import
      *
      * @throws \InvalidArgumentException If the model is not supported
      */
-    public function getGeohubIdsToImport(string $modelKey, ?array $wheres): array
+    public function getGeohubIdsToImport(string $modelKey, ?array $wheres, ?array $data = null): array
     {
+        $this->logger->info("🔍 getGeohubIdsToImport called for model: {$modelKey}, wheres: " . json_encode($wheres) . ", data: " . json_encode($data));
+
         $connection = $this->dbConnection->table($this->importMapping[$modelKey]['geohub_table']);
 
         if (! $wheres) {
+            // Caso speciale per ec_media: importiamo solo i media associati ai track dell'app
+            if ($modelKey === 'ec_media' && isset($data['app_user_id'])) {
+                $this->logger->info("🔍 Calling getEcMediaIdsForApp with app_user_id: {$data['app_user_id']}");
+                return $this->getEcMediaIdsForApp($data['app_user_id']);
+            }
             return $connection->pluck('id')->toArray();
         }
 
@@ -287,6 +326,102 @@ class GeohubImportService
 
         return $connection->pluck('id')->toArray();
     }
+
+    /**
+     * Get the IDs of ec_media associated with tracks of the current app
+     *
+     * @param  int  $appUserId  The user ID of the app
+     * @return array The IDs of ec_media to import
+     */
+    private function getEcMediaIdsForApp(int $appUserId): array
+    {
+        // Prima trova l'app nel database geohub per ottenere l'user_id corretto
+        $app = $this->dbConnection->table('apps')->where('user_id', $appUserId)->first();
+        if (!$app) {
+            $this->logger->info("App not found for user {$appUserId} in geohub database");
+            return [];
+        }
+
+        $this->logger->info("Found app {$app->id} with geohub user_id: {$appUserId}");
+
+        // Trova tutti i track dell'app corrente (sia quelli dell'user dell'app che quelli associati all'app)
+        $appTracks = $this->dbConnection->table('ec_tracks')
+            ->where('user_id', $appUserId)
+            ->whereNotNull('feature_image')
+            ->pluck('feature_image')
+            ->toArray();
+
+        // Trova anche i track associati all'app tramite la tabella di relazione
+        $appTracksViaRelation = $this->dbConnection->table('ec_track_layer')
+            ->join('layers', 'ec_track_layer.layer_id', '=', 'layers.id')
+            ->where('layers.app_id', $app->id)
+            ->join('ec_tracks', 'ec_track_layer.ec_track_id', '=', 'ec_tracks.id')
+            ->whereNotNull('ec_tracks.feature_image')
+            ->pluck('ec_tracks.feature_image')
+            ->toArray();
+
+        // Combina i due array
+        $allAppTracks = array_unique(array_merge($appTracks, $appTracksViaRelation));
+
+        if (empty($allAppTracks)) {
+            $this->logger->info("No tracks with feature_image found for app user {$appUserId}");
+            return [];
+        }
+
+        // Trova tutti i media associati a questi track (feature_image)
+        $mediaIds = $this->dbConnection->table('ec_media')
+            ->whereIn('id', $allAppTracks)
+            ->pluck('id')
+            ->toArray();
+
+        // Trova anche i media associati tramite la tabella di relazione ec_media_ec_track
+        $mediaViaRelation = $this->dbConnection->table('ec_media_ec_track')
+            ->whereIn('ec_track_id', $this->getTrackIdsFromMediaIds($allAppTracks))
+            ->pluck('ec_media_id')
+            ->toArray();
+
+        // Trova anche i media che sono feature_image dei track associati all'app
+        // (indipendentemente dal loro user_id)
+        $trackIds = $this->dbConnection->table('ec_track_layer')
+            ->join('layers', 'ec_track_layer.layer_id', '=', 'layers.id')
+            ->where('layers.app_id', $app->id)
+            ->pluck('ec_track_layer.ec_track_id')
+            ->toArray();
+
+        $featureImageMedia = $this->dbConnection->table('ec_tracks')
+            ->whereIn('id', $trackIds)
+            ->whereNotNull('feature_image')
+            ->pluck('feature_image')
+            ->toArray();
+
+        // Combina tutti i media
+        $allMediaIds = array_unique(array_merge($mediaIds, $mediaViaRelation, $featureImageMedia));
+
+        $this->logger->info("Found " . count($allMediaIds) . " ec_media associated with app tracks (geohub user_id: {$appUserId})");
+
+        return $allMediaIds;
+    }
+
+    /**
+     * Get app ID from user ID
+     */
+    private function getAppIdFromUserId(int $userId): ?int
+    {
+        $app = $this->dbConnection->table('apps')->where('user_id', $userId)->first();
+        return $app ? $app->id : null;
+    }
+
+    /**
+     * Get track IDs from media IDs (feature_image)
+     */
+    private function getTrackIdsFromMediaIds(array $mediaIds): array
+    {
+        return $this->dbConnection->table('ec_tracks')
+            ->whereIn('feature_image', $mediaIds)
+            ->pluck('id')
+            ->toArray();
+    }
+
 
     /**
      * Get the identifier for the updateOrCreate method.
@@ -492,29 +627,55 @@ class GeohubImportService
             ->where($foreignKey, $modelId)
             ->get();
 
-        return $morphableRecords->map(function ($record) use ($morphableModels, $morphableTypeKey, $morphableIdKey, $pivotColumns) {
-            $modelName = Str::snake(class_basename($record->{$morphableTypeKey}));
+        if ($morphableRecords->isEmpty()) {
+            return collect();
+        }
+
+        // Group records by model type for batch queries
+        $groupedRecords = $morphableRecords->groupBy($morphableTypeKey);
+        $results = collect();
+
+        foreach ($groupedRecords as $modelType => $records) {
+            $modelName = Str::snake(class_basename($modelType));
 
             if (! isset($morphableModels[$modelName])) {
-                return null;
+                continue;
             }
 
             $modelClass = $morphableModels[$modelName];
-            $morphableId = $record->{$morphableIdKey};
+            $morphableIds = $records->pluck($morphableIdKey)->toArray();
+
+            // Batch query: get all models at once
             $whereCondition = str_contains($modelName, 'media')
-                ? ['custom_properties->geohub_id' => $morphableId]
-                : ['properties->geohub_id' => $morphableId];
+                ? ['custom_properties->geohub_id' => $morphableIds]
+                : ['properties->geohub_id' => $morphableIds];
 
-            $model = $modelClass::where($whereCondition)->first();
+            $models = $modelClass::whereIn(
+                str_contains($modelName, 'media') ? 'custom_properties->geohub_id' : 'properties->geohub_id',
+                $morphableIds
+            )->get();
 
-            if ($model && ! empty($pivotColumns)) {
-                $model->pivot_data = $this->extractPivotData($record, $pivotColumns);
+            // Map records to their corresponding models
+            foreach ($records as $record) {
+                $morphableId = $record->{$morphableIdKey};
+                $model = $models->first(function ($m) use ($morphableId, $modelName) {
+                    $geohubId = $modelName === 'ec_media'
+                        ? $m->custom_properties['geohub_id'] ?? null
+                        : $m->properties['geohub_id'] ?? null;
+                    return $geohubId == $morphableId;
+                });
+
+                if ($model && ! empty($pivotColumns)) {
+                    $model->pivot_data = $this->extractPivotData($record, $pivotColumns);
+                }
+
+                if ($model) {
+                    $results->push($model);
+                }
             }
+        }
 
-            return $model;
-        })
-            ->filter()
-            ->values();
+        return $results;
     }
 
     /**
@@ -554,6 +715,99 @@ class GeohubImportService
         }
     }
 
+    public function associateLayersWithMedia(Model $model): void
+    {
+        Log::info("🖼️ ASSOCIATE LAYERS WITH MEDIA - Layer ID: {$model->id}, Geohub ID: {$model->properties['geohub_id']}");
+
+        // 1. Controlla se il layer ha già una feature_image associata nel database Geohub
+        $layerFeatureImage = $this->dbConnection->table('layers')
+            ->where('id', $model->properties['geohub_id'])
+            ->whereNotNull('feature_image')
+            ->first();
+
+        if ($layerFeatureImage && $layerFeatureImage->feature_image) {
+            Log::info("✅ Layer already has feature_image in Geohub: {$layerFeatureImage->feature_image}");
+
+            return;
+        }
+
+        // 2. Se non ha feature_image, controlla taxonomy_activity con feature_image
+        $featureImageMedia = $this->getFeatureImageFromTaxonomy($model, 'taxonomy_activity');
+
+        // 3. Se nemmeno taxonomy_activity ha feature_image, controlla taxonomy_theme
+        if (! $featureImageMedia) {
+            $featureImageMedia = $this->getFeatureImageFromTaxonomy($model, 'taxonomy_theme');
+        }
+    }
+
+    /**
+     * Get feature image from taxonomy associated with the layer
+     */
+    private function getFeatureImageFromTaxonomy(Model $model, string $taxonomyKey): ?object
+    {
+        Log::info("🔍 Checking {$taxonomyKey} for feature_image");
+
+        $taxonomyConfig = $this->getRelationConfig('layer', $taxonomyKey);
+        $relationTable = $taxonomyConfig['pivot_table'];
+        $primaryKey = $taxonomyConfig['key'];
+        $foreignKey = $taxonomyConfig['foreign_key'];
+        $morphableTypeKey = $taxonomyConfig['morphable_type']['key'];
+        $morphableTypeValue = $taxonomyConfig['morphable_type']['value'];
+
+        // Ottieni le relazioni taxonomy per questo layer
+        $taxonomyRelations = $this->dbConnection->table($relationTable)
+            ->where($foreignKey, $model->properties['geohub_id'])
+            ->where($morphableTypeKey, $morphableTypeValue)
+            ->get();
+
+        foreach ($taxonomyRelations as $relation) {
+            // Ottieni il nome della tabella e della colonna ID dalla configurazione
+            $taxonomyTable = Str::plural($taxonomyKey);
+
+            // Cerca taxonomy con feature_image nel database Geohub
+            $taxonomy = $this->dbConnection->table($taxonomyTable)
+                ->where('id', $relation->{$primaryKey})
+                ->whereNotNull('feature_image')
+                ->first();
+
+            if ($taxonomy && $taxonomy->feature_image) {
+                $ecMedia = $this->dbConnection->table('ec_media')
+                    ->where('id', $taxonomy->feature_image)
+                    ->first();
+
+                if ($ecMedia && $ecMedia->url) {
+                    return $this->addMediaFromUrlToLayer($model, $ecMedia);
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Add media from URL to layer using Spatie Media Library
+     */
+    private function addMediaFromUrlToLayer(Model $model, object $ecMedia): ?object
+    {
+        try {
+            // Usa addMediaFromUrl di Spatie per aggiungere il media direttamente al layer
+            $media = $model->addMediaFromUrl($ecMedia->url)
+                ->usingName($ecMedia->name ?? 'Feature Image')
+                ->withCustomProperties([
+                    'geohub_id' => $ecMedia->id,
+                ])
+                ->toMediaCollection('default');
+
+            Log::info("✅ Added media from URL to layer: {$media->id}");
+
+            return $media;
+        } catch (\Exception $e) {
+            Log::error("❌ Failed to add media from URL {$ecMedia->url}: " . $e->getMessage());
+
+            return null;
+        }
+    }
+
     /**
      * Associate layers with ec_track through taxonomy
      *
@@ -562,30 +816,65 @@ class GeohubImportService
      */
     public function associateLayersWithEcTrack(string $taxonomyKey, Model $model): void
     {
+        $this->logger->info("🔍 ASSOCIATE LAYERS WITH EC TRACK - Layer ID: {$model->id}, Geohub ID: {$model->properties['geohub_id']}, Taxonomy: {$taxonomyKey}");
+
         $config = $this->getRelationConfig('layer', $taxonomyKey);
         $relationTable = $config['pivot_table'];
         $key = $config['key'];
         $foreignKey = $config['foreign_key'];
         $morphableTypeKey = $config['morphable_type']['key'];
         $morphableTypeValue = $config['morphable_type']['value'];
+
+        $this->logger->info("📊 Using relation table: {$relationTable}, key: {$key}, foreignKey: {$foreignKey}");
+
         $layerTaxonomyRelations = $this->dbConnection->table($relationTable)
             ->where($foreignKey, $model->properties['geohub_id'])
             ->where($morphableTypeKey, $morphableTypeValue)
             ->get();
 
+        $this->logger->info('📋 Layer taxonomy relations found: ' . $layerTaxonomyRelations->count());
+
+        $totalTracksAssigned = 0;
+        $totalTracksAlreadyAssigned = 0;
+        $totalTracksNotFound = 0;
+
         foreach ($layerTaxonomyRelations as $relation) {
+            $this->logger->info("🔗 Processing taxonomy relation: {$relation->{$key}}");
+
             $trackTaxonomyRelations = $this->dbConnection->table($relationTable)
                 ->where($key, $relation->{$key})
                 ->where($morphableTypeKey, 'App\\Models\\EcTrack')
                 ->get();
 
-            foreach ($trackTaxonomyRelations as $relation) {
-                $ecTrack = EcTrack::where('properties->geohub_id', $relation->{$foreignKey})->first();
-                if ($ecTrack && ! $model->ecTracks()->where('layerable_type', 'App\\Models\\EcTrack')->where('layerable_id', $ecTrack->id)->exists()) {
-                    $model->ecTracks()->attach($ecTrack->id, ['created_at' => now(), 'updated_at' => now()]);
+            $this->logger->info("📋 Track taxonomy relations for {$relation->{$key}}: " . $trackTaxonomyRelations->count());
+
+            foreach ($trackTaxonomyRelations as $trackRelation) {
+                $ecTrackModelClass = config('wm-package.ec_track_model', 'App\Models\EcTrack');
+                $ecTrack = $ecTrackModelClass::where('properties->geohub_id', $trackRelation->{$foreignKey})->first();
+
+                if ($ecTrack) {
+                    $alreadyExists = $model->ecTracks()->where('layerable_type', $ecTrackModelClass)->where('layerable_id', $ecTrack->id)->exists();
+
+                    if (!$alreadyExists) {
+                        $model->ecTracks()->attach($ecTrack->id, ['created_at' => now(), 'updated_at' => now()]);
+                        $totalTracksAssigned++;
+                        $this->logger->info("✅ Track assigned: Geohub ID {$trackRelation->{$foreignKey}} -> Local ID {$ecTrack->id}");
+                    } else {
+                        $totalTracksAlreadyAssigned++;
+                        $this->logger->info("⚠️ Track already assigned: Geohub ID {$trackRelation->{$foreignKey}} -> Local ID {$ecTrack->id}");
+                    }
+                } else {
+                    $totalTracksNotFound++;
+                    $this->logger->warning("❌ Track not found locally: Geohub ID {$trackRelation->{$foreignKey}}");
                 }
             }
         }
+
+        $this->logger->info("📊 ASSOCIATION SUMMARY for Layer {$model->id} (Taxonomy: {$taxonomyKey}):");
+        $this->logger->info("   • Tracks assigned: {$totalTracksAssigned}");
+        $this->logger->info("   • Tracks already assigned: {$totalTracksAlreadyAssigned}");
+        $this->logger->info("   • Tracks not found locally: {$totalTracksNotFound}");
+        $this->logger->info('   • Final layer track count: ' . $model->ecTracks()->count());
     }
 
     public function handleOverlayLayers(Model $model): void
@@ -617,6 +906,11 @@ class GeohubImportService
 
     protected function handleTranslatableAttributes(Model $model, array &$data): void
     {
+        // Check if the model has the getTranslatableAttributes method
+        if (!method_exists($model, 'getTranslatableAttributes')) {
+            return;
+        }
+
         $translatableAttributes = $model->getTranslatableAttributes();
 
         if (empty($translatableAttributes)) {
@@ -646,7 +940,7 @@ class GeohubImportService
             }
             // Otherwise we need to download and upload to AWS
             else {
-                $fileUrl = config('wm-package.clients.geohub.host').'/storage/'.$featureCollection;
+                $fileUrl = config('wm-package.clients.geohub.host') . '/storage/' . $featureCollection;
                 $fileContent = $this->downloadFileContent($fileUrl);
 
                 if ($fileContent !== false) {
@@ -662,7 +956,7 @@ class GeohubImportService
         // Update the layer with the merged data if there's anything to update
         if (! empty($updateData)) {
             $model->update($updateData);
-            \Log::info("Layer {$model->id} updated with overlay layer {$overlayLayer->id} data");
+            Log::info("Layer {$model->id} updated with overlay layer {$overlayLayer->id} data");
         }
     }
 
@@ -698,7 +992,7 @@ class GeohubImportService
                 $fileContent
             );
         } catch (\Exception $e) {
-            $this->logger->error('Error storing layer feature collection: '.$e->getMessage());
+            $this->logger->error('Error storing layer feature collection: ' . $e->getMessage());
         }
 
         if ($path) {
@@ -736,5 +1030,69 @@ class GeohubImportService
     protected function getRelationConfig(string $modelKey, string $relationKey): array
     {
         return $this->importMapping[$modelKey]['relations'][$relationKey];
+    }
+
+    /**
+     * Controlla se una coda specifica è vuota
+     * Verifica sia Redis che Horizon per assicurarsi che non ci siano job in attesa o in esecuzione
+     * 
+     * @param string $queueName Nome della coda da controllare
+     * @return bool True se la coda è vuota, false altrimenti
+     */
+    public function isQueueEmpty(string $queueName): bool
+    {
+        try {
+            $appName = config('app.name', 'wm-package');
+            $redis = Redis::connection();
+
+            $queueKeyPrefix = "{$appName}_database_queues:{$queueName}";
+            $horizonPrefix = "{$appName}_horizon:";
+
+            $checkQueues = function () use ($redis, $queueKeyPrefix, $horizonPrefix, $queueName) {
+                // Code Redis: attesa, delayed, reserved
+                $pendingSize = (int) $redis->llen($queueKeyPrefix);
+                $delayedSize = (int) $redis->zcard($queueKeyPrefix . ':delayed');
+                $reservedSize = (int) $redis->zcard($queueKeyPrefix . ':reserved');
+
+                if (($pendingSize + $delayedSize + $reservedSize) > 0) {
+                    Log::info("Coda '{$queueName}' non vuota (pending={$pendingSize}, delayed={$delayedSize}, reserved={$reservedSize})");
+                    return false;
+                }
+
+                // Horizon processing (job in esecuzione)
+                $processingSize = (int) $redis->zcard($horizonPrefix . 'processing');
+                if ($processingSize > 0) {
+                    $processingData = $redis->zrange($horizonPrefix . 'processing', 0, -1);
+                    foreach ($processingData as $jobData) {
+                        $job = json_decode($jobData, true);
+                        if (isset($job['queue']) && $job['queue'] === $queueName) {
+                            Log::info("Coda '{$queueName}' ha job in processing su Horizon");
+                            return false;
+                        }
+                    }
+                }
+
+                return true;
+            };
+
+            // Primo controllo
+            if (! $checkQueues()) {
+                return false;
+            }
+
+            // Breve attesa e secondo controllo per mitigare race conditions
+            usleep(1500000); // 1.5 secondi
+
+            if (! $checkQueues()) {
+                return false;
+            }
+
+            Log::info("Coda '{$queueName}' è vuota (doppio check)");
+            return true;
+        } catch (\Exception $e) {
+            Log::error("Errore nel controllo della coda '{$queueName}': " . $e->getMessage());
+            // In caso di errore, assumiamo che la coda non sia vuota per sicurezza
+            return false;
+        }
     }
 }

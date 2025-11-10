@@ -16,6 +16,7 @@ use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Tymon\JWTAuth\Providers\LaravelServiceProvider;
 use Wm\WmPackage\Commands\WmBackupCommand;
+use Wm\WmPackage\Commands\WmBuildAppPoisGeojsonCommand;
 use Wm\WmPackage\Commands\WmDownloadDbBackupCommand;
 use Wm\WmPackage\Commands\WmGeneratePBFCommand;
 use Wm\WmPackage\Commands\WmImportFromGeohubCommand;
@@ -41,6 +42,14 @@ class WmPackageServiceProvider extends PackageServiceProvider
         parent::register();
 
         $this->app->bind(HitsIteratorAggregate::class, ElasticSearchHitsIteratorAggregate::class);
+
+        // Registra il GlobalFileServiceProvider
+        $this->app->register(GlobalFileServiceProvider::class);
+
+        // Registra IconSelect FieldServiceProvider
+        $this->app->register(\Wm\WmPackage\Nova\Fields\IconSelect\FieldServiceProvider::class);
+        $this->app->register(\Wm\WmPackage\Nova\Fields\LayerFeatures\FieldServiceProvider::class);
+        $this->app->register(\Wm\WmPackage\Nova\Fields\FeatureCollectionMap\src\FieldServiceProvider::class);
     }
 
     public static function getBasePath(): string
@@ -64,8 +73,8 @@ class WmPackageServiceProvider extends PackageServiceProvider
 
         // Register Nova CSS assets
         Nova::serving(function () {
-            Nova::style('wm-flexible-field', __DIR__.'/../resources/css/flexible-field.css');
-            $this->addDownloadDbMenuItem();
+            Nova::style('wm-flexible-field', __DIR__ . '/../resources/css/flexible-field.css');
+            $this->addWmpackageToolsMenuItem();
         });
 
         // Register routes as Laravel does with RouteServiceProvider
@@ -74,15 +83,15 @@ class WmPackageServiceProvider extends PackageServiceProvider
             Route::name('v2.')
                 ->middleware('api')
                 ->prefix('api/v2')
-                ->group($packageDirPath.'routes/api.php');
+                ->group($packageDirPath . 'routes/api.php');
 
             Route::name('default.')
                 ->middleware('api')
                 ->prefix('api')
-                ->group($packageDirPath.'routes/api.php');
+                ->group($packageDirPath . 'routes/api.php');
 
             Route::middleware('web')
-                ->group($packageDirPath.'routes/web.php');
+                ->group($packageDirPath . 'routes/web.php');
         });
 
         // Register policies
@@ -139,6 +148,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
                 'wm-tab-translatable',
                 'wm-layer-schema',
                 'wm-ec-track-schema',
+                'wm-ec-from-ugc-schema',
             ])
             // ->hasRoutes(['api', 'web'])// Check the boot method, routes are registered there
             ->discoversMigrations()
@@ -148,6 +158,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
                 WmImportFromGeohubCommand::class,
                 WmGeneratePBFCommand::class,
                 WmDownloadDbBackupCommand::class,
+                WmBuildAppPoisGeojsonCommand::class,
             ])
             ->hasViews();
     }
@@ -198,6 +209,29 @@ class WmPackageServiceProvider extends PackageServiceProvider
 
         $this->app->config['tab-translatable'] = config('wm-tab-translatable', []);
 
+        // Merge elasticsearch configuration from wm-elasticsearch
+        $wmElasticsearchConfig = config('wm-elasticsearch', []);
+        if (isset($wmElasticsearchConfig['host'])) {
+            $this->app->config['elasticsearch.host'] = $wmElasticsearchConfig['host'];
+        }
+        if (isset($wmElasticsearchConfig['user'])) {
+            $this->app->config['elasticsearch.user'] = $wmElasticsearchConfig['user'];
+        }
+        if (isset($wmElasticsearchConfig['password'])) {
+            $this->app->config['elasticsearch.password'] = $wmElasticsearchConfig['password'];
+        }
+        if (isset($wmElasticsearchConfig['cloud_id'])) {
+            $this->app->config['elasticsearch.cloud_id'] = $wmElasticsearchConfig['cloud_id'];
+        }
+        if (isset($wmElasticsearchConfig['api_key'])) {
+            $this->app->config['elasticsearch.api_key'] = $wmElasticsearchConfig['api_key'];
+        }
+        if (isset($wmElasticsearchConfig['ssl_verification'])) {
+            $this->app->config['elasticsearch.ssl_verification'] = $wmElasticsearchConfig['ssl_verification'];
+        }
+        if (isset($wmElasticsearchConfig['queue'])) {
+            $this->app->config['elasticsearch.queue'] = $wmElasticsearchConfig['queue'];
+        }
         $this->app->config['elasticsearch.indices'] =
             config('wm-elasticsearch.indices', []);
 
@@ -303,7 +337,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
      */
     protected function resources()
     {
-        Nova::resourcesIn($this->getPackageBaseDir().'/Nova');
+        Nova::resourcesIn($this->getPackageBaseDir() . '/Nova');
     }
 
     /**
@@ -342,34 +376,90 @@ class WmPackageServiceProvider extends PackageServiceProvider
         return $appConfig;
     }
 
-    protected function addDownloadDbMenuItem()
+    protected function addWmpackageToolsMenuItem()
     {
+        $createHorizonMenuItem = function () {
+            $menuItem = MenuItem::externalLink(__('Horizon'), url('/horizon'))
+                ->canSee(fn() => optional(Auth::user())->hasRole('Administrator'))
+                ->openInNewTab();
+            return $menuItem;
+        };
         $createDownloadDbMenuItem = function () {
             $menuItem = MenuItem::externalLink(__('Download DB'), route('download.db'))
-                ->canSee(fn () => optional(Auth::user())->hasRole('Administrator'))
+                ->canSee(fn() => optional(Auth::user())->hasRole('Administrator'))
                 ->openInNewTab();
 
+            return $menuItem;
+        };
+        $createMinioMenuItem = function () {
+            // Determina l'URL in base all'ambiente
+            $environment = app()->environment();
+            if ($environment === 'local') {
+                $url = 'http://0.0.0.0:8900';
+            } elseif ($environment === 'production') {
+                // Non mostrare in produzione
+                return null;
+            } else {
+                // Staging, testing, ecc.
+                $url = url('/minio');
+            }
+
+            $menuItem = MenuItem::externalLink(__('Minio'), $url)
+                ->canSee(fn() => optional(Auth::user())->hasRole('Administrator'))
+                ->openInNewTab();
+
+            return $menuItem;
+        };
+        $createKibanaMenuItem = function () {
+            // Determina l'URL in base all'ambiente
+            $environment = app()->environment();
+            if ($environment === 'local') {
+                $url = 'http://0.0.0.0:5601';
+            } elseif ($environment === 'production') {
+                // Non mostrare in produzione
+                return null;
+            } else {
+                // Staging, testing, ecc.
+                $url = url('/kibana');
+            }
+            $menuItem = MenuItem::externalLink(__('Kibana'), $url)
+                ->canSee(fn() => optional(Auth::user())->hasRole('Administrator'))
+                ->openInNewTab();
             return $menuItem;
         };
 
         if (Nova::$mainMenuCallback) {
             $originalCallback = Nova::$mainMenuCallback;
 
-            Nova::mainMenu(function (Request $request) use ($originalCallback, $createDownloadDbMenuItem) {
+            Nova::mainMenu(function (Request $request) use ($originalCallback, $createDownloadDbMenuItem, $createMinioMenuItem, $createHorizonMenuItem, $createKibanaMenuItem) {
                 $menuItems = call_user_func($originalCallback, $request);
                 $downloadDbMenuItem = $createDownloadDbMenuItem();
+                $minioMenuItem = $createMinioMenuItem();
+                $horizonMenuItem = $createHorizonMenuItem();
+                $kibanaMenuItem = $createKibanaMenuItem();
 
+                $toolsSectionFound = false;
                 foreach ($menuItems as $index => &$sectionOrGroup) {
                     if (
                         $sectionOrGroup instanceof MenuSection &&
                         $sectionOrGroup->name === __('Tools')
                     ) {
+                        $toolsSectionFound = true;
                         try {
                             $reflection = new \ReflectionObject($sectionOrGroup);
 
                             $itemsProperty = $reflection->getProperty('items');
                             $itemsProperty->setAccessible(true);
                             $currentItems = $itemsProperty->getValue($sectionOrGroup);
+                            if ($horizonMenuItem !== null) {
+                                $currentItems[] = $horizonMenuItem;
+                            }
+                            if ($minioMenuItem !== null) {
+                                $currentItems[] = $minioMenuItem;
+                            }
+                            if ($kibanaMenuItem !== null) {
+                                $currentItems[] = $kibanaMenuItem;
+                            }
                             $currentItems[] = $downloadDbMenuItem;
 
                             $icon = $reflection->getProperty('icon');
@@ -385,7 +475,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
                                 ->collapsable($collapsableValue);
                         } catch (\ReflectionException $e) {
                             logger()->error(
-                                'WM-Package: Failed to modify Nova Tools menu section via reflection. Exception: '.$e->getMessage()
+                                'WM-Package: Failed to modify Nova Tools menu section via reflection. Exception: ' . $e->getMessage()
                             );
                         }
                         break;
@@ -393,12 +483,44 @@ class WmPackageServiceProvider extends PackageServiceProvider
                 }
                 unset($sectionOrGroup);
 
+                // Se la sezione Tools non esiste, la creiamo
+                if (! $toolsSectionFound) {
+                    $toolsItems = [];
+                    if ($horizonMenuItem !== null) {
+                        $toolsItems[] = $horizonMenuItem;
+                    }
+                    if ($minioMenuItem !== null) {
+                        $toolsItems[] = $minioMenuItem;
+                    }
+                    if ($kibanaMenuItem !== null) {
+                        $toolsItems[] = $kibanaMenuItem;
+                    }
+                    $toolsItems[] = $downloadDbMenuItem;
+
+                    $menuItems[] = MenuSection::make(__('Tools'), $toolsItems)->icon('briefcase')
+                        ->collapsable();
+                }
+
                 return $menuItems;
             });
         } else {
-            Nova::mainMenu(function (Request $request) use ($createDownloadDbMenuItem) {
+            Nova::mainMenu(function (Request $request) use ($createDownloadDbMenuItem, $createMinioMenuItem, $createHorizonMenuItem, $createKibanaMenuItem) {
+                $toolsItems = [$createDownloadDbMenuItem()];
+                $minioMenuItem = $createMinioMenuItem();
+                if ($minioMenuItem !== null) {
+                    $toolsItems[] = $minioMenuItem;
+                }
+                $horizonMenuItem = $createHorizonMenuItem();
+                if ($horizonMenuItem !== null) {
+                    $toolsItems[] = $horizonMenuItem;
+                }
+                $kibanaMenuItem = $createKibanaMenuItem();
+                if ($kibanaMenuItem !== null) {
+                    $toolsItems[] = $kibanaMenuItem;
+                }
+
                 return [
-                    MenuSection::make(__('Tools'), [$createDownloadDbMenuItem()])
+                    MenuSection::make(__('Tools'), $toolsItems)
                         ->icon('color-swatch')
                         ->collapsable(),
                 ];

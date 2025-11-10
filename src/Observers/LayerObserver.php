@@ -4,14 +4,17 @@ namespace Wm\WmPackage\Observers;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
-use Wm\WmPackage\Jobs\Pbf\GenerateOptimizedPBFChainJob;
+use Wm\WmPackage\Jobs\UpdateAppConfigJob;
 use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Services\Models\LayerService;
 use Wm\WmPackage\Services\PBFGeneratorService;
 
 class LayerObserver extends AbstractObserver
 {
-    public function __construct(protected LayerService $layerService) {}
+    public function __construct(
+        protected LayerService $layerService,
+        protected PBFGeneratorService $pbfGeneratorService
+    ) {}
 
     /**
      * Handle the Layer "creating" event.
@@ -35,10 +38,18 @@ class LayerObserver extends AbstractObserver
             $this->layerService->updateLayersPropertyOnAllLayeredFeaturesWithJobs($layer);
         }
 
+        // Se il layer ha tassonomie di attività associate, assegna automaticamente le track
+        if ($this->hasTaxonomyActivitiesChanged($layer)) {
+            $this->layerService->assignTracksByTaxonomy($layer);
+        }
+
+        // Update App conf when layer properties change
+        if ($layer->wasChanged('properties')) {
+            $this->updateAppConf($layer);
+        }
+
         // Aggiorna sempre la geometria del layer quando viene salvato
         $this->layerService->updateLayerGeometryWithJob($layer);
-
-        $this->updatePbfsForLayer($layer);
     }
 
     /**
@@ -66,6 +77,28 @@ class LayerObserver extends AbstractObserver
         return false;
     }
 
+    /**
+     * Check if taxonomy activities have changed
+     */
+    private function hasTaxonomyActivitiesChanged(Layer $layer): bool
+    {
+        // Se è un nuovo record e ha tassonomie di attività
+        if ($layer->wasRecentlyCreated) {
+            return $layer->taxonomyActivities()->count() > 0;
+        }
+
+        // Se le tassonomie di attività sono cambiate
+        return $layer->wasChanged() && $layer->taxonomyActivities()->count() > 0;
+    }
+
+    private function updateAppConf(Layer $layer): void
+    {
+        // Dispatches il job con ritardo di 10 secondi per permettere ai media di essere processati
+        UpdateAppConfigJob::dispatch($layer->app_id)
+            ->delay(now()->addSeconds(10))
+            ->onQueue('default');
+    }
+
     public function saving($layer)
     {
         parent::saving($layer);
@@ -76,43 +109,9 @@ class LayerObserver extends AbstractObserver
 
     public function deleted(Layer $layer)
     {
-        $this->updatePbfsForLayer($layer);
-    }
+        // Rigenera i PBF del layer dopo la cancellazione
+        $this->pbfGeneratorService->regeneratePbfsForLayer($layer);
 
-    public function updatePbfsForLayer(Layer $layer)
-    {
-        return;
-        try {
-            $trackIds = $layer->layerables()
-                ->where('layerable_type', config('wm-package.ec_track_model', 'App\Models\EcTrack'))
-                ->pluck('layerable_id')
-                ->toArray();
-
-            if (! empty($trackIds)) {
-                GenerateOptimizedPBFChainJob::dispatch(
-                    $layer->app->id,
-                    5,  // minZoom
-                    13, // minZoom
-                    false,
-                    $trackIds // Passa le track IDs già recuperate
-                )->onConnection('redis')->onQueue('pbf');
-
-                Log::info('PBF rigenerati per tracce multiple del layer', [
-                    'layer_id' => $layer->id,
-                    'track_count' => count($trackIds),
-                    'app_id' => $layer->app->id,
-                ]);
-            } else {
-                // Se non ci sono tracce, usa il metodo originale
-                PBFGeneratorService::make()->generateWholeAppPbfsOptimized($layer->app);
-            }
-        } catch (\Exception $e) {
-            Log::warning('Fallback a generateWholeAppPbfs per errore nella rigenerazione multipla', [
-                'layer_id' => $layer->id,
-                'error' => $e->getMessage(),
-            ]);
-            // Fallback al metodo originale
-            PBFGeneratorService::make()->generateWholeAppPbfs($layer->app);
-        }
+        $this->updateAppConf($layer);
     }
 }

@@ -24,14 +24,20 @@ class EcTrackResource extends JsonResource
         $geometryLinestring = $geometryComputationService->getModelLineMergeGeojson($this->resource);
         $geojson['geometry'] = json_decode($geometryLinestring, true);
 
-        $geojson['properties'] = [
+        $properties = [
             ...GeoJsonService::make()->removeInvalidProperties($geojson['properties']),
             'name' => $this->getTranslations('name'),
             'roundtrip' => $geojson['properties']['dem_data']['round_trip'] ?? $geometryComputationService->isRoundtrip($geojson['geometry']['coordinates']),
-            'feature_image' => new MediaResource($this->getMedia()->first()),
-            'image_gallery' => MediaResource::collection($this->getMedia()),
             'related_pois' => $this->getRelatedPois(),
         ];
+
+        $media = $this->getMedia();
+        if ($media->isNotEmpty()) {
+            $properties['feature_image'] = new MediaResource($media->first());
+            $properties['image_gallery'] = MediaResource::collection($media);
+        }
+
+        $geojson['properties'] = $properties;
 
         return $geojson;
     }
@@ -43,9 +49,12 @@ class EcTrackResource extends JsonResource
     private function getRelatedPois()
     {
         try {
-            return $this->ecPois->map(function (EcPoi $ecPoi) {
-                return EcPoiResource::make($ecPoi);
-            });
+            return $this->ecPois
+                ->whereNull('osmfeatures_id') // TODO: da rimuovere, aggiunto per osm2cai, evita che i poi presi da osm vengano aggiunti ai related
+                ->map(function (EcPoi $ecPoi) {
+                    return EcPoiResource::make($ecPoi);
+                })
+                ->toArray();
         } catch (\Exception $e) {
             // Se la relazione fallisce (es: tabella pivot non esiste), ritorna array vuoto
             return [];

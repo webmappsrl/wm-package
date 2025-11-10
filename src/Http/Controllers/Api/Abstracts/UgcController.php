@@ -107,11 +107,12 @@ abstract class UgcController extends Controller
             'properties' => $properties,
             'name' => $properties['name'], // validated in the validateProperties method
             'app_id' => $properties['app_id'] ?? $model->app_id, // for those UGCs created from Nova, the app_id is not present in the properties, so we use the one from the model
+            'created_by' => 'device',
         ]);
 
         try {
             $model->save();
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $message = 'Error saving '.class_basename($this->getModelIstance()::class).'. '.$e->getMessage();
             Log::channel('ugc')->error($message);
             throw new Exception($message, 500);

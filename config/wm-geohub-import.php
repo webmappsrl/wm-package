@@ -6,6 +6,7 @@ use Wm\WmPackage\Jobs\Import\ImportEcPoiJob;
 use Wm\WmPackage\Jobs\Import\ImportEcTrackJob;
 use Wm\WmPackage\Jobs\Import\ImportLayerJob;
 use Wm\WmPackage\Jobs\Import\ImportTaxonomyActivityJob;
+use Wm\WmPackage\Jobs\Import\ImportTaxonomyPoiTypeJob;
 use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Services\Import\DataTransformer;
 
@@ -216,7 +217,7 @@ return [
             'geohub_table' => 'layers',
             'identifier' => 'properties->geohub_id',
             'fields' => [
-                'name' => 'name',
+                'name' => ['field' => 'title', 'transformer' => [DataTransformer::class, 'jsonToArray']],
                 'geometry' => ['field' => 'bbox', 'transformer' => [GeometryComputationService::class, 'bboxToPolygon']],
                 'app_id' => 'app_id',
                 'rank' => 'rank',
@@ -299,7 +300,7 @@ return [
                     'pivot_table' => 'ec_media_ec_track',
                     'foreign_key' => 'ec_media_id',
                     'key' => 'ec_track_id',
-                    'model' => 'Wm\\WmPackage\\Models\\EcTrack',
+                    'model' => config('wm-package.ec_track_model', 'Wm\\WmPackage\\Models\\EcTrack'),
                 ],
                 'layers' => [
                     'pivot_table' => 'ec_media_layer',
@@ -316,7 +317,7 @@ return [
         |----------------------------------------------------------------------
         */
         'ec_track' => [
-            'namespace' => 'Wm\\WmPackage\\Models\\EcTrack',
+            'namespace' => config('wm-package.ec_track_model'),
             'job' => ImportEcTrackJob::class,
             'geohub_table' => 'ec_tracks',
             'identifier' => 'properties->geohub_id',
@@ -490,9 +491,10 @@ return [
                 'name' => ['field' => 'name', 'transformer' => [DataTransformer::class, 'jsonToArray']],
                 'description' => ['field' => 'description', 'transformer' => [DataTransformer::class, 'jsonToArray']],
                 'excerpt' => ['field' => 'excerpt', 'transformer' => [DataTransformer::class, 'jsonToArray']],
-                'identifier' => 'properties->geohub_id',
+                'identifier' => 'identifier',
                 'created_at' => 'created_at',
                 'updated_at' => 'updated_at',
+                'icon' => ['field' => 'icon', 'transformer' => [DataTransformer::class, 'svgIconToNameIcon']],
             ],
             'properties' => [
                 'column_name' => 'properties',
@@ -505,7 +507,7 @@ return [
                 'morphable_type' => 'taxonomy_activityable_type',
                 'morphable_models' => [
                     'ec_poi' => 'Wm\\WmPackage\\Models\\EcPoi',
-                    'ec_track' => 'Wm\\WmPackage\\Models\\EcTrack',
+                    'ec_track' => config('wm-package.ec_track_model', 'App\\Models\\EcTrack'),
                     'media' => 'Wm\\WmPackage\\Models\\Media',
                     'layer' => 'Wm\\WmPackage\\Models\\Layer',
                 ],
@@ -521,7 +523,7 @@ return [
         | Taxonomy POI Type Entity Mapping
         |----------------------------------------------------------------------
         */
-        'taxonomy_poi_type' => [
+        'taxonomy_poi_types' => [
             'namespace' => 'Wm\\WmPackage\\Models\\TaxonomyPoiType',
             'job' => ImportTaxonomyPoiTypeJob::class,
             'geohub_table' => 'taxonomy_poi_types',
@@ -530,11 +532,15 @@ return [
                 'name' => ['field' => 'name', 'transformer' => [DataTransformer::class, 'jsonToArray']],
                 'description' => ['field' => 'description', 'transformer' => [DataTransformer::class, 'jsonToArray']],
                 'excerpt' => ['field' => 'excerpt', 'transformer' => [DataTransformer::class, 'jsonToArray']],
-                'identifier' => 'properties->geohub_id',
+                'identifier' => 'identifier',
                 'created_at' => 'created_at',
                 'updated_at' => 'updated_at',
+                'icon' => ['field' => 'icon', 'transformer' => [DataTransformer::class, 'svgIconToNameIcon']],
             ],
-            'properties' => [],
+            'properties' => [
+                'column_name' => 'properties',
+                'mapping' => [],
+            ],
             'relations' => [
                 'morphable_table' => 'taxonomy_poi_typeables',
                 'foreign_key' => 'taxonomy_poi_type_id',
@@ -542,8 +548,8 @@ return [
                 'morphable_type' => 'taxonomy_poi_typeable_type',
                 'morphable_models' => [
                     'ec_poi' => 'Wm\\WmPackage\\Models\\EcPoi',
-                    'ec_track' => 'Wm\\WmPackage\\Models\\EcTrack',
-                    'ec_media' => 'Wm\\WmPackage\\Models\\EcMedia',
+                    'ec_track' => config('wm-package.ec_track_model', 'App\\Models\\EcTrack'),
+                    'media' => 'Wm\\WmPackage\\Models\\Media',
                     'layer' => 'Wm\\WmPackage\\Models\\Layer',
                 ],
             ],
@@ -575,7 +581,7 @@ return [
                 'morphable_type' => 'taxonomy_targetable_type',
                 'morphable_models' => [
                     'ec_poi' => 'Wm\\WmPackage\\Models\\EcPoi',
-                    'ec_track' => 'Wm\\WmPackage\\Models\\EcTrack',
+                    'ec_track' => config('wm-package.ec_track_model', 'App\\Models\\EcTrack'),
                     'ec_media' => 'Wm\\WmPackage\\Models\\EcMedia',
                     'layer' => 'Wm\\WmPackage\\Models\\Layer',
                 ],
@@ -608,7 +614,7 @@ return [
                 'morphable_type' => 'taxonomy_whenable_type',
                 'morphable_models' => [
                     'ec_poi' => 'Wm\\WmPackage\\Models\\EcPoi',
-                    'ec_track' => 'Wm\\WmPackage\\Models\\EcTrack',
+                    'ec_track' => config('wm-package.ec_track_model', 'App\\Models\\EcTrack'),
                     'ec_media' => 'Wm\\WmPackage\\Models\\EcMedia',
                     'layer' => 'Wm\\WmPackage\\Models\\Layer',
                 ],
@@ -634,7 +640,7 @@ return [
                 'morphable_type' => 'taxonomy_themeable_type',
                 'morphable_models' => [
                     'ec_poi' => 'Wm\\WmPackage\\Models\\EcPoi',
-                    'ec_track' => 'Wm\\WmPackage\\Models\\EcTrack',
+                    'ec_track' => config('wm-package.ec_track_model', 'App\\Models\\EcTrack'),
                     'media' => 'Wm\\WmPackage\\Models\\Media',
                     'layer' => 'Wm\\WmPackage\\Models\\Layer',
                 ],

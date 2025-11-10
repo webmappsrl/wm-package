@@ -40,7 +40,6 @@ class UpdateTracksOnAws extends Action
                     });
 
                     $count += $processedCount;
-
                 } catch (Exception $e) {
                     Log::error('Error processing App', ['app_id' => $model->id, 'error' => $e->getMessage()]);
                 }
@@ -61,12 +60,14 @@ class UpdateTracksOnAws extends Action
         $totalTracks = count($tracks);
         $processedCount = 0;
 
-        foreach ($tracks->chunk($batchSize) as $batch) {
+        // Convert array to Collection if needed
+        $tracksCollection = is_array($tracks) ? collect($tracks) : $tracks;
+
+        foreach ($tracksCollection->chunk($batchSize) as $batch) {
             foreach ($batch as $track) {
                 try {
                     UpdateEcTrackAwsJob::dispatch($track);
                     $processedCount++;
-
                 } catch (Exception $e) {
                     Log::error('Failed to dispatch job', [
                         'track_id' => $track->id,

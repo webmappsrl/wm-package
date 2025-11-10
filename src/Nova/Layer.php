@@ -11,9 +11,12 @@ use Laravel\Nova\Fields\MorphToMany;
 use Laravel\Nova\Fields\Number;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
+use Laravel\Nova\Panel;
+use Wm\WmPackage\Nova\Fields\LayerFeatures\LayerFeatures;
 use Wm\WmPackage\Nova\Fields\PropertiesPanel;
 use Wm\WmPackage\Nova\Filters\AppFilter;
 use Wm\WmPackage\Nova\Traits\MultiPolygonResourceTrait;
+use Wm\WmPackage\Nova\Fields\FeatureCollectionMap\src\FeatureCollectionMap;
 
 class Layer extends AbstractGeometryResource
 {
@@ -37,7 +40,6 @@ class Layer extends AbstractGeometryResource
             NovaTabTranslatable::make([
                 Text::make(__('Name'), 'name')->required(),
             ]),
-
             Number::make(__('Rank'), 'rank', function () {
                 if (is_array($this->properties) && isset($this->properties['rank'])) {
                     return (int) $this->properties['rank'];
@@ -45,13 +47,19 @@ class Layer extends AbstractGeometryResource
 
                 return $this->rank ?? 0;
             })->onlyOnIndex()->sortable(),
-
             BelongsTo::make(__('App'), 'appOwner', App::class),
-            BelongsTo::make('Owner', 'layerOwner', User::class)->nullable(),
+            BelongsTo::make(__('Owner'), 'layerOwner', User::class)
+                ->nullable()
+                ->searchable(),
             Images::make(__('Image'), 'default'),
-            PropertiesPanel::make(__('Properties'), 'layer')->collapsible(),
+            PropertiesPanel::makeWithModel(__('Properties'), 'properties', $this, true)->collapsible(),
             MorphToMany::make(__('Activities'), 'taxonomyActivities', TaxonomyActivity::class),
-            ...$this->fieldsTrait($request),
+            Panel::make('Ec Tracks', [
+                FeatureCollectionMap::make(__('Geometry'), 'geometry')->onlyOnDetail(),
+                LayerFeatures::make(__('tracks'), $this->resource, config('wm-package.ec_track_model', 'Wm\WmPackage\Models\EcTrack'))
+                    ->hideWhenCreating()
+                    ->withMeta(['model_class' => config('wm-package.ec_track_model', 'Wm\WmPackage\Models\EcTrack')]),
+            ]),
         ];
     }
 

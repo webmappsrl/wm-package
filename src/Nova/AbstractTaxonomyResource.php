@@ -8,6 +8,7 @@ use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Fields\Textarea;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Resource;
+use Wm\WmPackage\Nova\Fields\IconSelect\IconSelect;
 
 abstract class AbstractTaxonomyResource extends Resource
 {
@@ -39,6 +40,10 @@ abstract class AbstractTaxonomyResource extends Resource
             ID::make()->sortable(),
             Text::make('Name', 'name'),
             Textarea::make('Description', 'description'),
+            IconSelect::make('Icona', 'icon')
+                ->loadFromIconsFile()
+                ->searchPlaceholder('Cerca un\'icona per la tassonomia...')
+                ->help('Seleziona un\'icona che rappresenti questa categoria'),
             Code::make('Properties', 'properties')->json(),
         ];
     }

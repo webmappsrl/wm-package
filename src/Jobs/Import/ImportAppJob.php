@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Wm\WmPackage\Jobs\UpdateAppConfigHomeLayerIdsJob;
 
 class ImportAppJob extends BaseImportJob
 {
@@ -43,16 +44,20 @@ class ImportAppJob extends BaseImportJob
         // }
 
         // Import only allowed dependencies
+        if (in_array('taxonomy_activity', $allowedDependencies)) {
+            $this->queueEntityImport('taxonomy_activity', $data['user_id'], 'user_id', $model->id);
+        }
+
+        if (in_array('taxonomy_poi_types', $allowedDependencies)) {
+            $this->queueEntityImport('taxonomy_poi_types', $data['user_id'], 'user_id', $model->id);
+        }
+
         if (in_array('ec_poi', $allowedDependencies)) {
             $this->queueEntityImport('ec_poi', $data['user_id'], 'user_id', $model->id);
         }
 
         if (in_array('ec_track', $allowedDependencies)) {
             $this->queueEntityImport('ec_track', $data['user_id'], 'user_id', $model->id);
-        }
-
-        if (in_array('taxonomy_activity', $allowedDependencies)) {
-            $this->queueEntityImport('taxonomy_activity', $data['user_id'], 'user_id', $model->id);
         }
 
         if (in_array('layer', $allowedDependencies)) {
@@ -70,7 +75,7 @@ class ImportAppJob extends BaseImportJob
     protected function getAllowedDependencies(): array
     {
         // All available dependencies
-        $allDependencies = ['ec_poi', 'ec_track', 'taxonomy_activity', 'layer', 'ec_media'];
+        $allDependencies = ['taxonomy_activity', 'taxonomy_poi_types', 'ec_poi', 'ec_track',  'layer', 'ec_media'];
 
         // First check if allowed_dependencies is passed in job data
         if (isset($this->data['allowed_dependencies']) && is_array($this->data['allowed_dependencies'])) {
@@ -99,6 +104,11 @@ class ImportAppJob extends BaseImportJob
                     $whereCondition = [$entityForeignKey => $this->entityId];
                     $data = ['app_id' => $appId];
                     break;
+                case 'ec_media':
+                    // Per ec_media, importiamo i media associati ai track dell'app, non solo quelli dell'utente
+                    $whereCondition = null; // Gestiremo i media tramite relazioni
+                    $data = ['app_id' => $appId, 'app_user_id' => $userId];
+                    break;
                 case strpos($entityModelKey, 'taxonomy') !== false: // import all taxonomy entities
                     $whereCondition = null;
                     break;
@@ -107,7 +117,7 @@ class ImportAppJob extends BaseImportJob
                     $data = ['app_id' => $appId];
                     break;
             }
-            $ids = $this->geohubImportService->getGeohubIdsToImport($entityModelKey, $whereCondition);
+            $ids = $this->geohubImportService->getGeohubIdsToImport($entityModelKey, $whereCondition, $data);
 
             if (count($ids) > 0) {
                 $jobs = [];
@@ -117,9 +127,15 @@ class ImportAppJob extends BaseImportJob
                 // create a batch and add the jobs to it
                 $batch = Bus::batch($jobs)->name("app-dependencies-{$entityModelKey}-import-batch")->onQueue(config('wm-geohub-import.queue.queue', 'geohub-import'));
                 $batch->dispatch();
+
+                // Dopo aver dispatchato tutti i job dei layer, lancia l'aggiornamento di config_home
+                if ($entityModelKey === 'layer') {
+                    dispatch((new UpdateAppConfigHomeLayerIdsJob($appId))
+                        ->onQueue(config('wm-geohub-import.queue.queue', 'geohub-import')));
+                }
             }
         } catch (\Exception $e) {
-            $logger->error("Error queuing {$entityModelKey} imports for app {$this->entityId}: ".$e->getMessage());
+            $logger->error("Error queuing {$entityModelKey} imports for app {$this->entityId}: " . $e->getMessage());
             throw $e;
         }
     }

@@ -161,12 +161,17 @@ class AppConfigService extends AppBaseService
             'title' => $this->app->name,
         ];
 
-        if (! empty($this->app->config_home)) {
-            if (is_string($this->app->config_home)) {
-                $data = json_decode($this->app->config_home, true);
-            } elseif (is_array($this->app->config_home)) {
+        // se chiamato dal job $this->app->config_home è di tipo Whitecube\NovaFlexibleContent\Layouts\Collection
+        $configHome = $this->app->getRawOriginal('config_home');
+        if (! empty($configHome)) {
+            Log::info('Config home found', [
+                'config_home' => $configHome,
+            ]);
+            if (is_string($configHome)) {
+                $data = json_decode($configHome, true);
+            } elseif (is_array($configHome)) {
                 // Se config_home è già un array, lo usiamo direttamente
-                $data = $this->app->config_home;
+                $data = $configHome;
             }
         } elseif ($this->app->layers->count() > 0) {
             foreach ($this->app->layers()->orderBy('rank')->get() as $layer) {
@@ -177,6 +182,10 @@ class AppConfigService extends AppBaseService
                 ];
             }
         }
+
+        Log::info('Config home data', [
+            'data' => $data,
+        ]);
 
         return $data;
     }
@@ -298,7 +307,7 @@ class AppConfigService extends AppBaseService
                     } elseif (isset($item['geometry'])) {
                         $item['bbox'] = GeometryComputationService::make()->getGeometryModelBbox($layer);
                     }
-                } catch (\Exception $e) {
+                } catch (Exception $e) {
                     Log::warning('The bbox value '.$layer->id.' are not correct. Error: '.$e->getMessage());
                 }
                 // style
@@ -358,7 +367,7 @@ class AppConfigService extends AppBaseService
         $data['MAP']['pois']['poiIconRadius'] = $this->app->poi_icon_radius;
         $data['MAP']['pois']['poiMinZoom'] = $this->app->poi_min_zoom;
         $data['MAP']['pois']['poiLabelMinZoom'] = $this->app->poi_label_min_zoom;
-        // $data['MAP']['pois']['taxonomies'] = $this->app->getAllPoiTaxonomies(); //TODO trovare le tassonomie non piu tramite tema ma tramite associazione layer
+        $data['MAP']['pois']['taxonomies'] = $this->app->getAllPoiTaxonomies();
         $data['MAP']['pois']['poi_interaction'] = $this->app->poi_interaction;
 
         // Other Options
@@ -489,8 +498,8 @@ class AppConfigService extends AppBaseService
             $poi_types = [];
             try {
                 // TODO removed a.color and a.icon from taxonomy_poi_types because it does not exists in the database. Check if needed
-                $poi_types = DB::select("SELECT distinct a.id, a.identifier, a.name from taxonomy_poi_typeables as txa inner join ec_pois as t on t.id=txa.taxonomy_poi_typeable_id inner join taxonomy_poi_types as a on a.id=taxonomy_poi_type_id where txa.taxonomy_poi_typeable_type='App\Models\EcPoi' and t.user_id=$app_user_id ORDER BY a.name ASC;");
-            } catch (\Exception $e) {
+                $poi_types = DB::select("SELECT distinct a.id, a.identifier, a.name, a.icon from taxonomy_poi_typeables as txa inner join ec_pois as t on t.id=txa.taxonomy_poi_typeable_id inner join taxonomy_poi_types as a on a.id=taxonomy_poi_type_id where txa.taxonomy_poi_typeable_type='App\Models\EcPoi' and t.user_id=$app_user_id ORDER BY a.name ASC;");
+            } catch (Exception $e) {
                 Log::error('Error fetching poi types: '.$e->getMessage());
             }
 
@@ -499,7 +508,7 @@ class AppConfigService extends AppBaseService
                     'identifier' => 'poi_type_'.$poi_type->identifier,
                     'name' => json_decode($poi_type->name, true),
                     'id' => $poi_type->id,
-                    // 'icon' => $poi_type->icon,
+                    'icon_name' => $poi_type->icon,
                 ];
                 // if ($poi_type->color) {
                 //     $a['color'] = $poi_type->color;

@@ -31,7 +31,7 @@ class EcTrackObserver extends AbstractEcObserver
         $this->ecTrackService->updateDataChain($ecTrack);
 
         if ($user = auth()->user()) {
-            UserService::make()->assigUserAppIdIfNeeded($user, null, $ecTrack->app_id);
+            //  UserService::make()->assigUserAppIdIfNeeded($user, null, $ecTrack->app_id); TODO: attualmente non c'e' una migrazione valutare se inserirla in caso come array di app_id
         }
     }
 
@@ -88,7 +88,7 @@ class EcTrackObserver extends AbstractEcObserver
         if ($apps && $bbox && $author_id) {
             GenerateAppPBFJob::dispatch($apps, $bbox);
         } else {
-            Log::info('No apps or bbox or author_id found for track '.$ecTrack->id.' to delete PBFs.');
+            Log::info('No apps or bbox or author_id found for track ' . $ecTrack->id . ' to delete PBFs.');
         }
     }
 }

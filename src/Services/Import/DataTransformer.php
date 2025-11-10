@@ -4,6 +4,7 @@ namespace Wm\WmPackage\Services\Import;
 
 use Carbon\Carbon;
 use Illuminate\Support\Str;
+use Wm\WmPackage\Services\Import\IconMappingService;
 
 class DataTransformer
 {
@@ -204,5 +205,14 @@ class DataTransformer
         }
 
         return json_encode($properties);
+    }
+
+    public function svgIconToNameIcon(?string $svg): ?string
+    {
+        if (! $svg) {
+            return null;
+        }
+
+        return app(IconMappingService::class)->getSvgIdentifier($svg);
     }
 }

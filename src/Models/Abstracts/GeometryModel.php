@@ -8,15 +8,15 @@ use Spatie\Image\Enums\Fit;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Wm\WmPackage\Models\App;
-use Wm\WmPackage\Models\Media;
 use Wm\WmPackage\Services\GeoJsonService;
 use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Services\Models\MediaService;
 use Wm\WmPackage\Services\StorageService;
+use Wm\WmPackage\Traits\HasSafeTranslatable;
 
 abstract class GeometryModel extends Model implements HasMedia
 {
-    use InteractsWithMedia;
+    use InteractsWithMedia, HasSafeTranslatable;
 
     protected $fillable = [
         'name',
@@ -153,7 +153,7 @@ abstract class GeometryModel extends Model implements HasMedia
      */
     public function getMorphClass()
     {
-        return 'App\\Models\\'.class_basename($this);
+        return get_class($this);
     }
 
     //

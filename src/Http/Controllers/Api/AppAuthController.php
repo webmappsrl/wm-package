@@ -21,18 +21,18 @@ class AppAuthController extends Controller
     {
         $validator = Validator::make(
             $request->all(),
-            [
+            array_merge([
                 'email' => 'required|email|unique:users,email',
                 'password' => 'required',
                 'name' => 'required|string|max:255',
-            ],
-            [
+            ], $this->getPrivacyRules()),
+            array_merge([
                 'email.email' => 'Il campo email deve essere un indirizzo email valido.',
                 'email.unique' => 'Un utente è già stato registrato con questa email.',
                 'email.required' => 'Il campo email è obbligatorio.',
                 'password.required' => 'Il campo password è obbligatorio.',
                 'name.required' => 'Il campo nome è obbligatorio.',
-            ]
+            ], $this->getPrivacyMessages())
         );
 
         if ($validator->fails()) {
@@ -45,8 +45,11 @@ class AppAuthController extends Controller
         $credentials = $request->only(['email', 'password', 'name']);
         $credentials['email'] = strtolower($credentials['email']);
 
+        $privacy = $request->input('privacy');
+        $appId = $request->header('app-id');
+
         try {
-            $user = $this->createUser($credentials);
+            $user = $this->createUser($credentials, $privacy, $appId);
         } catch (Exception $e) {
             return response()->json([
                 'error' => $e->getMessage(),
@@ -154,16 +157,20 @@ class AppAuthController extends Controller
     /**
      * Get the authenticated User.
      */
-    public function me(): JsonResponse
+    public function me(Request $request): JsonResponse
     {
         try {
             $user = auth('api')->user();
             if (! $user) {
                 return response()->json(['error' => 'Utente non autenticato.'], 401);
             }
+            $appId = $request->header('app-id');
+            if ($appId) {
+                $user = $this->filterUserPrivacyByAppId($user, $appId);
+            }
 
             return response()->json($user);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             \Log::error('Errore nel metodo me: '.$e->getMessage());
 
             return response()->json(['error' => 'Errore interno.'], 500);
@@ -193,6 +200,83 @@ class AppAuthController extends Controller
         }
     }
 
+    public function update(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), array_merge([
+            'name' => 'sometimes|string|max:255',
+            'email' => 'sometimes|email|unique:users,email,'.auth('api')->id(),
+            'password' => 'sometimes|string|min:6',
+            'properties' => 'sometimes|array',
+            'properties.*' => 'sometimes',
+            'app_id' => 'sometimes|integer',
+        ], $this->getPrivacyRules()), array_merge([
+            'name.string' => 'Il campo nome deve essere una stringa.',
+            'name.max' => 'Il campo nome non può superare i 255 caratteri.',
+            'email.email' => 'Il campo email deve essere un indirizzo email valido.',
+            'email.unique' => 'Un utente è già stato registrato con questa email.',
+            'password.min' => 'La password deve essere di almeno 6 caratteri.',
+            'properties.array' => 'Il campo properties deve essere un array.',
+        ], $this->getPrivacyMessages()));
+
+        if ($validator->fails()) {
+            return response()->json([
+                'error' => $validator->errors()->first(),
+                'code' => 400,
+            ], 400);
+        }
+
+        try {
+            $userId = auth('api')->user()->id;
+            $user = User::find($userId);
+            $updateData = [];
+
+            // Update basic user fields
+            $name = $request->input('name');
+            $email = $request->input('email');
+            $password = $request->input('password');
+            $properties = $request->input('properties');
+            $privacy = $request->input('privacy');
+
+            if ($name) {
+                $updateData['name'] = $name;
+            }
+            if ($email) {
+                $updateData['email'] = strtolower($email);
+            }
+            if ($password) {
+                $updateData['password'] = bcrypt($password);
+            }
+
+            // Handle properties update
+            if ($properties) {
+                $currentProperties = $user->properties ?? [];
+                // Merge with existing properties
+                $updateData['properties'] = array_merge($currentProperties, $properties);
+            }
+
+            // Handle privacy object if provided (new format)
+            if ($privacy) {
+                $appId = $request->header('app-id');
+                $user = $this->updatePrivacyAgree($user, $privacy, $appId);
+            }
+
+            // Update user with basic fields
+            if (! empty($updateData)) {
+                $user->update($updateData);
+            }
+
+            $appIdForResponse = $request->header('app-id');
+            $user = $this->filterUserPrivacyByAppId($user, $appIdForResponse);
+
+            return response()->json($user);
+        } catch (Exception $e) {
+            return response()->json([
+                'error' => 'Errore durante l\'aggiornamento dell\'utente: '.$e->getMessage(),
+                'code' => 500,
+            ], 500);
+        }
+    }
+
     /**
      * Get the token array structure.
      */
@@ -213,7 +297,7 @@ class AppAuthController extends Controller
     {
         $tokenArray = $this->respondWithToken($token);
 
-        return response()->json($tokenArray->getData(true));
+        return response()->json(array_merge($this->me(request())->getData(true), $tokenArray->getData(true)));
     }
 
     /**
@@ -221,7 +305,7 @@ class AppAuthController extends Controller
      *
      * @throws Exception
      */
-    private function createUser(array $data)
+    private function createUser(array $data, array $privacy, string $appId): User
     {
         $user = new User;
         $user->fill([
@@ -231,6 +315,10 @@ class AppAuthController extends Controller
             'email_verified_at' => now(),
         ]);
 
+        if ($privacy && $appId) {
+            $user = $this->updatePrivacyAgree($user, $privacy, $appId);
+        }
+
         try {
             $user->save();
         } catch (Exception $e) {
@@ -238,5 +326,85 @@ class AppAuthController extends Controller
         }
 
         return $user;
+    }
+
+    /**
+     * Update the privacy agree for the user.
+     *
+     * @param  User  $user  The user to update the privacy agree for.
+     * @param  array  $privacyAgree  The privacy agree to update.
+     * @return User The updated user.
+     */
+    private function updatePrivacyAgree(User $user, array $privacyAgree, string $appId): User
+    {
+        $properties = $user->properties ?? [];
+
+        // Initialize privacy if not exists
+        if (! isset($properties['privacy'])) {
+            $properties['privacy'] = [];
+        }
+
+        // Initialize app_id array if not exists
+        if (! isset($properties['privacy'][$appId])) {
+            $properties['privacy'][$appId] = [];
+        }
+
+        $properties['privacy'][$appId][] = $privacyAgree;
+
+        $user->properties = $properties;
+        $user->saveQuietly();
+
+        return $user;
+    }
+
+    /**
+     * Format user data for API response with privacy filtered by app_id.
+     */
+    private function filterUserPrivacyByAppId(User $user, string $appId): array
+    {
+        $userArray = $user->toArray();
+
+        if (! isset($userArray['properties'])) {
+            $userArray['properties'] = [];
+        }
+
+        if (isset($userArray['properties']['privacy'])) {
+            $privacy = $userArray['properties']['privacy'];
+            $userArray['properties']['privacy'] = isset($privacy[$appId])
+                ? array_values($privacy[$appId])
+                : [];
+        } else {
+            $userArray['properties']['privacy'] = [];
+        }
+
+        unset($userArray['password']);
+
+        return $userArray;
+    }
+
+    /**
+     * Get common validation rules for privacy
+     */
+    private function getPrivacyRules(): array
+    {
+        return [
+            'privacy' => 'sometimes|array',
+            'privacy.agree' => 'required_with:privacy|boolean',
+            'privacy.date' => 'required_with:privacy|date',
+        ];
+    }
+
+    /**
+     * Get common validation messages for privacy
+     */
+    private function getPrivacyMessages(): array
+    {
+        return [
+            'privacy.array' => 'Il campo privacy deve essere un oggetto.',
+            'privacy.agree.required_with' => 'Il campo agree è obbligatorio quando privacy è fornito.',
+            'privacy.agree.boolean' => 'Il campo agree deve essere true o false.',
+            'privacy.date.required_with' => 'Il campo date è obbligatorio quando privacy è fornito.',
+            'privacy.date.date' => 'Il campo date deve essere una data valida.',
+        ];
     }
 }

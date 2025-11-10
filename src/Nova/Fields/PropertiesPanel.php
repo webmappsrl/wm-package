@@ -18,6 +18,8 @@ use Laravel\Nova\Fields\Select;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Fields\Textarea;
 use Laravel\Nova\Panel;
+use Wm\WmPackage\Models\UgcPoi;
+use Wm\WmPackage\Models\User;
 
 class PropertiesPanel extends Panel
 {
@@ -69,6 +71,48 @@ class PropertiesPanel extends Panel
     }
 
     /**
+     * Check if there is data for the specified path in the model
+     *
+     * @param  object  $model  The model instance
+     * @param  string  $columnName  The column name
+     * @param  string|null  $attributePath  The attribute path within the JSON
+     * @return bool True if there is data, false otherwise
+     */
+    protected static function hasDataForPath(object $model, string $columnName, ?string $attributePath): bool
+    {
+        // Se non c'è una colonna, non ci sono dati
+        if (!$columnName || !Schema::hasColumn($model->getTable(), $columnName)) {
+            return false;
+        }
+
+        // Recupera i dati dalla colonna
+        $column = $model->$columnName ?? '';
+        if (!is_array($column)) {
+            $column = json_decode($column, true) ?? [];
+        }
+
+        // Se non c'è un path di attributo, controlla se la colonna ha dati
+        if (!$attributePath) {
+            return !empty($column);
+        }
+
+        // Naviga attraverso il path per verificare se ci sono dati
+        $currentData = $column;
+        $pathArray = explode('->', $attributePath);
+        
+        foreach ($pathArray as $segment) {
+            if (isset($currentData[$segment]) && !empty($currentData[$segment])) {
+                $currentData = $currentData[$segment];
+            } else {
+                return false;
+            }
+        }
+
+        // Se siamo arrivati qui, il path esiste e ha dati
+        return true;
+    }
+
+    /**
      * Create a properties panel with model context
      *
      * @param  string  $name  Panel name
@@ -85,6 +129,12 @@ class PropertiesPanel extends Panel
             $pathSegments = explode('->', $path);
             $columnName = array_shift($pathSegments); // Primo segmento è sempre il nome della colonna
             $attributePath = implode('->', $pathSegments); // Il resto è il path dell'attributo
+
+            // Controlla se l'attributo ha dati prima di procedere
+            if (!static::hasDataForPath($model, $columnName, $attributePath)) {
+                // Se non ci sono dati, restituisci un panel vuoto che non verrà visualizzato
+                return new Panel($name, []);
+            }
 
             // Recupera lo schema per vedere se c'è un label da usare
             if ($model && $columnName && Schema::hasColumn($model->getTable(), $columnName)) {
@@ -154,6 +204,22 @@ class PropertiesPanel extends Panel
             $ecTrackSchema = config('wm-ec-track-schema');
             if ($ecTrackSchema && isset($ecTrackSchema[$columnName])) {
                 $formSchema = $ecTrackSchema[$columnName];
+            } elseif ($columnName === 'properties' && $attribute === 'ugc') {
+                $ugcSchema = config('wm-ec-from-ugc-schema');
+                if ($ugcSchema && isset($ugcSchema[$columnName])) {
+                    $formSchema = $ugcSchema[$columnName];
+                }
+            }
+        }
+        if (class_basename($model) === 'EcPoi') {
+            $ecPoiSchema = config('wm-ec-poi-schema');
+            if ($ecPoiSchema && isset($ecPoiSchema[$columnName])) {
+                $formSchema = $ecPoiSchema[$columnName];
+            } elseif ($columnName === 'properties' && $attribute === 'ugc') {
+                $ugcSchema = config('wm-ec-from-ugc-schema');
+                if ($ugcSchema && isset($ugcSchema[$columnName])) {
+                    $formSchema = $ugcSchema[$columnName];
+                }
             }
         }
 
@@ -368,7 +434,14 @@ class PropertiesPanel extends Panel
                 break;
 
             case 'date':
-                $field = Date::make($label, $jsonPath);
+                $field = Date::make($label, $jsonPath)
+                    ->resolveUsing(function ($value, $resource, $attribute) {
+                        // Solo per campi nested in properties: se il valore è una stringa ISO 8601, convertila in Carbon
+                        if (str_contains($attribute, 'properties') && is_string($value) && preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/', $value)) {
+                            return \Carbon\Carbon::parse($value);
+                        }
+                        return $value;
+                    });
                 break;
 
             case 'datetime':
@@ -445,6 +518,37 @@ class PropertiesPanel extends Panel
                             return $value;
                         });
                 }
+                break;
+            case 'user':
+                $field = Text::make($label, $jsonPath)
+                    ->resolveUsing(function ($value, $resource, $attribute) {
+                        // Se il valore è un ID utente, crea un link cliccabile
+                        if (is_numeric($value)) {
+                            $user = User::find($value);
+                            if ($user) {
+                                $url = "/resources/users/{$user->id}";
+                                return "<a href='{$url}' class='link-default'>{$user->name}</a>";
+                            }
+                            return "User ID: {$value}";
+                        }
+                        return $value;
+                    })
+                    ->asHtml();
+                break;
+            case 'ugc_poi':
+                $field = Text::make($label, $jsonPath)
+                    ->resolveUsing(function ($value, $resource, $attribute) {
+                        if (is_numeric($value)) {
+                            $ugcPoi = UgcPoi::find($value);
+                            if ($ugcPoi) {
+                                $url = "/resources/ugc-pois/{$ugcPoi->id}";
+                                return "<a href='{$url}' class='link-default'>{$ugcPoi->name}</a>";
+                            }
+                            return "UGC POI ID: {$value}";
+                        }
+                        return $value;
+                    })
+                    ->asHtml();
                 break;
         }
 

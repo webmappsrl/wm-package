@@ -48,6 +48,13 @@ class Controller extends BaseController
             $data = json_decode($data['feature'], true);
         }
 
+        // Se presente l'header app-id, ha priorità e sovrascrive properties.app_id
+        $headerAppId = $request->header('app-id');
+        if (! empty($headerAppId)) {
+            $data['properties'] = $data['properties'] ?? [];
+            $data['properties']['app_id'] = is_numeric($headerAppId) ? (int) $headerAppId : $headerAppId;
+        }
+
         // Set up validation rules
         $rules = [
             'type' => 'required|string',
@@ -72,7 +79,7 @@ class Controller extends BaseController
             $errors = $validator->errors()->toArray();
             $errorMessage = '';
             foreach ($errors as $field => $messages) {
-                $errorMessage .= "$field: [".implode(', ', $messages)."]\n";
+                $errorMessage .= "$field: [" . implode(', ', $messages) . "]\n";
             }
             abort(400, trim($errorMessage));
         }

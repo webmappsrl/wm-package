@@ -15,14 +15,23 @@ abstract class ImportTaxonomyJob extends BaseImportJob
     {
         $recordsToImport = $this->geohubImportService->getTaxonomyMorphableRecords($this->getModelKey(), $model->id);
 
+        if ($recordsToImport->isEmpty()) {
+            \Log::debug("No records to import for taxonomy model: {$model->id}");
+            return;
+        }
+
+        \Log::info("Processing {$recordsToImport->count()} records for taxonomy model: {$model->id}");
+
+        // Prepare sync data for batch operation
+        $syncData = [];
         foreach ($recordsToImport as $record) {
-            // Check if the relationship already exists before attaching
-            if (! $record->{$this->getRelationshipName()}()->where($this->getForeignKey(), $model->id)->exists()) {
-                $record->{$this->getRelationshipName()}()->attach($model->id, $record->pivot_data);
-            } else {
-                // Update pivot data if relationship exists
-                $record->{$this->getRelationshipName()}()->updateExistingPivot($model->id, $record->pivot_data);
-            }
+            $pivotData = $record->pivot_data ?? [];
+            $syncData[$record->id] = $pivotData;
+        }
+
+        // Use sync for efficient batch operation
+        foreach ($recordsToImport as $record) {
+            $record->{$this->getRelationshipName()}()->sync([$model->id => $record->pivot_data ?? []]);
         }
     }
 

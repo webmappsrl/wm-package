@@ -8,18 +8,92 @@ class GeoJsonService extends BaseService
 {
     public function getModelAsGeojson(Model $model)
     {
-        $properties = $model->properties ?? [];
-        $properties['id'] = $model->id;
-        $geom = GeometryComputationService::make()->getModelGeometryAsGeojson($model);
+        try {
+            $properties = is_array($model->properties) ? $model->properties : [];
+            $properties['id'] = $model->id;
 
-        $decodedGeom = isset($geom) ? json_decode($geom, true) : null;
+            // Verifica che il modello abbia una geometria valida
+            if (!$model->geometry || empty($model->geometry)) {
+                return null;
+            }
 
-        return [
-            'type' => 'Feature',
-            // remove empty arrays from properties
-            'properties' => $this->removeInvalidProperties($properties),
-            'geometry' => $decodedGeom,
-        ];
+            // Aggiungo le tassonomie se presenti
+            $taxonomyPoiTypes = [];
+            if ($model->taxonomyPoiTypes) {
+                foreach ($model->taxonomyPoiTypes as $taxonomyPoiType) {
+                    $taxonomyPoiTypes[] = $taxonomyPoiType->getJson();
+                }
+            }
+            $taxonomyActivities = [];
+            if ($model->taxonomyActivities) {
+                foreach ($model->taxonomyActivities as $taxonomyActivity) {
+                    $taxonomyActivities[] = $taxonomyActivity->getJson();
+                }
+            }
+            $taxonomyWhens = [];
+            if ($model->taxonomyWhens) {
+                $taxonomyWhens = $model->taxonomyWhens()->pluck('taxonomy_whens.id')->toArray();
+            }
+            // TODO: manca taxonomy where? Taxonomy whens serve?
+            $taxonomy = [
+                'activity' => $taxonomyActivities,
+                'when' => $taxonomyWhens,
+                'poi_type' => isset($taxonomyPoiTypes[0]) ? $taxonomyPoiTypes[0] : null,
+                'poi_types' => $taxonomyPoiTypes,
+            ];
+            $properties['taxonomy'] = $taxonomy;
+
+            // Aggiungo la feature_image se presente
+            $firstMedia = $model->getMedia()->first();
+            if ($firstMedia) {
+                $properties['feature_image'] = [
+                    'id' => $firstMedia->id,
+                    'name' => $firstMedia->custom_properties['name'] ?? ['it' => $firstMedia->name],
+                    'url' => $firstMedia->getUrl(),
+                    'caption' => $firstMedia->custom_properties['caption'] ?? null,
+                    'thumbnail' => $firstMedia->getUrl('thumbnail_400_200'),
+                    'api_url' => route('default.api.media.geojson', $firstMedia->id),
+                ];
+            }
+
+            $allMedia = $model->getMedia();
+            if ($allMedia) {
+                $imageGallery = [];
+                foreach ($allMedia as $media) {
+                    $imageGallery[] = [
+                        'id' => $media->id,
+                        'name' => $media->custom_properties['name'] ?? ['it' => $media->name],
+                        'url' => $media->getUrl(),
+                        'caption' => $media->custom_properties['caption'] ?? null,
+                        'thumbnail' => $media->getUrl('thumbnail_400_200'),
+                        'api_url' => route('default.api.media.geojson', $media->id),
+                    ];
+                }
+                $properties['image_gallery'] = $imageGallery;
+            }
+
+            $geom = GeometryComputationService::make()->getModelGeometryAsGeojson($model);
+
+            if (!$geom) {
+                return null;
+            }
+
+            $decodedGeom = json_decode($geom, true);
+
+            if (!$decodedGeom) {
+                return null;
+            }
+
+            return [
+                'type' => 'Feature',
+                // remove empty arrays from properties
+                'properties' => $this->removeInvalidProperties($properties),
+                'geometry' => $decodedGeom,
+            ];
+        } catch (\Exception $e) {
+            \Log::warning("Errore nel generare GeoJSON per modello ID {$model->id}: " . $e->getMessage());
+            return null;
+        }
     }
 
     public function removeInvalidProperties(array $properties): array

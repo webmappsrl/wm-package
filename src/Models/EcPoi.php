@@ -11,6 +11,7 @@ use Spatie\Translatable\HasTranslations;
 use Wm\WmPackage\Models\Abstracts\Point;
 use Wm\WmPackage\Models\Interfaces\LayerRelatedModel;
 use Wm\WmPackage\Observers\EcPoiObserver;
+use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Traits\EcFeatureTrait;
 use Wm\WmPackage\Traits\TaxonomyAbleModel;
 use Wm\WmPackage\Traits\TaxonomyWhereAbleModel;
@@ -52,6 +53,14 @@ class EcPoi extends Point implements LayerRelatedModel
     {
         parent::boot();
         EcPoi::observe(EcPoiObserver::class);
+    }
+
+    /**
+     * Convert 2D geometry to 3D when setting geometry attribute
+     */
+    public function setGeometryAttribute($value)
+    {
+        $this->attributes['geometry'] = GeometryComputationService::make()->convertTo3DGeometry($value);
     }
 
     public function ecTracks(): BelongsToMany
@@ -196,14 +205,14 @@ class EcPoi extends Point implements LayerRelatedModel
     //     return $array;
     // }
 
-    private function addPrefix($array, $prefix)
+    public function addPrefix($array, $prefix)
     {
         return array_map(function ($elem) use ($prefix) {
             return $prefix.'_'.$elem;
         }, $array);
     }
 
-    private function addTaxonomyPoiTypes()
+    public function addTaxonomyPoiTypes()
     {
         $taxonomyPoiTypes = $this->taxonomyPoiTypes()->pluck('identifier')->toArray();
         if (count($taxonomyPoiTypes) > 1 && in_array('poi', $taxonomyPoiTypes) == true) {
@@ -272,7 +281,6 @@ class EcPoi extends Point implements LayerRelatedModel
 
     public function getSearchableString($app_id = 0)
     {
-
         $string = '';
         $searchables = '';
         if ($app_id) {
