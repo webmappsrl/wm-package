@@ -139,6 +139,15 @@ abstract class UgcController extends Controller
             foreach ($features as $feature) {
                 $geojson = $feature->getGeojson();
 
+                // Skip features with null or invalid geojson (e.g., old UGCs without valid geometry)
+                if ($geojson === null || !is_array($geojson) || !isset($geojson['properties'])) {
+                    Log::warning("UGC feature ID {$feature->id} has null/invalid geojson, skipped", [
+                        'geojson_type' => gettype($geojson),
+                        'has_geometry' => !empty($feature->geometry),
+                    ]);
+                    continue;
+                }
+
                 $geojson['properties']['media'] = $feature->getMedia()->map(fn ($media) => [
                     'id' => $media->id,
                     'name' => $media->name,
