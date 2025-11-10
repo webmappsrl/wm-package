@@ -85,6 +85,14 @@ class App extends Resource
                 ->default(false)
                 ->hideFromIndex()
                 ->help(__('Enables user geolocation recording on tracks')),
+            Boolean::make(__('Show Download Tracks'), 'download_track_enable')
+                ->default(false)
+                ->hideFromIndex()
+                ->help(__('Shows download track in GPX, KML, GEOJSON')),
+            Boolean::make(__('Show Download Tiles'), 'properties->show_download_tiles')
+                ->default(false)
+                ->hideFromIndex()
+                ->help(__('Shows the download tiles button on the map')),
 
         ];
     }
@@ -207,6 +215,12 @@ class App extends Resource
             Text::make(__('Sku'), 'sku')
                 ->required()
                 ->help(__('App name on the stores (App Store and Playstore).')),
+            Text::make(__('Play Store link (android)'), 'android_store_link')
+                ->hideFromIndex()
+                ->help(__('Link to the app on the Play Store')),
+            Text::make(__('App Store link (iOS)'), 'ios_store_link')
+                ->hideFromIndex()
+                ->help(__('Link to the app on the App Store')),
             Images::make(__('Icon'), 'icon')
                 // ->rules('image', 'mimes:png', 'dimensions:width=1024,height=1024')
                 ->help(__('Required size is :widthx:heightpx', ['width' => 1024, 'height' => 1024]))
