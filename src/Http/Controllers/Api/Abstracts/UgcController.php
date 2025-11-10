@@ -140,11 +140,12 @@ abstract class UgcController extends Controller
                 $geojson = $feature->getGeojson();
 
                 // Skip features with null or invalid geojson (e.g., old UGCs without valid geometry)
-                if ($geojson === null || !is_array($geojson) || !isset($geojson['properties'])) {
+                if ($geojson === null || ! is_array($geojson) || ! isset($geojson['properties'])) {
                     Log::warning("UGC feature ID {$feature->id} has null/invalid geojson, skipped", [
                         'geojson_type' => gettype($geojson),
-                        'has_geometry' => !empty($feature->geometry),
+                        'has_geometry' => ! empty($feature->geometry),
                     ]);
+
                     continue;
                 }
 
