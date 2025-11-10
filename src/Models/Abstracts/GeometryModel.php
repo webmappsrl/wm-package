@@ -40,7 +40,7 @@ abstract class GeometryModel extends Model implements HasMedia
     /**
      * Calculate the geojson of a model with only the geometry
      */
-    public function getGeojson(): array
+    public function getGeojson(): ?array
     {
         return GeoJsonService::make()->getModelAsGeojson($this);
     }
