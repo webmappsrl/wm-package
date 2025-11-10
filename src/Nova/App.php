@@ -89,7 +89,7 @@ class App extends Resource
                 ->default(false)
                 ->hideFromIndex()
                 ->help(__('Shows download track in GPX, KML, GEOJSON')),
-            Boolean::make(__('Show Download Tiles'), 'properties->show_download_tiles_button')
+            Boolean::make(__('Show Download Tiles'), 'properties->show_download_tiles')
                 ->default(false)
                 ->hideFromIndex()
                 ->help(__('Shows the download tiles button on the map')),
