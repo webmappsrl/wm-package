@@ -215,7 +215,7 @@ class App extends Model implements HasMedia
             foreach ($appPois as $poi) {
                 try {
                     // Verifica che il POI abbia una geometria valida
-                    if ($poi->geometry && !empty($poi->geometry)) {
+                    if ($poi->geometry && ! empty($poi->geometry)) {
                         $item = $poi->getGeojson(false, $this->id);
 
                         // Aggiungo le taxonomy identifiers necessari per filtri
@@ -237,7 +237,8 @@ class App extends Model implements HasMedia
                     }
                 } catch (\Exception $e) {
                     // Log dell'errore ma continua con gli altri POI
-                    \Log::warning("Errore nel processare POI ID {$poi->id}: " . $e->getMessage());
+                    \Log::warning("Errore nel processare POI ID {$poi->id}: ".$e->getMessage());
+
                     continue;
                 }
             }
@@ -443,12 +444,13 @@ class App extends Model implements HasMedia
             foreach ($appPois as $poi) {
                 try {
                     // Verifica che il POI abbia una geometria valida
-                    if ($poi->geometry && !empty($poi->geometry)) {
+                    if ($poi->geometry && ! empty($poi->geometry)) {
                         $pois[$poi->id] = $poi->updated_at;
                     }
                 } catch (\Exception $e) {
                     // Log dell'errore ma continua con gli altri POI
-                    \Log::warning("Errore nel processare POI ID {$poi->id} per updated_at: " . $e->getMessage());
+                    \Log::warning("Errore nel processare POI ID {$poi->id} per updated_at: ".$e->getMessage());
+
                     continue;
                 }
             }

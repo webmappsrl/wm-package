@@ -13,7 +13,7 @@ class ImportTaxonomyActivityJob extends ImportTaxonomyJob
 
     public function getModelKey(): string
     {
-        return parent::getModelKey() . 'activity';
+        return parent::getModelKey().'activity';
     }
 
     protected function getForeignKey(): string

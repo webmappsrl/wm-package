@@ -30,14 +30,16 @@ class UpdateAppConfigHomeLayerIdsJob implements ShouldQueue
         // Prima di tutto, aspetta che la coda 'geohub-import' sia vuota
         $geohubImportService = app(GeohubImportService::class);
         $geohubImportQueue = config('wm-geohub-import.queue.queue', 'geohub-import');
-        if (!$geohubImportService->isQueueEmpty($geohubImportQueue)) {
+        if (! $geohubImportService->isQueueEmpty($geohubImportQueue)) {
             $currentAttempt = $this->attempts();
             if ($currentAttempt >= $this->maxAttempts) {
                 Log::warning("Coda '{$geohubImportQueue}' non vuota dopo {$this->maxAttempts} tentativi, abbandono");
+
                 return;
             }
             Log::info("Coda '{$geohubImportQueue}' non vuota, riprovo tra 2 minuti (tentativo {$currentAttempt}/{$this->maxAttempts})");
             $this->release(120);
+
             return;
         }
 
@@ -47,7 +49,6 @@ class UpdateAppConfigHomeLayerIdsJob implements ShouldQueue
 
             return;
         }
-
 
         // Usa getRawOriginal per evitare il cast FlexibleCast
         $configHome = $app->getRawOriginal('config_home');

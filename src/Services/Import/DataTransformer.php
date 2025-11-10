@@ -4,7 +4,6 @@ namespace Wm\WmPackage\Services\Import;
 
 use Carbon\Carbon;
 use Illuminate\Support\Str;
-use Wm\WmPackage\Services\Import\IconMappingService;
 
 class DataTransformer
 {

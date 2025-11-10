@@ -16,7 +16,6 @@ use Illuminate\Support\Str;
 use Spatie\Permission\Models\Role;
 use stdClass;
 use Wm\WmPackage\Jobs\Import\BaseImportJob;
-use Wm\WmPackage\Jobs\UpdateAppConfigHomeLayerIdsJob;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Models\TaxonomyActivity;
@@ -97,8 +96,6 @@ class GeohubImportService
         $this->logger->info('Completed full import from geohub');
     }
 
-
-
     /**
      * Import all entities of a specific model type
      *
@@ -120,7 +117,7 @@ class GeohubImportService
             ->allowFailures()
             ->dispatch();
 
-        $this->logger->info("Dispatched batch {$batch->id} with " . count($jobs) . " jobs for {$modelKey}s");
+        $this->logger->info("Dispatched batch {$batch->id} with ".count($jobs)." jobs for {$modelKey}s");
     }
 
     /**
@@ -225,7 +222,7 @@ class GeohubImportService
 
             return $model;
         } catch (\Exception $e) {
-            $this->logger->error("Error importing {$modelName} with ID {$entityId}: " . $e->getMessage());
+            $this->logger->error("Error importing {$modelName} with ID {$entityId}: ".$e->getMessage());
             throw $e;
         }
     }
@@ -277,7 +274,6 @@ class GeohubImportService
             $jobs[] = $this->createJob($modelKey, $geohubModelId, $data);
         }
 
-
         return $jobs;
     }
 
@@ -307,7 +303,7 @@ class GeohubImportService
      */
     public function getGeohubIdsToImport(string $modelKey, ?array $wheres, ?array $data = null): array
     {
-        $this->logger->info("🔍 getGeohubIdsToImport called for model: {$modelKey}, wheres: " . json_encode($wheres) . ", data: " . json_encode($data));
+        $this->logger->info("🔍 getGeohubIdsToImport called for model: {$modelKey}, wheres: ".json_encode($wheres).', data: '.json_encode($data));
 
         $connection = $this->dbConnection->table($this->importMapping[$modelKey]['geohub_table']);
 
@@ -315,8 +311,10 @@ class GeohubImportService
             // Caso speciale per ec_media: importiamo solo i media associati ai track dell'app
             if ($modelKey === 'ec_media' && isset($data['app_user_id'])) {
                 $this->logger->info("🔍 Calling getEcMediaIdsForApp with app_user_id: {$data['app_user_id']}");
+
                 return $this->getEcMediaIdsForApp($data['app_user_id']);
             }
+
             return $connection->pluck('id')->toArray();
         }
 
@@ -337,8 +335,9 @@ class GeohubImportService
     {
         // Prima trova l'app nel database geohub per ottenere l'user_id corretto
         $app = $this->dbConnection->table('apps')->where('user_id', $appUserId)->first();
-        if (!$app) {
+        if (! $app) {
             $this->logger->info("App not found for user {$appUserId} in geohub database");
+
             return [];
         }
 
@@ -365,6 +364,7 @@ class GeohubImportService
 
         if (empty($allAppTracks)) {
             $this->logger->info("No tracks with feature_image found for app user {$appUserId}");
+
             return [];
         }
 
@@ -397,7 +397,7 @@ class GeohubImportService
         // Combina tutti i media
         $allMediaIds = array_unique(array_merge($mediaIds, $mediaViaRelation, $featureImageMedia));
 
-        $this->logger->info("Found " . count($allMediaIds) . " ec_media associated with app tracks (geohub user_id: {$appUserId})");
+        $this->logger->info('Found '.count($allMediaIds)." ec_media associated with app tracks (geohub user_id: {$appUserId})");
 
         return $allMediaIds;
     }
@@ -408,6 +408,7 @@ class GeohubImportService
     private function getAppIdFromUserId(int $userId): ?int
     {
         $app = $this->dbConnection->table('apps')->where('user_id', $userId)->first();
+
         return $app ? $app->id : null;
     }
 
@@ -421,7 +422,6 @@ class GeohubImportService
             ->pluck('id')
             ->toArray();
     }
-
 
     /**
      * Get the identifier for the updateOrCreate method.
@@ -662,6 +662,7 @@ class GeohubImportService
                     $geohubId = $modelName === 'ec_media'
                         ? $m->custom_properties['geohub_id'] ?? null
                         : $m->properties['geohub_id'] ?? null;
+
                     return $geohubId == $morphableId;
                 });
 
@@ -802,7 +803,7 @@ class GeohubImportService
 
             return $media;
         } catch (\Exception $e) {
-            Log::error("❌ Failed to add media from URL {$ecMedia->url}: " . $e->getMessage());
+            Log::error("❌ Failed to add media from URL {$ecMedia->url}: ".$e->getMessage());
 
             return null;
         }
@@ -832,7 +833,7 @@ class GeohubImportService
             ->where($morphableTypeKey, $morphableTypeValue)
             ->get();
 
-        $this->logger->info('📋 Layer taxonomy relations found: ' . $layerTaxonomyRelations->count());
+        $this->logger->info('📋 Layer taxonomy relations found: '.$layerTaxonomyRelations->count());
 
         $totalTracksAssigned = 0;
         $totalTracksAlreadyAssigned = 0;
@@ -846,7 +847,7 @@ class GeohubImportService
                 ->where($morphableTypeKey, 'App\\Models\\EcTrack')
                 ->get();
 
-            $this->logger->info("📋 Track taxonomy relations for {$relation->{$key}}: " . $trackTaxonomyRelations->count());
+            $this->logger->info("📋 Track taxonomy relations for {$relation->{$key}}: ".$trackTaxonomyRelations->count());
 
             foreach ($trackTaxonomyRelations as $trackRelation) {
                 $ecTrackModelClass = config('wm-package.ec_track_model', 'App\Models\EcTrack');
@@ -855,7 +856,7 @@ class GeohubImportService
                 if ($ecTrack) {
                     $alreadyExists = $model->ecTracks()->where('layerable_type', $ecTrackModelClass)->where('layerable_id', $ecTrack->id)->exists();
 
-                    if (!$alreadyExists) {
+                    if (! $alreadyExists) {
                         $model->ecTracks()->attach($ecTrack->id, ['created_at' => now(), 'updated_at' => now()]);
                         $totalTracksAssigned++;
                         $this->logger->info("✅ Track assigned: Geohub ID {$trackRelation->{$foreignKey}} -> Local ID {$ecTrack->id}");
@@ -874,7 +875,7 @@ class GeohubImportService
         $this->logger->info("   • Tracks assigned: {$totalTracksAssigned}");
         $this->logger->info("   • Tracks already assigned: {$totalTracksAlreadyAssigned}");
         $this->logger->info("   • Tracks not found locally: {$totalTracksNotFound}");
-        $this->logger->info('   • Final layer track count: ' . $model->ecTracks()->count());
+        $this->logger->info('   • Final layer track count: '.$model->ecTracks()->count());
     }
 
     public function handleOverlayLayers(Model $model): void
@@ -907,7 +908,7 @@ class GeohubImportService
     protected function handleTranslatableAttributes(Model $model, array &$data): void
     {
         // Check if the model has the getTranslatableAttributes method
-        if (!method_exists($model, 'getTranslatableAttributes')) {
+        if (! method_exists($model, 'getTranslatableAttributes')) {
             return;
         }
 
@@ -940,7 +941,7 @@ class GeohubImportService
             }
             // Otherwise we need to download and upload to AWS
             else {
-                $fileUrl = config('wm-package.clients.geohub.host') . '/storage/' . $featureCollection;
+                $fileUrl = config('wm-package.clients.geohub.host').'/storage/'.$featureCollection;
                 $fileContent = $this->downloadFileContent($fileUrl);
 
                 if ($fileContent !== false) {
@@ -992,7 +993,7 @@ class GeohubImportService
                 $fileContent
             );
         } catch (\Exception $e) {
-            $this->logger->error('Error storing layer feature collection: ' . $e->getMessage());
+            $this->logger->error('Error storing layer feature collection: '.$e->getMessage());
         }
 
         if ($path) {
@@ -1035,8 +1036,8 @@ class GeohubImportService
     /**
      * Controlla se una coda specifica è vuota
      * Verifica sia Redis che Horizon per assicurarsi che non ci siano job in attesa o in esecuzione
-     * 
-     * @param string $queueName Nome della coda da controllare
+     *
+     * @param  string  $queueName  Nome della coda da controllare
      * @return bool True se la coda è vuota, false altrimenti
      */
     public function isQueueEmpty(string $queueName): bool
@@ -1051,22 +1052,24 @@ class GeohubImportService
             $checkQueues = function () use ($redis, $queueKeyPrefix, $horizonPrefix, $queueName) {
                 // Code Redis: attesa, delayed, reserved
                 $pendingSize = (int) $redis->llen($queueKeyPrefix);
-                $delayedSize = (int) $redis->zcard($queueKeyPrefix . ':delayed');
-                $reservedSize = (int) $redis->zcard($queueKeyPrefix . ':reserved');
+                $delayedSize = (int) $redis->zcard($queueKeyPrefix.':delayed');
+                $reservedSize = (int) $redis->zcard($queueKeyPrefix.':reserved');
 
                 if (($pendingSize + $delayedSize + $reservedSize) > 0) {
                     Log::info("Coda '{$queueName}' non vuota (pending={$pendingSize}, delayed={$delayedSize}, reserved={$reservedSize})");
+
                     return false;
                 }
 
                 // Horizon processing (job in esecuzione)
-                $processingSize = (int) $redis->zcard($horizonPrefix . 'processing');
+                $processingSize = (int) $redis->zcard($horizonPrefix.'processing');
                 if ($processingSize > 0) {
-                    $processingData = $redis->zrange($horizonPrefix . 'processing', 0, -1);
+                    $processingData = $redis->zrange($horizonPrefix.'processing', 0, -1);
                     foreach ($processingData as $jobData) {
                         $job = json_decode($jobData, true);
                         if (isset($job['queue']) && $job['queue'] === $queueName) {
                             Log::info("Coda '{$queueName}' ha job in processing su Horizon");
+
                             return false;
                         }
                     }
@@ -1088,9 +1091,11 @@ class GeohubImportService
             }
 
             Log::info("Coda '{$queueName}' è vuota (doppio check)");
+
             return true;
         } catch (\Exception $e) {
-            Log::error("Errore nel controllo della coda '{$queueName}': " . $e->getMessage());
+            Log::error("Errore nel controllo della coda '{$queueName}': ".$e->getMessage());
+
             // In caso di errore, assumiamo che la coda non sia vuota per sicurezza
             return false;
         }

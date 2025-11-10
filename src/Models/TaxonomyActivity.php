@@ -14,7 +14,7 @@ class TaxonomyActivity extends Taxonomy
 
     public function layers(): MorphToMany
     {
-        return $this->morphedByMany(Layer::class, 'taxonomy_' . $this->getRelationKey())
+        return $this->morphedByMany(Layer::class, 'taxonomy_'.$this->getRelationKey())
             ->using(TaxonomyActivityable::class); // this is necessary to make events on pivot working
         // https://github.com/chelout/laravel-relationship-events/issues/16
     }
@@ -23,7 +23,7 @@ class TaxonomyActivity extends Taxonomy
     {
         $ecTrackModel = config('wm-package.ec_track_model', EcTrack::class);
 
-        return $this->morphedByMany($ecTrackModel, 'taxonomy_' . $this->getRelationKey())
+        return $this->morphedByMany($ecTrackModel, 'taxonomy_'.$this->getRelationKey())
             ->using(TaxonomyActivityable::class)
             ->withPivot(['duration_forward', 'duration_backward']);
     }

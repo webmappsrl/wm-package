@@ -53,7 +53,7 @@ class AppIconsService extends BaseService
                         $svg .= "<path d='{$path}'/>";
                     }
                     $svg .=
-                    <<<SVG
+                    <<<'SVG'
                             </g>
                         </svg>
                     SVG;

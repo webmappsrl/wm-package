@@ -2,8 +2,8 @@
 
 namespace Wm\WmPackage;
 
-use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\ServiceProvider;
 use Wm\WmPackage\Http\Controllers\GlobalFileController;
 
 class GlobalFileServiceProvider extends ServiceProvider
@@ -15,7 +15,7 @@ class GlobalFileServiceProvider extends ServiceProvider
     {
         // Registra l'helper
         $this->app->singleton('global-file-helper', function ($app) {
-            return new \Wm\WmPackage\Helpers\GlobalFileHelper();
+            return new \Wm\WmPackage\Helpers\GlobalFileHelper;
         });
     }
 
@@ -25,16 +25,16 @@ class GlobalFileServiceProvider extends ServiceProvider
     public function boot(): void
     {
         // Carica le viste del package
-        $this->loadViewsFrom(__DIR__ . '/../resources/views', 'wm-package');
+        $this->loadViewsFrom(__DIR__.'/../resources/views', 'wm-package');
 
         // Pubblica le viste se necessario
         $this->publishes([
-            __DIR__ . '/../resources/views' => resource_path('views/vendor/wm-package'),
+            __DIR__.'/../resources/views' => resource_path('views/vendor/wm-package'),
         ], 'wm-package-views');
 
         // Pubblica la configurazione
         $this->publishes([
-            __DIR__ . '/../config/global-files.php' => config_path('global-files.php'),
+            __DIR__.'/../config/global-files.php' => config_path('global-files.php'),
         ], 'wm-package-config');
 
         // Registra le routes del package
@@ -46,7 +46,7 @@ class GlobalFileServiceProvider extends ServiceProvider
      */
     protected function registerRoutes(): void
     {
-        $config = config('global-files', require __DIR__ . '/../config/global-files.php');
+        $config = config('global-files', require __DIR__.'/../config/global-files.php');
         $middleware = $config['middleware'] ?? ['auth', 'nova'];
 
         Route::middleware($middleware)->group(function () use ($config) {

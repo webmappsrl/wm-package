@@ -16,7 +16,7 @@ use Wm\WmPackage\Traits\HasSafeTranslatable;
 
 abstract class GeometryModel extends Model implements HasMedia
 {
-    use InteractsWithMedia, HasSafeTranslatable;
+    use HasSafeTranslatable, InteractsWithMedia;
 
     protected $fillable = [
         'name',

@@ -57,7 +57,7 @@ class FormSchemaFilter extends Filter
             foreach ($schemas as $schema) {
                 $label = reset($schema['label']);
                 // Salta se il label è vuoto per evitare chiavi vuote
-                if (!empty($label)) {
+                if (! empty($label)) {
                     $options[$label] = $schema['id'];
                 }
             }

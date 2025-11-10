@@ -122,7 +122,7 @@ class PBFGeneratorService extends BaseService
         SQL;
 
         $result = DB::select($sql, [
-            'layer_ids' => '{' . implode(',', $layerIds) . '}', // Converti in array PostgreSQL
+            'layer_ids' => '{'.implode(',', $layerIds).'}', // Converti in array PostgreSQL
         ]);
 
         return $result[0]->total_tracks ?? 0;
@@ -426,7 +426,6 @@ class PBFGeneratorService extends BaseService
      * @param  Layer  $layer  Il layer per cui rigenerare i PBF
      * @param  int|null  $minZoom  Zoom minimo (default: dalla config)
      * @param  int|null  $maxZoom  Zoom massimo (default: dalla config)
-     * @return void
      */
     public function regeneratePbfsForLayer(Layer $layer, $minZoom = null, $maxZoom = null): void
     {
@@ -439,7 +438,7 @@ class PBFGeneratorService extends BaseService
             $minZoom = $minZoom ?? config('wm-package.services.pbf.min_zoom');
             $maxZoom = $maxZoom ?? config('wm-package.services.pbf.max_zoom');
 
-            if (!empty($trackIds)) {
+            if (! empty($trackIds)) {
                 GenerateOptimizedPBFChainJob::dispatch(
                     $layer->app->id,
                     $maxZoom,
@@ -531,7 +530,7 @@ class PBFGeneratorService extends BaseService
         ";
 
         $results = DB::select($sql, [
-            'track_ids' => '{' . implode(',', $trackIds) . '}',
+            'track_ids' => '{'.implode(',', $trackIds).'}',
         ]);
 
         $tiles = [];
@@ -613,7 +612,7 @@ class PBFGeneratorService extends BaseService
         // 1. Calcola i tile di livello zoom che contengono le geometrie delle tracce
         $tilesAtZoom = $this->calculateTilesFromGeometries($trackIds, $zoom);
 
-        Log::info('Calcolati ' . count($tilesAtZoom) . " tile al livello zoom {$zoom}", [
+        Log::info('Calcolati '.count($tilesAtZoom)." tile al livello zoom {$zoom}", [
             'zoom' => $zoom,
             'tiles_count' => count($tilesAtZoom),
         ]);
@@ -636,7 +635,7 @@ class PBFGeneratorService extends BaseService
             AND geometry IS NOT NULL
             AND ST_IsValid(geometry::geometry)
         ", [
-            'track_ids' => '{' . implode(',', $trackIds) . '}',
+            'track_ids' => '{'.implode(',', $trackIds).'}',
         ]);
 
         if (empty($res) || is_null($res[0]->bbox)) {

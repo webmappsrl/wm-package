@@ -12,11 +12,11 @@ use Laravel\Nova\Fields\Number;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Panel;
+use Wm\WmPackage\Nova\Fields\FeatureCollectionMap\src\FeatureCollectionMap;
 use Wm\WmPackage\Nova\Fields\LayerFeatures\LayerFeatures;
 use Wm\WmPackage\Nova\Fields\PropertiesPanel;
 use Wm\WmPackage\Nova\Filters\AppFilter;
 use Wm\WmPackage\Nova\Traits\MultiPolygonResourceTrait;
-use Wm\WmPackage\Nova\Fields\FeatureCollectionMap\src\FeatureCollectionMap;
 
 class Layer extends AbstractGeometryResource
 {

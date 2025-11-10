@@ -13,7 +13,7 @@ class GeoJsonService extends BaseService
             $properties['id'] = $model->id;
 
             // Verifica che il modello abbia una geometria valida
-            if (!$model->geometry || empty($model->geometry)) {
+            if (! $model->geometry || empty($model->geometry)) {
                 return null;
             }
 
@@ -74,13 +74,13 @@ class GeoJsonService extends BaseService
 
             $geom = GeometryComputationService::make()->getModelGeometryAsGeojson($model);
 
-            if (!$geom) {
+            if (! $geom) {
                 return null;
             }
 
             $decodedGeom = json_decode($geom, true);
 
-            if (!$decodedGeom) {
+            if (! $decodedGeom) {
                 return null;
             }
 
@@ -91,7 +91,8 @@ class GeoJsonService extends BaseService
                 'geometry' => $decodedGeom,
             ];
         } catch (\Exception $e) {
-            \Log::warning("Errore nel generare GeoJSON per modello ID {$model->id}: " . $e->getMessage());
+            \Log::warning("Errore nel generare GeoJSON per modello ID {$model->id}: ".$e->getMessage());
+
             return null;
         }
     }

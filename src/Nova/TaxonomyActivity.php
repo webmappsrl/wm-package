@@ -21,8 +21,8 @@ class TaxonomyActivity extends AbstractTaxonomyResource
         return [
             ...parent::fields($request),
             MorphToMany::make('Tracks Associate', 'ecTracks', EcTrack::class)
-            ->display('name')
-            ->help('Punti di interesse associati a questa tassonomia'),
+                ->display('name')
+                ->help('Punti di interesse associati a questa tassonomia'),
         ];
     }
 }

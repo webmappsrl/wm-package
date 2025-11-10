@@ -16,7 +16,7 @@ class FieldServiceProvider extends ServiceProvider
     {
         Nova::serving(function (ServingNova $event) {
             // Se in futuro aggiungiamo asset JS/CSS, li registriamo qui
-             Nova::mix('feature-collection-map', __DIR__.'/../dist/mix-manifest.json');
+            Nova::mix('feature-collection-map', __DIR__.'/../dist/mix-manifest.json');
         });
 
         // Registra le view del FeatureCollectionMap
@@ -31,7 +31,6 @@ class FieldServiceProvider extends ServiceProvider
      */
     protected function loadRoutes(): void
     {
-
 
         Route::middleware(['nova'])
             ->prefix('nova-vendor/feature-collection-map')

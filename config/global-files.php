@@ -20,8 +20,8 @@ return [
     'file_types' => [
         'icons' => [
             'filename' => 'icons.json',
-            'route_prefix' => 'icons-upload'
-        ]
+            'route_prefix' => 'icons-upload',
+        ],
     ],
 
     // Middleware da applicare alle routes

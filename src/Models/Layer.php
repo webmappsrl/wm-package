@@ -10,22 +10,22 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Spatie\Translatable\HasTranslations;
 use Wm\WmPackage\Models\Abstracts\Polygon;
+use Wm\WmPackage\Nova\Fields\FeatureCollectionMap\src\FeatureCollectionMapTrait;
 use Wm\WmPackage\Observers\LayerObserver;
 use Wm\WmPackage\Services\GeometryComputationService;
-use Wm\WmPackage\Nova\Fields\FeatureCollectionMap\src\FeatureCollectionMapTrait;
 use Wm\WmPackage\Traits\HasPackageFactory;
 use Wm\WmPackage\Traits\TaxonomyAbleModel;
 use Wm\WmPackage\Traits\TaxonomyWhereAbleModel;
 
 class Layer extends Polygon
 {
-    use HasPackageFactory, HasTranslations, TaxonomyAbleModel, TaxonomyWhereAbleModel, FeatureCollectionMapTrait;
+    use FeatureCollectionMapTrait, HasPackageFactory, HasTranslations, TaxonomyAbleModel, TaxonomyWhereAbleModel;
 
     protected static function boot()
     {
         parent::boot();
         Layer::observe(LayerObserver::class);
-        
+
         // Imposta un default per properties se è null
         static::creating(function ($model) {
             if (is_null($model->properties)) {
@@ -275,8 +275,6 @@ class Layer extends Polygon
             }
         }
 
-        
-
         return [
             'type' => 'FeatureCollection',
             'features' => $this->getAdditionalFeaturesForMap(),
@@ -287,7 +285,7 @@ class Layer extends Polygon
     {
         // Ottieni il nome della tabella dalla configurazione, default è 'ec_tracks'
         $tableName = config('wm-package.ec_track_table', 'ec_tracks');
-        
+
         $sql = "
         SELECT 
             hr.id,
@@ -305,5 +303,4 @@ class Layer extends Polygon
 
         return $sql;
     }
-
 }

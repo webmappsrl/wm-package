@@ -31,16 +31,17 @@ class WmImportFromGeohubCommand extends Command
         $this->info('Starting import from geohub...');
 
         // Validate conflicting options
-        if ($skipDependencies && !empty($dependencies)) {
+        if ($skipDependencies && ! empty($dependencies)) {
             $this->error('Cannot use both --skip-dependencies and --dependencies options together.');
+
             return 1;
         }
 
         // Log dependency configuration
         if ($skipDependencies) {
             $this->info('Skipping all dependencies');
-        } elseif (!empty($dependencies)) {
-            $this->info('Importing only dependencies: ' . implode(', ', $dependencies));
+        } elseif (! empty($dependencies)) {
+            $this->info('Importing only dependencies: '.implode(', ', $dependencies));
         } else {
             $this->info('Importing all dependencies (default behavior)');
         }
@@ -59,7 +60,7 @@ class WmImportFromGeohubCommand extends Command
                 $this->logAndOutput('Jobs dispatched for all data');
             }
         } catch (\Exception $e) {
-            $errorMessage = 'Import failed: ' . $e->getMessage();
+            $errorMessage = 'Import failed: '.$e->getMessage();
             $this->logAndOutput($errorMessage, 'error');
 
             return 1;
@@ -79,11 +80,11 @@ class WmImportFromGeohubCommand extends Command
         if ($skipDependencies) {
             // Skip all dependencies
             return [
-                'allowed_dependencies' => []
+                'allowed_dependencies' => [],
             ];
         }
 
-        if (!empty($dependencies)) {
+        if (! empty($dependencies)) {
             // Parse comma-separated values and flatten the array
             $parsedDependencies = [];
             foreach ($dependencies as $dependency) {
@@ -94,19 +95,19 @@ class WmImportFromGeohubCommand extends Command
             $validDependencies = array_intersect($parsedDependencies, $allDependencies);
             $invalidDependencies = array_diff($parsedDependencies, $allDependencies);
 
-            if (!empty($invalidDependencies)) {
-                $this->warn('Invalid dependencies ignored: ' . implode(', ', $invalidDependencies));
-                $this->info('Valid dependencies are: ' . implode(', ', $allDependencies));
+            if (! empty($invalidDependencies)) {
+                $this->warn('Invalid dependencies ignored: '.implode(', ', $invalidDependencies));
+                $this->info('Valid dependencies are: '.implode(', ', $allDependencies));
             }
 
             return [
-                'allowed_dependencies' => array_unique($validDependencies)
+                'allowed_dependencies' => array_unique($validDependencies),
             ];
         }
 
         // Default: import all dependencies
         return [
-            'allowed_dependencies' => $allDependencies
+            'allowed_dependencies' => $allDependencies,
         ];
     }
 

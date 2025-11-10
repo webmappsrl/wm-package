@@ -81,27 +81,27 @@ class PropertiesPanel extends Panel
     protected static function hasDataForPath(object $model, string $columnName, ?string $attributePath): bool
     {
         // Se non c'è una colonna, non ci sono dati
-        if (!$columnName || !Schema::hasColumn($model->getTable(), $columnName)) {
+        if (! $columnName || ! Schema::hasColumn($model->getTable(), $columnName)) {
             return false;
         }
 
         // Recupera i dati dalla colonna
         $column = $model->$columnName ?? '';
-        if (!is_array($column)) {
+        if (! is_array($column)) {
             $column = json_decode($column, true) ?? [];
         }
 
         // Se non c'è un path di attributo, controlla se la colonna ha dati
-        if (!$attributePath) {
-            return !empty($column);
+        if (! $attributePath) {
+            return ! empty($column);
         }
 
         // Naviga attraverso il path per verificare se ci sono dati
         $currentData = $column;
         $pathArray = explode('->', $attributePath);
-        
+
         foreach ($pathArray as $segment) {
-            if (isset($currentData[$segment]) && !empty($currentData[$segment])) {
+            if (isset($currentData[$segment]) && ! empty($currentData[$segment])) {
                 $currentData = $currentData[$segment];
             } else {
                 return false;
@@ -131,7 +131,7 @@ class PropertiesPanel extends Panel
             $attributePath = implode('->', $pathSegments); // Il resto è il path dell'attributo
 
             // Controlla se l'attributo ha dati prima di procedere
-            if (!static::hasDataForPath($model, $columnName, $attributePath)) {
+            if (! static::hasDataForPath($model, $columnName, $attributePath)) {
                 // Se non ci sono dati, restituisci un panel vuoto che non verrà visualizzato
                 return new Panel($name, []);
             }
@@ -440,6 +440,7 @@ class PropertiesPanel extends Panel
                         if (str_contains($attribute, 'properties') && is_string($value) && preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/', $value)) {
                             return \Carbon\Carbon::parse($value);
                         }
+
                         return $value;
                     });
                 break;
@@ -527,10 +528,13 @@ class PropertiesPanel extends Panel
                             $user = User::find($value);
                             if ($user) {
                                 $url = "/resources/users/{$user->id}";
+
                                 return "<a href='{$url}' class='link-default'>{$user->name}</a>";
                             }
+
                             return "User ID: {$value}";
                         }
+
                         return $value;
                     })
                     ->asHtml();
@@ -542,10 +546,13 @@ class PropertiesPanel extends Panel
                             $ugcPoi = UgcPoi::find($value);
                             if ($ugcPoi) {
                                 $url = "/resources/ugc-pois/{$ugcPoi->id}";
+
                                 return "<a href='{$url}' class='link-default'>{$ugcPoi->name}</a>";
                             }
+
                             return "UGC POI ID: {$value}";
                         }
+
                         return $value;
                     })
                     ->asHtml();

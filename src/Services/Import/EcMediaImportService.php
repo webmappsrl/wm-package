@@ -39,7 +39,7 @@ class EcMediaImportService extends GeohubImportService
         // Get the URL and prepare it
         $url = $transformedData['url'];
         if (! filter_var($url, FILTER_VALIDATE_URL)) {
-            $url = config('wm-package.clients.geohub.host') . '/storage/' . ltrim($url, '/');
+            $url = config('wm-package.clients.geohub.host').'/storage/'.ltrim($url, '/');
 
             // validate if the url returns an image content type
             $contentType = get_headers($url, 1)[0];
@@ -188,10 +188,10 @@ class EcMediaImportService extends GeohubImportService
                     $featureImagedModelsIds[] = $model->id;
                 } else {
                     // Log when model is not found for debugging
-                    \Log::warning("Model not found for featured image", [
+                    \Log::warning('Model not found for featured image', [
                         'related_id' => $relatedId,
                         'model_class' => $relation['model'],
-                        'media_id' => $mediaId
+                        'media_id' => $mediaId,
                     ]);
                 }
             }
@@ -212,11 +212,11 @@ class EcMediaImportService extends GeohubImportService
                     }
                 } else {
                     // Log when model is not found for debugging
-                    \Log::warning("Model not found for pivot relation", [
+                    \Log::warning('Model not found for pivot relation', [
                         'related_id' => $relatedId,
                         'model_class' => $relation['model'],
                         'media_id' => $mediaId,
-                        'pivot_key' => $relation['key']
+                        'pivot_key' => $relation['key'],
                     ]);
                 }
             }

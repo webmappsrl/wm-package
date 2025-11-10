@@ -9,7 +9,7 @@ class ImportEcTrackJob extends BaseEcImportJob
 {
     protected function getModelKey(): string
     {
-        return parent::getModelKey() . 'track';
+        return parent::getModelKey().'track';
     }
 
     protected function getGeometryType(): string
@@ -43,13 +43,14 @@ class ImportEcTrackJob extends BaseEcImportJob
 
         if (empty($activities)) {
             \Log::info("🔄 SYNC TAXONOMIES - No activities found for track ID: {$model->id}");
+
             return;
         }
 
         \Log::info("🔄 SYNC TAXONOMIES - Found activities for track ID: {$model->id}", ['activities' => $activities]);
 
         foreach ($activities as $geohubId => $activityTypes) {
-            if (!is_array($activityTypes)) {
+            if (! is_array($activityTypes)) {
                 continue;
             }
 
@@ -59,8 +60,9 @@ class ImportEcTrackJob extends BaseEcImportJob
                 // Trova la tassonomia per tipo di attività in modo dinamico
                 $taxonomy = $this->findTaxonomyByActivityType($activityType);
 
-                if (!$taxonomy) {
+                if (! $taxonomy) {
                     \Log::warning("🔄 SYNC TAXONOMIES - Taxonomy not found for activity type: {$activityType}");
+
                     continue;
                 }
 
@@ -71,7 +73,7 @@ class ImportEcTrackJob extends BaseEcImportJob
                     ->where('taxonomy_activity_id', $taxonomy->id)
                     ->exists();
 
-                if (!$existingRelation) {
+                if (! $existingRelation) {
                     // Crea la relazione
                     \Log::info("🔄 SYNC TAXONOMIES - Creating relation for track ID: {$model->id} with taxonomy ID: {$taxonomy->id}");
                     $model->taxonomyActivities()->attach($taxonomy->id, [
@@ -101,7 +103,7 @@ class ImportEcTrackJob extends BaseEcImportJob
                 ->orWhere('identifier', 'like', '%'.strtoupper($activityType).'%')
                 ->first();
 
-            if (!$taxonomy) {
+            if (! $taxonomy) {
                 // Se non trova per nome, cerca per geohub_id se disponibile
                 $taxonomy = TaxonomyActivity::where('properties->geohub_id', $activityType)->first();
             }
@@ -109,6 +111,7 @@ class ImportEcTrackJob extends BaseEcImportJob
             return $taxonomy;
         } catch (\Exception $e) {
             \Log::error("Error finding taxonomy by activity type: {$e->getMessage()}");
+
             return null;
         }
     }

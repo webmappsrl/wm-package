@@ -79,7 +79,7 @@ class Controller extends BaseController
             $errors = $validator->errors()->toArray();
             $errorMessage = '';
             foreach ($errors as $field => $messages) {
-                $errorMessage .= "$field: [" . implode(', ', $messages) . "]\n";
+                $errorMessage .= "$field: [".implode(', ', $messages)."]\n";
             }
             abort(400, trim($errorMessage));
         }

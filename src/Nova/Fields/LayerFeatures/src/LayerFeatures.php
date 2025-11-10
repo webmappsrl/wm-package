@@ -15,7 +15,6 @@ class LayerFeatures extends Field
      */
     public $component = 'layer-features';
 
-
     public function __construct($name, $layer, string $modelClass, $attribute = null, $resolveCallback = null)
     {
 
@@ -31,7 +30,7 @@ class LayerFeatures extends Field
             return;
         }
         if (! class_exists($modelClass)) {
-            Log::error('LayerFeatures: Il modello specificato non esiste: ' . $modelClass);
+            Log::error('LayerFeatures: Il modello specificato non esiste: '.$modelClass);
 
             return;
         }
@@ -66,7 +65,7 @@ class LayerFeatures extends Field
             // Se la relazione non è caricata, caricala esplicitamente
             // Specifica esplicitamente la tabella per evitare ambiguità nella colonna 'id'
             $tableName = (new $modelClass)->getTable();
-            $selectedFeatureIds = $layer->{$relationName}()->select($tableName . '.id')->pluck('id')->toArray();
+            $selectedFeatureIds = $layer->{$relationName}()->select($tableName.'.id')->pluck('id')->toArray();
         }
 
         $model = new $modelClass;
@@ -78,7 +77,7 @@ class LayerFeatures extends Field
             'modelName' => $modelName,
             'layerId' => $layer->id,
             'modelClass' => $modelClass,  // Aggiungiamo anche modelClass per essere sicuri
-            'model_class' => $modelClass  // Aggiungiamo anche model_class per essere sicuri
+            'model_class' => $modelClass,  // Aggiungiamo anche model_class per essere sicuri
         ]);
     }
 }

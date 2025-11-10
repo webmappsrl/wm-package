@@ -17,6 +17,7 @@ abstract class ImportTaxonomyJob extends BaseImportJob
 
         if ($recordsToImport->isEmpty()) {
             \Log::debug("No records to import for taxonomy model: {$model->id}");
+
             return;
         }
 

@@ -5,8 +5,8 @@ namespace Wm\WmPackage\Nova\Fields\LayerFeatures\Http\Controllers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Wm\WmPackage\Models\Layer;
 use Illuminate\Support\Facades\Log;
+use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Services\PBFGeneratorService;
 
 class LayerFeatureController
@@ -26,16 +26,16 @@ class LayerFeatureController
             // Ottieni il modello dalla query string
             $modelClass = $request->query('model');
 
-            if (!$modelClass) {
+            if (! $modelClass) {
                 return response()->json([
-                    'error' => 'Parametro model mancante'
+                    'error' => 'Parametro model mancante',
                 ], 400);
             }
 
             // Verifica che il modello esista
-            if (!class_exists($modelClass)) {
+            if (! class_exists($modelClass)) {
                 return response()->json([
-                    'error' => "Modello '{$modelClass}' non trovato"
+                    'error' => "Modello '{$modelClass}' non trovato",
                 ], 400);
             }
 
@@ -49,16 +49,16 @@ class LayerFeatureController
                 'layer_id' => $layerId,
                 'layer_name' => $layer->name,
                 'model_class' => $modelClass,
-                'count' => $count
+                'count' => $count,
             ]);
         } catch (\Exception $e) {
             Log::error('LayerFeatureController::index error', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return response()->json([
-                'error' => 'Errore interno del server: ' . $e->getMessage()
+                'error' => 'Errore interno del server: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -158,16 +158,16 @@ class LayerFeatureController
                     'last_page' => $features->lastPage(),
                     'per_page' => $features->perPage(),
                     'total' => $features->total(),
-                ]
+                ],
             ]);
         } catch (\Exception $e) {
             Log::error('LayerFeatureController::getFeatures error', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return response()->json([
-                'error' => 'Errore interno del server: ' . $e->getMessage()
+                'error' => 'Errore interno del server: '.$e->getMessage(),
             ], 500);
         }
     }

@@ -3,7 +3,6 @@
 namespace Wm\WmPackage\Observers;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Log;
 use Wm\WmPackage\Jobs\UpdateAppConfigJob;
 use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Services\Models\LayerService;

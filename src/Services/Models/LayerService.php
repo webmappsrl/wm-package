@@ -315,12 +315,12 @@ class LayerService extends BaseService
 
         // Usa una query con join diretto
         $trackIds = DB::table('taxonomy_activityables')
-            ->join($trackTable, 'taxonomy_activityables.taxonomy_activityable_id', '=', $trackTable . '.id')
-            ->whereIn($trackTable . '.app_id', $layerAppIds)
+            ->join($trackTable, 'taxonomy_activityables.taxonomy_activityable_id', '=', $trackTable.'.id')
+            ->whereIn($trackTable.'.app_id', $layerAppIds)
             ->where('taxonomy_activityables.taxonomy_activityable_type', $ecTrackModelClass)
             ->whereIn('taxonomy_activityables.taxonomy_activity_id', $layerTaxonomyIds)
-            ->whereNotNull($trackTable . '.geometry')
-            ->pluck($trackTable . '.id')
+            ->whereNotNull($trackTable.'.geometry')
+            ->pluck($trackTable.'.id')
             ->toArray();
 
         $tracksWithSameTaxonomy = $ecTrackModelClass::whereIn('id', $trackIds)->get();
