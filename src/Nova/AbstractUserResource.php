@@ -2,9 +2,12 @@
 
 namespace Wm\WmPackage\Nova;
 
+use App\Nova\UgcPoi;
+use App\Nova\UgcTrack;
 use Illuminate\Validation\Rules;
 use Laravel\Nova\Fields\FormData;
 use Laravel\Nova\Fields\Gravatar;
+use Laravel\Nova\Fields\HasMany;
 use Laravel\Nova\Fields\ID;
 use Laravel\Nova\Fields\Password;
 use Laravel\Nova\Fields\Text;
@@ -86,6 +89,16 @@ abstract class AbstractUserResource extends Resource
                     $field->options(function () use ($permissions) {
                         return $permissions->toArray();
                     });
+                }),
+            HasMany::make(__('UGC POIs'), 'ugcPois', UgcPoi::class)
+                ->onlyOnDetail()
+                ->canSee(function () {
+                    return optional(auth()->user())->hasRole('Administrator');
+                }),
+            HasMany::make(__('UGC Tracks'), 'ugcTracks', UgcTrack::class)
+                ->onlyOnDetail()
+                ->canSee(function () {
+                    return optional(auth()->user())->hasRole('Administrator');
                 }),
         ];
     }
