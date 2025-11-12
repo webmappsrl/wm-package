@@ -201,8 +201,7 @@ class LayerService extends BaseService
 
     public function updateLayerGeometryWithJob(Layer $layer)
     {
-        UpdateLayerGeometryJob::dispatch($layer)
-            ->delay($this->getUniqueJobDelay());
+        UpdateLayerGeometryJob::dispatchDebounced($layer);
     }
 
     /**
