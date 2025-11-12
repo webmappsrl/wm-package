@@ -38,17 +38,18 @@ class UpdateLayerGeometryJob implements ShouldBeUnique, ShouldQueue
         $key = "layer:{$layer->id}:update:last";
         $lastUpdate = Cache::get($key);
         $now = now();
-        
+
         // Se c'è un update recente e non è ancora passato il periodo di debounce, non dispatchare
         if ($lastUpdate) {
             $elapsed = $now->diffInSeconds($lastUpdate);
             if ($elapsed < $debounceSec) {
                 // Aggiorna solo il timestamp, ma non dispatchare (il job esistente si occuperà del resto)
                 Cache::put($key, $now, $debounceSec * 4);
+
                 return;
             }
         }
-        
+
         // Salva l'ultimo update; TTL ampio per sicurezza
         Cache::put($key, $now, $debounceSec * 4);
 
@@ -104,6 +105,7 @@ class UpdateLayerGeometryJob implements ShouldBeUnique, ShouldQueue
             if ($remaining > 0) {
                 // Non è ancora trascorso il periodo di quiete: rimetti in coda per i secondi rimanenti
                 $this->release($remaining);
+
                 return;
             }
         }
