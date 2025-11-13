@@ -26,10 +26,16 @@ class ScheduleServiceProvider extends ServiceProvider
                 $schedule->command('backup:clean')
                     ->sundays()
                     ->at('03:00');
+                $schedule->command('wm:download-db-backup --latest')
+                    ->daily()
+                    ->at('20:10');
+            } else {
+                // In non-production environments, download from production
+                // Restore is available via Nova action or API endpoint
+                $schedule->command('wm:download-db-backup --latest --s3')
+                    ->daily()
+                    ->at('20:10');
             }
-            $schedule->command('wm:download-db-backup --latest')
-                ->daily()
-                ->at('20:10');
         });
     }
 }

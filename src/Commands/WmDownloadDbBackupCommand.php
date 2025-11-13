@@ -13,7 +13,7 @@ use Symfony\Component\Process\Process;
 
 final class WmDownloadDbBackupCommand extends Command
 {
-    protected $signature = 'wm:download-db-backup {--file= : Specify a direct backup file path on wmdumps disk to restore from.} {--latest : Restore the latest available DB backup (default behavior if no --file is specified)}';
+    protected $signature = 'wm:download-db-backup {--file= : Specify a direct backup file path on wmdumps disk to restore from.} {--latest : Restore the latest available DB backup (default behavior if no --file is specified)} {--s3 : Force use of real AWS S3 instead of MinIO by removing endpoint configuration}';
 
     protected $description = 'Downloads a database dump (.zip) from wmdumps, extracts the .sql.gz file, and saves it to the \'backups\' disk as last_dump.sql.gz.';
 
@@ -25,14 +25,26 @@ final class WmDownloadDbBackupCommand extends Command
         $backupStorageDisk = Storage::disk('backups'); // Target disk for the final .sql.gz
 
         $tempBaseDir = 'temp_db_download'; // More specific temp dir name
-        $tempExtractDir = $tempBaseDir.'/sql_extract';
+        $tempExtractDir = $tempBaseDir . '/sql_extract';
         $zipBackupFilename = 'latest_db_dump_for_restore.sql.zip';
-        $localZipBackupPath = $tempBaseDir.'/'.$zipBackupFilename;
+        $localZipBackupPath = $tempBaseDir . '/' . $zipBackupFilename;
 
         $outputSqlGzFilenameOnBackupDisk = 'last_dump.sql.gz'; // Filename on the 'backups' disk
 
         try {
             $this->prepareTempDirectories($localTempStorage, $tempBaseDir, $tempExtractDir);
+
+            // If --s3 option is passed, force use of real AWS S3 by removing endpoint
+            if ($this->option('s3')) {
+                $wmdumpsConfig = config('filesystems.disks.wmdumps', []);
+                $wmdumpsConfig['endpoint'] = null;
+                // Use AWS_DUMPS_DEFAULT_REGION if set, otherwise AWS_DEFAULT_REGION
+                $wmdumpsConfig['region'] = env('AWS_DUMPS_DEFAULT_REGION', env('AWS_DEFAULT_REGION', 'us-east-1'));
+                Config::set('filesystems.disks.wmdumps', $wmdumpsConfig);
+                // Force Laravel to recreate the disk with new config
+                app()->forgetInstance('filesystem.disk.wmdumps');
+                $this->info('Using real AWS S3 (endpoint removed, region: ' . $wmdumpsConfig['region'] . ')');
+            }
 
             $remoteBackupDisk = Storage::disk('wmdumps');
             $remoteBackupPath = $this->resolveBackupPath($remoteBackupDisk);
@@ -67,8 +79,8 @@ final class WmDownloadDbBackupCommand extends Command
 
             return Command::SUCCESS;
         } catch (\Throwable $e) {
-            $this->error('An error occurred during the download/extraction process: '.$e->getMessage());
-            Log::error('WmDownloadDbBackupCommand failed: '.$e->getMessage(), [
+            $this->error('An error occurred during the download/extraction process: ' . $e->getMessage());
+            Log::error('WmDownloadDbBackupCommand failed: ' . $e->getMessage(), [
                 'exception' => $e,
                 'trace' => $e->getTraceAsString(),
             ]);
@@ -115,11 +127,11 @@ final class WmDownloadDbBackupCommand extends Command
         $this->info('Searching for the latest database backup (.zip) on wmdumps disk...');
         // Use app.name as the primary source for the backup directory (folder name on S3 for spatie backup)
         $backupDirName = Config::get('app.name', 'default_app_name');
-        // Fallback to backup.backup.name if app.name is not set, and remove /dev suffix if present
+        // Fallback to backup.backup.name if app.name is not set, and remove dev/local/uat suffix if present
         if ($backupDirName === 'default_app_name' || empty($backupDirName)) {
             $backupDirName = Config::get('backup.backup.name');
         }
-        $backupDirName = preg_replace('/dev$/', '', $backupDirName);
+        $backupDirName = preg_replace('/(dev|local|uat)$/', '', $backupDirName);
 
         if (empty($backupDirName)) {
             $this->error('Backup directory name (app name) could not be determined from config(\'app.name\') or config(\'backup.backup.name\').');
@@ -142,7 +154,7 @@ final class WmDownloadDbBackupCommand extends Command
         }
 
         // Sort by the full path as returned by S3 (which includes directory) to ensure correct order if multiple files exist
-        usort($dbBackups, static fn ($a, $b) => strcmp($b, $a)); // Sorts descending Z-A
+        usort($dbBackups, static fn($a, $b) => strcmp($b, $a)); // Sorts descending Z-A
         $latest = $dbBackups[0];
         $this->info("Latest database backup found: {$latest}");
 
@@ -182,15 +194,15 @@ final class WmDownloadDbBackupCommand extends Command
             $process->mustRun(function ($type, $buffer) {
                 if ($type === Process::ERR) {
                     $this->warn(trim($buffer));
-                    Log::warning('Zip extraction (stderr): '.trim($buffer));
+                    Log::warning('Zip extraction (stderr): ' . trim($buffer));
                 }
             });
             $this->info('Archive extracted successfully to temp directory.');
 
             return true;
         } catch (ProcessFailedException $exception) {
-            $this->error('Zip extraction failed: '.$exception->getMessage());
-            Log::error('Zip extraction process failed: '.$exception->getMessage());
+            $this->error('Zip extraction failed: ' . $exception->getMessage());
+            Log::error('Zip extraction process failed: ' . $exception->getMessage());
 
             return false;
         }
@@ -199,7 +211,7 @@ final class WmDownloadDbBackupCommand extends Command
     private function findSqlGzFile($localStorage, string $extractDir): ?string
     {
         // Path to where `unzip` extracts the `db-dumps` folder from the archive
-        $dbDumpsInExtractDir = $localStorage->path($extractDir.'/db-dumps');
+        $dbDumpsInExtractDir = $localStorage->path($extractDir . '/db-dumps');
         $this->info("Searching for .sql.gz file in extracted path: {$dbDumpsInExtractDir}");
 
         $finder = new Finder;

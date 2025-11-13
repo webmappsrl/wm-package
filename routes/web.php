@@ -5,12 +5,21 @@ use Wm\WmPackage\Http\Controllers\DownloadDbController;
 use Wm\WmPackage\Http\Controllers\ExportDownloadController;
 use Wm\WmPackage\Http\Controllers\ImportController;
 use Wm\WmPackage\Http\Controllers\RankingController;
+use Wm\WmPackage\Http\Controllers\RestoreDbController;
 
 Route::get('/download-export/{fileName}', [ExportDownloadController::class, 'download'])
     ->name('download.export')
     ->middleware(['web', 'signed']);
 
 Route::get('/download-db', [DownloadDbController::class, 'download'])->name('download.db');
+
+Route::get('/restore-db', [RestoreDbController::class, 'show'])
+    ->name('restore.db.show')
+    ->middleware(['web', 'auth']);
+
+Route::post('/restore-db', [RestoreDbController::class, 'restore'])
+    ->name('restore.db')
+    ->middleware(['web', 'auth']);
 
 Route::get('/top-ten/{app}', [RankingController::class, 'showTopTen'])->name('top-ten');
 Route::get('/user-ranking/{app}/{user}', [RankingController::class, 'showUserRanking'])->name('user-ranking');

@@ -4,6 +4,7 @@ namespace Wm\WmPackage;
 
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Laravel\Nova\Menu\MenuItem;
@@ -21,6 +22,7 @@ use Wm\WmPackage\Commands\WmDownloadDbBackupCommand;
 use Wm\WmPackage\Commands\WmGeneratePBFCommand;
 use Wm\WmPackage\Commands\WmImportFromGeohubCommand;
 use Wm\WmPackage\Commands\WmPackageCommand;
+use Wm\WmPackage\Commands\WmRestoreDbCommand;
 use Wm\WmPackage\ElasticSearch\HitsIteratorAggregate as ElasticSearchHitsIteratorAggregate;
 use Wm\WmPackage\Jobs\Import\ImportEcMediaJob;
 use Wm\WmPackage\Providers\EventServiceProvider;
@@ -160,6 +162,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
                 WmGeneratePBFCommand::class,
                 WmDownloadDbBackupCommand::class,
                 WmBuildAppPoisGeojsonCommand::class,
+                WmRestoreDbCommand::class,
             ])
             ->hasViews();
     }
@@ -393,6 +396,15 @@ class WmPackageServiceProvider extends PackageServiceProvider
 
             return $menuItem;
         };
+        $createRestoreDbMenuItem = function () {
+            // Create a menu item that opens the restore confirmation page
+            // Only show in non-production environments
+            $menuItem = MenuItem::link(__('Restore DB'), '/restore-db')
+                ->canSee(fn() => ! App::environment('production') && optional(Auth::user())->hasRole('Administrator'))
+                ->openInNewTab();
+
+            return $menuItem;
+        };
         $createMinioMenuItem = function () {
             // Determina l'URL in base all'ambiente
             $environment = app()->environment();
@@ -434,9 +446,10 @@ class WmPackageServiceProvider extends PackageServiceProvider
         if (Nova::$mainMenuCallback) {
             $originalCallback = Nova::$mainMenuCallback;
 
-            Nova::mainMenu(function (Request $request) use ($originalCallback, $createDownloadDbMenuItem, $createMinioMenuItem, $createHorizonMenuItem, $createKibanaMenuItem) {
+            Nova::mainMenu(function (Request $request) use ($originalCallback, $createDownloadDbMenuItem, $createRestoreDbMenuItem, $createMinioMenuItem, $createHorizonMenuItem, $createKibanaMenuItem) {
                 $menuItems = call_user_func($originalCallback, $request);
                 $downloadDbMenuItem = $createDownloadDbMenuItem();
+                $restoreDbMenuItem = $createRestoreDbMenuItem();
                 $minioMenuItem = $createMinioMenuItem();
                 $horizonMenuItem = $createHorizonMenuItem();
                 $kibanaMenuItem = $createKibanaMenuItem();
@@ -464,6 +477,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
                                 $currentItems[] = $kibanaMenuItem;
                             }
                             $currentItems[] = $downloadDbMenuItem;
+                            $currentItems[] = $restoreDbMenuItem;
 
                             $icon = $reflection->getProperty('icon');
                             $icon->setAccessible(true);
@@ -499,6 +513,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
                         $toolsItems[] = $kibanaMenuItem;
                     }
                     $toolsItems[] = $downloadDbMenuItem;
+                    $toolsItems[] = $createRestoreDbMenuItem();
 
                     $menuItems[] = MenuSection::make(__('Tools'), $toolsItems)->icon('briefcase')
                         ->collapsable();
@@ -507,7 +522,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
                 return $menuItems;
             });
         } else {
-            Nova::mainMenu(function (Request $request) use ($createDownloadDbMenuItem, $createMinioMenuItem, $createHorizonMenuItem, $createKibanaMenuItem) {
+            Nova::mainMenu(function (Request $request) use ($createDownloadDbMenuItem, $createRestoreDbMenuItem, $createMinioMenuItem, $createHorizonMenuItem, $createKibanaMenuItem) {
                 $toolsItems = [$createDownloadDbMenuItem()];
                 $minioMenuItem = $createMinioMenuItem();
                 if ($minioMenuItem !== null) {
@@ -521,6 +536,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
                 if ($kibanaMenuItem !== null) {
                     $toolsItems[] = $kibanaMenuItem;
                 }
+                $toolsItems[] = $createRestoreDbMenuItem();
 
                 return [
                     MenuSection::make(__('Tools'), $toolsItems)
