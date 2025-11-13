@@ -15,7 +15,7 @@ return [
     // Formato: http://minio-{APP_NAME}:9000
     'internal_endpoint' => env('MINIO_INTERNAL_ENDPOINT')
         ?: (env('APP_NAME')
-            ? 'http://minio-' . env('APP_NAME') . ':9000'
+            ? 'http://minio-'.env('APP_NAME').':9000'
             : 'http://minio-osm2cai2:9000'),
 
     // Endpoint esterno (per accesso dall'host)
@@ -25,7 +25,7 @@ return [
     // Se AWS_ENDPOINT è definito, usalo, altrimenti usa l'endpoint interno
     'endpoint' => env('MINIO_ENDPOINT', env('AWS_ENDPOINT'))
         ?: (env('APP_NAME')
-            ? 'http://minio-' . env('APP_NAME') . ':9000'
+            ? 'http://minio-'.env('APP_NAME').':9000'
             : 'http://minio-osm2cai2:9000'),
 
     // Credenziali
@@ -38,7 +38,7 @@ return [
 
     // Console URL (per accesso dall'host)
     'console_url' => env('MINIO_CONSOLE_URL')
-        ?: 'http://localhost:' . (env('FORWARD_MINIO_CONSOLE_PORT', 9003)),
+        ?: 'http://localhost:'.(env('FORWARD_MINIO_CONSOLE_PORT', 9003)),
 
     // Console base path (per reverse proxy)
     'console_base_href' => env('MINIO_CONSOLE_BASE_HREF', '/minio'),
@@ -55,7 +55,7 @@ return [
         'url' => env('AWS_URL', env('MINIO_EXTERNAL_ENDPOINT', 'http://localhost:9002')),
         'endpoint' => env('AWS_ENDPOINT')
             ?: (env('APP_NAME')
-                ? 'http://minio-' . env('APP_NAME') . ':9000'
+                ? 'http://minio-'.env('APP_NAME').':9000'
                 : 'http://minio-osm2cai2:9000'),
         'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', true), // IMPORTANTE per MinIO
         'visibility' => env('MINIO_VISIBILITY', 'public'),
