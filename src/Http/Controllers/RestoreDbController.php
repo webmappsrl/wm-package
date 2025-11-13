@@ -67,6 +67,7 @@ class RestoreDbController extends Controller
 
         if (! $backupsDisk->exists($filename)) {
             Log::error("RestoreDbController: File '{$filename}' not found on backups disk.");
+
             return response()->json([
                 'error' => 'Database dump file not found.',
                 'message' => "File '{$filename}' not found in storage/backups directory.",
@@ -125,4 +126,3 @@ class RestoreDbController extends Controller
         }
     }
 }
-

@@ -3,7 +3,6 @@
 namespace Wm\WmPackage\Commands;
 
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\Process\Exception\ProcessFailedException;
@@ -59,8 +58,8 @@ final class WmRestoreDbCommand extends Command
 
             return Command::SUCCESS;
         } catch (\Throwable $e) {
-            $this->error('An error occurred during the restore process: ' . $e->getMessage());
-            Log::error('WmRestoreDbCommand failed: ' . $e->getMessage(), [
+            $this->error('An error occurred during the restore process: '.$e->getMessage());
+            Log::error('WmRestoreDbCommand failed: '.$e->getMessage(), [
                 'exception' => $e,
                 'trace' => $e->getTraceAsString(),
             ]);
@@ -184,7 +183,7 @@ final class WmRestoreDbCommand extends Command
             });
             $this->info('Dump imported successfully.');
         } catch (ProcessFailedException $exception) {
-            $this->error('Import failed: ' . $exception->getMessage());
+            $this->error('Import failed: '.$exception->getMessage());
             throw $exception;
         }
     }
