@@ -3,6 +3,7 @@
 namespace Wm\WmPackage\Commands;
 
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\Process\Exception\ProcessFailedException;
@@ -75,6 +76,13 @@ final class WmRestoreDbCommand extends Command
         $dbHost = $dbConfig['host'];
         $dbPassword = $dbConfig['password'] ?? '';
 
+        // Close all Laravel database connections first
+        try {
+            DB::disconnect('pgsql');
+        } catch (\Exception $e) {
+            // Ignore errors when disconnecting
+        }
+
         // Use direct psql connection with the configured host
         $this->info("Wiping database via PostgreSQL connection to {$dbHost}...");
 
@@ -93,9 +101,9 @@ final class WmRestoreDbCommand extends Command
         $process = Process::fromShellCommandline($limitConnectionsCmd);
         $process->run(); // Ignore errors
 
-        // Then terminate all existing connections
+        // Then terminate all existing connections - use proper SQL string quoting
         $dropConnectionsCmd = sprintf(
-            'PGPASSWORD=%s psql -h %s -U %s -d postgres -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = %s AND pid <> pg_backend_pid();"',
+            'PGPASSWORD=%s psql -h %s -U %s -d postgres -c "SELECT pg_terminate_backend(pg_stat_activity.pid) FROM pg_stat_activity WHERE pg_stat_activity.datname = %s AND pg_stat_activity.pid <> pg_backend_pid();"',
             escapeshellarg($dbPassword),
             escapeshellarg($dbHost),
             escapeshellarg($dbUser),
@@ -103,10 +111,58 @@ final class WmRestoreDbCommand extends Command
         );
 
         // Try multiple times to ensure all connections are closed
-        for ($i = 0; $i < 3; $i++) {
+        for ($i = 0; $i < 5; $i++) {
             $process = Process::fromShellCommandline($dropConnectionsCmd);
             $process->run(); // Ignore errors
             sleep(1);
+            
+            // Check if there are still active connections
+            $checkConnectionsCmd = sprintf(
+                'PGPASSWORD=%s psql -h %s -U %s -d postgres -t -c "SELECT COUNT(*) FROM pg_stat_activity WHERE datname = %s AND pid <> pg_backend_pid();"',
+                escapeshellarg($dbPassword),
+                escapeshellarg($dbHost),
+                escapeshellarg($dbUser),
+                escapeshellarg($dbName)
+            );
+            
+            $checkProcess = Process::fromShellCommandline($checkConnectionsCmd);
+            $checkProcess->run();
+            $activeConnections = trim($checkProcess->getOutput());
+            
+            if ($activeConnections === '0' || $activeConnections === '') {
+                $this->info('All connections terminated.');
+                break;
+            }
+            
+            $this->warn("Still {$activeConnections} active connection(s), retrying...");
+        }
+
+        // Final check before dropping
+        $finalCheckCmd = sprintf(
+            'PGPASSWORD=%s psql -h %s -U %s -d postgres -t -c "SELECT COUNT(*) FROM pg_stat_activity WHERE datname = %s AND pid <> pg_backend_pid();"',
+            escapeshellarg($dbPassword),
+            escapeshellarg($dbHost),
+            escapeshellarg($dbUser),
+            escapeshellarg($dbName)
+        );
+        
+        $finalCheckProcess = Process::fromShellCommandline($finalCheckCmd);
+        $finalCheckProcess->run();
+        $finalActiveConnections = trim($finalCheckProcess->getOutput());
+        
+        if ($finalActiveConnections !== '0' && $finalActiveConnections !== '') {
+            // Force terminate with a more aggressive query
+            $this->warn("Force terminating remaining connections...");
+            $forceTerminateCmd = sprintf(
+                'PGPASSWORD=%s psql -h %s -U %s -d postgres -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = %s;"',
+                escapeshellarg($dbPassword),
+                escapeshellarg($dbHost),
+                escapeshellarg($dbUser),
+                escapeshellarg($dbName)
+            );
+            $forceProcess = Process::fromShellCommandline($forceTerminateCmd);
+            $forceProcess->run();
+            sleep(2);
         }
 
         // Drop database - use identifier quoting for database name
