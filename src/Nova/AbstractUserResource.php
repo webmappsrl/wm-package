@@ -90,12 +90,12 @@ abstract class AbstractUserResource extends Resource
                         return $permissions->toArray();
                     });
                 }),
-            HasMany::make(__('UGC POIs'), 'ugcPois', UgcPoi::class)
+            HasMany::make(__('UGC POIs'), 'ugc_pois', UgcPoi::class)
                 ->onlyOnDetail()
                 ->canSee(function () {
                     return optional(auth()->user())->hasRole('Administrator');
                 }),
-            HasMany::make(__('UGC Tracks'), 'ugcTracks', UgcTrack::class)
+            HasMany::make(__('UGC Tracks'), 'ugc_tracks', UgcTrack::class)
                 ->onlyOnDetail()
                 ->canSee(function () {
                     return optional(auth()->user())->hasRole('Administrator');
