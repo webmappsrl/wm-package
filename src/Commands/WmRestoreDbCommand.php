@@ -115,7 +115,7 @@ final class WmRestoreDbCommand extends Command
             $process = Process::fromShellCommandline($dropConnectionsCmd);
             $process->run(); // Ignore errors
             sleep(1);
-            
+
             // Check if there are still active connections
             $checkConnectionsCmd = sprintf(
                 'PGPASSWORD=%s psql -h %s -U %s -d postgres -t -c "SELECT COUNT(*) FROM pg_stat_activity WHERE datname = %s AND pid <> pg_backend_pid();"',
@@ -124,16 +124,16 @@ final class WmRestoreDbCommand extends Command
                 escapeshellarg($dbUser),
                 escapeshellarg($dbName)
             );
-            
+
             $checkProcess = Process::fromShellCommandline($checkConnectionsCmd);
             $checkProcess->run();
             $activeConnections = trim($checkProcess->getOutput());
-            
+
             if ($activeConnections === '0' || $activeConnections === '') {
                 $this->info('All connections terminated.');
                 break;
             }
-            
+
             $this->warn("Still {$activeConnections} active connection(s), retrying...");
         }
 
@@ -145,14 +145,14 @@ final class WmRestoreDbCommand extends Command
             escapeshellarg($dbUser),
             escapeshellarg($dbName)
         );
-        
+
         $finalCheckProcess = Process::fromShellCommandline($finalCheckCmd);
         $finalCheckProcess->run();
         $finalActiveConnections = trim($finalCheckProcess->getOutput());
-        
+
         if ($finalActiveConnections !== '0' && $finalActiveConnections !== '') {
             // Force terminate with a more aggressive query
-            $this->warn("Force terminating remaining connections...");
+            $this->warn('Force terminating remaining connections...');
             $forceTerminateCmd = sprintf(
                 'PGPASSWORD=%s psql -h %s -U %s -d postgres -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = %s;"',
                 escapeshellarg($dbPassword),
