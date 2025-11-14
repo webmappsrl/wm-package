@@ -399,7 +399,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
         $createRestoreDbMenuItem = function () {
             // Create a menu item that opens the restore confirmation page
             // Only show in non-production environments
-            $menuItem = MenuItem::link(__('Restore DB'), '/restore-db')
+            $menuItem = MenuItem::externalLink(__('Restore DB'), route('restore.db.show'))
                 ->canSee(fn () => ! App::environment('production') && optional(Auth::user())->hasRole('Administrator'))
                 ->openInNewTab();
 
