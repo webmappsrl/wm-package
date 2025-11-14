@@ -64,26 +64,23 @@ class EcTrackService extends BaseService
         $demData['duration_forward'] = $demData['duration_forward_hiking'];
         $demData['duration_backward'] = $demData['duration_backward_hiking'];
 
-        $oldDemData = $track->properties['dem_data'] ?? [];
+        $oldDemData = [];
+        foreach ($this->getDemDataFields() as $field) {
+            $oldDemData[$field] = $track->properties[$field] ?? null;
+        }
+
         $properties = $track->properties;
-        $properties['dem_data'] = $demData;
-        $track->properties = $properties;
 
         try {
             if (isset($demData)) {
                 foreach ($this->getDemDataFields() as $field) {
-                    if (
-                        isset($demData[$field])
-                        && ! empty($demData[$field])
-                        && isset($track->properties['dem_data'][$field]) && is_null($track->properties['dem_data'][$field])
-                    ) {
-                        $properties = $track->properties;
-                        $properties['dem_data'][$field] = $this->updateFieldIfNecessary($track, $field, $demData, $oldDemData);
-                        $track->properties = $properties;
-                    }
+                    $properties[$field] = $this->updateFieldIfNecessary($track, $field, $demData, $oldDemData);
                 }
+
+                $properties['dem_data'] = $demData;
             }
 
+            $track->properties = $properties;
             $track->saveQuietly();
         } catch (Exception $e) {
             Log::error('An error occurred during DEM operation: '.$e->getMessage());
