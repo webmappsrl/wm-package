@@ -21,13 +21,22 @@ class EcTrackObserver extends AbstractEcObserver
     public function __construct(protected GeometryComputationService $geometryComputationService, protected EcTrackService $ecTrackService) {}
 
     /**
+     * Handle the EcTrack "created" event.
+     *
+     * @return void
+     */
+    public function created(EcTrack $ecTrack)
+    {
+        $this->ecTrackService->initDataChain($ecTrack);
+    }
+
+    /**
      * Handle the EcTrack "saved" event.
      *
      * @return void
      */
-    public function saved($ecTrack)
+    public function updated($ecTrack)
     {
-        parent::saved($ecTrack);
         $this->ecTrackService->updateDataChain($ecTrack);
 
         if ($user = auth()->user()) {
