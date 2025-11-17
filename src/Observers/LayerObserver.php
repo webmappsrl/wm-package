@@ -47,8 +47,6 @@ class LayerObserver extends AbstractObserver
             $this->updateAppConf($layer);
         }
 
-        // Aggiorna sempre la geometria del layer quando viene salvato
-        $this->layerService->updateLayerGeometryWithJob($layer);
     }
 
     /**

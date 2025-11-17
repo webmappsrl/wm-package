@@ -21,6 +21,8 @@ class Layer extends Polygon
 {
     use FeatureCollectionMapTrait, HasPackageFactory, HasTranslations, TaxonomyAbleModel, TaxonomyWhereAbleModel;
 
+    public $timestamps = false;
+    
     protected static function boot()
     {
         parent::boot();

@@ -40,7 +40,6 @@ class TaxonomyActivityablesObserver
 
                 // Aggiorna le features correlate
                 $this->layerService->updateLayersPropertyOnAllLayeredFeaturesWithJobs($layer);
-                $this->layerService->updateLayerGeometryWithJob($layer);
 
                 // Aggiorna le icone dell'app
                 if ($shouldUpdate && isset($layer->app_id)) {
@@ -57,10 +56,6 @@ class TaxonomyActivityablesObserver
 
             // Aggiorna le features correlate
             $this->layerService->updateLayerIdsPropertyOnLayeredFeature($taxonomyActivityable->model, $layers->pluck('id')->toArray(), $add);
-            foreach ($layers as $layer) {
-                $this->layerService->updateLayerGeometryWithJob($layer);
-            }
-
             // Aggiorna le icone dell'app
             $relatedModel = $taxonomyActivityable->model;
             if ($shouldUpdate && $relatedModel && isset($relatedModel->user_id)) {
