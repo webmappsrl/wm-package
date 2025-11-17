@@ -63,7 +63,7 @@ class ExecuteEcTrackDataChainAction extends Action
         $processedCount = 0;
 
         $executeChain = empty($this->chain)
-            ? fn ($ecTrack) => $ecTrackService->initDataChain($ecTrack)
+            ? fn ($ecTrack) => $ecTrackService->createDataChain($ecTrack)
             : fn ($ecTrack) => $this->executeCustomChain($ecTrack, $this->chain);
 
         foreach ($models as $model) {

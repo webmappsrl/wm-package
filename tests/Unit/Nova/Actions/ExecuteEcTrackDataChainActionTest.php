@@ -65,7 +65,7 @@ class ExecuteEcTrackDataChainActionTest extends TestCase
         $models = collect([$track]);
 
         $ecTrackServiceMock = Mockery::mock(EcTrackService::class);
-        $ecTrackServiceMock->shouldReceive('initDataChain')
+        $ecTrackServiceMock->shouldReceive('createDataChain')
             ->once()
             ->with($track);
 
@@ -73,7 +73,7 @@ class ExecuteEcTrackDataChainActionTest extends TestCase
 
         $result = $action->handle(new ActionFields(collect(), collect()), $models);
 
-        $ecTrackServiceMock->shouldHaveReceived('initDataChain');
+        $ecTrackServiceMock->shouldHaveReceived('createDataChain');
         $this->assertInstanceOf(ActionResponse::class, $result);
     }
 
@@ -106,7 +106,7 @@ class ExecuteEcTrackDataChainActionTest extends TestCase
         $models = collect([$app]);
 
         $ecTrackServiceMock = Mockery::mock(EcTrackService::class);
-        $ecTrackServiceMock->shouldReceive('initDataChain')
+        $ecTrackServiceMock->shouldReceive('createDataChain')
             ->twice()
             ->with(Mockery::on(function ($track) use ($track1, $track2) {
                 return $track->id === $track1->id || $track->id === $track2->id;
@@ -116,7 +116,7 @@ class ExecuteEcTrackDataChainActionTest extends TestCase
 
         $result = $action->handle(new ActionFields(collect(), collect()), $models);
 
-        $ecTrackServiceMock->shouldHaveReceived('initDataChain');
+        $ecTrackServiceMock->shouldHaveReceived('createDataChain');
         $this->assertInstanceOf(ActionResponse::class, $result);
         $this->assertStringContainsString('2', json_encode($result));
     }
@@ -134,7 +134,7 @@ class ExecuteEcTrackDataChainActionTest extends TestCase
         $models = collect([$layer]);
 
         $ecTrackServiceMock = Mockery::mock(EcTrackService::class);
-        $ecTrackServiceMock->shouldReceive('initDataChain')
+        $ecTrackServiceMock->shouldReceive('createDataChain')
             ->twice()
             ->with(Mockery::on(function ($track) use ($track1, $track2) {
                 return $track->id === $track1->id || $track->id === $track2->id;
@@ -144,7 +144,7 @@ class ExecuteEcTrackDataChainActionTest extends TestCase
 
         $result = $action->handle(new ActionFields(collect(), collect()), $models);
 
-        $ecTrackServiceMock->shouldHaveReceived('initDataChain');
+        $ecTrackServiceMock->shouldHaveReceived('createDataChain');
         $this->assertInstanceOf(ActionResponse::class, $result);
         $this->assertStringContainsString('2', json_encode($result));
     }
@@ -156,7 +156,7 @@ class ExecuteEcTrackDataChainActionTest extends TestCase
         $models = collect([$track]);
 
         $ecTrackServiceMock = Mockery::mock(EcTrackService::class);
-        $ecTrackServiceMock->shouldReceive('initDataChain')
+        $ecTrackServiceMock->shouldReceive('createDataChain')
             ->once()
             ->with($track);
 
@@ -164,7 +164,7 @@ class ExecuteEcTrackDataChainActionTest extends TestCase
 
         $result = $action->handle(new ActionFields(collect(), collect()), $models);
 
-        $ecTrackServiceMock->shouldHaveReceived('initDataChain');
+        $ecTrackServiceMock->shouldHaveReceived('createDataChain');
         $this->assertInstanceOf(\Laravel\Nova\Actions\ActionResponse::class, $result);
         $this->assertStringContainsString('1', json_encode($result));
     }
@@ -193,14 +193,14 @@ class ExecuteEcTrackDataChainActionTest extends TestCase
         $models = collect([$app]);
 
         $ecTrackServiceMock = Mockery::mock(EcTrackService::class);
-        $ecTrackServiceMock->shouldReceive('initDataChain')
+        $ecTrackServiceMock->shouldReceive('createDataChain')
             ->times(250);
 
         app()->instance(EcTrackService::class, $ecTrackServiceMock);
 
         $result = $action->handle(new ActionFields(collect(), collect()), $models);
 
-        $ecTrackServiceMock->shouldHaveReceived('initDataChain');
+        $ecTrackServiceMock->shouldHaveReceived('createDataChain');
         $this->assertInstanceOf(\Laravel\Nova\Actions\ActionResponse::class, $result);
         $this->assertStringContainsString('250', json_encode($result));
     }
@@ -214,12 +214,12 @@ class ExecuteEcTrackDataChainActionTest extends TestCase
         $models = collect([$track1, $track2]);
 
         $ecTrackServiceMock = Mockery::mock(EcTrackService::class);
-        $ecTrackServiceMock->shouldReceive('initDataChain')
+        $ecTrackServiceMock->shouldReceive('createDataChain')
             ->once()
             ->with($track1)
             ->andThrow(new \Exception('Test error'));
 
-        $ecTrackServiceMock->shouldReceive('initDataChain')
+        $ecTrackServiceMock->shouldReceive('createDataChain')
             ->once()
             ->with($track2);
 

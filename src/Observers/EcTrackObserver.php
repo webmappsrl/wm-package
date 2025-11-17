@@ -27,7 +27,7 @@ class EcTrackObserver extends AbstractEcObserver
      */
     public function created(EcTrack $ecTrack)
     {
-        $this->ecTrackService->initDataChain($ecTrack);
+        $this->ecTrackService->createDataChain($ecTrack);
     }
 
     /**

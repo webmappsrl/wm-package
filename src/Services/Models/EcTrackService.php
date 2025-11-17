@@ -288,7 +288,7 @@ class EcTrackService extends BaseService
         return $trackProperties[$field] ?? null;
     }
 
-    public function initDataChain(EcTrack $track)
+    public function createDataChain(EcTrack $track)
     {
         $chain = [];
         if (isset($track->properties['osmid']) && $track->properties['osmid']) {
