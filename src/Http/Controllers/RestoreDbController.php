@@ -84,17 +84,40 @@ class RestoreDbController extends Controller
                 $output = Artisan::output();
                 Log::info('RestoreDbController: Database restore completed successfully.');
 
+                // Run migrations after successful restore
+                Log::info('RestoreDbController: Running migrations after restore...');
+                $migrateExitCode = Artisan::call('migrate', ['--force' => true]);
+                $migrateOutput = Artisan::output();
+
+                if ($migrateExitCode === 0) {
+                    Log::info('RestoreDbController: Migrations completed successfully.');
+                    $output .= "\n\nMigrations:\n".$migrateOutput;
+                } else {
+                    Log::error('RestoreDbController: Migrations failed after restore.', [
+                        'exit_code' => $migrateExitCode,
+                        'output' => $migrateOutput,
+                    ]);
+                    $output .= "\n\nMigrations failed:\n".$migrateOutput;
+                }
+
                 // If request expects JSON, return JSON response
                 if ($request->expectsJson() || $request->wantsJson()) {
                     return response()->json([
                         'success' => true,
-                        'message' => 'Database restore completed successfully.',
+                        'message' => 'Database restore completed successfully.'.($migrateExitCode === 0 ? ' Migrations applied.' : ' Migrations failed - check logs.'),
                         'output' => $output,
                     ]);
                 }
 
                 // Otherwise redirect back with success message
-                return redirect()->back()->with('success', 'Database restore completed successfully.');
+                $message = 'Database restore completed successfully.';
+                if ($migrateExitCode === 0) {
+                    $message .= ' Migrations applied.';
+                } else {
+                    $message .= ' Migrations failed - check logs.';
+                }
+
+                return redirect()->back()->with('success', $message);
             } else {
                 $output = Artisan::output();
                 Log::error('RestoreDbController: Database restore failed.', ['exit_code' => $exitCode, 'output' => $output]);
