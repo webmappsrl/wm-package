@@ -253,7 +253,8 @@ class Layer extends Polygon
     {
         $this->clearAdditionalFeaturesForMap();
 
-        $EcTracks = DB::select($this->getFeaturesQuery(), [$this->id, EcTrack::class]);
+        $ecTrackModelClass = config('wm-package.ec_track_model', 'App\Models\EcTrack');
+        $EcTracks = DB::select($this->getFeaturesQuery(), [$this->id, $ecTrackModelClass]);
         // Nova resource name per EcTrack - usa kebab-case del nome del modello
         $novaResourceName = 'ec-tracks';
 

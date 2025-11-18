@@ -52,5 +52,5 @@ return [
         ],
     ],
     'ec_track_table' => env('EC_TRACK_TABLE', 'ec_tracks'),
-    'ec_track_model' => env('EC_TRACK_MODEL', 'Wm\WmPackage\Models\EcTrack'),
+    'ec_track_model' => env('EC_TRACK_MODEL', 'App\Models\EcTrack'),
 ];
