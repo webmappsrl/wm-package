@@ -33,6 +33,10 @@ class Layer extends Polygon
             if (is_null($model->properties)) {
                 $model->properties = [];
             }
+
+            if (App::count() === 1 && empty($model->app_id)) {
+                $model->app_id = App::first()->id;
+            }
         });
     }
 

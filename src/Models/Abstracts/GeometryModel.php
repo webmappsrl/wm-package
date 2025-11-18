@@ -153,7 +153,7 @@ abstract class GeometryModel extends Model implements HasMedia
      */
     public function getMorphClass()
     {
-        return get_class($this);
+        return 'App\\Models\\'.class_basename($this);
     }
 
     //
