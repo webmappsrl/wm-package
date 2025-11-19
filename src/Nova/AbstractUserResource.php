@@ -65,7 +65,7 @@ abstract class AbstractUserResource extends Resource
                 ->onlyOnForms()
                 ->creationRules('required', Rules\Password::defaults())
                 ->updateRules('nullable', Rules\Password::defaults()),
-            $this->getAppFieldForIndex(),
+            ...array_filter([$this->getAppFieldForIndex()]),
             RoleBooleanGroup::make('Roles', 'roles')
                 ->readonly(function () {
                     return ! auth()->user()->hasRole('Administrator') && ! auth()->user()->hasPermissionTo('manage roles and permissions');
