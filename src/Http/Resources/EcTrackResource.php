@@ -31,7 +31,7 @@ class EcTrackResource extends JsonResource
         // Copia tutti gli attributi da dem_data se non presenti o null in properties
         if (isset($geojson['properties']['dem_data']) && is_array($geojson['properties']['dem_data'])) {
             foreach ($geojson['properties']['dem_data'] as $key => $value) {
-                if (!isset($properties[$key]) || $properties[$key] === null) {
+                if (! isset($properties[$key]) || $properties[$key] === null) {
                     $properties[$key] = $value;
                 }
             }
