@@ -5,10 +5,10 @@ namespace Wm\WmPackage\Observers;
 use Illuminate\Support\Facades\Log;
 use Wm\WmPackage\Jobs\Pbf\GenerateAppPBFJob;
 use Wm\WmPackage\Models\EcTrack;
+use Wm\WmPackage\Models\Layerable;
 use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Services\Models\EcTrackService;
-use Wm\WmPackage\Services\Models\UserService;
-
+use Wm\WmPackage\Services\StorageService;
 class EcTrackObserver extends AbstractEcObserver
 {
     /**
@@ -77,27 +77,31 @@ class EcTrackObserver extends AbstractEcObserver
     }
 
     /**
+     * Handle the EcTrack "deleting" event.
+     * Cancella i Layerable associati prima che l'EcTrack venga cancellato.
+     * Questo triggera automaticamente il LayerableObserver::deleted() per ogni Layerable.
+     *
+     * @return void
+     */
+    public function deleting(EcTrack $ecTrack)
+    {
+        $ecTrackModelClass = config('wm-package.ec_track_model', 'App\Models\EcTrack');
+        
+        // Cancella tutti i Layerable associati a questa track
+        // Questo triggera automaticamente LayerableObserver::deleted() per ogni record
+        Layerable::where('layerable_id', $ecTrack->id)
+            ->where('layerable_type', $ecTrackModelClass)
+            ->delete();
+    }
+
+    /**
      * Handle the EcTrack "deleted" event.
      *
      * @return void
      */
     public function deleted(EcTrack $ecTrack)
     {
-
-        /**
-         * Delete track PBFs if the track has associated apps, a bounding box, and an author ID.
-         * Otherwise, log an info message.
-         *
-         * @param  EcTrack  $ecTrack  The track to observe.
-         * @return void
-         */
-        $apps = $ecTrack->trackHasApps();
-        $author_id = $ecTrack->user->id;
-        $bbox = $this->geometryComputationService->getGeometryModelBbox($ecTrack);
-        if ($apps && $bbox && $author_id) {
-            GenerateAppPBFJob::dispatch($apps, $bbox);
-        } else {
-            Log::info('No apps or bbox or author_id found for track '.$ecTrack->id.' to delete PBFs.');
-        }
+        $storageService = new StorageService();
+        $storageService->deleteTrack($ecTrack->id);
     }
 }

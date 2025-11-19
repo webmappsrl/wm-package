@@ -434,7 +434,18 @@ class PBFGeneratorService extends BaseService
                 ->where('layerable_type', config('wm-package.ec_track_model', 'App\Models\EcTrack'))
                 ->pluck('layerable_id')
                 ->toArray();
-
+            if (empty($trackIds)) {
+                throw new Exception('No track IDs found for layer: '.$layer->id);
+            }
+        }catch (\Exception $e) {
+            Log::warning('Fallback a generateWholeAppPbfs per errore nella rigenerazione multipla dopo sync', [
+                'layer_id' => $layer->id,
+                'error' => $e->getMessage(),
+            ]);
+            $tableName = config('wm-package.ec_track_table', 'ec_tracks');
+            $trackIds = $layer->ecTracks()->pluck("{$tableName}.id")->toArray();
+        }
+        try {
             $minZoom = $minZoom ?? config('wm-package.services.pbf.min_zoom');
             $maxZoom = $maxZoom ?? config('wm-package.services.pbf.max_zoom');
 
