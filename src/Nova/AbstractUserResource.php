@@ -144,8 +144,6 @@ abstract class AbstractUserResource extends Resource
     /**
      * Restituisce il campo app per l'index se esistono più app.
      * La relazione è indiretta: utente -> UGC (ugc_pois/ugc_tracks) -> app
-     *
-     * @return \Laravel\Nova\Fields\Text|null
      */
     protected function getAppFieldForIndex(): ?Text
     {
@@ -164,8 +162,9 @@ abstract class AbstractUserResource extends Resource
 
                 // Genera link cliccabili per ogni app
                 $links = $apps->map(function ($app) {
-                    $url = Nova::url('/resources/apps/' . $app->id);
-                    return '<a href="' . $url . '" class="link-default">' . $app->name . '</a>';
+                    $url = Nova::url('/resources/apps/'.$app->id);
+
+                    return '<a href="'.$url.'" class="link-default">'.$app->name.'</a>';
                 });
 
                 return $links->join(', ');
