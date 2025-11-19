@@ -50,6 +50,17 @@ class StorageService extends BaseService
 
         return $a && $b ? $path : false;
     }
+    
+    public function deleteTrack(int $trackId): bool
+    {
+        $path = $this->getTrackPath($trackId);
+
+        if ($this->getRemoteWfeDisk()->exists($path)) {
+            return $this->getRemoteWfeDisk()->delete($path);
+        }
+
+        return true;
+    }
 
     public function getAppConfigJson(int $appId): ?string
     {
