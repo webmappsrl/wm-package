@@ -26,10 +26,22 @@ class EcTrackResource extends JsonResource
 
         $properties = [
             ...GeoJsonService::make()->removeInvalidProperties($geojson['properties']),
-            'name' => $this->getTranslations('name'),
-            'roundtrip' => $geojson['properties']['dem_data']['round_trip'] ?? $geometryComputationService->isRoundtrip($geojson['geometry']['coordinates']),
-            'related_pois' => $this->getRelatedPois(),
         ];
+
+        // Copia tutti gli attributi da dem_data se non presenti o null in properties
+        if (isset($geojson['properties']['dem_data']) && is_array($geojson['properties']['dem_data'])) {
+            foreach ($geojson['properties']['dem_data'] as $key => $value) {
+                if (!isset($properties[$key]) || $properties[$key] === null) {
+                    $properties[$key] = $value;
+                }
+            }
+            // Rimuovi dem_data dalle properties finali (gli attributi sono stati copiati flat)
+            unset($properties['dem_data']);
+        }
+
+        $properties['name'] = $this->getTranslations('name');
+        $properties['roundtrip'] = $properties['round_trip'] ?? $geometryComputationService->isRoundtrip($geojson['geometry']['coordinates']);
+        $properties['related_pois'] = $this->getRelatedPois();
 
         $media = $this->getMedia();
         if ($media->isNotEmpty()) {
