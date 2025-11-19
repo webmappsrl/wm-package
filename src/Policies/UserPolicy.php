@@ -2,8 +2,8 @@
 
 namespace Wm\WmPackage\Policies;
 
-use Wm\WmPackage\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
+use Wm\WmPackage\Models\User;
 
 class UserPolicy
 {
