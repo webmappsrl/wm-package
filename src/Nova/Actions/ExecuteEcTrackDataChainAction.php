@@ -86,7 +86,7 @@ class ExecuteEcTrackDataChainAction extends Action
             }
         }
 
-        return Action::message("Processate {$processedCount} EcTrack!");
+        return Action::message(__(':count EcTrack processed!', ['count' => $processedCount]));
     }
 
     /**

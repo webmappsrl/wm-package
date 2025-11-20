@@ -68,7 +68,7 @@ class Layer extends AbstractGeometryResource
     {
         return [
             ...parent::actions($request),
-            new Actions\UpdateLayerPbfAction,
+            new Actions\RegenerateLayerPbfAction,
             ExecuteEcTrackDataChainAction::make()
                 ->confirmText(__('Are you sure you want to process all tracks of this layer?'))
                 ->confirmButtonText(__('Yes, process'))

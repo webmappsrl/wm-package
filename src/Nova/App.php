@@ -20,6 +20,8 @@ use Whitecube\NovaFlexibleContent\Flexible;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
 use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Nova\Actions\ExecuteEcTrackDataChainAction;
+use Wm\WmPackage\Nova\Actions\RegenerateAppPbfAction;
+use Wm\WmPackage\Nova\Actions\ReindexAppScoutAction;
 use Wm\WmPackage\Nova\Flexible\Resolvers\ConfigHomeResolver;
 
 class App extends Resource
@@ -56,6 +58,16 @@ class App extends Resource
     public function actions(NovaRequest $request): array
     {
         return [
+            new RegenerateAppPbfAction()
+                ->onlyOnDetail()
+                ->confirmText(__('Are you sure you want to regenerate all PBFs for this app? This operation may take a long time.'))
+                ->confirmButtonText(__('Yes, regenerate'))
+                ->cancelButtonText(__('Cancel')),
+            new ReindexAppScoutAction()
+                ->onlyOnDetail()
+                ->confirmText(__('Are you sure you want to reindex the search for this app? This operation may take a long time.'))
+                ->confirmButtonText(__('Yes, reindex'))
+                ->cancelButtonText(__('Cancel')),
             ExecuteEcTrackDataChainAction::make([
                 fn ($track) => new UpdateEcTrackAwsJob($track),
             ], __('Update Tracks on AWS'))

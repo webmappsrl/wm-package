@@ -2,20 +2,16 @@
 
 namespace Wm\WmPackage\Nova\Actions;
 
-use Illuminate\Bus\Queueable;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Collection;
 use Laravel\Nova\Actions\Action;
 use Laravel\Nova\Fields\ActionFields;
 use Wm\WmPackage\Services\Models\LayerService;
 
-class UpdateLayerPbfAction extends Action
+class RegenerateLayerPbfAction extends BasePbfAction
 {
-    use InteractsWithQueue, Queueable;
-
     public function name()
     {
-        return __('Update Layer pbf');
+        return __('Rigenera PBF Layer');
     }
 
     public function handle(ActionFields $fields, Collection $models)
@@ -30,3 +26,4 @@ class UpdateLayerPbfAction extends Action
         return Action::message("Messe in coda {$count} layer per l'aggiornamento su aws!");
     }
 }
+
