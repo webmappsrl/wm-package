@@ -7,6 +7,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
@@ -75,7 +76,22 @@ class RestoreDbController extends Controller
         }
 
         try {
-            // Run the restore command
+            // Close all Laravel database connections first
+            Log::info('RestoreDbController: Closing all Laravel database connections...');
+            try {
+                foreach (array_keys(config('database.connections')) as $connection) {
+                    try {
+                        DB::disconnect($connection);
+                    } catch (\Exception $e) {
+                        // Ignore errors when disconnecting
+                    }
+                }
+                Log::info('RestoreDbController: All Laravel connections closed.');
+            } catch (\Throwable $e) {
+                Log::warning('RestoreDbController: Error closing Laravel connections: '.$e->getMessage());
+            }
+
+            // Run the restore command (it will handle closing all PostgreSQL connections)
             $exitCode = Artisan::call('wm:restore-db', [
                 '--no-wipe' => $request->boolean('no_wipe', false),
             ]);
