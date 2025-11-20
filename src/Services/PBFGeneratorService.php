@@ -437,7 +437,7 @@ class PBFGeneratorService extends BaseService
             if (empty($trackIds)) {
                 throw new Exception('No track IDs found for layer: '.$layer->id);
             }
-        }catch (\Exception $e) {
+        } catch (\Exception $e) {
             Log::warning('Fallback a generateWholeAppPbfs per errore nella rigenerazione multipla dopo sync', [
                 'layer_id' => $layer->id,
                 'error' => $e->getMessage(),

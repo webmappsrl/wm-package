@@ -2,13 +2,12 @@
 
 namespace Wm\WmPackage\Observers;
 
-use Illuminate\Support\Facades\Log;
-use Wm\WmPackage\Jobs\Pbf\GenerateAppPBFJob;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\Layerable;
 use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Services\Models\EcTrackService;
 use Wm\WmPackage\Services\StorageService;
+
 class EcTrackObserver extends AbstractEcObserver
 {
     /**
@@ -86,7 +85,7 @@ class EcTrackObserver extends AbstractEcObserver
     public function deleting(EcTrack $ecTrack)
     {
         $ecTrackModelClass = config('wm-package.ec_track_model', 'App\Models\EcTrack');
-        
+
         // Cancella tutti i Layerable associati a questa track
         // Questo triggera automaticamente LayerableObserver::deleted() per ogni record
         Layerable::where('layerable_id', $ecTrack->id)
@@ -101,7 +100,7 @@ class EcTrackObserver extends AbstractEcObserver
      */
     public function deleted(EcTrack $ecTrack)
     {
-        $storageService = new StorageService();
+        $storageService = new StorageService;
         $storageService->deleteTrack($ecTrack->id);
     }
 }

@@ -13,7 +13,7 @@ use Wm\WmPackage\Models\EcTrack;
 
 /**
  * Azione Nova per reindicizzare tutte le EcTrack di un'App in Scout/Elasticsearch
- * 
+ *
  * Reindicizza tutte le tracce associate all'applicazione utilizzando
  * il metodo searchable() di Laravel Scout.
  */
@@ -29,8 +29,6 @@ class ReindexAppScoutAction extends Action
     /**
      * Esegue la reindicizzazione Scout per le app selezionate
      *
-     * @param  ActionFields  $fields
-     * @param  Collection  $models
      * @return mixed
      */
     public function handle(ActionFields $fields, Collection $models)
@@ -41,28 +39,29 @@ class ReindexAppScoutAction extends Action
 
         // Verifica se l'indice Scout esiste
         try {
-            $ecTrackModel = new EcTrack();
+            $ecTrackModel = new EcTrack;
             $indexName = $ecTrackModel->searchableAs();
             $client = app(\Elastic\Elasticsearch\Client::class);
             $indexExists = $client->indices()->exists(['index' => $indexName])->asBool();
-            
-            if (!$indexExists) {
+
+            if (! $indexExists) {
                 // L'indice non esiste, mostra errore con comando da eseguire
                 $containerName = $this->getContainerName();
                 $ecTrackModelClass = config('wm-package.ec_track_model', 'App\\Models\\EcTrack');
                 $command = sprintf('docker exec %s php artisan scout:import "%s"', $containerName, $ecTrackModelClass);
-                
+
                 $errorMessage = __('The Scout index ":index" does not exist.<br><br>If the index is missing, create it this way:<br><br><code>:command</code>', [
                     'index' => $indexName,
                     'command' => htmlspecialchars($command),
                 ]);
-                
+
                 return Action::danger($errorMessage);
             }
         } catch (\Exception $e) {
             Log::error('Error checking Scout index', [
                 'error' => $e->getMessage(),
             ]);
+
             return Action::danger(__('Error checking Scout index: :error', ['error' => $e->getMessage()]));
         }
 
@@ -81,6 +80,7 @@ class ReindexAppScoutAction extends Action
                         'app_id' => $app->id,
                         'app_name' => $app->name,
                     ]);
+
                     continue;
                 }
 
@@ -101,7 +101,7 @@ class ReindexAppScoutAction extends Action
                     $containerName = $this->getContainerName();
                     $ecTrackModelClass = config('wm-package.ec_track_model', 'App\\Models\\EcTrack');
                     $command = sprintf('docker exec %s php artisan scout:import "%s"', $containerName, $ecTrackModelClass);
-                    
+
                     $errors[] = __('Error for app \':name\' (ID: :id): The Scout index does not exist. Execute: :command', [
                         'name' => $app->name,
                         'id' => $app->id,
@@ -127,10 +127,11 @@ class ReindexAppScoutAction extends Action
         // Costruisce il messaggio di risposta
         $message = __('Scout reindexing completed for :count app', ['count' => $processedCount]);
         if ($totalTracksIndexed > 0) {
-            $message .= ' ' . __('(:count tracks reindexed)', ['count' => $totalTracksIndexed]);
+            $message .= ' '.__('(:count tracks reindexed)', ['count' => $totalTracksIndexed]);
         }
         if (! empty($errors)) {
-            $message .= '. ' . __('Errors') . ': ' . implode('; ', $errors);
+            $message .= '. '.__('Errors').': '.implode('; ', $errors);
+
             return Action::danger($message);
         }
 
@@ -139,13 +140,11 @@ class ReindexAppScoutAction extends Action
 
     /**
      * Ottiene il nome del container PHP
-     *
-     * @return string
      */
     protected function getContainerName(): string
     {
         $appName = env('APP_NAME', 'camminiditalia');
+
         return "php-{$appName}";
     }
 }
-

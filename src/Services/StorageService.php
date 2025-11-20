@@ -50,7 +50,7 @@ class StorageService extends BaseService
 
         return $a && $b ? $path : false;
     }
-    
+
     public function deleteTrack(int $trackId): bool
     {
         $path = $this->getTrackPath($trackId);

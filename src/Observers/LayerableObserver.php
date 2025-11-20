@@ -9,6 +9,7 @@ use Wm\WmPackage\Services\PBFGeneratorService;
 class LayerableObserver
 {
     protected LayerService $layerService;
+
     protected PBFGeneratorService $pbfGeneratorService;
 
     public function __construct(
@@ -53,7 +54,7 @@ class LayerableObserver
         ) {
             $this->layerService->updateLayerIdsPropertyOnLayeredFeature($layerable->model, [$layerable->layer->id], $add);
             $this->layerService->updateLayerGeometryWithJob($layerable->layer);
-            
+
             // Rigenera i PBF ottimizzati per tutte le tracks del layer (solo per EcTrack)
             if ($relatedTypeClass === $ecTrackModelClass) {
                 $this->pbfGeneratorService->regeneratePbfsForLayer($layerable->layer);

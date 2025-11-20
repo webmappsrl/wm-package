@@ -26,4 +26,3 @@ class RegenerateLayerPbfAction extends BasePbfAction
         return Action::message("Messe in coda {$count} layer per l'aggiornamento su aws!");
     }
 }
-

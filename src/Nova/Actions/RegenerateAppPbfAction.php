@@ -12,7 +12,7 @@ use Wm\WmPackage\Services\PBFGeneratorService;
 
 /**
  * Azione Nova per rigenerare tutti i PBF ottimizzati per un'App
- * 
+ *
  * Utilizza l'approccio bottom-up ottimizzato con clustering geografico
  * per rigenerare tutti i tile PBF dell'applicazione.
  */
@@ -26,8 +26,6 @@ class RegenerateAppPbfAction extends BasePbfAction
     /**
      * Esegue la rigenerazione dei PBF ottimizzati per le app selezionate
      *
-     * @param  ActionFields  $fields
-     * @param  Collection  $models
      * @return mixed
      */
     public function handle(ActionFields $fields, Collection $models)
@@ -50,6 +48,7 @@ class RegenerateAppPbfAction extends BasePbfAction
                         'app_id' => $app->id,
                         'app_name' => $app->name,
                     ]);
+
                     continue;
                 }
 
@@ -83,4 +82,3 @@ class RegenerateAppPbfAction extends BasePbfAction
         return Action::message($message);
     }
 }
-

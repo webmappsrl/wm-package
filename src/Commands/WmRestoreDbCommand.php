@@ -114,10 +114,10 @@ final class WmRestoreDbCommand extends Command
 
         $process = Process::fromShellCommandline($limitConnectionsCmd);
         $process->run();
-        if (!$process->isSuccessful()) {
+        if (! $process->isSuccessful()) {
             $this->warn('Failed to set connection limit: '.$process->getErrorOutput());
         }
-        
+
         // Wait a moment for the limit to take effect
         sleep(1);
 
@@ -132,20 +132,20 @@ final class WmRestoreDbCommand extends Command
 
         // Try multiple times to ensure all connections are closed
         for ($i = 0; $i < 15; $i++) {
-            $this->info("Termination attempt " . ($i + 1) . "/15...");
+            $this->info('Termination attempt '.($i + 1).'/15...');
             $process = Process::fromShellCommandline($dropConnectionsCmd);
             $process->run();
-            
+
             if ($process->isSuccessful()) {
                 $output = trim($process->getOutput());
-                if (!empty($output)) {
+                if (! empty($output)) {
                     $this->line("Terminated: {$output}");
                 }
             } else {
                 $this->warn('Termination command output: '.$process->getOutput());
                 $this->warn('Termination command error: '.$process->getErrorOutput());
             }
-            
+
             sleep(2);
 
             // Check if there are still active connections
@@ -160,7 +160,7 @@ final class WmRestoreDbCommand extends Command
             $checkProcess = Process::fromShellCommandline($checkConnectionsCmd);
             $checkProcess->run();
             $activeConnections = trim($checkProcess->getOutput());
-            
+
             // Also show which connections are still active (for debugging)
             if ($activeConnections !== '0' && $activeConnections !== '') {
                 $showConnectionsCmd = sprintf(
@@ -209,7 +209,7 @@ final class WmRestoreDbCommand extends Command
             $forceProcess = Process::fromShellCommandline($forceTerminateCmd);
             $forceProcess->run();
             sleep(3);
-            
+
             // Verify all connections are closed
             $verifyCmd = sprintf(
                 'PGPASSWORD=%s psql -h %s -U %s -d postgres -t -c "SELECT COUNT(*) FROM pg_stat_activity WHERE datname = \'%s\';"',
@@ -221,7 +221,7 @@ final class WmRestoreDbCommand extends Command
             $verifyProcess = Process::fromShellCommandline($verifyCmd);
             $verifyProcess->run();
             $remainingConnections = trim($verifyProcess->getOutput());
-            
+
             if ($remainingConnections !== '0' && $remainingConnections !== '') {
                 $this->error("Warning: Still {$remainingConnections} connection(s) active. This may cause issues.");
             }
@@ -259,7 +259,7 @@ final class WmRestoreDbCommand extends Command
 
         // Drop database - try with FORCE first (PostgreSQL 13+), fallback to regular DROP
         $this->info('Dropping database...');
-        
+
         // First, try to get PostgreSQL version to see if FORCE is available
         $versionCmd = sprintf(
             'PGPASSWORD=%s psql -h %s -U %s -d postgres -t -c "SELECT version();"',
@@ -267,12 +267,12 @@ final class WmRestoreDbCommand extends Command
             escapeshellarg($dbHost),
             escapeshellarg($dbUser)
         );
-        
+
         $versionProcess = Process::fromShellCommandline($versionCmd);
         $versionProcess->run();
         $versionOutput = $versionProcess->getOutput();
-        $useForce = strpos($versionOutput, 'PostgreSQL 1') !== false && (int)substr($versionOutput, strpos($versionOutput, 'PostgreSQL ') + 11, 2) >= 13;
-        
+        $useForce = strpos($versionOutput, 'PostgreSQL 1') !== false && (int) substr($versionOutput, strpos($versionOutput, 'PostgreSQL ') + 11, 2) >= 13;
+
         if ($useForce) {
             $this->info('Using DROP DATABASE ... WITH (FORCE) (PostgreSQL 13+)...');
             $dropDbCmd = sprintf(
@@ -295,7 +295,7 @@ final class WmRestoreDbCommand extends Command
             $finalTerminateProcess = Process::fromShellCommandline($finalTerminateCmd);
             $finalTerminateProcess->run();
             sleep(3);
-            
+
             $dropDbCmd = sprintf(
                 'PGPASSWORD=%s psql -h %s -U %s -d postgres -c "DROP DATABASE IF EXISTS \"%s\";"',
                 escapeshellarg($dbPassword),

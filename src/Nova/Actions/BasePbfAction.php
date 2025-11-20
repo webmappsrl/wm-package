@@ -10,7 +10,7 @@ use Laravel\Nova\Fields\ActionFields;
 
 /**
  * Classe base per le azioni Nova relative alla gestione dei PBF
- * 
+ *
  * Fornisce la struttura comune e i trait necessari per le azioni PBF
  */
 abstract class BasePbfAction extends Action
@@ -20,10 +20,7 @@ abstract class BasePbfAction extends Action
     /**
      * Esegue l'azione sui modelli forniti
      *
-     * @param  ActionFields  $fields
-     * @param  Collection  $models
      * @return mixed
      */
     abstract public function handle(ActionFields $fields, Collection $models);
 }
-
