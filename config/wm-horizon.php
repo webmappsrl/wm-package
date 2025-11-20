@@ -198,7 +198,7 @@ return [
             'queue' => ['pbf'],
             'balance' => 'auto', // Usa il bilanciamento automatico
             'autoScalingStrategy' => 'time',
-            'maxProcesses' => 3, // Massimo 10 processi disponibili
+            'maxProcesses' => 10, // Massimo 10 processi disponibili
             'minProcesses' => 1, // Assicurati di avere almeno 1 processo sempre attivo
             'balanceMaxShift' => 10, // Massimo incremento o riduzione di processi
             'balanceCooldown' => 3, // Tempo di raffreddamento prima di cambiare processi
@@ -226,18 +226,28 @@ return [
     'environments' => [
         'production' => [
             'supervisor-default' => [
-                'maxProcesses' => 3,
-                'balanceMaxShift' => 3,
+                'maxProcesses' => 2,
+                'minProcesses' => 1,
+                'balance' => 'auto',
+                'autoScalingStrategy' => 'time',
+                'balanceMaxShift' => 1,
                 'balanceCooldown' => 3,
             ],
             'supervisor-pbf' => [
-                'maxProcesses' => 3, // Massimo 10 processi disponibili
-                'minProcesses' => 1, // Assicurati di avere almeno 1 processo sempre attivo
-                'balanceMaxShift' => 3, // Massimo incremento o riduzione di processi
-                'balanceCooldown' => 3, // Tempo di raffreddamento prima di cambiare processi
+                'maxProcesses' => 4, // Priorità alla coda più utilizzata, leggermente più conservativo di staging
+                'minProcesses' => 2, // Mantiene sempre almeno 2 processi attivi per risposta rapida
+                'balance' => 'auto', // Auto-scaling per gestire i picchi
+                'autoScalingStrategy' => 'time',
+                'balanceMaxShift' => 2, // Incremento graduale fino a 4 processi
+                'balanceCooldown' => 3, // Cooldown di 3 secondi tra i cambiamenti
             ],
             'supervisor-layers' => [
-                'maxProcesses' => 3,
+                'maxProcesses' => 2,
+                'minProcesses' => 1,
+                'balance' => 'auto',
+                'autoScalingStrategy' => 'time',
+                'balanceMaxShift' => 1,
+                'balanceCooldown' => 3,
             ],
         ],
         'local' => [
@@ -256,12 +266,20 @@ return [
         ],
         'staging' => [
             'supervisor-default' => [
-                'maxProcesses' => 3,
-                'balance' => 'simple',
+                'maxProcesses' => 2,
+                'minProcesses' => 1,
+                'balance' => 'auto',
+                'autoScalingStrategy' => 'time',
+                'balanceMaxShift' => 1,
+                'balanceCooldown' => 3,
             ],
             'supervisor-pbf' => [
-                'maxProcesses' => 1,
-                'balance' => 'simple',
+                'maxProcesses' => 5, // Priorità alla coda più utilizzata
+                'minProcesses' => 2, // Mantiene sempre almeno 2 processi attivi
+                'balance' => 'auto', // Auto-scaling per gestire i picchi
+                'autoScalingStrategy' => 'time',
+                'balanceMaxShift' => 2, // Incremento graduale fino a 5 processi
+                'balanceCooldown' => 3, // Cooldown di 3 secondi tra i cambiamenti
             ],
             'supervisor-layers' => [
                 'maxProcesses' => 1,
