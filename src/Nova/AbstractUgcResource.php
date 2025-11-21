@@ -29,7 +29,10 @@ abstract class AbstractUgcResource extends AbstractGeometryResource
             ID::make()->sortable(),
             BelongsTo::make('App', 'app', App::class)->filterable(),
             BelongsTo::make('Author', 'author', User::class)->searchable()->filterable()->hideWhenUpdating()->hideWhenCreating(),
-            Text::make('Name', 'properties->name'),
+            Text::make('Name', function () {
+                return data_get($this->properties, 'name')
+                    ?? data_get($this->properties, 'form.title');
+            })->readonly(),
             PropertiesPanel::makeWithModel('Form', 'properties->form', $this, true),
             PropertiesPanel::makeWithModel('Nominatim Address', 'properties->nominatim->address', $this, false)->collapsible(),
             PropertiesPanel::makeWithModel('Device', 'properties->device', $this, false)->collapsible()->collapsedByDefault(),
