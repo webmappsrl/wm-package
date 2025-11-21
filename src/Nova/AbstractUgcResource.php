@@ -30,8 +30,8 @@ abstract class AbstractUgcResource extends AbstractGeometryResource
             BelongsTo::make('App', 'app', App::class)->filterable(),
             BelongsTo::make('Author', 'author', User::class)->searchable()->filterable()->hideWhenUpdating()->hideWhenCreating(),
             Text::make('Name', function () {
-                return data_get($this->properties, 'name')
-                    ?? data_get($this->properties, 'form.title');
+                return data_get($this->properties, 'form.title')
+                    ?? data_get($this->properties, 'name');
             })->readonly(),
             PropertiesPanel::makeWithModel('Form', 'properties->form', $this, true),
             PropertiesPanel::makeWithModel('Nominatim Address', 'properties->nominatim->address', $this, false)->collapsible(),
