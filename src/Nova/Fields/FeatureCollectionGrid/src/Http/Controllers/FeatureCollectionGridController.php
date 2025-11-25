@@ -10,11 +10,6 @@ class FeatureCollectionGridController
 {
     /**
      * Get GeoJSON FeatureCollection for the resource
-     *
-     * @param  Request  $request
-     * @param  string  $resourceName
-     * @param  int  $resourceId
-     * @return JsonResponse
      */
     public function getGeojson(Request $request, string $resourceName, int $resourceId): JsonResponse
     {
@@ -70,18 +65,13 @@ class FeatureCollectionGridController
             ]);
 
             return response()->json([
-                'error' => 'Errore interno del server: ' . $e->getMessage(),
+                'error' => 'Errore interno del server: '.$e->getMessage(),
             ], 500);
         }
     }
 
     /**
      * Get paginated list of features from GeoJSON
-     *
-     * @param  Request  $request
-     * @param  string  $resourceName
-     * @param  int  $resourceId
-     * @return JsonResponse
      */
     public function getFeatures(Request $request, string $resourceName, int $resourceId): JsonResponse
     {
@@ -128,6 +118,7 @@ class FeatureCollectionGridController
             if ($search) {
                 $features = array_filter($features, function ($feature) use ($search) {
                     $name = $feature['properties']['name'] ?? '';
+
                     return stripos($name, $search) !== false;
                 });
             }
@@ -162,18 +153,13 @@ class FeatureCollectionGridController
             ]);
 
             return response()->json([
-                'error' => 'Errore interno del server: ' . $e->getMessage(),
+                'error' => 'Errore interno del server: '.$e->getMessage(),
             ], 500);
         }
     }
 
     /**
      * Sync relations based on selected feature IDs
-     *
-     * @param  Request  $request
-     * @param  string  $resourceName
-     * @param  int  $resourceId
-     * @return JsonResponse
      */
     public function sync(Request $request, string $resourceName, int $resourceId): JsonResponse
     {
@@ -252,7 +238,7 @@ class FeatureCollectionGridController
             ]);
 
             return response()->json([
-                'error' => 'Errore interno del server: ' . $e->getMessage(),
+                'error' => 'Errore interno del server: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -260,9 +246,6 @@ class FeatureCollectionGridController
     /**
      * Get widget view for the map
      *
-     * @param  Request  $request
-     * @param  string  $resourceName
-     * @param  int  $resourceId
      * @return \Illuminate\View\View
      */
     public function widget(Request $request, string $resourceName, int $resourceId)
@@ -273,7 +256,7 @@ class FeatureCollectionGridController
         // Build GeoJSON URL
         $geojsonUrl = url("/nova-vendor/feature-collection-grid/geojson/{$resourceName}/{$resourceId}");
         if ($geojsonSource) {
-            $geojsonUrl .= '?geojson_source=' . urlencode($geojsonSource);
+            $geojsonUrl .= '?geojson_source='.urlencode($geojsonSource);
         }
 
         return view('nova.fields.feature-collection-grid::feature-collection-map', [
@@ -285,8 +268,6 @@ class FeatureCollectionGridController
     /**
      * Find resource by name and ID
      *
-     * @param  string  $resourceName
-     * @param  int  $resourceId
      * @return mixed|null
      */
     protected function findResource(string $resourceName, int $resourceId)
@@ -314,7 +295,6 @@ class FeatureCollectionGridController
      *
      * @param  mixed  $resource
      * @param  string|callable  $source
-     * @return array|null
      */
     protected function getGeojsonFromSource($resource, $source): ?array
     {
@@ -331,9 +311,6 @@ class FeatureCollectionGridController
 
     /**
      * Build a map of feature IDs to model type and model ID
-     *
-     * @param  array|null  $geojson
-     * @return array
      */
     protected function buildFeatureMap(?array $geojson): array
     {
@@ -362,9 +339,6 @@ class FeatureCollectionGridController
 
     /**
      * Get model type key from class name or type
-     *
-     * @param  string  $modelType
-     * @return string
      */
     protected function getModelTypeKey(string $modelType): string
     {

@@ -26,7 +26,6 @@ class FeatureCollectionGrid extends Text
      *
      * @param  string  $name
      * @param  string|callable|null  $attribute  Method name or callback that returns GeoJSON FeatureCollection
-     * @param  callable|null  $resolveCallback
      * @return void
      */
     public function __construct($name, $attribute = null, ?callable $resolveCallback = null)
@@ -40,7 +39,8 @@ class FeatureCollectionGrid extends Text
 
         // Set resolve callback to generate map HTML
         $this->resolveUsing(function ($value, $resource) {
-            Log::info('FeatureCollectionGrid resolve called for resource ID: ' . $resource->id);
+            Log::info('FeatureCollectionGrid resolve called for resource ID: '.$resource->id);
+
             return $this->generateMapHtml($resource);
         })->asHtml();
 
@@ -89,7 +89,7 @@ class FeatureCollectionGrid extends Text
         // Build widget URL
         $widgetUrl = url("/nova-vendor/feature-collection-grid/widget/{$resourceName}/{$resourceId}");
         if ($this->geojsonSource) {
-            $widgetUrl .= '?geojson_source=' . urlencode($this->geojsonSource);
+            $widgetUrl .= '?geojson_source='.urlencode($this->geojsonSource);
         }
 
         return <<<HTML
@@ -108,7 +108,6 @@ class FeatureCollectionGrid extends Text
      * Get selected feature IDs from configured relations
      *
      * @param  mixed  $resource
-     * @return array
      */
     protected function getSelectedFeatureIds($resource): array
     {
@@ -127,7 +126,7 @@ class FeatureCollectionGrid extends Text
                     $tableName = $relatedModel->getTable();
 
                     // Specify table name explicitly to avoid ambiguous column error
-                    $ids = $relation->select($tableName . '.id')->pluck('id')->toArray();
+                    $ids = $relation->select($tableName.'.id')->pluck('id')->toArray();
                     $selectedIds = array_merge($selectedIds, $ids);
                 }
             }
@@ -140,7 +139,6 @@ class FeatureCollectionGrid extends Text
      * Get resource name from resource instance
      *
      * @param  mixed  $resource
-     * @return string
      */
     protected function getResourceName($resource): string
     {

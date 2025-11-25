@@ -23,11 +23,11 @@ class FieldServiceProvider extends ServiceProvider
         });
 
         // Register views
-        $this->loadViewsFrom(__DIR__ . '/../views', 'nova.fields.feature-collection-grid');
+        $this->loadViewsFrom(__DIR__.'/../views', 'nova.fields.feature-collection-grid');
 
         Route::middleware(['nova'])
             ->prefix('nova-vendor/feature-collection-grid')
-            ->group(__DIR__ . '/../routes/api.php');
+            ->group(__DIR__.'/../routes/api.php');
     }
 
     /**
