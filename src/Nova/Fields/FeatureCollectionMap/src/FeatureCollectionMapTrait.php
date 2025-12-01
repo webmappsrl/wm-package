@@ -93,16 +93,16 @@ trait FeatureCollectionMapTrait
             // Properties per interattività
             'tooltip',
             'link',
-            'id'
+            'id',
         ];
 
         $invalidProperties = array_diff(array_keys($properties), $validProperties);
 
         if (! empty($invalidProperties)) {
             throw new \InvalidArgumentException(
-                'Properties non supportate dal widget FeatureCollectionMap: ' .
-                    implode(', ', $invalidProperties) . '. ' .
-                    'Properties valide: ' . implode(', ', $validProperties)
+                'Properties non supportate dal widget FeatureCollectionMap: '.
+                    implode(', ', $invalidProperties).'. '.
+                    'Properties valide: '.implode(', ', $validProperties)
             );
         }
 
