@@ -2,9 +2,13 @@
 
 namespace Wm\WmPackage\Tests\Unit\Nova;
 
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Laravel\Nova\Http\Requests\NovaRequest;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\UgcPoi;
 use Wm\WmPackage\Models\UgcTrack;
@@ -20,13 +24,40 @@ class AppFilterTest extends TestCase
     {
         parent::setUp();
 
-        \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'Administrator', 'guard_name' => 'web']);
+        // Configura Spatie Permission per i test
+        config([
+            'permission.models.permission' => Permission::class,
+            'permission.models.role' => Role::class,
+            'permission.cache.key' => 'spatie.permission.cache',
+            'permission.cache.store' => 'default',
+            'permission.teams' => false,
+            'permission.column_names.role_pivot_key' => 'role_id',
+            'permission.column_names.permission_pivot_key' => 'permission_id',
+            'permission.column_names.model_morph_key' => 'model_id',
+            'permission.column_names.team_foreign_key' => 'team_id',
+            'permission.table_names.roles' => 'roles',
+            'permission.table_names.permissions' => 'permissions',
+            'permission.table_names.model_has_permissions' => 'model_has_permissions',
+            'permission.table_names.model_has_roles' => 'model_has_roles',
+            'permission.table_names.role_has_permissions' => 'role_has_permissions',
+        ]);
+
+        // Morph map necessario perché User::getMorphClass() restituisce 'App\Models\User' ma nel wm-package
+        // standalone la classe reale è Wm\WmPackage\Models\User. Potrebbe essere aggiunto al WmPackageServiceProvider.
+        Relation::morphMap([
+            'App\Models\User' => User::class,
+        ]);
+
+        Role::firstOrCreate(['name' => 'Administrator', 'guard_name' => 'web']);
     }
 
     public function test_apply_filters_query_by_app_id_when_model_has_app_id_column(): void
     {
         $filter = new AppFilter;
+        /** @var User $user */
         $user = User::factory()->create();
+        $this->actingAs($user);
+
         $app = App::factory()->create(['user_id' => $user->id]);
         $otherApp = App::factory()->create(['user_id' => $user->id]);
 
@@ -68,7 +99,7 @@ class AppFilterTest extends TestCase
         ]);
 
         $query = UgcPoi::query();
-        $request = new \Illuminate\Http\Request;
+        $request = new Request;
 
         $filteredQuery = $filter->apply($request, $query, $app->id);
         $results = $filteredQuery->get();
@@ -82,7 +113,10 @@ class AppFilterTest extends TestCase
     public function test_apply_filters_query_by_app_id_when_model_has_no_app_id_column(): void
     {
         $filter = new AppFilter;
+        /** @var User $user */
         $user = User::factory()->create();
+        $this->actingAs($user);
+
         $app = App::factory()->create(['user_id' => $user->id]);
         $otherApp = App::factory()->create(['user_id' => $user->id]);
 
@@ -112,7 +146,7 @@ class AppFilterTest extends TestCase
         ]);
 
         $query = User::query();
-        $request = new \Illuminate\Http\Request;
+        $request = new Request;
 
         // Il filtro cerca app_id direttamente nella tabella, quindi per User (senza app_id)
         // la query non restituirà risultati perché la colonna non esiste

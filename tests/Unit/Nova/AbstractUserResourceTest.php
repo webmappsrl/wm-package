@@ -17,9 +17,16 @@ class AbstractUserResourceTest extends TestCase
 {
     use DatabaseTransactions;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        config()->set('wm-package.shard_name', 'test_shard');
+    }
+
     public function test_get_apps_returns_unique_app_ids_from_user_ugc_relations(): void
     {
         $user = $this->createAppUser();
+        $this->actingAs($user);
 
         $firstApp = App::factory()->create(['name' => 'App Alpha']);
         $secondApp = App::factory()->create(['name' => 'App Beta']);
@@ -74,6 +81,7 @@ class AbstractUserResourceTest extends TestCase
     public function test_get_app_field_for_index_is_hidden_when_only_one_app_exists(): void
     {
         $user = $this->createAppUser();
+        $this->actingAs($user);
 
         $singleApp = App::factory()->create(['name' => 'Single App']);
 
@@ -105,6 +113,7 @@ class AbstractUserResourceTest extends TestCase
     public function test_get_app_field_for_index_returns_clickable_links_when_multiple_apps_exist(): void
     {
         $user = $this->createAppUser();
+        $this->actingAs($user);
 
         $firstApp = App::factory()->create(['name' => 'App Alpha']);
         $secondApp = App::factory()->create(['name' => 'App Beta']);
@@ -153,7 +162,14 @@ class AbstractUserResourceTest extends TestCase
 
     private function makeResource(User $user): TestableUserResource
     {
-        return new TestableUserResource($user);
+        $resource = new TestableUserResource($user);
+
+        $reflection = new \ReflectionClass($resource);
+        $resourceProperty = $reflection->getProperty('resource');
+        $resourceProperty->setAccessible(true);
+        $resourceProperty->setValue($resource, $user);
+
+        return $resource;
     }
 
     private function createAppUser(): User
