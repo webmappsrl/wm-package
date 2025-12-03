@@ -72,6 +72,11 @@ trait FeatureCollectionMapTrait
      * INTERATTIVITÀ:
      * - tooltip: Testo mostrato al hover (stringa)
      * - link: URL per la navigazione al click (stringa)
+     * - clickAction: Azione al click ('redirect' o 'popup', default 'redirect')
+     *
+     * DATI AGGIUNTIVI:
+     * - name: Nome del punto (usato per DEM enrichment)
+     * - dem: Dati DEM arricchiti (elevazione, matrice distanze/tempi)
      *
      * @param  array  $properties  Properties da validare
      * @return array Properties validate
@@ -93,7 +98,12 @@ trait FeatureCollectionMapTrait
             // Properties per interattività
             'tooltip',
             'link',
-            'id'
+            'clickAction',
+            'popupComponent',
+            'id',
+            // Properties per dati aggiuntivi
+            'name',
+            'dem',
         ];
 
         $invalidProperties = array_diff(array_keys($properties), $validProperties);
