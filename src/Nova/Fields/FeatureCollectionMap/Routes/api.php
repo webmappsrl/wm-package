@@ -9,16 +9,41 @@ Route::get('/{model}/{id}', function ($model, $id) {
     // Converti lo slug in nome della classe (es: hiking-route -> HikingRoute)
     $className = \Illuminate\Support\Str::studly($model);
 
-    // Prova a trovare la classe
-    $modelClass = "\\App\\Models\\{$className}";
+    // Prova a trovare la classe provando tutte le varianti:
+    // 1. Nome esatto (es: HikingRoutes, Poles)
+    // 2. Senza 's' finale (es: HikingRoute, Pole) - solo se finisce con 's'
+    // 3. Con 's' finale (es: HikingRoutes) - solo se non finisce con 's'
+    $modelClass = null;
+    $candidates = [
+        "\\App\\Models\\{$className}",
+    ];
 
-    // Se non esiste in App\Models, prova in Wm\WmPackage\Models
-    if (! class_exists($modelClass)) {
-        $modelClass = "\\Wm\\WmPackage\\Models\\{$className}";
+    // Aggiungi variante senza 's' se finisce con 's'
+    if (str_ends_with($className, 's')) {
+        $candidates[] = "\\App\\Models\\" . substr($className, 0, -1);
+    }
+
+    // Aggiungi variante con 's' se non finisce con 's'
+    if (! str_ends_with($className, 's')) {
+        $candidates[] = "\\App\\Models\\{$className}s";
+    }
+
+    // Stesse varianti per Wm\WmPackage\Models
+    $wmCandidates = [];
+    foreach ($candidates as $candidate) {
+        $wmCandidates[] = str_replace("\\App\\Models\\", "\\Wm\\WmPackage\\Models\\", $candidate);
+    }
+    $candidates = array_merge($candidates, $wmCandidates);
+
+    foreach ($candidates as $candidate) {
+        if (class_exists($candidate)) {
+            $modelClass = $candidate;
+            break;
+        }
     }
 
     // Se non troviamo la classe, restituiamo 404
-    if (! class_exists($modelClass)) {
+    if (! $modelClass) {
         abort(404, "Model class for '{$model}' not found");
     }
 
