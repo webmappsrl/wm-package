@@ -36,12 +36,8 @@ export default {
                 return this.field.geojsonUrl;
             }
 
-            // Convert plural resourceName to singular model name
-            // e.g., 'hiking-routes' -> 'hiking-route'
-            let modelName = this.resourceName;
-            if (modelName.endsWith('s')) {
-                modelName = modelName.slice(0, -1);
-            }
+            // Use resourceName as-is (Str::studly will handle the conversion)
+            const modelName = this.resourceName;
 
             // Get the resource ID from the resource object or resourceId prop
             const id = this.resourceId || (this.resource && this.resource.id && this.resource.id.value);
