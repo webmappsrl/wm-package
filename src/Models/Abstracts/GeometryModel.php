@@ -28,6 +28,8 @@ abstract class GeometryModel extends Model implements HasMedia
         'properties' => 'array',
     ];
 
+    public $timestamps = false;
+
     public function app(): BelongsTo
     {
         return $this->belongsTo(App::class);
