@@ -1,6 +1,6 @@
 <?php
 
-namespace Wm\WmPackage\Nova\Fields\FeatureCollectionMap\src;
+namespace Wm\WmPackage\Nova\Fields\FeatureCollectionMap;
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
