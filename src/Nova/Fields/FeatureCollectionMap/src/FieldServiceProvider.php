@@ -16,11 +16,11 @@ class FieldServiceProvider extends ServiceProvider
     {
         Nova::serving(function (ServingNova $event) {
             // Se in futuro aggiungiamo asset JS/CSS, li registriamo qui
-            Nova::mix('feature-collection-map', __DIR__ . '/../dist/mix-manifest.json');
+            Nova::mix('feature-collection-map', __DIR__.'/../dist/mix-manifest.json');
         });
 
         // Registra le view del FeatureCollectionMap
-        $this->loadViewsFrom(__DIR__ . '/../views', 'nova.fields.feature-collection-map');
+        $this->loadViewsFrom(__DIR__.'/../views', 'nova.fields.feature-collection-map');
 
         // Registra le route del FeatureCollectionMap
         $this->loadRoutes();
@@ -34,7 +34,7 @@ class FieldServiceProvider extends ServiceProvider
 
         Route::middleware(['nova'])
             ->prefix('nova-vendor/feature-collection-map')
-            ->group(__DIR__ . '/../Routes/api.php');
+            ->group(__DIR__.'/../Routes/api.php');
     }
 
     /**
