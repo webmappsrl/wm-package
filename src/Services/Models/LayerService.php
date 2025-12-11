@@ -146,7 +146,9 @@ class LayerService extends BaseService
         if ($geometry !== $layer->geometry) {
             $layer->geometry = $geometry;
             if ($save) {
-                $saved = $layer->save();
+                // Use saveQuietly to avoid triggering observers and prevent infinite loops
+                // This method is called from observers and jobs, so we need to prevent observer loops
+                $saved = $layer->saveQuietly();
             }
         }
 
@@ -181,7 +183,8 @@ class LayerService extends BaseService
         $properties['layers'] = array_values($properties['layers']);
 
         $geometryModel->properties = $properties;
-        $geometryModel->save();
+        // Use saveQuietly to avoid triggering observers and prevent infinite loops
+        $geometryModel->saveQuietly();
     }
 
     public function updateLayersPropertyOnAllLayeredFeaturesWithJobs(Layer $layer, bool $delay = true)
@@ -250,7 +253,8 @@ class LayerService extends BaseService
                 $properties['layers'] = array_diff($properties['layers'], [$layer->id]);
                 $properties['layers'] = array_values($properties['layers']);
                 $feature->properties = $properties;
-                $feature->save();
+                // Use saveQuietly to avoid triggering observers and prevent infinite loops
+                $feature->saveQuietly();
                 $deleted[] = $feature->id;
             }
             $oldLayerFeatures = null;
@@ -261,7 +265,8 @@ class LayerService extends BaseService
                 $properties = $feature->properties;
                 $properties['layers'][] = $layer->id;
                 $feature->properties = $properties;
-                $feature->save();
+                // Use saveQuietly to avoid triggering observers and prevent infinite loops
+                $feature->saveQuietly();
                 $added[] = $feature->id;
             }
 
