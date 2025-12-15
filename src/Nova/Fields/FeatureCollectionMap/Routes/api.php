@@ -20,7 +20,7 @@ Route::get('/{model}/{id}', function ($model, $id) {
 
     // Aggiungi variante senza 's' se finisce con 's'
     if (str_ends_with($className, 's')) {
-        $candidates[] = "\\App\\Models\\" . substr($className, 0, -1);
+        $candidates[] = '\\App\\Models\\'.substr($className, 0, -1);
     }
 
     // Aggiungi variante con 's' se non finisce con 's'
@@ -31,7 +31,7 @@ Route::get('/{model}/{id}', function ($model, $id) {
     // Stesse varianti per Wm\WmPackage\Models
     $wmCandidates = [];
     foreach ($candidates as $candidate) {
-        $wmCandidates[] = str_replace("\\App\\Models\\", "\\Wm\\WmPackage\\Models\\", $candidate);
+        $wmCandidates[] = str_replace('\\App\\Models\\', '\\Wm\\WmPackage\\Models\\', $candidate);
     }
     $candidates = array_merge($candidates, $wmCandidates);
 
@@ -62,7 +62,7 @@ Route::get('/{model}/{id}', function ($model, $id) {
         // Se richiesto l'arricchimento DEM, chiama l'endpoint point-matrix
         if (request()->boolean('dem_enrichment')) {
             try {
-                $demClient = new DemClient();
+                $demClient = new DemClient;
                 $geojson = $demClient->getPointMatrix($geojson);
             } catch (\Exception $e) {
                 Log::warning('DEM enrichment failed, returning original geojson', [
@@ -82,7 +82,7 @@ Route::get('/{model}/{id}', function ($model, $id) {
             'error' => $e->getMessage(),
             'trace' => $e->getTraceAsString(),
         ]);
-        abort(500, 'Error generating GeoJSON: ' . $e->getMessage());
+        abort(500, 'Error generating GeoJSON: '.$e->getMessage());
     }
 })->name('feature-collection-map.geojson');
 
