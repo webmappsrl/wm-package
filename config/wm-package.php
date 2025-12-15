@@ -39,6 +39,7 @@ return [
             'ele_api' => env('DEM_ELE_API', 'api/v1/elevation'),
             'tech_data_api' => env('DEM_TECH_DATA_API', 'api/v1/track'),
             '3d_data_api' => env('DEM_3D_DATA_API', 'api/v1/track3d'),
+            'point_matrix_api' => env('DEM_POINT_MATRIX_API', 'api/v1/feature-collection/point-matrix'),
         ],
         'cai' => [
             'basic_auth_user' => env('CAI_BASIC_AUTH_USER'),

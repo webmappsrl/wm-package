@@ -1,0 +1,39 @@
+// OpenLayers styles
+@import 'ol/ol.css';
+
+// Feature Collection Map Field styles
+.feature-collection-map-container {
+    .map-container {
+        background: #f3f4f6;
+    }
+}
+
+// Override OpenLayers default styles
+.ol-control {
+    background-color: rgba(255, 255, 255, 0.9) !important;
+    border-radius: 4px;
+    
+    button {
+        background-color: white !important;
+        color: #374151 !important;
+        
+        &:hover {
+            background-color: #f3f4f6 !important;
+        }
+    }
+}
+
+.ol-zoom {
+    top: 10px;
+    left: 10px;
+}
+
+.ol-attribution {
+    font-size: 10px;
+    
+    a {
+        color: #6b7280;
+    }
+}
+
+
