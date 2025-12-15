@@ -42,6 +42,7 @@ class FeatureCollectionMap extends Field
      * Abilita l'arricchimento DEM per la FeatureCollection
      * Chiama l'endpoint point-matrix per aggiungere dati di elevazione e distanze
      *
+     * @param  bool  $enabled
      * @return $this
      */
     public function withDemEnrichment(bool $enabled = true)
@@ -65,6 +66,7 @@ class FeatureCollectionMap extends Field
     /**
      * Permette di personalizzare l'altezza della mappa
      *
+     * @param  int  $height
      * @return $this
      */
     public function height(int $height = 500)
@@ -75,6 +77,7 @@ class FeatureCollectionMap extends Field
     /**
      * Abilita/disabilita i controlli zoom
      *
+     * @param  bool  $enabled
      * @return $this
      */
     public function showZoomControls(bool $enabled = true)
@@ -85,6 +88,7 @@ class FeatureCollectionMap extends Field
     /**
      * Abilita/disabilita lo zoom con la rotellina del mouse
      *
+     * @param  bool  $enabled
      * @return $this
      */
     public function mouseWheelZoom(bool $enabled = true)
@@ -95,6 +99,7 @@ class FeatureCollectionMap extends Field
     /**
      * Abilita/disabilita il pan con il drag
      *
+     * @param  bool  $enabled
      * @return $this
      */
     public function dragPan(bool $enabled = true)
@@ -105,6 +110,7 @@ class FeatureCollectionMap extends Field
     /**
      * Imposta il padding per il fit della vista
      *
+     * @param  int  $padding
      * @return $this
      */
     public function padding(int $padding = 50)
