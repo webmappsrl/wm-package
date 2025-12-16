@@ -24,6 +24,11 @@ class FeatureCollectionMap extends Field
     protected ?string $popupComponent = null;
 
     /**
+     * Flag per abilitare lo screenshot della mappa
+     */
+    protected bool $enableScreenshot = false;
+
+    /**
      * Create a new field.
      *
      * @param  string  $name
@@ -127,6 +132,19 @@ class FeatureCollectionMap extends Field
     }
 
     /**
+     * Abilita la funzionalità di screenshot della mappa usando html2canvas
+     *
+     * @param  bool  $enabled
+     * @return $this
+     */
+    public function enableScreenshot(bool $enabled = true)
+    {
+        $this->enableScreenshot = $enabled;
+
+        return $this->withMeta(['enableScreenshot' => $enabled]);
+    }
+
+    /**
      * Prepare the field for JSON serialization.
      *
      * @return array<string, mixed>
@@ -136,6 +154,7 @@ class FeatureCollectionMap extends Field
         return array_merge(parent::jsonSerialize(), [
             'demEnrichment' => $this->demEnrichment,
             'popupComponent' => $this->popupComponent,
+            'enableScreenshot' => $this->enableScreenshot,
         ]);
     }
 }

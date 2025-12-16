@@ -1,11 +1,14 @@
 <template>
     <PanelItem :index="index" :field="field">
         <template #value>
-            <FeatureCollectionMap :geojson-url="geojsonUrl" :height="field.height || 500"
+            <FeatureCollectionMap ref="mapComponent" :geojson-url="geojsonUrl" :height="field.height || 500"
                 :show-zoom-controls="field.showZoomControls !== false"
                 :mouse-wheel-zoom="field.mouseWheelZoom !== false" :drag-pan="field.dragPan !== false"
-                :popup-component="field.popupComponent" @feature-click="handleFeatureClick" @map-ready="handleMapReady"
-                @popup-open="handlePopupOpen" @popup-close="handlePopupClose" />
+                :popup-component="field.popupComponent" :enable-screenshot="field.enableScreenshot === true"
+                :resource-name="resourceName"
+                :resource-id="resourceId || (resource && resource.id && resource.id.value)"
+                @feature-click="handleFeatureClick" @map-ready="handleMapReady" @popup-open="handlePopupOpen"
+                @popup-close="handlePopupClose" />
 
             <!-- Custom popup component if specified -->
             <component v-if="field.popupComponent" :is="field.popupComponent" />
@@ -25,8 +28,58 @@ export default {
 
     props: ['index', 'resource', 'resourceName', 'resourceId', 'field'],
 
+    data() {
+        return {
+            mapRefreshKey: Date.now(),
+            lastUpdatedAt: null,
+            pollInterval: null,
+            lastGeojsonHash: null
+        };
+    },
+
     mounted() {
         console.log('DetailField mounted, popupComponent:', this.field.popupComponent);
+
+        // Get initial updated_at timestamp if available
+        this.updateLastUpdatedAt();
+
+        // Listen for Nova relationship update events to refresh the map
+        // Nova emits 'relationship-updated' when BelongsToMany relationships change
+        Nova.$on('relationship-updated', this.handleRelationshipUpdate);
+
+        // Also listen for resource refresh events
+        Nova.$on('resource-refresh', this.handleResourceRefresh);
+
+        // Listen for custom event when UGC relationships change
+        const currentResourceId = this.resourceId || (this.resource && this.resource.id && this.resource.id.value);
+        const currentResourceName = this.resourceName;
+        const eventName = `trail-survey-ugc-updated-${currentResourceName}-${currentResourceId}`;
+        Nova.$on(eventName, this.handleUgcUpdate);
+
+        // Store event name for cleanup
+        this.ugcUpdateEventName = eventName;
+
+        // Poll for changes by checking GeoJSON hash (more reliable than timestamp)
+        // Check every 2 seconds
+        this.pollInterval = setInterval(() => {
+            this.checkForGeojsonUpdates();
+        }, 2000);
+    },
+
+    beforeUnmount() {
+        // Remove event listeners
+        Nova.$off('relationship-updated', this.handleRelationshipUpdate);
+        Nova.$off('resource-refresh', this.handleResourceRefresh);
+
+        // Remove custom UGC update event listener
+        if (this.ugcUpdateEventName) {
+            Nova.$off(this.ugcUpdateEventName, this.handleUgcUpdate);
+        }
+
+        // Clear polling interval
+        if (this.pollInterval) {
+            clearInterval(this.pollInterval);
+        }
     },
 
     computed: {
@@ -44,14 +97,18 @@ export default {
 
             const baseUrl = `/nova-vendor/feature-collection-map/${modelName}/${id}`;
 
-            console.log('FeatureCollectionMap URL:', baseUrl);
-
-            // Add dem_enrichment parameter if enabled
+            // Add timestamp parameter to force refresh when relationships change
+            const params = new URLSearchParams();
             if (this.field.demEnrichment) {
-                return `${baseUrl}?dem_enrichment=1`;
+                params.append('dem_enrichment', '1');
             }
+            // Add refresh key to force reload when relationships change
+            params.append('_t', this.mapRefreshKey);
 
-            return baseUrl;
+            const url = params.toString() ? `${baseUrl}?${params.toString()}` : baseUrl;
+            console.log('FeatureCollectionMap URL:', url);
+
+            return url;
         }
     },
 
@@ -79,6 +136,83 @@ export default {
             console.log('Popup closed:', event);
             // Emit global event for custom popup components
             Nova.$emit('feature-collection-map:popup-close', event);
+        },
+        handleRelationshipUpdate(data) {
+            // Check if this update is for the current resource
+            const currentResourceId = this.resourceId || (this.resource && this.resource.id && this.resource.id.value);
+            const currentResourceName = this.resourceName;
+
+            if (data && data.resourceName === currentResourceName && data.resourceId === currentResourceId) {
+                console.log('Relationship updated, refreshing map:', data);
+                this.forceMapReload();
+            }
+        },
+        handleResourceRefresh() {
+            // When resource is refreshed, update the map
+            console.log('Resource refreshed, updating map');
+            this.forceMapReload();
+            this.updateLastUpdatedAt();
+        },
+        handleUgcUpdate() {
+            // Handle custom UGC update event
+            console.log('UGC relationship updated, refreshing map');
+            this.forceMapReload();
+        },
+        forceMapReload() {
+            // Update refresh key to force URL change
+            this.mapRefreshKey = Date.now();
+
+            // Also directly call reload on map component if available
+            if (this.$refs.mapComponent && this.$refs.mapComponent.loadGeoJSON) {
+                console.log('Forcing map reload via component method');
+                this.$refs.mapComponent.loadGeoJSON();
+            }
+        },
+        updateLastUpdatedAt() {
+            // Try to get updated_at from resource
+            if (this.resource && this.resource.updated_at) {
+                const updatedAt = this.resource.updated_at.value || this.resource.updated_at;
+                this.lastUpdatedAt = updatedAt;
+            }
+        },
+        async checkForGeojsonUpdates() {
+            // Check if GeoJSON has changed by fetching and comparing hash
+            try {
+                const modelName = this.resourceName;
+                const id = this.resourceId || (this.resource && this.resource.id && this.resource.id.value);
+                if (!id) return;
+
+                const url = `/nova-vendor/feature-collection-map/${modelName}/${id}`;
+
+                const response = await fetch(url);
+                if (response.ok) {
+                    const data = await response.json();
+                    // Create a simple hash from feature count and IDs
+                    const featureIds = (data.features || [])
+                        .map(f => f.properties?.model_id || f.properties?.id || f.id)
+                        .filter(id => id != null)
+                        .sort()
+                        .join(',');
+                    const hash = `${data.features?.length || 0}-${featureIds}`;
+
+                    if (this.lastGeojsonHash && this.lastGeojsonHash !== hash) {
+                        console.log('GeoJSON changed, refreshing map', {
+                            oldHash: this.lastGeojsonHash,
+                            newHash: hash,
+                            featureCount: data.features?.length || 0
+                        });
+                        this.lastGeojsonHash = hash;
+                        this.forceMapReload();
+                    } else if (!this.lastGeojsonHash) {
+                        // Initialize hash on first check
+                        this.lastGeojsonHash = hash;
+                        console.log('Initialized GeoJSON hash:', hash);
+                    }
+                }
+            } catch (error) {
+                // Silently fail - polling is just a fallback
+                console.debug('GeoJSON hash check failed:', error);
+            }
         }
     }
 };

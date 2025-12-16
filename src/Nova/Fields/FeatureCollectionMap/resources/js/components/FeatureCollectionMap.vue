@@ -2,6 +2,8 @@
     <div class="feature-collection-map-container">
         <div ref="mapContainer" class="map-container"></div>
 
+        <!-- Screenshot button - nascosto quando enableScreenshot è attivo (screenshot automatico) -->
+
         <!-- Tooltip overlay -->
         <div ref="tooltipElement" class="map-tooltip" v-show="tooltipVisible">
             {{ tooltipText }}
@@ -64,6 +66,9 @@ import { fromLonLat } from 'ol/proj';
 import { defaults as defaultControls } from 'ol/control';
 import { defaults as defaultInteractions } from 'ol/interaction';
 
+// html2canvas import
+import html2canvas from 'html2canvas';
+
 export default {
     name: 'FeatureCollectionMap',
 
@@ -99,6 +104,18 @@ export default {
         popupComponent: {
             type: String,
             default: null
+        },
+        enableScreenshot: {
+            type: Boolean,
+            default: false
+        },
+        resourceName: {
+            type: String,
+            default: null
+        },
+        resourceId: {
+            type: [String, Number],
+            default: null
         }
     },
 
@@ -123,6 +140,10 @@ export default {
         const popupData = ref({});
         const currentFeatureId = ref(null);
         const currentFeatureProperties = ref({});
+
+        // Screenshot state
+        const isCapturing = ref(false);
+        const screenshotCaptured = ref(false); // Flag per evitare screenshot multipli
 
         // Get link to Nova resource
         const getResourceLink = () => {
@@ -194,10 +215,48 @@ export default {
 
                 if (features.length > 0) {
                     const extent = vectorSource.value.getExtent();
-                    map.value.getView().fit(extent, {
-                        padding: [props.padding, props.padding, props.padding, props.padding],
-                        maxZoom: 17,
-                        duration: 500
+                    const view = map.value.getView();
+
+                    // Calcola manualmente centro e zoom per evitare qualsiasi animazione
+                    const size = map.value.getSize();
+                    if (size && extent) {
+                        // Calcola il centro dell'extent
+                        const center = [
+                            (extent[0] + extent[2]) / 2,
+                            (extent[1] + extent[3]) / 2
+                        ];
+
+                        // Calcola la risoluzione necessaria per adattare l'extent con padding
+                        const width = extent[2] - extent[0];
+                        const height = extent[3] - extent[1];
+                        const aspectRatio = width / height;
+                        const mapAspectRatio = size[0] / size[1];
+
+                        let resolution;
+                        if (aspectRatio > mapAspectRatio) {
+                            // L'extent è più largo, usa la larghezza
+                            resolution = width / (size[0] - props.padding * 2);
+                        } else {
+                            // L'extent è più alto, usa l'altezza
+                            resolution = height / (size[1] - props.padding * 2);
+                        }
+
+                        // Calcola lo zoom dalla risoluzione usando la formula di OpenLayers
+                        const maxResolution = view.getMaxResolution();
+                        const zoom = Math.log2(maxResolution / resolution);
+                        const maxZoom = Math.min(view.getMaxZoom() || 17, 17);
+
+                        // Imposta direttamente centro e zoom senza animazione
+                        view.setCenter(center);
+                        view.setZoom(Math.min(Math.max(zoom, 0), maxZoom));
+                    }
+                }
+
+                // Cattura screenshot automaticamente solo quando la mappa ha finito di renderizzare
+                if (props.enableScreenshot && !screenshotCaptured.value) {
+                    // Con duration: 0, possiamo catturare immediatamente dopo il rendercomplete
+                    map.value.once('rendercomplete', () => {
+                        captureScreenshot();
                     });
                 }
 
@@ -290,6 +349,75 @@ export default {
             popupData.value = {};
         };
 
+        // Capture screenshot of the map
+        const captureScreenshot = async () => {
+            if (!map.value || !mapContainer.value || isCapturing.value || screenshotCaptured.value) {
+                return;
+            }
+
+            // Verifica che resourceName e resourceId siano disponibili
+            if (!props.resourceName || !props.resourceId) {
+                console.warn('Impossibile salvare lo screenshot: informazioni risorsa non disponibili.');
+                return;
+            }
+
+            isCapturing.value = true;
+            screenshotCaptured.value = true; // Evita screenshot multipli
+
+            try {
+                // Nascondi temporaneamente il tooltip se visibile
+                const tooltipWasVisible = tooltipVisible.value;
+                tooltipVisible.value = false;
+
+                // Cattura lo screenshot del container della mappa
+                const canvas = await html2canvas(mapContainer.value, {
+                    useCORS: true,
+                    logging: false,
+                    backgroundColor: '#ffffff',
+                    scale: 1,
+                    width: mapContainer.value.offsetWidth,
+                    height: mapContainer.value.offsetHeight
+                });
+
+                // Ripristina il tooltip se era visibile
+                tooltipVisible.value = tooltipWasVisible;
+
+                // Converti il canvas in base64
+                const imageData = canvas.toDataURL('image/png');
+
+                // Invia l'immagine al backend
+                const response = await fetch(`/nova-vendor/feature-collection-map/screenshot/${props.resourceName}/${props.resourceId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    },
+                    body: JSON.stringify({
+                        image: imageData
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ message: 'Errore sconosciuto' }));
+                    throw new Error(errorData.message || `Errore HTTP: ${response.status}`);
+                }
+
+                const result = await response.json();
+
+                // Mostra messaggio di successo solo se non è automatico (per non disturbare l'utente)
+                // Nova.success('Screenshot salvato con successo!');
+                console.log('Screenshot salvato automaticamente:', result);
+
+            } catch (error) {
+                console.error('Errore durante la cattura dello screenshot:', error);
+                // Non mostrare errori all'utente se è automatico, solo in console
+                // Nova.error('Errore durante il salvataggio dello screenshot: ' + (error.message || 'Errore sconosciuto'));
+                screenshotCaptured.value = false; // Permetti di riprovare in caso di errore
+            } finally {
+                isCapturing.value = false;
+            }
+        };
+
         // Handle ESC key
         const handleKeydown = (event) => {
             if (event.key === 'Escape' && showPopup.value) {
@@ -352,14 +480,20 @@ export default {
             }
         });
 
-        // Watch for geojsonUrl changes
-        watch(() => props.geojsonUrl, () => {
-            loadGeoJSON();
-        });
+        // Watch for geojsonUrl changes - use immediate and deep watching
+        watch(() => props.geojsonUrl, (newUrl, oldUrl) => {
+            if (newUrl && newUrl !== oldUrl) {
+                console.log('GeoJSON URL changed, reloading map:', { oldUrl, newUrl });
+                // Reset screenshot flag when URL changes
+                screenshotCaptured.value = false;
+                loadGeoJSON();
+            }
+        }, { immediate: false });
 
         return {
             // Props (for template)
             popupComponent: props.popupComponent,
+            enableScreenshot: props.enableScreenshot,
             // Refs
             mapContainer,
             tooltipElement,
@@ -371,9 +505,13 @@ export default {
             popupData,
             currentFeatureId,
             currentFeatureProperties,
+            // Screenshot state
+            isCapturing,
+            screenshotCaptured,
             // Methods
             closePopup,
             getResourceLink,
+            captureScreenshot,
             // Exposed for child components
             map,
             vectorSource,
@@ -408,5 +546,31 @@ export default {
     white-space: nowrap;
     pointer-events: none;
     z-index: 100;
+}
+
+.screenshot-button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 1000;
+    background-color: #0ea5e9;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: background-color 0.2s, opacity 0.2s;
+}
+
+.screenshot-button:hover:not(:disabled) {
+    background-color: #0284c7;
+}
+
+.screenshot-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 </style>
