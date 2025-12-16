@@ -77,6 +77,7 @@ trait FeatureCollectionMapTrait
      * DATI AGGIUNTIVI:
      * - name: Nome del punto (usato per DEM enrichment)
      * - dem: Dati DEM arricchiti (elevazione, matrice distanze/tempi)
+     * - ref: Riferimento del punto (es. codice identificativo)
      *
      * @param  array  $properties  Properties da validare
      * @return array Properties validate
@@ -104,15 +105,16 @@ trait FeatureCollectionMapTrait
             // Properties per dati aggiuntivi
             'name',
             'dem',
+            'ref',
         ];
 
         $invalidProperties = array_diff(array_keys($properties), $validProperties);
 
         if (! empty($invalidProperties)) {
             throw new \InvalidArgumentException(
-                'Properties non supportate dal widget FeatureCollectionMap: '.
-                    implode(', ', $invalidProperties).'. '.
-                    'Properties valide: '.implode(', ', $validProperties)
+                'Properties non supportate dal widget FeatureCollectionMap: ' .
+                    implode(', ', $invalidProperties) . '. ' .
+                    'Properties valide: ' . implode(', ', $validProperties)
             );
         }
 
