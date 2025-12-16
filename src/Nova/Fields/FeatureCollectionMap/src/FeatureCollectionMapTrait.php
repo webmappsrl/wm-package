@@ -112,9 +112,9 @@ trait FeatureCollectionMapTrait
 
         if (! empty($invalidProperties)) {
             throw new \InvalidArgumentException(
-                'Properties non supportate dal widget FeatureCollectionMap: ' .
-                    implode(', ', $invalidProperties) . '. ' .
-                    'Properties valide: ' . implode(', ', $validProperties)
+                'Properties non supportate dal widget FeatureCollectionMap: '.
+                    implode(', ', $invalidProperties).'. '.
+                    'Properties valide: '.implode(', ', $validProperties)
             );
         }
 
