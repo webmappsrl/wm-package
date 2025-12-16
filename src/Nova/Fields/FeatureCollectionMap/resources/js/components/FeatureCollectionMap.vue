@@ -1,6 +1,12 @@
 <template>
     <div class="feature-collection-map-container">
-        <div ref="mapContainer" class="map-container"></div>
+        <!-- Loading overlay -->
+        <div v-if="isLoading" class="loading-overlay">
+            <div class="loading-spinner"></div>
+            <p class="loading-text">Caricamento mappa...</p>
+        </div>
+
+        <div ref="mapContainer" class="map-container" :class="{ 'map-loading': isLoading }"></div>
 
         <!-- Screenshot button - nascosto quando enableScreenshot è attivo (screenshot automatico) -->
 
@@ -127,6 +133,7 @@ export default {
         const vectorSource = ref(null);
         const geojsonData = ref(null);
         const featuresMap = ref({});
+        const isLoading = ref(true);
 
         // Tooltip state
         const tooltipElement = ref(null);
@@ -185,11 +192,13 @@ export default {
         // Load GeoJSON data
         const loadGeoJSON = async () => {
             console.log('Loading GeoJSON from:', props.geojsonUrl);
+            isLoading.value = true;
             try {
                 const response = await fetch(props.geojsonUrl);
 
                 if (!response.ok) {
                     console.error('GeoJSON fetch failed:', response.status, response.statusText);
+                    isLoading.value = false;
                     return;
                 }
 
@@ -261,8 +270,10 @@ export default {
                 }
 
                 emit('map-ready', { map: map.value, features, geojson: data, featuresMap: featuresMap.value });
+                isLoading.value = false;
             } catch (error) {
                 console.error('Error loading GeoJSON:', error);
+                isLoading.value = false;
             }
         };
 
@@ -499,6 +510,8 @@ export default {
             tooltipElement,
             tooltipVisible,
             tooltipText,
+            // Loading state
+            isLoading,
             // Popup state
             showPopup,
             popupTitle,
@@ -572,5 +585,46 @@ export default {
 .screenshot-button:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+}
+
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.9);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    border-radius: 4px;
+}
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f4f6;
+    border-top: 4px solid #0ea5e9;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.loading-text {
+    margin-top: 12px;
+    color: #6b7280;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.map-loading {
+    opacity: 0.5;
+    pointer-events: none;
 }
 </style>
