@@ -21,7 +21,7 @@ Route::get('/{model}/{id}', function ($model, $id) {
     // Aggiungi variante senza 's' se finisce con 's'
     // Gestisce casi come: trail-surveys -> TrailSurveys -> TrailSurvey
     if (str_ends_with($className, 's')) {
-        $candidates[] = '\\App\\Models\\' . substr($className, 0, -1);
+        $candidates[] = '\\App\\Models\\'.substr($className, 0, -1);
     }
 
     // Aggiungi variante con 's' se non finisce con 's'
@@ -112,7 +112,7 @@ Route::get('/{model}/{id}', function ($model, $id) {
             'error' => $e->getMessage(),
             'trace' => $e->getTraceAsString(),
         ]);
-        abort(500, 'Error generating GeoJSON: ' . $e->getMessage());
+        abort(500, 'Error generating GeoJSON: '.$e->getMessage());
     }
 })->name('feature-collection-map.geojson');
 
@@ -144,7 +144,7 @@ Route::post('/screenshot/{model}/{id}', function ($model, $id) {
     ];
 
     if (str_ends_with($className, 's')) {
-        $candidates[] = '\\App\\Models\\' . substr($className, 0, -1);
+        $candidates[] = '\\App\\Models\\'.substr($className, 0, -1);
     }
 
     if (! str_ends_with($className, 's')) {
@@ -214,6 +214,6 @@ Route::post('/screenshot/{model}/{id}', function ($model, $id) {
             'id' => $id,
             'error' => $e->getMessage(),
         ]);
-        abort(500, 'Error saving screenshot: ' . $e->getMessage());
+        abort(500, 'Error saving screenshot: '.$e->getMessage());
     }
 })->name('feature-collection-map.screenshot');

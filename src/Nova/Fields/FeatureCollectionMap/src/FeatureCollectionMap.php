@@ -134,7 +134,6 @@ class FeatureCollectionMap extends Field
     /**
      * Abilita la funzionalità di screenshot della mappa usando html2canvas
      *
-     * @param  bool  $enabled
      * @return $this
      */
     public function enableScreenshot(bool $enabled = true)
