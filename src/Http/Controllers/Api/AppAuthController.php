@@ -305,7 +305,7 @@ class AppAuthController extends Controller
      *
      * @throws Exception
      */
-    private function createUser(array $data, array $privacy, string $appId): User
+    private function createUser(array $data, ?array $privacy, ?string $appId): User
     {
         $user = new User;
         $user->fill([
