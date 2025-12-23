@@ -1130,6 +1130,38 @@ GROUP BY
         throw new \InvalidArgumentException('Invalid geometry format provided');
     }
 
+    /**
+     * Converts GeoJSON to PostGIS geometry
+     *
+     * @param  string|array  $geojson  GeoJSON as string or array
+     * @return string|null The PostGIS geometry in string format
+     */
+    public function geojsonToGeometry($geojson): ?string
+    {
+        if (empty($geojson)) {
+            return null;
+        }
+
+        if (is_array($geojson)) {
+            $geojson = json_encode($geojson);
+        }
+
+        $expression = $this->convertTo3DGeometry($geojson);
+
+        if ($expression instanceof Expression) {
+            // Use reflection to access the protected 'value' property
+            $reflection = new \ReflectionProperty(get_class($expression), 'value');
+            $reflection->setAccessible(true);
+            $sqlValue = $reflection->getValue($expression);
+
+            $result = DB::select("SELECT ($sqlValue) as g");
+
+            return $result[0]->g ?? null;
+        }
+
+        return null;
+    }
+
     public function getEcTracksBboxByAppId(int $appId): ?array
     {
         $tableName = config('wm-package.ec_track_table');
