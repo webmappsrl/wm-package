@@ -21,18 +21,14 @@ class HasMediaFilter extends BooleanFilter
      */
     public function apply(Request $request, $query, $value)
     {
-        $hasYes = isset($value['true']) && $value['true'];
-        $hasNo = isset($value['false']) && $value['false'];
+        $hasYes = !empty($value['true']);
+        $hasNo  = !empty($value['false']);
 
-        if (($hasYes && $hasNo) || (! $hasYes && ! $hasNo)) {
-            return $query;
-        }
-
-        if ($hasYes) {
+        if ($hasYes && !$hasNo) {
             return $query->whereHas('media');
         }
-
-        if ($hasNo) {
+    
+        if ($hasNo && !$hasYes) {
             return $query->whereDoesntHave('media');
         }
 
@@ -52,4 +48,3 @@ class HasMediaFilter extends BooleanFilter
         ];
     }
 }
-
