@@ -31,7 +31,7 @@ class HasMediaFilter extends Filter
         if ($value === 'true') {
             return $query->whereHas('media');
         }
-    
+
         if ($value === 'false') {
             return $query->whereDoesntHave('media');
         }
