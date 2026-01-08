@@ -13,6 +13,7 @@ use Wm\WmPackage\Nova\Actions\ExportTo;
 use Wm\WmPackage\Nova\Fields\PropertiesPanel;
 use Wm\WmPackage\Nova\Filters\AppFilter;
 use Wm\WmPackage\Nova\Filters\FormSchemaFilter;
+use Wm\WmPackage\Nova\Filters\HasMediaFilter;
 use Wm\WmPackage\Nova\Filters\UgcCreationDateFilter;
 use Wm\WmPackage\Nova\Metrics\TopUgcCreators;
 
@@ -64,6 +65,7 @@ abstract class AbstractUgcResource extends AbstractGeometryResource
             new AppFilter,
             new FormSchemaFilter($this->model()),
             new UgcCreationDateFilter,
+            new HasMediaFilter,
         ];
     }
 
