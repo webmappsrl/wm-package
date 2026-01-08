@@ -40,11 +40,12 @@ abstract class AbstractUgcResource extends AbstractGeometryResource
             PropertiesPanel::makeWithModel('Properties', 'properties', $this, false)->collapsible()->collapsedByDefault(),
             Images::make('Image', 'default')->hideFromIndex(),
             Text::make(__('Media'))
-            ->resolveUsing(function ($value, $model) {
-                $count = $model->getMedia()->count();
-                return (string) $count;
-            })
-            ->onlyOnIndex(),
+                ->resolveUsing(function ($value, $model) {
+                    $count = $model->getMedia()->count();
+
+                    return (string) $count;
+                })
+                ->onlyOnIndex(),
         ];
     }
 
