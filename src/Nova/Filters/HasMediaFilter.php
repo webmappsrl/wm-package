@@ -3,10 +3,17 @@
 namespace Wm\WmPackage\Nova\Filters;
 
 use Illuminate\Http\Request;
-use Laravel\Nova\Filters\BooleanFilter;
+use Laravel\Nova\Filters\Filter;
 
-class HasMediaFilter extends BooleanFilter
+class HasMediaFilter extends Filter
 {
+    /**
+     * The filter's component.
+     *
+     * @var string
+     */
+    public $component = 'select-filter';
+
     public function __construct()
     {
         $this->name = __('Has Media');
@@ -21,14 +28,11 @@ class HasMediaFilter extends BooleanFilter
      */
     public function apply(Request $request, $query, $value)
     {
-        $hasYes = !empty($value['true']);
-        $hasNo  = !empty($value['false']);
-
-        if ($hasYes && !$hasNo) {
+        if ($value === 'true') {
             return $query->whereHas('media');
         }
     
-        if ($hasNo && !$hasYes) {
+        if ($value === 'false') {
             return $query->whereDoesntHave('media');
         }
 
