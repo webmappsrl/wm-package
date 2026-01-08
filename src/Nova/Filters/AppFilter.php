@@ -13,7 +13,10 @@ class AppFilter extends Filter
      *
      * @var string
      */
-    public $name = 'App';
+    public function name()
+    {
+        return __('App');
+    }
 
     /**
      * Apply the filter to the given query.

@@ -7,7 +7,15 @@ use Laravel\Nova\Filters\BooleanFilter;
 
 class ShareUgcPoiFilter extends BooleanFilter
 {
-    public $name = 'Share Ugc Poi';
+    /**
+     * Get the displayable name of the filter.
+     *
+     * @return string
+     */
+    public function name()
+    {
+        return __('Share Ugc Poi');
+    }
 
     /**
      * Apply the filter to the given query.

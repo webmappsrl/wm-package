@@ -10,14 +10,17 @@ use Wm\WmPackage\Models\UgcPoi; // Importa il modello App se non già fatto
 
 class FormSchemaFilter extends Filter
 {
-    /**
-     * The displayable name of the filter.
-     *
-     * @var string
-     */
-    public $name = 'Form Schema';
-
     protected $type = 'ugc_pois';
+
+    /**
+     * Get the displayable name of the filter.
+     *
+     * @return string
+     */
+    public function name()
+    {
+        return __('Form Schema');
+    }
 
     /**
      * Apply the filter to the given query.

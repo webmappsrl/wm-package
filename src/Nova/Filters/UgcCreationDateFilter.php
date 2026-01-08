@@ -8,7 +8,15 @@ use Laravel\Nova\Filters\DateFilter;
 
 class UgcCreationDateFilter extends DateFilter
 {
-    public $name = 'Creation Date';
+    /**
+     * Get the displayable name of the filter.
+     *
+     * @return string
+     */
+    public function name()
+    {
+        return __('Creation Date');
+    }
 
     /**
      * Apply the filter to the given query.
