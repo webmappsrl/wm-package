@@ -46,7 +46,11 @@ class UgcAppNameDistribution extends Partition
         }
 
         $result = array_filter($result, fn ($v) => $v > 0);
-        arsort($result);
+
+        // Ordina alfabeticamente per nome app, spostando "Unknown" alla fine
+        uksort($result, function ($a, $b) {
+            return strcasecmp($a, $b);
+        });
 
         return $this->result($result);
     }
@@ -61,4 +65,3 @@ class UgcAppNameDistribution extends Partition
         return null;
     }
 }
-

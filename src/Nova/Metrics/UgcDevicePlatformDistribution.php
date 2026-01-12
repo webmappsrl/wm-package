@@ -42,7 +42,12 @@ class UgcDevicePlatformDistribution extends Partition
         // Mostra solo le etichette con conteggio > 0
         $result = array_filter($result, fn ($v) => $v > 0);
 
-        arsort($result);
+        // Ordina alfabeticamente per piattaforma
+        uksort($result, function ($a, $b) {
+            $aClean = preg_replace('/[^\p{L}\p{N}]/u', '', $a);
+            $bClean = preg_replace('/[^\p{L}\p{N}]/u', '', $b);
+            return strcasecmp($aClean, $bClean);
+        });
 
         return $this->result($result);
     }
@@ -57,4 +62,3 @@ class UgcDevicePlatformDistribution extends Partition
         return null;
     }
 }
-
