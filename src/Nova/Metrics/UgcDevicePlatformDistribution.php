@@ -34,20 +34,13 @@ class UgcDevicePlatformDistribution extends Partition
             ->toArray();
 
         $result = [
-            '🍏 iOS' => $data['ios'] ?? 0,
             '🤖 Android' => $data['android'] ?? 0,
+            '🍏 iOS' => $data['ios'] ?? 0,
             '💻 Platform' => ($data['web'] ?? 0) + ($data['null'] ?? 0),
         ];
 
         // Mostra solo le etichette con conteggio > 0
         $result = array_filter($result, fn ($v) => $v > 0);
-
-        // Ordina alfabeticamente per piattaforma
-        uksort($result, function ($a, $b) {
-            $aClean = preg_replace('/[^\p{L}\p{N}]/u', '', $a);
-            $bClean = preg_replace('/[^\p{L}\p{N}]/u', '', $b);
-            return strcasecmp($aClean, $bClean);
-        });
 
         return $this->result($result);
     }
