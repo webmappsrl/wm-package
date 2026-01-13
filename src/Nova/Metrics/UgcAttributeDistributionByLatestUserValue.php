@@ -55,4 +55,3 @@ class UgcAttributeDistributionByLatestUserValue extends UgcAttributeDistribution
         return $this->normalizeAndFormatData($data);
     }
 }
-
