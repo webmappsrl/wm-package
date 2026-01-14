@@ -13,6 +13,10 @@ class CopyUgc extends Action
 {
     use InteractsWithQueue, Queueable;
 
+    public function name()
+    {
+        return __('Copy Ugc');
+    }
     /**
      * Perform the action on the given models.
      *

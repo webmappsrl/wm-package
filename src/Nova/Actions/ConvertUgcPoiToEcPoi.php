@@ -16,7 +16,10 @@ class ConvertUgcPoiToEcPoi extends Action
 {
     use InteractsWithQueue, Queueable;
 
-    public $name = 'Convert To EcPoi';
+    public function name()
+    {
+        return __('Convert To EcPoi');
+    }
 
     /**
      * Perform the action on the given models.
