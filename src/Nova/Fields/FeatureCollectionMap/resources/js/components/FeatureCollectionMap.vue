@@ -164,18 +164,69 @@ export default {
             const geometryType = feature.getGeometry().getType();
 
             if (geometryType === 'Point' || geometryType === 'MultiPoint') {
-                return new Style({
-                    image: new CircleStyle({
-                        radius: featureProps.pointRadius || 6,
-                        fill: new Fill({
-                            color: featureProps.pointFillColor || 'rgba(255, 0, 0, 0.8)'
-                        }),
-                        stroke: new Stroke({
-                            color: featureProps.pointStrokeColor || 'rgba(255, 255, 255, 1)',
-                            width: featureProps.pointStrokeWidth || 2
+                const baseRadius = featureProps.pointRadius || 6;
+                const fillColor = featureProps.pointFillColor || 'rgba(255, 0, 0, 0.8)';
+                const strokeColor = featureProps.pointStrokeColor || 'rgba(255, 255, 255, 1)';
+                const strokeWidth = featureProps.pointStrokeWidth || 2;
+
+                // Controlla se ci sono più colori checkpoint (bordo multicolore)
+                const checkpointRouteColors = featureProps.checkpointRouteColors;
+
+                if (checkpointRouteColors && Array.isArray(checkpointRouteColors) && checkpointRouteColors.length > 1) {
+                    // Crea un array di Style per cerchi concentrici multicolore
+                    const styles = [];
+
+                    // 1. Cerchio principale con fill
+                    styles.push(new Style({
+                        image: new CircleStyle({
+                            radius: baseRadius,
+                            fill: new Fill({
+                                color: fillColor
+                            }),
+                            // Nessun stroke sul cerchio principale
                         })
-                    })
-                });
+                    }));
+
+                    // 2. Cerchi concentrici per ogni colore checkpoint
+                    // Ogni cerchio ha un raggio leggermente più grande del precedente
+                    // e uno spessore di 2-3 pixel
+                    const colors = checkpointRouteColors;
+                    const segmentWidth = 2.5; // Spessore di ogni segmento colorato
+
+                    colors.forEach((color, index) => {
+                        // Il raggio aumenta per ogni colore (cerchi concentrici)
+                        const radius = baseRadius + (index * segmentWidth) + (segmentWidth / 2);
+
+                        styles.push(new Style({
+                            image: new CircleStyle({
+                                radius: radius,
+                                fill: new Fill({
+                                    color: 'transparent' // Trasparente, solo il bordo è visibile
+                                }),
+                                stroke: new Stroke({
+                                    color: color,
+                                    width: segmentWidth
+                                })
+                            })
+                        }));
+                    });
+
+                    return styles;
+                } else {
+                    // Stile normale con un solo colore
+                    return new Style({
+                        image: new CircleStyle({
+                            radius: baseRadius,
+                            fill: new Fill({
+                                color: fillColor
+                            }),
+                            stroke: new Stroke({
+                                color: strokeColor,
+                                width: strokeWidth
+                            })
+                        })
+                    });
+                }
             }
 
             return new Style({
@@ -619,8 +670,13 @@ export default {
 }
 
 @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
 .map-loading {
