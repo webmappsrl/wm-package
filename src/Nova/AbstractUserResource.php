@@ -51,26 +51,26 @@ abstract class AbstractUserResource extends Resource
 
             Gravatar::make()->maxWidth(50),
 
-            Text::make('Name')
+            Text::make(__('Name'), 'Name')
                 ->sortable()
                 ->rules('required', 'max:255'),
 
-            Text::make('Email')
+            Text::make(__('Email'), 'Email')
                 ->sortable()
                 ->rules('required', 'email', 'max:254')
                 ->creationRules('unique:users,email')
                 ->updateRules('unique:users,email,{{resourceId}}'),
 
-            Password::make('Password')
+            Password::make(__('Password'), 'Password')
                 ->onlyOnForms()
                 ->creationRules('required', Rules\Password::defaults())
                 ->updateRules('nullable', Rules\Password::defaults()),
             ...array_filter([$this->getAppFieldForIndex()]),
-            RoleBooleanGroup::make('Roles', 'roles')
+            RoleBooleanGroup::make(__('Roles'), 'roles')
                 ->readonly(function () {
                     return ! auth()->user()->hasRole('Administrator') && ! auth()->user()->hasPermissionTo('manage roles and permissions');
                 }),
-            PermissionBooleanGroup::make('Permissions', 'permissions')
+            PermissionBooleanGroup::make(__('Permissions'), 'permissions')
                 ->readonly(function () {
                     return ! auth()->user()->hasRole('Administrator') && ! auth()->user()->hasPermissionTo('manage roles and permissions');
                 })

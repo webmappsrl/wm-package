@@ -7,7 +7,10 @@ use Laravel\Nova\Filters\BooleanFilter;
 
 class ShareUgcPoiFilter extends BooleanFilter
 {
-    public $name = 'Share Ugc Poi';
+    public function name()
+    {
+        return __('Share Ugc Poi');
+    }
 
     /**
      * Apply the filter to the given query.
@@ -34,7 +37,7 @@ class ShareUgcPoiFilter extends BooleanFilter
     public function options(Request $request)
     {
         return [
-            'Yes' => 'yes',
+            __('Yes') => 'yes',
         ];
     }
 }

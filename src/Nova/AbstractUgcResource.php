@@ -28,18 +28,18 @@ abstract class AbstractUgcResource extends AbstractGeometryResource
     {
         return [
             ID::make()->sortable(),
-            BelongsTo::make('App', 'app', App::class)->filterable(),
-            BelongsTo::make('Author', 'author', User::class)->searchable()->filterable()->hideWhenUpdating()->hideWhenCreating(),
-            Text::make('Name', function () {
+            BelongsTo::make(__('App'), 'app', App::class)->filterable(),
+            BelongsTo::make(__('Author'), 'author', User::class)->searchable()->filterable()->hideWhenUpdating()->hideWhenCreating(),
+            Text::make(__('Name'), 'Name', function () {
                 return data_get($this->properties, 'name')
                     ?? data_get($this->properties, 'form.title');
             })->readonly(),
-            PropertiesPanel::makeWithModel('Form', 'properties->form', $this, true),
-            PropertiesPanel::makeWithModel('Nominatim Address', 'properties->nominatim->address', $this, false)->collapsible(),
-            PropertiesPanel::makeWithModel('Device', 'properties->device', $this, false)->collapsible()->collapsedByDefault(),
-            PropertiesPanel::makeWithModel('Nominatim', 'properties->nominatim', $this, false)->collapsible()->collapsedByDefault(),
-            PropertiesPanel::makeWithModel('Properties', 'properties', $this, false)->collapsible()->collapsedByDefault(),
-            Images::make('Image', 'default')->hideFromIndex(),
+            PropertiesPanel::makeWithModel(__('Form'), 'properties->form', $this, true),
+            PropertiesPanel::makeWithModel(__('Nominatim Address'), 'properties->nominatim->address', $this, false)->collapsible(),
+            PropertiesPanel::makeWithModel(__('Device'), 'properties->device', $this, false)->collapsible()->collapsedByDefault(),
+            PropertiesPanel::makeWithModel(__('Nominatim'), 'properties->nominatim', $this, false)->collapsible()->collapsedByDefault(),
+            PropertiesPanel::makeWithModel(__('Properties'), 'properties', $this, false)->collapsible()->collapsedByDefault(),
+            Images::make(__('Image'), 'default')->hideFromIndex(),
             Text::make(__('Media'))
                 ->resolveUsing(function ($value, $model) {
                     $count = $model->getMedia()->count();

@@ -15,7 +15,10 @@ class FormSchemaFilter extends Filter
      *
      * @var string
      */
-    public $name = 'Form Schema';
+    public function name()
+    {
+        return __('Form Schema');
+    }
 
     protected $type = 'ugc_pois';
 

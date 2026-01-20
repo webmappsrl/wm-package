@@ -15,7 +15,10 @@ class RegenerateTaxonomyWhere extends Action
 {
     use InteractsWithQueue, Queueable;
 
-    public $name = 'Regenerate taxonomy where';
+    public function name()
+    {
+        return __('Regenerate Taxonomy Where');
+    }
 
     /**
      * Perform the action on the given models.

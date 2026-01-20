@@ -15,7 +15,10 @@ class SaveModelsAction extends Action
 {
     use InteractsWithQueue, Queueable;
 
-    public $name = 'Save models';
+    public function name()
+    {
+        return __('Save Models');
+    }
 
     /**
      * Perform the action on the given models.

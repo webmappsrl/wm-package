@@ -13,7 +13,10 @@ class ReindexSearchableAction extends Action
 {
     use InteractsWithQueue, Queueable;
 
-    public $name = 'Reindex in Elasticsearch';
+    public function name()
+    {
+        return __('Reindex in Elasticsearch');
+    }
 
     /**
      * Perform the action on the given models.
