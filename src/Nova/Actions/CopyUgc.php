@@ -17,6 +17,7 @@ class CopyUgc extends Action
     {
         return __('Copy Ugc');
     }
+
     /**
      * Perform the action on the given models.
      *
