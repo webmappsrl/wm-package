@@ -177,9 +177,14 @@ export default {
                     const styles = [];
 
                     // 1. Cerchio principale con fill
+                    // Nel caso normale, lo stroke si estende sia dentro che fuori dal raggio
+                    // Il raggio visibile del fill è quindi baseRadius - strokeWidth/2
+                    // Per mantenere la stessa dimensione visibile, riduciamo il raggio qui
+                    const mainRadius = baseRadius - (strokeWidth / 2);
+
                     styles.push(new Style({
                         image: new CircleStyle({
-                            radius: baseRadius,
+                            radius: Math.max(mainRadius, 2), // Minimo 2px per evitare cerchi troppo piccoli
                             fill: new Fill({
                                 color: fillColor
                             }),
@@ -194,8 +199,10 @@ export default {
                     const segmentWidth = 2.5; // Spessore di ogni segmento colorato
 
                     colors.forEach((color, index) => {
-                        // Il raggio aumenta per ogni colore (cerchi concentrici)
-                        const radius = baseRadius + (index * segmentWidth) + (segmentWidth / 2);
+                        // Il primo cerchio concentrico deve iniziare esattamente dal bordo del cerchio principale
+                        // Ogni stroke si estende sia dentro che fuori dal raggio di segmentWidth/2
+                        // Quindi il raggio del cerchio per lo stroke è: mainRadius + (index * segmentWidth) + (segmentWidth / 2)
+                        const radius = mainRadius + (index * segmentWidth) + (segmentWidth / 2);
 
                         styles.push(new Style({
                             image: new CircleStyle({
