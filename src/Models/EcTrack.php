@@ -614,7 +614,7 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
             // 'from' => $this->getActualOrOSFValue('from'),
             // 'to' => $this->getActualOrOSFValue('to'),
             'name' => $this->getTranslation('name', 'it'),
-            'taxonomyWheres' => collect($ecTrackService->getTaxonomyWheres($this))->map(fn ($item) => $item['it'] ?? false)->values()->filter()->toArray(),
+            'taxonomyWheres' => $this->getOrderedTaxonomyWheres($ecTrackService),
             'feature_image' => $firstMedia ? $mediaService->getThumbnailUrl($firstMedia) : '',
             'strokeColor' => isset($this->properties['color']) ? hexToRgba($this->properties['color']) : '',
             'distance' => isset($this->properties['distance']) ? (float) ($this->properties['distance']) : 0,
@@ -627,6 +627,40 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
         ];
 
         return $arr;
+    }
+
+    /**
+     * Get ordered taxonomy wheres for Elasticsearch (regions first, then municipalities)
+     */
+    protected function getOrderedTaxonomyWheres(EcTrackService $ecTrackService): array
+    {
+        $wheres = $ecTrackService->getTaxonomyWheres($this);
+
+        if (empty($wheres)) {
+            return [];
+        }
+
+        // Separate regions (admin_level 4) and municipalities (admin_level 8)
+        $regions = [];
+        $municipalities = [];
+
+        foreach ($wheres as $whereId => $whereData) {
+            $adminLevel = $whereData['_admin_level'] ?? null;
+            $name = $whereData['it'] ?? $whereData['en'] ?? null;
+
+            if ($name) {
+                if ($adminLevel === 4) {
+                    // Region
+                    $regions[$whereId] = $name;
+                } else {
+                    // Municipality (admin_level 8 or other)
+                    $municipalities[$whereId] = $name;
+                }
+            }
+        }
+
+        // Return regions first, then municipalities
+        return array_merge(array_values($regions), array_values($municipalities));
     }
 
     public function getSearchableString(): string
@@ -672,7 +706,13 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
                 $string .= str_replace('"', '', json_encode($tax->getTranslations('name'))).' ';
             }
         }
-
+        if (empty($searchables) || in_array('taxonomyWheres', $searchables)) {
+            $ecTrackService = EcTrackService::make();
+            $taxonomyWheres = $this->getOrderedTaxonomyWheres($ecTrackService);
+            if (! empty($taxonomyWheres)) {
+                $string .= implode(' ', $taxonomyWheres) . ' ';
+            }
+        }
         return html_entity_decode($string);
     }
 

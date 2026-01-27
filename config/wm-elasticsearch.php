@@ -57,8 +57,7 @@ return [
                         'type' => 'keyword',
                     ],
                     'taxonomyWheres' => [
-                        'type' => 'object',
-                        'enabled' => false,
+                        'type' => 'keyword',
                     ],
                     'taxonomyIcons' => [
                         'type' => 'object',

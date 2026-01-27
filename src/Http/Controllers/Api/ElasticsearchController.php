@@ -24,6 +24,8 @@ class ElasticsearchController extends Controller
                 'layer' => 'integer',
                 'filters' => 'json',
                 'app' => 'string|required',
+                'taxonomyWheres' => 'string|nullable',
+                'taxonomyActivities' => 'string|nullable',
                 // IDS
                 'ids' => ['json', 'nullable', function ($attribute, $value, $fail) {
                     // Verifica che sia un JSON valido
@@ -64,6 +66,8 @@ class ElasticsearchController extends Controller
         $filters = isset($validated['filters']) ? json_decode($validated['filters'], true) : [];
         $app = $validated['app'] ?? false;
         $ids = isset($validated['ids']) ? json_decode($validated['ids'], true) : [];
+        $taxonomyWheres = $validated['taxonomyWheres'] ?? null;
+        $taxonomyActivities = $validated['taxonomyActivities'] ?? null;
 
         $appId = (int) last(explode('_', $app));
         $search = str_replace('%20', ' ', $query);
@@ -83,7 +87,7 @@ class ElasticsearchController extends Controller
         // base query
         $index = config('wm-package.ec_track_table');
 
-        $query = EcTrack::search($search, function (\Elastic\Elasticsearch\Client $client, Search $body) use ($layer, $search, $ids, $index) {
+        $query = EcTrack::search($search, function (\Elastic\Elasticsearch\Client $client, Search $body) use ($layer, $search, $ids, $index, $taxonomyWheres, $taxonomyActivities) {
             // # The es driver for Laravel Scout
             // # https://github.com/matchish/laravel-scout-elasticsearch?tab=readme-ov-file#search
 
@@ -134,6 +138,14 @@ class ElasticsearchController extends Controller
             if ($layer) {
                 $boolQuery->add(new \ONGR\ElasticsearchDSL\Query\TermLevel\TermsQuery('layers', [$layer]));
             } // #AND
+
+            // Add taxonomy filters
+            if ($taxonomyWheres) {
+                $boolQuery->add(new \ONGR\ElasticsearchDSL\Query\TermLevel\TermQuery('taxonomyWheres', $taxonomyWheres), BoolQuery::MUST);
+            }
+            if ($taxonomyActivities) {
+                $boolQuery->add(new \ONGR\ElasticsearchDSL\Query\TermLevel\TermQuery('taxonomyActivities', $taxonomyActivities), BoolQuery::MUST);
+            }
 
             // Replace the original query with our custom one
             $body->addQuery($boolQuery);
@@ -195,6 +207,14 @@ class ElasticsearchController extends Controller
                     ]));
                 }
             }
+        }
+
+        // handle direct taxonomy filters from query string
+        if ($taxonomyWheres) {
+            $query->where('taxonomyWheres', $taxonomyWheres);
+        }
+        if ($taxonomyActivities) {
+            $query->where('taxonomyActivities', $taxonomyActivities);
         }
 
         // results are formatted in wm-package/src/ElasticSearch/HitsIteratorAggregate.php
