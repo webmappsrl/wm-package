@@ -614,7 +614,7 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
             // 'from' => $this->getActualOrOSFValue('from'),
             // 'to' => $this->getActualOrOSFValue('to'),
             'name' => $this->getTranslation('name', 'it'),
-            'taxonomyWheres' => $this->getOrderedTaxonomyWheres($ecTrackService),
+            'taxonomyWheres' => $this->getOrderedTaxonomyWheres(),
             'feature_image' => $firstMedia ? $mediaService->getThumbnailUrl($firstMedia) : '',
             'strokeColor' => isset($this->properties['color']) ? hexToRgba($this->properties['color']) : '',
             'distance' => isset($this->properties['distance']) ? (float) ($this->properties['distance']) : 0,
@@ -632,9 +632,9 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
     /**
      * Get ordered taxonomy wheres for Elasticsearch (regions first, then municipalities)
      */
-    protected function getOrderedTaxonomyWheres(EcTrackService $ecTrackService): array
+    protected function getOrderedTaxonomyWheres(): array
     {
-        $wheres = $ecTrackService->getTaxonomyWheres($this);
+        $wheres = $this->properties['taxonomy_where'] ?? [];
 
         if (empty($wheres)) {
             return [];
@@ -706,12 +706,10 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
                 $string .= str_replace('"', '', json_encode($tax->getTranslations('name'))).' ';
             }
         }
-        if (empty($searchables) || in_array('taxonomyWheres', $searchables)) {
-            $ecTrackService = EcTrackService::make();
-            $taxonomyWheres = $this->getOrderedTaxonomyWheres($ecTrackService);
-            if (! empty($taxonomyWheres)) {
-                $string .= implode(' ', $taxonomyWheres) . ' ';
-            }
+
+        $taxonomyWheres = $this->getOrderedTaxonomyWheres();
+        if (empty($searchables) || (in_array('taxonomyWheres', $searchables) && ! empty($taxonomyWheres))) {
+            $string .= implode(' ', $taxonomyWheres) . ' ';
         }
         return html_entity_decode($string);
     }
