@@ -122,6 +122,11 @@ export default {
         resourceId: {
             type: [String, Number],
             default: null
+        },
+        /** Callback opzionale per stili aggiuntivi sui punti: (feature, resolution) => Style | Style[] | null. Riusabile per custom (es. icona X su pali esclusi da export). */
+        getAdditionalPointStyles: {
+            type: Function,
+            default: null
         }
     },
 
@@ -158,8 +163,8 @@ export default {
             return `/resources/${props.resourceName}/${currentFeatureId.value}`;
         };
 
-        // Style function for features
-        const getFeatureStyle = (feature) => {
+        // Style function for features (resolution = metri per pixel, usata anche per callback getAdditionalPointStyles)
+        const getFeatureStyle = (feature, resolution) => {
             const featureProps = feature.getProperties();
             const geometryType = feature.getGeometry().getType();
 
@@ -218,10 +223,18 @@ export default {
                         }));
                     });
 
+                    // Stili aggiuntivi opzionali (es. icona X per pali esclusi da export in SignageMap)
+                    if (props.getAdditionalPointStyles) {
+                        const extra = props.getAdditionalPointStyles(feature, resolution);
+                        if (extra) {
+                            const arr = Array.isArray(extra) ? extra : [extra];
+                            styles.push(...arr);
+                        }
+                    }
                     return styles;
                 } else {
                     // Stile normale con un solo colore
-                    return new Style({
+                    let styles = [new Style({
                         image: new CircleStyle({
                             radius: baseRadius,
                             fill: new Fill({
@@ -232,7 +245,15 @@ export default {
                                 width: strokeWidth
                             })
                         })
-                    });
+                    })];
+                    if (props.getAdditionalPointStyles) {
+                        const extra = props.getAdditionalPointStyles(feature, resolution);
+                        if (extra) {
+                            const arr = Array.isArray(extra) ? extra : [extra];
+                            styles = styles.concat(arr);
+                        }
+                    }
+                    return styles.length === 1 ? styles[0] : styles;
                 }
             }
 
