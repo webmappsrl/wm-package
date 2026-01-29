@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Config;
 use Kongulov\NovaTabTranslatable\NovaTabTranslatable;
 use Laravel\Nova\Fields\Boolean;
 use Laravel\Nova\Fields\Code;
+use Laravel\Nova\Fields\Color;
 use Laravel\Nova\Fields\Heading;
 use Laravel\Nova\Fields\ID;
 use Laravel\Nova\Fields\Number;
@@ -49,6 +50,7 @@ class App extends Resource
                 Tab::make('pages', $this->pages_tab()),
                 Tab::make('acquisition_form', $this->acquisition_form_tab()),
                 Tab::make('filters', $this->filters_tab()),
+                Tab::make('wordpress', $this->wordpress_tab()),
             ]),
 
             // TODO: implement fields
@@ -352,6 +354,62 @@ class App extends Resource
             Number::make('Track Distance Step Filter', 'filter_track_distance_steps')
                 ->hideFromIndex()
                 ->help(__('Set the steps of the distance filter')),
+        ];
+    }
+
+    protected function wordpress_tab(): array
+    {
+        $title = __('WordPress Configuration');
+        $description = __('Configuration for WordPress (wm-package) integration. These values are included in the app config.json.');
+        $heading = <<<HTML
+            <h2><strong>{$title}</strong></h2>
+            <p>{$description}</p>
+            HTML;
+
+        return [
+            Heading::make($heading)
+                ->asHtml()
+                ->hideFromIndex(),
+            Boolean::make(__('Download Track Enable'), 'properties->wordpress_download_track_enable')
+                ->default(false)
+                ->hideFromIndex()
+                ->help(__('Enables track download on the WordPress site')),
+            Boolean::make(__('Generate Edges'), 'properties->wordpress_generate_edges')
+                ->default(false)
+                ->hideFromIndex()
+                ->help(__('Generates edges for tracks')),
+            Boolean::make(__('Show Distance'), 'properties->wordpress_show_distance')
+                ->default(true)
+                ->hideFromIndex()
+                ->help(__('Shows the distance')),
+            Boolean::make(__('Show Duration Backward'), 'properties->wordpress_show_duration_backward')
+                ->default(true)
+                ->hideFromIndex()
+                ->help(__('Shows duration in backward direction')),
+            Boolean::make(__('Show Duration Forward'), 'properties->wordpress_show_duration_forward')
+                ->default(true)
+                ->hideFromIndex()
+                ->help(__('Shows duration in forward direction')),
+            Boolean::make(__('Show Ascent'), 'properties->wordpress_show_ascent')
+                ->default(true)
+                ->hideFromIndex()
+                ->help(__('Shows ascent elevation gain')),
+            Boolean::make(__('Show Descent'), 'properties->wordpress_show_descent')
+                ->default(true)
+                ->hideFromIndex()
+                ->help(__('Shows descent elevation loss')),
+            Boolean::make(__('Show Ele To'), 'properties->wordpress_show_ele_to')
+                ->default(true)
+                ->hideFromIndex()
+                ->help(__('Shows arrival elevation')),
+            Boolean::make(__('Show Ele From'), 'properties->wordpress_show_ele_from')
+                ->default(true)
+                ->hideFromIndex()
+                ->help(__('Shows start elevation')),
+            Color::make(__('Primary Color'), 'properties->wordpress_primary')
+                ->default('#de1b0d')
+                ->hideFromIndex()
+                ->help(__('Primary color for the WordPress theme (e.g. buttons, links)')),
         ];
     }
 
