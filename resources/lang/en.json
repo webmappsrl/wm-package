@@ -131,5 +131,6 @@
     "Zoom level for POI icons": "Zoom level for POI icons",
     "tracks": "tracks",
     "Enable tracking with Posthog": "Enable tracking with Posthog",
-    "If enabled, the app will use Posthog for analytics": "If enabled, the app will use Posthog for analytics"
+    "If enabled, the app will use Posthog for analytics": "If enabled, the app will use Posthog for analytics",
+    "If enabled, the webapp will use Posthog for analytics": "If enabled, the webapp will use Posthog for analytics"
 }
