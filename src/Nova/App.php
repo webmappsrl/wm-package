@@ -90,7 +90,7 @@ class App extends Resource
                 ->default(false)
                 ->hideFromIndex()
                 ->help(__('Shows the authentication and registration page for users')),
-            Boolean::make(__('Posthog'), 'properties->posthog_webapp')
+            Boolean::make(__('Enable tracking with Posthog'), 'properties->posthog_webapp')
                 ->default(false)
                 ->hideFromIndex()
                 ->help(__('If enabled, the webapp will use Posthog for analytics')),
@@ -116,7 +116,7 @@ class App extends Resource
                 ->default(false)
                 ->hideFromIndex()
                 ->help(__('Shows the download tiles button on the map')),
-            Boolean::make(__('Posthog'), 'properties->posthog_app')
+            Boolean::make(__('Enable tracking with Posthog'), 'properties->posthog_app')
                 ->default(false)
                 ->hideFromIndex()
                 ->help(__('If enabled, the app will use Posthog for analytics')),

@@ -129,5 +129,7 @@
     "Yes, reindex": "Sì, reindicizza",
     "Yes, update": "Sì, aggiorna",
     "Zoom level for POI icons": "Livello di zoom per le icone POI",
-    "tracks": "tracce"
+    "tracks": "tracce",
+    "Enable tracking with Posthog": "Abilita tracciamento con Posthog",
+    "If enabled, the app will use Posthog for analytics": "Se abilitato, l'app utilizzerà Posthog per l'analisi"
 }
