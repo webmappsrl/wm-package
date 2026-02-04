@@ -440,7 +440,7 @@ EOF;
 
             $query = EcPoi::where('user_id', $app->user_id)
                 ->whereHas('taxonomyPoiTypes', function ($q) use ($term_id) {
-                    $q->where('id', $term_id);
+                    $q->where('taxonomy_poi_types.id', $term_id);
                 });
 
             $features = $query->orderBy('name')->get()->map(function ($feature) {
@@ -461,17 +461,20 @@ EOF;
             switch ($taxonomy_name) {
                 case 'activity':
                     $tax_name = 'taxonomyActivities';
+                    $tax_table = 'taxonomy_activities';
                     break;
                 case 'theme':
                     $tax_name = 'taxonomyThemes';
+                    $tax_table = 'taxonomy_themes';
                     break;
                 case 'poi_type':
                     $tax_name = 'taxonomyPoiTypes';
+                    $tax_table = 'taxonomy_poi_types';
                     break;
             }
             $query = EcTrack::where('user_id', $app->user_id)
-                ->whereHas($tax_name, function ($q) use ($term_id) {
-                    $q->where('id', $term_id);
+                ->whereHas($tax_name, function ($q) use ($term_id, $tax_table) {
+                    $q->where($tax_table.'.id', $term_id);
                 });
             $features = $query->orderBy('name')->get()->map(function ($feature) {
                 if ($feature->feature_image) {
