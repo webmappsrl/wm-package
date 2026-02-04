@@ -11,6 +11,7 @@ use Laravel\Nova\Fields\Heading;
 use Laravel\Nova\Fields\ID;
 use Laravel\Nova\Fields\Number;
 use Laravel\Nova\Fields\Select;
+use Outl1ne\MultiselectField\Multiselect;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Resource;
@@ -49,6 +50,7 @@ class App extends Resource
                 Tab::make('pages', $this->pages_tab()),
                 Tab::make('acquisition_form', $this->acquisition_form_tab()),
                 Tab::make('filters', $this->filters_tab()),
+                Tab::make('languages', $this->languages_tab()),
             ]),
 
             // TODO: implement fields
@@ -188,6 +190,24 @@ class App extends Resource
                 Tiptap::make('Page Credits', 'page_credits'),
                 Tiptap::make('Page Privacy', 'page_privacy'),
             ]),
+        ];
+    }
+
+    protected function languages_tab(): array
+    {
+        $availableLanguages = is_null($this->model()->available_languages) ? [] : json_decode($this->model()->available_languages, true);
+        $languages = Config::get('wm-app-languages.languages', []);
+
+        return [
+            Select::make(__('Default Language'), 'default_language')
+                ->hideFromIndex()
+                ->options($languages)
+                ->displayUsingLabels()
+                ->help(__('This is the default language displayed by the app.')),
+            Multiselect::make(__('Available Languages'), 'available_languages')
+                ->hideFromIndex()
+                ->options($languages, $availableLanguages)
+                ->help(__('Select languages for app translations')),
         ];
     }
 
