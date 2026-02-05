@@ -46,6 +46,7 @@ class AppConfigService extends AppBaseService
         $data = array_merge($data, $this->config_section_map());
         $data = array_merge($data, $this->config_section_pages());
         $data = array_merge($data, $this->config_section_theme());
+        $data = array_merge($data, $this->config_section_wordpress());
         $data = array_merge($data, $this->config_section_options());
         $data = array_merge($data, $this->config_section_tables());
         $data = array_merge($data, $this->config_section_routing());
@@ -578,6 +579,44 @@ class AppConfigService extends AppBaseService
         $data['THEME']['fontFamilyContent'] = $this->app->font_family_content;
         $data['THEME']['defaultFeatureColor'] = $this->app->default_feature_color;
         $data['THEME']['primary'] = $this->app->primary_color;
+
+        return $data;
+    }
+
+    private function config_section_wordpress(): array
+    {
+        $data = [];
+
+        if (isset($this->app->properties['wp_download_track_enable'])) {
+            $data['WORDPRESS']['downloadTrackEnable'] = $this->app->properties['wp_download_track_enable'];
+        }
+        if (isset($this->app->properties['wp_generate_edges'])) {
+            $data['WORDPRESS']['generateEdges'] = $this->app->properties['wp_generate_edges'];
+        }
+        if (isset($this->app->properties['wp_show_distance'])) {
+            $data['WORDPRESS']['showDistance'] = $this->app->properties['wp_show_distance'];
+        }
+        if (isset($this->app->properties['wp_show_duration_backward'])) {
+            $data['WORDPRESS']['showDurationBackward'] = $this->app->properties['wp_show_duration_backward'];
+        }
+        if (isset($this->app->properties['wp_show_duration_forward'])) {
+            $data['WORDPRESS']['showDurationForward'] = $this->app->properties['wp_show_duration_forward'];
+        }
+        if (isset($this->app->properties['wp_show_ascent'])) {
+            $data['WORDPRESS']['showAscent'] = $this->app->properties['wp_show_ascent'];
+        }
+        if (isset($this->app->properties['wp_show_descent'])) {
+            $data['WORDPRESS']['showDescent'] = $this->app->properties['wp_show_descent'];
+        }
+        if (isset($this->app->properties['wp_show_ele_to'])) {
+            $data['WORDPRESS']['showEleTo'] = $this->app->properties['wp_show_ele_to'];
+        }
+        if (isset($this->app->properties['wp_show_ele_from'])) {
+            $data['WORDPRESS']['showEleFrom'] = $this->app->properties['wp_show_ele_from'];
+        }
+        if (isset($this->app->properties['wp_primary'])) {
+            $data['WORDPRESS']['primary'] = $this->app->properties['wp_primary'];
+        }
 
         return $data;
     }
