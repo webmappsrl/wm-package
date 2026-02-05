@@ -581,35 +581,35 @@ class AppConfigService extends AppBaseService
     {
         $data = [];
 
-        if (isset($this->app->properties['wordpress_download_track_enable'])) {
-            $data['WORDPRESS']['download_track_enable'] = $this->app->properties['wordpress_download_track_enable'];
+        if (isset($this->app->properties['wp_download_track_enable'])) {
+            $data['WORDPRESS']['downloadTrackEnable'] = $this->app->properties['wp_download_track_enable'];
         }
-        if (isset($this->app->properties['wordpress_generate_edges'])) {
-            $data['WORDPRESS']['generate_edges'] = $this->app->properties['wordpress_generate_edges'];
+        if (isset($this->app->properties['wp_generate_edges'])) {
+            $data['WORDPRESS']['generateEdges'] = $this->app->properties['wp_generate_edges'];
         }
-        if (isset($this->app->properties['wordpress_show_distance'])) {
-            $data['WORDPRESS']['showDistance'] = $this->app->properties['wordpress_show_distance'];
+        if (isset($this->app->properties['wp_show_distance'])) {
+            $data['WORDPRESS']['showDistance'] = $this->app->properties['wp_show_distance'];
         }
-        if (isset($this->app->properties['wordpress_show_duration_backward'])) {
-            $data['WORDPRESS']['showDurationBackward'] = $this->app->properties['wordpress_show_duration_backward'];
+        if (isset($this->app->properties['wp_show_duration_backward'])) {
+            $data['WORDPRESS']['showDurationBackward'] = $this->app->properties['wp_show_duration_backward'];
         }
-        if (isset($this->app->properties['wordpress_show_duration_forward'])) {
-            $data['WORDPRESS']['showDurationForward'] = $this->app->properties['wordpress_show_duration_forward'];
+        if (isset($this->app->properties['wp_show_duration_forward'])) {
+            $data['WORDPRESS']['showDurationForward'] = $this->app->properties['wp_show_duration_forward'];
         }
-        if (isset($this->app->properties['wordpress_show_ascent'])) {
-            $data['WORDPRESS']['showAscent'] = $this->app->properties['wordpress_show_ascent'];
+        if (isset($this->app->properties['wp_show_ascent'])) {
+            $data['WORDPRESS']['showAscent'] = $this->app->properties['wp_show_ascent'];
         }
-        if (isset($this->app->properties['wordpress_show_descent'])) {
-            $data['WORDPRESS']['showDescent'] = $this->app->properties['wordpress_show_descent'];
+        if (isset($this->app->properties['wp_show_descent'])) {
+            $data['WORDPRESS']['showDescent'] = $this->app->properties['wp_show_descent'];
         }
-        if (isset($this->app->properties['wordpress_show_ele_to'])) {
-            $data['WORDPRESS']['showEleTo'] = $this->app->properties['wordpress_show_ele_to'];
+        if (isset($this->app->properties['wp_show_ele_to'])) {
+            $data['WORDPRESS']['showEleTo'] = $this->app->properties['wp_show_ele_to'];
         }
-        if (isset($this->app->properties['wordpress_show_ele_from'])) {
-            $data['WORDPRESS']['showEleFrom'] = $this->app->properties['wordpress_show_ele_from'];
+        if (isset($this->app->properties['wp_show_ele_from'])) {
+            $data['WORDPRESS']['showEleFrom'] = $this->app->properties['wp_show_ele_from'];
         }
-        if (isset($this->app->properties['wordpress_primary'])) {
-            $data['WORDPRESS']['primary'] = $this->app->properties['wordpress_primary'];
+        if (isset($this->app->properties['wp_primary'])) {
+            $data['WORDPRESS']['primary'] = $this->app->properties['wp_primary'];
         }
 
         return $data;

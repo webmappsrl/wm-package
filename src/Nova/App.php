@@ -370,43 +370,43 @@ class App extends Resource
             Heading::make($heading)
                 ->asHtml()
                 ->hideFromIndex(),
-            Boolean::make(__('Download Track Enable'), 'properties->wordpress_download_track_enable')
+            Boolean::make(__('Download Track Enable'), 'properties->wp_download_track_enable')
                 ->default(false)
                 ->hideFromIndex()
                 ->help(__('Enables track download on the WordPress site')),
-            Boolean::make(__('Generate Edges'), 'properties->wordpress_generate_edges')
+            Boolean::make(__('Generate Edges'), 'properties->wp_generate_edges')
                 ->default(false)
                 ->hideFromIndex()
                 ->help(__('Generates edges for tracks')),
-            Boolean::make(__('Show Distance'), 'properties->wordpress_show_distance')
+            Boolean::make(__('Show Distance'), 'properties->wp_show_distance')
                 ->default(true)
                 ->hideFromIndex()
                 ->help(__('Shows the distance')),
-            Boolean::make(__('Show Duration Backward'), 'properties->wordpress_show_duration_backward')
+            Boolean::make(__('Show Duration Backward'), 'properties->wp_show_duration_backward')
                 ->default(true)
                 ->hideFromIndex()
                 ->help(__('Shows duration in backward direction')),
-            Boolean::make(__('Show Duration Forward'), 'properties->wordpress_show_duration_forward')
+            Boolean::make(__('Show Duration Forward'), 'properties->wp_show_duration_forward')
                 ->default(true)
                 ->hideFromIndex()
                 ->help(__('Shows duration in forward direction')),
-            Boolean::make(__('Show Ascent'), 'properties->wordpress_show_ascent')
+            Boolean::make(__('Show Ascent'), 'properties->wp_show_ascent')
                 ->default(true)
                 ->hideFromIndex()
                 ->help(__('Shows ascent elevation gain')),
-            Boolean::make(__('Show Descent'), 'properties->wordpress_show_descent')
+            Boolean::make(__('Show Descent'), 'properties->wp_show_descent')
                 ->default(true)
                 ->hideFromIndex()
                 ->help(__('Shows descent elevation loss')),
-            Boolean::make(__('Show Ele To'), 'properties->wordpress_show_ele_to')
+            Boolean::make(__('Show Ele To'), 'properties->wp_show_ele_to')
                 ->default(true)
                 ->hideFromIndex()
                 ->help(__('Shows arrival elevation')),
-            Boolean::make(__('Show Ele From'), 'properties->wordpress_show_ele_from')
+            Boolean::make(__('Show Ele From'), 'properties->wp_show_ele_from')
                 ->default(true)
                 ->hideFromIndex()
                 ->help(__('Shows start elevation')),
-            Color::make(__('Primary Color'), 'properties->wordpress_primary')
+            Color::make(__('Primary Color'), 'properties->wp_primary')
                 ->default('#de1b0d')
                 ->hideFromIndex()
                 ->help(__('Primary color for the WordPress theme (e.g. buttons, links)')),
