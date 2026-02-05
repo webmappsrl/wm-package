@@ -614,7 +614,7 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
             // 'from' => $this->getActualOrOSFValue('from'),
             // 'to' => $this->getActualOrOSFValue('to'),
             'name' => $this->getTranslation('name', 'it'),
-            'taxonomyWheres' => collect($ecTrackService->getTaxonomyWheres($this))->map(fn ($item) => $item['it'] ?? false)->values()->filter()->toArray(),
+            'taxonomyWheres' => $this->getOrderedTaxonomyWheres(),
             'feature_image' => $firstMedia ? $mediaService->getThumbnailUrl($firstMedia) : '',
             'strokeColor' => isset($this->properties['color']) ? hexToRgba($this->properties['color']) : '',
             'distance' => isset($this->properties['distance']) ? (float) ($this->properties['distance']) : 0,
@@ -629,13 +629,55 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
         return $arr;
     }
 
+    private function getValidName(array $whereData): string
+    {
+        $values = array_values($whereData);
+        $firstName = $values[0] ?? null;
+
+        return $whereData['it'] ?? $whereData['en'] ?? $firstName;
+    }
+
+    /**
+     * Get ordered taxonomy wheres for Elasticsearch (regions first, then municipalities)
+     */
+    protected function getOrderedTaxonomyWheres(): array
+    {
+        $wheres = $this->properties['taxonomy_where'] ?? [];
+
+        if (empty($wheres)) {
+            return [];
+        }
+
+        // Separate regions (admin_level 4) and municipalities (admin_level 8)
+        $regions = [];
+        $municipalities = [];
+
+        foreach ($wheres as $whereId => $whereData) {
+            $adminLevel = $whereData['_admin_level'] ?? null;
+            $name = $this->getValidName($whereData);
+
+            if ($name) {
+                if ($adminLevel === 4) {
+                    // Region
+                    $regions[$whereId] = $name;
+                } else {
+                    // Municipality (admin_level 8 or other)
+                    $municipalities[$whereId] = $name;
+                }
+            }
+        }
+
+        // Return regions first, then municipalities
+        return array_merge(array_values($regions), array_values($municipalities));
+    }
+
     public function getSearchableString(): string
     {
         $app_id = $this->app_id;
-        $string = '';
+        $stringValue = '';
         $searchables = '';
         if (is_null($app_id)) {
-            return $string;
+            return $stringValue;
         }
 
         $app = App::find($app_id);
@@ -646,34 +688,39 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
         }
 
         if (empty($searchables) || (in_array('name', $searchables) && ! empty($this->name))) {
-            $string .= str_replace('"', '', json_encode($this->getTranslations('name'))).' ';
+            $stringValue .= str_replace('"', '', json_encode($this->getTranslations('name'))).' ';
         }
         if (empty($searchables) || (in_array('description', $searchables) && ! empty($this->properties['description']))) {
             $description = is_array($this->properties['description']) ? json_encode($this->properties['description']) : $this->properties['description'];
             $description = str_replace('"', '', $description);
             $description = str_replace('\\', '', $description);
-            $string .= strip_tags($description).' ';
+            $stringValue .= strip_tags($description).' ';
         }
         if (empty($searchables) || (in_array('excerpt', $searchables) && ! empty($this->properties['excerpt']))) {
             $excerpt = str_replace('"', '', json_encode($this->properties['excerpt']));
             $excerpt = str_replace('\\', '', $excerpt);
-            $string .= strip_tags($excerpt).' ';
+            $stringValue .= strip_tags($excerpt).' ';
         }
         if (isset($this->properties['ref']) && empty($searchables) || (in_array('ref', $searchables) && ! empty($this->properties['ref']))) {
-            $string .= $this->properties['ref'].' ';
+            $stringValue .= $this->properties['ref'].' ';
         }
         if (isset($this->properties['osmid']) && empty($searchables) || (in_array('osmid', $searchables) && ! empty($this->properties['osmid']))) {
 
-            $string .= $this->properties['osmid'].' ';
+            $stringValue .= $this->properties['osmid'].' ';
         }
 
         if (empty($searchables) || (in_array('taxonomyActivities', $searchables) && ! empty($this->taxonomyActivities))) {
             foreach ($this->taxonomyActivities as $tax) {
-                $string .= str_replace('"', '', json_encode($tax->getTranslations('name'))).' ';
+                $stringValue .= str_replace('"', '', json_encode($tax->getTranslations('name'))).' ';
             }
         }
 
-        return html_entity_decode($string);
+        $taxonomyWheres = $this->getOrderedTaxonomyWheres();
+        if (empty($searchables) || (in_array('taxonomyWheres', $searchables) && ! empty($taxonomyWheres))) {
+            $stringValue .= implode(' ', $taxonomyWheres).' ';
+        }
+
+        return html_entity_decode($stringValue);
     }
 
     /**

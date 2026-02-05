@@ -151,5 +151,8 @@
     "Yes, update": "Sì, aggiorna",
     "WordPress Configuration": "Configurazione WordPress",
     "Zoom level for POI icons": "Livello di zoom per le icone POI",
-    "tracks": "tracce"
+    "tracks": "tracce",
+    "Enable tracking with Posthog": "Abilita tracciamento con Posthog",
+    "If enabled, the app will use Posthog for analytics": "Se abilitato, l'app utilizzerà Posthog per l'analisi",
+    "If enabled, the webapp will use Posthog for analytics": "Se abilitato, il webapp utilizzerà Posthog per l'analisi"
 }

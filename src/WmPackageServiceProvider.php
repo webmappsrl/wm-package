@@ -154,6 +154,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
                 'wm-layer-schema',
                 'wm-ec-track-schema',
                 'wm-ec-from-ugc-schema',
+                'wm-app-languages',
             ])
             // ->hasRoutes(['api', 'web'])// Check the boot method, routes are registered there
             ->discoversMigrations()

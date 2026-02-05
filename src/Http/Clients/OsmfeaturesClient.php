@@ -14,14 +14,23 @@ class OsmfeaturesClient extends JsonClient
             $geojson['properties'] = []; // unused on osmfeatures computation, this decrease the payload size
         }
 
-        $wheresGeojson = $this->getAdminAreasIntersected($geojson);
+        // Get the admin areas intersected by the geojson for the given admin level
+        $comuniGeojson = $this->getAdminAreasIntersected($geojson, 8); // COMUNE
+        $regioniGeojson = $this->getAdminAreasIntersected($geojson, 4); // REGIONE
+
+        // Merge the results
+        $allFeatures = array_merge(
+            $regioniGeojson['features'] ?? [],
+            $comuniGeojson['features'] ?? []
+        );
 
         // {"name": "Scalepranu/Escalaplano", "type": "boundary", "name:it": "Escalaplano", "name:sc": "Scalepranu", "website": "https://www.comune.escalaplano.ca.it/", "alt_name": "Iscalepranu", "boundary": "administrative", "wikidata": "Q179092", "ref:ISTAT": "111018", "wikipedia": "it:Escalaplano", "admin_level": "8", "postal_code": "08043", "ref:catasto": "D430", "wikipedia:sc": "Scalepranu"}
         $wheres = [];
-        foreach ($wheresGeojson['features'] as $feature) {
+        foreach ($allFeatures as $feature) {
             $properties = $feature['properties'];
             $whereId = $properties['osmfeatures_id'];
             $featureTags = $properties['osm_tags'];
+            $adminLevel = $featureTags['admin_level'] ?? null;
             $name = null;
             foreach ($featureTags as $tagName => $tagValue) {
 
@@ -44,19 +53,24 @@ class OsmfeaturesClient extends JsonClient
                     'en' => $name,
                 ];
             }
+
+            // Save admin_level to allow sorting (regions first, then municipalities)
+            if ($adminLevel !== null) {
+                $wheres[$whereId]['_admin_level'] = (int) $adminLevel;
+            }
         }
 
         return $wheres;
     }
 
-    protected function getAdminAreasIntersected(array $geojson)
+    protected function getAdminAreasIntersected(array $geojson, int $adminLevel = 8)
     {
 
         $response = $this->getHttpClient()->post(
             $this->getAdminAreasIntersectsUrl(),
             [
                 'geojson' => $geojson,
-                'admin_level' => 8, // COMUNE
+                'admin_level' => $adminLevel,
             ]
         );
         // Check the response
