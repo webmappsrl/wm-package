@@ -32,7 +32,7 @@ class Media extends AbstractGeometryResource
 
         return [
             ...$this->fieldsFromTrait($request),
-            MorphTo::make(__('Model'),'model')
+            MorphTo::make(__('Model'), 'model')
                 ->types([
                     UgcPoi::class,
                     UgcTrack::class,
