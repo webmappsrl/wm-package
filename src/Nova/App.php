@@ -53,6 +53,7 @@ class App extends Resource
                 Tab::make('filters', $this->filters_tab()),
                 Tab::make('wordpress', $this->wordpress_tab()),
                 Tab::make('languages', $this->languages_tab()),
+                Tab::make('seachable', $this->seachable_tab()),
             ]),
 
             // TODO: implement fields
@@ -73,7 +74,7 @@ class App extends Resource
                 ->confirmButtonText(__('Yes, reindex'))
                 ->cancelButtonText(__('Cancel')),
             ExecuteEcTrackDataChainAction::make([
-                fn ($track) => new UpdateEcTrackAwsJob($track),
+                fn($track) => new UpdateEcTrackAwsJob($track),
             ], __('Update Tracks on AWS'))
                 ->onlyOnDetail()
                 ->confirmText(__('Are you sure you want to update all tracks of this app on AWS?'))
@@ -213,6 +214,29 @@ class App extends Resource
         ];
     }
 
+    protected function seachable_tab(): array
+    {
+        $track_selected = is_null($this->model()->track_searchables) ? [] : json_decode($this->model()->track_searchables, true);
+        $poi_selected = is_null($this->model()->poi_searchables) ? [] : json_decode($this->model()->poi_searchables, true);
+
+        return [
+            MultiSelect::make(__('Track Search In'), 'track_searchables')
+                ->options([
+                    'name' => 'Name',
+                    'description' => 'Description',
+                    'excerpt' => 'Excerpt',
+                    'ref' => 'REF',
+                    'osmid' => 'OSMID',
+                    'taxonomyThemes' => 'Themes',
+                    'taxonomyWheres' => 'Wheres',
+                    'taxonomyActivities' => 'Activity',
+                ], $track_selected)
+                ->help(__('Select one or more criteria from "name", "description", "excerpt", "ref", "osmid", "taxonomy themes", "taxonomy activity"')),
+            MultiSelect::make(__('POI Search In'), 'poi_searchables')
+
+        ];
+    }
+
     protected function home_tab(): array
     {
         return [
@@ -295,12 +319,12 @@ class App extends Resource
                 ->language('json')
                 ->rules('json')
                 ->default($this->getDefaultPoiForm())
-                ->help(__('This JSON structures the acquisition form for UGC POIs. Knowledge of JSON format required.').view('wm-package::poi-forms')->render()),
+                ->help(__('This JSON structures the acquisition form for UGC POIs. Knowledge of JSON format required.') . view('wm-package::poi-forms')->render()),
             Code::Make(__('TRACK acquisition forms'), 'track_acquisition_form')
                 ->language('json')
                 ->rules('json')
                 ->default($this->getDefaultTrackForm())
-                ->help(__('This JSON structures the acquisition form for UGC Tracks. Knowledge of JSON format required.').view('wm-package::track-forms')->render()),
+                ->help(__('This JSON structures the acquisition form for UGC Tracks. Knowledge of JSON format required.') . view('wm-package::track-forms')->render()),
         ];
     }
 
@@ -503,9 +527,9 @@ class App extends Resource
                             $title = $layer->getStringName();
                             if (is_array($title)) {
                                 // Se è un array, prendi prima la versione italiana, poi quella inglese, altrimenti usa l'ID
-                                $title = $title['it'] ?? $title['en'] ?? ('Layer #'.$layer->id);
+                                $title = $title['it'] ?? $title['en'] ?? ('Layer #' . $layer->id);
                             } elseif (is_null($title)) {
-                                $title = 'Layer #'.$layer->id;
+                                $title = 'Layer #' . $layer->id;
                             }
 
                             return [
