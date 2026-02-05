@@ -628,14 +628,15 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
 
         return $arr;
     }
-    
+
     private function getValidName(array $whereData): string
     {
         $values = array_values($whereData);
         $firstName = $values[0] ?? null;
-        
+
         return $whereData['it'] ?? $whereData['en'] ?? $firstName;
     }
+
     /**
      * Get ordered taxonomy wheres for Elasticsearch (regions first, then municipalities)
      */
@@ -716,8 +717,9 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
 
         $taxonomyWheres = $this->getOrderedTaxonomyWheres();
         if (empty($searchables) || (in_array('taxonomyWheres', $searchables) && ! empty($taxonomyWheres))) {
-            $stringValue .= implode(' ', $taxonomyWheres) . ' ';
+            $stringValue .= implode(' ', $taxonomyWheres).' ';
         }
+
         return html_entity_decode($stringValue);
     }
 
