@@ -155,6 +155,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
                 'wm-ec-track-schema',
                 'wm-ec-from-ugc-schema',
                 'wm-app-languages',
+                'wm-logging',
             ])
             // ->hasRoutes(['api', 'web'])// Check the boot method, routes are registered there
             ->discoversMigrations()
@@ -264,6 +265,13 @@ class WmPackageServiceProvider extends PackageServiceProvider
         );
 
         // Configure logging channels
+        // SOLUZIONE 1 - SEMPLICE: LE CONFIG DEI LOG BENGONO SOVRASCRITTE DOPO LA REGISRTAZIONE DEL PROVIDER
+        if (isset($this->app->config['logging'])) {
+            $this->app->config['logging'] = array_merge(
+                $this->app->config['logging'],
+                config('wm-logging', []),
+            );
+        }
         if (isset($this->app->config['logging.channels'])) {
             $this->app->config['logging.channels'] = array_merge(
                 $this->app->config['logging.channels'],
