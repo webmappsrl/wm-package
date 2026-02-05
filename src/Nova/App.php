@@ -74,7 +74,7 @@ class App extends Resource
                 ->confirmButtonText(__('Yes, reindex'))
                 ->cancelButtonText(__('Cancel')),
             ExecuteEcTrackDataChainAction::make([
-                fn($track) => new UpdateEcTrackAwsJob($track),
+                fn ($track) => new UpdateEcTrackAwsJob($track),
             ], __('Update Tracks on AWS'))
                 ->onlyOnDetail()
                 ->confirmText(__('Are you sure you want to update all tracks of this app on AWS?'))
@@ -232,7 +232,7 @@ class App extends Resource
                     'taxonomyActivities' => 'Activity',
                 ], $track_selected)
                 ->help(__('Select one or more criteria from "name", "description", "excerpt", "ref", "osmid", "taxonomy themes", "taxonomy activity"')),
-            MultiSelect::make(__('POI Search In'), 'poi_searchables')
+            MultiSelect::make(__('POI Search In'), 'poi_searchables'),
 
         ];
     }
@@ -319,12 +319,12 @@ class App extends Resource
                 ->language('json')
                 ->rules('json')
                 ->default($this->getDefaultPoiForm())
-                ->help(__('This JSON structures the acquisition form for UGC POIs. Knowledge of JSON format required.') . view('wm-package::poi-forms')->render()),
+                ->help(__('This JSON structures the acquisition form for UGC POIs. Knowledge of JSON format required.').view('wm-package::poi-forms')->render()),
             Code::Make(__('TRACK acquisition forms'), 'track_acquisition_form')
                 ->language('json')
                 ->rules('json')
                 ->default($this->getDefaultTrackForm())
-                ->help(__('This JSON structures the acquisition form for UGC Tracks. Knowledge of JSON format required.') . view('wm-package::track-forms')->render()),
+                ->help(__('This JSON structures the acquisition form for UGC Tracks. Knowledge of JSON format required.').view('wm-package::track-forms')->render()),
         ];
     }
 
@@ -527,9 +527,9 @@ class App extends Resource
                             $title = $layer->getStringName();
                             if (is_array($title)) {
                                 // Se è un array, prendi prima la versione italiana, poi quella inglese, altrimenti usa l'ID
-                                $title = $title['it'] ?? $title['en'] ?? ('Layer #' . $layer->id);
+                                $title = $title['it'] ?? $title['en'] ?? ('Layer #'.$layer->id);
                             } elseif (is_null($title)) {
-                                $title = 'Layer #' . $layer->id;
+                                $title = 'Layer #'.$layer->id;
                             }
 
                             return [
