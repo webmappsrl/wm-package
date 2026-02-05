@@ -152,7 +152,12 @@
     "WordPress Configuration": "WordPress Configuration",
     "Zoom level for POI icons": "Zoom level for POI icons",
     "tracks": "tracks",
-    "Enable tracking with Posthog": "Enable tracking with Posthog",
-    "If enabled, the app will use Posthog for analytics": "If enabled, the app will use Posthog for analytics",
-    "If enabled, the webapp will use Posthog for analytics": "If enabled, the webapp will use Posthog for analytics"
+    "Enable for App": "Enable for App",
+    "Enable for Webapp": "Enable for Webapp",
+    "Enable Session Recording": "Enable Session Recording",
+    "Recording Probability": "Recording Probability",
+    "If enabled, the mobile app will use Posthog for analytics": "If enabled, the mobile app will use Posthog for analytics",
+    "If enabled, the webapp will use Posthog for analytics": "If enabled, the webapp will use Posthog for analytics",
+    "If enabled, Posthog will video record user sessions": "If enabled, Posthog will video record user sessions",
+    "Probability of triggering session recording (0 = never, 1 = always)": "Probability of triggering session recording (0 = never, 1 = always)"
 }

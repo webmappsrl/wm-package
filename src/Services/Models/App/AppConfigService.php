@@ -122,9 +122,6 @@ class AppConfigService extends AppBaseService
         if ($this->app->track_acquisition_form) {
             $data['APP']['track_acquisition_form'] = json_decode($this->app->track_acquisition_form, true);
         }
-        if ($this->app->properties['posthog_app']) {
-            $data['APP']['posthog'] = $this->app->properties['posthog_app'];
-        }
 
         return $data;
     }
@@ -141,9 +138,6 @@ class AppConfigService extends AppBaseService
         }
         if ($this->app->embed_code_body) {
             $data['WEBAPP']['embed_code_body'] = $this->app->embed_code_body;
-        }
-        if ($this->app->properties['posthog_webapp']) {
-            $data['WEBAPP']['posthog'] = $this->app->properties['posthog_webapp'];
         }
 
         return $data;
@@ -687,6 +681,18 @@ class AppConfigService extends AppBaseService
                 $data['OPTIONS'][$label] = $value;
             }
         }
+
+        // Analytics configuration
+        $properties = $this->app->properties ?? [];
+        $analyticsAppEnabled = $properties['analytics_app_enabled'] ?? false;
+        $analyticsWebappEnabled = $properties['analytics_webapp_enabled'] ?? false;
+
+        $data['OPTIONS']['analytics'] = [
+            'appEnabled' => (bool) $analyticsAppEnabled,
+            'webappEnabled' => (bool) $analyticsWebappEnabled,
+            'recordingEnabled' => (bool) ($properties['analytics_recording_enabled'] ?? false),
+            'recordingProbability' => (float) ($properties['analytics_recording_probability'] ?? 0),
+        ];
 
         return $data;
     }
