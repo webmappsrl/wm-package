@@ -628,7 +628,14 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
 
         return $arr;
     }
-
+    
+    private function getValidName(array $whereData): string
+    {
+        $values = array_values($whereData);
+        $firstName = $values[0] ?? null;
+        
+        return $whereData['it'] ?? $whereData['en'] ?? $firstName;
+    }
     /**
      * Get ordered taxonomy wheres for Elasticsearch (regions first, then municipalities)
      */
@@ -646,7 +653,7 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
 
         foreach ($wheres as $whereId => $whereData) {
             $adminLevel = $whereData['_admin_level'] ?? null;
-            $name = $whereData['it'] ?? $whereData['en'] ?? null;
+            $name = $this->getValidName($whereData);
 
             if ($name) {
                 if ($adminLevel === 4) {
@@ -666,10 +673,10 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
     public function getSearchableString(): string
     {
         $app_id = $this->app_id;
-        $string = '';
+        $stringValue = '';
         $searchables = '';
         if (is_null($app_id)) {
-            return $string;
+            return $stringValue;
         }
 
         $app = App::find($app_id);
@@ -680,38 +687,38 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
         }
 
         if (empty($searchables) || (in_array('name', $searchables) && ! empty($this->name))) {
-            $string .= str_replace('"', '', json_encode($this->getTranslations('name'))).' ';
+            $stringValue .= str_replace('"', '', json_encode($this->getTranslations('name'))).' ';
         }
         if (empty($searchables) || (in_array('description', $searchables) && ! empty($this->properties['description']))) {
             $description = is_array($this->properties['description']) ? json_encode($this->properties['description']) : $this->properties['description'];
             $description = str_replace('"', '', $description);
             $description = str_replace('\\', '', $description);
-            $string .= strip_tags($description).' ';
+            $stringValue .= strip_tags($description).' ';
         }
         if (empty($searchables) || (in_array('excerpt', $searchables) && ! empty($this->properties['excerpt']))) {
             $excerpt = str_replace('"', '', json_encode($this->properties['excerpt']));
             $excerpt = str_replace('\\', '', $excerpt);
-            $string .= strip_tags($excerpt).' ';
+            $stringValue .= strip_tags($excerpt).' ';
         }
         if (isset($this->properties['ref']) && empty($searchables) || (in_array('ref', $searchables) && ! empty($this->properties['ref']))) {
-            $string .= $this->properties['ref'].' ';
+            $stringValue .= $this->properties['ref'].' ';
         }
         if (isset($this->properties['osmid']) && empty($searchables) || (in_array('osmid', $searchables) && ! empty($this->properties['osmid']))) {
 
-            $string .= $this->properties['osmid'].' ';
+            $stringValue .= $this->properties['osmid'].' ';
         }
 
         if (empty($searchables) || (in_array('taxonomyActivities', $searchables) && ! empty($this->taxonomyActivities))) {
             foreach ($this->taxonomyActivities as $tax) {
-                $string .= str_replace('"', '', json_encode($tax->getTranslations('name'))).' ';
+                $stringValue .= str_replace('"', '', json_encode($tax->getTranslations('name'))).' ';
             }
         }
 
         $taxonomyWheres = $this->getOrderedTaxonomyWheres();
         if (empty($searchables) || (in_array('taxonomyWheres', $searchables) && ! empty($taxonomyWheres))) {
-            $string .= implode(' ', $taxonomyWheres) . ' ';
+            $stringValue .= implode(' ', $taxonomyWheres) . ' ';
         }
-        return html_entity_decode($string);
+        return html_entity_decode($stringValue);
     }
 
     /**
