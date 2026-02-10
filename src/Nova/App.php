@@ -102,31 +102,52 @@ class App extends Resource
     protected function analytics_tab(): array
     {
         return [
+            // APP ANALYTICS
             Heading::make(
                 <<<'HTML'
-                <h2><strong>POSTHOG CONFIGURATION</strong></h2>
-                <p>Configure PostHog analytics and session recording settings.</p>
+                <h2><strong>APP ANALYTICS</strong></h2>
+                <p>Configure PostHog analytics settings for the mobile app.</p>
                 HTML
             )->asHtml()->hideFromIndex(),
-            Boolean::make(__('Enable for App'), 'properties->analytics_app_enabled')
+            Boolean::make(__('Enable Analytics'), 'properties->analytics_app_enabled')
                 ->default(false)
                 ->hideFromIndex()
                 ->help(__('If enabled, the mobile app will use Posthog for analytics')),
-            Boolean::make(__('Enable for Webapp'), 'properties->analytics_webapp_enabled')
+            Boolean::make(__('Enable Session Recording'), 'properties->analytics_app_recording_enabled')
                 ->default(false)
                 ->hideFromIndex()
-                ->help(__('If enabled, the webapp will use Posthog for analytics')),
-            Boolean::make(__('Enable Session Recording'), 'properties->analytics_recording_enabled')
-                ->default(false)
-                ->hideFromIndex()
-                ->help(__('If enabled, Posthog will video record user sessions')),
-            Number::make(__('Recording Probability'), 'properties->analytics_recording_probability')
+                ->help(__('If enabled, Posthog will video record user sessions in the mobile app')),
+            Number::make(__('Recording Probability'), 'properties->analytics_app_recording_probability')
                 ->step(0.1)
                 ->min(0)
                 ->max(1)
                 ->default(0)
                 ->hideFromIndex()
-                ->help(__('Probability of triggering session recording (0 = never, 1 = always)')),
+                ->help(__('Probability of triggering session recording in the mobile app (0 = never, 1 = always)')),
+
+            // WEBAPP ANALYTICS
+            Heading::make(
+                <<<'HTML'
+                <hr style="margin: 2rem 0; border: none; border-top: 2px solid #e5e7eb;">
+                <h2><strong>WEBAPP ANALYTICS</strong></h2>
+                <p>Configure PostHog analytics settings for the webapp.</p>
+                HTML
+            )->asHtml()->hideFromIndex(),
+            Boolean::make(__('Enable Analytics'), 'properties->analytics_webapp_enabled')
+                ->default(false)
+                ->hideFromIndex()
+                ->help(__('If enabled, the webapp will use Posthog for analytics')),
+            Boolean::make(__('Enable Session Recording'), 'properties->analytics_webapp_recording_enabled')
+                ->default(false)
+                ->hideFromIndex()
+                ->help(__('If enabled, Posthog will video record user sessions in the webapp')),
+            Number::make(__('Recording Probability'), 'properties->analytics_webapp_recording_probability')
+                ->step(0.1)
+                ->min(0)
+                ->max(1)
+                ->default(0)
+                ->hideFromIndex()
+                ->help(__('Probability of triggering session recording in the webapp (0 = never, 1 = always)')),
         ];
     }
 
