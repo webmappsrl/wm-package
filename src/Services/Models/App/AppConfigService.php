@@ -93,6 +93,8 @@ class AppConfigService extends AppBaseService
         $data['APP']['customerName'] = $this->app->customer_name;
         $data['APP']['geohubId'] = $this->app->id;
 
+        $properties = $this->app->properties ?? [];
+
         if (! is_null($this->app->welcome)) {
             $data['APP']['welcome'] = [];
             $welcome = $this->app->toArray()['welcome'];
@@ -106,7 +108,7 @@ class AppConfigService extends AppBaseService
             $data['APP']['iosStore'] = $this->app->ios_store_link;
         }
 
-        if (isset($this->app->properties['force_to_release_update']) && $this->app->properties['force_to_release_update']) {
+        if (isset($properties['force_to_release_update']) && $properties['force_to_release_update']) {
             $data['APP']['forceToReleaseUpdate'] = true;
         }
 
@@ -122,8 +124,13 @@ class AppConfigService extends AppBaseService
         if ($this->app->track_acquisition_form) {
             $data['APP']['track_acquisition_form'] = json_decode($this->app->track_acquisition_form, true);
         }
-        if ($this->app->properties['posthog_app']) {
-            $data['APP']['posthog'] = $this->app->properties['posthog_app'];
+
+        if (isset($properties['analytics_app_enabled']) && $properties['analytics_app_enabled']) {
+            $data['APP']['analytics'] = [
+                'enabled' => true,
+                'recordingEnabled' => (bool) ($properties['analytics_app_recording_enabled'] ?? false),
+                'recordingProbability' => (float) ($properties['analytics_app_recording_probability'] ?? 0),
+            ];
         }
 
         return $data;
@@ -136,14 +143,22 @@ class AppConfigService extends AppBaseService
         $data['WEBAPP']['draw_track_show'] = $this->app->draw_track_show;
         $data['WEBAPP']['editing_inline_show'] = $this->app->editing_inline_show;
         $data['WEBAPP']['splash_screen_show'] = $this->app->splash_screen_show;
+
+        $properties = $this->app->properties ?? [];
+
         if ($this->app->gu_id) {
             $data['WEBAPP']['gu_id'] = $this->app->gu_id;
         }
         if ($this->app->embed_code_body) {
             $data['WEBAPP']['embed_code_body'] = $this->app->embed_code_body;
         }
-        if ($this->app->properties['posthog_webapp']) {
-            $data['WEBAPP']['posthog'] = $this->app->properties['posthog_webapp'];
+
+        if (isset($properties['analytics_webapp_enabled']) && $properties['analytics_webapp_enabled']) {
+            $data['WEBAPP']['analytics'] = [
+                'enabled' => true,
+                'recordingEnabled' => (bool) ($properties['analytics_webapp_recording_enabled'] ?? false),
+                'recordingProbability' => (float) ($properties['analytics_webapp_recording_probability'] ?? 0),
+            ];
         }
 
         return $data;
