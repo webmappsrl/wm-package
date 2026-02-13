@@ -37,7 +37,8 @@ class EcTrack extends AbstractEcResource
     {
         return [
             ...$this->fieldsTrait($request),
-            BelongsToMany::make('EcPois', 'ecPois', EcPoi::class),
+            BelongsToMany::make('EcPois', 'ecPois', EcPoi::class)
+                ->searchable(),
             MorphToMany::make('Layers', 'layers', Layer::class),
             MorphToMany::make('Activities', 'taxonomyActivities', TaxonomyActivity::class)->display('name'),
         ];

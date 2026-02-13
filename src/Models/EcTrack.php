@@ -106,7 +106,10 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
 
     public function ecPois(): BelongsToMany
     {
-        return $this->belongsToMany(EcPoi::class)->withPivot('order')->orderByPivot('order');
+        return $this->belongsToMany(EcPoi::class)
+            ->using(EcPoiEcTrack::class)
+            ->withPivot('order')
+            ->orderByPivot('order');
     }
 
     public function taxonomyActivities(): MorphToMany

@@ -6,7 +6,7 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
 use Wm\WmPackage\Jobs\BuildAppPoisGeojsonJob;
 use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Services\Models\EcPoiService;
-use Wm\WmPackage\Services\Models\UserService;
+use Wm\WmPackage\Services\Models\EcTrackService;
 
 class EcPoiObserver extends AbstractEcObserver
 {
@@ -17,6 +17,7 @@ class EcPoiObserver extends AbstractEcObserver
      */
     public function deleting(EcPoi $ecPoi)
     {
+        // TODO: impedisco di cancellare il poi oppure cancello le relazioni con le tracce?
         if ($ecPoi->ecTracks()->exists()) {
             throw new HttpException(500, 'Cannot delete this POI because it is linked to one or more tracks.');
         }
@@ -31,6 +32,15 @@ class EcPoiObserver extends AbstractEcObserver
     {
         parent::saved($ecPoi);
         EcPoiService::make()->updateDataChain($ecPoi);
+
+        // Aggiorna anche gli EcTrack collegati a questo EcPoi
+        $ecTracks = $ecPoi->ecTracks;
+        if ($ecTracks && $ecTracks->isNotEmpty()) {
+            $ecTrackService = EcTrackService::make();
+            foreach ($ecTracks as $ecTrack) {
+                $ecTrackService->updateDataChain($ecTrack);
+            }
+        }
 
         // UserService::make()->assigUserAppIdIfNeeded(null, null, $ecPoi->app_id);
         $app = $ecPoi->app;

@@ -19,6 +19,7 @@ use Tymon\JWTAuth\Providers\LaravelServiceProvider;
 use Wm\WmPackage\Commands\WmBackupCommand;
 use Wm\WmPackage\Commands\WmBuildAppPoisGeojsonCommand;
 use Wm\WmPackage\Commands\WmDownloadDbBackupCommand;
+use Wm\WmPackage\Commands\WmGenerateIconsCommand;
 use Wm\WmPackage\Commands\WmGeneratePBFCommand;
 use Wm\WmPackage\Commands\WmImportFromGeohubCommand;
 use Wm\WmPackage\Commands\WmPackageCommand;
@@ -153,6 +154,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
                 'wm-tab-translatable',
                 'wm-layer-schema',
                 'wm-ec-track-schema',
+                'wm-ec-poi-schema',
                 'wm-ec-from-ugc-schema',
                 'wm-app-languages',
                 'wm-logging',
@@ -167,6 +169,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
                 WmDownloadDbBackupCommand::class,
                 WmBuildAppPoisGeojsonCommand::class,
                 WmRestoreDbCommand::class,
+                WmGenerateIconsCommand::class,
             ])
             ->hasViews();
     }
