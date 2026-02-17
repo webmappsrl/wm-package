@@ -4,6 +4,7 @@ namespace Wm\WmPackage\Nova\Traits;
 
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Wm\MapMultiLinestring\MapMultiLinestring;
+use Wm\WmPackage\Nova\Fields\FeatureCollectionMap\src\FeatureCollectionMap;
 
 trait MultiLinestringResourceTrait
 {
@@ -11,7 +12,8 @@ trait MultiLinestringResourceTrait
     {
         return [
             ...parent::fields($request),
-            MapMultiLinestring::make('Geometry', 'geometry')->withMeta(['tiles' => 'https://api.webmapp.it/tiles/{z}/{x}/{y}.png'])->hideFromIndex()->required(),
+            // TODO: usare FeatureCollectionMap anche nelle altre Geometry del wm-package
+            FeatureCollectionMap::make('Geometry', 'geometry')->hideFromIndex()->required(),
         ];
     }
 }
