@@ -159,5 +159,8 @@
     "If enabled, the mobile app will use Posthog for analytics": "If enabled, the mobile app will use Posthog for analytics",
     "If enabled, the webapp will use Posthog for analytics": "If enabled, the webapp will use Posthog for analytics",
     "If enabled, Posthog will video record user sessions": "If enabled, Posthog will video record user sessions",
-    "Probability of triggering session recording (0 = never, 1 = always)": "Probability of triggering session recording (0 = never, 1 = always)"
+    "Probability of triggering session recording (0 = never, 1 = always)": "Probability of triggering session recording (0 = never, 1 = always)",
+    "Global": "Global",
+    "Indicates if the POI is global and visible always on the map": "Indicates if the POI is global and visible always on the map",
+    "Tipologie di POI associate a questo punto di interesse": "POI types associated with this point of interest"
 }

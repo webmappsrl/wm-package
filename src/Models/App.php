@@ -208,8 +208,8 @@ class App extends Model implements HasMedia
     {
         $pois = [];
 
-        // Usa la relazione diretta come per le tracks
-        $appPois = $this->ecPois()->get();
+        // Usa la relazione diretta come per le tracks, filtrando solo i POI globali
+        $appPois = $this->ecPois()->where('global', true)->get();
 
         if (count($appPois) > 0) {
             foreach ($appPois as $poi) {
