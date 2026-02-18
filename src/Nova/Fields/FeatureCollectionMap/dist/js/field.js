@@ -35,12 +35,20 @@ function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e 
       mapRefreshKey: Date.now(),
       lastUpdatedAt: null,
       pollInterval: null,
-      lastGeojsonHash: null
+      lastGeojsonHash: null,
+      clickHandler: null,
+      inertiaStartHandler: null
     };
   },
   mounted: function mounted() {
     var _this = this;
     console.log('DetailField mounted, popupComponent:', this.field.popupComponent);
+
+    // Intercept navigation to force reload when navigating to index
+    var currentResourceId = this.resourceId || this.resource && this.resource.id && this.resource.id.value;
+    if (currentResourceId) {
+      this.setupNavigationInterceptor();
+    }
 
     // Get initial updated_at timestamp if available
     this.updateLastUpdatedAt();
@@ -53,7 +61,6 @@ function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e 
     Nova.$on('resource-refresh', this.handleResourceRefresh);
 
     // Listen for custom event when UGC relationships change
-    var currentResourceId = this.resourceId || this.resource && this.resource.id && this.resource.id.value;
     var currentResourceName = this.resourceName;
     var eventName = "trail-survey-ugc-updated-".concat(currentResourceName, "-").concat(currentResourceId);
     Nova.$on(eventName, this.handleUgcUpdate);
@@ -68,6 +75,9 @@ function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e 
     }, 2000);
   },
   beforeUnmount: function beforeUnmount() {
+    // Remove navigation interceptor
+    this.removeNavigationInterceptor();
+
     // Remove event listeners
     Nova.$off('relationship-updated', this.handleRelationshipUpdate);
     Nova.$off('resource-refresh', this.handleResourceRefresh);
@@ -231,6 +241,75 @@ function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e 
           }
         }, _callee, null, [[0, 5]]);
       }))();
+    },
+    setupNavigationInterceptor: function setupNavigationInterceptor() {
+      var _this3 = this;
+      // Intercept clicks on links that navigate to index page
+      var handleClick = function handleClick(e) {
+        var link = e.target.closest('a[href]');
+        if (!link) return;
+        var href = link.getAttribute('href') || link.href;
+        if (!href) return;
+        try {
+          var currentPath = new URL(window.location.href).pathname;
+          var newPath = new URL(href, window.location.origin).pathname;
+
+          // Check if we're on a detail page and clicking a link to the index page
+          var currentResourceId = _this3.resourceId || _this3.resource && _this3.resource.id && _this3.resource.id.value;
+          if (currentResourceId && currentPath.includes("/".concat(_this3.resourceName, "/"))) {
+            var indexPattern = new RegExp("^/resources/".concat(_this3.resourceName, "/?$"));
+            if (indexPattern.test(newPath)) {
+              e.preventDefault();
+              e.stopPropagation();
+              e.stopImmediatePropagation();
+              window.location.href = href;
+              return false;
+            }
+          }
+        } catch (err) {
+          // Invalid URL, ignore
+        }
+      };
+
+      // Use capture phase to intercept before other handlers
+      document.addEventListener('click', handleClick, true);
+      this.clickHandler = handleClick;
+
+      // Also intercept Inertia navigation events
+      var handleInertiaStart = function handleInertiaStart(event) {
+        var _event$detail;
+        var url = ((_event$detail = event.detail) === null || _event$detail === void 0 ? void 0 : _event$detail.url) || event.url || window.location.href;
+        try {
+          var currentPath = new URL(window.location.href).pathname;
+          var newPath = new URL(url, window.location.origin).pathname;
+          var currentResourceId = _this3.resourceId || _this3.resource && _this3.resource.id && _this3.resource.id.value;
+          if (currentResourceId && currentPath.includes("/".concat(_this3.resourceName, "/"))) {
+            var indexPattern = new RegExp("^/resources/".concat(_this3.resourceName, "/?$"));
+            if (indexPattern.test(newPath)) {
+              if (event.preventDefault) event.preventDefault();
+              if (event.stopPropagation) event.stopPropagation();
+              window.location.href = url;
+              return false;
+            }
+          }
+        } catch (err) {
+          // Invalid URL, ignore
+        }
+      };
+
+      // Listen to Inertia events
+      document.addEventListener('inertia:start', handleInertiaStart);
+      this.inertiaStartHandler = handleInertiaStart;
+    },
+    removeNavigationInterceptor: function removeNavigationInterceptor() {
+      if (this.clickHandler) {
+        document.removeEventListener('click', this.clickHandler, true);
+        this.clickHandler = null;
+      }
+      if (this.inertiaStartHandler) {
+        document.removeEventListener('inertia:start', this.inertiaStartHandler);
+        this.inertiaStartHandler = null;
+      }
     }
   }
 });
