@@ -302,12 +302,31 @@ export default {
                 vectorSource.value.addFeatures(features);
 
                 if (features.length > 0) {
-                    const extent = vectorSource.value.getExtent();
+                    // Trova tutte le LineString nella FeatureCollection (escludi poligoni e punti)
+                    const lineStringFeatures = features.filter(feature => {
+                        const geometry = feature.getGeometry();
+                        if (!geometry) {
+                            return false;
+                        }
+                        const geometryType = geometry.getType();
+                        // Include solo LineString e MultiLineString
+                        return geometryType === 'LineString' || geometryType === 'MultiLineString';
+                    });
+
+                    // Se ci sono LineString, usa solo quelle per il calcolo dell'extent
+                    // Altrimenti usa tutte le feature come fallback
+                    const featuresForExtent = lineStringFeatures.length > 0 ? lineStringFeatures : features;
+
+                    // Crea una source temporanea per calcolare l'extent solo delle LineString
+                    const tempSource = new VectorSource();
+                    tempSource.addFeatures(featuresForExtent);
+                    const extent = tempSource.getExtent();
+
                     const view = map.value.getView();
 
                     // Calcola manualmente centro e zoom per evitare qualsiasi animazione
                     const size = map.value.getSize();
-                    if (size && extent) {
+                    if (size && extent && extent[0] !== Infinity) {
                         // Calcola il centro dell'extent
                         const center = [
                             (extent[0] + extent[2]) / 2,
@@ -415,14 +434,24 @@ export default {
             const feature = map.value.forEachFeatureAtPixel(pixel, (f) => f);
 
             if (feature) {
-                map.value.getTargetElement().style.cursor = 'pointer';
                 const featureProps = feature.getProperties();
+                
+                // Mostra il cursore pointer solo se c'è un link o un'azione di click
+                if (featureProps.link || featureProps.clickAction === 'popup') {
+                    map.value.getTargetElement().style.cursor = 'pointer';
+                } else {
+                    map.value.getTargetElement().style.cursor = 'default';
+                }
+                
+                // Mostra sempre il tooltip se presente, indipendentemente dal link
                 const tooltip = featureProps.tooltip || featureProps.name;
 
                 if (tooltip && tooltipOverlay.value) {
                     tooltipText.value = tooltip;
                     tooltipVisible.value = true;
                     tooltipOverlay.value.setPosition(event.coordinate);
+                } else {
+                    tooltipVisible.value = false;
                 }
             } else {
                 map.value.getTargetElement().style.cursor = '';
