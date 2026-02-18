@@ -10,7 +10,7 @@ use Wm\WmPackage\Models\UgcTrack;
 
 class UgcTrackController extends UgcController
 {
-    protected function getModelIstance(): UgcTrack
+    protected function getModelIstance(?Request $request = null): UgcTrack
     {
         return new UgcTrack;
     }
