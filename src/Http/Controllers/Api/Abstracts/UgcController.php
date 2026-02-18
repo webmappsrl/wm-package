@@ -12,7 +12,7 @@ use Wm\WmPackage\Services\GeometryComputationService;
 
 abstract class UgcController extends Controller
 {
-    abstract protected function getModelIstance(): GeometryModel;
+    abstract protected function getModelIstance(?Request $request = null): GeometryModel;
 
     /**
      * Display a listing of the resource.
@@ -41,7 +41,7 @@ abstract class UgcController extends Controller
     {
         $validated = $this->validateGeojson($request);
 
-        $model = $this->fillModelWithRequest($this->getModelIstance(), $request, $validated);
+        $model = $this->fillModelWithRequest($this->getModelIstance($request), $request, $validated);
 
         return response()->json(['id' => $model->id, 'message' => 'Created successfully'], 201);
     }

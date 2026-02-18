@@ -2,17 +2,26 @@
 
 namespace Wm\WmPackage\Http\Controllers\Api;
 
-use App\Models\UgcPoi as ModelsUgcPoi;
+use App\Models\UgcPoi;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Wm\WmPackage\Http\Controllers\Api\Abstracts\UgcController;
-use Wm\WmPackage\Models\UgcPoi;
 
 class UgcPoiController extends UgcController
 {
-    protected function getModelIstance(): UgcPoi
+    protected function getModelIstance(?Request $request = null): UgcPoi
     {
-        return new UgcPoi;
+        if (!$request) {
+            return new UgcPoi;
+        }
+        $uuid = Arr::get($request->only('properties',[]),'uuid',null);
+        if (!$uuid) {
+            return new UgcPoi;
+        }    
+        $uuidModel = UgcPoi::where('properties->uuid', $uuid)->first();
+        return $uuidModel ?: new UgcPoi();
+
     }
 
     /**
@@ -38,7 +47,7 @@ class UgcPoiController extends UgcController
         $featureCollection = ['type' => 'FeatureCollection', 'features' => []];
 
         $ids = explode(',', $ids);
-        $pois = ModelsUgcPoi::whereIn('id', $ids)->get();
+        $pois = UgcPoi::whereIn('id', $ids)->get();
 
         foreach ($pois as $poi) {
             $feature = $poi->getEmptyGeojson();
