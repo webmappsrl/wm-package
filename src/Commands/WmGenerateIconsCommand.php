@@ -75,9 +75,6 @@ class WmGenerateIconsCommand extends Command
     /**
      * Generate icons.json for a specific app
      *
-     * @param  App  $app
-     * @param  AppIconsService  $appIconsService
-     * @param  StorageService  $storageService
      * @return void
      */
     private function generateIconsForApp(App $app, AppIconsService $appIconsService, StorageService $storageService)
@@ -89,7 +86,7 @@ class WmGenerateIconsCommand extends Command
             // Usa la stessa logica dell'observer TaxonomyPoiTypeablesObserver (riga 39)
             $icons = $appIconsService->writeIconsOnAws($app->id);
             $path = $storageService->getShardBasePath($app->id).'icons.json';
-            $this->info("📊 Numero di icone generate: ".count($icons));
+            $this->info('📊 Numero di icone generate: '.count($icons));
             $this->info("📁 Percorso: {$path}");
         } catch (\Exception $e) {
             $this->error("Errore durante la generazione del icons.json per App {$app->id}: ".$e->getMessage());
