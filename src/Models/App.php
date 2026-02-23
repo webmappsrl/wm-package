@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\Translatable\HasTranslations;
@@ -208,8 +209,13 @@ class App extends Model implements HasMedia
     {
         $pois = [];
 
-        // Usa la relazione diretta come per le tracks, filtrando solo i POI globali
-        $appPois = $this->ecPois()->where('global', true)->get();
+        // Usa la relazione diretta come per le tracks
+        // Se la colonna 'global' esiste, filtra solo i POI globali, altrimenti restituisce tutti i POI
+        $query = $this->ecPois();
+        if (Schema::hasColumn((new EcPoi)->getTable(), 'global')) {
+            $query->where('global', true);
+        }
+        $appPois = $query->get();
 
         if (count($appPois) > 0) {
             foreach ($appPois as $poi) {
