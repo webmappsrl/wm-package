@@ -369,7 +369,7 @@ class EcTrackService extends BaseService
         foreach ($ecTrackLayers as $layer) {
             if (! empty($layer)) {
                 $updates['layers'][$layer->app_id] = $layer->id;
-                $updates['activities'][$layer->app_id] = $ecTrack->getTaxonomyArray($ecTrack->taxonomyActivities);
+                $updates['activities'][$layer->app_id] = $this->getTaxonomyArray($ecTrack->taxonomyActivities);
                 $updates['searchable'][$layer->app_id] = $ecTrack->getSearchableString($layer->app_id);
             }
         }
