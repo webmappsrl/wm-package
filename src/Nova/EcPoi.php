@@ -3,6 +3,7 @@
 namespace Wm\WmPackage\Nova;
 
 use Laravel\Nova\Fields\BelongsToMany;
+use Laravel\Nova\Fields\Boolean;
 use Laravel\Nova\Fields\MorphToMany;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Wm\WmPackage\Nova\Fields\PropertiesPanel;
@@ -34,10 +35,13 @@ class EcPoi extends AbstractEcResource
             ...$this->fieldsTrait($request),
             MorphToMany::make(__('Taxonomy Poi Types'), 'taxonomyPoiTypes', TaxonomyPoiType::class)
                 ->display('name')
-                ->help('Tipologie di POI associate a questo punto di interesse'),
+                ->help(__('Tipologie di POI associate a questo punto di interesse')),
             PropertiesPanel::makeWithModel(__('Converted from UGC'), 'properties->ugc', $this, false),
             PropertiesPanel::makeWithModel('Form', 'properties->form', $this, false),
             BelongsToMany::make('EcTracks', 'ecTracks', EcTrack::class),
+            Boolean::make(__('Global'), 'global')
+                ->default(true)
+                ->help(__('Indicates if the POI is global and visible always on the map')),
         ];
     }
 }
