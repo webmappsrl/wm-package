@@ -12,7 +12,7 @@ class EcPoiEcTrack extends Pivot
     protected static function boot()
     {
         parent::boot();
-        EcPoiEcTrack::observe(EcPoiEcTrackObserver::class);
+        static::observe(EcPoiEcTrackObserver::class);
     }
 
     /**

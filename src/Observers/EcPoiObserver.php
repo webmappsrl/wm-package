@@ -36,7 +36,7 @@ class EcPoiObserver extends AbstractEcObserver
         // Aggiorna anche gli EcTrack collegati a questo EcPoi
         $ecTracks = $ecPoi->ecTracks;
         if ($ecTracks && $ecTracks->isNotEmpty()) {
-            $ecTrackService = EcTrackService::make();
+            $ecTrackService = app(EcTrackService::class);
             foreach ($ecTracks as $ecTrack) {
                 $ecTrackService->updateDataChain($ecTrack);
             }
