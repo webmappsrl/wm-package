@@ -52,7 +52,15 @@ class EcPoi extends Point implements LayerRelatedModel
     protected static function boot()
     {
         parent::boot();
-        EcPoi::observe(EcPoiObserver::class);
+        // Registra l'observer usando static:: per funzionare anche con le classi estese
+        static::observe(EcPoiObserver::class);
+
+        // Imposta un default per properties se è null
+        static::creating(function ($model) {
+            if (is_null($model->properties)) {
+                $model->properties = [];
+            }
+        });
     }
 
     /**
@@ -80,6 +88,13 @@ class EcPoi extends Point implements LayerRelatedModel
     {
         return $this->morphToMany(TaxonomyActivity::class, 'taxonomy_activityable')
             ->using(TaxonomyActivityable::class); // this is necessary to make events on pivot working
+        // https://github.com/chelout/laravel-relationship-events/issues/16;;
+    }
+
+    public function taxonomyPoiTypes(): MorphToMany
+    {
+        return $this->morphToMany(TaxonomyPoiType::class, 'taxonomy_poi_typeable')
+            ->using(TaxonomyPoiTypeable::class); // this is necessary to make events on pivot working
         // https://github.com/chelout/laravel-relationship-events/issues/16;;
     }
 

@@ -21,6 +21,13 @@ class EcPoi extends AbstractEcResource
 
     public static $model = \Wm\WmPackage\Models\EcPoi::class;
 
+    public static $title = 'name';
+
+    public function title()
+    {
+        return $this->getTranslation('name', 'it') ?: $this->id;
+    }
+
     public function fields(NovaRequest $request): array
     {
         return [

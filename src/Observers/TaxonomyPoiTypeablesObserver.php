@@ -36,7 +36,7 @@ class TaxonomyPoiTypeablesObserver
                 $user = User::find($relatedModel->user_id);
                 $apps = App::where('user_id', $user->id)->get();
                 foreach ($apps as $app) {
-                    $appIconsService->writeIconsOnAws($app->id, $iconName);
+                    $appIconsService->writeIconsOnAws($app->id);
                 }
             }
         }

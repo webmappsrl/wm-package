@@ -106,7 +106,10 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
 
     public function ecPois(): BelongsToMany
     {
-        return $this->belongsToMany(EcPoi::class)->withPivot('order')->orderByPivot('order');
+        return $this->belongsToMany(EcPoi::class)
+            ->using(EcPoiEcTrack::class)
+            ->withPivot('order')
+            ->orderByPivot('order');
     }
 
     public function taxonomyActivities(): MorphToMany
@@ -730,28 +733,39 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
      */
     public function getFeatureCollectionMap(): array
     {
-        if (! $this->geometry) {
-            return [
-                'type' => 'FeatureCollection',
-                'features' => [],
-            ];
+        $features = [];
+
+        if ($this->geometry) {
+            $geojson = DB::select("SELECT ST_AsGeoJSON(ST_GeomFromWKB(decode(?, 'hex'))) as geojson", [$this->geometry]);
+
+            if (! empty($geojson)) {
+                $feature = $this->getFeatureMap();
+                $feature['properties'] = $this->properties;
+                $features[] = $feature;
+            }
         }
 
-        // Converti WKB in GeoJSON usando PostGIS
-        $geojson = DB::select("SELECT ST_AsGeoJSON(ST_GeomFromWKB(decode(?, 'hex'))) as geojson", [$this->geometry]);
+        $relatedPoi = $this->ecPois ?? collect();
+        foreach ($relatedPoi as $poi) {
+            $poiFeature = $poi->getGeojson();
+            if ($poiFeature) {
+                $lang = app()->getLocale() ?? 'it';
+                $tooltip = $poi->getTranslation('name', $lang) ?: $poi->getTranslation('name', 'it');
+                $linkPath = trim(config('nova.path', '/nova'), '/').'/resources/ec-pois/'.$poi->id;
 
-        if (empty($geojson)) {
-            return [
-                'type' => 'FeatureCollection',
-                'features' => [],
-            ];
+                $poiFeature['properties'] = [
+                    ...($poiFeature['properties'] ?? []),
+                    'tooltip' => $tooltip ?? '',
+                    'pointRadius' => 4,
+                    'link' => url($linkPath),
+                ];
+                $features[] = $poiFeature;
+            }
         }
-        $feature = $this->getFeatureMap();
-        $feature['properties'] = $this->properties;
 
         return [
             'type' => 'FeatureCollection',
-            'features' => [$feature],
+            'features' => $features,
         ];
     }
 
