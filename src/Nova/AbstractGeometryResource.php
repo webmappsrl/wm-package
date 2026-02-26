@@ -5,6 +5,7 @@ namespace Wm\WmPackage\Nova;
 use App\Nova\User;
 use Kongulov\NovaTabTranslatable\NovaTabTranslatable;
 use Laravel\Nova\Fields\BelongsTo;
+use Laravel\Nova\Fields\Boolean;
 use Laravel\Nova\Fields\ID;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
@@ -119,5 +120,25 @@ abstract class AbstractGeometryResource extends Resource
         }
 
         return 'properties';
+    }
+
+    public function getDemTabFields(): array
+    {
+        return [
+            Boolean::make(__('Round Trip'), 'properties->dem_data->round_trip'),
+            Text::make(__('Ascent'), 'properties->dem_data->ascent'),
+            Text::make(__('Descent'), 'properties->dem_data->descent'),
+            Text::make(__('Distance'), 'properties->dem_data->distance'),
+            Text::make(__('Maximum Elevation'), 'properties->dem_data->ele_max'),
+            Text::make(__('Minimum Elevation'), 'properties->dem_data->ele_min'),
+            Text::make(__('Starting Point Elevation'), 'properties->dem_data->ele_from'),
+            Text::make(__('Ending Point Elevation'), 'properties->dem_data->ele_to'),
+            Text::make(__('Duration Forward'), 'properties->dem_data->duration_forward'),
+            Text::make(__('Duration Backward'), 'properties->dem_data->duration_backward'),
+            Text::make(__('Duration Forward (bike)'), 'properties->dem_data->duration_forward_bike'),
+            Text::make(__('Duration Backward (bike)'), 'properties->dem_data->duration_backward_bike'),
+            Text::make(__('Duration Forward (hiking)'), 'properties->dem_data->duration_forward_hiking'),
+            Text::make(__('Duration Backward (hiking)'), 'properties->dem_data->duration_backward_hiking'),
+        ];
     }
 }
