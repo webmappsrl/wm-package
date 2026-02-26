@@ -1,5 +1,5 @@
 <template>
-    <div class="feature-collection-map-container">
+    <div ref="keydownRoot" class="feature-collection-map-container" tabindex="-1" @keydown.esc="closePopup">
         <!-- Loading overlay -->
         <div v-if="isLoading" class="loading-overlay">
             <div class="loading-spinner"></div>
@@ -56,7 +56,7 @@
 </template>
 
 <script>
-import { ref, onMounted, onUnmounted, watch } from 'vue';
+import { ref, nextTick, onMounted, onUnmounted, watch } from 'vue';
 
 // OpenLayers imports
 import Map from 'ol/Map';
@@ -133,6 +133,7 @@ export default {
     emits: ['feature-click', 'map-ready', 'popup-open', 'popup-close'],
 
     setup(props, { emit }) {
+        const keydownRoot = ref(null);
         const mapContainer = ref(null);
         const map = ref(null);
         const vectorSource = ref(null);
@@ -414,6 +415,8 @@ export default {
             });
 
             emit('feature-click', { feature, properties: featureProps, action: 'popup' });
+
+            nextTick(() => keydownRoot.value?.focus());
         };
 
         // Handle map click
@@ -537,13 +540,6 @@ export default {
             }
         };
 
-        // Handle ESC key
-        const handleKeydown = (event) => {
-            if (event.key === 'Escape' && showPopup.value) {
-                closePopup();
-            }
-        };
-
         // Initialize map
         onMounted(() => {
             vectorSource.value = new VectorSource();
@@ -585,14 +581,12 @@ export default {
 
             map.value.on('click', handleClick);
             map.value.on('pointermove', handlePointerMove);
-            document.addEventListener('keydown', handleKeydown);
 
             loadGeoJSON();
         });
 
         // Cleanup
         onUnmounted(() => {
-            document.removeEventListener('keydown', handleKeydown);
             if (map.value) {
                 map.value.setTarget(null);
                 map.value = null;
@@ -614,6 +608,7 @@ export default {
             popupComponent: props.popupComponent,
             enableScreenshot: props.enableScreenshot,
             // Refs
+            keydownRoot,
             mapContainer,
             tooltipElement,
             tooltipVisible,
