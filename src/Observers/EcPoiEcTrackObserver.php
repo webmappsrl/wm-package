@@ -43,14 +43,19 @@ class EcPoiEcTrackObserver
 
     /**
      * Update the EcTrack data chain when POI relationships change.
+     * Uses config('wm-package.ec_track_model') to resolve the correct model class,
+     * and EcPoiEcTrack::getTrackForeignKeyName() to resolve the correct FK,
      *
      * @return void
      */
     private function updateEcTrackDataChain(EcPoiEcTrack $pivot)
     {
-        $ecTrackId = $pivot->ec_track_id ?? $pivot->getAttribute('ec_track_id');
+        $ecTrackModelClass = config('wm-package.ec_track_model', EcTrack::class);
+        $fkName = EcPoiEcTrack::getTrackForeignKeyName();
+
+        $ecTrackId = $pivot->getAttribute($fkName);
         if ($ecTrackId) {
-            $ecTrack = EcTrack::find($ecTrackId);
+            $ecTrack = $ecTrackModelClass::find($ecTrackId);
             if ($ecTrack) {
                 $ecTrackService = app(EcTrackService::class);
                 $ecTrackService->updateDataChain($ecTrack);
