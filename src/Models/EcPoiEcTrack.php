@@ -50,6 +50,6 @@ class EcPoiEcTrack extends Pivot
     {
         $tableName = config('wm-package.ec_track_table', 'ec_tracks');
 
-        return rtrim($tableName, 's') . '_id';
+        return rtrim($tableName, 's').'_id';
     }
 }
