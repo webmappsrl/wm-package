@@ -2,11 +2,14 @@
 
 namespace Wm\WmPackage\Nova;
 
+use Laravel\Nova\Actions\Action;
 use Laravel\Nova\Fields\BelongsToMany;
 use Laravel\Nova\Fields\Boolean;
 use Laravel\Nova\Fields\MorphToMany;
 use Laravel\Nova\Http\Requests\NovaRequest;
+use Wm\WmPackage\Nova\Actions\ExecuteEcPoiDataChainAction;
 use Wm\WmPackage\Nova\Fields\PropertiesPanel;
+use Wm\WmPackage\Nova\Filters\GlobalEcPoiFilter;
 use Wm\WmPackage\Nova\Traits\PointResourceTrait;
 
 class EcPoi extends AbstractEcResource
@@ -42,6 +45,29 @@ class EcPoi extends AbstractEcResource
             Boolean::make(__('Global'), 'global')
                 ->default(true)
                 ->help(__('Indicates if the POI is global and visible always on the map')),
+        ];
+    }
+
+    /**
+     * Azioni disponibili sul resource EcPoi.
+     *
+     * @return array<int, Action>
+     */
+    public function actions(NovaRequest $request): array
+    {
+        return [
+            new ExecuteEcPoiDataChainAction(),
+        ];
+    }
+
+    /**
+     * Filtri disponibili sul resource EcPoi.
+     */
+    public function filters(NovaRequest $request): array
+    {
+        return [
+            ...parent::filters($request),
+            new GlobalEcPoiFilter(),
         ];
     }
 }
