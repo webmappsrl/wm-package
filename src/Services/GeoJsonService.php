@@ -83,6 +83,8 @@ class GeoJsonService extends BaseService
             if (! $decodedGeom) {
                 return null;
             }
+            $properties['created_at'] = $model->created_at;
+            $properties['updated_at'] = $model->updated_at;
 
             return [
                 'type' => 'Feature',
@@ -91,7 +93,7 @@ class GeoJsonService extends BaseService
                 'geometry' => $decodedGeom,
             ];
         } catch (\Exception $e) {
-            \Log::warning("Errore nel generare GeoJSON per modello ID {$model->id}: ".$e->getMessage());
+            \Log::warning("Errore nel generare GeoJSON per modello ID {$model->id}: " . $e->getMessage());
 
             return null;
         }
@@ -99,7 +101,7 @@ class GeoJsonService extends BaseService
 
     public function removeInvalidProperties(array $properties): array
     {
-        return array_filter($properties, fn ($e) => ! is_array($e)
+        return array_filter($properties, fn($e) => ! is_array($e)
             || count(array_filter($e)) !== 0);
     }
 
