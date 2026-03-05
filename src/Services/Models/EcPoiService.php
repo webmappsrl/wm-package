@@ -17,11 +17,13 @@ class EcPoiService extends BaseService
 {
     public function updateDataChain(EcPoi $model)
     {
+        $properties = $model->properties ?? [];
+        $elevation = $properties['ele'] ?? null;
+        $taxonomyWhere = $properties['taxonomy_where'] ?? null;
 
-        if ($model->wasChanged('geometry')) {
+        if ($model->wasChanged('geometry') || $elevation === null || $taxonomyWhere === null) {
 
             $chain = [
-
                 new UpdateModelWithGeometryTaxonomyWhere($model), // it relates where taxonomy terms to the media model based on geometry attribute
                 new UpdateEcPoiDemJob($model),
             ];
