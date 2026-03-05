@@ -50,4 +50,3 @@ class GlobalEcPoiFilter extends BooleanFilter
         ];
     }
 }
-

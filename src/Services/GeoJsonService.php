@@ -93,7 +93,7 @@ class GeoJsonService extends BaseService
                 'geometry' => $decodedGeom,
             ];
         } catch (\Exception $e) {
-            \Log::warning("Errore nel generare GeoJSON per modello ID {$model->id}: " . $e->getMessage());
+            \Log::warning("Errore nel generare GeoJSON per modello ID {$model->id}: ".$e->getMessage());
 
             return null;
         }
@@ -101,7 +101,7 @@ class GeoJsonService extends BaseService
 
     public function removeInvalidProperties(array $properties): array
     {
-        return array_filter($properties, fn($e) => ! is_array($e)
+        return array_filter($properties, fn ($e) => ! is_array($e)
             || count(array_filter($e)) !== 0);
     }
 

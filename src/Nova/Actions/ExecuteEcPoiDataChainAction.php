@@ -47,4 +47,3 @@ class ExecuteEcPoiDataChainAction extends Action
         return __('Execute EcPoi Data Chain');
     }
 }
-

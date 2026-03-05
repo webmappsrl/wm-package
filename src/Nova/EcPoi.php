@@ -56,7 +56,7 @@ class EcPoi extends AbstractEcResource
     public function actions(NovaRequest $request): array
     {
         return [
-            new ExecuteEcPoiDataChainAction(),
+            new ExecuteEcPoiDataChainAction,
         ];
     }
 
@@ -67,7 +67,7 @@ class EcPoi extends AbstractEcResource
     {
         return [
             ...parent::filters($request),
-            new GlobalEcPoiFilter(),
+            new GlobalEcPoiFilter,
         ];
     }
 }
