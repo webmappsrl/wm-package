@@ -87,7 +87,7 @@ class EcTrackService extends BaseService
 
             $track->saveQuietly();
         } catch (Exception $e) {
-            Log::error('An error occurred during DEM operation: '.$e->getMessage());
+            Log::error('An error occurred during DEM operation: ' . $e->getMessage());
         }
     }
 
@@ -101,7 +101,7 @@ class EcTrackService extends BaseService
                 throw new Exception('No OSM ID found');
             }
             $osmClient = new OsmClient;
-            $geojson_content = $osmClient::getGeojson('relation/'.$osmId);
+            $geojson_content = $osmClient::getGeojson('relation/' . $osmId);
             $geojson_content = json_decode($geojson_content, true);
             $osmData = $geojson_content['properties'];
             if (isset($osmData['duration:forward'])) {
@@ -136,7 +136,11 @@ class EcTrackService extends BaseService
             $properties['ref'] = $properties['ref'] ?? $osmData['ref'] ?? null;
 
             // Update additional fields only if they are null
-            $oldOsmData = isset($track->properties['osm_data']) ? json_decode($track->properties['osm_data'], true) : [];
+            $oldOsmData = isset($track->properties['osm_data']) ? (
+                is_array($track->properties['osm_data'])
+                ? $track->properties['osm_data']
+                : json_decode($track->properties['osm_data'], true)
+            ) : [];
 
             $properties['cai_scale'] = $this->updateFieldIfNecessary($track, 'cai_scale', $osmData, $oldOsmData);
             $properties['from'] = $this->updateFieldIfNecessary($track, 'from', $osmData, $oldOsmData);
@@ -164,20 +168,32 @@ class EcTrackService extends BaseService
             $dirtyFields = $track->getDirty();
             $demDataFields = array_flip($track->getDemDataFields());
             $dirtyFields = array_intersect_key($dirtyFields, $demDataFields);
-            $manualData = json_decode($track->properties['manual_data'] ?? null, true);
+            $manualData = isset($track->properties['manual_data']) ? (
+                is_array($track->properties['manual_data'])
+                ? $track->properties['manual_data']
+                : json_decode($track->properties['manual_data'], true)
+            ) : null;
 
             $properties = $track->properties;
             foreach ($dirtyFields as $field => $newValue) {
                 $manualData[$field] = $newValue;
                 if (is_null($newValue)) {
-                    $demData = isset($properties['dem_data']) ? json_decode($properties['dem_data'], true) : [];
-                    $osmData = isset($properties['osm_data']) ? json_decode($properties['osm_data'], true) : [];
+                    $demData = isset($properties['dem_data']) ? (
+                        is_array($properties['dem_data'])
+                        ? $properties['dem_data']
+                        : json_decode($properties['dem_data'], true)
+                    ) : [];
+                    $osmData = isset($properties['osm_data']) ? (
+                        is_array($properties['osm_data'])
+                        ? $properties['osm_data']
+                        : json_decode($properties['osm_data'], true)
+                    ) : [];
                     if (isset($osmData[$field]) && ! is_null($osmData[$field])) {
                         $properties[$field] = $osmData[$field];
-                        Log::info("Updated $field with OSM value: ".$osmData[$field]);
+                        Log::info("Updated $field with OSM value: " . $osmData[$field]);
                     } elseif (isset($demData[$field]) && ! is_null($demData[$field])) {
                         $properties[$field] = $demData[$field];
-                        Log::info("Updated $field with DEM value: ".$demData[$field]);
+                        Log::info("Updated $field with DEM value: " . $demData[$field]);
                     }
                 }
             }
@@ -186,7 +202,7 @@ class EcTrackService extends BaseService
             $track->properties = $properties;
             $track->saveQuietly();
         } catch (Exception $e) {
-            Log::error($track->id.': HandlesData: An error occurred during a store operation: '.$e->getMessage());
+            Log::error($track->id . ': HandlesData: An error occurred during a store operation: ' . $e->getMessage());
         }
     }
 
