@@ -2,8 +2,12 @@
 
 namespace Wm\WmPackage\Nova;
 
+use Kongulov\NovaTabTranslatable\NovaTabTranslatable;
 use Laravel\Nova\Fields\BelongsToMany;
+use Laravel\Nova\Fields\Boolean;
 use Laravel\Nova\Fields\MorphToMany;
+use Laravel\Nova\Tabs\Tab;
+use Laravel\Nova\Fields\Textarea;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
 use Wm\WmPackage\Jobs\UpdateModelWithGeometryTaxonomyWhere;
@@ -42,6 +46,9 @@ class EcTrack extends AbstractEcResource
                 ->searchable(),
             MorphToMany::make('Layers', 'layers', Layer::class),
             MorphToMany::make('Activities', 'taxonomyActivities', TaxonomyActivity::class)->display('name'),
+            Tab::group(__('Details'), [
+                Tab::make(__('Info'), $this->getInfoTabFields()),
+            ]),
         ];
     }
 
@@ -69,14 +76,26 @@ class EcTrack extends AbstractEcResource
         return [
             new Actions\ReindexSearchableAction,
             new ExecuteEcTrackDataChainAction([
-                fn ($ecTrack) => new UpdateEcTrackAwsJob($ecTrack),
+                fn($ecTrack) => new UpdateEcTrackAwsJob($ecTrack),
             ], __('Update Tracks on AWS')),
             new ExecuteEcTrackDataChainAction([
-                fn ($ecTrack) => new UpdateModelWithGeometryTaxonomyWhere($ecTrack),
-                fn ($ecTrack) => new UpdateEcTrackAwsJob($ecTrack),
+                fn($ecTrack) => new UpdateModelWithGeometryTaxonomyWhere($ecTrack),
+                fn($ecTrack) => new UpdateEcTrackAwsJob($ecTrack),
             ], __('Regenerate Taxonomy Where')),
             new ExecuteEcTrackDataChainAction,
             new TranslateModelAction,
+        ];
+    }
+
+    public function getInfoTabFields(): array
+    {
+        return [
+            Boolean::make('Not Accessible')
+                ->help('Enable this option to indicate that the track is not accessible. The reason can be specified below.'),
+            NovaTabTranslatable::make([
+                Textarea::make(__('Not Accessible Message'), 'not_accessible_message')->alwaysShow(),
+            ]),
+
         ];
     }
 }
