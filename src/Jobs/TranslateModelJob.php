@@ -23,17 +23,31 @@ class TranslateModelJob implements ShouldQueue
     ];
 
     /**
-     * System prompt per la traduzione di testi descrittivi.
-     * Traduzione libera mantenendo il senso del testo.
+     * System prompt unico per tutti i campi.
+     *
+     * Il JSON in input ha campi con traduzioni già presenti (stringa) o da compilare (null).
+     * Regole per "name": preserva nomi propri e luoghi; se il valore italiano è un codice/sigla
+     * alfanumerica, restituiscilo invariato in tutte le lingue.
+     * Regole per "description": traduzione libera mantenendo il senso del testo.
+     * Restituisci SOLO il JSON con i null compilati, senza modificare i valori già presenti.
      */
-    protected const PROMPT_DESCRIPTION = "You are a professional translator specializing in outdoor and hiking content. Translate the user's text from Italian to %s. Return ONLY the translated text, without any explanation, introduction, or additional commentary.";
+    protected const PROMPT = <<<'PROMPT'
+You are a professional translator specializing in outdoor and hiking content.
+You will receive a JSON object where each key is a field name (e.g. "name", "description"),
+and the value is an object of locale codes mapped to text or null.
+Non-null values are already translated — do NOT change them.
+Fill in ONLY the null values with the appropriate translation from the Italian ("it") source.
 
-    /**
-     * System prompt per la traduzione di nomi/titoli.
-     * Preserva i nomi propri di persone e luoghi senza traduzione letterale,
-     * usando la denominazione ufficiale nella lingua target solo se universalmente nota.
-     */
-    protected const PROMPT_NAME = "You are a professional translator specializing in outdoor and hiking content. Translate the user's text from Italian to %s. Important rules: keep proper nouns (names of people, local place names, mountain names, village names) in their original Italian form unless they have a widely recognized official equivalent in the target language (e.g. 'Monte Bianco' → 'Mont Blanc' in French). Do NOT invent translations for local place names. Return ONLY the translated text, without any explanation, introduction, or additional commentary.";
+Rules for "name":
+- Keep proper nouns (people, local place names, mountains, villages) in their original Italian form
+  unless they have a widely recognized official equivalent (e.g. "Monte Bianco" → "Mont Blanc" in French).
+- If the Italian value is a code, abbreviation, or alphanumeric identifier, return it unchanged for all locales.
+
+Rules for "description":
+- Translate freely, preserving the meaning and tone of the original text.
+
+Return ONLY the same JSON structure with null values replaced. No explanation, no extra keys.
+PROMPT;
 
     protected array $locales;
 
@@ -47,129 +61,162 @@ class TranslateModelJob implements ShouldQueue
     public function handle(): void
     {
         $properties = $this->model->properties ?? [];
-        $updated = false;
 
-        $updated = $this->translateField($properties, 'description', self::PROMPT_DESCRIPTION) || $updated;
-        $updated = $this->translateField($properties, 'name', self::PROMPT_NAME) || $updated;
-        $updated = $this->translateNameColumn(self::PROMPT_NAME) || $updated;
+        // Costruisce il payload con tutti i campi traducibili
+        $payload = $this->buildPayload($properties);
 
-        if ($updated) {
-            $this->model->properties = $properties;
-            $this->model->saveQuietly();
+        if (empty($payload)) {
+            return;
+        }
+
+        $result = $this->callOpenAI($payload);
+
+        if (empty($result)) {
+            return;
+        }
+
+        $this->applyResult($result, $properties);
+
+        $this->model->properties = $properties;
+        $this->model->saveQuietly();
+    }
+
+    /**
+     * Costruisce il JSON da inviare a OpenAI con i campi traducibili e le lingue mancanti a null.
+     * Restituisce array vuoto se non c'è nulla da tradurre.
+     *
+     * Esempio output:
+     * [
+     *   "name"        => ["it" => "Sentiero dei Fiori", "en" => null, "de" => "...già presente..."],
+     *   "description" => ["it" => "Un bellissimo sentiero...", "en" => null, "de" => null],
+     * ]
+     */
+    protected function buildPayload(array $properties): array
+    {
+        $payload = [];
+
+        // Campo description
+        $description = $properties['description'] ?? null;
+        if (is_string($description)) {
+            $description = ['it' => $description];
+        }
+        if (is_array($description) && ! empty($description['it'])) {
+            $entry = ['it' => $description['it']];
+            $hasMissing = false;
+            foreach ($this->locales as $locale) {
+                $entry[$locale] = ! empty($description[$locale]) ? $description[$locale] : null;
+                if ($entry[$locale] === null) {
+                    $hasMissing = true;
+                }
+            }
+            if ($hasMissing) {
+                $payload['description'] = $entry;
+            }
+        }
+
+        // Campo name — recupera it da properties o dalla colonna Spatie
+        $nameArray = $properties['name'] ?? null;
+        if (is_string($nameArray)) {
+            $nameArray = ['it' => $nameArray];
+        }
+        $italianName = is_array($nameArray) ? ($nameArray['it'] ?? null) : null;
+        if (empty($italianName) && in_array('name', $this->model->translatable ?? [])) {
+            $italianName = $this->model->getTranslation('name', 'it', false);
+        }
+        if (! empty($italianName)) {
+            $entry = ['it' => $italianName];
+            $hasMissing = false;
+            foreach ($this->locales as $locale) {
+                $existing = is_array($nameArray) ? ($nameArray[$locale] ?? null) : null;
+                if (empty($existing) && in_array('name', $this->model->translatable ?? [])) {
+                    $existing = $this->model->getTranslation('name', $locale, false) ?: null;
+                }
+                $entry[$locale] = ! empty($existing) ? $existing : null;
+                if ($entry[$locale] === null) {
+                    $hasMissing = true;
+                }
+            }
+            if ($hasMissing) {
+                $payload['name'] = $entry;
+            }
+        }
+
+        return $payload;
+    }
+
+    /**
+     * Applica il risultato di OpenAI alle properties e alla colonna Spatie.
+     */
+    protected function applyResult(array $result, array &$properties): void
+    {
+        if (isset($result['description']) && is_array($result['description'])) {
+            $current = is_array($properties['description'] ?? null)
+                ? $properties['description']
+                : ['it' => $properties['description'] ?? null];
+
+            foreach ($this->locales as $locale) {
+                $translated = $result['description'][$locale] ?? null;
+                if (! empty($translated) && ! $this->looksLikeRefusal($translated)) {
+                    $current[$locale] = $translated;
+                }
+            }
+            $properties['description'] = $current;
+        }
+
+        if (isset($result['name']) && is_array($result['name'])) {
+            $current = is_array($properties['name'] ?? null)
+                ? $properties['name']
+                : ['it' => $result['name']['it'] ?? null];
+
+            foreach ($this->locales as $locale) {
+                $translated = $result['name'][$locale] ?? null;
+                if (! empty($translated) && ! $this->looksLikeRefusal($translated)) {
+                    $current[$locale] = $translated;
+                    // Sincronizza anche la colonna Spatie
+                    if (in_array('name', $this->model->translatable ?? [])) {
+                        $this->model->setTranslation('name', $locale, $translated);
+                    }
+                }
+            }
+            $properties['name'] = $current;
         }
     }
 
     /**
-     * Traduce il campo `name` come colonna translatable diretta (Spatie),
-     * usando l'italiano presente in properties['name'] o nel campo name stesso.
+     * Invia il payload a OpenAI e restituisce il JSON compilato.
      */
-    protected function translateNameColumn(string $promptTemplate): bool
+    protected function callOpenAI(array $payload): ?array
     {
-        if (! in_array('name', $this->model->translatable ?? [])) {
-            return false;
-        }
-
-        // Preferisce l'italiano da properties['name'], poi dalla colonna name
-        $properties = $this->model->properties ?? [];
-        $propertiesName = $properties['name'] ?? null;
-        if (is_array($propertiesName)) {
-            $italianText = $propertiesName['it'] ?? null;
-        } else {
-            $italianText = $this->model->getTranslation('name', 'it', false);
-        }
-
-        if (empty($italianText)) {
-            return false;
-        }
-
-        $updated = false;
-        foreach ($this->locales as $locale) {
-            if (! empty($this->model->getTranslation('name', $locale, false))) {
-                continue;
-            }
-
-            $translated = $this->callOpenAI($italianText, $locale, $promptTemplate);
-            if ($translated !== null) {
-                $this->model->setTranslation('name', $locale, $translated);
-                $updated = true;
-            }
-        }
-
-        return $updated;
-    }
-
-    protected function translateField(array &$properties, string $field, string $promptTemplate): bool
-    {
-        $value = $properties[$field] ?? null;
-
-        if (empty($value)) {
-            return false;
-        }
-
-        // Normalizza a array se è ancora una stringa semplice
-        if (is_string($value)) {
-            $value = ['it' => $value];
-        }
-
-        if (! is_array($value) || empty($value['it'] ?? null)) {
-            return false;
-        }
-
-        $italianText = $value['it'];
-        $updated = false;
-
-        foreach ($this->locales as $locale) {
-            if (! empty($value[$locale])) {
-                continue;
-            }
-
-            $translated = $this->callOpenAI($italianText, $locale, $promptTemplate);
-            if ($translated !== null) {
-                $value[$locale] = $translated;
-                $updated = true;
-            }
-        }
-
-        if ($updated) {
-            $properties[$field] = $value;
-        }
-
-        return $updated;
-    }
-
-    protected function callOpenAI(string $text, string $locale, string $promptTemplate): ?string
-    {
-        $targetLanguage = self::LOCALE_NAMES[$locale] ?? $locale;
         $apiKey = config('wm-package.clients.openai.api_key', env('OPENAI_API_KEY'));
 
         if (empty($apiKey)) {
-            Log::warning('TranslateModelDescriptionJob: OPENAI_API_KEY not configured');
+            Log::warning('TranslateModelJob: OPENAI_API_KEY not configured');
 
             return null;
         }
 
-        $response = Http::withHeaders([
+        $response = Http::timeout(120)->withHeaders([
             'Authorization' => "Bearer {$apiKey}",
             'Content-Type' => 'application/json',
         ])->post('https://api.openai.com/v1/chat/completions', [
             'model' => config('wm-package.clients.openai.model', 'gpt-4o-mini'),
+            'response_format' => ['type' => 'json_object'],
             'messages' => [
                 [
                     'role' => 'system',
-                    'content' => sprintf($promptTemplate, $targetLanguage),
+                    'content' => self::PROMPT,
                 ],
                 [
                     'role' => 'user',
-                    'content' => $text,
+                    'content' => json_encode($payload, JSON_UNESCAPED_UNICODE),
                 ],
             ],
         ]);
 
         if (! $response->successful()) {
-            Log::error('TranslateModelDescriptionJob: OpenAI API error', [
+            Log::error('TranslateModelJob: OpenAI API error', [
                 'model_class' => $this->model::class,
                 'model_id' => $this->model->id,
-                'locale' => $locale,
                 'status' => $response->status(),
                 'body' => $response->body(),
             ]);
@@ -177,6 +224,46 @@ class TranslateModelJob implements ShouldQueue
             return null;
         }
 
-        return $response->json('choices.0.message.content');
+        $content = $response->json('choices.0.message.content');
+        $decoded = json_decode($content, true);
+
+        if (! is_array($decoded)) {
+            Log::error('TranslateModelJob: OpenAI returned invalid JSON', [
+                'model_class' => $this->model::class,
+                'model_id' => $this->model->id,
+                'content' => $content,
+            ]);
+
+            return null;
+        }
+
+        return $decoded;
+    }
+
+    protected function looksLikeRefusal(?string $text): bool
+    {
+        if ($text === null) {
+            return false;
+        }
+
+        $refusalPatterns = [
+            "I'm sorry",
+            "I cannot",
+            "I can't",
+            "does not appear to be",
+            "cannot be translated",
+            "is not translatable",
+            "Please provide",
+            "not in Italian",
+            "does not seem to be",
+        ];
+
+        foreach ($refusalPatterns as $pattern) {
+            if (stripos($text, $pattern) !== false) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
