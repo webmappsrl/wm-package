@@ -11,10 +11,12 @@ use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Tabs\Tab;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
 use Wm\WmPackage\Jobs\UpdateModelWithGeometryTaxonomyWhere;
+use Wm\WmPackage\Nova\Actions\DownloadEcTrackAction;
 use Wm\WmPackage\Nova\Actions\ExecuteEcTrackDataChainAction;
 use Wm\WmPackage\Nova\Actions\TranslateModelAction;
 use Wm\WmPackage\Nova\Cards\ApiLinksCard\EcTrackApiLinksCard;
 use Wm\WmPackage\Nova\Fields\TrackColor\src\TrackColor;
+use Wm\WmPackage\Nova\Actions\UploadTrackFile;
 use Wm\WmPackage\Nova\Filters\FeaturesByLayerFilter;
 use Wm\WmPackage\Nova\Filters\FeaturesExcludeByIds;
 use Wm\WmPackage\Nova\Filters\FeaturesIncludeByIds;
@@ -97,6 +99,8 @@ class EcTrack extends AbstractEcResource
                 fn ($ecTrack) => new UpdateEcTrackAwsJob($ecTrack),
             ], __('Regenerate Taxonomy Where')),
             new ExecuteEcTrackDataChainAction,
+            new DownloadEcTrackAction,
+            (new UploadTrackFile)->standalone(),
             new TranslateModelAction,
         ];
     }
