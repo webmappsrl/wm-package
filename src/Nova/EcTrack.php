@@ -90,10 +90,10 @@ class EcTrack extends AbstractEcResource
     public function getInfoTabFields(): array
     {
         return [
-            Boolean::make('Not Accessible')
+            Boolean::make('Not Accessible', 'properties->not_accessible')
                 ->help('Enable this option to indicate that the track is not accessible. The reason can be specified below.'),
             NovaTabTranslatable::make([
-                Textarea::make(__('Not Accessible Message'), 'not_accessible_message')->alwaysShow(),
+                Textarea::make(__('Not Accessible Message'), 'properties->not_accessible_message'),
             ]),
 
         ];
