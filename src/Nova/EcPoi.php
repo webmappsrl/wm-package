@@ -5,10 +5,10 @@ namespace Wm\WmPackage\Nova;
 use Laravel\Nova\Actions\Action;
 use Laravel\Nova\Fields\BelongsToMany;
 use Laravel\Nova\Fields\Boolean;
-use Laravel\Nova\Fields\Text;
-use Laravel\Nova\Fields\MorphToMany;
-use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Fields\KeyValue;
+use Laravel\Nova\Fields\MorphToMany;
+use Laravel\Nova\Fields\Text;
+use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Tabs\Tab;
 use Wm\WmPackage\Nova\Actions\ExecuteEcPoiDataChainAction;
 use Wm\WmPackage\Nova\Actions\TranslateModelAction;
@@ -54,7 +54,6 @@ class EcPoi extends AbstractEcResource
             ]),
         ];
     }
-
 
     public function getInfoTabFields(): array
     {

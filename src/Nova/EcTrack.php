@@ -6,9 +6,9 @@ use Kongulov\NovaTabTranslatable\NovaTabTranslatable;
 use Laravel\Nova\Fields\BelongsToMany;
 use Laravel\Nova\Fields\Boolean;
 use Laravel\Nova\Fields\MorphToMany;
-use Laravel\Nova\Tabs\Tab;
 use Laravel\Nova\Fields\Textarea;
 use Laravel\Nova\Http\Requests\NovaRequest;
+use Laravel\Nova\Tabs\Tab;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
 use Wm\WmPackage\Jobs\UpdateModelWithGeometryTaxonomyWhere;
 use Wm\WmPackage\Nova\Actions\ExecuteEcTrackDataChainAction;
@@ -76,11 +76,11 @@ class EcTrack extends AbstractEcResource
         return [
             new Actions\ReindexSearchableAction,
             new ExecuteEcTrackDataChainAction([
-                fn($ecTrack) => new UpdateEcTrackAwsJob($ecTrack),
+                fn ($ecTrack) => new UpdateEcTrackAwsJob($ecTrack),
             ], __('Update Tracks on AWS')),
             new ExecuteEcTrackDataChainAction([
-                fn($ecTrack) => new UpdateModelWithGeometryTaxonomyWhere($ecTrack),
-                fn($ecTrack) => new UpdateEcTrackAwsJob($ecTrack),
+                fn ($ecTrack) => new UpdateModelWithGeometryTaxonomyWhere($ecTrack),
+                fn ($ecTrack) => new UpdateEcTrackAwsJob($ecTrack),
             ], __('Regenerate Taxonomy Where')),
             new ExecuteEcTrackDataChainAction,
             new TranslateModelAction,

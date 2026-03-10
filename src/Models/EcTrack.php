@@ -370,7 +370,7 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
     {
         $geojson = $this->getGeojson();
         // MAPPING
-        $geojson['properties']['id'] = 'ec_track_' . $this->id;
+        $geojson['properties']['id'] = 'ec_track_'.$this->id;
         $geojson = $this->_mapElbrusGeojsonProperties($geojson);
 
         if ($this->ecPois) {
@@ -405,9 +405,9 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
 
         $fields = ['kml', 'gpx'];
         foreach ($fields as $field) {
-            if (isset($geojson['properties'][$field . '_url'])) {
-                $geojson['properties'][$field] = $geojson['properties'][$field . '_url'];
-                unset($geojson['properties'][$field . '_url']);
+            if (isset($geojson['properties'][$field.'_url'])) {
+                $geojson['properties'][$field] = $geojson['properties'][$field.'_url'];
+                unset($geojson['properties'][$field.'_url']);
             }
         }
 
@@ -417,13 +417,13 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
 
                 if ($taxonomy === 'activity') {
                     $geojson['properties']['taxonomy'][$name] = array_map(function ($item) use ($name) {
-                        return $name . '_' . $item;
+                        return $name.'_'.$item;
                     }, array_map(function ($item) {
                         return $item['id'];
                     }, $values));
                 } else {
                     $geojson['properties']['taxonomy'][$name] = array_map(function ($item) use ($name) {
-                        return $name . '_' . $item;
+                        return $name.'_'.$item;
                     }, $values);
                 }
             }
@@ -699,36 +699,36 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
         }
 
         if (empty($searchables) || (in_array('name', $searchables) && ! empty($this->name))) {
-            $stringValue .= str_replace('"', '', json_encode($this->getTranslations('name'))) . ' ';
+            $stringValue .= str_replace('"', '', json_encode($this->getTranslations('name'))).' ';
         }
         if (empty($searchables) || (in_array('description', $searchables) && ! empty($this->properties['description']))) {
             $description = is_array($this->properties['description']) ? json_encode($this->properties['description']) : $this->properties['description'];
             $description = str_replace('"', '', $description);
             $description = str_replace('\\', '', $description);
-            $stringValue .= strip_tags($description) . ' ';
+            $stringValue .= strip_tags($description).' ';
         }
         if (empty($searchables) || (in_array('excerpt', $searchables) && ! empty($this->properties['excerpt']))) {
             $excerpt = str_replace('"', '', json_encode($this->properties['excerpt']));
             $excerpt = str_replace('\\', '', $excerpt);
-            $stringValue .= strip_tags($excerpt) . ' ';
+            $stringValue .= strip_tags($excerpt).' ';
         }
         if (isset($this->properties['ref']) && empty($searchables) || (in_array('ref', $searchables) && ! empty($this->properties['ref']))) {
-            $stringValue .= $this->properties['ref'] . ' ';
+            $stringValue .= $this->properties['ref'].' ';
         }
         if (isset($this->properties['osmid']) && empty($searchables) || (in_array('osmid', $searchables) && ! empty($this->properties['osmid']))) {
 
-            $stringValue .= $this->properties['osmid'] . ' ';
+            $stringValue .= $this->properties['osmid'].' ';
         }
 
         if (empty($searchables) || (in_array('taxonomyActivities', $searchables) && ! empty($this->taxonomyActivities))) {
             foreach ($this->taxonomyActivities as $tax) {
-                $stringValue .= str_replace('"', '', json_encode($tax->getTranslations('name'))) . ' ';
+                $stringValue .= str_replace('"', '', json_encode($tax->getTranslations('name'))).' ';
             }
         }
 
         $taxonomyWheres = $this->getOrderedTaxonomyWheres();
         if (empty($searchables) || (in_array('taxonomyWheres', $searchables) && ! empty($taxonomyWheres))) {
-            $stringValue .= implode(' ', $taxonomyWheres) . ' ';
+            $stringValue .= implode(' ', $taxonomyWheres).' ';
         }
 
         return html_entity_decode($stringValue);
@@ -759,7 +759,7 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
             if ($poiFeature) {
                 $lang = app()->getLocale() ?? 'it';
                 $tooltip = $poi->getTranslation('name', $lang) ?: $poi->getTranslation('name', 'it');
-                $linkPath = trim(config('nova.path', '/nova'), '/') . '/resources/ec-pois/' . $poi->id;
+                $linkPath = trim(config('nova.path', '/nova'), '/').'/resources/ec-pois/'.$poi->id;
 
                 $poiFeature['properties'] = [
                     ...($poiFeature['properties'] ?? []),

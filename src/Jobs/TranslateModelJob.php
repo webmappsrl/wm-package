@@ -306,14 +306,14 @@ PROMPT;
 
         $refusalPatterns = [
             "I'm sorry",
-            "I cannot",
+            'I cannot',
             "I can't",
-            "does not appear to be",
-            "cannot be translated",
-            "is not translatable",
-            "Please provide",
-            "not in Italian",
-            "does not seem to be",
+            'does not appear to be',
+            'cannot be translated',
+            'is not translatable',
+            'Please provide',
+            'not in Italian',
+            'does not seem to be',
         ];
 
         foreach ($refusalPatterns as $pattern) {
