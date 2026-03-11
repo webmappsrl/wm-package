@@ -11,20 +11,32 @@ use Wm\WmPackage\Services\Models\EcTrackService;
 class EcPoiObserver extends AbstractEcObserver
 {
     /**
-     * Handle the EcMedia "deleted" event.
+     * Handle the EcPoi "deleting" event.
      *
      * @return void
      */
     public function deleting(EcPoi $ecPoi)
     {
-        // TODO: impedisco di cancellare il poi oppure cancello le relazioni con le tracce?
         if ($ecPoi->ecTracks()->exists()) {
             throw new HttpException(500, 'Cannot delete this POI because it is linked to one or more tracks.');
         }
     }
 
     /**
-     * Handle the EcMedia "saved" event.
+     * Handle the EcPoi "deleted" event.
+     *
+     * @return void
+     */
+    public function deleted(EcPoi $ecPoi)
+    {
+        $app = $ecPoi->app;
+        if ($app) {
+            BuildAppPoisGeojsonJob::dispatch($app->id);
+        }
+    }
+
+    /**
+     * Handle the EcPoi "saved" event.
      *
      * @return void
      */

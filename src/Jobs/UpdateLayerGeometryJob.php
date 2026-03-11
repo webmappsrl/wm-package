@@ -5,6 +5,7 @@ namespace Wm\WmPackage\Jobs;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
@@ -61,7 +62,7 @@ class UpdateLayerGeometryJob implements ShouldBeUnique, ShouldQueue
         // (ed è proprio ciò che vogliamo: una sola istanza che si "autoriprogramma").
         try {
             dispatch(new self($layer, $debounceSec))->delay($initialDelay);
-        } catch (\Illuminate\Database\QueryException $e) {
+        } catch (QueryException $e) {
             // Gestisce silenziosamente l'errore di transazione SQL fallita
             if ($e->getCode() === '25P02') {
                 return;

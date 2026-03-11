@@ -83,6 +83,8 @@ class GeoJsonService extends BaseService
             if (! $decodedGeom) {
                 return null;
             }
+            $properties['created_at'] = $model->created_at;
+            $properties['updated_at'] = $model->updated_at;
 
             return [
                 'type' => 'Feature',

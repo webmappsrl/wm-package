@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Nova\Events\ServingNova;
 use Laravel\Nova\Nova;
+use Wm\WmPackage\Helpers\GlobalFileHelper;
 
 class FieldServiceProvider extends ServiceProvider
 {
@@ -43,7 +44,7 @@ class FieldServiceProvider extends ServiceProvider
             ->group(function () {
                 Route::get('/icons', function () {
                     try {
-                        $iconsData = \Wm\WmPackage\Helpers\GlobalFileHelper::getJsonContent('icons.json', 'icons');
+                        $iconsData = GlobalFileHelper::getJsonContent('icons.json', 'icons');
 
                         return response()->json($iconsData);
                     } catch (\Exception $e) {

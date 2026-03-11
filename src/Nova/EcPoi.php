@@ -2,11 +2,18 @@
 
 namespace Wm\WmPackage\Nova;
 
+use Laravel\Nova\Actions\Action;
 use Laravel\Nova\Fields\BelongsToMany;
 use Laravel\Nova\Fields\Boolean;
+use Laravel\Nova\Fields\KeyValue;
 use Laravel\Nova\Fields\MorphToMany;
+use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
+use Laravel\Nova\Tabs\Tab;
+use Wm\WmPackage\Nova\Actions\ExecuteEcPoiDataChainAction;
+use Wm\WmPackage\Nova\Actions\TranslateModelAction;
 use Wm\WmPackage\Nova\Fields\PropertiesPanel;
+use Wm\WmPackage\Nova\Filters\GlobalEcPoiFilter;
 use Wm\WmPackage\Nova\Traits\PointResourceTrait;
 
 class EcPoi extends AbstractEcResource
@@ -42,6 +49,46 @@ class EcPoi extends AbstractEcResource
             Boolean::make(__('Global'), 'global')
                 ->default(true)
                 ->help(__('Indicates if the POI is global and visible always on the map')),
+            Tab::group(__('Details'), [
+                Tab::make(__('Info'), $this->getInfoTabFields()),
+            ]),
+        ];
+    }
+
+    public function getInfoTabFields(): array
+    {
+        return [
+            Text::make(__('Contact email'), 'properties->contact_email'),
+            Text::make(__('Contact phone'), 'properties->contact_phone'),
+            Text::make(__('Opening hours'), 'properties->opening_hours'),
+            Text::make(__('Locality'), 'properties->addr_locality'),
+            Text::make(__('House number'), 'properties->addr_housenumber'),
+            KeyValue::make(__('Related URL'), 'properties->related_url'),
+            Text::make(__('Complete address'), 'properties->addr_complete'),
+        ];
+    }
+
+    /**
+     * Azioni disponibili sul resource EcPoi.
+     *
+     * @return array<int, Action>
+     */
+    public function actions(NovaRequest $request): array
+    {
+        return [
+            new ExecuteEcPoiDataChainAction,
+            new TranslateModelAction,
+        ];
+    }
+
+    /**
+     * Filtri disponibili sul resource EcPoi.
+     */
+    public function filters(NovaRequest $request): array
+    {
+        return [
+            ...parent::filters($request),
+            new GlobalEcPoiFilter,
         ];
     }
 }

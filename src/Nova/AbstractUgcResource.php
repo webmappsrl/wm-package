@@ -4,7 +4,9 @@ namespace Wm\WmPackage\Nova;
 
 use App\Nova\User;
 use Ebess\AdvancedNovaMediaLibrary\Fields\Images;
+use Laravel\Nova\Card;
 use Laravel\Nova\Fields\BelongsTo;
+use Laravel\Nova\Fields\Field;
 use Laravel\Nova\Fields\ID;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
@@ -22,7 +24,7 @@ abstract class AbstractUgcResource extends AbstractGeometryResource
     /**
      * Get the fields displayed by the resource.
      *
-     * @return array<int, \Laravel\Nova\Fields\Field>
+     * @return array<int, Field>
      */
     public function fields(NovaRequest $request): array
     {
@@ -72,7 +74,7 @@ abstract class AbstractUgcResource extends AbstractGeometryResource
     /**
      * Get the cards available for the resource.
      *
-     * @return array<int, \Laravel\Nova\Card>
+     * @return array<int, Card>
      */
     public function cards(NovaRequest $request): array
     {

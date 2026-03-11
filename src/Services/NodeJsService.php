@@ -4,6 +4,7 @@ namespace Wm\WmPackage\Services;
 
 use Exception;
 use Illuminate\Support\Facades\Log;
+use Wm\WmPackage\WmPackageServiceProvider;
 
 class NodeJsService extends BaseService
 {
@@ -31,7 +32,7 @@ class NodeJsService extends BaseService
         $src = $paths['src'];
         $dest = $paths['dest'];
 
-        $packageServiceProvider = \Wm\WmPackage\WmPackageServiceProvider::getBasePath();
+        $packageServiceProvider = WmPackageServiceProvider::getBasePath();
 
         $cmd = config('wm-package.services.nodejs.executable')." {$packageServiceProvider}/node/jobs/build-elevation-chart.js --geojson=$src --dest=$dest --type=svg";
 

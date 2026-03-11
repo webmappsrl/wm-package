@@ -44,7 +44,13 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
         'properties' => 'array',
     ];
 
-    public $translatable = ['name', 'properties->description', 'properties->excerpt', 'properties->difficulty'];
+    public $translatable = [
+        'name',
+        'properties->description',
+        'properties->excerpt',
+        'properties->difficulty',
+        'properties->not_accessible_message',
+    ];
 
     public static string $geometryType = 'LineString';
 
@@ -106,7 +112,9 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
 
     public function ecPois(): BelongsToMany
     {
-        return $this->belongsToMany(EcPoi::class)
+        $pivotTable = config('wm-package.ec_poi_track_pivot_table', 'ec_poi_ec_track');
+
+        return $this->belongsToMany(EcPoi::class, $pivotTable)
             ->using(EcPoiEcTrack::class)
             ->withPivot('order')
             ->orderByPivot('order');

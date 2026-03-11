@@ -3,6 +3,7 @@
 namespace Wm\WmPackage\Nova\Fields\FeatureCollectionGrid;
 
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Laravel\Nova\Fields\Text;
 
 class FeatureCollectionGrid extends Text
@@ -144,7 +145,7 @@ class FeatureCollectionGrid extends Text
     {
         $className = class_basename(get_class($resource));
 
-        return \Illuminate\Support\Str::kebab($className);
+        return Str::kebab($className);
     }
 
     public function fillModelWithData(object $model, mixed $value, string $attribute): void

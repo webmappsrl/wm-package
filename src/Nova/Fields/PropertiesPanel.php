@@ -2,6 +2,8 @@
 
 namespace Wm\WmPackage\Nova\Fields;
 
+use Carbon\Carbon;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Kongulov\NovaTabTranslatable\NovaTabTranslatable;
@@ -54,7 +56,7 @@ class PropertiesPanel extends Panel
      *
      * @param  bool|callable|null  $editable  Editable configuration
      * @param  object|null  $model  The model instance for callback evaluation
-     * @param  \Illuminate\Http\Request|null  $request  The request instance for callback evaluation
+     * @param  Request|null  $request  The request instance for callback evaluation
      */
     protected static function determineEditability($editable, ?object $model = null, $request = null): bool
     {
@@ -438,7 +440,7 @@ class PropertiesPanel extends Panel
                     ->resolveUsing(function ($value, $resource, $attribute) {
                         // Solo per campi nested in properties: se il valore è una stringa ISO 8601, convertila in Carbon
                         if (str_contains($attribute, 'properties') && is_string($value) && preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/', $value)) {
-                            return \Carbon\Carbon::parse($value);
+                            return Carbon::parse($value);
                         }
 
                         return $value;

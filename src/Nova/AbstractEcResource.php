@@ -3,6 +3,7 @@
 namespace Wm\WmPackage\Nova;
 
 use Ebess\AdvancedNovaMediaLibrary\Fields\Images;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
 use Laravel\Nova\Http\Requests\NovaRequest;
@@ -13,8 +14,8 @@ abstract class AbstractEcResource extends AbstractGeometryResource
     /**
      * Build an "index" query for the given resource.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public static function indexQuery(NovaRequest $request, $query)
     {

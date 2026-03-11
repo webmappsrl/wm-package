@@ -51,7 +51,12 @@ return [
         'geohub' => [
             'host' => env('GEOHUB_HOST', 'https://geohub.webmapp.it'),
         ],
+        'openai' => [
+            'api_key' => env('OPENAI_API_KEY'),
+            'model' => env('OPENAI_TRANSLATION_MODEL', 'gpt-4o-mini'),
+        ],
     ],
     'ec_track_table' => env('EC_TRACK_TABLE', 'ec_tracks'),
     'ec_track_model' => env('EC_TRACK_MODEL', 'App\Models\EcTrack'),
+    'ec_poi_track_pivot_table' => env('EC_POI_TRACK_PIVOT_TABLE', 'ec_poi_ec_track'),
 ];

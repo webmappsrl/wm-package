@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Carbon;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 use Tymon\JWTAuth\Contracts\JWTSubject;
@@ -19,7 +20,7 @@ use Wm\WmPackage\Traits\HasPackageFactory;
  * @property string $name
  * @property string $email
  * @property array $sku
- * @property \Illuminate\Support\Carbon $last_login_at
+ * @property Carbon $last_login_at
  */
 class User extends Authenticatable implements JWTSubject
 {

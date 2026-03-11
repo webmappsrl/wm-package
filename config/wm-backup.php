@@ -1,5 +1,8 @@
 <?php
 
+use Spatie\Backup\Tasks\Cleanup\Strategies\DefaultStrategy;
+use Spatie\DbDumper\Compressors\GzipCompressor;
+
 // for the full configuration see: https://spatie.be/docs/laravel-backup/v8/installation-and-setup
 return [
 
@@ -11,7 +14,7 @@ return [
             ],
         ],
 
-        'database_dump_compressor' => \Spatie\DbDumper\Compressors\GzipCompressor::class,
+        'database_dump_compressor' => GzipCompressor::class,
 
         'destination' => [
             'disks' => [
@@ -22,7 +25,7 @@ return [
 
     'cleanup' => [
 
-        'strategy' => \Spatie\Backup\Tasks\Cleanup\Strategies\DefaultStrategy::class,
+        'strategy' => DefaultStrategy::class,
 
         'default_strategy' => [
             'keep_all_backups_for_days' => env('BACKUP_KEEP_ALL_FOR_DAYS', 7),

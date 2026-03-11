@@ -2,12 +2,15 @@
 
 namespace Wm\WmPackage\Http\Controllers\Api;
 
+use Elastic\Elasticsearch\Client;
 use Exception;
 use Illuminate\Http\Request;
 use ONGR\ElasticsearchDSL\Aggregation\Bucketing\TermsAggregation;
 use ONGR\ElasticsearchDSL\Query\Compound\BoolQuery;
 use ONGR\ElasticsearchDSL\Query\FullText\QueryStringQuery;
 use ONGR\ElasticsearchDSL\Query\TermLevel\RangeQuery;
+use ONGR\ElasticsearchDSL\Query\TermLevel\TermQuery;
+use ONGR\ElasticsearchDSL\Query\TermLevel\TermsQuery;
 use ONGR\ElasticsearchDSL\Search;
 use Wm\WmPackage\Http\Controllers\Controller;
 use Wm\WmPackage\Models\EcTrack;
@@ -87,7 +90,7 @@ class ElasticsearchController extends Controller
         // base query
         $index = config('wm-package.ec_track_table');
 
-        $query = EcTrack::search($search, function (\Elastic\Elasticsearch\Client $client, Search $body) use ($layer, $search, $ids, $index, $taxonomyWheres, $taxonomyActivities) {
+        $query = EcTrack::search($search, function (Client $client, Search $body) use ($layer, $search, $ids, $index, $taxonomyWheres, $taxonomyActivities) {
             // # The es driver for Laravel Scout
             // # https://github.com/matchish/laravel-scout-elasticsearch?tab=readme-ov-file#search
 
@@ -132,19 +135,19 @@ class ElasticsearchController extends Controller
             // ]), BoolQuery::SHOULD); // #OR
 
             if (count($ids) > 0) {
-                $boolQuery->add(new \ONGR\ElasticsearchDSL\Query\TermLevel\TermsQuery('id', $ids));
+                $boolQuery->add(new TermsQuery('id', $ids));
             }
 
             if ($layer) {
-                $boolQuery->add(new \ONGR\ElasticsearchDSL\Query\TermLevel\TermsQuery('layers', [$layer]));
+                $boolQuery->add(new TermsQuery('layers', [$layer]));
             } // #AND
 
             // Add taxonomy filters
             if ($taxonomyWheres) {
-                $boolQuery->add(new \ONGR\ElasticsearchDSL\Query\TermLevel\TermQuery('taxonomyWheres', $taxonomyWheres), BoolQuery::MUST);
+                $boolQuery->add(new TermQuery('taxonomyWheres', $taxonomyWheres), BoolQuery::MUST);
             }
             if ($taxonomyActivities) {
-                $boolQuery->add(new \ONGR\ElasticsearchDSL\Query\TermLevel\TermQuery('taxonomyActivities', $taxonomyActivities), BoolQuery::MUST);
+                $boolQuery->add(new TermQuery('taxonomyActivities', $taxonomyActivities), BoolQuery::MUST);
             }
 
             // Replace the original query with our custom one

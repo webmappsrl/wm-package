@@ -6,6 +6,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Maatwebsite\Excel\ExcelServiceProvider;
 use Orchestra\Testbench\Attributes\WithMigration;
 use Orchestra\Testbench\TestCase as Orchestra;
+use Tymon\JWTAuth\Providers\LaravelServiceProvider;
 use Wm\WmPackage\WmPackageServiceProvider;
 
 use function Orchestra\Testbench\artisan;
@@ -18,7 +19,7 @@ class TestCase extends Orchestra
     protected function getPackageProviders($app)
     {
         return [
-            \Tymon\JWTAuth\Providers\LaravelServiceProvider::class,
+            LaravelServiceProvider::class,
             WmPackageServiceProvider::class,
             ExcelServiceProvider::class,
         ];
