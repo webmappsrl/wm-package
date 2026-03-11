@@ -2,10 +2,12 @@
 
 namespace Tests\Unit\Services\EcTrackService;
 
+use Illuminate\Database\Query\Expression;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Mockery;
+use Mockery\LegacyMockInterface;
 use Mockery\MockInterface;
 use Wm\WmPackage\Http\Clients\DemClient;
 use Wm\WmPackage\Http\Clients\OsmClient;
@@ -60,7 +62,7 @@ class AbstractEcTrackServiceTest extends TestCase
     {
         foreach ($fields as $field => $expected) {
             $actualValue = $track->{$field};
-            if ($field === 'geometry' && $actualValue instanceof \Illuminate\Database\Query\Expression) {
+            if ($field === 'geometry' && $actualValue instanceof Expression) {
                 $expectedExpressionString = "ST_Force3D(ST_GeomFromGeoJSON('".json_encode(json_decode($expected))."'))";
                 if (str_starts_with(strtoupper($expected), 'LINESTRING') || str_starts_with(strtoupper($expected), 'POINT') || str_starts_with(strtoupper($expected), 'POLYGON')) {
                     $expectedExpressionString = "ST_Force3D(ST_GeomFromText('".$expected."'))";
@@ -136,7 +138,7 @@ class AbstractEcTrackServiceTest extends TestCase
     public function prepareTrackWithOsmData($track): void
     {
         // Only call shouldReceive if it's a Mockery mock object
-        if ($track instanceof \Mockery\LegacyMockInterface || $track instanceof \Mockery\MockInterface) {
+        if ($track instanceof LegacyMockInterface || $track instanceof MockInterface) {
             $track->shouldReceive('saveQuietly')->once();
         }
     }

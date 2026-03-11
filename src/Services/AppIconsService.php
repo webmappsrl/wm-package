@@ -3,6 +3,7 @@
 namespace Wm\WmPackage\Services;
 
 use Illuminate\Support\Facades\DB;
+use Wm\WmPackage\Helpers\GlobalFileHelper;
 
 class AppIconsService extends BaseService
 {
@@ -31,7 +32,7 @@ class AppIconsService extends BaseService
             $this->getIconsFromTable('taxonomy_activities'),
         );
 
-        $iconsData = \Wm\WmPackage\Helpers\GlobalFileHelper::getJsonContent('icons.json', 'icons');
+        $iconsData = GlobalFileHelper::getJsonContent('icons.json', 'icons');
         $height = ($iconsData['height']) ? $iconsData['height'] : 1024;
         $height2 = $height / 2;
 

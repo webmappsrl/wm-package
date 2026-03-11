@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Log;
 use Wm\WmPackage\Jobs\Pbf\GenerateOptimizedPBFChainJob;
 use Wm\WmPackage\Jobs\Pbf\GeneratePBFByZoomJob;
 use Wm\WmPackage\Jobs\Pbf\RegeneratePBFForTrackJob;
+use Wm\WmPackage\Models\Abstracts\GeometryModel;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\Layer;
@@ -159,11 +160,11 @@ class PBFGeneratorService extends BaseService
         // Recupera l'app con i layer associati
         $app = App::with('layers')->find($app_id);
         if (! $app) {
-            throw new \Exception("App not found: {$app_id}");
+            throw new Exception("App not found: {$app_id}");
         }
         // $layerIds = $app->layers->pluck('id')->toArray();
         if ($app->layers->count() === 0) {
-            throw new \Exception("No layers associated with app: {$app_id}");
+            throw new Exception("No layers associated with app: {$app_id}");
         }
 
         // simplifies geometry by a factor of 4 for zoom levels <= 8
@@ -241,12 +242,12 @@ class PBFGeneratorService extends BaseService
         // Recupera l'app con i layer associati
         $app = App::with('layers')->find($app_id);
         if (! $app) {
-            throw new \Exception("App not found: {$app_id}");
+            throw new Exception("App not found: {$app_id}");
         }
 
         $layerIds = $app->layers->pluck('id')->toArray();
         if (empty($layerIds)) {
-            throw new \Exception("No layers associated with app: {$app_id}");
+            throw new Exception("No layers associated with app: {$app_id}");
         }
         // Genera l'elenco degli ID layer come stringa SQL
         $layerIdsSQL = implode(', ', $layerIds);
@@ -388,12 +389,12 @@ class PBFGeneratorService extends BaseService
      * Genera i tile PBF solo per una traccia specifica modificata
      * Ottimizzato per rigenerare solo i tile impattati dalla modifica
      *
-     * @param  \Wm\WmPackage\Models\Abstracts\GeometryModel  $track  Il modello della traccia modificata
+     * @param  GeometryModel  $track  Il modello della traccia modificata
      * @param  int|null  $startZoom  Zoom di partenza (default: max_zoom dalla config)
      * @param  int|null  $minZoom  Zoom minimo (default: min_zoom dalla config)
      * @return void
      *
-     * @throws \Exception Se la traccia non ha un bounding box valido
+     * @throws Exception Se la traccia non ha un bounding box valido
      */
     public function generatePbfsForTrack($track, $startZoom = null, $minZoom = null)
     {
@@ -437,7 +438,7 @@ class PBFGeneratorService extends BaseService
             if (empty($trackIds)) {
                 throw new Exception('No track IDs found for layer: '.$layer->id);
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::warning('Fallback a generateWholeAppPbfs per errore nella rigenerazione multipla dopo sync', [
                 'layer_id' => $layer->id,
                 'error' => $e->getMessage(),
@@ -472,7 +473,7 @@ class PBFGeneratorService extends BaseService
                     'app_id' => $layer->app->id,
                 ]);
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::warning('Fallback a generateWholeAppPbfs per errore nella rigenerazione multipla dopo sync', [
                 'layer_id' => $layer->id,
                 'error' => $e->getMessage(),

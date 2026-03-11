@@ -49,7 +49,7 @@ class UgcPoiControllerTest extends TestCase
         $this->appModel = App::factory()->create();
 
         /**
-         * @var \Wm\WmPackage\Models\User
+         * @var User
          */
         $this->user = User::factory()->create();
 

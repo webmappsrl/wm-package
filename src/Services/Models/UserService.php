@@ -11,11 +11,11 @@ class UserService extends BaseService
     /**
      * Undocumented function
      *
-     * @param  \Wm\WmPackage\Models\User  $user
+     * @param  User  $user
      * @param  array  $sku
      * @param  string|null  $appId
      * @param  bool  $save  - If the model should be saved
-     * @return \Wm\WmPackage\Models\User - the eventually updated User model
+     * @return User - the eventually updated User model
      */
     public function assigUserAppIdIfNeeded($user, $sku = null, $appId = null, $save = true): User
     {

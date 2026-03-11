@@ -2,6 +2,7 @@
 
 namespace Wm\WmPackage\Nova\Actions;
 
+use Elastic\Elasticsearch\Client;
 use Illuminate\Bus\Queueable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Collection;
@@ -41,7 +42,7 @@ class ReindexAppScoutAction extends Action
         try {
             $ecTrackModel = new EcTrack;
             $indexName = $ecTrackModel->searchableAs();
-            $client = app(\Elastic\Elasticsearch\Client::class);
+            $client = app(Client::class);
             $indexExists = $client->indices()->exists(['index' => $indexName])->asBool();
 
             if (! $indexExists) {

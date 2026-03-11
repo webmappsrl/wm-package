@@ -2,12 +2,15 @@
 
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Laravel\Nova\Nova;
 use Wm\WmPackage\Http\Clients\DemClient;
 
 // Route per il GeoJSON endpoint del FeatureCollectionMap con formato: /{model}/{id}
 Route::get('/{model}/{id}', function ($model, $id) {
     // Converti lo slug in nome della classe (es: hiking-route -> HikingRoute)
-    $className = \Illuminate\Support\Str::studly($model);
+    $className = Str::studly($model);
 
     // Prova a trovare la classe provando tutte le varianti:
     // 1. Nome esatto (es: HikingRoutes, Poles, TrailSurveys)
@@ -48,7 +51,7 @@ Route::get('/{model}/{id}', function ($model, $id) {
     // Cerca tra tutti i resource registrati in Nova per trovare quello che corrisponde
     if (! $modelClass) {
         try {
-            $allResources = \Laravel\Nova\Nova::availableResources(request());
+            $allResources = Nova::availableResources(request());
             foreach ($allResources as $resourceClass) {
                 if (method_exists($resourceClass, 'uriKey')) {
                     $uriKey = $resourceClass::uriKey();
@@ -61,7 +64,7 @@ Route::get('/{model}/{id}', function ($model, $id) {
                     }
                 }
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // Ignora errori nel fallback
             Log::debug('FeatureCollectionMap fallback error', ['error' => $e->getMessage()]);
         }
@@ -94,7 +97,7 @@ Route::get('/{model}/{id}', function ($model, $id) {
             try {
                 $demClient = new DemClient;
                 $geojson = $demClient->getPointMatrix($geojson);
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 Log::warning('DEM enrichment failed, returning original geojson', [
                     'model' => $modelClass,
                     'id' => $id,
@@ -105,7 +108,7 @@ Route::get('/{model}/{id}', function ($model, $id) {
         }
 
         return response()->json($geojson);
-    } catch (\Exception $e) {
+    } catch (Exception $e) {
         Log::error('FeatureCollectionMap error', [
             'model' => $modelClass,
             'id' => $id,
@@ -135,7 +138,7 @@ Route::get('/widget/{model}/{id}', function ($model, $id) {
 // Route per salvare lo screenshot della mappa
 Route::post('/screenshot/{model}/{id}', function ($model, $id) {
     // Converti lo slug in nome della classe (es: hiking-route -> HikingRoute)
-    $className = \Illuminate\Support\Str::studly($model);
+    $className = Str::studly($model);
 
     // Prova a trovare la classe provando tutte le varianti
     $modelClass = null;
@@ -193,7 +196,7 @@ Route::post('/screenshot/{model}/{id}', function ($model, $id) {
         $path = "{$directory}/{$filename}";
 
         // Salva il file usando Storage
-        $storage = \Illuminate\Support\Facades\Storage::disk('public');
+        $storage = Storage::disk('public');
 
         // Crea la directory se non esiste
         if (! $storage->exists($directory)) {
@@ -208,7 +211,7 @@ Route::post('/screenshot/{model}/{id}', function ($model, $id) {
             'path' => $path,
             'url' => $storage->url($path),
         ]);
-    } catch (\Exception $e) {
+    } catch (Exception $e) {
         Log::error('Error saving map screenshot', [
             'model' => $modelClass,
             'id' => $id,

@@ -5,6 +5,7 @@ namespace Wm\WmPackage\Services;
 use Exception;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Query\Expression;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Collection as SupportCollection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -58,7 +59,7 @@ class GeometryComputationService extends BaseService
             $result = DB::select($sql, $bindings);
 
             return ! empty($result) && isset($result[0]->type) && $result[0]->type === 'ST_LineString';
-        } catch (\Illuminate\Database\QueryException $e) {
+        } catch (QueryException $e) {
             Log::error('Error in isGeometryLinestring: '.$e->getMessage(), [
                 'sql' => $sql,
                 'bindings' => $bindings,
@@ -131,7 +132,7 @@ class GeometryComputationService extends BaseService
             }
 
             return null;
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             \Log::warning("Errore nel convertire geometria per modello ID {$model->id}: ".$e->getMessage());
 
             return null;
@@ -1053,7 +1054,7 @@ GROUP BY
             }
 
             return $bbox;
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return null;
         }
     }

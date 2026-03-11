@@ -3,6 +3,7 @@
 namespace Wm\WmPackage\Jobs;
 
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Cache\Store;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -62,7 +63,7 @@ class BuildAppPoisGeojsonJob implements ShouldBeUnique, ShouldQueue
      * Get the cache store that should be used to acquire the job lock.
      * Uses Redis for better performance and reliability.
      *
-     * @return \Illuminate\Contracts\Cache\Store
+     * @return Store
      */
     public function uniqueVia()
     {

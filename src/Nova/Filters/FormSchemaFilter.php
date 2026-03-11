@@ -2,11 +2,14 @@
 
 namespace Wm\WmPackage\Nova\Filters;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Laravel\Nova\Filters\Filter;
 use Wm\WmPackage\Models\App;
-use Wm\WmPackage\Models\UgcPoi; // Importa il modello App se non già fatto
+use Wm\WmPackage\Models\UgcPoi;
+
+ // Importa il modello App se non già fatto
 
 class FormSchemaFilter extends Filter
 {
@@ -25,9 +28,9 @@ class FormSchemaFilter extends Filter
     /**
      * Apply the filter to the given query.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @param  Builder  $query
      * @param  mixed  $value
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @return Builder
      */
     public function apply(Request $request, $query, $value)
     {

@@ -1,10 +1,13 @@
 <?php
 
+use Wm\WmPackage\Models\Media;
+use Wm\WmPackage\Support\PathGenerator\WmfePathGenerator;
+
 return [
     /*
      * The fully qualified class name of the media model.
      */
-    'media_model' => Wm\WmPackage\Models\Media::class,
+    'media_model' => Media::class,
     /*
      * The disk name to use for media storage.
      */
@@ -12,7 +15,7 @@ return [
     /*
      * The path generator to use for media storage.
      */
-    'path_generator' => \Wm\WmPackage\Support\PathGenerator\WmfePathGenerator::class,
+    'path_generator' => WmfePathGenerator::class,
 
     'queue_conversions_after_database_commit' => true,
 
