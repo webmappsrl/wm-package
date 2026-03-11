@@ -22,7 +22,6 @@ use Wm\WmPackage\Commands\WmDownloadDbBackupCommand;
 use Wm\WmPackage\Commands\WmGenerateIconsCommand;
 use Wm\WmPackage\Commands\WmGeneratePBFCommand;
 use Wm\WmPackage\Commands\WmImportFromGeohubCommand;
-use Wm\WmPackage\Commands\ImportEcTrackFromFileCommand;
 use Wm\WmPackage\Commands\WmPackageCommand;
 use Wm\WmPackage\Commands\WmRestoreDbCommand;
 use Wm\WmPackage\ElasticSearch\HitsIteratorAggregate as ElasticSearchHitsIteratorAggregate;
@@ -171,7 +170,6 @@ class WmPackageServiceProvider extends PackageServiceProvider
                 WmBuildAppPoisGeojsonCommand::class,
                 WmRestoreDbCommand::class,
                 WmGenerateIconsCommand::class,
-                ImportEcTrackFromFileCommand::class,
             ])
             ->hasViews();
     }

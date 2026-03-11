@@ -7,8 +7,10 @@ use Laravel\Nova\Fields\MorphToMany;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
 use Wm\WmPackage\Jobs\UpdateModelWithGeometryTaxonomyWhere;
+use Wm\WmPackage\Nova\Actions\DownloadEcTrackTemplateAction;
+use Wm\WmPackage\Nova\Actions\DownloadExcelEcTrackAction;
 use Wm\WmPackage\Nova\Actions\ExecuteEcTrackDataChainAction;
-use Wm\WmPackage\Nova\Actions\ImportEcTrackFromFile;
+use Wm\WmPackage\Nova\Actions\UploadTrackFile;
 use Wm\WmPackage\Nova\Filters\FeaturesByLayerFilter;
 use Wm\WmPackage\Nova\Filters\FeaturesExcludeByIds;
 use Wm\WmPackage\Nova\Filters\FeaturesIncludeByIds;
@@ -68,7 +70,6 @@ class EcTrack extends AbstractEcResource
     {
         return [
             new Actions\ReindexSearchableAction,
-            new ImportEcTrackFromFile,
             new ExecuteEcTrackDataChainAction([
                 fn ($ecTrack) => new UpdateEcTrackAwsJob($ecTrack),
             ], __('Update Tracks on AWS')),
@@ -77,6 +78,9 @@ class EcTrack extends AbstractEcResource
                 fn ($ecTrack) => new UpdateEcTrackAwsJob($ecTrack),
             ], __('Regenerate Taxonomy Where')),
             new ExecuteEcTrackDataChainAction,
+            new DownloadExcelEcTrackAction,
+            (new DownloadEcTrackTemplateAction)->standalone(),
+            (new UploadTrackFile)->standalone(),
         ];
     }
 }

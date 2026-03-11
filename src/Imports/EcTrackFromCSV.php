@@ -76,35 +76,28 @@ class EcTrackFromCSV implements OnEachRow, SkipsEmptyRows, WithChunkReading, Wit
     }
 
     /**
-     * Validate that all headers are within the allowed EcTrack set.
+     * Validate headers format and normalize, but do NOT fail on unknown columns.
+     *
+     * This allows importing files exported via generic exporters (e.g. ExportTo)
+     * that contain many more columns than those actually supported by the
+     * EcTrack importer. Extra columns will simply be ignored later.
      *
      * @param  string[]  $headers
      */
     private function validateHeaders(array $headers): void
     {
-        $valid = config('wm-geohub-import.ecTracks.validHeaders', []);
-        $valid = array_map(
-            static fn (string $h) => Str::of($h)->lower()->replace(' ', '_')->toString(),
-            $valid
-        );
-
-        $unknown = [];
+        // Kept for potential future checks (e.g. required headers),
+        // but we intentionally do not throw on unknown headers anymore.
+        // We still normalize everything so that later code can safely
+        // compare normalized keys.
         foreach ($headers as $header) {
-            // Keep Geohub quirk: ignore numeric headers.
+            // Ignore numeric headers (Excel quirks)
             if (is_numeric($header)) {
                 continue;
             }
 
-            $normalized = Str::of((string) $header)->lower()->replace(' ', '_')->toString();
-            if (! in_array($normalized, $valid, true)) {
-                $unknown[] = (string) $header;
-            }
-        }
-
-        if ($unknown !== []) {
-            throw new \InvalidArgumentException(
-                'Invalid headers found: '.implode(', ', $unknown).'. Please check the file and try again.'
-            );
+            // Just normalize to ensure we don't get weird whitespace issues.
+            Str::of((string) $header)->lower()->replace(' ', '_')->toString();
         }
     }
 
