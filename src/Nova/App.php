@@ -10,6 +10,7 @@ use Laravel\Nova\Fields\Code;
 use Laravel\Nova\Fields\Color;
 use Laravel\Nova\Fields\Heading;
 use Laravel\Nova\Fields\ID;
+use Wm\WmPackage\Nova\Fields\StoreVersionField;
 use Laravel\Nova\Fields\Number;
 use Laravel\Nova\Fields\Select;
 use Laravel\Nova\Fields\Text;
@@ -42,6 +43,8 @@ class App extends Resource
         return [
             ID::make()->sortable(),
             Text::make('Name')->sortable(),
+            StoreVersionField::make(),
+
             Tab::group('App', [
                 Tab::make('home', $this->home_tab()),
                 Tab::make('webapp', $this->webapp_tab()),

@@ -144,6 +144,13 @@ Route::name('api.')->group(function () {
      */
     Route::prefix('app')->name('app.')->group(function () {
         /**
+         * Versione corrente dell'app su App Store e Play Store
+         * GET /api/app/{app}/version
+         * Risposta: { ios: { version, release_notes, store_url }, android: { ... } }
+         */
+        Route::get('/{app}/version', [AppController::class, 'version'])->name('version');
+
+        /**
          * ELBRUS API
          */
         Route::prefix('elbrus')->name('elbrus.')->group(function () {

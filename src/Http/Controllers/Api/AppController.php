@@ -10,6 +10,7 @@ use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Models\TaxonomyPoiType;
 use Wm\WmPackage\Services\Models\App\AppConfigService;
+use Wm\WmPackage\Services\Models\App\AppVersionService;
 use Wm\WmPackage\Services\StorageService;
 
 class AppController extends Controller
@@ -343,6 +344,18 @@ EOF;
 EOF;
 
         $data = json_decode($data, true);
+
+        return response()->json($data);
+    }
+
+    /**
+     * Restituisce la versione più recente dell'app su App Store e Play Store
+     * con le relative release notes. I dati vengono recuperati automaticamente
+     * dagli store e cachati per 6 ore.
+     */
+    public function version(App $app): JsonResponse
+    {
+        $data = (new AppVersionService)->getVersionInfo($app);
 
         return response()->json($data);
     }
