@@ -13,6 +13,7 @@ use Laravel\Nova\Tabs\Tab;
 use Wm\WmPackage\Nova\Actions\ExecuteEcPoiDataChainAction;
 use Wm\WmPackage\Nova\Actions\TranslateModelAction;
 use Wm\WmPackage\Nova\Fields\PropertiesPanel;
+use Wm\WmPackage\Nova\Filters\EcPoiRegionFilter;
 use Wm\WmPackage\Nova\Filters\GlobalEcPoiFilter;
 use Wm\WmPackage\Nova\Traits\PointResourceTrait;
 
@@ -89,6 +90,7 @@ class EcPoi extends AbstractEcResource
         return [
             ...parent::filters($request),
             new GlobalEcPoiFilter,
+            new EcPoiRegionFilter,
         ];
     }
 }
