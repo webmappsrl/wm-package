@@ -10,7 +10,6 @@ use Laravel\Nova\Fields\Code;
 use Laravel\Nova\Fields\Color;
 use Laravel\Nova\Fields\Heading;
 use Laravel\Nova\Fields\ID;
-use Wm\WmPackage\Nova\Fields\StoreVersionField;
 use Laravel\Nova\Fields\Number;
 use Laravel\Nova\Fields\Select;
 use Laravel\Nova\Fields\Text;
@@ -25,6 +24,7 @@ use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Nova\Actions\ExecuteEcTrackDataChainAction;
 use Wm\WmPackage\Nova\Actions\RegenerateAppPbfAction;
 use Wm\WmPackage\Nova\Actions\ReindexAppScoutAction;
+use Wm\WmPackage\Nova\Fields\StoreVersionField;
 use Wm\WmPackage\Nova\Flexible\Resolvers\ConfigHomeResolver;
 
 class App extends Resource
@@ -268,7 +268,7 @@ class App extends Resource
         $poi_selected = is_null($this->model()->poi_searchables) ? [] : json_decode($this->model()->poi_searchables, true);
 
         return [
-            MultiSelect::make(__('Track Search In'), 'track_searchables')
+            Multiselect::make(__('Track Search In'), 'track_searchables')
                 ->options([
                     'name' => 'Name',
                     'description' => 'Description',
@@ -280,7 +280,7 @@ class App extends Resource
                     'taxonomyActivities' => 'Activity',
                 ], $track_selected)
                 ->help(__('Select one or more criteria from "name", "description", "excerpt", "ref", "osmid", "taxonomy themes", "taxonomy activity"')),
-            MultiSelect::make(__('POI Search In'), 'poi_searchables'),
+            Multiselect::make(__('POI Search In'), 'poi_searchables'),
 
         ];
     }

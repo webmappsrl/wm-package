@@ -4,6 +4,7 @@ namespace Wm\WmPackage;
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
+use Wm\WmPackage\Helpers\GlobalFileHelper;
 use Wm\WmPackage\Http\Controllers\GlobalFileController;
 
 class GlobalFileServiceProvider extends ServiceProvider
@@ -15,7 +16,7 @@ class GlobalFileServiceProvider extends ServiceProvider
     {
         // Registra l'helper
         $this->app->singleton('global-file-helper', function ($app) {
-            return new \Wm\WmPackage\Helpers\GlobalFileHelper;
+            return new GlobalFileHelper;
         });
     }
 

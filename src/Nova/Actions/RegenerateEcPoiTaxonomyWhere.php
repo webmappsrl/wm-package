@@ -50,4 +50,3 @@ class RegenerateEcPoiTaxonomyWhere extends Action
         return [];
     }
 }
-

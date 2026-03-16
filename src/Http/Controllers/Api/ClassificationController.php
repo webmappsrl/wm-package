@@ -3,6 +3,7 @@
 namespace Wm\WmPackage\Http\Controllers\Api;
 
 use Exception;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
 use Wm\WmPackage\Http\Controllers\Controller;
 use Wm\WmPackage\Models\App;
@@ -13,7 +14,7 @@ class ClassificationController extends Controller
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function getRankedUsersNearPois(App $app)
     {

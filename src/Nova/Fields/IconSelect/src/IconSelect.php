@@ -4,6 +4,7 @@ namespace Wm\WmPackage\Nova\Fields\IconSelect;
 
 use Illuminate\Support\Facades\Log;
 use Laravel\Nova\Fields\Field;
+use Wm\WmPackage\Helpers\GlobalFileHelper;
 
 class IconSelect extends Field
 {
@@ -73,7 +74,7 @@ class IconSelect extends Field
     {
         try {
             // Usa il metodo statico del GlobalFileHelper
-            $iconsData = \Wm\WmPackage\Helpers\GlobalFileHelper::getJsonContent('icons.json', 'icons');
+            $iconsData = GlobalFileHelper::getJsonContent('icons.json', 'icons');
 
             if ($iconsData && isset($iconsData['icons']) && is_array($iconsData['icons'])) {
                 $options = [];

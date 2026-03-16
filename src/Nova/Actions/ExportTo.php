@@ -29,7 +29,7 @@ use Wm\WmPackage\Exporters\ModelExporter;
  * @property array $styleCallback Callback to customize export styling
  * @property string $defaultFormat Default export format (@see ExportFormat)
  *
- * @see \Wm\WmPackage\Enums\ExportFormat
+ * @see ExportFormat
  */
 class ExportTo extends Action
 {

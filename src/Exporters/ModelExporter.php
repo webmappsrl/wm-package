@@ -10,6 +10,7 @@ use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\WithStyles;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 /**
  * Class for exporting Eloquent models to various spreadsheet formats.
@@ -256,7 +257,7 @@ class ModelExporter implements FromCollection, ShouldAutoSize, WithHeadings, Wit
     /**
      * Applies styles to the Excel sheet.
      *
-     * @param  \PhpOffice\PhpSpreadsheet\Worksheet\Worksheet  $sheet
+     * @param  Worksheet  $sheet
      * @return array Array of styles for the sheet
      *
      * @link https://phpspreadsheet.readthedocs.io/en/latest/topics/styling/

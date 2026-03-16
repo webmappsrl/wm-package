@@ -2,6 +2,8 @@
 
 namespace Wm\WmPackage\Nova\Flexible\Resolvers;
 
+use Illuminate\Support\Collection;
+use Whitecube\NovaFlexibleContent\Layouts\Layout;
 use Whitecube\NovaFlexibleContent\Value\ResolverInterface;
 use Wm\WmPackage\Models\Layer;
 
@@ -13,7 +15,7 @@ class ConfigHomeResolver implements ResolverInterface
      * @param  mixed  $resource
      * @param  string  $attribute
      * @param  \Whitecube\NovaFlexibleContent\Layouts\Collection  $layouts
-     * @return \Illuminate\Support\Collection<array-key, \Whitecube\NovaFlexibleContent\Layouts\Layout>
+     * @return Collection<array-key, Layout>
      */
     public function get($resource, $attribute, $layouts)
     {
@@ -56,7 +58,7 @@ class ConfigHomeResolver implements ResolverInterface
      *
      * @param  mixed  $resource
      * @param  string  $attribute  Attribute name set for a Flexible field.
-     * @param  \Illuminate\Support\Collection<int, \Whitecube\NovaFlexibleContent\Layouts\Layout>  $groups
+     * @param  Collection<int, Layout>  $groups
      * @return mixed
      */
     public function set($resource, $attribute, $groups)

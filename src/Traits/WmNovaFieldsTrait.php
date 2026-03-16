@@ -3,6 +3,10 @@
 namespace Wm\WmPackage\Traits;
 
 use Illuminate\Support\Facades\Schema;
+use Laravel\Nova\Fields\Field;
+use Laravel\Nova\Fields\Number;
+use Laravel\Nova\Fields\Password;
+use Laravel\Nova\Fields\Text;
 
 /**
  * @phpstan-ignore trait.unused
@@ -79,7 +83,7 @@ provnamee a form schema.');
      * Create a Nova field based on the field schema.
      *
      * @param  string|null  $columnName
-     * @return \Laravel\Nova\Fields\Field|null
+     * @return Field|null
      */
     protected function createFieldFromSchema(array $fieldSchema, $columnName = null)
     {
@@ -108,13 +112,13 @@ provnamee a form schema.');
         $field = null;
 
         if ($fieldType === 'number') {
-            $field = \Laravel\Nova\Fields\Number::make(__($label), "$columnName->$key")
+            $field = Number::make(__($label), "$columnName->$key")
                 ->rules($rules);
         } elseif ($fieldType === 'password') {
-            $field = \Laravel\Nova\Fields\Password::make(__($label), "$columnName->$key")
+            $field = Password::make(__($label), "$columnName->$key")
                 ->rules($rules);
         } else {
-            $field = \Laravel\Nova\Fields\Text::make(__($label), "$columnName->$key")
+            $field = Text::make(__($label), "$columnName->$key")
                 ->rules($rules);
         }
 

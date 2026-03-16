@@ -5,6 +5,7 @@ namespace Wm\WmPackage\Nova\Metrics;
 use App\Models\User as AppUser;
 use App\Nova\User as UserResource;
 use DateTimeInterface;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Metrics\MetricTableRow;
@@ -14,12 +15,12 @@ use Laravel\Nova\Nova;
 class TopUgcCreators extends Table
 {
     /**
-     * @var class-string<\Illuminate\Database\Eloquent\Model>
+     * @var class-string<Model>
      */
     protected string $ugcModelClass;
 
     /**
-     * @param  class-string<\Illuminate\Database\Eloquent\Model>  $ugcModelClass
+     * @param  class-string<Model>  $ugcModelClass
      */
     public function __construct(string $ugcModelClass)
     {
@@ -30,7 +31,7 @@ class TopUgcCreators extends Table
     /**
      * Calculate the value of the metric.
      *
-     * @return array<int, \Laravel\Nova\Metrics\MetricTableRow>
+     * @return array<int, MetricTableRow>
      */
     public function calculate(NovaRequest $request): array
     {

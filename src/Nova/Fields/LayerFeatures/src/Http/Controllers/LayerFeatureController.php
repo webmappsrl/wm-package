@@ -4,6 +4,7 @@ namespace Wm\WmPackage\Nova\Fields\LayerFeatures\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Wm\WmPackage\Models\Layer;
@@ -142,7 +143,7 @@ class LayerFeatureController
                 $paginatedFeatures = $allFeatures->slice($offset, $perPage);
 
                 // Crea un oggetto paginazione manuale
-                $features = new \Illuminate\Pagination\LengthAwarePaginator(
+                $features = new LengthAwarePaginator(
                     $paginatedFeatures,
                     $total,
                     $perPage,

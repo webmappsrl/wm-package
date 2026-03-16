@@ -165,7 +165,7 @@ class ExecuteEcTrackDataChainActionTest extends TestCase
         $result = $action->handle(new ActionFields(collect(), collect()), $models);
 
         $ecTrackServiceMock->shouldHaveReceived('createDataChain');
-        $this->assertInstanceOf(\Laravel\Nova\Actions\ActionResponse::class, $result);
+        $this->assertInstanceOf(ActionResponse::class, $result);
         $this->assertStringContainsString('1', json_encode($result));
     }
 
@@ -201,7 +201,7 @@ class ExecuteEcTrackDataChainActionTest extends TestCase
         $result = $action->handle(new ActionFields(collect(), collect()), $models);
 
         $ecTrackServiceMock->shouldHaveReceived('createDataChain');
-        $this->assertInstanceOf(\Laravel\Nova\Actions\ActionResponse::class, $result);
+        $this->assertInstanceOf(ActionResponse::class, $result);
         $this->assertStringContainsString('250', json_encode($result));
     }
 
@@ -228,7 +228,7 @@ class ExecuteEcTrackDataChainActionTest extends TestCase
         $result = $action->handle(new ActionFields(collect(), collect()), $models);
 
         // Should still process the second track
-        $this->assertInstanceOf(\Laravel\Nova\Actions\ActionResponse::class, $result);
+        $this->assertInstanceOf(ActionResponse::class, $result);
         $this->assertStringContainsString('1', json_encode($result));
     }
 

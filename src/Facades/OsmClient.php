@@ -3,9 +3,10 @@
 namespace Wm\WmPackage\Facades;
 
 use Illuminate\Support\Facades\Facade;
+use Wm\WmPackage\WmPackage;
 
 /**
- * @see \Wm\WmPackage\WmPackage
+ * @see WmPackage
  */
 class OsmClient extends Facade
 {

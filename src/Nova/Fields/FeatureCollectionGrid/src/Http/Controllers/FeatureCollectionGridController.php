@@ -5,6 +5,8 @@ namespace Wm\WmPackage\Nova\Fields\FeatureCollectionGrid\Http\Controllers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
+use Illuminate\View\View;
 
 class FeatureCollectionGridController
 {
@@ -246,7 +248,7 @@ class FeatureCollectionGridController
     /**
      * Get widget view for the map
      *
-     * @return \Illuminate\View\View
+     * @return View
      */
     public function widget(Request $request, string $resourceName, int $resourceId)
     {
@@ -273,7 +275,7 @@ class FeatureCollectionGridController
     protected function findResource(string $resourceName, int $resourceId)
     {
         // Convert kebab-case to StudlyCase
-        $className = \Illuminate\Support\Str::studly($resourceName);
+        $className = Str::studly($resourceName);
 
         // Try App\Models namespace first
         $modelClass = "\\App\\Models\\{$className}";

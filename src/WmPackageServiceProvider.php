@@ -2,6 +2,7 @@
 
 namespace Wm\WmPackage;
 
+use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
@@ -12,6 +13,7 @@ use Laravel\Nova\Menu\MenuSection;
 use Laravel\Nova\Nova;
 use Matchish\ScoutElasticSearch\ElasticSearch\HitsIteratorAggregate;
 use Matchish\ScoutElasticSearch\ElasticSearchServiceProvider;
+use Sentry\State\Scope;
 use Spatie\Backup\Config\Config as BackupConfig;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
@@ -26,6 +28,7 @@ use Wm\WmPackage\Commands\WmPackageCommand;
 use Wm\WmPackage\Commands\WmRestoreDbCommand;
 use Wm\WmPackage\ElasticSearch\HitsIteratorAggregate as ElasticSearchHitsIteratorAggregate;
 use Wm\WmPackage\Jobs\Import\ImportEcMediaJob;
+use Wm\WmPackage\Nova\Fields\IconSelect\FieldServiceProvider;
 use Wm\WmPackage\Providers\EventServiceProvider;
 use Wm\WmPackage\Providers\ScheduleServiceProvider;
 use Wm\WmPackage\Services\Import\EcMediaImportService;
@@ -37,7 +40,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
     {
         // Error handler
         $this->app->singleton(
-            \Illuminate\Contracts\Debug\ExceptionHandler::class,
+            ExceptionHandler::class,
             Exceptions\Handler::class,
 
         );
@@ -50,7 +53,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
         $this->app->register(GlobalFileServiceProvider::class);
 
         // Registra IconSelect FieldServiceProvider
-        $this->app->register(\Wm\WmPackage\Nova\Fields\IconSelect\FieldServiceProvider::class);
+        $this->app->register(FieldServiceProvider::class);
         $this->app->register(\Wm\WmPackage\Nova\Fields\LayerFeatures\FieldServiceProvider::class);
         $this->app->register(\Wm\WmPackage\Nova\Fields\FeatureCollectionMap\FieldServiceProvider::class);
         $this->app->register(\Wm\WmPackage\Nova\Fields\FeatureCollectionGrid\FieldServiceProvider::class);
@@ -113,7 +116,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
         // SENTRY
         $this->app->booted(function () {
             if (app()->bound('sentry')) {
-                \Sentry\configureScope(function (\Sentry\State\Scope $scope) {
+                \Sentry\configureScope(function (Scope $scope) {
                     $scope->setTag('app_name', config('app.name'));
                 });
             }
