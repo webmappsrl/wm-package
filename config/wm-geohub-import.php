@@ -158,6 +158,58 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Excel Import Valid Headers
+    |--------------------------------------------------------------------------
+    |
+    | These headers are used to validate and map Excel/CSV files coming from
+    | Geohub when importing EcTracks and EcPois via WmPackage.
+    | They replicate the behaviour of Geohub's own importers so that the same
+    | templates can be reused.
+    |
+    */
+    'ecTracks' => [
+        'validHeaders' => [
+            'id',
+            'from',
+            'to',
+            'ele_from',
+            'ele_to',
+            'distance',
+            'duration_forward',
+            'duration_backward',
+            'ascent',
+            'descent',
+            'ele_min',
+            'ele_max',
+            'difficulty',
+        ],
+    ],
+    'ecPois' => [
+        'validHeaders' => [
+            'id',
+            'name_it',
+            'name_en',
+            'description_it',
+            'description_en',
+            'excerpt_it',
+            'excerpt_en',
+            'poi_type',
+            'lat',
+            'lng',
+            'addr_complete',
+            'capacity',
+            'contact_phone',
+            'contact_email',
+            'related_url',
+            'feature_image',
+            'gallery',
+            'theme',
+            'errors',
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Import Mapping Configuration
     |--------------------------------------------------------------------------
     |
