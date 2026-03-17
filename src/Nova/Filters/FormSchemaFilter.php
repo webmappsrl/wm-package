@@ -9,7 +9,7 @@ use Laravel\Nova\Filters\Filter;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\UgcPoi;
 
- // Importa il modello App se non già fatto
+// Importa il modello App se non già fatto
 
 class FormSchemaFilter extends Filter
 {
