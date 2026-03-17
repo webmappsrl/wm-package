@@ -29,6 +29,11 @@ class EcTrack extends AbstractEcResource
         return __('Tracks');
     }
 
+    public static function singularLabel(): string
+    {
+        return __('Track');
+    }
+
     public static $model = \Wm\WmPackage\Models\EcTrack::class;
 
     public static $title = 'name';
@@ -76,11 +81,11 @@ class EcTrack extends AbstractEcResource
         return [
             new Actions\ReindexSearchableAction,
             new ExecuteEcTrackDataChainAction([
-                fn ($ecTrack) => new UpdateEcTrackAwsJob($ecTrack),
+                fn($ecTrack) => new UpdateEcTrackAwsJob($ecTrack),
             ], __('Update Tracks on AWS')),
             new ExecuteEcTrackDataChainAction([
-                fn ($ecTrack) => new UpdateModelWithGeometryTaxonomyWhere($ecTrack),
-                fn ($ecTrack) => new UpdateEcTrackAwsJob($ecTrack),
+                fn($ecTrack) => new UpdateModelWithGeometryTaxonomyWhere($ecTrack),
+                fn($ecTrack) => new UpdateEcTrackAwsJob($ecTrack),
             ], __('Regenerate Taxonomy Where')),
             new ExecuteEcTrackDataChainAction,
             new TranslateModelAction,

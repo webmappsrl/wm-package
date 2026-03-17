@@ -13,6 +13,16 @@ class UgcPoi extends AbstractUgcResource
 
     public static $model = \Wm\WmPackage\Models\UgcPoi::class;
 
+    public static function label(): string
+    {
+        return __('Pois');
+    }
+
+    public static function singularLabel(): string
+    {
+        return __('Poi');
+    }
+
     public function actions(NovaRequest $request): array
     {
         return [
