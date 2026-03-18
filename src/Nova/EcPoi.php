@@ -10,7 +10,10 @@ use Laravel\Nova\Fields\MorphToMany;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Tabs\Tab;
+use Wm\WmPackage\Nova\Actions\DownloadEcPoiTemplateAction;
+use Wm\WmPackage\Nova\Actions\DownloadExcelEcPoiAction;
 use Wm\WmPackage\Nova\Actions\ExecuteEcPoiDataChainAction;
+use Wm\WmPackage\Nova\Actions\UploadPoiFile;
 use Wm\WmPackage\Nova\Actions\TranslateModelAction;
 use Wm\WmPackage\Nova\Fields\PropertiesPanel;
 use Wm\WmPackage\Nova\Filters\GlobalEcPoiFilter;
@@ -77,6 +80,9 @@ class EcPoi extends AbstractEcResource
     {
         return [
             new ExecuteEcPoiDataChainAction,
+            new DownloadExcelEcPoiAction,
+            (new DownloadEcPoiTemplateAction)->standalone(),
+            (new UploadPoiFile)->standalone(),
             new TranslateModelAction,
         ];
     }
