@@ -2,7 +2,7 @@
 
 // config for Wm/WmPackage
 return [
-    'version' => '1.3.0', // x-release-please-version
+    'version' => '2.0.0', // x-release-please-version
     'shard_name' => env('SHARD_NAME', env('APP_NAME')),
     'services' => [
         'geometry_computation' => [
