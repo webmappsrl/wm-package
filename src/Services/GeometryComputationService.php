@@ -47,6 +47,54 @@ class GeometryComputationService extends BaseService
         return DB::raw($finalSql, $bindings);
     }
 
+    /**
+     * Convert MultiLineString geometry to LineString if needed.
+     * If the geometry is already a LineString, returns it unchanged.
+     *
+     * @param  mixed  $geometry  The geometry to convert (WKT string or Expression)
+     * @return string|\Illuminate\Database\Query\Expression The converted geometry
+     */
+    public function convertToLinestring($geometry)
+    {
+        if (empty($geometry)) {
+            return $geometry;
+        }
+
+        try {
+            if ($geometry instanceof \Illuminate\Database\Query\Expression) {
+                $sqlValue = $geometry->getValue(app('db')->getQueryGrammar());
+
+                return DB::raw("ST_Force3D(ST_LineMerge($sqlValue))");
+            }
+
+            $sql = 'SELECT ST_GeometryType(?::geometry) As type, 
+                           ST_AsText(ST_Force3D(ST_LineMerge(?::geometry))) As linestring_wkt,
+                           ST_AsText(ST_Force3D(?::geometry)) As original_wkt';
+
+            $result = DB::select($sql, [$geometry, $geometry, $geometry]);
+
+            if (! empty($result) && isset($result[0]->type)) {
+                $geometryType = $result[0]->type;
+
+                if ($geometryType === 'ST_MultiLineString') {
+                    Log::info('Converting MultiLineString to LineString');
+
+                    return $result[0]->linestring_wkt;
+                }
+
+                return $result[0]->original_wkt;
+            }
+
+            return $geometry;
+        } catch (\Exception $e) {
+            Log::error('Error in convertToLinestring: '.$e->getMessage(), [
+                'geometry' => $geometry,
+            ]);
+
+            return $geometry;
+        }
+    }
+
     public function isGeometryLinestring(GeometryModel $model): bool
     {
         $geometryInput = $model->geometry;
