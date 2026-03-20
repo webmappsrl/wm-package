@@ -81,7 +81,7 @@ class App extends Resource
                 ->confirmButtonText(__('Yes, reindex'))
                 ->cancelButtonText(__('Cancel')),
             ExecuteEcTrackDataChainAction::make([
-                fn($track) => new UpdateEcTrackAwsJob($track),
+                fn ($track) => new UpdateEcTrackAwsJob($track),
             ], __('Update Tracks on AWS'))
                 ->onlyOnDetail()
                 ->confirmText(__('Are you sure you want to update all tracks of this app on AWS?'))
@@ -370,12 +370,12 @@ class App extends Resource
                 ->language('json')
                 ->rules('json')
                 ->default($this->getDefaultPoiForm())
-                ->help(__('This JSON structures the acquisition form for UGC POIs. Knowledge of JSON format required.') . view('wm-package::poi-forms')->render()),
+                ->help(__('This JSON structures the acquisition form for UGC POIs. Knowledge of JSON format required.').view('wm-package::poi-forms')->render()),
             Code::Make(__('TRACK acquisition forms'), 'track_acquisition_form')
                 ->language('json')
                 ->rules('json')
                 ->default($this->getDefaultTrackForm())
-                ->help(__('This JSON structures the acquisition form for UGC Tracks. Knowledge of JSON format required.') . view('wm-package::track-forms')->render()),
+                ->help(__('This JSON structures the acquisition form for UGC Tracks. Knowledge of JSON format required.').view('wm-package::track-forms')->render()),
         ];
     }
 
@@ -578,9 +578,9 @@ class App extends Resource
                             $title = $layer->getStringName();
                             if (is_array($title)) {
                                 // Se è un array, prendi prima la versione italiana, poi quella inglese, altrimenti usa l'ID
-                                $title = $title['it'] ?? $title['en'] ?? ('Layer #' . $layer->id);
+                                $title = $title['it'] ?? $title['en'] ?? ('Layer #'.$layer->id);
                             } elseif (is_null($title)) {
-                                $title = 'Layer #' . $layer->id;
+                                $title = 'Layer #'.$layer->id;
                             }
 
                             return [
@@ -693,7 +693,7 @@ class App extends Resource
                         }
                         $decoded = json_decode($value);
                         if (! is_array($decoded)) {
-                            $fail('The ' . $attribute . ' is invalid. Follow the example [9.9456,43.9116,11.3524,45.0186]');
+                            $fail('The '.$attribute.' is invalid. Follow the example [9.9456,43.9116,11.3524,45.0186]');
                         }
                     },
                 ])
@@ -729,9 +729,9 @@ class App extends Resource
             // --- GPS ---
             Select::make(__('GPS Accuracy Default'), 'gps_accuracy_default')
                 ->options([
-                    '5'   => '5 meters',
-                    '10'  => '10 meters',
-                    '20'  => '20 meters',
+                    '5' => '5 meters',
+                    '10' => '10 meters',
+                    '20' => '20 meters',
                     '100' => '100 meters',
                 ])
                 ->hideFromIndex()

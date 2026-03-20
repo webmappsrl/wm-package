@@ -123,7 +123,7 @@ class PBFGeneratorService extends BaseService
         SQL;
 
         $result = DB::select($sql, [
-            'layer_ids' => '{' . implode(',', $layerIds) . '}', // Converti in array PostgreSQL
+            'layer_ids' => '{'.implode(',', $layerIds).'}', // Converti in array PostgreSQL
         ]);
 
         return $result[0]->total_tracks ?? 0;
@@ -445,7 +445,7 @@ class PBFGeneratorService extends BaseService
                 ->pluck('layerable_id')
                 ->toArray();
             if (empty($trackIds)) {
-                throw new Exception('No track IDs found for layer: ' . $layer->id);
+                throw new Exception('No track IDs found for layer: '.$layer->id);
             }
         } catch (Exception $e) {
             Log::warning('Fallback a generateWholeAppPbfs per errore nella rigenerazione multipla dopo sync', [
@@ -551,7 +551,7 @@ class PBFGeneratorService extends BaseService
         ";
 
         $results = DB::select($sql, [
-            'track_ids' => '{' . implode(',', $trackIds) . '}',
+            'track_ids' => '{'.implode(',', $trackIds).'}',
         ]);
 
         $tiles = [];
@@ -633,7 +633,7 @@ class PBFGeneratorService extends BaseService
         // 1. Calcola i tile di livello zoom che contengono le geometrie delle tracce
         $tilesAtZoom = $this->calculateTilesFromGeometries($trackIds, $zoom);
 
-        Log::info('Calcolati ' . count($tilesAtZoom) . " tile al livello zoom {$zoom}", [
+        Log::info('Calcolati '.count($tilesAtZoom)." tile al livello zoom {$zoom}", [
             'zoom' => $zoom,
             'tiles_count' => count($tilesAtZoom),
         ]);
@@ -656,7 +656,7 @@ class PBFGeneratorService extends BaseService
             AND geometry IS NOT NULL
             AND ST_IsValid(geometry::geometry)
         ", [
-            'track_ids' => '{' . implode(',', $trackIds) . '}',
+            'track_ids' => '{'.implode(',', $trackIds).'}',
         ]);
 
         if (empty($res) || is_null($res[0]->bbox)) {
