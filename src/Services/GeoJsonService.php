@@ -34,7 +34,7 @@ class GeoJsonService extends BaseService
             if ($model->taxonomyWhens) {
                 $taxonomyWhens = $model->taxonomyWhens()->pluck('taxonomy_whens.id')->toArray();
             }
-            // TODO: manca taxonomy where? Taxonomy whens serve?
+
             $taxonomy = [
                 'activity' => $taxonomyActivities,
                 'when' => $taxonomyWhens,
@@ -42,6 +42,13 @@ class GeoJsonService extends BaseService
                 'poi_types' => $taxonomyPoiTypes,
             ];
             $properties['taxonomy'] = $taxonomy;
+
+            if (method_exists($model, 'getOrderedTaxonomyWheres')) {
+                $properties['taxonomyWheres'] = $model->getOrderedTaxonomyWheres();
+            }
+
+            // Rimuovo da properties campi non desiderati nel geojson
+            unset($properties['media']);
 
             // Aggiungo la feature_image se presente
             $firstMedia = $model->getMedia()->first();
