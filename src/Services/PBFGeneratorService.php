@@ -123,7 +123,7 @@ class PBFGeneratorService extends BaseService
         SQL;
 
         $result = DB::select($sql, [
-            'layer_ids' => '{'.implode(',', $layerIds).'}', // Converti in array PostgreSQL
+            'layer_ids' => '{' . implode(',', $layerIds) . '}', // Converti in array PostgreSQL
         ]);
 
         return $result[0]->total_tracks ?? 0;
@@ -190,7 +190,7 @@ class PBFGeneratorService extends BaseService
         SELECT {$boundingBoxSQL} AS geom, {$boundingBoxSQL}::box2d AS b2d
     ),
             validGeometries AS (
-        SELECT 
+        SELECT
             ec.id,
             ec.name,
             ec.properties,
@@ -207,26 +207,35 @@ class PBFGeneratorService extends BaseService
             )
     ),
     processedGeometries AS (
-        SELECT 
+        SELECT
             id,
             properties,
             name,
             ST_SimplifyPreserveTopology(geom_mercator, $simplificationFactor) as simplified_geom
         FROM validGeometries
     ),
+    trackLayers AS (
+        SELECT
+            layerable_id,
+            ARRAY_TO_JSON(ARRAY_AGG(layer_id))::text AS layers
+        FROM layerables
+        WHERE layerable_type LIKE '%{$this->getTrackModelClassName()}'
+        GROUP BY layerable_id
+    ),
     ecTracks AS (
-        SELECT 
-            ST_AsMVTGeom(simplified_geom, bounds.b2d) AS geom,
-            id,
-            properties ->> 'ref' as ref,
-            name,
-            properties ->> 'cai_scale' as cai_scale,
-            properties ->> 'distance' as distance,
-            properties ->> 'duration_forward' as duration_forward,
-            properties ->> 'layers' AS layers, -- text
-            properties ->> 'searchable' as searchable,
-            properties ->> 'color' as stroke_color
-        FROM processedGeometries
+        SELECT
+            ST_AsMVTGeom(pg.simplified_geom, bounds.b2d) AS geom,
+            pg.id,
+            pg.name,
+            pg.properties ->> 'ref' as ref,
+            pg.properties ->> 'cai_scale' as cai_scale,
+            pg.properties -> 'distance' as distance,
+            pg.properties -> 'duration_forward' as duration_forward,
+            tl.layers,
+            pg.properties ->> 'searchable' as searchable,
+            pg.properties ->> 'color' as stroke_color
+        FROM processedGeometries pg
+        LEFT JOIN trackLayers tl ON tl.layerable_id = pg.id
         CROSS JOIN bounds
     )
     SELECT ST_AsMVT(ecTracks.*, '{$tableName}') FROM ecTracks
@@ -436,7 +445,7 @@ class PBFGeneratorService extends BaseService
                 ->pluck('layerable_id')
                 ->toArray();
             if (empty($trackIds)) {
-                throw new Exception('No track IDs found for layer: '.$layer->id);
+                throw new Exception('No track IDs found for layer: ' . $layer->id);
             }
         } catch (Exception $e) {
             Log::warning('Fallback a generateWholeAppPbfs per errore nella rigenerazione multipla dopo sync', [
@@ -542,7 +551,7 @@ class PBFGeneratorService extends BaseService
         ";
 
         $results = DB::select($sql, [
-            'track_ids' => '{'.implode(',', $trackIds).'}',
+            'track_ids' => '{' . implode(',', $trackIds) . '}',
         ]);
 
         $tiles = [];
@@ -624,7 +633,7 @@ class PBFGeneratorService extends BaseService
         // 1. Calcola i tile di livello zoom che contengono le geometrie delle tracce
         $tilesAtZoom = $this->calculateTilesFromGeometries($trackIds, $zoom);
 
-        Log::info('Calcolati '.count($tilesAtZoom)." tile al livello zoom {$zoom}", [
+        Log::info('Calcolati ' . count($tilesAtZoom) . " tile al livello zoom {$zoom}", [
             'zoom' => $zoom,
             'tiles_count' => count($tilesAtZoom),
         ]);
@@ -647,7 +656,7 @@ class PBFGeneratorService extends BaseService
             AND geometry IS NOT NULL
             AND ST_IsValid(geometry::geometry)
         ", [
-            'track_ids' => '{'.implode(',', $trackIds).'}',
+            'track_ids' => '{' . implode(',', $trackIds) . '}',
         ]);
 
         if (empty($res) || is_null($res[0]->bbox)) {
