@@ -42,6 +42,17 @@ class App extends Model implements HasMedia
         'track_technical_details' => 'array',
         'properties' => 'array',
         'config_home' => FlexibleCast::class,
+        'map_def_zoom' => 'integer',
+        'map_max_zoom' => 'integer',
+        'map_min_zoom' => 'integer',
+        'map_max_stroke_width' => 'integer',
+        'map_min_stroke_width' => 'integer',
+        'start_end_icons_min_zoom' => 'integer',
+        'ref_on_track_min_zoom' => 'integer',
+        'alert_poi_radius' => 'integer',
+        'flow_line_quote_orange' => 'integer',
+        'flow_line_quote_red' => 'integer',
+        'gps_accuracy_default' => 'integer',
     ];
 
     protected static function boot()
