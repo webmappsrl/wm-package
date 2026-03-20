@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>Gestione {{ ucfirst($fileType) }} - osm2cai2</title>
+    <title>Gestione {{ ucfirst($fileType) }} - {{ config('app.name', env('APP_NAME', 'Laravel')) }}</title>
 
     <!-- Fonts -->
     <link href="https://fonts.bunny.net/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
@@ -22,7 +22,7 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16">
                 <div class="flex items-center">
-                    <h1 class="text-xl font-semibold text-gray-900">osm2cai2</h1>
+                    <h1 class="text-xl font-semibold text-gray-900">{{ config('app.name', env('APP_NAME', 'Laravel')) }}</h1>
                 </div>
                 <div class="flex items-center space-x-4">
                     <span class="text-sm text-gray-500">Benvenuto, {{ auth()->user()->name ?? 'Utente' }}</span>
