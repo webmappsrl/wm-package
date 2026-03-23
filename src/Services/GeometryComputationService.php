@@ -1180,10 +1180,10 @@ GROUP BY
         preg_match('/BOX\(([-\d\.]+) ([-\d\.]+),([-\d\.]+) ([-\d\.]+)\)/', $res[0]->bbox, $matches);
 
         return [
-            'min_lon' => (float) $matches[1],
-            'min_lat' => (float) $matches[2],
-            'max_lon' => (float) $matches[3],
-            'max_lat' => (float) $matches[4],
+            (float) $matches[1],
+            (float) $matches[2],
+            (float) $matches[3],
+            (float) $matches[4],
         ];
     }
 

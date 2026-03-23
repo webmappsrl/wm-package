@@ -13,12 +13,14 @@ use Laravel\Nova\Fields\ID;
 use Laravel\Nova\Fields\Number;
 use Laravel\Nova\Fields\Select;
 use Laravel\Nova\Fields\Text;
+use Laravel\Nova\Fields\Textarea;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Resource;
 use Laravel\Nova\Tabs\Tab;
 use Marshmallow\Tiptap\Tiptap;
 use Outl1ne\MultiselectField\Multiselect;
 use Whitecube\NovaFlexibleContent\Flexible;
+use Wm\WmPackage\Enums\AppTiles;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
 use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Nova\Actions\ExecuteEcTrackDataChainAction;
@@ -49,6 +51,7 @@ class App extends Resource
                 Tab::make('home', $this->home_tab()),
                 Tab::make('webapp', $this->webapp_tab()),
                 Tab::make('app', $this->app_tab()),
+                Tab::make('map', $this->map_tab()),
                 Tab::make('pois', $this->pois_tab()),
                 Tab::make('release_data', $this->app_release_data_tab()),
                 Tab::make('pages', $this->pages_tab()),
@@ -592,6 +595,147 @@ class App extends Resource
                 ->searchable()
                 ->rules('required')
                 ->help(__('Select an existing layer'))
+                ->displayUsingLabels(),
+        ];
+    }
+
+    protected function map_tab(): array
+    {
+        $selectedTileLayers = is_null($this->model()->tiles) ? [] : json_decode($this->model()->tiles, true);
+        $appTiles = new AppTiles;
+        $t = $appTiles->oldval();
+
+        return [
+            // --- TILES ---
+            Heading::make(
+                <<<'HTML'
+                <p><strong>Tiles Label</strong>: Text displayed for selecting tiles through the app.</p>
+                HTML
+            )->asHtml()->hideFromIndex(),
+            NovaTabTranslatable::make([
+                Text::make('Tiles Label'),
+            ])->hideFromIndex(),
+            Multiselect::make(__('Tiles'), 'tiles')
+                ->options($t, $selectedTileLayers)
+                ->reorderable()
+                ->hideFromIndex()
+                ->help(__('Select which tile layers will be used by the app, the order is the same as the insertion order, so the last one inserted will be the one visible first')),
+
+            // --- DATA CONTROLS ---
+            Heading::make(
+                <<<'HTML'
+                <ul>
+                  <li><p><strong>Data Label</strong>: Text to be displayed as the header of the data filter.</p></li>
+                  <li><p><strong>Pois Data Label</strong>: Text to be displayed for the POIs filter.</p></li>
+                  <li><p><strong>Tracks Data Label</strong>: Text to be displayed for the Tracks filter.</p></li>
+                </ul>
+                HTML
+            )->asHtml()->hideFromIndex(),
+            NovaTabTranslatable::make([
+                Text::make('Data Label')->help(__('Text to be displayed as the header of the data filter.')),
+                Text::make('Pois Data Label'),
+                Text::make('Tracks Data Label'),
+            ])->hideFromIndex(),
+            Boolean::make('Show POIs data by default', 'pois_data_default')
+                ->hideFromIndex()
+                ->help(__('Turn this option off if you do not want to show POIs by default on the map.')),
+            Text::make('POI Data Icon', 'pois_data_icon', function () {
+                return '<div style="width:64px;height:64px;">'.$this->pois_data_icon.'</div>';
+            })->asHtml()->onlyOnDetail(),
+            Textarea::make('POI Data Icon SVG', 'pois_data_icon')
+                ->onlyOnForms()
+                ->help(__('SVG icon shown in the filter for POIs')),
+            Boolean::make('Show Tracks data by default', 'tracks_data_default')
+                ->hideFromIndex()
+                ->help(__('Turn this option off if you do not want to show all track layers by default on the map')),
+            Text::make('Track Data Icon', 'tracks_data_icon', function () {
+                return '<div style="width:64px;height:64px;">'.$this->tracks_data_icon.'</div>';
+            })->asHtml()->onlyOnDetail(),
+            Textarea::make('Track Data Icon SVG', 'tracks_data_icon')
+                ->onlyOnForms()
+                ->help(__('SVG icon shown in the filter for Tracks')),
+
+            // --- ZOOM & STROKE ---
+            Heading::make(
+                <<<'HTML'
+                <p><strong>Map zoom and stroke settings.</strong></p>
+                HTML
+            )->asHtml()->hideFromIndex(),
+            Number::make(__('Def Zoom'), 'map_def_zoom')
+                ->min(1)->max(19)->step(0.1)->default(12)
+                ->hideFromIndex()
+                ->help(__('The default zoom level when the map is first loaded.')),
+            Number::make(__('Max Zoom'), 'map_max_zoom')
+                ->min(1)->max(20)->default(16)
+                ->hideFromIndex()
+                ->help(__('Maximum zoom level for the map')),
+            Number::make(__('Min Zoom'), 'map_min_zoom')
+                ->min(1)->max(20)->default(12)
+                ->hideFromIndex()
+                ->help(__('Minimum zoom level for the map')),
+            Number::make(__('Max Stroke width'), 'map_max_stroke_width')
+                ->min(0)->max(19)->default(6)
+                ->hideFromIndex()
+                ->help(__('Set max stroke width of line string, applied at max zoom level')),
+            Number::make(__('Min Stroke width'), 'map_min_stroke_width')
+                ->min(0)->max(19)->default(3)
+                ->hideFromIndex()
+                ->help(__('Set min stroke width of line string, applied at min zoom level')),
+
+            // --- BBOX ---
+            Text::make(__('Bounding BOX'), 'map_bbox')
+                ->nullable()
+                ->hideFromIndex()
+                ->rules([
+                    function ($attribute, $value, $fail) {
+                        if ($value === null || $value === '') {
+                            return;
+                        }
+                        $decoded = json_decode($value);
+                        if (! is_array($decoded)) {
+                            $fail('The '.$attribute.' is invalid. Follow the example [9.9456,43.9116,11.3524,45.0186]');
+                        }
+                    },
+                ])
+                ->help(__('Bounding the map view. Example: [9.9456,43.9116,11.3524,45.0186]')),
+
+            // --- ADVANCED MAP SETTINGS ---
+            Heading::make(
+                <<<'HTML'
+                <p><strong>Advanced map display settings.</strong></p>
+                HTML
+            )->asHtml()->hideFromIndex(),
+            Number::make(__('start_end_icons_min_zoom'))
+                ->min(10)->max(20)
+                ->hideFromIndex()
+                ->help(__('Set minimum zoom at which start and end icons are shown in general maps (start_end_icons_show must be true)')),
+            Number::make(__('ref_on_track_min_zoom'))
+                ->min(10)->max(20)
+                ->hideFromIndex()
+                ->help(__('Set minimum zoom at which ref parameter is shown on tracks line in general maps (ref_on_track_show must be true)')),
+            Number::make(__('alert_poi_radius'))
+                ->default(100)
+                ->hideFromIndex()
+                ->help(__('Set the radius (in meters) of the activation circle with the center as the user position. The nearest POI inside the circle triggers the alert')),
+            Number::make(__('flow_line_quote_orange'))
+                ->default(800)
+                ->hideFromIndex()
+                ->help(__('Defines the elevation by which the track turns orange')),
+            Number::make(__('flow_line_quote_red'))
+                ->default(1500)
+                ->hideFromIndex()
+                ->help(__('Defines the elevation by which the track turns red')),
+
+            // --- GPS ---
+            Select::make(__('GPS Accuracy Default'), 'gps_accuracy_default')
+                ->options([
+                    '5' => '5 meters',
+                    '10' => '10 meters',
+                    '20' => '20 meters',
+                    '100' => '100 meters',
+                ])
+                ->hideFromIndex()
+                ->help(__('Set the default GPS accuracy level for tracking.'))
                 ->displayUsingLabels(),
         ];
     }
