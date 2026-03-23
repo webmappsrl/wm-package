@@ -29,7 +29,7 @@ class TaxonomyActivityablesObserver
         $relatedTypeClass = $taxonomyActivityable->taxonomy_activityable_type;
         $ecTrackModelClass = config('wm-package.ec_track_model', 'App\Models\EcTrack');
         $iconName = $taxonomyActivityable->activity->icon;
-        $iconExists = $appIconsService->existIcon($iconName);
+        $iconExists = $iconName !== null && $appIconsService->existIcon($iconName);
         $shouldUpdate = $add ? ! $iconExists : $iconExists;
 
         if (str_contains($relatedTypeClass, '\Layer')) {
