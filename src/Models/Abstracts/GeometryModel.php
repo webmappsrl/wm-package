@@ -147,6 +147,65 @@ abstract class GeometryModel extends Model implements HasMedia
     }
 
     /**
+     * Get a valid localized name from taxonomy where data.
+     */
+    public function getValidName(array $whereData): string
+    {
+        $values = array_values($whereData);
+        $firstName = $values[0] ?? null;
+
+        return $whereData['it'] ?? $whereData['en'] ?? $firstName;
+    }
+
+    /**
+     * Get ordered taxonomy wheres for Elasticsearch.
+     * Sorted by _admin_level ascending (nulls first).
+     *
+     * @return string[]
+     */
+    public function getOrderedTaxonomyWheres(): array
+    {
+        $wheres = $this->properties['taxonomy_where'] ?? [];
+
+        if (empty($wheres)) {
+            return [];
+        }
+
+        $entries = [];
+        $idx = 0;
+
+        foreach ($wheres as $whereId => $whereData) {
+            $adminLevel = $whereData['_admin_level'] ?? null;
+            $name = $this->getValidName($whereData);
+
+            if ($name) {
+                $entries[] = [
+                    'name' => $name,
+                    'adminLevel' => $adminLevel,
+                    'idx' => $idx++,
+                ];
+            }
+        }
+
+        usort($entries, function (array $a, array $b): int {
+            $aNull = $a['adminLevel'] === null;
+            $bNull = $b['adminLevel'] === null;
+
+            if ($aNull !== $bNull) {
+                return $aNull ? -1 : 1;
+            }
+
+            if ($a['adminLevel'] !== $b['adminLevel']) {
+                return $a['adminLevel'] <=> $b['adminLevel'];
+            }
+
+            return $a['idx'] <=> $b['idx'];
+        });
+
+        return array_map(static fn (array $e) => $e['name'], $entries);
+    }
+
+    /**
      * Get the class name for polymorphic relations.
      *
      * @return string

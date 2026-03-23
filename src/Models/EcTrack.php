@@ -640,48 +640,6 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
         return $arr;
     }
 
-    private function getValidName(array $whereData): string
-    {
-        $values = array_values($whereData);
-        $firstName = $values[0] ?? null;
-
-        return $whereData['it'] ?? $whereData['en'] ?? $firstName;
-    }
-
-    /**
-     * Get ordered taxonomy wheres for Elasticsearch (regions first, then municipalities)
-     */
-    protected function getOrderedTaxonomyWheres(): array
-    {
-        $wheres = $this->properties['taxonomy_where'] ?? [];
-
-        if (empty($wheres)) {
-            return [];
-        }
-
-        // Separate regions (admin_level 4) and municipalities (admin_level 8)
-        $regions = [];
-        $municipalities = [];
-
-        foreach ($wheres as $whereId => $whereData) {
-            $adminLevel = $whereData['_admin_level'] ?? null;
-            $name = $this->getValidName($whereData);
-
-            if ($name) {
-                if ($adminLevel === 4) {
-                    // Region
-                    $regions[$whereId] = $name;
-                } else {
-                    // Municipality (admin_level 8 or other)
-                    $municipalities[$whereId] = $name;
-                }
-            }
-        }
-
-        // Return regions first, then municipalities
-        return array_merge(array_values($regions), array_values($municipalities));
-    }
-
     public function getSearchableString(): string
     {
         $app_id = $this->app_id;
