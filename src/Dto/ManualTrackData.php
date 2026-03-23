@@ -29,7 +29,7 @@ readonly class ManualTrackData
     /**
      * Build from a raw array (e.g., existing properties['manual_data']).
      *
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      */
     public static function fromArray(array $data): self
     {
