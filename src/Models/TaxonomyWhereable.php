@@ -12,6 +12,12 @@ class TaxonomyWhereable extends MorphPivot
 
     public $incrementing = true;
 
+    protected static function boot()
+    {
+        parent::boot();
+        TaxonomyWhereable::observe('Wm\\WmPackage\\Observers\\TaxonomyWhereablesObserver');
+    }
+
     /**
      * Get the parent model that the where is associated with.
      */

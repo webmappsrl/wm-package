@@ -292,9 +292,11 @@ class Layer extends Polygon
         $tableName = config('wm-package.ec_track_table', 'ec_tracks');
         $trackIds = $this->ecTracks()->pluck($tableName.'.id')->toArray();
         $taxonomyIds = $this->taxonomyActivities->pluck('id')->toArray();
+        $whereIds = $this->taxonomyWheres->pluck('id')->toArray();
 
-        // Fallback temporaneo in lettura: solo in auto e solo se ci sono taxonomy activities.
-        if ($this->isAutoTrackMode() && ! empty($taxonomyIds) && empty($trackIds)) {
+        // Fallback in lettura: in auto, ricostruisce i trackIds da taxonomy activities/wheres
+        // quando il pivot layerables e' vuoto o non ancora riallineato.
+        if ($this->isAutoTrackMode() && ( ! empty($taxonomyIds) || ! empty($whereIds)) && empty($trackIds)) {
             $ecTrackModelClass = config('wm-package.ec_track_model', 'Wm\WmPackage\Models\EcTrack');
             $appIds = array_values(array_unique(array_filter([
                 $this->app_id,
@@ -305,8 +307,19 @@ class Layer extends Polygon
                 $fallbackQuery = $ecTrackModelClass::query()
                     ->whereIn('app_id', $appIds);
 
-                if (method_exists($ecTrackModelClass, 'taxonomyActivities')) {
+                if (! empty($taxonomyIds) && method_exists($ecTrackModelClass, 'taxonomyActivities')) {
                     $fallbackQuery->whereHas('taxonomyActivities', fn ($q) => $q->whereIn('taxonomy_activities.id', $taxonomyIds));
+                }
+
+                if (! empty($whereIds)) {
+                    $trackTable = (new $ecTrackModelClass)->getTable();
+                    $fallbackQuery->whereExists(function ($q) use ($whereIds, $trackTable) {
+                        $q->select(DB::raw(1))
+                            ->from('taxonomy_wheres')
+                            ->whereIn('taxonomy_wheres.id', $whereIds)
+                            ->whereNotNull('taxonomy_wheres.geometry')
+                            ->whereRaw("ST_Intersects({$trackTable}.geometry::geometry, taxonomy_wheres.geometry::geometry)");
+                    });
                 }
 
                 $trackIds = $fallbackQuery->pluck('id')->toArray();
@@ -346,6 +359,33 @@ class Layer extends Polygon
                             'strokeColor' => $strokeColor,
                             'strokeWidth' => $strokeWidth,
                             'fillColor' => $fillColor,
+                        ],
+                    ]]);
+                }
+            }
+        }
+
+        $whereIds = $this->taxonomyWheres()->pluck('taxonomy_wheres.id')->toArray();
+        if (! empty($whereIds)) {
+            $placeholders = implode(',', array_fill(0, count($whereIds), '?'));
+            $sql = "SELECT id, name, ST_AsGeoJSON(geometry) as geometry FROM taxonomy_wheres WHERE id IN ({$placeholders}) AND geometry IS NOT NULL";
+            $rows = DB::select($sql, $whereIds);
+
+            foreach ($rows as $taxonomyWhere) {
+                $geometry = json_decode($taxonomyWhere->geometry, true);
+                $nameData = json_decode($taxonomyWhere->name, true);
+                $whereName = $nameData['it'] ?? (is_array($nameData) && ! empty($nameData) ? reset($nameData) : 'Taxonomy Where');
+
+                if ($geometry) {
+                    $this->addFeaturesForMap([[
+                        'type' => 'Feature',
+                        'geometry' => $geometry,
+                        'properties' => [
+                            'tooltip' => $whereName,
+                            'link' => url('nova/resources/taxonomy-wheres/'.$taxonomyWhere->id),
+                            'strokeColor' => 'rgba(37, 99, 235, 1)',
+                            'strokeWidth' => 2,
+                            'fillColor' => 'rgba(37, 99, 235, 0.2)',
                         ],
                     ]]);
                 }

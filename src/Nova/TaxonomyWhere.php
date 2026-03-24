@@ -8,6 +8,8 @@ use Laravel\Nova\Fields\Number;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Wm\WmPackage\Nova\Actions\RetryTaxonomyWhereGeometryFetch;
+use Wm\WmPackage\Nova\Actions\SyncTracksTaxonomyWhereAction;
+use Wm\WmPackage\Nova\Fields\FeatureCollectionMap\src\FeatureCollectionMap;
 
 class TaxonomyWhere extends AbstractTaxonomyResource
 {
@@ -37,6 +39,7 @@ class TaxonomyWhere extends AbstractTaxonomyResource
             Text::make('name'),
             Text::make('osmfeatures_id')->readonly(),
             Number::make('admin_level')->readonly(),
+            FeatureCollectionMap::make('Geometry', 'geometry')->onlyOnDetail(),
             Boolean::make('Geometry', function () {
                 /** @var \Wm\WmPackage\Models\TaxonomyWhere $model */
                 $model = $this->resource;
@@ -50,6 +53,7 @@ class TaxonomyWhere extends AbstractTaxonomyResource
     {
         return [
             new RetryTaxonomyWhereGeometryFetch,
+            new SyncTracksTaxonomyWhereAction,
         ];
     }
 }

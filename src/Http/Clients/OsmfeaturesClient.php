@@ -103,9 +103,11 @@ class OsmfeaturesClient extends JsonClient
             ]);
             $data = $response->json('data', []);
             foreach ($data as $item) {
+                $nameObj = $item['name'] ?? [];
+                $name = $nameObj['it'] ?? $nameObj['en'] ?? (is_array($nameObj) ? (reset($nameObj) ?: $item['id']) : $item['id']);
                 $items[] = [
                     'id'   => $item['id'],
-                    'name' => $item['tags']['name'] ?? $item['id'],
+                    'name' => $name,
                 ];
             }
             $page++;
