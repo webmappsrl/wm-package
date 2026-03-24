@@ -1,4 +1,4 @@
-import { ref, Ref } from 'vue';
+import { ref, type Ref } from 'vue';
 import { IRowNode } from 'ag-grid-community';
 import type { GridData, LayerFeatureProps } from '../types/interfaces';
 
@@ -32,7 +32,7 @@ interface PaginatedResponse {
     };
 }
 
-export function useFeatures(props: LayerFeatureProps) {
+export function useFeatures(props: LayerFeatureProps, isManual: Ref<boolean>) {
     const isLoading = ref<boolean>(true);
     const gridData = ref<GridData[]>([]);
     const persistentSelectedIds = ref<number[]>([]);
@@ -106,6 +106,10 @@ export function useFeatures(props: LayerFeatureProps) {
             const model = props.field.model;
             const searchValue = filterModel?.name?.filter || '';
 
+            if (!model) {
+                throw new Error('Model is required for fetching features');
+            }
+
             // Determina la modalità di visualizzazione in base al contesto
             // Se non siamo in modalità edit, siamo in modalità details
             const viewMode = props.edit ? 'edit' : 'details';
@@ -116,6 +120,7 @@ export function useFeatures(props: LayerFeatureProps) {
                 page: page.toString(),
                 per_page: perPage.value.toString(),
                 view_mode: viewMode,
+                manual: (props.edit && isManual.value ? '1' : '0'),
             });
 
             if (searchValue) {
@@ -139,10 +144,15 @@ export function useFeatures(props: LayerFeatureProps) {
             
             // Mappa le features alla struttura GridData
             // Le features sono selezionate se sono presenti in persistentSelectedIds
+            const readOnlyCheckbox = !props.edit || !isManual.value;
             const newFeatures: GridData[] = data.features.map(feature => ({
                 id: feature.id,
                 name: typeof feature.name === 'object' ? feature.name.it || feature.name.en || Object.values(feature.name)[0] : feature.name,
-                isSelected: persistentSelectedIds.value.includes(feature.id)
+                isSelected:
+                    !props.edit ||
+                    !isManual.value ||
+                    persistentSelectedIds.value.includes(feature.id),
+                checkboxReadOnly: readOnlyCheckbox,
             }));
 
             // Aggiorna le variabili di paginazione
