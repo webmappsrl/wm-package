@@ -100,6 +100,19 @@ class Layer extends Polygon
             ->using(TaxonomyActivityable::class);
     }
 
+    public function isAutoTrackMode(): bool
+    {
+        return ($this->configuration['track_mode'] ?? 'auto') === 'auto';
+    }
+
+    public function setTrackMode(string $mode): void
+    {
+        $configuration = $this->configuration ?? [];
+        $configuration['track_mode'] = $mode;
+        $this->configuration = $configuration;
+        $this->save();
+    }
+
     /**
      * Move to a model mutator
      * https://laravel.com/docs/11.x/eloquent-mutators#defining-a-mutator
@@ -252,33 +265,84 @@ class Layer extends Polygon
     public function getFeatureCollectionMap(): array
     {
         $this->clearAdditionalFeaturesForMap();
+        $layerProperties = is_array($this->properties) ? $this->properties : [];
+        $strokeWidth = isset($layerProperties['stroke_width']) && is_numeric($layerProperties['stroke_width'])
+            ? max(1, (int) $layerProperties['stroke_width'])
+            : 2;
+        $strokeOpacity = isset($layerProperties['stroke_opacity']) && is_numeric($layerProperties['stroke_opacity'])
+            ? min(1, max(0, (float) $layerProperties['stroke_opacity']))
+            : 1.0;
+        $fillOpacity = isset($layerProperties['fill_opacity']) && is_numeric($layerProperties['fill_opacity'])
+            ? min(1, max(0, (float) $layerProperties['fill_opacity']))
+            : 0.3;
+        $strokeColor = ! empty($layerProperties['color'])
+            ? hexToRgba($layerProperties['color'], $strokeOpacity)
+            : 'rgba(255, 0, 0, 1)';
+        $fillColor = ! empty($layerProperties['fill_color'])
+            ? hexToRgba($layerProperties['fill_color'], $fillOpacity)
+            : 'rgba(255, 0, 0, 0.3)';
 
-        $ecTrackModelClass = config('wm-package.ec_track_model', 'App\Models\EcTrack');
-        $EcTracks = DB::select($this->getFeaturesQuery(), [$this->id, $ecTrackModelClass]);
-        // Nova resource name per EcTrack - usa kebab-case del nome del modello
         $novaResourceName = 'ec-tracks';
+        $tableName = config('wm-package.ec_track_table', 'ec_tracks');
+        $trackIds = $this->ecTracks()->pluck($tableName.'.id')->toArray();
+        $taxonomyIds = $this->taxonomyActivities->pluck('id')->toArray();
 
-        foreach ($EcTracks as $ecTrack) {
-            $geometry = json_decode($ecTrack->geometry, true);
+        // Fallback temporaneo in lettura: solo in auto e solo se ci sono taxonomy activities.
+        if ($this->isAutoTrackMode() && ! empty($taxonomyIds) && empty($trackIds)) {
+            $ecTrackModelClass = config('wm-package.ec_track_model', 'Wm\WmPackage\Models\EcTrack');
+            $appIds = array_values(array_unique(array_filter([
+                $this->app_id,
+                ...$this->associatedApps->pluck('id')->toArray(),
+            ])));
 
-            // Decodifica il JSON del nome e estrai la traduzione italiana o la prima disponibile
-            $nameData = json_decode($ecTrack->name, true);
+            if (! empty($appIds)) {
+                $fallbackQuery = $ecTrackModelClass::query()
+                    ->whereIn('app_id', $appIds);
 
-            // Priorità: 1) Italiano, 2) Prima disponibile, 3) Nome non disponibile
-            $ecTrackName = $nameData['it'] ?? (is_array($nameData) && ! empty($nameData) ? reset($nameData) : 'Nome non disponibile');
+                if (method_exists($ecTrackModelClass, 'taxonomyActivities')) {
+                    $fallbackQuery->whereHas('taxonomyActivities', fn ($q) => $q->whereIn('taxonomy_activities.id', $taxonomyIds));
+                }
 
-            if ($geometry) {
-                $routeFeature = [
-                    'type' => 'Feature',
-                    'geometry' => $geometry,
-                    'properties' => [
-                        'tooltip' => $ecTrackName,
-                        'link' => url('nova'.'/resources/'.$novaResourceName.'/'.$ecTrack->id),
-                        'strokeColor' => 'red',
-                        'strokeWidth' => 2,
-                    ],
-                ];
-                $this->addFeaturesForMap([$routeFeature]);
+                $trackIds = $fallbackQuery->pluck('id')->toArray();
+
+                // Mantiene coerente il pivot, così il dettaglio delle track riflette gli stessi layer.
+                if (! empty($trackIds)) {
+                    $now = now();
+                    $syncPayload = [];
+                    foreach ($trackIds as $trackId) {
+                        $syncPayload[$trackId] = [
+                            'created_at' => $now,
+                            'updated_at' => $now,
+                        ];
+                    }
+                    $this->ecTracks()->sync($syncPayload);
+                }
+            }
+        }
+
+        if (! empty($trackIds)) {
+            $placeholders = implode(',', array_fill(0, count($trackIds), '?'));
+            $sql = "SELECT id, name, ST_AsGeoJSON(geometry) as geometry FROM {$tableName} WHERE id IN ({$placeholders}) AND geometry IS NOT NULL";
+            $rows = DB::select($sql, $trackIds);
+
+            foreach ($rows as $ecTrack) {
+                $geometry = json_decode($ecTrack->geometry, true);
+                $nameData = json_decode($ecTrack->name, true);
+                $ecTrackName = $nameData['it'] ?? (is_array($nameData) && ! empty($nameData) ? reset($nameData) : 'Nome non disponibile');
+
+                if ($geometry) {
+                    $this->addFeaturesForMap([[
+                        'type' => 'Feature',
+                        'geometry' => $geometry,
+                        'properties' => [
+                            'tooltip' => $ecTrackName,
+                            'link' => url('nova/resources/'.$novaResourceName.'/'.$ecTrack->id),
+                            'strokeColor' => $strokeColor,
+                            'strokeWidth' => $strokeWidth,
+                            'fillColor' => $fillColor,
+                        ],
+                    ]]);
+                }
             }
         }
 
@@ -288,26 +352,4 @@ class Layer extends Polygon
         ];
     }
 
-    private function getFeaturesQuery()
-    {
-        // Ottieni il nome della tabella dalla configurazione, default è 'ec_tracks'
-        $tableName = config('wm-package.ec_track_table', 'ec_tracks');
-
-        $sql = "
-        SELECT 
-            hr.id,
-            hr.name,
-            hr.properties,
-            ST_AsGeoJSON(hr.geometry) as geometry
-        FROM {$tableName} hr
-        INNER JOIN layerables l ON hr.id = l.layerable_id
-        WHERE l.layer_id = ?
-            AND l.layerable_type = ?
-            AND hr.geometry IS NOT NULL
-            AND hr.geometry != ''
-        ORDER BY hr.id
-    ";
-
-        return $sql;
-    }
 }

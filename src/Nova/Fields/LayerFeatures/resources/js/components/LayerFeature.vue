@@ -41,8 +41,16 @@
                 <ToggleSwitch :is-manual="isManual" @toggle="handleToggleClick" />
             </div>
 
-            <div v-if="isManual || !edit">
-                <div v-if="edit" class="flex justify-end mb-2">
+            <div>
+                <div v-if="edit && isManual" class="flex justify-end mb-2">
+                    <button type="button" class="btn btn-secondary" @click="selectAllVisible"
+                        :disabled="isSaving || isLoading">
+                        Seleziona visibili
+                    </button>
+                    <button type="button" class="btn btn-secondary" @click="deselectAllVisible"
+                        :disabled="isSaving || isLoading">
+                        Deseleziona visibili
+                    </button>
                     <button type="button" class="btn btn-primary" @click="handleSave" :disabled="isSaving">
                         {{ isSaving ? "Salvataggio..." : "Salva" }}
                     </button>
@@ -129,6 +137,28 @@ export default defineComponent({
             }
         });
 
+        const isManual = ref<boolean>(
+            props.edit ? props.field?.trackMode === 'manual' : true
+        );
+
+        const {
+            isLoading,
+            gridData,
+            persistentSelectedIds,
+            isSaving,
+            currentPage,
+            perPage,
+            totalFeatures,
+            hasMorePages,
+            fetchFeatures,
+            loadMoreFeatures,
+            handleSave,
+            updateSelectedNodes,
+            setGridApi,
+            addToPersistentSelection,
+            removeFromPersistentSelection,
+        } = useFeatures(props, isManual);
+
         const fetchCounts = async () => {
             try {
                 isLoading.value = true;
@@ -184,47 +214,27 @@ export default defineComponent({
         };
 
         const {
-            isLoading,
-            gridData,
-            persistentSelectedIds,
-            isSaving,
-            currentPage,
-            perPage,
-            totalFeatures,
-            hasMorePages,
-            fetchFeatures,
-            loadMoreFeatures,
-            handleSave,
-            updateSelectedNodes,
-            setGridApi,
-            addToPersistentSelection,
-            removeFromPersistentSelection,
-        } = useFeatures(props);
-
-        const {
             gridApi,
             columnDefs,
             defaultColDef,
             onGridReady: initGrid,
+            sortBySelection,
         } = useGrid({
             resourceName: props.resourceName,
             modelName: props.field?.modelName,
         });
 
-        const isManual = ref<boolean>(
-            props.edit ? (props.field?.selectedEcFeaturesIds?.length ?? 0) > 0 : true
-        );
         const showConfirmModal = ref<boolean>(false);
         const modelName = ref<string | undefined>(props.field?.modelName);
 
         onMounted(() => {
             const savedIds = props.field?.selectedEcFeaturesIds;
-            if (Array.isArray(savedIds) && savedIds.length > 0) {
+            if (
+                props.field?.trackMode === 'manual' &&
+                Array.isArray(savedIds) &&
+                savedIds.length > 0
+            ) {
                 persistentSelectedIds.value = savedIds;
-                console.log(
-                    "[Selection] Initialized with saved IDs:",
-                    persistentSelectedIds.value
-                );
             }
         });
 
@@ -234,14 +244,12 @@ export default defineComponent({
             initGrid(params);
             setGridApi(params.api);
 
-            if (isManual.value) {
-                try {
-                    await fetchFeatures();
-                } catch (error) {
-                    Nova.error(
-                        "Errore durante l'inizializzazione della griglia"
-                    );
-                }
+            try {
+                await fetchFeatures();
+            } catch (error) {
+                Nova.error(
+                    "Errore durante l'inizializzazione della griglia"
+                );
             }
         };
 
@@ -267,6 +275,49 @@ export default defineComponent({
             } catch (error) {
                 Nova.error("Errore durante il filtraggio");
             }
+        };
+
+        const applySelectionToVisibleRows = (isSelected: boolean) => {
+            if (!gridApi.value) return;
+
+            const visibleIds: number[] = [];
+            const changedNodes: IRowNode[] = [];
+
+            gridApi.value.forEachNodeAfterFilterAndSort((node: IRowNode) => {
+                if (!node.data || node.data.checkboxReadOnly) {
+                    return;
+                }
+
+                visibleIds.push(node.data.id);
+                changedNodes.push(node);
+                node.setData({
+                    ...node.data,
+                    isSelected,
+                });
+            });
+
+            if (isSelected) {
+                visibleIds.forEach((id) => addToPersistentSelection(id));
+            } else {
+                visibleIds.forEach((id) => removeFromPersistentSelection(id));
+            }
+
+            // Riallinea lo stato delle righe alla selezione persistente e forza il redraw
+            updateSelectedNodes();
+            gridApi.value.redrawRows({ rowNodes: changedNodes });
+            gridApi.value.refreshCells({
+                columns: ["boolean"],
+                force: true,
+            });
+            sortBySelection(gridApi.value);
+        };
+
+        const selectAllVisible = () => {
+            applySelectionToVisibleRows(true);
+        };
+
+        const deselectAllVisible = () => {
+            applySelectionToVisibleRows(false);
         };
 
         const handleToggleClick = async () => {
@@ -308,12 +359,14 @@ export default defineComponent({
                         {
                             features: [],
                             model: props.field.model,
+                            auto: true,
                         }
                     );
                     persistentSelectedIds.value = [];
                     props.field.value = [];
                     props.field.selectedEcFeaturesIds = [];
                     Nova.success("Modalità automatica attivata");
+                    Nova.visit(window.location.href);
                 }
             } catch (error) {
                 console.error("Errore durante il cambio di modalità:", error);
@@ -327,13 +380,13 @@ export default defineComponent({
         watch(
             () => props.resourceId,
             async (newId, oldId) => {
-                console.log("ResourceId changed:", { newId, oldId });
-                if (isManual.value) {
-                    try {
-                        await fetchFeatures();
-                    } catch (error) {
-                        console.error("Error during resourceId change:", error);
-                    }
+                if (isIndexMode.value) {
+                    return;
+                }
+                try {
+                    await fetchFeatures();
+                } catch (error) {
+                    console.error("Error during resourceId change:", error);
                 }
             }
         );
@@ -366,6 +419,8 @@ export default defineComponent({
             handleGridReady,
             onFirstDataRendered,
             onFilterChanged,
+            selectAllVisible,
+            deselectAllVisible,
             handleToggleClick,
             closeConfirmModal,
             confirmModeChange,
@@ -466,6 +521,20 @@ export default defineComponent({
 
 .btn-primary:hover:not(:disabled) {
     background-color: #357abd;
+}
+
+.btn-secondary {
+    background-color: #5f6c7b;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    margin-right: 8px;
+}
+
+.btn-secondary:hover:not(:disabled) {
+    background-color: #4d5968;
 }
 
 .toggle-switch {

@@ -76,8 +76,9 @@ class LayerFeatures extends Field
             'model' => $modelClass,
             'modelName' => $modelName,
             'layerId' => $layer->id,
-            'modelClass' => $modelClass,  // Aggiungiamo anche modelClass per essere sicuri
-            'model_class' => $modelClass,  // Aggiungiamo anche model_class per essere sicuri
+            'modelClass' => $modelClass,
+            'model_class' => $modelClass,
+            'trackMode' => $layer->isAutoTrackMode() ? 'auto' : 'manual',
         ]);
     }
 }

@@ -302,6 +302,10 @@ class LayerService extends BaseService
      */
     public function assignTracksByTaxonomy(Layer $layer): void
     {
+        if (! $layer->isAutoTrackMode()) {
+            return;
+        }
+
         // Ottieni le tassonomie di attività del layer
         $layerTaxonomyIds = $layer->taxonomyActivities->pluck('id')->toArray();
         $layerAppIds = [
@@ -309,7 +313,13 @@ class LayerService extends BaseService
             ...$layer->associatedApps->pluck('id')->toArray(),
         ];
 
-        if (empty($layerTaxonomyIds) || empty($layerAppIds)) {
+        if (empty($layerAppIds)) {
+            return;
+        }
+
+        if (empty($layerTaxonomyIds)) {
+            $layer->ecTracks()->sync([]);
+
             return;
         }
 
@@ -324,27 +334,26 @@ class LayerService extends BaseService
             ->where('taxonomy_activityables.taxonomy_activityable_type', $ecTrackModelClass)
             ->whereIn('taxonomy_activityables.taxonomy_activity_id', $layerTaxonomyIds)
             ->whereNotNull($trackTable.'.geometry')
+            ->distinct()
             ->pluck($trackTable.'.id')
             ->toArray();
 
-        $tracksWithSameTaxonomy = $ecTrackModelClass::whereIn('id', $trackIds)->get();
-
-        // Assegna le track al layer se non sono già assegnate
-        foreach ($tracksWithSameTaxonomy as $track) {
-            $alreadyAssigned = $layer->ecTracks()->where('layerable_id', $track->id)->exists();
-
-            if (! $alreadyAssigned) {
-                $layer->ecTracks()->attach($track->id, [
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-
-                Log::info('Track assegnata automaticamente al layer per tassonomia', [
-                    'layer_id' => $layer->id,
-                    'track_id' => $track->id,
-                    'taxonomy_ids' => $layerTaxonomyIds,
-                ]);
-            }
+        $now = now();
+        $syncPayload = [];
+        foreach ($trackIds as $trackId) {
+            $syncPayload[$trackId] = [
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
         }
+
+        // In auto mode il pivot deve riflettere esattamente il risultato taxonomy-based
+        $layer->ecTracks()->sync($syncPayload);
+
+        Log::info('Track sincronizzate automaticamente al layer per tassonomia', [
+            'layer_id' => $layer->id,
+            'track_count' => count($trackIds),
+            'taxonomy_ids' => $layerTaxonomyIds,
+        ]);
     }
 }

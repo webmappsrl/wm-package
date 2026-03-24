@@ -8,15 +8,19 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Wm\WmPackage\Models\Layer;
+use Wm\WmPackage\Services\Models\LayerService;
 use Wm\WmPackage\Services\PBFGeneratorService;
 
 class LayerFeatureController
 {
     private PBFGeneratorService $pbfGeneratorService;
 
-    public function __construct(PBFGeneratorService $pbfGeneratorService)
+    private LayerService $layerService;
+
+    public function __construct(PBFGeneratorService $pbfGeneratorService, LayerService $layerService)
     {
         $this->pbfGeneratorService = $pbfGeneratorService;
+        $this->layerService = $layerService;
     }
 
     public function index(Request $request, $layerId): JsonResponse
@@ -81,8 +85,8 @@ class LayerFeatureController
             $perPage = $validatedData['per_page'] ?? 50;
             $search = $validatedData['search'] ?? '';
             $viewMode = $validatedData['view_mode'] ?? 'edit';
+            $isManualRequest = filter_var($request->query('manual', false), FILTER_VALIDATE_BOOLEAN);
 
-            // Creo un'istanza del modello per ottenere il nome della relazione
             $model = new $validatedData['model'];
 
             if (! method_exists($model, 'getLayerRelationName')) {
@@ -91,69 +95,95 @@ class LayerFeatureController
                 ], 400);
             }
 
-            // Funzione helper per caricare le features associate
-            $getAssociatedFeatures = function () use ($model, $layerId, $search) {
-                $query = $model->newQuery();
-                $query->whereHas('associatedLayers', function ($q) use ($layerId) {
-                    $q->where('layer_id', $layerId);
-                });
+            $relationName = $model->getLayerRelationName();
+            $featureTable = $model->getTable();
+            $taxonomyIds = $layer->taxonomyActivities->pluck('id')->toArray();
+            $hasTaxonomyRelation = method_exists($model, 'taxonomyActivities');
+            $isAuto = $layer->isAutoTrackMode();
+            $useAutoMode = ! $isManualRequest && $isAuto;
+            $associatedQuery = $layer->{$relationName}()
+                ->select([$featureTable.'.id as id', $featureTable.'.name as name']);
 
-                if ($search) {
-                    $query->where('name', 'like', "%{$search}%");
+            if (! empty($taxonomyIds) && $hasTaxonomyRelation) {
+                $associatedQuery->whereHas('taxonomyActivities', fn ($q) => $q->whereIn('taxonomy_activities.id', $taxonomyIds));
+            }
+            $associatedTracks = $associatedQuery->orderBy($featureTable.'.name', 'ASC')->get();
+
+            // Fallback temporaneo in lettura: solo in auto, solo con taxonomy activities, solo se pivot vuoto.
+            if ($useAutoMode && ! empty($taxonomyIds) && $associatedTracks->isEmpty() && $relationName === 'ecTracks') {
+                // Se il pivot è vuoto in auto, prova prima a riallinearlo.
+                $this->layerService->assignTracksByTaxonomy($layer);
+
+                $associatedQuery = $layer->{$relationName}()
+                    ->select([$featureTable.'.id as id', $featureTable.'.name as name']);
+                if ($hasTaxonomyRelation) {
+                    $associatedQuery->whereHas('taxonomyActivities', fn ($q) => $q->whereIn('taxonomy_activities.id', $taxonomyIds));
                 }
+                $associatedTracks = $associatedQuery->orderBy($featureTable.'.name', 'ASC')->get();
 
-                return $query->select(['id', 'name'])->orderBy('name', 'ASC');
-            };
+                // Fallback UI: se resta vuoto, mostra comunque il risultato runtime.
+                if ($associatedTracks->isEmpty()) {
+                    $fallbackQuery = $model->newQuery();
+                    $appIds = array_values(array_unique(array_filter([
+                        $layer->app_id,
+                        ...$layer->associatedApps->pluck('id')->toArray(),
+                    ])));
 
-            // Query ottimizzata per ottenere le features
-            if ($viewMode === 'details') {
-                // In modalità details, mostra solo le features associate al layer
-                $features = $getAssociatedFeatures()->paginate($perPage, ['*'], 'page', $page);
+                    if (! empty($appIds)) {
+                        $fallbackQuery->whereIn('app_id', $appIds);
+                    }
+
+                    if ($hasTaxonomyRelation) {
+                        $fallbackQuery->whereHas('taxonomyActivities', fn ($q) => $q->whereIn('taxonomy_activities.id', $taxonomyIds));
+                    }
+
+                    $associatedTracks = $fallbackQuery->select(['id', 'name'])->orderBy('name', 'ASC')->get();
+                }
+            }
+
+            if ($useAutoMode || $viewMode === 'details') {
+                // Auto o details: mostra le tracks effettivamente associate al layer
+                $selectedTracks = $this->filterTracksBySearch($associatedTracks, $search);
+
+                $total = $selectedTracks->count();
+                $offset = ($page - 1) * $perPage;
+                $paginatedItems = $selectedTracks
+                    ->sortBy(fn ($track) => $this->normalizeFeatureName($track->name))
+                    ->slice($offset, $perPage)
+                    ->values();
+
+                $features = new LengthAwarePaginator($paginatedItems, $total, $perPage, $page, ['path' => request()->url(), 'pageName' => 'page']);
             } else {
-                // In modalità edit, fai due chiamate separate
+                // Modalità manuale edit: tracks selezionate (da layerables + filtro tassonomia) prima, poi le altre
+                $selectedTracks = $this->filterTracksBySearch($associatedTracks, $search);
 
-                // 1. Carica le features associate al layer
-                $associatedFeatures = $getAssociatedFeatures()->get();
-
-                // 2. Carica le altre features dell'app (non associate)
+                // Altre tracks dell'app, filtrate per tassonomia se presenti
                 $otherQuery = $model->newQuery();
                 if ($layer->app_id) {
                     $otherQuery->where('app_id', $layer->app_id);
                 }
-
-                // Escludi quelle già associate
-                if ($associatedFeatures->isNotEmpty()) {
-                    $otherQuery->whereNotIn('id', $associatedFeatures->pluck('id'));
+                if (! empty($taxonomyIds) && $hasTaxonomyRelation) {
+                    $otherQuery->whereHas('taxonomyActivities', fn ($q) => $q->whereIn('taxonomy_activities.id', $taxonomyIds));
                 }
-
+                if ($selectedTracks->isNotEmpty()) {
+                    $otherQuery->whereNotIn('id', $selectedTracks->pluck('id'));
+                }
                 if ($search) {
                     $otherQuery->where('name', 'like', "%{$search}%");
                 }
 
-                $otherFeatures = $otherQuery->select(['id', 'name'])
-                    ->orderBy('name', 'ASC')
-                    ->get();
+                $otherTracks = $otherQuery->select(['id', 'name'])->orderBy('name', 'ASC')->get();
+                $allFeatures = $selectedTracks->concat($otherTracks);
 
-                // 3. Concatenazione: prima le associate, poi le altre
-                $allFeatures = $associatedFeatures->concat($otherFeatures);
-
-                // 4. Paginazione manuale
                 $total = $allFeatures->count();
                 $offset = ($page - 1) * $perPage;
-                $paginatedFeatures = $allFeatures->slice($offset, $perPage);
+                $paginatedItems = $allFeatures->slice($offset, $perPage)->values();
 
-                // Crea un oggetto paginazione manuale
-                $features = new LengthAwarePaginator(
-                    $paginatedFeatures,
-                    $total,
-                    $perPage,
-                    $page,
-                    ['path' => request()->url(), 'pageName' => 'page']
-                );
+                $features = new LengthAwarePaginator($paginatedItems, $total, $perPage, $page, ['path' => request()->url(), 'pageName' => 'page']);
             }
 
             return response()->json([
-                'features' => array_values($features->items()), // Converte in array e reindirizza
+                'features' => array_values($features->items()),
                 'pagination' => [
                     'current_page' => $features->currentPage(),
                     'last_page' => $features->lastPage(),
@@ -180,6 +210,7 @@ class LayerFeatureController
         $validatedData = $request->validate([
             'features' => 'array',
             'model' => 'required|string',
+            'auto' => 'boolean',
         ]);
 
         // Creo un'istanza del modello per ottenere il nome della relazione
@@ -199,11 +230,48 @@ class LayerFeatureController
             ], 400);
         }
 
-        $layer->{$relationName}()->sync($validatedData['features']);
+        $isAutoRequest = ! empty($validatedData['auto']) && $relationName === 'ecTracks';
+        if ($isAutoRequest) {
+            // In modalità automatica il pivot ecTracks viene ricalcolato da taxonomy
+            $this->layerService->assignTracksByTaxonomy($layer);
+        } else {
+            $layer->{$relationName}()->sync($validatedData['features'] ?? []);
+        }
+
         $this->pbfGeneratorService->regeneratePbfsForLayer($layer);
+
+        $tableName = $model->getTable();
+        $assignedIds = $layer->{$relationName}()->select($tableName.'.id')->pluck('id')->toArray();
 
         return response()->json([
             'message' => 'Features sincronizzate con successo',
+            'assigned_ids' => $assignedIds,
         ], 200);
+    }
+
+    private function filterTracksBySearch($tracks, string $search)
+    {
+        if ($search === '') {
+            return $tracks;
+        }
+
+        $searchNeedle = strtolower($search);
+
+        return $tracks->filter(fn ($track) => str_contains($this->normalizeFeatureName($track->name), $searchNeedle));
+    }
+
+    private function normalizeFeatureName(mixed $name): string
+    {
+        if (is_array($name)) {
+            foreach ($name as $value) {
+                if (is_string($value) && $value !== '') {
+                    return strtolower($value);
+                }
+            }
+
+            return '';
+        }
+
+        return strtolower((string) ($name ?? ''));
     }
 }
