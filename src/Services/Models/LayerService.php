@@ -325,13 +325,18 @@ class LayerService extends BaseService
 
         // Ottieni tutte le track dell'app che hanno le stesse tassonomie
         $ecTrackModelClass = config('wm-package.ec_track_model', 'App\Models\EcTrack');
+        $trackMorphTypes = array_values(array_unique([
+            $ecTrackModelClass,
+            EcTrack::class,
+            'App\\Models\\EcTrack',
+        ]));
         $trackTable = (new $ecTrackModelClass)->getTable();
 
         // Usa una query con join diretto
         $trackIds = DB::table('taxonomy_activityables')
             ->join($trackTable, 'taxonomy_activityables.taxonomy_activityable_id', '=', $trackTable.'.id')
             ->whereIn($trackTable.'.app_id', $layerAppIds)
-            ->where('taxonomy_activityables.taxonomy_activityable_type', $ecTrackModelClass)
+            ->whereIn('taxonomy_activityables.taxonomy_activityable_type', $trackMorphTypes)
             ->whereIn('taxonomy_activityables.taxonomy_activity_id', $layerTaxonomyIds)
             ->whereNotNull($trackTable.'.geometry')
             ->distinct()
