@@ -1,6 +1,6 @@
 # Changelog
 
-## [1.4.0](https://github.com/webmappsrl/wm-package/compare/v1.3.1...v1.4.0) (2026-03-23)
+## [1.4.0](https://github.com/webmappsrl/wm-package/compare/v1.3.1...v1.4.0) (2026-03-24)
 
 
 ### Features
@@ -10,6 +10,7 @@
 * add ids parameter to elasticsearch controller ([90560c2](https://github.com/webmappsrl/wm-package/commit/90560c2d5c9b8d8c5430a2cac2c3b6d68942227e))
 * add media on App model ([43d01c4](https://github.com/webmappsrl/wm-package/commit/43d01c4911b55dd6b7abdb51f27fe796ac4d97ee))
 * add password reset route redirect ([d61b02c](https://github.com/webmappsrl/wm-package/commit/d61b02c48b8fc61a4d2bdca53392a842b68758f3))
+* add rank to nova layer resource ([6eea8ea](https://github.com/webmappsrl/wm-package/commit/6eea8eaeba51eddd1ba57976541fb2f54cdddefc))
 * add setGeometryAttribute method to convert geometry to 3D and improve code styling ([b76aa49](https://github.com/webmappsrl/wm-package/commit/b76aa49ad4c93686ed35806d3bc99f01ac087674))
 * add user relationship to AbstractGeometryResource and Layer models ([673e7d1](https://github.com/webmappsrl/wm-package/commit/673e7d14d7b664bd12ee4e7d46532fee4f8d8a93))
 * add user relationship to EcPoi, EcTrack, and Layer models ([0340de7](https://github.com/webmappsrl/wm-package/commit/0340de7f60d1593ea83fbcf518de163afc4bd9a7))
@@ -204,6 +205,7 @@
 * enhance UpdateDataChainTest with refined mock setups for queue serialization and property access ([0c7162a](https://github.com/webmappsrl/wm-package/commit/0c7162a2cf3d607083b99dfc912fa64c0869cb11))
 * enhance UpdateDataChainTest with refined mock strategies for property access and handling of isset and direct property access ([03f3e7a](https://github.com/webmappsrl/wm-package/commit/03f3e7a4868bd0ad423a28dbc4bff133b74b404a))
 * ensure parent booted method is called in UgcTrack and set default name in UgcObserver ([c9b8ca3](https://github.com/webmappsrl/wm-package/commit/c9b8ca34855b146cac7a4d1799cd20262fa331e7))
+* error on layer edit/creation ([0815d63](https://github.com/webmappsrl/wm-package/commit/0815d635c8bb73644eec22c0d299ce4f0e0277c8))
 * error on layer image update ([a8e9a6b](https://github.com/webmappsrl/wm-package/commit/a8e9a6bf6fbc4656ef4aa9dd4c1fdbca8e7fe4b2))
 * favorites list ([73b9ffc](https://github.com/webmappsrl/wm-package/commit/73b9ffc6f90352633b6e017ff30e7430e2813df7))
 * fields ([7831802](https://github.com/webmappsrl/wm-package/commit/7831802630acce1b1ea82805dc67060f159e62b9))
@@ -245,6 +247,7 @@
 * **resource:** improve media handling oc: 6404 ([#134](https://github.com/webmappsrl/wm-package/issues/134)) ([36fb5f5](https://github.com/webmappsrl/wm-package/commit/36fb5f549c0f4cf74e1c0b3aa8df03a4f8ecaea8))
 * **service-provider:** 🐛 update local environment URL for Kibana ([361e5dd](https://github.com/webmappsrl/wm-package/commit/361e5ddce9dcf3d2fa872a1e5b3155244a7f1599))
 * **service:** 🐛 add comment for config_home handling ([0dac940](https://github.com/webmappsrl/wm-package/commit/0dac94060044810aebfcf8e0bee3499a2040551e))
+* sortable rank on layers ([43f5e4d](https://github.com/webmappsrl/wm-package/commit/43f5e4da1ff74df5c7ead83a988be50fb3d2513b))
 * tests ([cb5a0b2](https://github.com/webmappsrl/wm-package/commit/cb5a0b2c86f81114e2dc3fcbff13936a9f7778f4))
 * update AppFactory and tests for improved data handling and configuration consistency ([c4156b9](https://github.com/webmappsrl/wm-package/commit/c4156b9d387e2144960279326b220c21e9297dce))
 * update field policy on ectrack ([987e147](https://github.com/webmappsrl/wm-package/commit/987e1475623114c6010848eec68f32c35b62b01c))
