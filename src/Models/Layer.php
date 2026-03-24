@@ -100,6 +100,12 @@ class Layer extends Polygon
             ->using(TaxonomyActivityable::class);
     }
 
+    public function taxonomyWheres(): MorphToMany
+    {
+        return $this->morphToMany(TaxonomyWhere::class, 'taxonomy_whereable', 'taxonomy_whereables', null, 'taxonomy_where_id')
+            ->using(TaxonomyWhereable::class);
+    }
+
     public function isAutoTrackMode(): bool
     {
         return ($this->configuration['track_mode'] ?? 'auto') === 'auto';
@@ -126,7 +132,7 @@ class Layer extends Polygon
         try {
             $this->bbox = $bbox ?? $defaultBBOX;
             $this->save();
-        } catch (Exception $e) {
+        } catch (Exception) {
             Log::channel('layer')->error('computeBB of layer with id: '.$this->id);
         }
     }

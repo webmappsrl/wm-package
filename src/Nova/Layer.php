@@ -55,6 +55,7 @@ class Layer extends AbstractGeometryResource
             Images::make(__('Image'), 'default'),
             PropertiesPanel::makeWithModel(__('Properties'), 'properties', $this, true)->collapsible(),
             MorphToMany::make(__('Activities'), 'taxonomyActivities', TaxonomyActivity::class),
+            MorphToMany::make('Taxonomy Where', 'taxonomyWheres', \Wm\WmPackage\Nova\TaxonomyWhere::class),
             Panel::make('Ec Tracks', [
                 FeatureCollectionMap::make(__('Geometry'), 'geometry')->onlyOnDetail(),
                 LayerFeatures::make(__('tracks'), $this->resource, config('wm-package.ec_track_model', 'Wm\WmPackage\Models\EcTrack'))

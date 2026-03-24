@@ -298,7 +298,8 @@ class LayerService extends BaseService
     }
 
     /**
-     * Assegna automaticamente le track che hanno le stesse tassonomie del layer
+     * Assegna automaticamente le track che hanno le stesse tassonomie del layer.
+     * Supporta filtro per TaxonomyActivity (JOIN), TaxonomyWhere (ST_Intersects), o entrambi (AND).
      */
     public function assignTracksByTaxonomy(Layer $layer): void
     {
@@ -306,45 +307,60 @@ class LayerService extends BaseService
             return;
         }
 
-        // Ottieni le tassonomie di attività del layer
         $layerTaxonomyIds = $layer->taxonomyActivities->pluck('id')->toArray();
+        $layerWhereIds    = $layer->taxonomyWheres->pluck('id')->filter()->toArray();
+
         $layerAppIds = [
             $layer->app_id,
             ...$layer->associatedApps->pluck('id')->toArray(),
         ];
 
-        if (empty($layerAppIds)) {
-            return;
-        }
-
-        if (empty($layerTaxonomyIds)) {
+        if (empty($layerAppIds) || (empty($layerTaxonomyIds) && empty($layerWhereIds))) {
             $layer->ecTracks()->sync([]);
 
             return;
         }
 
-        // Ottieni tutte le track dell'app che hanno le stesse tassonomie
         $ecTrackModelClass = config('wm-package.ec_track_model', 'App\Models\EcTrack');
-        $trackMorphTypes = array_values(array_unique([
+        $trackTable        = (new $ecTrackModelClass)->getTable();
+        $trackMorphTypes   = array_values(array_unique([
             $ecTrackModelClass,
             EcTrack::class,
             'App\\Models\\EcTrack',
         ]));
-        $trackTable = (new $ecTrackModelClass)->getTable();
 
-        // Usa una query con join diretto
-        $trackIds = DB::table('taxonomy_activityables')
-            ->join($trackTable, 'taxonomy_activityables.taxonomy_activityable_id', '=', $trackTable.'.id')
-            ->whereIn($trackTable.'.app_id', $layerAppIds)
-            ->whereIn('taxonomy_activityables.taxonomy_activityable_type', $trackMorphTypes)
-            ->whereIn('taxonomy_activityables.taxonomy_activity_id', $layerTaxonomyIds)
-            ->whereNotNull($trackTable.'.geometry')
-            ->distinct()
-            ->pluck($trackTable.'.id')
-            ->toArray();
+        // Base query: app filter + geometry not null
+        $query = DB::table($trackTable)
+            ->whereIn("{$trackTable}.app_id", $layerAppIds)
+            ->whereNotNull("{$trackTable}.geometry");
 
-        $now = now();
-        $syncPayload = [];
+        // Filter by TaxonomyActivity via JOIN (se presenti)
+        if (! empty($layerTaxonomyIds)) {
+            $query->join(
+                'taxonomy_activityables',
+                'taxonomy_activityables.taxonomy_activityable_id',
+                '=',
+                "{$trackTable}.id"
+            )
+                ->whereIn('taxonomy_activityables.taxonomy_activityable_type', $trackMorphTypes)
+                ->whereIn('taxonomy_activityables.taxonomy_activity_id', $layerTaxonomyIds);
+        }
+
+        // Filter by TaxonomyWhere via ST_Intersects (se presenti)
+        if (! empty($layerWhereIds)) {
+            $query->whereExists(function ($sub) use ($layerWhereIds, $trackTable) {
+                $sub->select(DB::raw(1))
+                    ->from('taxonomy_wheres')
+                    ->whereIn('taxonomy_wheres.id', $layerWhereIds)
+                    ->whereNotNull('taxonomy_wheres.geometry')
+                    ->whereRaw("ST_Intersects({$trackTable}.geometry::geometry, taxonomy_wheres.geometry::geometry)");
+            });
+        }
+
+        $trackIds = $query->distinct()->pluck("{$trackTable}.id")->toArray();
+
+        $now          = now();
+        $syncPayload  = [];
         foreach ($trackIds as $trackId) {
             $syncPayload[$trackId] = [
                 'created_at' => $now,
@@ -352,13 +368,13 @@ class LayerService extends BaseService
             ];
         }
 
-        // In auto mode il pivot deve riflettere esattamente il risultato taxonomy-based
         $layer->ecTracks()->sync($syncPayload);
 
-        Log::info('Track sincronizzate automaticamente al layer per tassonomia', [
-            'layer_id' => $layer->id,
-            'track_count' => count($trackIds),
+        Log::info('Track sincronizzate automaticamente al layer', [
+            'layer_id'     => $layer->id,
+            'track_count'  => count($trackIds),
             'taxonomy_ids' => $layerTaxonomyIds,
+            'where_ids'    => $layerWhereIds,
         ]);
     }
 }
