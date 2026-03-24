@@ -7,6 +7,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Wm\WmPackage\Http\Clients\OsmfeaturesClient;
 use Wm\WmPackage\Models\TaxonomyWhere;
@@ -33,8 +34,10 @@ class FetchTaxonomyWhereGeometryJob implements ShouldQueue
             return;
         }
 
-        $taxonomyWhere->geometry = $detail['geometry'];
-        $taxonomyWhere->save();
+        DB::statement(
+            'UPDATE taxonomy_wheres SET geometry = ST_GeomFromGeoJSON(?) WHERE id = ?',
+            [$detail['geometry'], $taxonomyWhere->id]
+        );
     }
 
     public function failed(\Throwable $e): void

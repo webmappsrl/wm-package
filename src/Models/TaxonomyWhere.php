@@ -4,6 +4,7 @@ namespace Wm\WmPackage\Models;
 
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Wm\WmPackage\Models\Abstracts\Taxonomy;
+use Wm\WmPackage\Nova\Fields\FeatureCollectionMap\src\FeatureCollectionMapTrait;
 
 /**
  * @property int $id
@@ -17,6 +18,8 @@ use Wm\WmPackage\Models\Abstracts\Taxonomy;
  */
 class TaxonomyWhere extends Taxonomy
 {
+    use FeatureCollectionMapTrait;
+
     protected $fillable = ['name', 'osmfeatures_id', 'admin_level', 'geometry', 'properties'];
 
     protected function getRelationKey(): string
@@ -36,5 +39,19 @@ class TaxonomyWhere extends Taxonomy
 
         return $this->morphedByMany($ecTrackModel, 'taxonomy_whereable', 'taxonomy_whereables', 'taxonomy_where_id')
             ->using(TaxonomyWhereable::class);
+    }
+
+    public function getFeatureCollectionMap(): array
+    {
+        $tooltip = is_array($this->name)
+            ? ($this->name[app()->getLocale()] ?? $this->name['it'] ?? $this->name['en'] ?? (reset($this->name) ?: 'Taxonomy Where'))
+            : ($this->name ?: 'Taxonomy Where');
+
+        return $this->getFeatureCollectionMapFromTrait([
+            'tooltip' => $tooltip,
+            'strokeColor' => 'rgba(37, 99, 235, 1)',
+            'strokeWidth' => 2,
+            'fillColor' => 'rgba(37, 99, 235, 0.2)',
+        ]);
     }
 }
