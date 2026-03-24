@@ -3,6 +3,7 @@
 namespace Wm\WmPackage\Http\Clients;
 
 use Exception;
+use Illuminate\Support\Facades\Http;
 use Wm\WmPackage\Http\Clients\Abstracts\JsonClient;
 
 class OsmfeaturesClient extends JsonClient
@@ -87,6 +88,43 @@ class OsmfeaturesClient extends JsonClient
     protected function getAdminAreasIntersectsUrl()
     {
         return $this->getHost().'/api/v1/features/admin-areas/geojson';
+    }
+
+    public function getAdminAreasIds(string $bbox, int $adminLevel): array
+    {
+        $items = [];
+        $page = 1;
+        do {
+            $response = Http::get($this->getHost() . '/api/v2/features/admin-areas/list', [
+                'bbox'        => $bbox,
+                'admin_level' => $adminLevel,
+                'tags'        => 'name',
+                'page'        => $page,
+            ]);
+            $data = $response->json('data', []);
+            foreach ($data as $item) {
+                $items[] = [
+                    'id'   => $item['id'],
+                    'name' => $item['tags']['name'] ?? $item['id'],
+                ];
+            }
+            $page++;
+        } while (count($data) === 1000);
+
+        return $items;
+    }
+
+    public function getAdminAreaDetail(string $osmfeaturesId): array
+    {
+        $response = Http::get($this->getHost() . '/api/v2/features/admin-areas/' . $osmfeaturesId);
+        $data = $response->json();
+
+        return [
+            'osmfeatures_id' => $osmfeaturesId,
+            'name'           => $data['properties']['name'] ?? $osmfeaturesId,
+            'admin_level'    => $data['properties']['admin_level'] ?? null,
+            'geometry'       => isset($data['geometry']) ? json_encode($data['geometry']) : null,
+        ];
     }
 
     protected function getHost(): string
