@@ -9,8 +9,6 @@ use Wm\WmPackage\Nova\Fields\FeatureCollectionMap\src\FeatureCollectionMapTrait;
 /**
  * @property int $id
  * @property string|null $name
- * @property string|null $osmfeatures_id
- * @property int|null $admin_level
  * @property string|null $geometry
  * @property array|null $properties
  * @property \Illuminate\Support\Carbon|null $created_at
@@ -20,7 +18,23 @@ class TaxonomyWhere extends Taxonomy
 {
     use FeatureCollectionMapTrait;
 
-    protected $fillable = ['name', 'osmfeatures_id', 'admin_level', 'geometry', 'properties'];
+    protected $fillable = ['name', 'geometry', 'properties'];
+
+    public function getOsmfeaturesId(): ?string
+    {
+        return $this->properties['osmfeatures_id'] ?? null;
+    }
+
+    public function getAdminLevel(): ?int
+    {
+        $v = $this->properties['admin_level'] ?? null;
+        return $v !== null ? (int) $v : null;
+    }
+
+    public function getSource(): ?string
+    {
+        return $this->properties['source'] ?? null;
+    }
 
     protected function getRelationKey(): string
     {

@@ -115,8 +115,9 @@ class OsmfeaturesClient extends JsonClient
                 $nameObj = $item['name'] ?? [];
                 $name = $nameObj['it'] ?? $nameObj['en'] ?? (is_array($nameObj) ? (reset($nameObj) ?: $item['id']) : $item['id']);
                 $items[] = [
-                    'id'   => $item['id'],
-                    'name' => $name,
+                    'id'         => $item['id'],
+                    'name'       => $name,
+                    'updated_at' => $item['updated_at'] ?? null,
                 ];
             }
             $page++;

@@ -29,8 +29,8 @@ class SyncTracksTaxonomyWhereAction extends Action
                 COALESCE(
                     (
                         SELECT jsonb_object_agg(
-                            tw.osmfeatures_id,
-                            jsonb_build_object('name', tw.name, 'admin_level', tw.admin_level)
+                            COALESCE(tw.properties->>'osmfeatures_id', (tw.properties->>'osm2cai_id'), tw.id::text),
+                            jsonb_build_object('name', tw.name, 'admin_level', (tw.properties->>'admin_level')::int, 'source', tw.properties->>'source')
                         )
                         FROM taxonomy_wheres tw
                         WHERE tw.geometry IS NOT NULL

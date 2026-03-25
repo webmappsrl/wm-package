@@ -24,12 +24,22 @@ class FetchTaxonomyWhereGeometryJob implements ShouldQueue
     public function handle(OsmfeaturesClient $client): void
     {
         $taxonomyWhere = TaxonomyWhere::findOrFail($this->taxonomyWhereId);
-        $detail = $client->getAdminAreaDetail($taxonomyWhere->osmfeatures_id);
+
+        $osmfeaturesId = $taxonomyWhere->getOsmfeaturesId();
+
+        if (empty($osmfeaturesId)) {
+            Log::warning('TaxonomyWhere non ha osmfeatures_id, skip geometry fetch', [
+                'taxonomy_where_id' => $this->taxonomyWhereId,
+            ]);
+            return;
+        }
+
+        $detail = $client->getAdminAreaDetail($osmfeaturesId);
 
         if (empty($detail['geometry'])) {
             Log::warning('TaxonomyWhere geometry not available from OSMFeatures', [
                 'taxonomy_where_id' => $this->taxonomyWhereId,
-                'osmfeatures_id'    => $taxonomyWhere->osmfeatures_id,
+                'osmfeatures_id'    => $osmfeaturesId,
             ]);
             return;
         }

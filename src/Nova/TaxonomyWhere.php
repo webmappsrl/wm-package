@@ -7,9 +7,14 @@ use Laravel\Nova\Fields\ID;
 use Laravel\Nova\Fields\Number;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
+use Wm\WmPackage\Nova\Actions\CreateLayerFromTaxonomyWhere;
+use Wm\WmPackage\Nova\Actions\ImportTaxonomyWhere;
 use Wm\WmPackage\Nova\Actions\RetryTaxonomyWhereGeometryFetch;
 use Wm\WmPackage\Nova\Actions\SyncTracksTaxonomyWhereAction;
 use Wm\WmPackage\Nova\Fields\FeatureCollectionMap\src\FeatureCollectionMap;
+use Wm\WmPackage\Nova\Filters\TaxonomyWhereAdminLevelFilter;
+use Wm\WmPackage\Nova\Filters\TaxonomyWhereHasGeometryFilter;
+use Wm\WmPackage\Nova\Filters\TaxonomyWhereSourceFilter;
 
 class TaxonomyWhere extends AbstractTaxonomyResource
 {
@@ -37,8 +42,9 @@ class TaxonomyWhere extends AbstractTaxonomyResource
         return [
             ID::make()->sortable(),
             Text::make('name'),
-            Text::make('osmfeatures_id')->readonly(),
-            Number::make('admin_level')->readonly(),
+            Text::make('osmfeatures_id', fn () => $this->resource->getOsmfeaturesId())->readonly()->onlyOnDetail(),
+            Number::make('admin_level', fn () => $this->resource->getAdminLevel())->readonly()->onlyOnDetail(),
+            Text::make('source', fn () => $this->resource->getSource())->readonly()->onlyOnIndex(),
             FeatureCollectionMap::make('Geometry', 'geometry')->onlyOnDetail(),
             Boolean::make('Geometry', function () {
                 /** @var \Wm\WmPackage\Models\TaxonomyWhere $model */
@@ -49,9 +55,20 @@ class TaxonomyWhere extends AbstractTaxonomyResource
         ];
     }
 
+    public function filters(NovaRequest $request): array
+    {
+        return [
+            new TaxonomyWhereSourceFilter,
+            new TaxonomyWhereAdminLevelFilter,
+            new TaxonomyWhereHasGeometryFilter,
+        ];
+    }
+
     public function actions(NovaRequest $request): array
     {
         return [
+            new ImportTaxonomyWhere,
+            new CreateLayerFromTaxonomyWhere,
             new RetryTaxonomyWhereGeometryFetch,
             new SyncTracksTaxonomyWhereAction,
         ];
