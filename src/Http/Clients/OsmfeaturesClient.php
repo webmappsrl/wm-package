@@ -87,11 +87,13 @@ class OsmfeaturesClient extends JsonClient
 
     protected function getAdminAreasIntersectsUrl()
     {
-        return $this->getHost().'/api/v1/features/admin-areas/geojson';
+        return $this->getHost() . '/api/v1/features/admin-areas/geojson';
     }
 
     public function getAdminAreasIds(string $bbox, int $adminLevel): array
     {
+        $bbox = $this->normalizeBboxForQuery($bbox);
+
         $items = [];
         $page = 1;
         do {
@@ -101,6 +103,13 @@ class OsmfeaturesClient extends JsonClient
                 'tags'        => 'name',
                 'page'        => $page,
             ]);
+
+            if (! $response->successful()) {
+                throw new Exception(
+                    "OSMFeatures admin-areas/list HTTP {$response->status()}: " . $response->body()
+                );
+            }
+
             $data = $response->json('data', []);
             foreach ($data as $item) {
                 $nameObj = $item['name'] ?? [];
@@ -114,6 +123,27 @@ class OsmfeaturesClient extends JsonClient
         } while (count($data) === 1000);
 
         return $items;
+    }
+
+    /**
+     * L'API si aspetta tipicamente "minLon,minLat,maxLon,maxLat". Se map_bbox è JSON
+     * (es. salvato come array nel DB), la query string altrimenti risulta inutilizzabile e l'API risponde vuota.
+     */
+    protected function normalizeBboxForQuery(string $bbox): string
+    {
+        $trimmed = trim($bbox);
+        if ($trimmed === '') {
+            return $bbox;
+        }
+
+        if (str_starts_with($trimmed, '[')) {
+            $decoded = json_decode($trimmed, true);
+            if (is_array($decoded) && count($decoded) === 4) {
+                return implode(',', array_map(static fn($v) => (string) $v, $decoded));
+            }
+        }
+
+        return $bbox;
     }
 
     public function getAdminAreaDetail(string $osmfeaturesId): array
