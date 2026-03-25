@@ -2,6 +2,7 @@
 
 namespace Wm\WmPackage\Nova\Actions;
 
+use Exception;
 use Illuminate\Bus\Queueable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Collection;
@@ -12,6 +13,7 @@ use Laravel\Nova\Http\Requests\NovaRequest;
 use Wm\WmPackage\Http\Clients\OsmfeaturesClient;
 use Wm\WmPackage\Jobs\TaxonomyWhere\FetchTaxonomyWhereGeometryJob;
 use Wm\WmPackage\Models\TaxonomyWhere;
+use Wm\WmPackage\Services\GeometryComputationService;
 
 class ImportTaxonomyWhereFromOsmfeatures extends Action
 {
@@ -29,17 +31,41 @@ class ImportTaxonomyWhereFromOsmfeatures extends Action
      */
     public function handle(ActionFields $fields, Collection $models)
     {
+        if ($models->isEmpty()) {
+            return Action::danger("Seleziona almeno un'App su cui eseguire l'import.");
+        }
+
         $adminLevel = (int) $fields->get('admin_level');
         $client = app(OsmfeaturesClient::class);
         $count = 0;
+        $skippedNoBbox = [];
+        $emptyListForApps = [];
 
         foreach ($models as $app) {
             $bbox = $app->map_bbox;
             if (empty($bbox)) {
+                $computed = GeometryComputationService::make()->getEcTracksBboxByAppId($app->id);
+                if ($computed !== null) {
+                    $bbox = json_encode($computed);
+                }
+            }
+
+            if (empty($bbox)) {
+                $skippedNoBbox[] = $app->name ?? '#' . $app->id;
                 continue;
             }
 
-            $items = $client->getAdminAreasIds($bbox, $adminLevel);
+            try {
+                $items = $client->getAdminAreasIds($bbox, $adminLevel);
+            } catch (Exception $e) {
+                return Action::danger(
+                    'Errore chiamata OSMFeatures (app: ' . ($app->name ?? '#' . $app->id) . '): ' . $e->getMessage()
+                );
+            }
+
+            if (count($items) === 0) {
+                $emptyListForApps[] = $app->name ?? '#' . $app->id;
+            }
 
             foreach ($items as $item) {
                 $taxonomyWhere = TaxonomyWhere::updateOrCreate(
@@ -55,7 +81,23 @@ class ImportTaxonomyWhereFromOsmfeatures extends Action
             }
         }
 
-        return Action::message("Creati/aggiornati {$count} record TaxonomyWhere. Geometrie in download in background.");
+        $parts = [];
+        if ($skippedNoBbox !== []) {
+            $parts[] = 'App senza bbox utilizzabile (map_bbox vuoto e nessuna geometria dalle track per calcolarlo): ' . implode(', ', $skippedNoBbox);
+        }
+        if ($emptyListForApps !== []) {
+            $parts[] = 'OSMFeatures ha restituito 0 aree per: ' . implode(', ', $emptyListForApps) . ' (verifica bbox e admin level).';
+        }
+
+        if ($count === 0) {
+            $detail = $parts !== [] ? ' ' . implode(' ', $parts) : '';
+
+            return Action::danger('Nessun TaxonomyWhere importato.' . $detail);
+        }
+
+        $suffix = $parts !== [] ? ' (' . implode(' ', $parts) . ')' : '';
+
+        return Action::message("Creati/aggiornati {$count} record TaxonomyWhere. Geometrie in download in background." . $suffix);
     }
 
     /**
