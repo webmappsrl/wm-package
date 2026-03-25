@@ -22,6 +22,52 @@ use Wm\WmPackage\Services\Models\MediaService;
 
 class GeometryComputationService extends BaseService
 {
+    /**
+     * Synchronize taxonomy_where properties for a track model table.
+     *
+     * @param  class-string<MultiLineString>|MultiLineString  $trackModel
+     */
+    public function syncTracksTaxonomyWhere(string|MultiLineString $trackModel): int
+    {
+        $modelInstance = is_string($trackModel) ? new $trackModel : $trackModel;
+        if (! $modelInstance instanceof MultiLineString) {
+            throw new \InvalidArgumentException('The track model must extend MultiLineString.');
+        }
+
+        $tableName = $modelInstance->getTable();
+        if (! preg_match('/^[a-zA-Z0-9_]+$/', $tableName)) {
+            throw new \InvalidArgumentException('Invalid track table name.');
+        }
+
+        DB::statement("
+            UPDATE {$tableName}
+            SET properties = jsonb_set(
+                COALESCE(properties, '{}'),
+                '{taxonomy_where}',
+                COALESCE(
+                    (
+                        SELECT jsonb_object_agg(
+                            COALESCE(tw.properties->>'osmfeatures_id', (tw.properties->>'osm2cai_id'), tw.id::text),
+                            jsonb_build_object('name', tw.name, 'admin_level', (tw.properties->>'admin_level')::int, 'source', tw.properties->>'source')
+                        )
+                        FROM taxonomy_wheres tw
+                        WHERE tw.geometry IS NOT NULL
+                          AND ST_Intersects({$tableName}.geometry::geometry, tw.geometry::geometry)
+                    ),
+                    '{}'::jsonb
+                )
+            )
+            WHERE geometry IS NOT NULL
+        ");
+
+        return (int) (DB::selectOne("
+            SELECT COUNT(*) as c
+            FROM {$tableName}
+            WHERE geometry IS NOT NULL
+              AND properties->'taxonomy_where' != '{}'::jsonb
+        ")->c ?? 0);
+    }
+
     public function get3dLineMergeWktFromGeojson(string $geojson): string
     {
         return DB::select(
@@ -133,7 +179,7 @@ class GeometryComputationService extends BaseService
 
             return null;
         } catch (Exception $e) {
-            \Log::warning("Errore nel convertire geometria per modello ID {$model->id}: ".$e->getMessage());
+            Log::warning("Errore nel convertire geometria per modello ID {$model->id}: ".$e->getMessage());
 
             return null;
         }
