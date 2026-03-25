@@ -15,6 +15,17 @@ class UgcObserver extends AbstractAuthorableObserver
         $model->name = $model->name ?? $model->properties['name'] ?? '';
     }
 
+    /**
+     * Nova updates send 2D WKT from FeatureCollectionMap (ST_Force2D). The DB column is MultiLineStringZ;
+     * without this, PostgreSQL can reject the write. Creating already runs normalizeGeometry above.
+     */
+    public function updating(Model $model)
+    {
+        if ($model->isDirty('geometry')) {
+            $this->normalizeGeometry($model);
+        }
+    }
+
     private function normalizeGeometry(Model $model)
     {
         $service = app(GeometryComputationService::class);

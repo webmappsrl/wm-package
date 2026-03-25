@@ -3,7 +3,6 @@
 namespace Wm\WmPackage\Nova\Traits;
 
 use Laravel\Nova\Http\Requests\NovaRequest;
-use Wm\MapMultiLinestring\MapMultiLinestring;
 use Wm\WmPackage\Nova\Fields\FeatureCollectionMap\src\FeatureCollectionMap;
 
 trait MultiLinestringResourceTrait
@@ -12,13 +11,8 @@ trait MultiLinestringResourceTrait
     {
         return [
             ...parent::fields($request),
-            // TODO: usare FeatureCollectionMap anche nelle altre Geometry del wm-package
             FeatureCollectionMap::make('Geometry', 'geometry')
-                ->onlyOnDetail()
-                ->required(),
-            // TODO: modificare FeatureCollectionMap in modo da gestire anche crate e update della geometria
-            MapMultiLinestring::make('Geometry', 'geometry')
-                ->onlyOnForms()
+                ->hideFromIndex()
                 ->required(),
         ];
     }
