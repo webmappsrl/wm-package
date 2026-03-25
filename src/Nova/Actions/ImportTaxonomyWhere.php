@@ -7,6 +7,7 @@ use Exception;
 use Illuminate\Bus\Queueable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Schema;
 use Laravel\Nova\Actions\Action;
 use Laravel\Nova\Fields\ActionFields;
 use Laravel\Nova\Fields\Select;
@@ -16,6 +17,7 @@ use Wm\WmPackage\Http\Clients\OsmfeaturesClient;
 use Wm\WmPackage\Jobs\TaxonomyWhere\FetchOsm2caiSectorGeometryJob;
 use Wm\WmPackage\Jobs\TaxonomyWhere\FetchTaxonomyWhereGeometryJob;
 use Wm\WmPackage\Models\App;
+use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\TaxonomyWhere;
 use Wm\WmPackage\Services\GeometryComputationService;
 
@@ -117,12 +119,14 @@ class ImportTaxonomyWhere extends Action
                     'name'       => $item['name'],
                     'properties' => array_merge($existing->properties ?? [], $properties),
                 ]);
+                $this->assignTaxonomyUserFromApp($existing, $app);
                 FetchTaxonomyWhereGeometryJob::dispatch($existing->id);
             } else {
                 $taxonomyWhere = TaxonomyWhere::create([
                     'name'       => $item['name'],
                     'properties' => $properties,
                 ]);
+                $this->assignTaxonomyUserFromApp($taxonomyWhere, $app);
                 FetchTaxonomyWhereGeometryJob::dispatch($taxonomyWhere->id);
             }
 
@@ -133,6 +137,10 @@ class ImportTaxonomyWhere extends Action
         if ($skipped > 0) {
             $msg .= " ({$skipped} già aggiornati, saltati)";
         }
+        $tracksSynced = GeometryComputationService::make()->syncTracksTaxonomyWhere(
+            config('wm-package.ec_track_model', EcTrack::class)
+        );
+        $msg .= " Sync taxonomy_where su {$tracksSynced} tracks avviata.";
 
         return Action::message($msg);
     }
@@ -207,12 +215,14 @@ class ImportTaxonomyWhere extends Action
                     'name'       => $sector['name'],
                     'properties' => array_merge($existing->properties ?? [], $properties),
                 ]);
+                $this->assignTaxonomyUserFromApp($existing, $app);
                 FetchOsm2caiSectorGeometryJob::dispatch($existing->id);
             } else {
                 $created = TaxonomyWhere::create([
                     'name'       => $sector['name'],
                     'properties' => $properties,
                 ]);
+                $this->assignTaxonomyUserFromApp($created, $app);
                 FetchOsm2caiSectorGeometryJob::dispatch($created->id);
             }
 
@@ -223,6 +233,10 @@ class ImportTaxonomyWhere extends Action
         if ($skipped > 0) {
             $msg .= " ({$skipped} già aggiornati, saltati)";
         }
+        $tracksSynced = GeometryComputationService::make()->syncTracksTaxonomyWhere(
+            config('wm-package.ec_track_model', EcTrack::class)
+        );
+        $msg .= " Sync taxonomy_where su {$tracksSynced} tracks avviata.";
 
         return Action::message($msg);
     }
@@ -252,5 +266,18 @@ class ImportTaxonomyWhere extends Action
         }
 
         return $fields;
+    }
+
+    private function assignTaxonomyUserFromApp(TaxonomyWhere $taxonomyWhere, App $app): void
+    {
+        if (! Schema::hasColumn($taxonomyWhere->getTable(), 'user_id')) {
+            return;
+        }
+
+        if (empty($app->user_id)) {
+            return;
+        }
+
+        $taxonomyWhere->forceFill(['user_id' => $app->user_id])->saveQuietly();
     }
 }
