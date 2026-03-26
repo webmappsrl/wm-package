@@ -14,7 +14,10 @@ return new class extends Migration
     public function up()
     {
         Schema::table('taxonomy_whereables', function (Blueprint $table) {
-            $table->foreign(['taxonomy_where_id'])->references(['id'])->on('taxonomy_wheres');
+            $table->foreign(['taxonomy_where_id'])
+                ->references(['id'])
+                ->on('taxonomy_wheres')
+                ->cascadeOnDelete();
         });
     }
 
