@@ -273,10 +273,13 @@ class WmPackageServiceProvider extends PackageServiceProvider
         // Configure logging channels
         // SOLUZIONE 1 - SEMPLICE: LE CONFIG DEI LOG BENGONO SOVRASCRITTE DOPO LA REGISRTAZIONE DEL PROVIDER
         if (isset($this->app->config['logging'])) {
-            $this->app->config['logging'] = array_merge(
-                $this->app->config['logging'],
-                config('wm-logging', []),
-            );
+            $wmLogging = config('wm-logging', []);
+            $appChannels = $this->app->config['logging']['channels'] ?? [];
+            $wmChannels = $wmLogging['channels'] ?? [];
+            $merged = array_merge($this->app->config['logging'], $wmLogging);
+            // Deep merge channels so app-defined channels are not lost
+            $merged['channels'] = array_merge($wmChannels, $appChannels);
+            $this->app->config['logging'] = $merged;
         }
         if (isset($this->app->config['logging.channels'])) {
             $this->app->config['logging.channels'] = array_merge(
