@@ -48,7 +48,18 @@ class GeometryComputationService extends BaseService
                     (
                         SELECT jsonb_object_agg(
                             COALESCE(tw.properties->>'osmfeatures_id', (tw.properties->>'osm2cai_id'), tw.id::text),
-                            jsonb_build_object('name', tw.name, 'admin_level', (tw.properties->>'admin_level')::int, 'source', tw.properties->>'source')
+                            jsonb_build_object(
+                                'name',
+                                CASE
+                                    WHEN tw.name IS NULL OR btrim(tw.name) = '' THEN '{}'::jsonb
+                                    WHEN left(ltrim(tw.name), 1) = '{' THEN tw.name::jsonb
+                                    ELSE jsonb_build_object('it', tw.name, 'en', tw.name)
+                                END,
+                                'admin_level',
+                                (tw.properties->>'admin_level')::int,
+                                'source',
+                                tw.properties->>'source'
+                            )
                         )
                         FROM taxonomy_wheres tw
                         WHERE tw.geometry IS NOT NULL
