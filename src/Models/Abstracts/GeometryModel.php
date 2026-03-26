@@ -162,10 +162,45 @@ abstract class GeometryModel extends Model implements HasMedia
      */
     public function getValidName(array $whereData): string
     {
-        $values = array_values($whereData);
-        $firstName = $values[0] ?? null;
+        // New shape: ['name' => ['it' => '...', 'en' => '...'], ...]
+        // Legacy shape: ['it' => '...', 'en' => '...', ...]
+        $candidate = $whereData['name'] ?? $whereData;
 
-        return $whereData['it'] ?? $whereData['en'] ?? $firstName;
+        if (is_string($candidate)) {
+            $trimmed = trim($candidate);
+            if ($trimmed === '') {
+                return '';
+            }
+
+            // Defensive: handle JSON serialized string values.
+            if (str_starts_with($trimmed, '{')) {
+                $decoded = json_decode($trimmed, true);
+                if (is_array($decoded)) {
+                    $candidate = $decoded;
+                } else {
+                    return $trimmed;
+                }
+            } else {
+                return $trimmed;
+            }
+        }
+
+        if (! is_array($candidate)) {
+            return '';
+        }
+
+        $localized = $candidate['it'] ?? $candidate['en'] ?? null;
+        if (is_string($localized)) {
+            return trim($localized);
+        }
+
+        foreach ($candidate as $value) {
+            if (is_string($value) && trim($value) !== '') {
+                return trim($value);
+            }
+        }
+
+        return '';
     }
 
     /**
@@ -186,7 +221,7 @@ abstract class GeometryModel extends Model implements HasMedia
         $idx = 0;
 
         foreach ($wheres as $whereId => $whereData) {
-            $adminLevel = $whereData['_admin_level'] ?? null;
+            $adminLevel = $whereData['admin_level'] ?? $whereData['_admin_level'] ?? null;
             $name = $this->getValidName($whereData);
 
             if ($name) {
