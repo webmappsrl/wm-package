@@ -5,6 +5,7 @@ namespace Wm\WmPackage\Nova\Fields\LayerFeatures\Http\Controllers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Wm\WmPackage\Models\Layer;
@@ -44,10 +45,12 @@ class LayerFeatureController
                 ], 400);
             }
 
-            // Query ottimizzata per ottenere il count per il modello specifico
+            // Risolve il morph type tramite la morph map (es. Wm\...\EcTrack → App\Models\EcTrack)
+            $morphType = array_search($modelClass, Relation::morphMap()) ?: $modelClass;
+
             $count = DB::table('layerables')
                 ->where('layer_id', $layerId)
-                ->where('layerable_type', $modelClass)
+                ->where('layerable_type', $morphType)
                 ->count();
 
             return response()->json([

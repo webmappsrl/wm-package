@@ -24,7 +24,7 @@
 import { ref, onMounted } from 'vue';
 
 export default {
-    props: ["resourceName", "field", "resourceId"],
+    props: ["resourceName", "field", "resourceId", "resource"],
 
     setup(props) {
         const isLoading = ref(true);
@@ -40,18 +40,8 @@ export default {
                 isLoading.value = true;
                 error.value = null;
 
-                // Usa il resourceId se disponibile, altrimenti fallback al layerId del field
-                const layerId = props.resourceId || props.field?.layerId;
-
-                console.log('IndexField: Fetching counts for layer:', layerId);
-                console.log('IndexField: Props:', props);
-                console.log('IndexField: Field model:', props.field?.model);
-                console.log('IndexField: Field meta:', props.field);
-                console.log('IndexField: Field keys:', Object.keys(props.field || {}));
-                console.log('IndexField: Field value:', props.field?.value);
-                console.log('IndexField: Field meta model_class:', props.field?.meta?.model_class);
-                console.log('IndexField: Field modelClass:', props.field?.modelClass);
-                console.log('IndexField: Field model_class:', props.field?.model_class);
+                // Usa il resourceId se disponibile, altrimenti leggi dall'oggetto resource (index view) o dal field meta
+                const layerId = props.resourceId || props.resource?.id?.value || props.field?.layerId;
 
                 if (!layerId) {
                     throw new Error('Layer ID non disponibile');
@@ -61,14 +51,10 @@ export default {
                 const modelClass = props.field?.model || props.field?.modelClass || props.field?.model_class || props.field?.value?.model || props.field?.meta?.model_class;
 
                 if (!modelClass) {
-                    console.error('IndexField: Model class not found in field meta');
-                    console.error('IndexField: Available field properties:', Object.keys(props.field || {}));
-                    console.error('IndexField: Field object:', props.field);
                     throw new Error('Modello non configurato nel field');
                 }
 
                 const url = `/nova-vendor/layer-features/${layerId}?model=${encodeURIComponent(modelClass)}`;
-                console.log('IndexField: Calling URL:', url);
 
                 const response = await fetch(url);
 
@@ -77,8 +63,6 @@ export default {
                 }
 
                 const data = await response.json();
-                console.log('IndexField: Response data:', data);
-
                 // Aggiorna i conteggi basandosi sul modello
                 if (modelClass) {
                     if (modelClass.includes('EcPoi')) {
@@ -91,8 +75,6 @@ export default {
                 }
                 total.value = data.count || 0;
 
-                console.log('IndexField: Final counts:', counts.value, 'total:', total.value);
-
             } catch (err) {
                 console.error('Errore nel caricamento dei conteggi:', err);
                 error.value = err.message;
@@ -102,7 +84,6 @@ export default {
         };
 
         onMounted(() => {
-            console.log('IndexField mounted for layer:', props.resourceId || props.field?.layerId);
             fetchCounts();
         });
 
