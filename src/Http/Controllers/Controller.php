@@ -76,6 +76,10 @@ class Controller extends BaseController
 
         // Return all validation errors when it fails
         if ($validator->fails()) {
+            $failed = $validator->failed();
+            if (isset($failed['properties.id']['Exists'])) {
+                abort(404, 'UGC not found');
+            }
             $errors = $validator->errors()->toArray();
             $errorMessage = '';
             foreach ($errors as $field => $messages) {
