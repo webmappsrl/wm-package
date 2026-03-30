@@ -108,6 +108,13 @@ class AppConfigService extends AppBaseService
             $data['APP']['iosStore'] = $this->app->ios_store_link;
         }
 
+        if ($this->app->my_routes_image) {
+            $data['APP']['myRoutesImageUrl'] = url('/api/app/webmapp/'.$this->app->id.'/resources/my_routes_image.png');
+        }
+        if ($this->app->my_downloads_image) {
+            $data['APP']['myDownloadsImageUrl'] = url('/api/app/webmapp/'.$this->app->id.'/resources/my_downloads_image.png');
+        }
+
         if (isset($properties['force_to_release_update']) && $properties['force_to_release_update']) {
             $data['APP']['forceToReleaseUpdate'] = true;
         }
