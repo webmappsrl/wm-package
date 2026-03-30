@@ -159,6 +159,8 @@ Route::name('api.')->group(function () {
             Route::get('/{app}/resources/splash.png', [AppController::class, 'splash'])->name('splash');
             Route::get('/{app}/resources/icon_small.png', [AppController::class, 'iconSmall'])->name('icon_small');
             Route::get('/{app}/resources/feature_image.png', [AppController::class, 'featureImage'])->name('feature_image');
+            Route::get('/{app}/resources/my_routes_image.png', [AppController::class, 'myRoutes'])->name('my_routes_image');
+            Route::get('/{app}/resources/my_downloads_image.png', [AppController::class, 'myDownloads'])->name('my_downloads_image');
 
             Route::get('/{app}/geojson/ec_poi_{poi}.geojson', [AppElbrusEditorialContentController::class, 'getPoiGeojson'])->name('geojson.poi');
             Route::get('/{app}/geojson/ec_track_{track}.geojson', [AppElbrusEditorialContentController::class, 'getTrackGeojson'])->name('geojson.track');
@@ -181,6 +183,8 @@ Route::name('api.')->group(function () {
             Route::get('/{app}/resources/splash.png', [AppController::class, 'splash'])->name('splash');
             Route::get('/{app}/resources/icon_small.png', [AppController::class, 'iconSmall'])->name('icon_small');
             Route::get('/{app}/resources/feature_image.png', [AppController::class, 'featureImage'])->name('feature_image');
+            Route::get('/{app}/resources/my_routes_image.png', [AppController::class, 'myRoutes'])->name('my_routes_image');
+            Route::get('/{app}/resources/my_downloads_image.png', [AppController::class, 'myDownloads'])->name('my_downloads_image');
             Route::get('/{app}/resources/icon_notify.png', [AppController::class, 'iconNotify'])->name('icon_notify');
             Route::get('/{app}/resources/logo_homepage.svg', [AppController::class, 'logoHomepage'])->name('logo_homepage');
         });
@@ -222,6 +226,8 @@ Route::name('api.')->group(function () {
                 Route::get('/{id}/resources/splash.png', [AppController::class, 'splash'])->name('splash');
                 Route::get('/{id}/resources/icon_small.png', [AppController::class, 'iconSmall'])->name('icon_small');
                 Route::get('/{id}/resources/feature_image.png', [AppController::class, 'featureImage'])->name('feature_image');
+                Route::get('/{id}/resources/my_routes_image.png', [AppController::class, 'myRoutes'])->name('my_routes_image');
+                Route::get('/{id}/resources/my_downloads_image.png', [AppController::class, 'myDownloads'])->name('my_downloads_image');
                 Route::get('/{id}/resources/icon_notify.png', [AppController::class, 'iconNotify'])->name('icon_notify');
                 Route::get('/{id}/resources/logo_homepage.svg', [AppController::class, 'logoHomepage'])->name('logo_homepage');
             });
