@@ -3,7 +3,7 @@
 namespace Wm\WmPackage\Nova\Traits;
 
 use Laravel\Nova\Http\Requests\NovaRequest;
-use Wm\MapPoint\MapPoint;
+use Wm\WmPackage\Nova\Fields\FeatureCollectionMap\src\FeatureCollectionMap;
 
 trait PointResourceTrait
 {
@@ -11,7 +11,9 @@ trait PointResourceTrait
     {
         return [
             ...parent::fields($request),
-            MapPoint::make('Geometry', 'geometry')->hideFromIndex()->required(),
+            FeatureCollectionMap::make('Geometry', 'geometry')
+                ->hideFromIndex()
+                ->required(),
         ];
     }
 }

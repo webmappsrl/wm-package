@@ -75,4 +75,17 @@ class Media extends SpatieMedia implements UserOwnedModelInterface
 
         return $geojson;
     }
+
+    /**
+     * FeatureCollection per Nova FeatureCollectionMap (geometry punto).
+     */
+    public function getFeatureCollectionMap(): array
+    {
+        $feature = $this->getGeojson();
+        if (! $feature || ! isset($feature['geometry'])) {
+            return GeoJsonService::make()->wrapAsFeatureCollection(null);
+        }
+
+        return GeoJsonService::make()->wrapAsFeatureCollection($feature);
+    }
 }

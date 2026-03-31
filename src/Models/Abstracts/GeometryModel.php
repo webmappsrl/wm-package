@@ -71,6 +71,17 @@ abstract class GeometryModel extends Model implements HasMedia
         return GeometryComputationService::make()->getRelatedUgcGeojson($this);
     }
 
+    /**
+     * FeatureCollection per il campo Nova FeatureCollectionMap (dettaglio / form).
+     * Modelli con geometria complessa (es. EcTrack, Layer) possono sovrascrivere.
+     */
+    public function getFeatureCollectionMap(): array
+    {
+        $feature = $this->getGeojson();
+
+        return GeoJsonService::make()->wrapAsFeatureCollection($feature);
+    }
+
     public function populateProperties(): void
     {
         $properties = [];
