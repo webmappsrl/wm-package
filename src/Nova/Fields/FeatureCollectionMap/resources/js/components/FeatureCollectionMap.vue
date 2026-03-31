@@ -8,6 +8,10 @@
 
         <div ref="mapContainer" class="map-container" :class="{ 'map-loading': isLoading }"></div>
 
+        <div v-if="enableSlopeChart && selectedTrackForChart" class="slope-chart-container">
+            <SlopeChart ref="slopeChartRef" :track="selectedTrackForChart" @hover="onSlopeHover" />
+        </div>
+
         <!-- Screenshot button - nascosto quando enableScreenshot è attivo (screenshot automatico) -->
 
         <!-- Tooltip overlay -->
@@ -57,6 +61,7 @@
 
 <script>
 import { ref, nextTick, onMounted, onUnmounted, watch } from 'vue';
+import SlopeChart from './SlopeChart.vue';
 
 // OpenLayers imports
 import Map from 'ol/Map';
@@ -67,8 +72,10 @@ import VectorSource from 'ol/source/Vector';
 import OSM from 'ol/source/OSM';
 import GeoJSON from 'ol/format/GeoJSON';
 import Overlay from 'ol/Overlay';
+import Feature from 'ol/Feature';
+import Point from 'ol/geom/Point';
 import { Style, Fill, Stroke, Circle as CircleStyle } from 'ol/style';
-import { fromLonLat } from 'ol/proj';
+import { fromLonLat, toLonLat } from 'ol/proj';
 import { defaults as defaultControls } from 'ol/control';
 import { defaults as defaultInteractions } from 'ol/interaction';
 
@@ -77,11 +84,19 @@ import html2canvas from 'html2canvas';
 
 export default {
     name: 'FeatureCollectionMap',
+    components: {
+        SlopeChart,
+    },
 
     props: {
+        /** Se valorizzato, ha priorità su geojsonUrl (es. upload in form). */
+        inlineGeojson: {
+            type: Object,
+            default: null
+        },
         geojsonUrl: {
             type: String,
-            required: true
+            default: ''
         },
         height: {
             type: Number,
@@ -105,7 +120,7 @@ export default {
         },
         resourceName: {
             type: String,
-            default: 'poles'
+            default: null
         },
         popupComponent: {
             type: String,
@@ -115,10 +130,6 @@ export default {
             type: Boolean,
             default: false
         },
-        resourceName: {
-            type: String,
-            default: null
-        },
         resourceId: {
             type: [String, Number],
             default: null
@@ -127,10 +138,18 @@ export default {
         getAdditionalPointStyles: {
             type: Function,
             default: null
+        },
+        defaultCursor: {
+            type: String,
+            default: ''
+        },
+        enableSlopeChart: {
+            type: Boolean,
+            default: true
         }
     },
 
-    emits: ['feature-click', 'map-ready', 'popup-open', 'popup-close'],
+    emits: ['feature-click', 'map-ready', 'popup-open', 'popup-close', 'map-click', 'slope-hover'],
 
     setup(props, { emit }) {
         const keydownRoot = ref(null);
@@ -153,6 +172,51 @@ export default {
         const popupData = ref({});
         const currentFeatureId = ref(null);
         const currentFeatureProperties = ref({});
+
+        // Slope chart state
+        const slopeChartRef = ref(null);
+        const selectedTrackForChart = ref(null);
+        const slopeHover = ref({ location: undefined, track: undefined });
+        const hoverSource = ref(null); // 'map' | 'chart' | null
+
+        const hoverMarkerSource = ref(null);
+        const hoverMarkerFeature = ref(null);
+
+        const toLineStringFeatureObject = (featureObject) => {
+            if (!featureObject || typeof featureObject !== 'object') {
+                return null;
+            }
+            const g = featureObject.geometry;
+            if (!g || !g.type) {
+                return null;
+            }
+            if (g.type === 'LineString') {
+                return featureObject;
+            }
+            if (g.type === 'MultiLineString' && Array.isArray(g.coordinates) && g.coordinates.length) {
+                return {
+                    type: 'Feature',
+                    properties: featureObject.properties || {},
+                    geometry: {
+                        type: 'LineString',
+                        coordinates: g.coordinates[0] || []
+                    }
+                };
+            }
+            return null;
+        };
+
+        const setDefaultTrackForChartFromGeojson = (data) => {
+            if (!data || typeof data !== 'object') {
+                return;
+            }
+            const feats = Array.isArray(data.features) ? data.features : [];
+            const candidate = feats.find((f) => {
+                const t = f?.geometry?.type;
+                return t === 'LineString' || t === 'MultiLineString';
+            });
+            selectedTrackForChart.value = candidate ? toLineStringFeatureObject(candidate) : null;
+        };
 
         // Screenshot state
         const isCapturing = ref(false);
@@ -269,11 +333,99 @@ export default {
             });
         };
 
-        // Load GeoJSON data
+        const applyGeoJSONData = (data) => {
+            if (!vectorSource.value || !map.value) {
+                isLoading.value = false;
+                return;
+            }
+            geojsonData.value = data;
+            featuresMap.value = {};
+            if (data.features) {
+                data.features.forEach(feature => {
+                    if (feature.properties && feature.properties.id) {
+                        featuresMap.value[String(feature.properties.id)] = feature;
+                    }
+                });
+            }
+            setDefaultTrackForChartFromGeojson(data);
+
+            const format = new GeoJSON();
+            const features = format.readFeatures(data, {
+                featureProjection: 'EPSG:3857'
+            });
+
+            vectorSource.value.clear();
+            vectorSource.value.addFeatures(features);
+
+            if (features.length > 0) {
+                const lineStringFeatures = features.filter(feature => {
+                    const geometry = feature.getGeometry();
+                    if (!geometry) {
+                        return false;
+                    }
+                    const geometryType = geometry.getType();
+                    return geometryType === 'LineString' || geometryType === 'MultiLineString';
+                });
+
+                const featuresForExtent = lineStringFeatures.length > 0 ? lineStringFeatures : features;
+
+                const tempSource = new VectorSource();
+                tempSource.addFeatures(featuresForExtent);
+                const extent = tempSource.getExtent();
+
+                const view = map.value.getView();
+
+                const size = map.value.getSize();
+                if (size && extent && extent[0] !== Infinity) {
+                    const center = [
+                        (extent[0] + extent[2]) / 2,
+                        (extent[1] + extent[3]) / 2
+                    ];
+
+                    const width = extent[2] - extent[0];
+                    const height = extent[3] - extent[1];
+                    const aspectRatio = width / height;
+                    const mapAspectRatio = size[0] / size[1];
+
+                    let resolution;
+                    if (aspectRatio > mapAspectRatio) {
+                        resolution = width / (size[0] - props.padding * 2);
+                    } else {
+                        resolution = height / (size[1] - props.padding * 2);
+                    }
+
+                    const maxResolution = view.getMaxResolution();
+                    const zoom = Math.log2(maxResolution / resolution);
+                    const maxZoom = Math.min(view.getMaxZoom() || 17, 17);
+
+                    view.setCenter(center);
+                    view.setZoom(Math.min(Math.max(zoom, 0), maxZoom));
+                }
+            }
+
+            if (props.enableScreenshot && !screenshotCaptured.value) {
+                map.value.once('rendercomplete', () => {
+                    captureScreenshot();
+                });
+            }
+
+            emit('map-ready', { map: map.value, features, geojson: data, featuresMap: featuresMap.value });
+            isLoading.value = false;
+        };
+
         const loadGeoJSON = async () => {
-            console.log('Loading GeoJSON from:', props.geojsonUrl);
+            console.log('Loading GeoJSON from:', props.geojsonUrl, 'inline:', !!props.inlineGeojson);
             isLoading.value = true;
             try {
+                if (props.inlineGeojson) {
+                    applyGeoJSONData(props.inlineGeojson);
+                    return;
+                }
+                if (!props.geojsonUrl) {
+                    isLoading.value = false;
+                    return;
+                }
+
                 const response = await fetch(props.geojsonUrl);
 
                 if (!response.ok) {
@@ -284,92 +436,7 @@ export default {
 
                 const data = await response.json();
                 console.log('GeoJSON loaded:', data);
-                geojsonData.value = data;
-
-                if (data.features) {
-                    data.features.forEach(feature => {
-                        if (feature.properties && feature.properties.id) {
-                            featuresMap.value[String(feature.properties.id)] = feature;
-                        }
-                    });
-                }
-
-                const format = new GeoJSON();
-                const features = format.readFeatures(data, {
-                    featureProjection: 'EPSG:3857'
-                });
-
-                vectorSource.value.clear();
-                vectorSource.value.addFeatures(features);
-
-                if (features.length > 0) {
-                    // Trova tutte le LineString nella FeatureCollection (escludi poligoni e punti)
-                    const lineStringFeatures = features.filter(feature => {
-                        const geometry = feature.getGeometry();
-                        if (!geometry) {
-                            return false;
-                        }
-                        const geometryType = geometry.getType();
-                        // Include solo LineString e MultiLineString
-                        return geometryType === 'LineString' || geometryType === 'MultiLineString';
-                    });
-
-                    // Se ci sono LineString, usa solo quelle per il calcolo dell'extent
-                    // Altrimenti usa tutte le feature come fallback
-                    const featuresForExtent = lineStringFeatures.length > 0 ? lineStringFeatures : features;
-
-                    // Crea una source temporanea per calcolare l'extent solo delle LineString
-                    const tempSource = new VectorSource();
-                    tempSource.addFeatures(featuresForExtent);
-                    const extent = tempSource.getExtent();
-
-                    const view = map.value.getView();
-
-                    // Calcola manualmente centro e zoom per evitare qualsiasi animazione
-                    const size = map.value.getSize();
-                    if (size && extent && extent[0] !== Infinity) {
-                        // Calcola il centro dell'extent
-                        const center = [
-                            (extent[0] + extent[2]) / 2,
-                            (extent[1] + extent[3]) / 2
-                        ];
-
-                        // Calcola la risoluzione necessaria per adattare l'extent con padding
-                        const width = extent[2] - extent[0];
-                        const height = extent[3] - extent[1];
-                        const aspectRatio = width / height;
-                        const mapAspectRatio = size[0] / size[1];
-
-                        let resolution;
-                        if (aspectRatio > mapAspectRatio) {
-                            // L'extent è più largo, usa la larghezza
-                            resolution = width / (size[0] - props.padding * 2);
-                        } else {
-                            // L'extent è più alto, usa l'altezza
-                            resolution = height / (size[1] - props.padding * 2);
-                        }
-
-                        // Calcola lo zoom dalla risoluzione usando la formula di OpenLayers
-                        const maxResolution = view.getMaxResolution();
-                        const zoom = Math.log2(maxResolution / resolution);
-                        const maxZoom = Math.min(view.getMaxZoom() || 17, 17);
-
-                        // Imposta direttamente centro e zoom senza animazione
-                        view.setCenter(center);
-                        view.setZoom(Math.min(Math.max(zoom, 0), maxZoom));
-                    }
-                }
-
-                // Cattura screenshot automaticamente solo quando la mappa ha finito di renderizzare
-                if (props.enableScreenshot && !screenshotCaptured.value) {
-                    // Con duration: 0, possiamo catturare immediatamente dopo il rendercomplete
-                    map.value.once('rendercomplete', () => {
-                        captureScreenshot();
-                    });
-                }
-
-                emit('map-ready', { map: map.value, features, geojson: data, featuresMap: featuresMap.value });
-                isLoading.value = false;
+                applyGeoJSONData(data);
             } catch (error) {
                 console.error('Error loading GeoJSON:', error);
                 isLoading.value = false;
@@ -379,6 +446,20 @@ export default {
         // Handle feature click - can be overridden in child components
         const handleFeatureClick = (feature, featureProps) => {
             const clickAction = featureProps.clickAction || (featureProps.link ? 'link' : 'none');
+            try {
+                const geom = feature?.getGeometry?.();
+                const type = geom?.getType?.();
+                if (type === 'LineString' || type === 'MultiLineString') {
+                    const format = new GeoJSON();
+                    const obj = format.writeFeatureObject(feature, {
+                        featureProjection: 'EPSG:3857',
+                        dataProjection: 'EPSG:4326',
+                    });
+                    selectedTrackForChart.value = toLineStringFeatureObject(obj);
+                }
+            } catch (e) {
+                console.warn('Impossibile impostare traccia per slope chart', e);
+            }
 
             switch (clickAction) {
                 case 'popup':
@@ -428,13 +509,20 @@ export default {
                 const feature = features[0];
                 const featureProps = feature.getProperties();
                 handleFeatureClick(feature, featureProps);
+            } else {
+                const [lon, lat] = toLonLat(event.coordinate);
+                emit('map-click', { lon, lat });
             }
         };
 
         // Handle pointer move for cursor change and tooltip
         const handlePointerMove = (event) => {
             const pixel = event.pixel;
-            const feature = map.value.forEachFeatureAtPixel(pixel, (f) => f);
+            const feature = map.value.forEachFeatureAtPixel(
+                pixel,
+                (f) => f,
+                { hitTolerance: 6 }
+            );
 
             if (feature) {
                 const featureProps = feature.getProperties();
@@ -456,9 +544,32 @@ export default {
                 } else {
                     tooltipVisible.value = false;
                 }
+
+                // Sync hover mappa -> slope chart quando si passa su una linea
+                try {
+                    if (!props.enableSlopeChart) {
+                        return;
+                    }
+                    const geom = feature?.getGeometry?.();
+                    const type = geom?.getType?.();
+                    if (type === 'LineString' || type === 'MultiLineString') {
+                        const [lon, lat] = toLonLat(event.coordinate);
+                        hoverSource.value = 'map';
+                        slopeChartRef.value?.setHoverLocation?.({ lon, lat });
+                    } else if (hoverSource.value === 'map') {
+                        slopeChartRef.value?.clearHover?.();
+                        hoverSource.value = null;
+                    }
+                } catch (_) {
+                    /* ignore */
+                }
             } else {
-                map.value.getTargetElement().style.cursor = '';
+                map.value.getTargetElement().style.cursor = props.defaultCursor || '';
                 tooltipVisible.value = false;
+                if (hoverSource.value === 'map') {
+                    slopeChartRef.value?.clearHover?.();
+                    hoverSource.value = null;
+                }
             }
         };
 
@@ -469,6 +580,38 @@ export default {
             currentFeatureId.value = null;
             currentFeatureProperties.value = {};
             popupData.value = {};
+        };
+
+        const onSlopeHover = (payload) => {
+            if (!props.enableSlopeChart) {
+                return;
+            }
+            slopeHover.value = payload || { location: undefined, track: undefined };
+            emit('slope-hover', slopeHover.value);
+            // TODO: in seguito qui agganceremo evidenziazione tratto su mappa usando slopeHover.track
+
+            // Sync slope chart -> marker su mappa
+            if (!map.value) {
+                return;
+            }
+            hoverSource.value = 'chart';
+            const loc = slopeHover.value?.location;
+            const lon = Number(loc?.lon);
+            const lat = Number(loc?.lat);
+            if (!Number.isFinite(lon) || !Number.isFinite(lat)) {
+                if (hoverMarkerFeature.value) {
+                    hoverMarkerSource.value?.removeFeature(hoverMarkerFeature.value);
+                    hoverMarkerFeature.value = null;
+                }
+                return;
+            }
+            const coord3857 = fromLonLat([lon, lat]);
+            if (!hoverMarkerFeature.value) {
+                hoverMarkerFeature.value = new Feature(new Point(coord3857));
+                hoverMarkerSource.value?.addFeature(hoverMarkerFeature.value);
+            } else {
+                hoverMarkerFeature.value.getGeometry().setCoordinates(coord3857);
+            }
         };
 
         // Capture screenshot of the map
@@ -546,7 +689,21 @@ export default {
 
             const vectorLayer = new VectorLayer({
                 source: vectorSource.value,
-                style: getFeatureStyle
+                style: getFeatureStyle,
+                zIndex: 10
+            });
+
+            hoverMarkerSource.value = new VectorSource();
+            const hoverMarkerLayer = new VectorLayer({
+                source: hoverMarkerSource.value,
+                style: new Style({
+                    image: new CircleStyle({
+                        radius: 6,
+                        fill: new Fill({ color: 'rgba(0, 0, 0, 0.9)' }),
+                        stroke: new Stroke({ color: 'rgba(255, 255, 255, 1)', width: 2 })
+                    })
+                }),
+                zIndex: 5
             });
 
             map.value = new Map({
@@ -555,6 +712,7 @@ export default {
                     new TileLayer({
                         source: new OSM()
                     }),
+                    hoverMarkerLayer,
                     vectorLayer
                 ],
                 view: new View({
@@ -593,15 +751,18 @@ export default {
             }
         });
 
-        // Watch for geojsonUrl changes - use immediate and deep watching
         watch(() => props.geojsonUrl, (newUrl, oldUrl) => {
-            if (newUrl && newUrl !== oldUrl) {
+            if (newUrl && newUrl !== oldUrl && !props.inlineGeojson) {
                 console.log('GeoJSON URL changed, reloading map:', { oldUrl, newUrl });
-                // Reset screenshot flag when URL changes
                 screenshotCaptured.value = false;
                 loadGeoJSON();
             }
         }, { immediate: false });
+
+        watch(() => props.inlineGeojson, () => {
+            screenshotCaptured.value = false;
+            loadGeoJSON();
+        }, { deep: true });
 
         return {
             // Props (for template)
@@ -621,6 +782,10 @@ export default {
             popupData,
             currentFeatureId,
             currentFeatureProperties,
+            slopeChartRef,
+            selectedTrackForChart,
+            slopeHover,
+            onSlopeHover,
             // Screenshot state
             isCapturing,
             screenshotCaptured,
@@ -643,6 +808,10 @@ export default {
 .feature-collection-map-container {
     position: relative;
     width: 100%;
+}
+
+.slope-chart-container {
+    margin-top: 10px;
 }
 
 .map-container {
