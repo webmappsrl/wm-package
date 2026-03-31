@@ -16,9 +16,12 @@ use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Lenses\Lens;
 use Laravel\Nova\Resource;
 use Wm\WmPackage\Nova\Fields\PropertiesPanel;
+use Wm\WmPackage\Nova\Traits\HasDemClassification;
 
 abstract class AbstractGeometryResource extends Resource
 {
+    use HasDemClassification;
+
     /**
      * The single value that should be used to represent the resource when being displayed.
      *
@@ -129,21 +132,39 @@ abstract class AbstractGeometryResource extends Resource
 
     public function getDemTabFields(): array
     {
-        return [
-            Boolean::make(__('Round Trip'), 'properties->dem_data->round_trip'),
-            Text::make(__('Ascent'), 'properties->dem_data->ascent'),
-            Text::make(__('Descent'), 'properties->dem_data->descent'),
-            Text::make(__('Distance'), 'properties->dem_data->distance'),
-            Text::make(__('Maximum Elevation'), 'properties->dem_data->ele_max'),
-            Text::make(__('Minimum Elevation'), 'properties->dem_data->ele_min'),
-            Text::make(__('Starting Point Elevation'), 'properties->dem_data->ele_from'),
-            Text::make(__('Ending Point Elevation'), 'properties->dem_data->ele_to'),
-            Text::make(__('Duration Forward'), 'properties->dem_data->duration_forward'),
-            Text::make(__('Duration Backward'), 'properties->dem_data->duration_backward'),
-            Text::make(__('Duration Forward (bike)'), 'properties->dem_data->duration_forward_bike'),
-            Text::make(__('Duration Backward (bike)'), 'properties->dem_data->duration_backward_bike'),
-            Text::make(__('Duration Forward (hiking)'), 'properties->dem_data->duration_forward_hiking'),
-            Text::make(__('Duration Backward (hiking)'), 'properties->dem_data->duration_backward_hiking'),
+        $mainFields = [
+            'ascent'            => __('Ascent'),
+            'descent'           => __('Descent'),
+            'distance'          => __('Distance'),
+            'ele_max'           => __('Maximum Elevation'),
+            'ele_min'           => __('Minimum Elevation'),
+            'ele_from'          => __('Starting Point Elevation'),
+            'ele_to'            => __('Ending Point Elevation'),
+            'duration_forward'  => __('Duration Forward'),
+            'duration_backward' => __('Duration Backward'),
         ];
+
+        $fields = [
+            Boolean::make(__('Round Trip'), 'properties->dem_data->round_trip'),
+        ];
+
+        foreach ($mainFields as $fieldKey => $label) {
+            $fields[] = Text::make($label, 'properties->dem_data->'.$fieldKey)
+                ->onlyOnDetail()
+                ->resolveUsing(function ($value, $model) use ($fieldKey) {
+                    return $this->generateFieldTable($model, $fieldKey);
+                })
+                ->asHtml();
+
+            $fields[] = Text::make($label, 'properties->manual_data->'.$fieldKey)
+                ->onlyOnForms();
+        }
+
+        $fields[] = Text::make(__('Duration Forward (bike)'), 'properties->dem_data->duration_forward_bike');
+        $fields[] = Text::make(__('Duration Backward (bike)'), 'properties->dem_data->duration_backward_bike');
+        $fields[] = Text::make(__('Duration Forward (hiking)'), 'properties->dem_data->duration_forward_hiking');
+        $fields[] = Text::make(__('Duration Backward (hiking)'), 'properties->dem_data->duration_backward_hiking');
+
+        return $fields;
     }
 }
