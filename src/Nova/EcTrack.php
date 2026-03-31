@@ -16,6 +16,7 @@ use Wm\WmPackage\Nova\Actions\TranslateModelAction;
 use Wm\WmPackage\Nova\Filters\FeaturesByLayerFilter;
 use Wm\WmPackage\Nova\Filters\FeaturesExcludeByIds;
 use Wm\WmPackage\Nova\Filters\FeaturesIncludeByIds;
+use Wm\WmPackage\Nova\Cards\ApiLinksCard\EcTrackApiLinksCard;
 use Wm\WmPackage\Nova\Traits\MultiLinestringResourceTrait;
 
 class EcTrack extends AbstractEcResource
@@ -89,6 +90,17 @@ class EcTrack extends AbstractEcResource
             ], __('Regenerate Taxonomy Where')),
             new ExecuteEcTrackDataChainAction,
             new TranslateModelAction,
+        ];
+    }
+
+    public function cards(NovaRequest $request): array
+    {
+        if (! $request->resourceId) {
+            return [];
+        }
+
+        return [
+            new EcTrackApiLinksCard($request->findModelOrFail()),
         ];
     }
 

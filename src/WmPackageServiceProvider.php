@@ -57,6 +57,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
         $this->app->register(\Wm\WmPackage\Nova\Fields\LayerFeatures\FieldServiceProvider::class);
         $this->app->register(\Wm\WmPackage\Nova\Fields\FeatureCollectionMap\FieldServiceProvider::class);
         $this->app->register(\Wm\WmPackage\Nova\Fields\FeatureCollectionGrid\FieldServiceProvider::class);
+        $this->app->register(\Wm\WmPackage\Nova\Cards\ApiLinksCard\CardServiceProvider::class);
     }
 
     public static function getBasePath(): string
