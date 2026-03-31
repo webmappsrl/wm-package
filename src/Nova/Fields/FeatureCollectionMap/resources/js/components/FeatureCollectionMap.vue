@@ -178,9 +178,36 @@ export default {
         const selectedTrackForChart = ref(null);
         const slopeHover = ref({ location: undefined, track: undefined });
         const hoverSource = ref(null); // 'map' | 'chart' | null
+        const slopeChartAllowed = ref(false);
 
         const hoverMarkerSource = ref(null);
         const hoverMarkerFeature = ref(null);
+
+        const flattenMultiLineStringCoordinates = (multiCoords) => {
+            if (!Array.isArray(multiCoords) || multiCoords.length === 0) {
+                return [];
+            }
+            const flat = [];
+            for (const part of multiCoords) {
+                if (!Array.isArray(part) || part.length === 0) {
+                    continue;
+                }
+                for (let i = 0; i < part.length; i++) {
+                    const c = part[i];
+                    if (!Array.isArray(c) || c.length < 2) {
+                        continue;
+                    }
+                    if (flat.length > 0 && i === 0) {
+                        const prev = flat[flat.length - 1];
+                        if (Array.isArray(prev) && prev[0] === c[0] && prev[1] === c[1] && prev[2] === c[2]) {
+                            continue;
+                        }
+                    }
+                    flat.push(c);
+                }
+            }
+            return flat;
+        };
 
         const toLineStringFeatureObject = (featureObject) => {
             if (!featureObject || typeof featureObject !== 'object') {
@@ -199,7 +226,7 @@ export default {
                     properties: featureObject.properties || {},
                     geometry: {
                         type: 'LineString',
-                        coordinates: g.coordinates[0] || []
+                        coordinates: flattenMultiLineStringCoordinates(g.coordinates)
                     }
                 };
             }
@@ -211,11 +238,41 @@ export default {
                 return;
             }
             const feats = Array.isArray(data.features) ? data.features : [];
-            const candidate = feats.find((f) => {
+            const lineFeats = feats.filter((f) => {
                 const t = f?.geometry?.type;
                 return t === 'LineString' || t === 'MultiLineString';
             });
-            selectedTrackForChart.value = candidate ? toLineStringFeatureObject(candidate) : null;
+            console.debug('[FeatureCollectionMap] geojson features', {
+                total: feats.length,
+                lines: lineFeats.length,
+                types: feats.reduce((acc, f) => {
+                    const t = f?.geometry?.type || 'unknown';
+                    acc[t] = (acc[t] || 0) + 1;
+                    return acc;
+                }, {}),
+            });
+            slopeChartAllowed.value = lineFeats.length === 1;
+            if (!slopeChartAllowed.value) {
+                selectedTrackForChart.value = null;
+                return;
+            }
+            selectedTrackForChart.value = toLineStringFeatureObject(lineFeats[0]);
+            try {
+                const coords = selectedTrackForChart.value?.geometry?.coordinates || [];
+                const first = coords?.[0];
+                const last = coords?.[coords.length - 1];
+                const lens = Array.isArray(coords)
+                    ? coords.slice(0, 50).map((c) => (Array.isArray(c) ? c.length : null))
+                    : [];
+                console.debug('[FeatureCollectionMap] chart coords debug', {
+                    points: Array.isArray(coords) ? coords.length : null,
+                    first,
+                    last,
+                    coordLengthsSample: lens,
+                });
+            } catch (_) {
+                /* ignore */
+            }
         };
 
         // Screenshot state
@@ -447,6 +504,10 @@ export default {
         const handleFeatureClick = (feature, featureProps) => {
             const clickAction = featureProps.clickAction || (featureProps.link ? 'link' : 'none');
             try {
+                if (!props.enableSlopeChart || !slopeChartAllowed.value) {
+                    // Non mostrare il chart se disabilitato o se ci sono più linee nella FeatureCollection
+                    selectedTrackForChart.value = null;
+                } else {
                 const geom = feature?.getGeometry?.();
                 const type = geom?.getType?.();
                 if (type === 'LineString' || type === 'MultiLineString') {
@@ -456,6 +517,7 @@ export default {
                         dataProjection: 'EPSG:4326',
                     });
                     selectedTrackForChart.value = toLineStringFeatureObject(obj);
+                }
                 }
             } catch (e) {
                 console.warn('Impossibile impostare traccia per slope chart', e);

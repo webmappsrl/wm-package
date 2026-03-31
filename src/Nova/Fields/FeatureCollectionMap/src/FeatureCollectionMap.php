@@ -34,9 +34,9 @@ class FeatureCollectionMap extends Field
     protected bool $enableScreenshot = false;
 
     /**
-     * Flag per abilitare lo slope chart (default: true)
+     * Flag per abilitare lo slope chart (default: false)
      */
-    protected bool $enableSlopeChart = true;
+    protected bool $enableSlopeChart = false;
 
     /**
      * Tipi di geometria accettati dal campo.
@@ -191,7 +191,7 @@ class FeatureCollectionMap extends Field
                     [$json]
                 )[0]->wkt,
                 GeometryType::MultiLineString => DB::select(
-                    'SELECT ST_AsText(ST_LineMerge(ST_Force2D(ST_GeomFromGeoJSON(?)))) AS wkt',
+                    'SELECT ST_AsText(ST_LineMerge(ST_Force3D(ST_GeomFromGeoJSON(?)))) AS wkt',
                     [$json]
                 )[0]->wkt,
                 GeometryType::MultiPolygon => DB::select(

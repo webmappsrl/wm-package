@@ -5,7 +5,7 @@
                 :show-zoom-controls="field.showZoomControls !== false"
                 :mouse-wheel-zoom="field.mouseWheelZoom !== false" :drag-pan="field.dragPan !== false"
                 :popup-component="field.popupComponent" :enable-screenshot="field.enableScreenshot === true"
-                :enable-slope-chart="field.enableSlopeChart !== false"
+                :enable-slope-chart="field.enableSlopeChart === true"
                 :resource-name="resourceName"
                 :resource-id="resourceId || (resource && resource.id && resource.id.value)"
                 @feature-click="handleFeatureClick" @map-ready="handleMapReady" @popup-open="handlePopupOpen"

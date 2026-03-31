@@ -12,6 +12,7 @@ trait MultiLinestringResourceTrait
         return [
             ...parent::fields($request),
             FeatureCollectionMap::make('Geometry', 'geometry')
+                ->enableSlopeChart(true)
                 ->hideFromIndex()
                 ->required(),
         ];
