@@ -33,6 +33,29 @@ class App extends Resource
 {
     public static $model = \Wm\WmPackage\Models\App::class;
 
+    protected function tiptapButtons(): array
+    {
+        return [
+            'heading',
+            '|',
+            'bold',
+            'italic',
+            'underline',
+            '|',
+            'bulletList',
+            'orderedList',
+            '|',
+            'link',
+            'image',
+            '|',
+            'textAlign',
+            '|',
+            'horizontalRule',
+            '|',
+            'editHtml',
+        ];
+    }
+
     /**
      * The single value that should be used to represent the resource when being displayed.
      *
@@ -239,10 +262,18 @@ class App extends Resource
     {
         return [
             NovaTabTranslatable::make([
-                Tiptap::make('Page Project', 'page_project'),
-                Tiptap::make('Page Disclaimer', 'page_disclaimer'),
-                Tiptap::make('Page Credits', 'page_credits'),
-                Tiptap::make('Page Privacy', 'page_privacy'),
+                Tiptap::make('Page Project', 'page_project')
+                    ->buttons($this->tiptapButtons())
+                    ->headingLevels([2, 3, 4]),
+                Tiptap::make('Page Disclaimer', 'page_disclaimer')
+                    ->buttons($this->tiptapButtons())
+                    ->headingLevels([2, 3, 4]),
+                Tiptap::make('Page Credits', 'page_credits')
+                    ->buttons($this->tiptapButtons())
+                    ->headingLevels([2, 3, 4]),
+                Tiptap::make('Page Privacy', 'page_privacy')
+                    ->buttons($this->tiptapButtons())
+                    ->headingLevels([2, 3, 4]),
             ]),
         ];
     }
