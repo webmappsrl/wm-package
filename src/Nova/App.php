@@ -81,7 +81,7 @@ class App extends Resource
                 ->confirmButtonText(__('Yes, reindex'))
                 ->cancelButtonText(__('Cancel')),
             ExecuteEcTrackDataChainAction::make([
-                fn ($track) => new UpdateEcTrackAwsJob($track),
+                fn($track) => new UpdateEcTrackAwsJob($track),
             ], __('Update Tracks on AWS'))
                 ->onlyOnDetail()
                 ->confirmText(__('Are you sure you want to update all tracks of this app on AWS?'))
@@ -291,6 +291,7 @@ class App extends Resource
     protected function home_tab(): array
     {
         return [
+            Images::make('Home Images', 'home_images'),
             NovaTabTranslatable::make([
                 Code::make('Welcome', 'welcome'),
                 /*   Tiptap::make('Welcome', 'welcome')
@@ -370,12 +371,12 @@ class App extends Resource
                 ->language('json')
                 ->rules('json')
                 ->default($this->getDefaultPoiForm())
-                ->help(__('This JSON structures the acquisition form for UGC POIs. Knowledge of JSON format required.').view('wm-package::poi-forms')->render()),
+                ->help(__('This JSON structures the acquisition form for UGC POIs. Knowledge of JSON format required.') . view('wm-package::poi-forms')->render()),
             Code::Make(__('TRACK acquisition forms'), 'track_acquisition_form')
                 ->language('json')
                 ->rules('json')
                 ->default($this->getDefaultTrackForm())
-                ->help(__('This JSON structures the acquisition form for UGC Tracks. Knowledge of JSON format required.').view('wm-package::track-forms')->render()),
+                ->help(__('This JSON structures the acquisition form for UGC Tracks. Knowledge of JSON format required.') . view('wm-package::track-forms')->render()),
         ];
     }
 
@@ -578,9 +579,9 @@ class App extends Resource
                             $title = $layer->getStringName();
                             if (is_array($title)) {
                                 // Se è un array, prendi prima la versione italiana, poi quella inglese, altrimenti usa l'ID
-                                $title = $title['it'] ?? $title['en'] ?? ('Layer #'.$layer->id);
+                                $title = $title['it'] ?? $title['en'] ?? ('Layer #' . $layer->id);
                             } elseif (is_null($title)) {
-                                $title = 'Layer #'.$layer->id;
+                                $title = 'Layer #' . $layer->id;
                             }
 
                             return [
@@ -640,7 +641,7 @@ class App extends Resource
                 ->hideFromIndex()
                 ->help(__('Turn this option off if you do not want to show POIs by default on the map.')),
             Text::make('POI Data Icon', 'pois_data_icon', function () {
-                return '<div style="width:64px;height:64px;">'.$this->pois_data_icon.'</div>';
+                return '<div style="width:64px;height:64px;">' . $this->pois_data_icon . '</div>';
             })->asHtml()->onlyOnDetail(),
             Textarea::make('POI Data Icon SVG', 'pois_data_icon')
                 ->onlyOnForms()
@@ -649,7 +650,7 @@ class App extends Resource
                 ->hideFromIndex()
                 ->help(__('Turn this option off if you do not want to show all track layers by default on the map')),
             Text::make('Track Data Icon', 'tracks_data_icon', function () {
-                return '<div style="width:64px;height:64px;">'.$this->tracks_data_icon.'</div>';
+                return '<div style="width:64px;height:64px;">' . $this->tracks_data_icon . '</div>';
             })->asHtml()->onlyOnDetail(),
             Textarea::make('Track Data Icon SVG', 'tracks_data_icon')
                 ->onlyOnForms()
@@ -717,7 +718,7 @@ class App extends Resource
                         }
                         $decoded = json_decode($value);
                         if (! is_array($decoded)) {
-                            $fail('The '.$attribute.' is invalid. Follow the example [9.9456,43.9116,11.3524,45.0186]');
+                            $fail('The ' . $attribute . ' is invalid. Follow the example [9.9456,43.9116,11.3524,45.0186]');
                         }
                     },
                 ])
