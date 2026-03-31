@@ -83,15 +83,9 @@ class Media extends SpatieMedia implements UserOwnedModelInterface
     {
         $feature = $this->getGeojson();
         if (! $feature || ! isset($feature['geometry'])) {
-            return [
-                'type' => 'FeatureCollection',
-                'features' => [],
-            ];
+            return GeoJsonService::make()->wrapAsFeatureCollection(null);
         }
 
-        return [
-            'type' => 'FeatureCollection',
-            'features' => [$feature],
-        ];
+        return GeoJsonService::make()->wrapAsFeatureCollection($feature);
     }
 }

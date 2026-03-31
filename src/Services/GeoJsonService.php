@@ -106,6 +106,19 @@ class GeoJsonService extends BaseService
         }
     }
 
+    /**
+     * Wrap a single GeoJSON Feature into a FeatureCollection.
+     *
+     * If the feature is null/falsy, returns an empty FeatureCollection.
+     */
+    public function wrapAsFeatureCollection(?array $feature): array
+    {
+        return [
+            'type' => 'FeatureCollection',
+            'features' => $feature ? [$feature] : [],
+        ];
+    }
+
     public function removeInvalidProperties(array $properties): array
     {
         return array_filter($properties, fn ($e) => ! is_array($e)

@@ -151,21 +151,21 @@ function extractFirstPolygonGeometry(parsed) {
 }
 
 /**
- * Estrae la prima geometria compatibile con i kinds configurati.
- * Restituisce { geometry, kind } oppure null.
+ * Estrae la prima geometria compatibile con i types configurati.
+ * Restituisce { geometry, type } oppure null.
  */
-function extractGeometryByKinds(parsed, kinds) {
-    for (const kind of kinds) {
+function extractGeometryByTypes(parsed, types) {
+    for (const type of types) {
         let geom = null;
-        if (kind === 'point') {
+        if (type === 'point') {
             geom = extractFirstPointGeometry(parsed);
-        } else if (kind === 'multilinestring') {
+        } else if (type === 'multilinestring') {
             geom = extractFirstLineGeometry(parsed);
-        } else if (kind === 'multipolygon') {
+        } else if (type === 'multipolygon') {
             geom = extractFirstPolygonGeometry(parsed);
         }
         if (geom) {
-            return { geometry: geom, kind };
+            return { geometry: geom, type };
         }
     }
     return null;
@@ -255,19 +255,19 @@ export default {
         };
     },
     computed: {
-        kinds() {
-            return this.field.geometryKinds || ['multilinestring'];
+        types() {
+            return this.field.geometryTypes || ['multilinestring'];
         },
-        hasKind() {
-            const k = this.kinds;
+        hasType() {
+            const t = this.types;
             return {
-                point: k.includes('point'),
-                multilinestring: k.includes('multilinestring'),
-                multipolygon: k.includes('multipolygon')
+                point: t.includes('point'),
+                multilinestring: t.includes('multilinestring'),
+                multipolygon: t.includes('multipolygon')
             };
         },
         isPointMode() {
-            return this.hasKind.point;
+            return this.hasType.point;
         },
         placeholderLat() {
             return this.field.placeholderLat || 'es. 41.9028';
@@ -280,14 +280,14 @@ export default {
                 return this.field.fileUploadLabel;
             }
             const formats = ['GeoJSON', 'GPX', 'KML'];
-            if (this.hasKind.point) {
+            if (this.hasType.point) {
                 formats.push('CSV');
             }
             return `Carica geometria (${formats.join(', ')})`;
         },
         fileAccept() {
             let accept = '.geojson,.json,.gpx,.kml,application/geo+json';
-            if (this.hasKind.point) {
+            if (this.hasType.point) {
                 accept += ',.csv,text/csv';
             }
             return accept;
@@ -376,7 +376,7 @@ export default {
             }
 
             let geom;
-            if (g.type === 'Point' && this.hasKind.point && g.coordinates?.length >= 2) {
+            if (g.type === 'Point' && this.hasType.point && g.coordinates?.length >= 2) {
                 geom = g;
                 this.latInput = String(g.coordinates[1]);
                 this.lonInput = String(g.coordinates[0]);
@@ -398,7 +398,7 @@ export default {
             if (!geom) {
                 return null;
             }
-            if (geom.type === 'Point' && this.hasKind.point) {
+            if (geom.type === 'Point' && this.hasType.point) {
                 return geom;
             }
             if (geom.type === 'LineString') {
@@ -434,7 +434,7 @@ export default {
                     const res = ev.target.result;
                     const lower = fileName.toLowerCase();
 
-                    if (this.hasKind.point && (lower.endsWith('.csv') || lower.endsWith('.tsv'))) {
+                    if (this.hasType.point && (lower.endsWith('.csv') || lower.endsWith('.tsv'))) {
                         const pt = parseCsvPoint(res);
                         if (!pt) {
                             tryRead(
@@ -458,9 +458,9 @@ export default {
                         parsed = JSON.parse(res);
                     }
 
-                    const result = extractGeometryByKinds(parsed, this.kinds);
+                    const result = extractGeometryByTypes(parsed, this.types);
                     if (!result) {
-                        const labels = this.kinds.map(k => ({
+                        const labels = this.types.map(k => ({
                             point: 'Point',
                             multilinestring: 'LineString/MultiLineString',
                             multipolygon: 'Polygon/MultiPolygon'
@@ -469,9 +469,9 @@ export default {
                         return;
                     }
 
-                    const { geometry, kind } = result;
+                    const { geometry, type } = result;
 
-                    if (kind === 'point') {
+                    if (type === 'point') {
                         this.applyPointGeometry(geometry);
                         await this.mergeInlineFromServer(geometry);
                     } else {

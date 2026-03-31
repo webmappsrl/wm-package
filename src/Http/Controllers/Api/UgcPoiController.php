@@ -2,18 +2,18 @@
 
 namespace Wm\WmPackage\Http\Controllers\Api;
 
-use App\Models\UgcPoi;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Wm\WmPackage\Http\Controllers\Api\Abstracts\UgcController;
+use Wm\WmPackage\Models\UgcPoi;
 
 class UgcPoiController extends UgcController
 {
     protected function getModelIstance(?Request $request = null): UgcPoi
     {
         if (! $request) {
-            return new UgcPoi;
+            return new UgcPoi();
         }
         $uuid = Arr::get($request->only('properties', []), 'uuid', null);
         if (! $uuid) {

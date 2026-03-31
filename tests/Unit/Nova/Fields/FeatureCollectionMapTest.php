@@ -8,7 +8,7 @@ use Tests\TestCase;
 use Wm\WmPackage\Models\Abstracts\MultiLineString;
 use Wm\WmPackage\Models\Abstracts\Point;
 use Wm\WmPackage\Models\Layer;
-use Wm\WmPackage\Nova\Fields\FeatureCollectionMap\src\Enums\GeometryKind;
+use Wm\WmPackage\Nova\Fields\FeatureCollectionMap\src\Enums\GeometryType;
 use Wm\WmPackage\Nova\Fields\FeatureCollectionMap\src\FeatureCollectionMap;
 
 class FeatureCollectionMapTest extends TestCase
@@ -29,13 +29,13 @@ class FeatureCollectionMapTest extends TestCase
 
         $field = new FeatureCollectionMap('Geometry', 'geometry');
         $reflection = new \ReflectionClass($field);
-        $method = $reflection->getMethod('detectGeometryKinds');
+        $method = $reflection->getMethod('detectGeometryTypes');
         $method->setAccessible(true);
 
         $kinds = $method->invoke($field, $model);
 
         $this->assertCount(1, $kinds);
-        $this->assertSame(GeometryKind::Point, $kinds[0]);
+        $this->assertSame(GeometryType::Point, $kinds[0]);
     }
 
     /** @test */
@@ -46,13 +46,13 @@ class FeatureCollectionMapTest extends TestCase
 
         $field = new FeatureCollectionMap('Geometry', 'geometry');
         $reflection = new \ReflectionClass($field);
-        $method = $reflection->getMethod('detectGeometryKinds');
+        $method = $reflection->getMethod('detectGeometryTypes');
         $method->setAccessible(true);
 
         $kinds = $method->invoke($field, $model);
 
         $this->assertCount(1, $kinds);
-        $this->assertSame(GeometryKind::MultiLineString, $kinds[0]);
+        $this->assertSame(GeometryType::MultiLineString, $kinds[0]);
     }
 
     /** @test */
@@ -62,13 +62,13 @@ class FeatureCollectionMapTest extends TestCase
 
         $field = new FeatureCollectionMap('Geometry', 'geometry');
         $reflection = new \ReflectionClass($field);
-        $method = $reflection->getMethod('detectGeometryKinds');
+        $method = $reflection->getMethod('detectGeometryTypes');
         $method->setAccessible(true);
 
         $kinds = $method->invoke($field, $model);
 
         $this->assertCount(1, $kinds);
-        $this->assertSame(GeometryKind::MultiPolygon, $kinds[0]);
+        $this->assertSame(GeometryType::MultiPolygon, $kinds[0]);
     }
 
     /** @test */
@@ -80,15 +80,15 @@ class FeatureCollectionMapTest extends TestCase
         $field = new FeatureCollectionMap('Geometry', 'geometry');
 
         $reflection = new \ReflectionClass($field);
-        $method = $reflection->getMethod('applyDetectedGeometryKinds');
+        $method = $reflection->getMethod('applyDetectedGeometryTypes');
         $method->setAccessible(true);
 
         $method->invoke($field, $model);
 
         $json = $field->jsonSerialize();
 
-        $this->assertArrayHasKey('geometryKinds', $json);
-        $this->assertSame([GeometryKind::MultiLineString->value], $json['geometryKinds']);
+        $this->assertArrayHasKey('geometryTypes', $json);
+        $this->assertSame([GeometryType::MultiLineString->value], $json['geometryTypes']);
     }
 
     /** @test */
@@ -99,19 +99,19 @@ class FeatureCollectionMapTest extends TestCase
 
         $field = new FeatureCollectionMap('Geometry', 'geometry');
 
-        $field->forGeometryKinds(GeometryKind::Point, GeometryKind::MultiPolygon);
+        $field->forGeometryTypes(GeometryType::Point, GeometryType::MultiPolygon);
 
-        // Dopo l'override, l'auto-detect non deve cambiare i kinds
+        // Dopo l'override, l'auto-detect non deve cambiare i tipi
         $reflection = new \ReflectionClass($field);
-        $method = $reflection->getMethod('applyDetectedGeometryKinds');
+        $method = $reflection->getMethod('applyDetectedGeometryTypes');
         $method->setAccessible(true);
         $method->invoke($field, $model);
 
         $json = $field->jsonSerialize();
 
         $this->assertSame(
-            [GeometryKind::Point->value, GeometryKind::MultiPolygon->value],
-            $json['geometryKinds']
+            [GeometryType::Point->value, GeometryType::MultiPolygon->value],
+            $json['geometryTypes']
         );
     }
 
@@ -142,7 +142,7 @@ class FeatureCollectionMapTest extends TestCase
             ->andReturn([(object) ['wkt' => 'POINT(10 45)']]);
 
         $field = new FeatureCollectionMap('Geometry', 'geometry');
-        $field->forGeometryKinds(GeometryKind::Point);
+        $field->forGeometryTypes(GeometryType::Point);
 
         $reflection = new \ReflectionClass($field);
         $method = $reflection->getMethod('geojsonToGeometry');
@@ -182,7 +182,7 @@ class FeatureCollectionMapTest extends TestCase
             ->andReturn([(object) ['wkt' => 'MULTILINESTRING((0 0,1 1))']]);
 
         $field = new FeatureCollectionMap('Geometry', 'geometry');
-        $field->forGeometryKinds(GeometryKind::MultiLineString);
+        $field->forGeometryTypes(GeometryType::MultiLineString);
 
         $reflection = new \ReflectionClass($field);
         $method = $reflection->getMethod('geojsonToGeometry');
@@ -214,7 +214,7 @@ class FeatureCollectionMapTest extends TestCase
             ->andReturn([(object) ['wkt' => 'MULTIPOLYGON(((0 0,1 0,1 1,0 1,0 0)))']]);
 
         $field = new FeatureCollectionMap('Geometry', 'geometry');
-        $field->forGeometryKinds(GeometryKind::MultiPolygon);
+        $field->forGeometryTypes(GeometryType::MultiPolygon);
 
         $reflection = new \ReflectionClass($field);
         $method = $reflection->getMethod('geojsonToGeometry');
@@ -389,7 +389,7 @@ class FeatureCollectionMapTest extends TestCase
         $field->withDemEnrichment(true)
             ->withPopupComponent('my-popup')
             ->enableScreenshot(true)
-            ->forGeometryKinds(GeometryKind::Point, GeometryKind::MultiPolygon);
+            ->forGeometryTypes(GeometryType::Point, GeometryType::MultiPolygon);
 
         $json = $field->jsonSerialize();
 
@@ -397,8 +397,8 @@ class FeatureCollectionMapTest extends TestCase
         $this->assertSame('my-popup', $json['popupComponent']);
         $this->assertTrue($json['enableScreenshot']);
         $this->assertSame(
-            [GeometryKind::Point->value, GeometryKind::MultiPolygon->value],
-            $json['geometryKinds']
+            [GeometryType::Point->value, GeometryType::MultiPolygon->value],
+            $json['geometryTypes']
         );
     }
 }

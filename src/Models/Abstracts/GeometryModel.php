@@ -78,17 +78,7 @@ abstract class GeometryModel extends Model implements HasMedia
     public function getFeatureCollectionMap(): array
     {
         $feature = $this->getGeojson();
-        if (! $feature) {
-            return [
-                'type' => 'FeatureCollection',
-                'features' => [],
-            ];
-        }
-
-        return [
-            'type' => 'FeatureCollection',
-            'features' => [$feature],
-        ];
+        return GeoJsonService::make()->wrapAsFeatureCollection($feature);
     }
 
     public function populateProperties(): void

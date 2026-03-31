@@ -4,7 +4,7 @@ namespace Wm\WmPackage\Nova\Fields\FeatureCollectionMap\src;
 
 use Illuminate\Support\Facades\DB;
 use Laravel\Nova\Fields\Field;
-use Wm\WmPackage\Nova\Fields\FeatureCollectionMap\src\Enums\GeometryKind;
+use Wm\WmPackage\Nova\Fields\FeatureCollectionMap\src\Enums\GeometryType;
 use Wm\WmPackage\Models\Abstracts\MultiLineString;
 use Wm\WmPackage\Models\Abstracts\Point;
 use Wm\WmPackage\Models\Abstracts\Polygon;
@@ -36,14 +36,14 @@ class FeatureCollectionMap extends Field
     /**
      * Tipi di geometria accettati dal campo.
      *
-     * @var GeometryKind[]
+     * @var GeometryType[]
      */
-    protected array $geometryKinds = [GeometryKind::MultiLineString];
+    protected array $geometryTypes = [GeometryType::MultiLineString];
 
     /**
-     * Indica se geometryKinds è stato impostato esplicitamente (override).
+     * Indica se geometryTypes è stato impostato esplicitamente (override).
      */
-    protected bool $geometryKindsExplicit = false;
+    protected bool $geometryTypesExplicit = false;
 
     /**
      * Create a new field.
@@ -62,7 +62,7 @@ class FeatureCollectionMap extends Field
      */
     public function resolve($resource, ?string $attribute = null): void
     {
-        $this->applyDetectedGeometryKinds($resource);
+        $this->applyDetectedGeometryTypes($resource);
         parent::resolve($resource, $attribute);
         $zone = $this->geometryToGeojson($this->value);
         if (! is_null($zone)) {
@@ -73,7 +73,7 @@ class FeatureCollectionMap extends Field
 
     public function fillModelWithData(object $model, mixed $value, string $attribute): void
     {
-        $this->applyDetectedGeometryKinds($model);
+        $this->applyDetectedGeometryTypes($model);
         $newValue = $this->geojsonToGeometry($value);
         $oldAttribute = $this->geometryToGeojson($model->{$attribute});
         if ($oldAttribute) {
@@ -89,36 +89,36 @@ class FeatureCollectionMap extends Field
     /**
      * Deduce i tipi di geometria dal modello (fallback: multilinestring).
      *
-     * @return GeometryKind[]
+     * @return GeometryType[]
      */
-    protected function detectGeometryKinds(object $resource): array
+    protected function detectGeometryTypes(object $resource): array
     {
         if ($resource instanceof Point) {
-            return [GeometryKind::Point];
+            return [GeometryType::Point];
         }
         if ($resource instanceof MultiLineString) {
-            return [GeometryKind::MultiLineString];
+            return [GeometryType::MultiLineString];
         }
         if ($resource instanceof Polygon) {
-            return [GeometryKind::MultiPolygon];
+            return [GeometryType::MultiPolygon];
         }
 
-        return [GeometryKind::MultiLineString];
+        return [GeometryType::MultiLineString];
     }
 
     /**
-     * Applica auto-detect solo se non è stato impostato un override via forGeometryKinds().
+     * Applica auto-detect solo se non è stato impostato un override via forGeometryTypes().
      */
-    protected function applyDetectedGeometryKinds(object $resource): void
+    protected function applyDetectedGeometryTypes(object $resource): void
     {
-        if ($this->geometryKindsExplicit) {
+        if ($this->geometryTypesExplicit) {
             return;
         }
 
-        $this->geometryKinds = $this->detectGeometryKinds($resource);
+        $this->geometryTypes = $this->detectGeometryTypes($resource);
 
         $this->withMeta([
-            'geometryKinds' => array_map(fn (GeometryKind $k) => $k->value, $this->geometryKinds),
+            'geometryTypes' => array_map(fn (GeometryType $k) => $k->value, $this->geometryTypes),
         ]);
     }
 
@@ -127,13 +127,13 @@ class FeatureCollectionMap extends Field
      *
      * @return $this
      */
-    public function forGeometryKinds(GeometryKind ...$kinds): static
+    public function forGeometryTypes(GeometryType ...$types): static
     {
-        $this->geometryKindsExplicit = true;
-        $this->geometryKinds = $kinds ?: [GeometryKind::MultiLineString];
+        $this->geometryTypesExplicit = true;
+        $this->geometryTypes = $types ?: [GeometryType::MultiLineString];
 
         return $this->withMeta([
-            'geometryKinds' => array_map(fn (GeometryKind $k) => $k->value, $this->geometryKinds),
+            'geometryTypes' => array_map(fn (GeometryType $k) => $k->value, $this->geometryTypes),
         ]);
     }
 
@@ -178,18 +178,18 @@ class FeatureCollectionMap extends Field
         try {
             $decoded = json_decode($json, true);
             $type = $decoded['type'] ?? null;
-            $kind = $this->resolveGeometryKind($type);
+            $geometryType = $this->resolveGeometryType($type);
 
-            return match ($kind) {
-                GeometryKind::Point => DB::select(
+            return match ($geometryType) {
+                GeometryType::Point => DB::select(
                     'SELECT ST_AsText(ST_Force2D(ST_GeomFromGeoJSON(?))) AS wkt',
                     [$json]
                 )[0]->wkt,
-                GeometryKind::MultiLineString => DB::select(
+                GeometryType::MultiLineString => DB::select(
                     'SELECT ST_AsText(ST_LineMerge(ST_Force2D(ST_GeomFromGeoJSON(?)))) AS wkt',
                     [$json]
                 )[0]->wkt,
-                GeometryKind::MultiPolygon => DB::select(
+                GeometryType::MultiPolygon => DB::select(
                     'SELECT ST_AsText(ST_Force2D(ST_GeomFromGeoJSON(?))) AS wkt',
                     [$json]
                 )[0]->wkt,
@@ -197,7 +197,7 @@ class FeatureCollectionMap extends Field
         } catch (\Throwable $e) {
             \Log::error('FeatureCollectionMap geojsonToGeometry', [
                 'message' => $e->getMessage(),
-                'geometryKinds' => array_map(fn (GeometryKind $k) => $k->value, $this->geometryKinds),
+                'geometryTypes' => array_map(fn (GeometryType $k) => $k->value, $this->geometryTypes),
             ]);
 
             throw $e;
@@ -205,26 +205,26 @@ class FeatureCollectionMap extends Field
     }
 
     /**
-     * Determina il GeometryKind appropriato in base al tipo GeoJSON ricevuto e ai tipi configurati.
+     * Determina il GeometryType appropriato in base al tipo GeoJSON ricevuto e ai tipi configurati.
      */
-    protected function resolveGeometryKind(?string $geojsonType): GeometryKind
+    protected function resolveGeometryType(?string $geojsonType): GeometryType
     {
-        $typeToKind = [
-            'Point' => GeometryKind::Point,
-            'MultiPoint' => GeometryKind::Point,
-            'LineString' => GeometryKind::MultiLineString,
-            'MultiLineString' => GeometryKind::MultiLineString,
-            'Polygon' => GeometryKind::MultiPolygon,
-            'MultiPolygon' => GeometryKind::MultiPolygon,
+        $geojsonTypeToGeometryType = [
+            'Point' => GeometryType::Point,
+            'MultiPoint' => GeometryType::Point,
+            'LineString' => GeometryType::MultiLineString,
+            'MultiLineString' => GeometryType::MultiLineString,
+            'Polygon' => GeometryType::MultiPolygon,
+            'MultiPolygon' => GeometryType::MultiPolygon,
         ];
 
-        $detectedKind = $typeToKind[$geojsonType] ?? null;
+        $detectedType = $geojsonTypeToGeometryType[$geojsonType] ?? null;
 
-        if ($detectedKind && in_array($detectedKind, $this->geometryKinds, true)) {
-            return $detectedKind;
+        if ($detectedType && in_array($detectedType, $this->geometryTypes, true)) {
+            return $detectedType;
         }
 
-        return $this->geometryKinds[0];
+        return $this->geometryTypes[0];
     }
 
     /**
@@ -338,7 +338,7 @@ class FeatureCollectionMap extends Field
             'demEnrichment' => $this->demEnrichment,
             'popupComponent' => $this->popupComponent,
             'enableScreenshot' => $this->enableScreenshot,
-            'geometryKinds' => array_map(fn (GeometryKind $k) => $k->value, $this->geometryKinds),
+            'geometryTypes' => array_map(fn (GeometryType $k) => $k->value, $this->geometryTypes),
         ]);
     }
 }
