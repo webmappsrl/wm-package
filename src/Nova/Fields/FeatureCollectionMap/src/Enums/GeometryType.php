@@ -8,4 +8,3 @@ enum GeometryType: string
     case MultiLineString = 'multilinestring';
     case MultiPolygon = 'multipolygon';
 }
-

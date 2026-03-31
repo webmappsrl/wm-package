@@ -13,7 +13,7 @@ class UgcPoiController extends UgcController
     protected function getModelIstance(?Request $request = null): UgcPoi
     {
         if (! $request) {
-            return new UgcPoi();
+            return new UgcPoi;
         }
         $uuid = Arr::get($request->only('properties', []), 'uuid', null);
         if (! $uuid) {

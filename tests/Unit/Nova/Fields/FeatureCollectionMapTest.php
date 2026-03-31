@@ -24,8 +24,7 @@ class FeatureCollectionMapTest extends TestCase
     /** @test */
     public function it_detects_point_geometry_kind_from_point_model()
     {
-        $model = new class extends Point {
-        };
+        $model = new class extends Point {};
 
         $field = new FeatureCollectionMap('Geometry', 'geometry');
         $reflection = new \ReflectionClass($field);
@@ -41,8 +40,7 @@ class FeatureCollectionMapTest extends TestCase
     /** @test */
     public function it_detects_multilinestring_geometry_kind_from_multilinestring_model()
     {
-        $model = new class extends MultiLineString {
-        };
+        $model = new class extends MultiLineString {};
 
         $field = new FeatureCollectionMap('Geometry', 'geometry');
         $reflection = new \ReflectionClass($field);
@@ -58,7 +56,7 @@ class FeatureCollectionMapTest extends TestCase
     /** @test */
     public function it_detects_multipolygon_geometry_kind_from_polygon_model()
     {
-        $model = new Layer();
+        $model = new Layer;
 
         $field = new FeatureCollectionMap('Geometry', 'geometry');
         $reflection = new \ReflectionClass($field);
@@ -74,8 +72,7 @@ class FeatureCollectionMapTest extends TestCase
     /** @test */
     public function apply_detected_geometry_kinds_sets_meta_when_not_overridden()
     {
-        $model = new class extends MultiLineString {
-        };
+        $model = new class extends MultiLineString {};
 
         $field = new FeatureCollectionMap('Geometry', 'geometry');
 
@@ -94,8 +91,7 @@ class FeatureCollectionMapTest extends TestCase
     /** @test */
     public function for_geometry_kinds_overrides_detected_kinds_and_serialization()
     {
-        $model = new class extends MultiLineString {
-        };
+        $model = new class extends MultiLineString {};
 
         $field = new FeatureCollectionMap('Geometry', 'geometry');
 
@@ -228,8 +224,7 @@ class FeatureCollectionMapTest extends TestCase
     /** @test */
     public function fill_model_with_data_does_not_change_geometry_when_unchanged()
     {
-        $model = new class extends MultiLineString {
-        };
+        $model = new class extends MultiLineString {};
 
         $originalGeometry = 'MULTILINESTRING((0 0,1 1))';
         $model->geometry = $originalGeometry;
@@ -276,8 +271,7 @@ class FeatureCollectionMapTest extends TestCase
     /** @test */
     public function fill_model_with_data_updates_geometry_when_changed()
     {
-        $model = new class extends MultiLineString {
-        };
+        $model = new class extends MultiLineString {};
 
         $originalGeometry = 'MULTILINESTRING((0 0,1 1))';
         $model->geometry = $originalGeometry;
@@ -324,8 +318,7 @@ class FeatureCollectionMapTest extends TestCase
     /** @test */
     public function resolve_sets_geojson_meta_using_geometry_to_geojson()
     {
-        $model = new class extends MultiLineString {
-        };
+        $model = new class extends MultiLineString {};
         $geometry = '0102000000020000000000000000000000000000000000000000000000000000F03F000000000000F03F';
 
         $model->geometry = $geometry;
@@ -333,7 +326,7 @@ class FeatureCollectionMapTest extends TestCase
         DB::shouldReceive('select')
             ->once()
             ->with("SELECT ST_AsGeoJSON(ST_GeomFromWKB(decode(?, 'hex'))) as geojson", [$geometry])
-            ->andReturn([(object) ['geojson' => '{"type":"MultiLineString","coordinates":[[[0,0],[1,1]]]}' ]]);
+            ->andReturn([(object) ['geojson' => '{"type":"MultiLineString","coordinates":[[[0,0],[1,1]]]}']]);
 
         $field = new FeatureCollectionMap('Geometry', 'geometry');
         $field->resolve($model, 'geometry');
@@ -402,4 +395,3 @@ class FeatureCollectionMapTest extends TestCase
         );
     }
 }
-
