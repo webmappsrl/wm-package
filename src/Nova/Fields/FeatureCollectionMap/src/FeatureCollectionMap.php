@@ -2,7 +2,12 @@
 
 namespace Wm\WmPackage\Nova\Fields\FeatureCollectionMap\src;
 
+use Illuminate\Support\Facades\DB;
 use Laravel\Nova\Fields\Field;
+use Wm\WmPackage\Nova\Fields\FeatureCollectionMap\src\Enums\GeometryType;
+use Wm\WmPackage\Models\Abstracts\MultiLineString;
+use Wm\WmPackage\Models\Abstracts\Point;
+use Wm\WmPackage\Models\Abstracts\Polygon;
 
 class FeatureCollectionMap extends Field
 {
@@ -29,6 +34,18 @@ class FeatureCollectionMap extends Field
     protected bool $enableScreenshot = false;
 
     /**
+     * Tipi di geometria accettati dal campo.
+     *
+     * @var GeometryType[]
+     */
+    protected array $geometryTypes = [GeometryType::MultiLineString];
+
+    /**
+     * Indica se geometryTypes è stato impostato esplicitamente (override).
+     */
+    protected bool $geometryTypesExplicit = false;
+
+    /**
      * Create a new field.
      *
      * @param  string  $name
@@ -38,9 +55,176 @@ class FeatureCollectionMap extends Field
     public function __construct($name, $attribute = null, ?callable $resolveCallback = null)
     {
         parent::__construct($name, $attribute, $resolveCallback);
+    }
 
-        // Imposta automaticamente soloOnDetail
-        $this->onlyOnDetail();
+    /**
+     * GeoJSON + centro per compatibilità con form (stesso schema di MapMultiLinestring).
+     */
+    public function resolve($resource, ?string $attribute = null): void
+    {
+        $this->applyDetectedGeometryTypes($resource);
+        parent::resolve($resource, $attribute);
+        $zone = $this->geometryToGeojson($this->value);
+        if (! is_null($zone)) {
+            $this->withMeta(['geojson' => $zone['geojson']]);
+            $this->withMeta(['center' => $zone['center']]);
+        }
+    }
+
+    public function fillModelWithData(object $model, mixed $value, string $attribute): void
+    {
+        $this->applyDetectedGeometryTypes($model);
+        $newValue = $this->geojsonToGeometry($value);
+        $oldAttribute = $this->geometryToGeojson($model->{$attribute});
+        if ($oldAttribute) {
+            $oldValue = $this->geojsonToGeometry($oldAttribute['geojson']);
+        } else {
+            $oldValue = null;
+        }
+        if ($newValue != $oldValue) {
+            parent::fillModelWithData($model, $newValue, $attribute);
+        }
+    }
+
+    /**
+     * Deduce i tipi di geometria dal modello (fallback: multilinestring).
+     *
+     * @return GeometryType[]
+     */
+    protected function detectGeometryTypes(object $resource): array
+    {
+        if ($resource instanceof Point) {
+            return [GeometryType::Point];
+        }
+        if ($resource instanceof MultiLineString) {
+            return [GeometryType::MultiLineString];
+        }
+        if ($resource instanceof Polygon) {
+            return [GeometryType::MultiPolygon];
+        }
+
+        return [GeometryType::MultiLineString];
+    }
+
+    /**
+     * Applica auto-detect solo se non è stato impostato un override via forGeometryTypes().
+     */
+    protected function applyDetectedGeometryTypes(object $resource): void
+    {
+        if ($this->geometryTypesExplicit) {
+            return;
+        }
+
+        $this->geometryTypes = $this->detectGeometryTypes($resource);
+
+        $this->withMeta([
+            'geometryTypes' => array_map(fn (GeometryType $k) => $k->value, $this->geometryTypes),
+        ]);
+    }
+
+    /**
+     * Imposta i tipi di geometria accettati dal campo.
+     *
+     * @return $this
+     */
+    public function forGeometryTypes(GeometryType ...$types): static
+    {
+        $this->geometryTypesExplicit = true;
+        $this->geometryTypes = $types ?: [GeometryType::MultiLineString];
+
+        return $this->withMeta([
+            'geometryTypes' => array_map(fn (GeometryType $k) => $k->value, $this->geometryTypes),
+        ]);
+    }
+
+    /**
+     * @return array{geojson: string, center: array}|null
+     */
+    public function geometryToGeojson($geometry)
+    {
+        $coords = null;
+        if (! is_null($geometry)) {
+            $g = DB::select("SELECT st_asgeojson('$geometry') as g")[0]->g;
+            $c = json_decode(DB::select("SELECT st_asgeojson(ST_Centroid('$geometry')) as g")[0]->g);
+            $coords['geojson'] = $g;
+            $coords['center'] = [$c->coordinates[1], $c->coordinates[0]];
+        }
+
+        return $coords;
+    }
+
+    /**
+     * Nova può passare la geometria come stringa JSON o come array già decodificato.
+     */
+    protected function normalizeGeojsonInput(mixed $geojson): ?string
+    {
+        if ($geojson === null || $geojson === '' || $geojson === 'null') {
+            return null;
+        }
+        if (is_array($geojson) || is_object($geojson)) {
+            return json_encode($geojson, JSON_UNESCAPED_UNICODE);
+        }
+
+        return trim((string) $geojson);
+    }
+
+    public function geojsonToGeometry($geojson)
+    {
+        $json = $this->normalizeGeojsonInput($geojson);
+        if ($json === null) {
+            return null;
+        }
+
+        try {
+            $decoded = json_decode($json, true);
+            $type = $decoded['type'] ?? null;
+            $geometryType = $this->resolveGeometryType($type);
+
+            return match ($geometryType) {
+                GeometryType::Point => DB::select(
+                    'SELECT ST_AsText(ST_Force2D(ST_GeomFromGeoJSON(?))) AS wkt',
+                    [$json]
+                )[0]->wkt,
+                GeometryType::MultiLineString => DB::select(
+                    'SELECT ST_AsText(ST_LineMerge(ST_Force2D(ST_GeomFromGeoJSON(?)))) AS wkt',
+                    [$json]
+                )[0]->wkt,
+                GeometryType::MultiPolygon => DB::select(
+                    'SELECT ST_AsText(ST_Force2D(ST_GeomFromGeoJSON(?))) AS wkt',
+                    [$json]
+                )[0]->wkt,
+            };
+        } catch (\Throwable $e) {
+            \Log::error('FeatureCollectionMap geojsonToGeometry', [
+                'message' => $e->getMessage(),
+                'geometryTypes' => array_map(fn (GeometryType $k) => $k->value, $this->geometryTypes),
+            ]);
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Determina il GeometryType appropriato in base al tipo GeoJSON ricevuto e ai tipi configurati.
+     */
+    protected function resolveGeometryType(?string $geojsonType): GeometryType
+    {
+        $geojsonTypeToGeometryType = [
+            'Point' => GeometryType::Point,
+            'MultiPoint' => GeometryType::Point,
+            'LineString' => GeometryType::MultiLineString,
+            'MultiLineString' => GeometryType::MultiLineString,
+            'Polygon' => GeometryType::MultiPolygon,
+            'MultiPolygon' => GeometryType::MultiPolygon,
+        ];
+
+        $detectedType = $geojsonTypeToGeometryType[$geojsonType] ?? null;
+
+        if ($detectedType && in_array($detectedType, $this->geometryTypes, true)) {
+            return $detectedType;
+        }
+
+        return $this->geometryTypes[0];
     }
 
     /**
@@ -154,6 +338,7 @@ class FeatureCollectionMap extends Field
             'demEnrichment' => $this->demEnrichment,
             'popupComponent' => $this->popupComponent,
             'enableScreenshot' => $this->enableScreenshot,
+            'geometryTypes' => array_map(fn (GeometryType $k) => $k->value, $this->geometryTypes),
         ]);
     }
 }

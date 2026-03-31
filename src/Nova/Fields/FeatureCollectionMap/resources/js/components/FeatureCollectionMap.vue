@@ -68,7 +68,7 @@ import OSM from 'ol/source/OSM';
 import GeoJSON from 'ol/format/GeoJSON';
 import Overlay from 'ol/Overlay';
 import { Style, Fill, Stroke, Circle as CircleStyle } from 'ol/style';
-import { fromLonLat } from 'ol/proj';
+import { fromLonLat, toLonLat } from 'ol/proj';
 import { defaults as defaultControls } from 'ol/control';
 import { defaults as defaultInteractions } from 'ol/interaction';
 
@@ -79,9 +79,14 @@ export default {
     name: 'FeatureCollectionMap',
 
     props: {
+        /** Se valorizzato, ha priorità su geojsonUrl (es. upload in form). */
+        inlineGeojson: {
+            type: Object,
+            default: null
+        },
         geojsonUrl: {
             type: String,
-            required: true
+            default: ''
         },
         height: {
             type: Number,
@@ -105,7 +110,7 @@ export default {
         },
         resourceName: {
             type: String,
-            default: 'poles'
+            default: null
         },
         popupComponent: {
             type: String,
@@ -115,10 +120,6 @@ export default {
             type: Boolean,
             default: false
         },
-        resourceName: {
-            type: String,
-            default: null
-        },
         resourceId: {
             type: [String, Number],
             default: null
@@ -127,10 +128,14 @@ export default {
         getAdditionalPointStyles: {
             type: Function,
             default: null
+        },
+        defaultCursor: {
+            type: String,
+            default: ''
         }
     },
 
-    emits: ['feature-click', 'map-ready', 'popup-open', 'popup-close'],
+    emits: ['feature-click', 'map-ready', 'popup-open', 'popup-close', 'map-click'],
 
     setup(props, { emit }) {
         const keydownRoot = ref(null);
@@ -269,11 +274,98 @@ export default {
             });
         };
 
-        // Load GeoJSON data
+        const applyGeoJSONData = (data) => {
+            if (!vectorSource.value || !map.value) {
+                isLoading.value = false;
+                return;
+            }
+            geojsonData.value = data;
+            featuresMap.value = {};
+            if (data.features) {
+                data.features.forEach(feature => {
+                    if (feature.properties && feature.properties.id) {
+                        featuresMap.value[String(feature.properties.id)] = feature;
+                    }
+                });
+            }
+
+            const format = new GeoJSON();
+            const features = format.readFeatures(data, {
+                featureProjection: 'EPSG:3857'
+            });
+
+            vectorSource.value.clear();
+            vectorSource.value.addFeatures(features);
+
+            if (features.length > 0) {
+                const lineStringFeatures = features.filter(feature => {
+                    const geometry = feature.getGeometry();
+                    if (!geometry) {
+                        return false;
+                    }
+                    const geometryType = geometry.getType();
+                    return geometryType === 'LineString' || geometryType === 'MultiLineString';
+                });
+
+                const featuresForExtent = lineStringFeatures.length > 0 ? lineStringFeatures : features;
+
+                const tempSource = new VectorSource();
+                tempSource.addFeatures(featuresForExtent);
+                const extent = tempSource.getExtent();
+
+                const view = map.value.getView();
+
+                const size = map.value.getSize();
+                if (size && extent && extent[0] !== Infinity) {
+                    const center = [
+                        (extent[0] + extent[2]) / 2,
+                        (extent[1] + extent[3]) / 2
+                    ];
+
+                    const width = extent[2] - extent[0];
+                    const height = extent[3] - extent[1];
+                    const aspectRatio = width / height;
+                    const mapAspectRatio = size[0] / size[1];
+
+                    let resolution;
+                    if (aspectRatio > mapAspectRatio) {
+                        resolution = width / (size[0] - props.padding * 2);
+                    } else {
+                        resolution = height / (size[1] - props.padding * 2);
+                    }
+
+                    const maxResolution = view.getMaxResolution();
+                    const zoom = Math.log2(maxResolution / resolution);
+                    const maxZoom = Math.min(view.getMaxZoom() || 17, 17);
+
+                    view.setCenter(center);
+                    view.setZoom(Math.min(Math.max(zoom, 0), maxZoom));
+                }
+            }
+
+            if (props.enableScreenshot && !screenshotCaptured.value) {
+                map.value.once('rendercomplete', () => {
+                    captureScreenshot();
+                });
+            }
+
+            emit('map-ready', { map: map.value, features, geojson: data, featuresMap: featuresMap.value });
+            isLoading.value = false;
+        };
+
         const loadGeoJSON = async () => {
-            console.log('Loading GeoJSON from:', props.geojsonUrl);
+            console.log('Loading GeoJSON from:', props.geojsonUrl, 'inline:', !!props.inlineGeojson);
             isLoading.value = true;
             try {
+                if (props.inlineGeojson) {
+                    applyGeoJSONData(props.inlineGeojson);
+                    return;
+                }
+                if (!props.geojsonUrl) {
+                    isLoading.value = false;
+                    return;
+                }
+
                 const response = await fetch(props.geojsonUrl);
 
                 if (!response.ok) {
@@ -284,92 +376,7 @@ export default {
 
                 const data = await response.json();
                 console.log('GeoJSON loaded:', data);
-                geojsonData.value = data;
-
-                if (data.features) {
-                    data.features.forEach(feature => {
-                        if (feature.properties && feature.properties.id) {
-                            featuresMap.value[String(feature.properties.id)] = feature;
-                        }
-                    });
-                }
-
-                const format = new GeoJSON();
-                const features = format.readFeatures(data, {
-                    featureProjection: 'EPSG:3857'
-                });
-
-                vectorSource.value.clear();
-                vectorSource.value.addFeatures(features);
-
-                if (features.length > 0) {
-                    // Trova tutte le LineString nella FeatureCollection (escludi poligoni e punti)
-                    const lineStringFeatures = features.filter(feature => {
-                        const geometry = feature.getGeometry();
-                        if (!geometry) {
-                            return false;
-                        }
-                        const geometryType = geometry.getType();
-                        // Include solo LineString e MultiLineString
-                        return geometryType === 'LineString' || geometryType === 'MultiLineString';
-                    });
-
-                    // Se ci sono LineString, usa solo quelle per il calcolo dell'extent
-                    // Altrimenti usa tutte le feature come fallback
-                    const featuresForExtent = lineStringFeatures.length > 0 ? lineStringFeatures : features;
-
-                    // Crea una source temporanea per calcolare l'extent solo delle LineString
-                    const tempSource = new VectorSource();
-                    tempSource.addFeatures(featuresForExtent);
-                    const extent = tempSource.getExtent();
-
-                    const view = map.value.getView();
-
-                    // Calcola manualmente centro e zoom per evitare qualsiasi animazione
-                    const size = map.value.getSize();
-                    if (size && extent && extent[0] !== Infinity) {
-                        // Calcola il centro dell'extent
-                        const center = [
-                            (extent[0] + extent[2]) / 2,
-                            (extent[1] + extent[3]) / 2
-                        ];
-
-                        // Calcola la risoluzione necessaria per adattare l'extent con padding
-                        const width = extent[2] - extent[0];
-                        const height = extent[3] - extent[1];
-                        const aspectRatio = width / height;
-                        const mapAspectRatio = size[0] / size[1];
-
-                        let resolution;
-                        if (aspectRatio > mapAspectRatio) {
-                            // L'extent è più largo, usa la larghezza
-                            resolution = width / (size[0] - props.padding * 2);
-                        } else {
-                            // L'extent è più alto, usa l'altezza
-                            resolution = height / (size[1] - props.padding * 2);
-                        }
-
-                        // Calcola lo zoom dalla risoluzione usando la formula di OpenLayers
-                        const maxResolution = view.getMaxResolution();
-                        const zoom = Math.log2(maxResolution / resolution);
-                        const maxZoom = Math.min(view.getMaxZoom() || 17, 17);
-
-                        // Imposta direttamente centro e zoom senza animazione
-                        view.setCenter(center);
-                        view.setZoom(Math.min(Math.max(zoom, 0), maxZoom));
-                    }
-                }
-
-                // Cattura screenshot automaticamente solo quando la mappa ha finito di renderizzare
-                if (props.enableScreenshot && !screenshotCaptured.value) {
-                    // Con duration: 0, possiamo catturare immediatamente dopo il rendercomplete
-                    map.value.once('rendercomplete', () => {
-                        captureScreenshot();
-                    });
-                }
-
-                emit('map-ready', { map: map.value, features, geojson: data, featuresMap: featuresMap.value });
-                isLoading.value = false;
+                applyGeoJSONData(data);
             } catch (error) {
                 console.error('Error loading GeoJSON:', error);
                 isLoading.value = false;
@@ -428,6 +435,9 @@ export default {
                 const feature = features[0];
                 const featureProps = feature.getProperties();
                 handleFeatureClick(feature, featureProps);
+            } else {
+                const [lon, lat] = toLonLat(event.coordinate);
+                emit('map-click', { lon, lat });
             }
         };
 
@@ -457,7 +467,7 @@ export default {
                     tooltipVisible.value = false;
                 }
             } else {
-                map.value.getTargetElement().style.cursor = '';
+                map.value.getTargetElement().style.cursor = props.defaultCursor || '';
                 tooltipVisible.value = false;
             }
         };
@@ -593,15 +603,18 @@ export default {
             }
         });
 
-        // Watch for geojsonUrl changes - use immediate and deep watching
         watch(() => props.geojsonUrl, (newUrl, oldUrl) => {
-            if (newUrl && newUrl !== oldUrl) {
+            if (newUrl && newUrl !== oldUrl && !props.inlineGeojson) {
                 console.log('GeoJSON URL changed, reloading map:', { oldUrl, newUrl });
-                // Reset screenshot flag when URL changes
                 screenshotCaptured.value = false;
                 loadGeoJSON();
             }
         }, { immediate: false });
+
+        watch(() => props.inlineGeojson, () => {
+            screenshotCaptured.value = false;
+            loadGeoJSON();
+        }, { deep: true });
 
         return {
             // Props (for template)
