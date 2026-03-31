@@ -19,6 +19,7 @@ use Wm\WmPackage\Nova\Fields\FeatureCollectionMap\src\FeatureCollectionMap;
 use Wm\WmPackage\Nova\Fields\LayerFeatures\LayerFeatures;
 use Wm\WmPackage\Nova\Fields\PropertiesPanel;
 use Wm\WmPackage\Nova\Filters\AppFilter;
+use Wm\WmPackage\Nova\Cards\ApiLinksCard\LayerApiLinksCard;
 use Wm\WmPackage\Nova\Traits\MultiPolygonResourceTrait;
 
 class Layer extends AbstractGeometryResource
@@ -112,6 +113,17 @@ class Layer extends AbstractGeometryResource
         return [
             ...parent::filters($request),
             new AppFilter,
+        ];
+    }
+
+    public function cards(NovaRequest $request): array
+    {
+        if (! $request->resourceId) {
+            return [];
+        }
+
+        return [
+            new LayerApiLinksCard($request->findModelOrFail()),
         ];
     }
 }
