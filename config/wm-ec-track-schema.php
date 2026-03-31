@@ -48,56 +48,6 @@ return [
                 ],
             ],
             [
-                'name' => 'ascent',
-                'type' => 'number',
-                'required' => false,
-                'translatable' => false,
-                'label' => [
-                    'it' => 'Dislivello positivo',
-                    'en' => 'Ascent',
-                ],
-            ],
-            [
-                'name' => 'descent',
-                'type' => 'number',
-                'required' => false,
-                'translatable' => false,
-                'label' => [
-                    'it' => 'Dislivello negativo',
-                    'en' => 'Descent',
-                ],
-            ],
-            [
-                'name' => 'distance',
-                'type' => 'number',
-                'required' => false,
-                'translatable' => false,
-                'label' => [
-                    'it' => 'Distanza',
-                    'en' => 'Distance',
-                ],
-            ],
-            [
-                'name' => 'duration_forward',
-                'type' => 'number',
-                'required' => false,
-                'translatable' => false,
-                'label' => [
-                    'it' => 'Durata Andata',
-                    'en' => 'Duration Forward',
-                ],
-            ],
-            [
-                'name' => 'duration_backward',
-                'type' => 'number',
-                'required' => false,
-                'translatable' => false,
-                'label' => [
-                    'it' => 'Durata Ritorno',
-                    'en' => 'Duration Backward',
-                ],
-            ],
-            [
                 'name' => 'geohub_id',
                 'type' => 'number',
                 'required' => false,
