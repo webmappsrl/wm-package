@@ -45,6 +45,7 @@
                     :mouse-wheel-zoom="field.mouseWheelZoom !== false" :drag-pan="field.dragPan !== false"
                     :padding="field.padding || 50" :resource-name="resourceName" :resource-id="resourceId"
                     :popup-component="field.popupComponent" :enable-screenshot="false"
+                    :enable-slope-chart="false"
                     :default-cursor="isPointMode ? 'crosshair' : ''"
                     @map-click="onMapClick" />
             </div>

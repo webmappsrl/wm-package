@@ -8,6 +8,10 @@
 
         <div ref="mapContainer" class="map-container" :class="{ 'map-loading': isLoading }"></div>
 
+        <div v-if="enableSlopeChart && selectedTrackForChart" class="slope-chart-container">
+            <SlopeChart ref="slopeChartRef" :track="selectedTrackForChart" @hover="onSlopeHover" />
+        </div>
+
         <!-- Screenshot button - nascosto quando enableScreenshot è attivo (screenshot automatico) -->
 
         <!-- Tooltip overlay -->
@@ -57,6 +61,7 @@
 
 <script>
 import { ref, nextTick, onMounted, onUnmounted, watch } from 'vue';
+import SlopeChart from './SlopeChart.vue';
 
 // OpenLayers imports
 import Map from 'ol/Map';
@@ -67,6 +72,8 @@ import VectorSource from 'ol/source/Vector';
 import OSM from 'ol/source/OSM';
 import GeoJSON from 'ol/format/GeoJSON';
 import Overlay from 'ol/Overlay';
+import Feature from 'ol/Feature';
+import Point from 'ol/geom/Point';
 import { Style, Fill, Stroke, Circle as CircleStyle } from 'ol/style';
 import { fromLonLat, toLonLat } from 'ol/proj';
 import { defaults as defaultControls } from 'ol/control';
@@ -77,6 +84,9 @@ import html2canvas from 'html2canvas';
 
 export default {
     name: 'FeatureCollectionMap',
+    components: {
+        SlopeChart,
+    },
 
     props: {
         /** Se valorizzato, ha priorità su geojsonUrl (es. upload in form). */
@@ -132,10 +142,14 @@ export default {
         defaultCursor: {
             type: String,
             default: ''
+        },
+        enableSlopeChart: {
+            type: Boolean,
+            default: true
         }
     },
 
-    emits: ['feature-click', 'map-ready', 'popup-open', 'popup-close', 'map-click'],
+    emits: ['feature-click', 'map-ready', 'popup-open', 'popup-close', 'map-click', 'slope-hover'],
 
     setup(props, { emit }) {
         const keydownRoot = ref(null);
@@ -158,6 +172,51 @@ export default {
         const popupData = ref({});
         const currentFeatureId = ref(null);
         const currentFeatureProperties = ref({});
+
+        // Slope chart state
+        const slopeChartRef = ref(null);
+        const selectedTrackForChart = ref(null);
+        const slopeHover = ref({ location: undefined, track: undefined });
+        const hoverSource = ref(null); // 'map' | 'chart' | null
+
+        const hoverMarkerSource = ref(null);
+        const hoverMarkerFeature = ref(null);
+
+        const toLineStringFeatureObject = (featureObject) => {
+            if (!featureObject || typeof featureObject !== 'object') {
+                return null;
+            }
+            const g = featureObject.geometry;
+            if (!g || !g.type) {
+                return null;
+            }
+            if (g.type === 'LineString') {
+                return featureObject;
+            }
+            if (g.type === 'MultiLineString' && Array.isArray(g.coordinates) && g.coordinates.length) {
+                return {
+                    type: 'Feature',
+                    properties: featureObject.properties || {},
+                    geometry: {
+                        type: 'LineString',
+                        coordinates: g.coordinates[0] || []
+                    }
+                };
+            }
+            return null;
+        };
+
+        const setDefaultTrackForChartFromGeojson = (data) => {
+            if (!data || typeof data !== 'object') {
+                return;
+            }
+            const feats = Array.isArray(data.features) ? data.features : [];
+            const candidate = feats.find((f) => {
+                const t = f?.geometry?.type;
+                return t === 'LineString' || t === 'MultiLineString';
+            });
+            selectedTrackForChart.value = candidate ? toLineStringFeatureObject(candidate) : null;
+        };
 
         // Screenshot state
         const isCapturing = ref(false);
@@ -288,6 +347,7 @@ export default {
                     }
                 });
             }
+            setDefaultTrackForChartFromGeojson(data);
 
             const format = new GeoJSON();
             const features = format.readFeatures(data, {
@@ -386,6 +446,20 @@ export default {
         // Handle feature click - can be overridden in child components
         const handleFeatureClick = (feature, featureProps) => {
             const clickAction = featureProps.clickAction || (featureProps.link ? 'link' : 'none');
+            try {
+                const geom = feature?.getGeometry?.();
+                const type = geom?.getType?.();
+                if (type === 'LineString' || type === 'MultiLineString') {
+                    const format = new GeoJSON();
+                    const obj = format.writeFeatureObject(feature, {
+                        featureProjection: 'EPSG:3857',
+                        dataProjection: 'EPSG:4326',
+                    });
+                    selectedTrackForChart.value = toLineStringFeatureObject(obj);
+                }
+            } catch (e) {
+                console.warn('Impossibile impostare traccia per slope chart', e);
+            }
 
             switch (clickAction) {
                 case 'popup':
@@ -444,7 +518,11 @@ export default {
         // Handle pointer move for cursor change and tooltip
         const handlePointerMove = (event) => {
             const pixel = event.pixel;
-            const feature = map.value.forEachFeatureAtPixel(pixel, (f) => f);
+            const feature = map.value.forEachFeatureAtPixel(
+                pixel,
+                (f) => f,
+                { hitTolerance: 6 }
+            );
 
             if (feature) {
                 const featureProps = feature.getProperties();
@@ -466,9 +544,32 @@ export default {
                 } else {
                     tooltipVisible.value = false;
                 }
+
+                // Sync hover mappa -> slope chart quando si passa su una linea
+                try {
+                    if (!props.enableSlopeChart) {
+                        return;
+                    }
+                    const geom = feature?.getGeometry?.();
+                    const type = geom?.getType?.();
+                    if (type === 'LineString' || type === 'MultiLineString') {
+                        const [lon, lat] = toLonLat(event.coordinate);
+                        hoverSource.value = 'map';
+                        slopeChartRef.value?.setHoverLocation?.({ lon, lat });
+                    } else if (hoverSource.value === 'map') {
+                        slopeChartRef.value?.clearHover?.();
+                        hoverSource.value = null;
+                    }
+                } catch (_) {
+                    /* ignore */
+                }
             } else {
                 map.value.getTargetElement().style.cursor = props.defaultCursor || '';
                 tooltipVisible.value = false;
+                if (hoverSource.value === 'map') {
+                    slopeChartRef.value?.clearHover?.();
+                    hoverSource.value = null;
+                }
             }
         };
 
@@ -479,6 +580,38 @@ export default {
             currentFeatureId.value = null;
             currentFeatureProperties.value = {};
             popupData.value = {};
+        };
+
+        const onSlopeHover = (payload) => {
+            if (!props.enableSlopeChart) {
+                return;
+            }
+            slopeHover.value = payload || { location: undefined, track: undefined };
+            emit('slope-hover', slopeHover.value);
+            // TODO: in seguito qui agganceremo evidenziazione tratto su mappa usando slopeHover.track
+
+            // Sync slope chart -> marker su mappa
+            if (!map.value) {
+                return;
+            }
+            hoverSource.value = 'chart';
+            const loc = slopeHover.value?.location;
+            const lon = Number(loc?.lon);
+            const lat = Number(loc?.lat);
+            if (!Number.isFinite(lon) || !Number.isFinite(lat)) {
+                if (hoverMarkerFeature.value) {
+                    hoverMarkerSource.value?.removeFeature(hoverMarkerFeature.value);
+                    hoverMarkerFeature.value = null;
+                }
+                return;
+            }
+            const coord3857 = fromLonLat([lon, lat]);
+            if (!hoverMarkerFeature.value) {
+                hoverMarkerFeature.value = new Feature(new Point(coord3857));
+                hoverMarkerSource.value?.addFeature(hoverMarkerFeature.value);
+            } else {
+                hoverMarkerFeature.value.getGeometry().setCoordinates(coord3857);
+            }
         };
 
         // Capture screenshot of the map
@@ -556,7 +689,21 @@ export default {
 
             const vectorLayer = new VectorLayer({
                 source: vectorSource.value,
-                style: getFeatureStyle
+                style: getFeatureStyle,
+                zIndex: 10
+            });
+
+            hoverMarkerSource.value = new VectorSource();
+            const hoverMarkerLayer = new VectorLayer({
+                source: hoverMarkerSource.value,
+                style: new Style({
+                    image: new CircleStyle({
+                        radius: 6,
+                        fill: new Fill({ color: 'rgba(0, 0, 0, 0.9)' }),
+                        stroke: new Stroke({ color: 'rgba(255, 255, 255, 1)', width: 2 })
+                    })
+                }),
+                zIndex: 5
             });
 
             map.value = new Map({
@@ -565,6 +712,7 @@ export default {
                     new TileLayer({
                         source: new OSM()
                     }),
+                    hoverMarkerLayer,
                     vectorLayer
                 ],
                 view: new View({
@@ -634,6 +782,10 @@ export default {
             popupData,
             currentFeatureId,
             currentFeatureProperties,
+            slopeChartRef,
+            selectedTrackForChart,
+            slopeHover,
+            onSlopeHover,
             // Screenshot state
             isCapturing,
             screenshotCaptured,
@@ -656,6 +808,10 @@ export default {
 .feature-collection-map-container {
     position: relative;
     width: 100%;
+}
+
+.slope-chart-container {
+    margin-top: 10px;
 }
 
 .map-container {

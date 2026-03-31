@@ -34,6 +34,11 @@ class FeatureCollectionMap extends Field
     protected bool $enableScreenshot = false;
 
     /**
+     * Flag per abilitare lo slope chart (default: true)
+     */
+    protected bool $enableSlopeChart = true;
+
+    /**
      * Tipi di geometria accettati dal campo.
      *
      * @var GeometryType[]
@@ -328,6 +333,18 @@ class FeatureCollectionMap extends Field
     }
 
     /**
+     * Abilita/disabilita lo slope chart sotto la mappa.
+     *
+     * @return $this
+     */
+    public function enableSlopeChart(bool $enabled = true)
+    {
+        $this->enableSlopeChart = $enabled;
+
+        return $this->withMeta(['enableSlopeChart' => $enabled]);
+    }
+
+    /**
      * Prepare the field for JSON serialization.
      *
      * @return array<string, mixed>
@@ -338,6 +355,7 @@ class FeatureCollectionMap extends Field
             'demEnrichment' => $this->demEnrichment,
             'popupComponent' => $this->popupComponent,
             'enableScreenshot' => $this->enableScreenshot,
+            'enableSlopeChart' => $this->enableSlopeChart,
             'geometryTypes' => array_map(fn (GeometryType $k) => $k->value, $this->geometryTypes),
         ]);
     }
