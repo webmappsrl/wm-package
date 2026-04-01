@@ -172,6 +172,24 @@ class StorageService extends BaseService
     //     return $this->getEcMediaDisk()->url($cloudPath);
     // }
 
+    public function storeFeatureCollection(int $appId, int $featureCollectionId, string $contents): string|false
+    {
+        try {
+            $path = $this->getShardBasePath($appId)."feature-collection/{$featureCollectionId}.geojson";
+
+            $success = $this->getRemoteWfeDisk()->put($path, $contents);
+
+            if ($success) {
+                return $path;
+            }
+
+            return false;
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to store feature collection: '.$e->getMessage());
+            return false;
+        }
+    }
+
     /**
      * Store layer feature collection in AWS
      *

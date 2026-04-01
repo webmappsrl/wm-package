@@ -422,53 +422,71 @@ class AppConfigService extends AppBaseService
             array_push($data['MAP']['controls']['tiles'], ...$ta);
         }
 
-        // Overlays
-        // TODO: refactor as layers
-        // if ($this->app->overlayLayers->count() > 0) {
-        //     $data['MAP']['controls']['overlays'][] = ['label' => $this->app->getTranslations('overlays_label'), 'type' => 'title'];
-        //     $overlays = array_map(function ($overlay) {
-        //         $array = [];
-        //         $overlay = OverlayLayer::find($overlay['id']);
-        //         $array['label'] = $overlay->getTranslations('label');
-        //         if ($overlay['default']) {
-        //             $array['default'] = $overlay['default'];
-        //         }
-        //         if (isset($overlay['icon'])) {
-        //             $array['icon'] = $overlay['icon'];
-        //         }
-        //         if (isset($overlay['fill_color'])) {
-        //             $array['fillColor'] = hexToRgba($overlay['fill_color']);
-        //         } else {
-        //             $array['fillColor'] = hexToRgba($overlay->app->primary_color);
-        //         }
-        //         if (isset($overlay['stroke_color'])) {
-        //             $array['strokeColor'] = hexToRgba($overlay['stroke_color']);
-        //         } else {
-        //             $array['strokeColor'] = hexToRgba($overlay->app->primary_color);
-        //         }
-        //         if (isset($overlay['stroke_width'])) {
-        //             $array['strokeWidth'] = $overlay['stroke_width'];
-        //         }
-        //         if (isset($overlay['feature_collection'])) {
-        //             // if the feature collection is an external geojson URL then put it in the conf file
-        //             if (strpos($overlay['feature_collection'], 'http') === 0 || strpos($overlay['feature_collection'], 'https') === 0) {
-        //                 $array['url'] = $overlay['feature_collection'];
-        //             } else {
-        //                 $array['url'] = route('api.export.taxonomy.getOverlaysPath', explode('/', $overlay['feature_collection']));
-        //             }
-        //         }
-        //         if (isset($overlay['configuration'])) {
-        //             $configuration = json_decode($overlay['configuration'], true);
-        //             if (is_array($configuration)) {
-        //                 $array = array_merge($array, $configuration);
-        //             }
-        //         }
-        //         $array['type'] = 'button';
+        // FeatureCollections (overlays)
+        $rawOverlays = $this->app->config_overlays ?? [];
+        if (is_string($rawOverlays)) {
+            $rawOverlays = json_decode($rawOverlays, true) ?? [];
+        }
+        $overlayItems = $rawOverlays['OVERLAYS'] ?? [];
+        if (! empty($overlayItems)) {
+            $fcIds = collect($overlayItems)
+                ->where('box_type', 'feature_collection')
+                ->pluck('feature_collection')
+                ->filter()
+                ->all();
 
-        //         return $array;
-        //     }, json_decode($this->app->overlayLayers, true));
-        //     array_push($data['MAP']['controls']['overlays'], ...$overlays);
-        // }
+            $fcs = \Wm\WmPackage\Models\FeatureCollection::whereIn('id', $fcIds)
+                ->where('app_id', $this->app->id)
+                ->where('enabled', true)
+                ->get()
+                ->keyBy('id');
+
+            foreach ($overlayItems as $item) {
+                $boxType = $item['box_type'] ?? null;
+
+                if ($boxType === 'title') {
+                    $data['MAP']['controls']['overlays'][] = [
+                        'label' => $item['label'] ?? [],
+                        'type' => 'title',
+                    ];
+                    continue;
+                }
+
+                if ($boxType === 'feature_collection') {
+                    $fc = $fcs->get($item['feature_collection'] ?? null);
+                    if (! $fc) {
+                        continue;
+                    }
+
+                    $array = [];
+                    $array['label'] = $fc->label ?? [];
+
+                    if ($fc->default) {
+                        $array['default'] = true;
+                    }
+
+                    if ($fc->icon) {
+                        $array['icon'] = $fc->icon;
+                    }
+
+                    $primaryColor = $this->app->primary_color ?? '#000000';
+                    $array['fillColor'] = $fc->fill_color ? hexToRgba($fc->fill_color) : hexToRgba($primaryColor);
+                    $array['strokeColor'] = $fc->stroke_color ? hexToRgba($fc->stroke_color) : hexToRgba($primaryColor);
+
+                    if ($fc->stroke_width) {
+                        $array['strokeWidth'] = $fc->stroke_width;
+                    }
+
+                    if ($fc->configuration) {
+                        $array = array_merge($array, $fc->configuration);
+                    }
+
+                    $array['url'] = $fc->getUrl();
+                    $array['type'] = 'button';
+                    $data['MAP']['controls']['overlays'][] = $array;
+                }
+            }
+        }
 
         // data => turn the layers (pois,tracks) off an on
         if ($this->app->app_pois_api_layer || $this->app->layers->count() > 0) {

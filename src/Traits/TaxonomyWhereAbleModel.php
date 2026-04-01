@@ -7,6 +7,18 @@ use Illuminate\Support\Facades\Log;
 
 trait TaxonomyWhereAbleModel
 {
+    protected function dispatchFeatureCollectionRegeneration(): void
+    {
+        if ($this instanceof \Wm\WmPackage\Models\Layer) {
+            $this->featureCollections()
+                ->where('mode', 'generated')
+                ->where('enabled', true)
+                ->each(function ($fc) {
+                    \Wm\WmPackage\Jobs\FeatureCollection\GenerateFeatureCollectionJob::dispatch($fc->id);
+                });
+        }
+    }
+
     public function scopeByWhereProperty(Builder $query, array $properties)
     {
         $whereProperty = $properties['taxonomy_where'] ?? [];

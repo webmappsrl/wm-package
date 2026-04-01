@@ -32,6 +32,8 @@ class Layer extends AbstractGeometryResource
 
     public static $model = \Wm\WmPackage\Models\Layer::class;
 
+    public static $title = 'name';
+
     public static $search = [
         'id',
         'name',

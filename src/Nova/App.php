@@ -22,12 +22,14 @@ use Outl1ne\MultiselectField\Multiselect;
 use Whitecube\NovaFlexibleContent\Flexible;
 use Wm\WmPackage\Enums\AppTiles;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
+use Wm\WmPackage\Models\FeatureCollection as FeatureCollectionModel;
 use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Nova\Actions\ExecuteEcTrackDataChainAction;
 use Wm\WmPackage\Nova\Actions\RegenerateAppPbfAction;
 use Wm\WmPackage\Nova\Actions\ReindexAppScoutAction;
 use Wm\WmPackage\Nova\Fields\StoreVersionField;
 use Wm\WmPackage\Nova\Flexible\Resolvers\ConfigHomeResolver;
+use Wm\WmPackage\Nova\Flexible\Resolvers\ConfigOverlaysResolver;
 
 class App extends Resource
 {
@@ -84,6 +86,7 @@ class App extends Resource
                 Tab::make('languages', $this->languages_tab()),
                 Tab::make('seachable', $this->seachable_tab()),
                 Tab::make('analytics', $this->analytics_tab()),
+                Tab::make('overlays', $this->overlays_tab()),
             ]),
 
             // TODO: implement fields
@@ -125,6 +128,47 @@ class App extends Resource
                 ->default(false)
                 ->hideFromIndex()
                 ->help(__('Shows the authentication and registration page for users')),
+        ];
+    }
+
+    protected function overlays_tab(): array
+    {
+        return [
+            Flexible::make('config_overlays')
+                ->resolver(ConfigOverlaysResolver::class)
+                ->menu('flexible-search-menu')
+                ->button('Aggiungi elemento')
+                ->help("Configurazione degli overlay della mappa")
+                ->addLayout('Titolo', 'title', $this->overlays_title_layout())
+                ->addLayout('Feature Collection', 'feature_collection', $this->feature_collection_layout())
+                ->confirmRemove('Sei sicuro di voler eliminare questo elemento?', 'Elimina', 'Annulla'),
+        ];
+    }
+
+    protected function overlays_title_layout(): array
+    {
+        $languages = Config::get('wm-app-languages.languages', []);
+        $fields = [];
+
+        foreach ($languages as $locale => $name) {
+            $fields[] = Text::make($name, 'label_'.$locale);
+        }
+
+        return $fields;
+    }
+
+    protected function feature_collection_layout(): array
+    {
+        return [
+            Select::make('Feature Collection', 'feature_collection')
+                ->options(function () {
+                    return FeatureCollectionModel::where('app_id', $this->model()->id)
+                        ->get()
+                        ->pluck('name', 'id')
+                        ->all();
+                })
+                ->rules('required')
+                ->displayUsingLabels(),
         ];
     }
 
