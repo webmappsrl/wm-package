@@ -5,11 +5,20 @@ namespace Wm\WmPackage\Http\Resources;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Wm\WmPackage\Models\EcPoi;
+use Wm\WmPackage\Nova\Traits\HasDemClassification;
 use Wm\WmPackage\Services\GeoJsonService;
 use Wm\WmPackage\Services\GeometryComputationService;
 
 class EcTrackResource extends JsonResource
 {
+    use HasDemClassification;
+
+    private const DEM_FIELDS = [
+        'distance', 'ascent', 'descent',
+        'ele_max', 'ele_min', 'ele_from', 'ele_to',
+        'duration_forward', 'duration_backward',
+    ];
+
     /**
      * Transform the resource into an array.
      *
@@ -28,16 +37,8 @@ class EcTrackResource extends JsonResource
             ...GeoJsonService::make()->removeInvalidProperties($geojson['properties']),
         ];
 
-        // Copia tutti gli attributi da dem_data se non presenti o null in properties
-        if (isset($geojson['properties']['dem_data']) && is_array($geojson['properties']['dem_data'])) {
-            foreach ($geojson['properties']['dem_data'] as $key => $value) {
-                if (! isset($properties[$key]) || $properties[$key] === null) {
-                    $properties[$key] = $value;
-                }
-            }
-            // Rimuovi dem_data dalle properties finali (gli attributi sono stati copiati flat)
-            unset($properties['dem_data']);
-        }
+        // Applica priorità MANUAL > OSM > DEM per i 9 campi principali e rimuove le sorgenti raw
+        $properties = $this->applyDemFields($properties, $this->resource);
 
         $properties['name'] = $this->getTranslations('name');
         $properties['roundtrip'] = $properties['round_trip'] ?? $geometryComputationService->isRoundtrip($geojson['geometry']['coordinates']);
@@ -52,6 +53,26 @@ class EcTrackResource extends JsonResource
         $geojson['properties'] = $properties;
 
         return $geojson;
+    }
+
+    /**
+     * Applica la tabella di priorità MANUAL > OSM > DEM ai 9 campi principali.
+     * Rimuove le sorgenti raw (manual_data, dem_data, osm_data) dall'array risultante.
+     */
+    protected function applyDemFields(array $properties, object $model): array
+    {
+        foreach (self::DEM_FIELDS as $field) {
+            $classified = $this->classifyField($model, $field);
+            if ($classified['currentValue'] !== null) {
+                $properties[$field] = $classified['currentValue'];
+            } else {
+                unset($properties[$field]);
+            }
+        }
+
+        unset($properties['manual_data'], $properties['dem_data'], $properties['osm_data']);
+
+        return $properties;
     }
 
     /**
