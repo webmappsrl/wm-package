@@ -17,6 +17,6 @@ class UgcTrack extends AbstractUgcResource
 
     public static function singularLabel(): string
     {
-        return __('Track');
+        return __('UGC Track');
     }
 }
