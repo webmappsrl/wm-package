@@ -50,6 +50,16 @@ class AppController extends Controller
         return $this->getOrDownloadIcon($app, 'logo_homepage');
     }
 
+    public function myRoutes(App $app)
+    {
+        return $this->getOrDownloadIcon($app, 'my_routes_image');
+    }
+
+    public function myDownloads(App $app)
+    {
+        return $this->getOrDownloadIcon($app, 'my_downloads_image');
+    }
+
     protected function getOrDownloadIcon(App $app, $type = 'icon')
     {
         if (! isset($app->$type)) {
