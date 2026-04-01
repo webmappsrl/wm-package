@@ -407,6 +407,7 @@ class AppConfigService extends AppBaseService
         $data['MAP']['flow_line_quote_show'] = $this->app->flow_line_quote_show;
         $data['MAP']['flow_line_quote_orange'] = $this->app->flow_line_quote_orange;
         $data['MAP']['flow_line_quote_red'] = $this->app->flow_line_quote_red;
+        $data['MAP']['show_track_direction_arrow'] = $this->app->show_track_direction_arrow;
 
         // Tiles
         if ($this->app->tiles && ! empty(json_decode($this->app->tiles, true))) {
@@ -701,6 +702,10 @@ class AppConfigService extends AppBaseService
         $data['OPTIONS']['showKmlDownload'] = $this->app->table_details_show_kml_download;
         $data['OPTIONS']['showGeojsonDownload'] = (bool) $this->app->table_details_show_geojson_download;
         $data['OPTIONS']['showShapefileDownload'] = (bool) $this->app->table_details_show_shapefile_download;
+        $data['OPTIONS']['showTravelMode'] = $this->app->show_travel_mode;
+        $data['OPTIONS']['showFeaturesInViewport'] = $this->app->show_features_in_viewport;
+        $data['OPTIONS']['maxZoomFeaturesInViewport'] = $this->app->max_zoom_features_in_viewport;
+        $data['OPTIONS']['minZoomFeaturesInViewport'] = $this->app->min_zoom_features_in_viewport;
 
         if (isset($this->app->properties['show_download_tiles'])) {
             // TODO: opzione usata solo dalla 3.1.6, rimuovere showDownloadTilesButton al prossimo rilascio
