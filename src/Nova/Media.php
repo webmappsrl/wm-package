@@ -34,10 +34,12 @@ class Media extends AbstractGeometryResource
             ...$this->fieldsFromTrait($request),
             MorphTo::make(__('Model'), 'model')
                 ->types([
-                    UgcPoi::class,
-                    UgcTrack::class,
+                    App::class,
                     EcPoi::class,
                     EcTrack::class,
+                    Layer::class,
+                    UgcPoi::class,
+                    UgcTrack::class,
                 ])
                 ->searchable(),
             Text::make('UUID', 'uuid'),
