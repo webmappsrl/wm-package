@@ -42,6 +42,8 @@ class App extends Model implements HasMedia
         'track_technical_details' => 'array',
         'properties' => 'array',
         'config_home' => FlexibleCast::class,
+        'config_overlays' => 'array',
+        'overlays_label' => 'array',
         'map_def_zoom' => 'integer',
         'map_max_zoom' => 'integer',
         'map_min_zoom' => 'integer',
@@ -101,6 +103,11 @@ class App extends Model implements HasMedia
     public function ecPois(): HasMany
     {
         return $this->hasMany(EcPoi::class);
+    }
+
+    public function featureCollections(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(\Wm\WmPackage\Models\FeatureCollection::class);
     }
 
     public function poiAcquisitionForm($formId = null)

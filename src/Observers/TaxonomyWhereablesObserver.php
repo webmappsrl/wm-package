@@ -36,6 +36,7 @@ class TaxonomyWhereablesObserver
 
         $this->layerService->assignTracksByTaxonomy($layer);
         $this->layerService->updateLayersPropertyOnAllLayeredFeaturesWithJobs($layer);
+        $layer->dispatchFeatureCollectionRegeneration();
 
         Log::info('TaxonomyWhereablesObserver: auto-sync layer after where change', [
             'layer_id' => $layer->id,

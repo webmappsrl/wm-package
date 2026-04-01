@@ -18,5 +18,16 @@ class LayerApiLinksCard extends ApiLinksCard
                     .'&layer='.$layer->id,
             ],
         ]);
+
+        $layer->featureCollections()
+            ->where('mode', 'generated')
+            ->where('enabled', true)
+            ->whereNotNull('file_path')
+            ->each(function ($fc) {
+                $this->addLink(
+                    'FeatureCollection: ' . ($fc->name),
+                    $fc->getUrl()
+                );
+            });
     }
 }

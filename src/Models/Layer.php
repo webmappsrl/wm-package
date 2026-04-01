@@ -28,6 +28,15 @@ class Layer extends Polygon
         parent::boot();
         Layer::observe(LayerObserver::class);
 
+        static::deleting(function (Layer $layer) {
+            $layer->featureCollections()
+                ->where('mode', 'generated')
+                ->where('enabled', true)
+                ->each(function ($fc) {
+                    \Wm\WmPackage\Jobs\FeatureCollection\GenerateFeatureCollectionJob::dispatch($fc->id);
+                });
+        });
+
         // Imposta un default per properties se è null
         static::creating(function ($model) {
             if (is_null($model->properties)) {
@@ -72,6 +81,11 @@ class Layer extends Polygon
     public function associatedApps()
     {
         return $this->belongsToMany(App::class, 'layer_associated_app');
+    }
+
+    public function featureCollections(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(\Wm\WmPackage\Models\FeatureCollection::class, 'feature_collection_layer');
     }
 
     /**
