@@ -34,9 +34,9 @@ class FeatureCollectionMap extends Field
     protected bool $enableScreenshot = false;
 
     /**
-     * Flag per abilitare lo slope chart (default: false)
+     * Flag per abilitare lo slope chart (default: true)
      */
-    protected bool $enableSlopeChart = false;
+    protected bool $enableSlopeChart = true;
 
     /**
      * Tipi di geometria accettati dal campo.

@@ -4,7 +4,7 @@ namespace Tests\Unit\Nova\Fields;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
-use Tests\TestCase;
+use Wm\WmPackage\Tests\TestCase;
 use Wm\WmPackage\Models\Abstracts\MultiLineString;
 use Wm\WmPackage\Models\Abstracts\Point;
 use Wm\WmPackage\Models\Layer;
@@ -172,7 +172,7 @@ class FeatureCollectionMapTest extends TestCase
         DB::shouldReceive('select')
             ->once()
             ->with(
-                'SELECT ST_AsText(ST_LineMerge(ST_Force2D(ST_GeomFromGeoJSON(?)))) AS wkt',
+                'SELECT ST_AsText(ST_LineMerge(ST_Force3D(ST_GeomFromGeoJSON(?)))) AS wkt',
                 [$json]
             )
             ->andReturn([(object) ['wkt' => 'MULTILINESTRING((0 0,1 1))']]);
@@ -245,20 +245,31 @@ class FeatureCollectionMapTest extends TestCase
         ];
 
         $json = json_encode($featureCollection);
+        $oldGeojson = '{"type":"MultiLineString","coordinates":[[[0,0],[1,1]]]}';
 
         DB::shouldReceive('select')
             ->once()
             ->with(
-                "SELECT ST_AsGeoJSON(ST_GeomFromWKB(decode(?, 'hex'))) as geojson",
-                [$originalGeometry]
-            )
-            ->andReturn([(object) ['geojson' => $json]]);
-
-        DB::shouldReceive('select')
-            ->once()
-            ->with(
-                'SELECT ST_AsText(ST_LineMerge(ST_Force2D(ST_GeomFromGeoJSON(?)))) AS wkt',
+                'SELECT ST_AsText(ST_LineMerge(ST_Force3D(ST_GeomFromGeoJSON(?)))) AS wkt',
                 [$json]
+            )
+            ->andReturn([(object) ['wkt' => $originalGeometry]]);
+
+        DB::shouldReceive('select')
+            ->once()
+            ->with("SELECT st_asgeojson('$originalGeometry') as g")
+            ->andReturn([(object) ['g' => $oldGeojson]]);
+
+        DB::shouldReceive('select')
+            ->once()
+            ->with("SELECT st_asgeojson(ST_Centroid('$originalGeometry')) as g")
+            ->andReturn([(object) ['g' => '{"type":"Point","coordinates":[0,0]}']]);
+
+        DB::shouldReceive('select')
+            ->once()
+            ->with(
+                'SELECT ST_AsText(ST_LineMerge(ST_Force3D(ST_GeomFromGeoJSON(?)))) AS wkt',
+                [$oldGeojson]
             )
             ->andReturn([(object) ['wkt' => $originalGeometry]]);
 
@@ -292,22 +303,33 @@ class FeatureCollectionMapTest extends TestCase
         ];
 
         $json = json_encode($featureCollection);
+        $oldGeojson = '{"type":"MultiLineString","coordinates":[[[0,0],[1,1]]]}';
 
         DB::shouldReceive('select')
             ->once()
             ->with(
-                "SELECT ST_AsGeoJSON(ST_GeomFromWKB(decode(?, 'hex'))) as geojson",
-                [$originalGeometry]
-            )
-            ->andReturn([(object) ['geojson' => $json]]);
-
-        DB::shouldReceive('select')
-            ->once()
-            ->with(
-                'SELECT ST_AsText(ST_LineMerge(ST_Force2D(ST_GeomFromGeoJSON(?)))) AS wkt',
+                'SELECT ST_AsText(ST_LineMerge(ST_Force3D(ST_GeomFromGeoJSON(?)))) AS wkt',
                 [$json]
             )
             ->andReturn([(object) ['wkt' => 'MULTILINESTRING((0 0,2 2))']]);
+
+        DB::shouldReceive('select')
+            ->once()
+            ->with("SELECT st_asgeojson('$originalGeometry') as g")
+            ->andReturn([(object) ['g' => $oldGeojson]]);
+
+        DB::shouldReceive('select')
+            ->once()
+            ->with("SELECT st_asgeojson(ST_Centroid('$originalGeometry')) as g")
+            ->andReturn([(object) ['g' => '{"type":"Point","coordinates":[0,0]}']]);
+
+        DB::shouldReceive('select')
+            ->once()
+            ->with(
+                'SELECT ST_AsText(ST_LineMerge(ST_Force3D(ST_GeomFromGeoJSON(?)))) AS wkt',
+                [$oldGeojson]
+            )
+            ->andReturn([(object) ['wkt' => $originalGeometry]]);
 
         $field = new FeatureCollectionMap('Geometry', 'geometry');
         $field->fillModelWithData($model, $featureCollection, 'geometry');
@@ -325,18 +347,23 @@ class FeatureCollectionMapTest extends TestCase
 
         DB::shouldReceive('select')
             ->once()
-            ->with("SELECT ST_AsGeoJSON(ST_GeomFromWKB(decode(?, 'hex'))) as geojson", [$geometry])
-            ->andReturn([(object) ['geojson' => '{"type":"MultiLineString","coordinates":[[[0,0],[1,1]]]}']]);
+            ->with("SELECT st_asgeojson('$geometry') as g")
+            ->andReturn([(object) ['g' => '{"type":"MultiLineString","coordinates":[[[0,0],[1,1]]]}']]);
+
+        DB::shouldReceive('select')
+            ->once()
+            ->with("SELECT st_asgeojson(ST_Centroid('$geometry')) as g")
+            ->andReturn([(object) ['g' => '{"type":"Point","coordinates":[0,0]}']]);
 
         $field = new FeatureCollectionMap('Geometry', 'geometry');
         $field->resolve($model, 'geometry');
 
         $json = $field->jsonSerialize();
 
-        $this->assertArrayHasKey('geojson', $json['meta']);
+        $this->assertArrayHasKey('geojson', $json);
         $this->assertSame(
             '{"type":"MultiLineString","coordinates":[[[0,0],[1,1]]]}',
-            $json['meta']['geojson']
+            $json['geojson']
         );
     }
 

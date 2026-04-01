@@ -62,6 +62,7 @@
 <script>
 import { ref, nextTick, onMounted, onUnmounted, watch } from 'vue';
 import SlopeChart from './SlopeChart.vue';
+import { getSlopeChartTrackFromGeojson, toLineStringFeatureObject } from '../slope-chart/utils.mjs';
 
 // OpenLayers imports
 import Map from 'ol/Map';
@@ -183,80 +184,10 @@ export default {
         const hoverMarkerSource = ref(null);
         const hoverMarkerFeature = ref(null);
 
-        const flattenMultiLineStringCoordinates = (multiCoords) => {
-            if (!Array.isArray(multiCoords) || multiCoords.length === 0) {
-                return [];
-            }
-            const flat = [];
-            for (const part of multiCoords) {
-                if (!Array.isArray(part) || part.length === 0) {
-                    continue;
-                }
-                for (let i = 0; i < part.length; i++) {
-                    const c = part[i];
-                    if (!Array.isArray(c) || c.length < 2) {
-                        continue;
-                    }
-                    if (flat.length > 0 && i === 0) {
-                        const prev = flat[flat.length - 1];
-                        if (Array.isArray(prev) && prev[0] === c[0] && prev[1] === c[1] && prev[2] === c[2]) {
-                            continue;
-                        }
-                    }
-                    flat.push(c);
-                }
-            }
-            return flat;
-        };
-
-        const toLineStringFeatureObject = (featureObject) => {
-            if (!featureObject || typeof featureObject !== 'object') {
-                return null;
-            }
-            const g = featureObject.geometry;
-            if (!g || !g.type) {
-                return null;
-            }
-            if (g.type === 'LineString') {
-                return featureObject;
-            }
-            if (g.type === 'MultiLineString' && Array.isArray(g.coordinates) && g.coordinates.length) {
-                return {
-                    type: 'Feature',
-                    properties: featureObject.properties || {},
-                    geometry: {
-                        type: 'LineString',
-                        coordinates: flattenMultiLineStringCoordinates(g.coordinates)
-                    }
-                };
-            }
-            return null;
-        };
-
         const setDefaultTrackForChartFromGeojson = (data) => {
-            if (!data || typeof data !== 'object') {
-                return;
-            }
-            const feats = Array.isArray(data.features) ? data.features : [];
-            const lineFeats = feats.filter((f) => {
-                const t = f?.geometry?.type;
-                return t === 'LineString' || t === 'MultiLineString';
-            });
-            console.debug('[FeatureCollectionMap] geojson features', {
-                total: feats.length,
-                lines: lineFeats.length,
-                types: feats.reduce((acc, f) => {
-                    const t = f?.geometry?.type || 'unknown';
-                    acc[t] = (acc[t] || 0) + 1;
-                    return acc;
-                }, {}),
-            });
-            slopeChartAllowed.value = lineFeats.length === 1;
-            if (!slopeChartAllowed.value) {
-                selectedTrackForChart.value = null;
-                return;
-            }
-            selectedTrackForChart.value = toLineStringFeatureObject(lineFeats[0]);
+            const track = getSlopeChartTrackFromGeojson(data, props.enableSlopeChart);
+            slopeChartAllowed.value = !!track;
+            selectedTrackForChart.value = track;
             try {
                 const coords = selectedTrackForChart.value?.geometry?.coordinates || [];
                 const first = coords?.[0];
