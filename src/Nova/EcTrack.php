@@ -32,7 +32,7 @@ class EcTrack extends AbstractEcResource
 
     public static function singularLabel(): string
     {
-        return __('Track');
+        return __('EC Track');
     }
 
     public static $model = \Wm\WmPackage\Models\EcTrack::class;
