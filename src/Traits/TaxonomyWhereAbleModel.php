@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Log;
 
 trait TaxonomyWhereAbleModel
 {
-    protected function dispatchFeatureCollectionRegeneration(): void
+    public function dispatchFeatureCollectionRegeneration(): void
     {
         if ($this instanceof \Wm\WmPackage\Models\Layer) {
             $this->featureCollections()
