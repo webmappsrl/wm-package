@@ -322,6 +322,26 @@ class StorageService extends BaseService
         return $this->getShardBasePath($appId).'config.json';
     }
 
+    public function getAppConfigUrl(int $appId): string
+    {
+        return $this->getRemoteWfeDisk()->url($this->getAppConfigPath($appId));
+    }
+
+    public function getAppIconsUrl(int $appId): string
+    {
+        return $this->getRemoteWfeDisk()->url($this->getAppIconsPath($appId));
+    }
+
+    public function getGlobalIconsUrl(): string
+    {
+        return $this->getRemoteWfeDisk()->url($this->getIconsPath());
+    }
+
+    public function getAppPoisUrl(int $appId): string
+    {
+        return $this->getRemoteWfeDisk()->url($this->getShardBasePath($appId).'pois.geojson');
+    }
+
     //
     // PUBLIC GETTERS
     //
