@@ -246,10 +246,12 @@ class PBFGeneratorService extends BaseService
             pg.properties ->> 'cai_scale' as cai_scale,
             COALESCE(
                 NULLIF(pg.properties -> 'manual_data' ->> 'distance', '')::double precision,
+                NULLIF(pg.properties -> 'osm_data' ->> 'distance', '')::double precision,
                 NULLIF(pg.properties -> 'dem_data' ->> 'distance', '')::double precision
             ) as distance,
             COALESCE(
                 NULLIF(pg.properties -> 'manual_data' ->> 'duration_forward', '')::integer,
+                NULLIF(pg.properties -> 'osm_data' ->> 'duration_forward', '')::integer,
                 NULLIF(pg.properties -> 'dem_data' ->> 'duration_forward', '')::integer
             ) as duration_forward,
             ta.activities::text as activities,
