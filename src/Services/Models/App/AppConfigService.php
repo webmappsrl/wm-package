@@ -459,7 +459,7 @@ class AppConfigService extends AppBaseService
                     }
 
                     $array = [];
-                    $array['label'] = $fc->label ?? [];
+                    $array['label'] = $fc->getTranslations('label');
 
                     if ($fc->default) {
                         $array['default'] = true;
