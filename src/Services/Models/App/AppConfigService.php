@@ -407,7 +407,8 @@ class AppConfigService extends AppBaseService
         $data['MAP']['flow_line_quote_show'] = $this->app->flow_line_quote_show;
         $data['MAP']['flow_line_quote_orange'] = $this->app->flow_line_quote_orange;
         $data['MAP']['flow_line_quote_red'] = $this->app->flow_line_quote_red;
-        $data['MAP']['show_track_direction_arrow'] = $this->app->show_track_direction_arrow;
+        $properties = $this->app->properties ?? [];
+        $data['MAP']['show_track_direction_arrow'] = (bool) ($properties['show_track_direction_arrow'] ?? false);
 
         // Tiles
         if ($this->app->tiles && ! empty(json_decode($this->app->tiles, true))) {
@@ -702,10 +703,6 @@ class AppConfigService extends AppBaseService
         $data['OPTIONS']['showKmlDownload'] = $this->app->table_details_show_kml_download;
         $data['OPTIONS']['showGeojsonDownload'] = (bool) $this->app->table_details_show_geojson_download;
         $data['OPTIONS']['showShapefileDownload'] = (bool) $this->app->table_details_show_shapefile_download;
-        $data['OPTIONS']['showTravelMode'] = $this->app->show_travel_mode;
-        $data['OPTIONS']['showFeaturesInViewport'] = $this->app->show_features_in_viewport;
-        $data['OPTIONS']['maxZoomFeaturesInViewport'] = $this->app->max_zoom_features_in_viewport;
-        $data['OPTIONS']['minZoomFeaturesInViewport'] = $this->app->min_zoom_features_in_viewport;
 
         if (isset($this->app->properties['show_download_tiles'])) {
             // TODO: opzione usata solo dalla 3.1.6, rimuovere showDownloadTilesButton al prossimo rilascio
@@ -725,6 +722,13 @@ class AppConfigService extends AppBaseService
                 $data['OPTIONS'][$label] = $value;
             }
         }
+
+        // Ensure "new" options come from properties and are never overwritten by track_technical_details.
+        $properties = $this->app->properties ?? [];
+        $data['OPTIONS']['showTravelMode'] = (bool) ($properties['show_travel_mode'] ?? false);
+        $data['OPTIONS']['showFeaturesInViewport'] = (bool) ($properties['show_features_in_viewport'] ?? false);
+        $data['OPTIONS']['minZoomFeaturesInViewport'] = (int) ($properties['min_zoom_features_in_viewport'] ?? 10);
+        $data['OPTIONS']['maxZoomFeaturesInViewport'] = (int) ($properties['max_zoom_features_in_viewport'] ?? 12);
 
         return $data;
     }

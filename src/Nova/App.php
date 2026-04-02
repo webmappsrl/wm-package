@@ -264,7 +264,7 @@ class App extends Resource
                 ->default(false)
                 ->hideFromIndex()
                 ->help(__('Shows download track in GPX, KML, GEOJSON')),
-            Boolean::make(__('Show Travel Mode'), 'show_travel_mode')
+            Boolean::make(__('Show Travel Mode'), 'properties->show_travel_mode')
                 ->default(false)
                 ->hideFromIndex()
                 ->help(__('Enable the Travel Mode feature on the app')),
@@ -842,24 +842,24 @@ class App extends Resource
                 ->min(10)->max(20)
                 ->hideFromIndex()
                 ->help(__('Set minimum zoom at which ref parameter is shown on tracks line in general maps (ref_on_track_show must be true)')),
-            Boolean::make(__('Show Features In Viewport'), 'show_features_in_viewport')
+            Boolean::make(__('Show Features In Viewport'), 'properties->show_features_in_viewport')
                 ->default(false)
                 ->hideFromIndex()
                 ->help(__('Enable the Features In Viewport on the app')),
-            Number::make(__('Min Zoom Features In Viewport'), 'min_zoom_features_in_viewport')
+            Number::make(__('Min Zoom Features In Viewport'), 'properties->min_zoom_features_in_viewport')
                 ->min(1)
                 ->max(20)
                 ->default(10)
                 ->hideFromIndex()
                 ->help(__('Minimum zoom level for enabling Features In Viewport')),
-            Number::make(__('Max Zoom Features In Viewport'), 'max_zoom_features_in_viewport')
+            Number::make(__('Max Zoom Features In Viewport'), 'properties->max_zoom_features_in_viewport')
                 ->min(1)
                 ->max(20)
                 ->default(12)
                 ->hideFromIndex()
                 ->help(__('Maximum zoom level for enabling Features In Viewport')),
-            Boolean::make(__('Show Track Direction Arrow'), 'show_track_direction_arrow')
-                ->default(true)
+            Boolean::make(__('Show Track Direction Arrow'), 'properties->show_track_direction_arrow')
+                ->default(false)
                 ->hideFromIndex()
                 ->help(__('Enables the track direction arrow in the map.')),
             Number::make(__('alert_poi_radius'))
