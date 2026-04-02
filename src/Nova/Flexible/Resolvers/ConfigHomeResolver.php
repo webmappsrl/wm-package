@@ -40,7 +40,16 @@ class ConfigHomeResolver implements ResolverInterface
                 if ($layout) {
                     $attributes = [];
                     foreach ($item as $key => $val) {
-                        if ($key !== 'box_type') {
+                        if ($key === 'box_type') {
+                            continue;
+                        }
+
+                        // Expand title array into title_{locale} fields
+                        if ($key === 'title' && is_array($val)) {
+                            foreach ($val as $locale => $translation) {
+                                $attributes['title_'.$locale] = $translation;
+                            }
+                        } else {
                             $attributes[$key] = $val;
                         }
                     }
@@ -76,17 +85,31 @@ class ConfigHomeResolver implements ResolverInterface
                 'box_type' => $layout->name(),
             ];
 
+            $titleData = [];
+
             // Merge all attributes
             foreach ($layout->getAttributes() as $key => $val) {
-                // Assicuriamoci che 'layer' sia sempre un numero intero
+                // Ensure 'layer' is always an integer
                 if ($key === 'layer' && $val) {
                     $homeElement[$key] = (int) $val;
+                } elseif (str_starts_with($key, 'title_')) {
+                    $locale = substr($key, 6);
+                    if (! is_null($val) && $val !== '') {
+                        $titleData[$locale] = $val;
+                    }
                 } else {
-                    $homeElement[$key] = $val;
+                    // Do not write empty fields to JSON: avoids keys like "x": null or "x": ""
+                    if (! is_null($val) && $val !== '') {
+                        $homeElement[$key] = $val;
+                    }
                 }
             }
 
-            // Se è un layout di tipo Layer, aggiungiamo automaticamente il titolo del layer
+            if (! empty($titleData)) {
+                $homeElement['title'] = $titleData;
+            }
+
+            // If it's a Layer layout, automatically add the layer title
             if ($layout->name() === 'layer' && isset($homeElement['layer'])) {
                 $layerId = $homeElement['layer'];
                 $layer = Layer::find($layerId);

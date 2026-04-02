@@ -697,31 +697,49 @@ class App extends Resource
 
     protected function title_layout(): array
     {
-        return [
-            Text::make('Titolo', 'title')->rules('required'),
-        ];
+        return $this->config_home_title_layout();
     }
 
     protected function slug_layout(): array
     {
-        return [
-            Text::make('Title', 'title'),
+        return array_merge($this->config_home_title_layout(), [
             Text::make('Slug', 'slug')
                 ->rules('required')
                 ->resolveUsing(function ($value) {
                     return $value ?: 'project';
                 }),
             Text::make('Image url', 'image_url'), // TODO: fare in modo di usare Media caricando un immagine e restituendo l'url
-        ];
+        ]);
     }
 
     protected function external_url_layout(): array
     {
-        return [
-            Text::make('Title', 'title'),
+        return array_merge($this->config_home_title_layout(), [
             Text::make('Url', 'url')->rules('required'),
             Text::make('Image url', 'image_url'), // TODO: fare in modo di usare Media caricando un immagine e restituendo l'url
-        ];
+        ]);
+    }
+
+    protected function config_home_title_layout(): array
+    {
+        $languages = Config::get('wm-app-languages.languages', []);
+        $fields = [];
+        $requiredLocales = $this->config_home_required_locales();
+
+        foreach ($languages as $locale => $name) {
+            $field = Text::make($name, 'title_'.$locale);
+            if (in_array($locale, $requiredLocales, true)) {
+                $field->rules('required');
+            }
+            $fields[] = $field;
+        }
+
+        return $fields;
+    }
+
+    protected function config_home_required_locales(): array
+    {
+        return ['it'];
     }
 
     protected function base_layout(): array
