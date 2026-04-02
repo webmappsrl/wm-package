@@ -24,6 +24,7 @@ use Wm\WmPackage\Enums\AppTiles;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
 use Wm\WmPackage\Models\FeatureCollection as FeatureCollectionModel;
 use Wm\WmPackage\Models\Layer;
+use Wm\WmPackage\Nova\Cards\ApiLinksCard\AppApiLinksCard;
 use Wm\WmPackage\Nova\Actions\ExecuteEcTrackDataChainAction;
 use Wm\WmPackage\Nova\Actions\RegenerateAppPbfAction;
 use Wm\WmPackage\Nova\Actions\ReindexAppScoutAction;
@@ -90,6 +91,17 @@ class App extends Resource
             ]),
 
             // TODO: implement fields
+        ];
+    }
+
+    public function cards(NovaRequest $request): array
+    {
+        if (! $request->resourceId) {
+            return [];
+        }
+
+        return [
+            new AppApiLinksCard($request->findModelOrFail()),
         ];
     }
 
