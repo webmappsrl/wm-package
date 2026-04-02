@@ -80,30 +80,7 @@ class FeatureCollection extends Model
         }
 
         if ($this->file_path) {
-            $url = \Illuminate\Support\Facades\Storage::disk('wmfe')->url($this->file_path);
-            $parsedUrl = parse_url($url);
-
-            // Costruisce un URL assoluto same-origin (quando possibile) per evitare
-            // mismatch http/https senza perdere l'host per i client che richiedono URL completi.
-            if (is_array($parsedUrl) && isset($parsedUrl['path'])) {
-                $relativeUrl = $parsedUrl['path'];
-                if (isset($parsedUrl['query'])) {
-                    $relativeUrl .= '?' . $parsedUrl['query'];
-                }
-
-                if (request() !== null) {
-                    return rtrim(request()->getSchemeAndHttpHost(), '/') . $relativeUrl;
-                }
-
-                $appUrl = config('app.url');
-                if (is_string($appUrl) && $appUrl !== '') {
-                    return rtrim($appUrl, '/') . $relativeUrl;
-                }
-
-                return $relativeUrl;
-            }
-
-            return $url;
+            return \Illuminate\Support\Facades\Storage::disk('wmfe')->url($this->file_path);
         }
 
         return null;

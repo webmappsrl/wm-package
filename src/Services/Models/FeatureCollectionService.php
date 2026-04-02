@@ -3,6 +3,7 @@
 namespace Wm\WmPackage\Services\Models;
 
 use Illuminate\Support\Facades\DB;
+use Wm\WmPackage\Jobs\UpdateAppConfigJob;
 use Wm\WmPackage\Models\FeatureCollection;
 use Wm\WmPackage\Services\StorageService;
 
@@ -54,13 +55,18 @@ class FeatureCollectionService
         );
 
         if ($path === false) {
-            return false;
+            throw new \RuntimeException("Failed to store FeatureCollection #{$fc->id} to storage.");
         }
 
-        $fc->update([
+        // updateQuietly to avoid re-triggering the saved event (which would re-dispatch this job)
+        $fc->updateQuietly([
             'file_path' => $path,
             'generated_at' => now(),
         ]);
+
+        if ($fc->app_id && $fc->enabled) {
+            UpdateAppConfigJob::dispatch($fc->app_id);
+        }
 
         return true;
     }
