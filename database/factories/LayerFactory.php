@@ -12,7 +12,6 @@ class LayerFactory extends Factory
 
     public function definition()
     {
-        dump('test');
         $a = $this->faker->randomFloat(6, 10, 20);
         $b = $this->faker->randomFloat(6, 10, 20);
         $c = $this->faker->randomFloat(6, 10, 20);
