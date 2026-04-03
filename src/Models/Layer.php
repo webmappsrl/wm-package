@@ -83,6 +83,11 @@ class Layer extends Polygon
         return $this->belongsToMany(App::class, 'layer_associated_app');
     }
 
+    public function filterApps()
+    {
+        return $this->belongsToMany(App::class, 'app_filter_layers');
+    }
+
     public function featureCollections(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
     {
         return $this->belongsToMany(\Wm\WmPackage\Models\FeatureCollection::class, 'feature_collection_layer');

@@ -479,6 +479,10 @@ class App extends Resource
                 ->default(false)
                 ->hideFromIndex()
                 ->help(__('Activates the activity filter for tracks')),
+            Boolean::make(__('Layer Filter'), 'filter_layer')
+                ->default(false)
+                ->hideFromIndex()
+                ->help(__('Activates the layer-based filter for tracks and data')),
             Boolean::make(__('POI Type Filter'), 'filter_poi_type')
                 ->default(false)
                 ->hideFromIndex()
@@ -501,7 +505,7 @@ class App extends Resource
                 <br/>
                 <ul>
                     <li><p><strong>Activity Filter Label</strong>: Text to be displayed for the Activity filter.</p></li>
-                    <li><p><strong>Theme Filter Label</strong>: Text to be displayed for the Theme filter.</p></li>
+                    <li><p><strong>Layer Filter Label</strong>: Text to be displayed for the Layer filter.</p></li>
                     <li><p><strong>Poi Type Filter Label</strong>: Text to be displayed for the Poi Type filter.</p></li>
                     <li><p><strong>Duration Filter Label</strong>: Text to be displayed for the tracks duration filter.</p></li>
                     <li><p><strong>Distance Filter Label</strong>: Text to be displayed for the tracks distance filter.</p></li>
@@ -509,38 +513,61 @@ class App extends Resource
                 HTML
             )->asHtml()->hideFromIndex(),
             NovaTabTranslatable::make([
-                Text::make('Activity Filter Label', 'filter_activity_label'),
-                Text::make('Theme Filter Label', 'filter_theme_label'),
-                Text::make('Poi Type Filter Label', 'filter_poi_type_label'),
-                Text::make('Duration Filter Label', 'filter_track_duration_label'),
-                Text::make('Distance Filter Label', 'filter_track_distance_label'),
+                Text::make(__('Activity Filter Label'), 'filter_activity_label'),
+                Text::make(__('Layer Filter Label'), 'filter_layer_label'),
+                Text::make(__('Poi Type Filter Label'), 'filter_poi_type_label'),
+                Text::make(__('Duration Filter Label'), 'filter_track_duration_label'),
+                Text::make(__('Distance Filter Label'), 'filter_track_distance_label'),
             ])->hideFromIndex(),
 
-            Text::make('Activity Exclude Filter', 'filter_activity_exclude')
+            Text::make(__('Activity Exclude Filter'), 'filter_activity_exclude')
                 ->hideFromIndex()
                 ->help(__('Insert the activities you want to exclude from the filter, separated by commas')),
-            Text::make('Theme Exclude Filter', 'filter_theme_exclude')
-                ->hideFromIndex()
-                ->help(__('Insert the themes you want to exclude from the filter, separated by commas')),
-            Text::make('Poi Type Exclude Filter', 'filter_poi_type_exclude')
+            Multiselect::make(__('Filterable layers'), 'filter_layers_ids')
+                ->onlyOnForms()
+                ->options(function () {
+                    $app = $this->model();
+
+                    return $app->layers()
+                        ->orderBy('id')
+                        ->get()
+                        ->mapWithKeys(function ($layer) {
+                            $title = $layer->getStringName() ?: ('Layer #'.$layer->id);
+
+                            return [$layer->id => $title];
+                        })
+                        ->toArray();
+                })
+                ->resolveUsing(function () {
+                    return $this->model()
+                        ->filterLayers()
+                        ->pluck('layers.id')
+                        ->all();
+                })
+                ->fillUsing(function ($request, $model, $attribute, $requestAttribute) {
+                    $ids = $request->input($requestAttribute, []);
+                    $model->filterLayers()->sync($ids ?? []);
+                })
+                ->help(__('Select which layers will be available as filters')),
+            Text::make(__('Poi Type Exclude Filter'), 'filter_poi_type_exclude')
                 ->hideFromIndex()
                 ->help(__('Insert the poi types you want to exclude from the filter, separated by commas')),
-            Number::make('Track Min Duration Filter', 'filter_track_duration_min')
+            Number::make(__('Track Min Duration Filter'), 'filter_track_duration_min')
                 ->hideFromIndex()
                 ->help(__('Set the minimum duration of the duration filter')),
-            Number::make('Track Max Duration Filter', 'filter_track_duration_max')
+            Number::make(__('Track Max Duration Filter'), 'filter_track_duration_max')
                 ->hideFromIndex()
                 ->help(__('Set the maximum duration of the duration filter')),
-            Number::make('Track Duration Steps Filter', 'filter_track_duration_steps')
+            Number::make(__('Track Duration Steps Filter'), 'filter_track_duration_steps')
                 ->hideFromIndex()
                 ->help(__('Set the steps of the duration filter')),
-            Number::make('Track Min Distance Filter', 'filter_track_distance_min')
+            Number::make(__('Track Min Distance Filter'), 'filter_track_distance_min')
                 ->hideFromIndex()
                 ->help(__('Set the minimum distance of the distance filter')),
-            Number::make('Track Max Distance Filter', 'filter_track_distance_max')
+            Number::make(__('Track Max Distance Filter'), 'filter_track_distance_max')
                 ->hideFromIndex()
                 ->help(__('Set the maximum distance of the distance filter')),
-            Number::make('Track Distance Step Filter', 'filter_track_distance_steps')
+            Number::make(__('Track Distance Step Filter'), 'filter_track_distance_steps')
                 ->hideFromIndex()
                 ->help(__('Set the steps of the distance filter')),
         ];
