@@ -664,10 +664,8 @@ class App extends Resource
         return TaxonomyActivityModel::query()
             ->get(['identifier', 'name'])
             ->mapWithKeys(function (TaxonomyActivityModel $activity) {
-                $clean = TaxonomyActivityModel::normalizeIdentifierForRes($activity->identifier);
-
                 return [
-                    $clean => $this->getTaxonomyLabel($activity->name, $clean),
+                    $activity->identifier => $this->getTaxonomyLabel($activity->name, $activity->identifier),
                 ];
             })
             ->sort()
@@ -679,7 +677,7 @@ class App extends Resource
         return TaxonomyPoiTypeModel::query()
             ->get(['identifier', 'name'])
             ->mapWithKeys(function (TaxonomyPoiTypeModel $poiType) {
-                $identifier = 'poi_type_'.$poiType->identifier;
+                $identifier = 'poi_type_' . $poiType->identifier;
 
                 return [
                     $identifier => $this->getTaxonomyLabel($poiType->name, $identifier),
