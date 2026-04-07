@@ -11,6 +11,7 @@ use Laravel\Nova\Fields\Color;
 use Laravel\Nova\Fields\Heading;
 use Laravel\Nova\Fields\ID;
 use Laravel\Nova\Fields\Number;
+use Laravel\Nova\Fields\Repeater;
 use Laravel\Nova\Fields\Select;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Fields\Textarea;
@@ -24,10 +25,13 @@ use Wm\WmPackage\Enums\AppTiles;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
 use Wm\WmPackage\Models\FeatureCollection as FeatureCollectionModel;
 use Wm\WmPackage\Models\Layer;
-use Wm\WmPackage\Nova\Cards\ApiLinksCard\AppApiLinksCard;
+use Wm\WmPackage\Models\TaxonomyActivity as TaxonomyActivityModel;
+use Wm\WmPackage\Models\TaxonomyPoiType as TaxonomyPoiTypeModel;
+use Wm\WmPackage\Nova\Flexible\ConfigHome\HorizontalScrollItemRepeatable;
 use Wm\WmPackage\Nova\Actions\ExecuteEcTrackDataChainAction;
 use Wm\WmPackage\Nova\Actions\RegenerateAppPbfAction;
 use Wm\WmPackage\Nova\Actions\ReindexAppScoutAction;
+use Wm\WmPackage\Nova\Flexible\ConfigHome\HorizontalScrollRepeaterJsonPreset;
 use Wm\WmPackage\Nova\Fields\StoreVersionField;
 use Wm\WmPackage\Nova\Flexible\Resolvers\ConfigHomeResolver;
 use Wm\WmPackage\Nova\Flexible\Resolvers\ConfigOverlaysResolver;
@@ -457,6 +461,8 @@ class App extends Resource
                 ->button('Aggiungi contenuto')
                 ->help("Configurazione della home page dell'app")
                 ->addLayout('Titolo', 'title', $this->title_layout())
+                ->addLayout(__('Horizontal Scroll Activities'), 'horizontal_scroll_activities', $this->horizontal_scroll_activities_layout())
+                ->addLayout(__('Horizontal Scroll POI Types'), 'horizontal_scroll_poi_types', $this->horizontal_scroll_poi_types_layout())
                 ->addLayout('Layer', 'layer', $this->layer_layout())
                 ->addLayout('Slug', 'slug', $this->slug_layout())
                 ->addLayout('External URL', 'external_url', $this->external_url_layout())
@@ -694,6 +700,81 @@ class App extends Resource
     protected function title_layout(): array
     {
         return $this->config_home_title_layout();
+    }
+
+    protected function horizontal_scroll_activities_layout(): array
+    {
+        $fields = $this->config_home_title_layout();
+        $fields[] = $this->horizontalScrollItemsRepeater(
+            HorizontalScrollItemRepeatable::make($this->horizontalScrollActivityOptions())
+        );
+
+        return $fields;
+    }
+
+    protected function horizontal_scroll_poi_types_layout(): array
+    {
+        $fields = $this->config_home_title_layout();
+        $fields[] = $this->horizontalScrollItemsRepeater(
+            HorizontalScrollItemRepeatable::make($this->horizontalScrollPoiTypeOptions())
+        );
+
+        return $fields;
+    }
+
+    /**
+     * JSON preset for config_home horizontal scroll layouts: reliable hydration of `items` from the Whitecube layout.
+     */
+    protected function horizontalScrollItemsRepeater(HorizontalScrollItemRepeatable $repeatable): Repeater
+    {
+        return Repeater::make(__('Items'), 'items')
+            ->repeatables([$repeatable])
+            ->preset(new HorizontalScrollRepeaterJsonPreset())
+            ->rules('required', 'array')
+            ->help(__('Add one or more items for this horizontal scroll.'));
+    }
+
+    protected function horizontalScrollActivityOptions(): array
+    {
+        return TaxonomyActivityModel::query()
+            ->get(['identifier', 'name'])
+            ->mapWithKeys(function (TaxonomyActivityModel $activity) {
+                $clean = TaxonomyActivityModel::normalizeIdentifierForRes($activity->identifier);
+
+                return [
+                    $clean => $this->getTaxonomyLabel($activity->name, $clean),
+                ];
+            })
+            ->sort()
+            ->toArray();
+    }
+
+    protected function horizontalScrollPoiTypeOptions(): array
+    {
+        return TaxonomyPoiTypeModel::query()
+            ->get(['identifier', 'name'])
+            ->mapWithKeys(function (TaxonomyPoiTypeModel $poiType) {
+                $identifier = 'poi_type_'.$poiType->identifier;
+
+                return [
+                    $identifier => $this->getTaxonomyLabel($poiType->name, $identifier),
+                ];
+            })
+            ->sort()
+            ->toArray();
+    }
+
+    protected function getTaxonomyLabel($name, string $fallback): string
+    {
+        if (is_array($name)) {
+            return $name['it'] ?? $name['en'] ?? $fallback;
+        }
+
+        if (is_string($name) && $name !== '') {
+            return $name;
+        }
+
+        return $fallback;
     }
 
     protected function slug_layout(): array

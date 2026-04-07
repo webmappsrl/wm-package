@@ -220,4 +220,14 @@
     "Access Cognitive Description": "Accessibilità cognitiva (descrizione)",
     "Access Food Check": "Accessibilità alimentare (check)",
     "Access Food Description": "Accessibilità alimentare (descrizione)"
+    "Tipologie di POI associate a questo punto di interesse": "Tipologie di POI associate a questo punto di interesse",
+    "Add one or more items for this horizontal scroll.": "Aggiungi uno o più elementi per questo scorrimento orizzontale.",
+    "Horizontal Scroll Activities": "Scorrimento orizzontale — Attività",
+    "Horizontal Scroll POI Types": "Scorrimento orizzontale — Tipi POI",
+    "Image URL": "URL immagine",
+    "Item": "Elemento",
+    "Items": "Elementi",
+    "Optional in Nova; include in config when you have a card image URL.": "Opzionale in Nova; includi nel config se hai un URL immagine per la scheda.",
+    "Overrides the default taxonomy label for this item in config JSON; leave empty to use the taxonomy name.": "Sostituisce l’etichetta predefinita della taxonomy per questo elemento nel JSON di config; lascia vuoto per usare il nome della taxonomy.",
+    "Title": "Titolo"
 }

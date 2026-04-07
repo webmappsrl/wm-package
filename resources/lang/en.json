@@ -201,6 +201,16 @@
     "Italian Translations": "Italian Translations",
     "English Translations": "English Translations",
     "Indicates if the POI is global and visible always on the map": "Indicates if the POI is global and visible always on the map",
+    "Tipologie di POI associate a questo punto di interesse": "POI types associated with this point of interest",
+    "Add one or more items for this horizontal scroll.": "Add one or more items for this horizontal scroll.",
+    "Horizontal Scroll Activities": "Horizontal Scroll Activities",
+    "Horizontal Scroll POI Types": "Horizontal Scroll POI Types",
+    "Image URL": "Image URL",
+    "Item": "Item",
+    "Items": "Items",
+    "Optional in Nova; include in config when you have a card image URL.": "Optional in Nova; include in config when you have a card image URL.",
+    "Overrides the default taxonomy label for this item in config JSON; leave empty to use the taxonomy name.": "Overrides the default taxonomy label for this item in config JSON; leave empty to use the taxonomy name.",
+    "Title": "Title"
     "Tipologie di POI associate a questo punto di interesse": "POI types associated with this point of interest"
     ,
     "Accessibility": "Accessibility",
