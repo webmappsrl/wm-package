@@ -105,10 +105,8 @@ class HorizontalScrollItemRepeatable extends Repeatable
         $activities = TaxonomyActivityModel::query()
             ->get(['identifier', 'name'])
             ->mapWithKeys(function (TaxonomyActivityModel $activity) {
-                $clean = TaxonomyActivityModel::normalizeIdentifierForRes($activity->identifier);
-
                 return [
-                    $clean => $this->taxonomyLabel($activity->name, $clean),
+                    $activity->identifier => $this->taxonomyLabel($activity->name, $activity->identifier),
                 ];
             });
 

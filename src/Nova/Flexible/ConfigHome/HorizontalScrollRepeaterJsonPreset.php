@@ -5,7 +5,6 @@ namespace Wm\WmPackage\Nova\Flexible\ConfigHome;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Config;
 use Laravel\Nova\Fields\Repeater\Presets\JSON;
-use Wm\WmPackage\Models\TaxonomyActivity as TaxonomyActivityModel;
 use Laravel\Nova\Fields\Repeater\RepeatableCollection;
 use Laravel\Nova\Http\Requests\NovaRequest;
 
@@ -159,13 +158,8 @@ class HorizontalScrollRepeaterJsonPreset extends JSON
      */
     private function horizontalScrollRepeaterFieldsFromRow(array $fieldSource, array $row): array
     {
-        $res = $fieldSource['res'] ?? null;
-        if (is_string($res) && $res !== '') {
-            $res = TaxonomyActivityModel::normalizeIdentifierForRes($res);
-        }
-
         $out = [
-            'res' => $res,
+            'res' => $fieldSource['res'] ?? null,
             'image_url' => $fieldSource['image_url'] ?? null,
         ];
 
