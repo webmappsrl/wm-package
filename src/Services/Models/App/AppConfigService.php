@@ -523,14 +523,24 @@ class AppConfigService extends AppBaseService
             ];
         }
 
-        //  Theme Filter
-        if ($this->app->filter_theme) {
-            $app_user_id = $this->app->user_id;
-            $options = $this->get_unique_taxonomies('taxonomyThemes');
+        //  Layer Filter
+        if ($this->app->filter_layer) {
+            $options = $this->app->filterLayers
+                ->map(function (Layer $layer) {
+                    return [
+                        'id' => $layer->id,
+                        'identifier' => $layer->id,
+                        'name' => [
+                            'it' => $layer->getStringName(),
+                        ],
+                    ];
+                })
+                ->values()
+                ->all();
 
-            $data['MAP']['filters']['themes'] = [
+            $data['MAP']['filters']['layers'] = [
                 'type' => 'select',
-                'name' => $this->app->getTranslations('filter_theme_label'),
+                'name' => $this->app->getTranslations('filter_layer_label'),
                 'options' => $options,
             ];
         }
