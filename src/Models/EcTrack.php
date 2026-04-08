@@ -32,6 +32,22 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
         'properties',
         'user_id',
         'osmid',
+        'accessibility_validity_date',
+        'accessibility_pdf',
+        'access_mobility_check',
+        'access_mobility_level',
+        'access_mobility_description',
+        'access_hearing_check',
+        'access_hearing_level',
+        'access_hearing_description',
+        'access_vision_check',
+        'access_vision_level',
+        'access_vision_description',
+        'access_cognitive_check',
+        'access_cognitive_level',
+        'access_cognitive_description',
+        'access_food_check',
+        'access_food_description',
     ];
 
     public function __construct(array $attributes = [])
@@ -42,6 +58,7 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
 
     protected $casts = [
         'properties' => 'array',
+        'properties->accessibility_validity_date' => 'datetime',
     ];
 
     public $translatable = [

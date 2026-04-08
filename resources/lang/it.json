@@ -163,4 +163,22 @@
     "Global": "Globale",
     "Indicates if the POI is global and visible always on the map": "Indica se il POI è globale e visibile sempre sulla mappa",
     "Tipologie di POI associate a questo punto di interesse": "Tipologie di POI associate a questo punto di interesse"
+    ,
+    "Accessibility": "Accessibilità",
+    "Last verification date": "Data ultima verifica",
+    "Accessibility PDF": "PDF accessibilità",
+    "Access Mobility Check": "Accessibilità motoria (check)",
+    "Access Mobility Level": "Accessibilità motoria (livello)",
+    "Access Mobility Description": "Accessibilità motoria (descrizione)",
+    "Access Hearing Check": "Accessibilità uditiva (check)",
+    "Access Hearing Level": "Accessibilità uditiva (livello)",
+    "Access Hearing Description": "Accessibilità uditiva (descrizione)",
+    "Access Vision Check": "Accessibilità visiva (check)",
+    "Access Vision Level": "Accessibilità visiva (livello)",
+    "Access Vision Description": "Accessibilità visiva (descrizione)",
+    "Access Cognitive Check": "Accessibilità cognitiva (check)",
+    "Access Cognitive Level": "Accessibilità cognitiva (livello)",
+    "Access Cognitive Description": "Accessibilità cognitiva (descrizione)",
+    "Access Food Check": "Accessibilità alimentare (check)",
+    "Access Food Description": "Accessibilità alimentare (descrizione)"
 }
