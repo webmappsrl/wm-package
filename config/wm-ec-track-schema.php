@@ -18,6 +18,16 @@ return [
                 ],
             ],
             [
+                'name' => 'excerpt',
+                'type' => 'textarea',
+                'required' => false,
+                'translatable' => true,
+                'label' => [
+                    'it' => 'Excerpt',
+                    'en' => 'Excerpt',
+                ],
+            ],
+            [
                 'name' => 'ref',
                 'type' => 'text',
                 'required' => false,
