@@ -19,6 +19,20 @@ class ElasticsearchController extends Controller
 {
     public function __construct() {}
 
+    /**
+     * Query-string filter "taxonomy" values mapped to Scout / Elastic document fields.
+     *
+     * @return array<string, string>
+     */
+    public static function taxonomyFiltersMap(): array
+    {
+        return [
+            'wheres' => 'taxonomyWheres',
+            'activities' => 'taxonomyActivities',
+            'layers' => 'layers',
+        ];
+    }
+
     public function index(Request $request)
     {
         try {
@@ -59,10 +73,7 @@ class ElasticsearchController extends Controller
 
         // dd($validated->errors());
 
-        $taxonomiesMapping = [
-            'wheres' => 'taxonomyWheres',
-            'activities' => 'taxonomyActivities',
-        ];
+        $taxonomiesMapping = self::taxonomyFiltersMap();
 
         $query = $validated['query'] ?? '';
         $layer = $validated['layer'] ?? false;
@@ -200,7 +211,11 @@ class ElasticsearchController extends Controller
                 $identifier = $filter['identifier'];
                 // handle taxonomy filter
                 if (array_key_exists('taxonomy', $filter) && isset($taxonomiesMapping[$filter['taxonomy']])) {
-                    $query->where($taxonomiesMapping[$filter['taxonomy']], $identifier);
+                    $field = $taxonomiesMapping[$filter['taxonomy']];
+                    if ($field === 'layers') {
+                        $identifier = (int) $identifier;
+                    }
+                    $query->where($field, $identifier);
                 }
                 // handle range filter
                 elseif (array_key_exists('min', $filter) && array_key_exists('max', $filter)) {
