@@ -5,6 +5,7 @@ namespace Wm\WmPackage\Observers;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Wm\WmPackage\Jobs\BuildAppPoisGeojsonJob;
 use Wm\WmPackage\Models\EcPoi;
+use Wm\WmPackage\Services\StorageService;
 use Wm\WmPackage\Services\Models\EcPoiService;
 use Wm\WmPackage\Services\Models\EcTrackService;
 
@@ -20,6 +21,8 @@ class EcPoiObserver extends AbstractEcObserver
         if ($ecPoi->ecTracks()->exists()) {
             throw new HttpException(500, 'Cannot delete this POI because it is linked to one or more tracks.');
         }
+
+        app(StorageService::class)->deleteModelFiles($ecPoi);
     }
 
     /**

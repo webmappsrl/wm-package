@@ -3,7 +3,10 @@
 namespace Wm\WmPackage\Services;
 
 use Exception;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Contracts\Filesystem\Filesystem;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
@@ -37,7 +40,7 @@ class StorageService extends BaseService
 
     public function storePBF(int $appId, string $z, string $x, string $y, $pbfContent): string|false
     {
-        $path = $this->getShardBasePath($appId)."pbf/{$z}/{$x}/{$y}.pbf";
+        $path = $this->getShardBasePath($appId) . "pbf/{$z}/{$x}/{$y}.pbf";
 
         return $this->getRemoteWfeDisk()->put($path, $pbfContent) ? $path : false;
     }
@@ -87,7 +90,7 @@ class StorageService extends BaseService
 
     public function storeAppQrCode(int $appId, string $svg): string|false
     {
-        $path = $this->getShardBasePath($appId).'qrcode/webapp-qrcode.svg';
+        $path = $this->getShardBasePath($appId) . 'qrcode/webapp-qrcode.svg';
 
         return $this->getPublicDisk()->put($path, $svg) ? $path : false;
     }
@@ -175,7 +178,7 @@ class StorageService extends BaseService
     public function storeFeatureCollection(int $appId, int $featureCollectionId, string $contents): string|false
     {
         try {
-            $path = $this->getShardBasePath($appId)."feature-collection/{$featureCollectionId}.geojson";
+            $path = $this->getShardBasePath($appId) . "feature-collection/{$featureCollectionId}.geojson";
 
             $success = $this->getRemoteWfeDisk()->put($path, $contents);
 
@@ -185,8 +188,58 @@ class StorageService extends BaseService
 
             return false;
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Failed to store feature collection: '.$e->getMessage());
+            \Illuminate\Support\Facades\Log::error('Failed to store feature collection: ' . $e->getMessage());
             return false;
+        }
+    }
+
+    /**
+     * Store a model file on wmfe disk under /{shard}/{appId}/files/{model-type}/{id}/{filename}.{ext}.
+     */
+    public function storeFile(Model $model, string $filename, UploadedFile $file): string
+    {
+        $ext = strtolower($file->getClientOriginalExtension() ?: $file->extension() ?: 'bin');
+        $path = $this->buildFilePath($model, $filename, $ext);
+        $disk = $this->getRemoteWfeDisk();
+
+        // Replace atomically by removing the existing target first.
+        if ($disk->exists($path)) {
+            $disk->delete($path);
+        }
+
+        // Store file using put() to ensure path is created
+        $disk->put($path, file_get_contents($file->getRealPath()), 'public');
+
+        // Return direct S3 URL (filename is last segment: accessibility.pdf)
+        return $disk->url($path);
+    }
+
+    /**
+     * Delete a model file from wmfe disk by base filename (all extensions).
+     */
+    public function deleteFile(Model $model, string $filename): void
+    {
+        $disk = $this->getRemoteWfeDisk();
+        $directory = $this->buildModelFilesDirectory($model);
+        $files = $disk->files($directory);
+
+        foreach ($files as $file) {
+            if (Str::startsWith(basename($file), $filename . '.')) {
+                $disk->delete($file);
+            }
+        }
+    }
+
+    /**
+     * Delete all files in the model directory.
+     */
+    public function deleteModelFiles(Model $model): void
+    {
+        $disk = $this->getRemoteWfeDisk();
+        $directory = $this->buildModelFilesDirectory($model);
+
+        if ($disk->exists($directory)) {
+            $disk->deleteDirectory($directory);
         }
     }
 
@@ -201,7 +254,7 @@ class StorageService extends BaseService
     public function storeLayerFeatureCollection(?int $appId, int $layerId, string $contents): string|false
     {
         try {
-            $path = $this->getShardBasePath($appId)."layers/{$layerId}.geojson";
+            $path = $this->getShardBasePath($appId) . "layers/{$layerId}.geojson";
 
             $success = $this->getRemoteWfeDisk()->put($path, $contents);
 
@@ -211,7 +264,7 @@ class StorageService extends BaseService
 
             return false;
         } catch (Exception $e) {
-            \Log::error('Failed to store layer feature collection: '.$e->getMessage());
+            \Log::error('Failed to store layer feature collection: ' . $e->getMessage());
             throw $e;
         }
     }
@@ -289,37 +342,37 @@ class StorageService extends BaseService
 
     private function getElevationChartRemotePath(int $id): string
     {
-        return $this->getShardBasePath()."elevation_charts/ec_tracks/{$id}.svg";
+        return $this->getShardBasePath() . "elevation_charts/ec_tracks/{$id}.svg";
     }
 
     private function getElevationChartRemoteOldPath(int $id): string
     {
-        return $this->getShardBasePath()."elevation_charts/ec_tracks/{$id}_old.svg";
+        return $this->getShardBasePath() . "elevation_charts/ec_tracks/{$id}_old.svg";
     }
 
     private function getPoisPath(int $appId): string
     {
-        return $this->getShardBasePath($appId).'pois.geojson';
+        return $this->getShardBasePath($appId) . 'pois.geojson';
     }
 
     private function getTrackPath(int $trackId): string
     {
-        return $this->getShardBasePath()."tracks/{$trackId}.json";
+        return $this->getShardBasePath() . "tracks/{$trackId}.json";
     }
 
     private function getIconsPath(): string
     {
-        return $this->getShardBasePath().'json/icons.json';
+        return $this->getShardBasePath() . 'json/icons.json';
     }
 
     private function getAppIconsPath(int $appId): string
     {
-        return $this->getShardBasePath($appId).'icons.json';
+        return $this->getShardBasePath($appId) . 'icons.json';
     }
 
     private function getAppConfigPath(int $appId): string
     {
-        return $this->getShardBasePath($appId).'config.json';
+        return $this->getShardBasePath($appId) . 'config.json';
     }
 
     public function getAppConfigUrl(int $appId): string
@@ -339,12 +392,25 @@ class StorageService extends BaseService
 
     public function getAppPoisUrl(int $appId): string
     {
-        return $this->getRemoteWfeDisk()->url($this->getShardBasePath($appId).'pois.geojson');
+        return $this->getRemoteWfeDisk()->url($this->getShardBasePath($appId) . 'pois.geojson');
     }
 
     //
     // PUBLIC GETTERS
     //
+
+    private function buildModelFilesDirectory(Model $model): string
+    {
+        $type = Str::kebab(class_basename($model));
+        $id = $model->getKey();
+
+        return $this->getShardBasePath((int) $model->app_id) . "files/{$type}/{$id}";
+    }
+
+    private function buildFilePath(Model $model, string $filename, string $ext): string
+    {
+        return $this->buildModelFilesDirectory($model) . "/{$filename}.{$ext}";
+    }
 
     public function getPublicPath(string $path): string
     {
@@ -400,7 +466,7 @@ class StorageService extends BaseService
         try {
             return Storage::disk($disk);
         } catch (Exception $e) {
-            \Log::error("Failed to get disk {$disk}: ".$e->getMessage());
+            \Log::error("Failed to get disk {$disk}: " . $e->getMessage());
             throw $e;
         }
     }
@@ -412,9 +478,9 @@ class StorageService extends BaseService
 
     public function getShardBasePath(?int $appId = null)
     {
-        $basePath = '/'.$this->getShardName().'/';
+        $basePath = '/' . $this->getShardName() . '/';
         if (is_int($appId)) {
-            $basePath .= $appId.'/';
+            $basePath .= $appId . '/';
         }
 
         return $basePath;

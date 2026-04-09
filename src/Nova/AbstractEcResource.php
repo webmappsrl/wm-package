@@ -15,8 +15,8 @@ use Laravel\Nova\Fields\Textarea;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Tabs\Tab;
 use Carbon\Carbon;
-use Illuminate\Support\Str;
 use Wm\WmPackage\Nova\Filters\FeaturesByLayerFilter;
+use Wm\WmPackage\Services\StorageService;
 
 abstract class AbstractEcResource extends AbstractGeometryResource
 {
@@ -65,18 +65,24 @@ abstract class AbstractEcResource extends AbstractGeometryResource
         return [
             $this->makePropertiesDateTimeField(__('Last verification date'), 'accessibility_validity_date'),
             File::make(__('Accessibility PDF'), 'properties->accessibility_pdf')
-                ->disk('public')
-                ->path('accessibility')
-                ->storeAs(function ($request, $model, $attribute, $requestAttribute) {
-                    $file = $request->file($requestAttribute);
-                    $originalBase = $file ? pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME) : 'accessibility';
-                    $slug = Str::slug($originalBase) ?: 'accessibility';
-                    $type = Str::kebab(class_basename($model));
-
-                    return $type.'-'.$model->getKey().'-'.$slug.'.pdf';
-                })
                 ->acceptedTypes('.pdf')
-                ->hideFromIndex(),
+                ->rules('mimes:pdf')
+                ->hideFromIndex()
+                ->deletable()
+                ->store(function ($request, $model, $attribute, $requestAttribute) {
+                    $file = $request->file($requestAttribute);
+                    if ($file === null) {
+                        return null;
+                    }
+
+                    return app(StorageService::class)->storeFile($model, 'accessibility', $file);
+                })
+                ->delete(function ($request, $model) {
+                    app(StorageService::class)->deleteFile($model, 'accessibility');
+                    $properties = is_array($model->properties) ? $model->properties : [];
+                    unset($properties['accessibility_pdf']);
+                    $model->properties = $properties;
+                }),
 
             $this->makePropertiesBooleanCheckField(__('Access Mobility Check'), 'access_mobility_check'),
             Select::make(__('Access Mobility Level'), 'properties->access_mobility_level')->options([
