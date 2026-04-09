@@ -183,7 +183,7 @@ class PBFGeneratorService extends BaseService
         // Recupera il nome della tabella dal modello
         $tableName = config('wm-package.ec_track_table');
 
-        // TODO: add activities and wheres to match layers of the tracks
+        // TODO: add wheres to match layers of the tracks
         $sql = <<<SQL
     WITH 
     bounds AS (
@@ -222,6 +222,21 @@ class PBFGeneratorService extends BaseService
         WHERE layerable_type LIKE '%{$this->getTrackModelClassName()}'
         GROUP BY layerable_id
     ),
+    trackActivities AS (
+        SELECT
+            ta.taxonomy_activityable_id AS track_id,
+            jsonb_agg(
+                DISTINCT label
+                ORDER BY label
+            ) FILTER (WHERE label IS NOT NULL) AS activities
+        FROM taxonomy_activityables ta
+        JOIN taxonomy_activities tact ON tact.id = ta.taxonomy_activity_id
+        CROSS JOIN LATERAL (
+            SELECT NULLIF(btrim(tact.identifier), '') AS label
+        ) lbl
+        WHERE ta.taxonomy_activityable_type LIKE '%{$this->getTrackModelClassName()}'
+        GROUP BY ta.taxonomy_activityable_id
+    ),
     ecTracks AS (
         SELECT
             ST_AsMVTGeom(pg.simplified_geom, bounds.b2d) AS geom,
@@ -229,13 +244,23 @@ class PBFGeneratorService extends BaseService
             pg.name,
             pg.properties ->> 'ref' as ref,
             pg.properties ->> 'cai_scale' as cai_scale,
-            pg.properties -> 'distance' as distance,
-            pg.properties -> 'duration_forward' as duration_forward,
+            COALESCE(
+                NULLIF(pg.properties -> 'manual_data' ->> 'distance', '')::double precision,
+                NULLIF(pg.properties -> 'osm_data' ->> 'distance', '')::double precision,
+                NULLIF(pg.properties -> 'dem_data' ->> 'distance', '')::double precision
+            ) as distance,
+            COALESCE(
+                NULLIF(pg.properties -> 'manual_data' ->> 'duration_forward', '')::integer,
+                NULLIF(pg.properties -> 'osm_data' ->> 'duration_forward', '')::integer,
+                NULLIF(pg.properties -> 'dem_data' ->> 'duration_forward', '')::integer
+            ) as duration_forward,
+            ta.activities::text as activities,
             tl.layers,
             pg.properties ->> 'searchable' as searchable,
             pg.properties ->> 'color' as stroke_color
         FROM processedGeometries pg
         LEFT JOIN trackLayers tl ON tl.layerable_id = pg.id
+        LEFT JOIN trackActivities ta ON ta.track_id = pg.id
         CROSS JOIN bounds
     )
     SELECT ST_AsMVT(ecTracks.*, '{$tableName}') FROM ecTracks
