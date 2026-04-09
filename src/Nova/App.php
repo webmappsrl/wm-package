@@ -667,10 +667,34 @@ class App extends Resource
                 ->help(__('The default zoom level when the map is first loaded.')),
             Number::make(__('Max Zoom'), 'map_max_zoom')
                 ->min(1)->max(20)->default(16)
+                ->rules([
+                    function (string $attribute, mixed $value, \Closure $fail) {
+                        $min = request()->input('map_min_zoom');
+                        if ($min === null || $min === '') {
+                            return;
+                        }
+
+                        if ((float) $value < (float) $min) {
+                            $fail(__('Max Zoom must be greater than or equal to Min Zoom.'));
+                        }
+                    },
+                ])
                 ->hideFromIndex()
                 ->help(__('Maximum zoom level for the map')),
             Number::make(__('Min Zoom'), 'map_min_zoom')
                 ->min(1)->max(20)->default(12)
+                ->rules([
+                    function (string $attribute, mixed $value, \Closure $fail) {
+                        $max = request()->input('map_max_zoom');
+                        if ($max === null || $max === '') {
+                            return;
+                        }
+
+                        if ((float) $value > (float) $max) {
+                            $fail(__('Min Zoom must be less than or equal to Max Zoom.'));
+                        }
+                    },
+                ])
                 ->hideFromIndex()
                 ->help(__('Minimum zoom level for the map')),
             Number::make(__('Max Stroke width'), 'map_max_stroke_width')
