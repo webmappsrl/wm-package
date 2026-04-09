@@ -10,7 +10,7 @@ return [
 
             [
                 'name' => 'description',
-                'type' => 'textarea',
+                'type' => 'tiptap',
                 'required' => false,
                 'translatable' => true,
                 'label' => [
