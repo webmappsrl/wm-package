@@ -84,6 +84,8 @@
     "Play Store link (android)": "Link Play Store (android)",
     "Poi": "POI",
     "Popup": "Popup",
+    "Max Zoom must be greater than or equal to Min Zoom.": "Lo zoom massimo deve essere maggiore o uguale allo zoom minimo.",
+    "Min Zoom must be less than or equal to Max Zoom.": "Lo zoom minimo deve essere minore o uguale allo zoom massimo.",
     "Process Track Data": "Process Track Data",
     "Primary Color": "Colore Primario",
     "Primary color for the WordPress theme (e.g. buttons, links)": "Colore primario per il tema WordPress (es. pulsanti, link)",
