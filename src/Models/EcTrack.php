@@ -15,13 +15,14 @@ use Wm\WmPackage\Observers\EcTrackObserver;
 use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Services\Models\EcTrackService;
 use Wm\WmPackage\Services\Models\MediaService;
+use Wm\WmPackage\Nova\Traits\HasDemClassification;
 use Wm\WmPackage\Traits\EcFeatureTrait;
 use Wm\WmPackage\Traits\TaxonomyAbleModel;
 use Wm\WmPackage\Traits\TaxonomyWhereAbleModel;
 
 class EcTrack extends MultiLineString implements LayerRelatedModel
 {
-    use EcFeatureTrait, Favoriteable, Searchable, TaxonomyAbleModel, TaxonomyWhereAbleModel;
+    use EcFeatureTrait, Favoriteable, HasDemClassification, Searchable, TaxonomyAbleModel, TaxonomyWhereAbleModel;
 
     protected $table;
 
@@ -645,8 +646,8 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
             'taxonomyWheres' => $this->getOrderedTaxonomyWheres(),
             'feature_image' => $firstMedia ? $mediaService->getThumbnailUrl($firstMedia) : '',
             'strokeColor' => isset($this->properties['color']) ? hexToRgba($this->properties['color']) : '',
-            'distance' => isset($this->properties['distance']) ? (float) ($this->properties['distance']) : 0,
-            'duration_forward' => $this->convertDurationToHours($this->properties['duration_forward'] ?? null),
+            'distance' => (float) ($this->classifyField($this, 'distance')['currentValue'] ?? 0),
+            'duration_forward' => (float) ($this->classifyField($this, 'duration_forward')['currentValue'] ?? 0),
             'ascent' => isset($this->properties['ascent']) ? (int) ($this->properties['ascent']) : 0,
             'taxonomyActivities' => $ecTrackService->getTaxonomyArray($this->taxonomyActivities),
             'taxonomyIcons' => $ecTrackService->getTaxonomyIcons($this),
