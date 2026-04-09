@@ -18,6 +18,8 @@ class UpdateEcPoiDemJob implements ShouldQueue
     use Queueable;
     use SerializesModels;
 
+    public $queue = 'dem';
+
     /**
      * Create a new job instance.
      *
