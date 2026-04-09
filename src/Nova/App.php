@@ -356,6 +356,10 @@ class App extends Resource
                 // ->rules('image', 'mimes:png', 'dimensions:width=512,height=512')
                 ->help(__('Required size is :widthx:heightpx', ['width' => 512, 'height' => 512]))
                 ->hideFromIndex(),
+            Images::make(__('My routes'), 'my_routes_image')
+                ->hideFromIndex(),
+            Images::make(__('My downloads'), 'my_downloads_image')
+                ->hideFromIndex(),
             Boolean::make(__('Force to Release Update'), 'properties->force_to_release_update')
                 ->default(false)
                 ->hideFromIndex()
