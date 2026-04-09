@@ -339,8 +339,9 @@ class PBFGeneratorService extends BaseService
         SQL;
     }
 
-    public function generateWholeAppPbfs(App $app, $minZoom = null, $maxZoom = null, $noPbfLayer = false)
+    public function generateWholeAppPbfs(App $app, $minZoom = null, $maxZoom = null, $pbfLayer = null)
     {
+        $pbfLayer = $pbfLayer ?? (bool) config('wm-package.services.pbf.pbf_layer', false);
         $bbox = GeometryComputationService::make()->getTracksBboxFromQuery($app->ecTracks());
         if (empty($bbox)) {
             $bbox = json_decode($app->map_bbox);
@@ -356,7 +357,7 @@ class PBFGeneratorService extends BaseService
 
         $chain = [];
         for ($zoom = $minZoom; $zoom <= $maxZoom; $zoom++) {
-            $chain[] = new GeneratePBFByZoomJob($bbox, $zoom, $app->id, $noPbfLayer);
+            $chain[] = new GeneratePBFByZoomJob($bbox, $zoom, $app->id, $pbfLayer);
         }
         Bus::chain($chain)->onConnection('redis')->onQueue('pbf')->dispatch();
     }
@@ -378,8 +379,9 @@ class PBFGeneratorService extends BaseService
         App $app,
         $minZoom = null,
         $maxZoom = null,
-        $noPbfLayer = false
+        $pbfLayer = null
     ) {
+        $pbfLayer = $pbfLayer ?? (bool) config('wm-package.services.pbf.pbf_layer', false);
         // Verifica che l'app abbia tracce
         $trackCount = $app->ecTracks()->count();
         if ($trackCount === 0) {
@@ -409,7 +411,7 @@ class PBFGeneratorService extends BaseService
             $app->id,
             $maxZoom, // startZoom (dal più alto)
             $minZoom, // minZoom
-            $noPbfLayer,
+            $pbfLayer,
             $trackIds // Passa le track IDs già recuperate
         )->onConnection('redis')->onQueue('pbf');
 
