@@ -12,6 +12,12 @@ class GeoJsonService extends BaseService
             $properties = is_array($model->properties) ? $model->properties : [];
             $properties['id'] = $model->id;
 
+            // Merge accessibility columns (if present) into GeoJSON properties.
+            // and exposed flatly in `properties`.
+            $properties = [
+                ...$properties,
+            ];
+
             // Verifica che il modello abbia una geometria valida
             if (! $model->geometry || empty($model->geometry)) {
                 return null;
