@@ -97,6 +97,8 @@ class EcTrackObserver extends AbstractEcObserver
         Layerable::where('layerable_id', $ecTrack->id)
             ->where('layerable_type', $ecTrackModelClass)
             ->delete();
+
+        app(StorageService::class)->deleteModelFiles($ecTrack);
     }
 
     /**
