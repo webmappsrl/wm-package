@@ -73,6 +73,10 @@ class EcTrackObserver extends AbstractEcObserver
 
             $ecTrack->setAttribute('properties', $properties);
         }
+
+        if (isset($ecTrack->geometry)) {
+            $ecTrack->geometry = $this->geometryComputationService->convertToLinestring($ecTrack->geometry);
+        }
     }
 
     /**
