@@ -6,6 +6,8 @@ use Wm\WmPackage\Services\Models\EcTrackService;
 
 class UpdateEcTrackDemJob extends BaseEcTrackJob
 {
+    public $queue = 'dem';
+
     /**
      * Execute the job.
      *
