@@ -83,6 +83,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
         // Register Nova CSS assets
         Nova::serving(function () {
             Nova::style('wm-flexible-field', __DIR__.'/../resources/css/flexible-field.css');
+            Nova::style('wm-nova-overrides', __DIR__.'/../resources/css/nova.css');
             $this->addWmpackageToolsMenuItem();
         });
 
