@@ -79,6 +79,7 @@ class App extends Resource
                 Tab::make('app', $this->app_tab()),
                 Tab::make('map', $this->map_tab()),
                 Tab::make('pois', $this->pois_tab()),
+                Tab::make('theme', $this->theme_tab()),
                 Tab::make('release_data', $this->app_release_data_tab()),
                 Tab::make('pages', $this->pages_tab()),
                 Tab::make('acquisition_form', $this->acquisition_form_tab()),
@@ -255,6 +256,24 @@ class App extends Resource
                 ->default(false)
                 ->hideFromIndex()
                 ->help(__('Shows the download tiles button on the map')),
+        ];
+    }
+
+    protected function theme_tab(): array
+    {
+        return [
+            Text::make(__('Font Family Header'), 'properties->theme->fontFamilyHeader')
+                ->hideFromIndex()
+                ->help(__('Font family used for headings in the app theme')),
+            Text::make(__('Font Family Content'), 'properties->theme->fontFamilyContent')
+                ->hideFromIndex()
+                ->help(__('Font family used for body content in the app theme')),
+            Color::make(__('Primary color'), 'properties->theme->primary')
+                ->hideFromIndex()
+                ->help(__('Primary color for the app theme (e.g. buttons, links)')),
+            Color::make(__('Default feature color'), 'properties->theme->defaultFeatureColor')
+                ->hideFromIndex()
+                ->help(__('Default color used for map features when no specific style is set')),
         ];
     }
 
