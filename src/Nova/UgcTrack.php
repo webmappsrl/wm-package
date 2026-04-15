@@ -2,6 +2,8 @@
 
 namespace Wm\WmPackage\Nova;
 
+use Laravel\Nova\Http\Requests\NovaRequest;
+use Wm\WmPackage\Nova\Actions\ExportTracksFeatureCollectionAction;
 use Wm\WmPackage\Nova\Traits\MultiLinestringResourceTrait;
 
 class UgcTrack extends AbstractUgcResource
@@ -18,5 +20,13 @@ class UgcTrack extends AbstractUgcResource
     public static function singularLabel(): string
     {
         return __('UGC Track');
+    }
+
+    public function actions(NovaRequest $request): array
+    {
+        return [
+            ...parent::actions($request),
+            new ExportTracksFeatureCollectionAction,
+        ];
     }
 }

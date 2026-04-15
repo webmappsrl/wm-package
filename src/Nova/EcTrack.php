@@ -12,6 +12,7 @@ use Laravel\Nova\Tabs\Tab;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
 use Wm\WmPackage\Jobs\UpdateModelWithGeometryTaxonomyWhere;
 use Wm\WmPackage\Nova\Actions\ExecuteEcTrackDataChainAction;
+use Wm\WmPackage\Nova\Actions\ExportTracksFeatureCollectionAction;
 use Wm\WmPackage\Nova\Actions\TranslateModelAction;
 use Wm\WmPackage\Nova\Filters\FeaturesByLayerFilter;
 use Wm\WmPackage\Nova\Filters\FeaturesExcludeByIds;
@@ -80,6 +81,7 @@ class EcTrack extends AbstractEcResource
     public function actions(NovaRequest $request): array
     {
         return [
+            new ExportTracksFeatureCollectionAction,
             new Actions\ReindexSearchableAction,
             new ExecuteEcTrackDataChainAction([
                 fn ($ecTrack) => new UpdateEcTrackAwsJob($ecTrack),
