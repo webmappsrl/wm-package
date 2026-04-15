@@ -285,6 +285,7 @@ class AppConfigService extends AppBaseService
                 'identifier' => $taxonomy->identifier,
                 'name' => $taxonomy->getTranslations('name'),
                 'color' => $taxonomy->color ?? null,
+                'icon_name' => $taxonomy->icon ?? null,
             ],
             function ($value) {
                 return ! is_null($value);
