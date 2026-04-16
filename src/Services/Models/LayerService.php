@@ -20,9 +20,14 @@ use Wm\WmPackage\Services\GeometryComputationService;
 
 class LayerService extends BaseService
 {
-    public function getLayerMaxRank()
+    public function getLayerMaxRank(?int $appId = null): int
     {
-        return DB::table('layers')->selectRaw('max(rank)')->value('max') ?? 0;
+        $query = DB::table('layers')->selectRaw('max(rank) as max_rank');
+        if (! is_null($appId)) {
+            $query->where('app_id', $appId);
+        }
+
+        return (int) ($query->value('max_rank') ?? 0);
     }
 
     public function hasRelatedManualModels(Layer $layer, string $model): bool

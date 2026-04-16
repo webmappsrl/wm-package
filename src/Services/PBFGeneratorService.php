@@ -214,12 +214,23 @@ class PBFGeneratorService extends BaseService
             ST_SimplifyPreserveTopology(geom_mercator, $simplificationFactor) as simplified_geom
         FROM validGeometries
     ),
+    trackLayerRows AS (
+        SELECT DISTINCT
+            la.layerable_id,
+            la.layer_id,
+            l.rank
+        FROM layerables la
+        JOIN layers l ON l.id = la.layer_id
+        WHERE la.layerable_type LIKE '%{$this->getTrackModelClassName()}'
+    ),
     trackLayers AS (
         SELECT
             layerable_id,
-            ARRAY_TO_JSON(ARRAY_AGG(layer_id))::text AS layers
-        FROM layerables
-        WHERE layerable_type LIKE '%{$this->getTrackModelClassName()}'
+            jsonb_agg(
+                layer_id
+                ORDER BY rank ASC NULLS LAST, layer_id ASC
+            )::text AS layers
+        FROM trackLayerRows
         GROUP BY layerable_id
     ),
     trackActivities AS (

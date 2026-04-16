@@ -23,7 +23,8 @@ class LayerObserver extends AbstractObserver
      */
     public function creating(Model $layer)
     {
-        $layer->rank = $this->layerService->getLayerMaxRank() + 1;
+        $appId = isset($layer->app_id) ? (int) $layer->app_id : null;
+        $layer->rank = $this->layerService->getLayerMaxRank($appId) + 1;
     }
 
     /**
