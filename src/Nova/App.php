@@ -23,6 +23,7 @@ use Outl1ne\MultiselectField\Multiselect;
 use Whitecube\NovaFlexibleContent\Flexible;
 use Wm\WmPackage\Enums\AppTiles;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
+use Wm\WmPackage\Models\App as ModelsApp;
 use Wm\WmPackage\Models\FeatureCollection as FeatureCollectionModel;
 use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Models\TaxonomyActivity as TaxonomyActivityModel;
@@ -37,6 +38,7 @@ use Wm\WmPackage\Nova\Cards\ApiLinksCard\AppApiLinksCard;
 use Wm\WmPackage\Nova\Flexible\Resolvers\ConfigHomeResolver;
 use Wm\WmPackage\Nova\Flexible\Resolvers\ConfigOverlaysResolver;
 use Wm\WmPackage\Nova\Traits\HasFlexibleTranslatableFields;
+use Wm\WmPackage\Nova\Fields\OrderList\src\OrderList;
 
 class App extends Resource
 {
@@ -177,6 +179,44 @@ class App extends Resource
                 ->addLayout('Feature Collection', 'feature_collection', $this->feature_collection_layout())
                 ->confirmRemove('Sei sicuro di voler eliminare questo elemento?', 'Elimina', 'Annulla'),
         ];
+    }
+
+    protected function map_layers_rank_tab(): array
+    {
+        return [
+            OrderList::make(__('Layer Rank'))
+                ->model(Layer::class)
+                ->scope('app_id', fn ($resource) => (int) $resource->id)
+                ->orderColumn('rank')
+                ->labelColumn('name')
+                ->color(fn (Layer $layer) => $layer->getStrokeColorHex())
+                ->gate('update', fn ($resource) => $resource)
+                ->onlyOnDetail(),
+        ];
+    }
+
+    protected function map_tab(): array
+    {
+        return array_merge(
+            $this->map_settings_tab(),
+            [
+                Heading::make(
+                    <<<'HTML'
+                    <hr style="margin: 2rem 0 1rem; border: none; border-top: 2px solid #e5e7eb;">
+                    <h2 style="font-size: 1.25rem; font-weight: 700; margin: 0;">LAYERS RANK</h2>
+                    <p style="margin-top: 0.25rem;">
+                        Ordina i layer della mappa per <strong>priorità di visualizzazione</strong> nel frontend.
+                        I layer in cima alla lista sono disegnati <strong>sopra</strong> gli altri e quindi più visibili;
+                        quelli in fondo vengono coperti dai layer con priorità maggiore.
+                    </p>
+                    <p style="margin-top: 0.25rem;">
+                        Trascina gli elementi per cambiare l'ordine: la modifica viene salvata automaticamente.
+                    </p>
+                    HTML
+                )->asHtml()->onlyOnDetail(),
+            ],
+            $this->map_layers_rank_tab(),
+        );
     }
 
     protected function overlays_title_layout(): array
@@ -766,14 +806,14 @@ class App extends Resource
     protected function getTaxonomyLabel($name, ?string $fallback): string
     {
         if (is_array($name)) {
-            return $name['it'] ?? $name['en'] ?? $fallback;
+            return $name['it'] ?? $name['en'] ?? ($fallback ?? '');
         }
 
         if (is_string($name) && $name !== '') {
             return $name;
         }
 
-        return $fallback;
+        return $fallback ?? '';
     }
 
     protected function slug_layout(): array
@@ -843,7 +883,7 @@ class App extends Resource
         ];
     }
 
-    protected function map_tab(): array
+    protected function map_settings_tab(): array
     {
         $selectedTileLayers = is_null($this->model()->tiles) ? [] : json_decode($this->model()->tiles, true);
         $appTiles = new AppTiles;

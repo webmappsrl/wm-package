@@ -13,10 +13,11 @@ use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
 use Wm\WmPackage\Jobs\UpdateModelWithGeometryTaxonomyWhere;
 use Wm\WmPackage\Nova\Actions\ExecuteEcTrackDataChainAction;
 use Wm\WmPackage\Nova\Actions\TranslateModelAction;
+use Wm\WmPackage\Nova\Cards\ApiLinksCard\EcTrackApiLinksCard;
+use Wm\WmPackage\Nova\Fields\TrackColor\src\TrackColor;
 use Wm\WmPackage\Nova\Filters\FeaturesByLayerFilter;
 use Wm\WmPackage\Nova\Filters\FeaturesExcludeByIds;
 use Wm\WmPackage\Nova\Filters\FeaturesIncludeByIds;
-use Wm\WmPackage\Nova\Cards\ApiLinksCard\EcTrackApiLinksCard;
 use Wm\WmPackage\Nova\Traits\MultiLinestringResourceTrait;
 
 class EcTrack extends AbstractEcResource
@@ -54,6 +55,7 @@ class EcTrack extends AbstractEcResource
             MorphToMany::make('Activities', 'taxonomyActivities', TaxonomyActivity::class)->display('name'),
             Tab::group(__('Details'), [
                 Tab::make(__('Info'), $this->getInfoTabFields()),
+                Tab::make(__('Style'), $this->getStyleTabFields()),
             ]),
         ];
     }
@@ -113,6 +115,13 @@ class EcTrack extends AbstractEcResource
                 Textarea::make(__('Not Accessible Message'), 'properties->not_accessible_message'),
             ]),
 
+        ];
+    }
+
+    protected function getStyleTabFields(): array
+    {
+        return [
+            TrackColor::make(__('Color'), 'properties->color'),
         ];
     }
 }
