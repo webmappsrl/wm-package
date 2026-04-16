@@ -76,6 +76,8 @@ class App extends Resource
             Tab::group('App', [
                 Tab::make('home', $this->home_tab()),
                 Tab::make('webapp', $this->webapp_tab()),
+                Tab::make('mobile', $this->mobile_tab()),
+                Tab::make('translations', $this->translations_tab()),
                 Tab::make('app', $this->app_tab()),
                 Tab::make('map', $this->map_tab()),
                 Tab::make('pois', $this->pois_tab()),
@@ -136,10 +138,21 @@ class App extends Resource
     protected function webapp_tab(): array
     {
         return [
-            Boolean::make(__('Show Auth at startup'), 'webapp_auth_show_at_startup')
+            //
+        ];
+    }
+
+    protected function mobile_tab(): array
+    {
+        return [
+            Boolean::make(__('Geolocation Record Enable'), 'geolocation_record_enable')
                 ->default(false)
                 ->hideFromIndex()
-                ->help(__('Shows the authentication and registration page for users')),
+                ->help(__('Enables user geolocation recording on tracks')),
+            Boolean::make(__('Show Download Tiles'), 'properties->show_download_tiles')
+                ->default(false)
+                ->hideFromIndex()
+                ->help(__('Shows the download tiles button on the map')),
         ];
     }
 
@@ -243,18 +256,18 @@ class App extends Resource
                 ->default(false)
                 ->hideFromIndex()
                 ->help(__('Shows the authentication and registration page for users')),
-            Boolean::make(__('Geolocation Record Enable'), 'geolocation_record_enable')
+            Boolean::make(__('Show Auth at startup'), 'webapp_auth_show_at_startup')
                 ->default(false)
                 ->hideFromIndex()
-                ->help(__('Enables user geolocation recording on tracks')),
+                ->help(__('Shows the authentication and registration page for users')),
             Boolean::make(__('Show Download Tracks'), 'download_track_enable')
                 ->default(false)
                 ->hideFromIndex()
                 ->help(__('Shows download track in GPX, KML, GEOJSON')),
-            Boolean::make(__('Show Download Tiles'), 'properties->show_download_tiles')
+            Boolean::make(__('Show Travel Mode'), 'properties->show_travel_mode')
                 ->default(false)
                 ->hideFromIndex()
-                ->help(__('Shows the download tiles button on the map')),
+                ->help(__('Enable the Travel Mode feature on the app')),
         ];
     }
 
@@ -311,6 +324,22 @@ class App extends Resource
                 ->default('popup')
                 ->hideFromIndex()
                 ->help(__('Type of interaction when clicking on POIs')),
+        ];
+    }
+
+    protected function translations_tab(): array
+    {
+        return [
+            Code::make(__('Italian Translations'), 'translations_it')
+                ->language('json')
+                ->rules('nullable', 'json')
+                ->hideFromIndex()
+                ->help(__('Enter the Italian translations in JSON format here')),
+            Code::make(__('English Translations'), 'translations_en')
+                ->language('json')
+                ->rules('nullable', 'json')
+                ->hideFromIndex()
+                ->help(__('Enter the English translations in JSON format here')),
         ];
     }
 
@@ -379,6 +408,10 @@ class App extends Resource
     {
         return [
             Images::make('Home Images', 'home_images'),
+            Boolean::make(__('Show searchbar'), 'show_search')
+                ->default(true)
+                ->hideFromIndex()
+                ->help(__('Activate to show the search bar on the home')),
             NovaTabTranslatable::make([
                 Code::make('Welcome', 'welcome'),
                 /*   Tiptap::make('Welcome', 'welcome')
@@ -820,14 +853,42 @@ class App extends Resource
                 <p><strong>Advanced map display settings.</strong></p>
                 HTML
             )->asHtml()->hideFromIndex(),
+            Boolean::make(__('Start/End Icons Show'), 'start_end_icons_show')
+                ->default(false)
+                ->hideFromIndex()
+                ->help(__('Displays start and end icons on the map')),
             Number::make(__('start_end_icons_min_zoom'))
                 ->min(10)->max(20)
                 ->hideFromIndex()
                 ->help(__('Set minimum zoom at which start and end icons are shown in general maps (start_end_icons_show must be true)')),
+            Boolean::make(__('Ref on Track Show'), 'ref_on_track_show')
+                ->default(false)
+                ->hideFromIndex()
+                ->help(__('Displays reference labels on tracks')),
             Number::make(__('ref_on_track_min_zoom'))
                 ->min(10)->max(20)
                 ->hideFromIndex()
                 ->help(__('Set minimum zoom at which ref parameter is shown on tracks line in general maps (ref_on_track_show must be true)')),
+            Boolean::make(__('Show Features In Viewport'), 'properties->show_features_in_viewport')
+                ->default(false)
+                ->hideFromIndex()
+                ->help(__('Enable the Features In Viewport on the app')),
+            Number::make(__('Min Zoom Features In Viewport'), 'properties->min_zoom_features_in_viewport')
+                ->min(1)
+                ->max(20)
+                ->default(10)
+                ->hideFromIndex()
+                ->help(__('Minimum zoom level for enabling Features In Viewport')),
+            Number::make(__('Max Zoom Features In Viewport'), 'properties->max_zoom_features_in_viewport')
+                ->min(1)
+                ->max(20)
+                ->default(12)
+                ->hideFromIndex()
+                ->help(__('Maximum zoom level for enabling Features In Viewport')),
+            Boolean::make(__('Show Track Direction Arrow'), 'properties->show_track_direction_arrow')
+                ->default(false)
+                ->hideFromIndex()
+                ->help(__('Enables the track direction arrow in the map.')),
             Number::make(__('alert_poi_radius'))
                 ->default(100)
                 ->hideFromIndex()
