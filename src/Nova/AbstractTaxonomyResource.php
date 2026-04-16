@@ -13,6 +13,7 @@ use Laravel\Nova\Filters\Filter;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Lenses\Lens;
 use Laravel\Nova\Resource;
+use Kongulov\NovaTabTranslatable\NovaTabTranslatable;
 use Wm\WmPackage\Nova\Fields\IconSelect\IconSelect;
 
 abstract class AbstractTaxonomyResource extends Resource
@@ -43,7 +44,9 @@ abstract class AbstractTaxonomyResource extends Resource
     {
         return [
             ID::make()->sortable(),
-            Text::make('Name', 'name'),
+            NovaTabTranslatable::make([
+                Text::make('Name', 'name'),
+            ]),
             Textarea::make('Description', 'description'),
             IconSelect::make('Icona', 'icon')
                 ->loadFromIconsFile()
@@ -93,3 +96,4 @@ abstract class AbstractTaxonomyResource extends Resource
         return [];
     }
 }
+
