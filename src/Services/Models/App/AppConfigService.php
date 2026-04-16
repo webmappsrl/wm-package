@@ -285,6 +285,7 @@ class AppConfigService extends AppBaseService
                 'identifier' => $taxonomy->identifier,
                 'name' => $taxonomy->getTranslations('name'),
                 'color' => $taxonomy->color ?? null,
+                'icon_name' => $taxonomy->icon ?? null,
             ],
             function ($value) {
                 return ! is_null($value);
@@ -525,15 +526,27 @@ class AppConfigService extends AppBaseService
 
         //  Layer Filter
         if ($this->app->filter_layer) {
-            $options = $this->app->filterLayers
+            $options = $this->app->filterLayers()
+                ->with('taxonomyActivities')
+                ->get()
                 ->map(function (Layer $layer) {
-                    return [
+                    $layerProperties = is_array($layer->properties) ? $layer->properties : [];
+                    $taxonomyActivity = $layer->taxonomyActivities->first();
+
+                    $option = [
                         'id' => $layer->id,
                         'identifier' => $layer->id,
                         'name' => [
                             'it' => $layer->getStringName(),
                         ],
+                        'color' => $layerProperties['fill_color'] ?? $layerProperties['color'] ?? null,
                     ];
+
+                    if ($taxonomyActivity !== null) {
+                        $option['icon_name'] = $taxonomyActivity->icon;
+                    }
+
+                    return $option;
                 })
                 ->values()
                 ->all();
