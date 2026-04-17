@@ -128,10 +128,10 @@ class ReindexAppScoutAction extends Action
         // Costruisce il messaggio di risposta
         $message = __('Scout reindexing completed for :count app', ['count' => $processedCount]);
         if ($totalTracksIndexed > 0) {
-            $message .= ' ' . __('(:count tracks reindexed)', ['count' => $totalTracksIndexed]);
+            $message .= ' '.__('(:count tracks reindexed)', ['count' => $totalTracksIndexed]);
         }
         if (! empty($errors)) {
-            $message .= '. ' . __('Errors') . ': ' . implode('; ', $errors);
+            $message .= '. '.__('Errors').': '.implode('; ', $errors);
 
             return Action::danger($message);
         }
