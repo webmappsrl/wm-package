@@ -2,11 +2,25 @@
 
 Questo documento descrive tutte le modifiche necessarie per configurare Kibana con accesso tramite Apache reverse proxy in produzione.
 
+## maphub vs shard
+
+- **Piattaforma maphub** (macchina “contenitore” delle app base): host pubblico **`www.maphub.it`**. Gli esempi qui sotto usano questo FQDN e i file vhost tipici `maphub.it.conf` / `maphub.it-le-ssl.conf` (come da Certbot).
+- **Shard** (macchina dedicata a un sottoinsieme di app, es. Cammini d’Italia): ha **FQDN e vhost propri**, ad esempio **`camminiditalia.maphub.it`**, già configurato sullo shard. Su uno shard non usare gli URL `www.maphub.it`; adatta `ServerName` e i path dei file Apache al dominio reale.
+
 ## Script di Configurazione Automatica
 
 È disponibile uno script per automatizzare la configurazione di Apache:
 
 ```bash
+# Default: www.maphub.it e vhost maphub.it (vedi variabili nello script)
+sudo bash wm-package/scripts/configure_apache_kibana.sh
+```
+
+Su uno shard, esporta prima i valori coerenti con il vhost sul server, ad esempio:
+
+```bash
+export MAPHUB_PUBLIC_FQDN=camminiditalia.maphub.it
+export MAPHUB_APACHE_CONF_BASENAME=camminiditalia.maphub.it
 sudo bash wm-package/scripts/configure_apache_kibana.sh
 ```
 
@@ -84,13 +98,13 @@ sudo systemctl restart apache2
 
 ## Configurazione Apache HTTP (Porta 80)
 
-### File: `/etc/apache2/sites-available/camminiditalia.maphub.it.conf`
+### File: `/etc/apache2/sites-available/maphub.it.conf`
 
 Aggiungere il proxy per Kibana:
 
 ```apache
 <VirtualHost *:80>
-    ServerName camminiditalia.dev.maphub.it
+    ServerName www.maphub.it
     
     # ... altre configurazioni ...
     
@@ -105,7 +119,7 @@ Aggiungere il proxy per Kibana:
     
     # Redirect HTTP a HTTPS
     RewriteEngine on
-    RewriteCond %{SERVER_NAME} =camminiditalia.dev.maphub.it
+    RewriteCond %{SERVER_NAME} =www.maphub.it
     RewriteRule ^ https://%{SERVER_NAME}%{REQUEST_URI} [END,NE,R=permanent]
 </VirtualHost>
 ```
@@ -114,7 +128,7 @@ Aggiungere il proxy per Kibana:
 
 ## Configurazione Apache HTTPS (Porta 443)
 
-### File: `/etc/apache2/sites-available/camminiditalia.maphub.it-le-ssl.conf`
+### File: `/etc/apache2/sites-available/maphub.it-le-ssl.conf`
 
 #### 1. Redirect `/kibana` a `/kibana/`
 
@@ -158,7 +172,7 @@ ProxyPassReverse /kibana/ http://localhost:5601/
 ```apache
 <IfModule mod_ssl.c>
 <VirtualHost *:443>
-    ServerName camminiditalia.dev.maphub.it
+    ServerName www.maphub.it
     
     # ... altre configurazioni ...
     
@@ -227,13 +241,13 @@ curl -I http://localhost:5601/kibana/
 
 ```bash
 # Test Kibana tramite proxy
-curl -I https://camminiditalia.dev.maphub.it/kibana/
+curl -I https://www.maphub.it/kibana/
 ```
 
 ### 6. Verificare nel browser
 
 Aprire nel browser:
-- **Kibana**: `https://camminiditalia.dev.maphub.it/kibana/`
+- **Kibana**: `https://www.maphub.it/kibana/`
 
 Controllare la console del browser (F12) per eventuali errori.
 
@@ -311,7 +325,7 @@ Controllare la console del browser (F12) per eventuali errori.
 
 ### URL Pubblici
 
-- **Kibana**: `https://camminiditalia.dev.maphub.it/kibana/`
+- **Kibana**: `https://www.maphub.it/kibana/`
 
 ### Variabili d'Ambiente Kibana
 
@@ -325,7 +339,7 @@ Controllare la console del browser (F12) per eventuali errori.
 ### Credenziali di Accesso
 
 **Per accedere a Kibana via browser:**
-- URL: `https://camminiditalia.dev.maphub.it/kibana/`
+- URL: `https://www.maphub.it/kibana/`
 - Username: `elastic`
 - Password: valore di `ELASTICSEARCH_PASSWORD` nel file `.env` (default: `changeme`)
 
@@ -355,7 +369,7 @@ Controllare la console del browser (F12) per eventuali errori.
 
 5. **Log**: In caso di problemi, controllare:
    - Log Apache: `/var/log/apache2/error.log`
-   - Log Apache access: `/var/log/apache2/camminiditalia.dev.access.log`
+   - Log Apache access: `/var/log/apache2/www.maphub.it-access.log` (nome dipende da `CustomLog` nel vhost)
    - Log Kibana: `docker logs kibana-${APP_NAME}`
 
 6. **Security**: La sicurezza è abilitata di default in Elasticsearch e Kibana. Per cambiare la password:
@@ -408,11 +422,11 @@ Esempio completo:
 # 1. Modificare .env (es. ELASTICSEARCH_PASSWORD=nuova_password)
 
 # 2. Aggiornare password in Elasticsearch
-docker exec elasticsearch-camminiditaliadev curl -X POST -u elastic:vecchia_password \
+docker exec elasticsearch-${APP_NAME} curl -X POST -u elastic:vecchia_password \
   "http://localhost:9200/_security/user/elastic/_password" \
   -H "Content-Type: application/json" -d '{"password":"nuova_password"}'
 
-docker exec elasticsearch-camminiditaliadev curl -X POST -u elastic:nuova_password \
+docker exec elasticsearch-${APP_NAME} curl -X POST -u elastic:nuova_password \
   "http://localhost:9200/_security/user/kibana_system/_password" \
   -H "Content-Type: application/json" -d '{"password":"nuova_password"}'
 
@@ -420,8 +434,8 @@ docker exec elasticsearch-camminiditaliadev curl -X POST -u elastic:nuova_passwo
 docker compose restart kibana
 
 # 4. Aggiornare configurazione Laravel
-docker exec php-camminiditaliadev php artisan config:clear
-docker exec php-camminiditaliadev php artisan config:cache
+docker exec php-${APP_NAME} php artisan config:clear
+docker exec php-${APP_NAME} php artisan config:cache
 ```
 
 ### Configurazione Laravel Scout

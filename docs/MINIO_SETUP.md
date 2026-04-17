@@ -2,6 +2,11 @@
 
 Questo documento descrive tutte le modifiche necessarie per configurare MinIO con la console accessibile tramite Apache reverse proxy.
 
+## maphub vs shard
+
+- **Piattaforma maphub** (contenitore delle app base): host pubblico **`www.maphub.it`**. Negli esempi compaiono i file vhost tipici `maphub.it.conf` / `maphub.it-le-ssl.conf`.
+- **Shard** (es. Cammini d’Italia): macchina dedicata con FQDN propri, es. **`maphub.it`**. Adatta `ServerName`, URL e nomi file Apache al dominio dello shard.
+
 ## Indice
 
 1. [Modifiche Docker Compose](#modifiche-docker-compose)
@@ -78,13 +83,13 @@ sudo systemctl restart apache2
 
 ## Configurazione Apache HTTP (Porta 80)
 
-### File: `/etc/apache2/sites-available/camminiditalia.maphub.it.conf`
+### File: `/etc/apache2/sites-available/maphub.it.conf`
 
 Aggiungere il proxy per il bucket MinIO `/wmfe/`:
 
 ```apache
 <VirtualHost *:80>
-    ServerName camminiditalia.dev.maphub.it
+    ServerName www.maphub.it
     
     # ... altre configurazioni ...
     
@@ -104,7 +109,7 @@ Aggiungere il proxy per il bucket MinIO `/wmfe/`:
     
     # Redirect HTTP a HTTPS
     RewriteEngine on
-    RewriteCond %{SERVER_NAME} =camminiditalia.dev.maphub.it
+    RewriteCond %{SERVER_NAME} =www.maphub.it
     RewriteRule ^ https://%{SERVER_NAME}%{REQUEST_URI} [END,NE,R=permanent]
 </VirtualHost>
 ```
@@ -113,7 +118,7 @@ Aggiungere il proxy per il bucket MinIO `/wmfe/`:
 
 ## Configurazione Apache HTTPS (Porta 443)
 
-### File: `/etc/apache2/sites-available/camminiditalia.maphub.it-le-ssl.conf`
+### File: `/etc/apache2/sites-available/maphub.it-le-ssl.conf`
 
 #### 1. Proxy per Bucket MinIO `/wmfe/`
 
@@ -206,7 +211,7 @@ ProxyPassReverse /minio/ http://localhost:9003/
 ```apache
 <IfModule mod_ssl.c>
 <VirtualHost *:443>
-    ServerName camminiditalia.dev.maphub.it
+    ServerName www.maphub.it
     
     # ... altre configurazioni ...
     
@@ -314,17 +319,17 @@ curl -I http://localhost:9003/
 
 ```bash
 # Test bucket wmfe
-curl -I https://camminiditalia.dev.maphub.it/wmfe/
+curl -I https://www.maphub.it/wmfe/
 
 # Test console
-curl -I https://camminiditalia.dev.maphub.it/minio/
+curl -I https://www.maphub.it/minio/
 ```
 
 ### 6. Verificare nel browser
 
 Aprire nel browser:
-- **Console MinIO**: `https://camminiditalia.dev.maphub.it/minio/`
-- **Bucket wmfe**: `https://camminiditalia.dev.maphub.it/wmfe/`
+- **Console MinIO**: `https://www.maphub.it/minio/`
+- **Bucket wmfe**: `https://www.maphub.it/wmfe/`
 
 Controllare la console del browser (F12) per eventuali errori.
 
@@ -428,8 +433,8 @@ ProxyPass /minio/ http://localhost:9003/
 
 ### URL Pubblici
 
-- **Console MinIO**: `https://camminiditalia.dev.maphub.it/minio/`
-- **Bucket wmfe**: `https://camminiditalia.dev.maphub.it/wmfe/`
+- **Console MinIO**: `https://www.maphub.it/minio/`
+- **Bucket wmfe**: `https://www.maphub.it/wmfe/`
 
 ### Variabili d'Ambiente MinIO
 
@@ -463,8 +468,8 @@ ProxyPass /minio/ http://localhost:9003/
 
 5. **Log**: In caso di problemi, controllare:
    - Log Apache: `/var/log/apache2/error.log`
-   - Log Apache access: `/var/log/apache2/camminiditalia.dev.access.log`
-   - Log MinIO: `docker logs minio-camminiditaliadev`
+   - Log Apache access: `/var/log/apache2/www.maphub.it-access.log` (nome dipende da `CustomLog` nel vhost)
+   - Log MinIO: `docker logs minio-${APP_NAME}`
 
 ---
 

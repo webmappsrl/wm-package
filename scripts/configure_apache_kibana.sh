@@ -2,6 +2,10 @@
 
 # Script per configurare Apache come reverse proxy per Kibana
 # Basato su wm-package/docs/KIBANA_SETUP.md
+#
+# Piattaforma maphub (contenitore): host pubblico tipico www.maphub.it.
+# Gli shard (es. camminiditalia) hanno macchine dedicate e FQDN propri (es. camminiditalia.maphub.it):
+# su quelle esporta MAPHUB_PUBLIC_FQDN e MAPHUB_APACHE_CONF_BASENAME coerenti con i vhost reali.
 
 set -e
 
@@ -11,12 +15,18 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-# File di configurazione Apache
-APACHE_HTTP_CONF="/etc/apache2/sites-available/camminiditalia.maphub.it.conf"
-APACHE_HTTPS_CONF="/etc/apache2/sites-available/camminiditalia.maphub.it-le-ssl.conf"
+# Host pubblico (senza schema) e nome base dei file in sites-available (come da Certbot / vhost).
+# Esempio shard: export MAPHUB_PUBLIC_FQDN=camminiditalia.maphub.it
+#                export MAPHUB_APACHE_CONF_BASENAME=camminiditalia.maphub.it
+MAPHUB_PUBLIC_FQDN="${MAPHUB_PUBLIC_FQDN:-www.maphub.it}"
+MAPHUB_APACHE_CONF_BASENAME="${MAPHUB_APACHE_CONF_BASENAME:-maphub.it}"
+
+APACHE_HTTP_CONF="/etc/apache2/sites-available/${MAPHUB_APACHE_CONF_BASENAME}.conf"
+APACHE_HTTPS_CONF="/etc/apache2/sites-available/${MAPHUB_APACHE_CONF_BASENAME}-le-ssl.conf"
 KIBANA_PORT="${DOCKER_KIBANA_PORT:-5601}"
 
 echo -e "${GREEN}=== Configurazione Apache per Kibana ===${NC}\n"
+echo -e "  FQDN: ${YELLOW}${MAPHUB_PUBLIC_FQDN}${NC}  |  vhost: ${YELLOW}${APACHE_HTTP_CONF}${NC}\n"
 
 # Verifica che lo script sia eseguito come root
 if [ "$EUID" -ne 0 ]; then 
@@ -193,11 +203,11 @@ fi
 
 echo -e "\n${GREEN}=== Configurazione completata! ===${NC}\n"
 echo -e "Kibana dovrebbe essere accessibile tramite:"
-echo -e "  - HTTP:  http://camminiditalia.dev.maphub.it/kibana/"
-echo -e "  - HTTPS: https://camminiditalia.dev.maphub.it/kibana/"
+echo -e "  - HTTP:  http://${MAPHUB_PUBLIC_FQDN}/kibana/"
+echo -e "  - HTTPS: https://${MAPHUB_PUBLIC_FQDN}/kibana/"
 echo -e "\n${YELLOW}Credenziali di accesso:${NC}"
 echo -e "  Username: ${GREEN}elastic${NC}"
 echo -e "  Password: valore di ${GREEN}ELASTICSEARCH_PASSWORD${NC} nel file .env"
 echo -e "\nPer verificare:"
-echo -e "  curl -I https://camminiditalia.dev.maphub.it/kibana/"
+echo -e "  curl -I https://${MAPHUB_PUBLIC_FQDN}/kibana/"
 
