@@ -48,8 +48,25 @@ class StorageService extends BaseService
     public function storeAppConfig(int $appId, string $contents): string|false
     {
         $path = $this->getAppConfigPath($appId);
-        $a = $this->getRemoteWfeDisk()->put($path, $contents);
-        $b = $this->getLocalAppConfigDisk()->put($path, $contents);
+
+        $options = [
+            // Avoid stale reads through proxies/browsers/service-workers.
+            'CacheControl' => 'no-store, no-cache, must-revalidate, max-age=0',
+            'ContentType' => 'application/json; charset=utf-8',
+        ];
+
+        $remote = $this->getRemoteWfeDisk();
+        // Replace atomically-ish by removing the existing target first.
+        if ($remote->exists($path)) {
+            $remote->delete($path);
+        }
+        $a = $remote->put($path, $contents, $options);
+
+        $local = $this->getLocalAppConfigDisk();
+        if ($local->exists($path)) {
+            $local->delete($path);
+        }
+        $b = $local->put($path, $contents, $options);
 
         return $a && $b ? $path : false;
     }
