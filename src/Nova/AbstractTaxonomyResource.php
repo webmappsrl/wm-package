@@ -46,8 +46,8 @@ abstract class AbstractTaxonomyResource extends Resource
             ID::make()->sortable(),
             NovaTabTranslatable::make([
                 Text::make('Name', 'name'),
+                Textarea::make('Description', 'description'),
             ]),
-            Textarea::make('Description', 'description'),
             IconSelect::make('Icona', 'icon')
                 ->loadFromIconsFile()
                 ->searchPlaceholder('Cerca un\'icona per la tassonomia...')
