@@ -618,10 +618,10 @@ class AppConfigService extends AppBaseService
         $data = [];
         // THEME section
 
-        $data['THEME']['fontFamilyHeader'] = $this->app->font_family_header;
-        $data['THEME']['fontFamilyContent'] = $this->app->font_family_content;
-        $data['THEME']['defaultFeatureColor'] = $this->app->default_feature_color;
-        $data['THEME']['primary'] = $this->app->primary_color;
+        $data['THEME']['fontFamilyHeader'] = $this->app->properties['theme']['font_family_header'];
+        $data['THEME']['fontFamilyContent'] = $this->app->properties['theme']['font_family_content'];
+        $data['THEME']['defaultFeatureColor'] = $this->app->properties['theme']['default_feature_color'];
+        $data['THEME']['primary'] = $this->app->properties['theme']['primary_color'];
 
         return $data;
     }

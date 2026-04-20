@@ -262,16 +262,16 @@ class App extends Resource
     protected function theme_tab(): array
     {
         return [
-            Text::make(__('Font Family Header'), 'font_family_header')
+            Text::make(__('Font Family Header'), 'properties->theme->font_family_header')
                 ->hideFromIndex()
                 ->help(__('Font family used for headings in the app theme')),
-            Text::make(__('Font Family Content'), 'font_family_content')
+            Text::make(__('Font Family Content'), 'properties->theme->font_family_content')
                 ->hideFromIndex()
                 ->help(__('Font family used for body content in the app theme')),
-            Color::make(__('Primary color'), 'primary_color')
+            Color::make(__('Primary color'), 'properties->theme->primary_color')
                 ->hideFromIndex()
                 ->help(__('Primary color for the app theme (e.g. buttons, links)')),
-            Color::make(__('Default feature color'), 'default_feature_color')
+            Color::make(__('Default feature color'), 'properties->theme->default_feature_color')
                 ->hideFromIndex()
                 ->help(__('Default color used for map features when no specific style is set')),
         ];
