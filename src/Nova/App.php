@@ -763,7 +763,7 @@ class App extends Resource
             ->toArray();
     }
 
-    protected function getTaxonomyLabel($name, string $fallback): string
+    protected function getTaxonomyLabel($name, ?string $fallback): string
     {
         if (is_array($name)) {
             return $name['it'] ?? $name['en'] ?? $fallback;
