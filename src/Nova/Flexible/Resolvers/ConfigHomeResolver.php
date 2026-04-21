@@ -9,9 +9,11 @@ use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Models\TaxonomyActivity as TaxonomyActivityModel;
 use Wm\WmPackage\Models\TaxonomyPoiType as TaxonomyPoiTypeModel;
 use Wm\WmPackage\Nova\Flexible\ConfigHome\HorizontalScrollItemRepeatable;
+use Wm\WmPackage\Nova\Traits\HasFlexibleTranslatableFields;
 
 class ConfigHomeResolver implements ResolverInterface
 {
+    use HasFlexibleTranslatableFields;
     public function get($resource, $attribute, $layouts): Collection
     {
         $value = is_object($resource) && method_exists($resource, 'getRawOriginal')
@@ -125,7 +127,12 @@ class ConfigHomeResolver implements ResolverInterface
         $element = ['box_type' => $layout->name()];
 
         foreach ($layout->getAttributes() as $key => $val) {
-            if (! is_null($val) && $val !== '') {
+            if ($key === 'title') {
+                $val = $this->decodeTranslatableValue($val);
+                if ($val !== []) {
+                    $element[$key] = $val;
+                }
+            } elseif (! is_null($val) && $val !== '') {
                 $element[$key] = $val;
             }
         }

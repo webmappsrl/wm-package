@@ -6,9 +6,11 @@ use Illuminate\Support\Collection;
 use Whitecube\NovaFlexibleContent\Layouts\Layout;
 use Whitecube\NovaFlexibleContent\Value\ResolverInterface;
 use Wm\WmPackage\Models\FeatureCollection;
+use Wm\WmPackage\Nova\Traits\HasFlexibleTranslatableFields;
 
 class ConfigOverlaysResolver implements ResolverInterface
 {
+    use HasFlexibleTranslatableFields;
     /**
      * Resolve the Flexible field's content.
      *
@@ -69,7 +71,12 @@ class ConfigOverlaysResolver implements ResolverInterface
             $element = ['box_type' => $layout->name()];
 
             foreach ($layout->getAttributes() as $key => $val) {
-                if ($key === 'feature_collection' && $val) {
+                if ($key === 'label') {
+                    $val = $this->decodeTranslatableValue($val);
+                    if ($val !== []) {
+                        $element[$key] = $val;
+                    }
+                } elseif ($key === 'feature_collection' && $val) {
                     $element[$key] = (int) $val;
                 } elseif (! is_null($val) && $val !== '') {
                     $element[$key] = $val;
