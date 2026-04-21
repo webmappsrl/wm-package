@@ -38,13 +38,7 @@ class ConfigHomeResolver implements ResolverInterface
                 $layout = $layouts->find($item['box_type']);
 
                 if ($layout) {
-                    $attributes = [];
-                    foreach ($item as $key => $val) {
-                        if ($key !== 'box_type') {
-                            $attributes[$key] = $val;
-                        }
-                    }
-
+                    $attributes = array_filter($item, fn($key) => $key !== 'box_type', ARRAY_FILTER_USE_KEY);
                     $result->push($layout->duplicateAndHydrate(uniqid('', true), $attributes));
                 }
             }
@@ -57,7 +51,7 @@ class ConfigHomeResolver implements ResolverInterface
      * Save the Flexible field's content somewhere the get method will be able to access it.
      *
      * @param  mixed  $resource
-     * @param  string  $attribute  Attribute name set for a Flexible field.
+     * @param  string  $attribute
      * @param  Collection<int, Layout>  $groups
      * @return mixed
      */
@@ -72,34 +66,20 @@ class ConfigHomeResolver implements ResolverInterface
         $homeData = [];
 
         foreach ($groups as $layout) {
-            $homeElement = [
-                'box_type' => $layout->name(),
-            ];
+            $homeElement = ['box_type' => $layout->name()];
 
-            // Merge all attributes
             foreach ($layout->getAttributes() as $key => $val) {
-                // Assicuriamoci che 'layer' sia sempre un numero intero
                 if ($key === 'layer' && $val) {
                     $homeElement[$key] = (int) $val;
-                } else {
+                } elseif (! is_null($val) && $val !== '') {
                     $homeElement[$key] = $val;
                 }
             }
 
-            // Se è un layout di tipo Layer, aggiungiamo automaticamente il titolo del layer
             if ($layout->name() === 'layer' && isset($homeElement['layer'])) {
-                $layerId = $homeElement['layer'];
-                $layer = Layer::find($layerId);
-
+                $layer = Layer::find($homeElement['layer']);
                 if ($layer) {
-                    $title = $layer->getStringName();
-
-                    if (empty($title)) {
-                        $title = 'Layer #'.$layer->id;
-                    }
-
-                    // Aggiungiamo il titolo del layer come 'name'
-                    $homeElement['title'] = $title;
+                    $homeElement['title'] = $layer->getStringName() ?: 'Layer #'.$layer->id;
                 }
             }
 

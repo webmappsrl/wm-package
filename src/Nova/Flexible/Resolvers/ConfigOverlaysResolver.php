@@ -38,21 +38,7 @@ class ConfigOverlaysResolver implements ResolverInterface
                 $layout = $layouts->find($item['box_type']);
 
                 if ($layout) {
-                    $attributes = [];
-                    foreach ($item as $key => $val) {
-                        if ($key === 'box_type') {
-                            continue;
-                        }
-                        // Expand label array into label_{locale} fields
-                        if ($key === 'label' && is_array($val)) {
-                            foreach ($val as $locale => $translation) {
-                                $attributes['label_'.$locale] = $translation;
-                            }
-                        } else {
-                            $attributes[$key] = $val;
-                        }
-                    }
-
+                    $attributes = array_filter($item, fn($key) => $key !== 'box_type', ARRAY_FILTER_USE_KEY);
                     $result->push($layout->duplicateAndHydrate(uniqid('', true), $attributes));
                 }
             }
@@ -80,24 +66,14 @@ class ConfigOverlaysResolver implements ResolverInterface
         $overlaysData = [];
 
         foreach ($groups as $layout) {
-            $element = [
-                'box_type' => $layout->name(),
-            ];
+            $element = ['box_type' => $layout->name()];
 
-            $labelData = [];
             foreach ($layout->getAttributes() as $key => $val) {
                 if ($key === 'feature_collection' && $val) {
                     $element[$key] = (int) $val;
-                } elseif (str_starts_with($key, 'label_') && $val) {
-                    $locale = substr($key, 6);
-                    $labelData[$locale] = $val;
-                } else {
+                } elseif (! is_null($val) && $val !== '') {
                     $element[$key] = $val;
                 }
-            }
-
-            if (! empty($labelData)) {
-                $element['label'] = $labelData;
             }
 
             if ($layout->name() === 'feature_collection' && isset($element['feature_collection'])) {

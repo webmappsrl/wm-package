@@ -31,9 +31,12 @@ use Wm\WmPackage\Nova\Actions\ReindexAppScoutAction;
 use Wm\WmPackage\Nova\Fields\StoreVersionField;
 use Wm\WmPackage\Nova\Flexible\Resolvers\ConfigHomeResolver;
 use Wm\WmPackage\Nova\Flexible\Resolvers\ConfigOverlaysResolver;
+use Wm\WmPackage\Nova\Traits\HasFlexibleTranslatableFields;
 
 class App extends Resource
 {
+    use HasFlexibleTranslatableFields;
+
     public static $model = \Wm\WmPackage\Models\App::class;
 
     protected function tiptapButtons(): array
@@ -173,14 +176,7 @@ class App extends Resource
 
     protected function overlays_title_layout(): array
     {
-        $languages = Config::get('wm-app-languages.languages', []);
-        $fields = [];
-
-        foreach ($languages as $locale => $name) {
-            $fields[] = Text::make($name, 'label_'.$locale);
-        }
-
-        return $fields;
+        return $this->translatableFields('Label', 'label');
     }
 
     protected function feature_collection_layout(): array
@@ -584,7 +580,7 @@ class App extends Resource
                         ->orderBy('id')
                         ->get()
                         ->mapWithKeys(function ($layer) {
-                            $title = $layer->getStringName() ?: ('Layer #'.$layer->id);
+                            $title = $layer->getStringName() ?: ('Layer #' . $layer->id);
 
                             return [$layer->id => $title];
                         })
@@ -697,31 +693,32 @@ class App extends Resource
 
     protected function title_layout(): array
     {
-        return [
-            Text::make('Titolo', 'title')->rules('required'),
-        ];
+        return $this->config_home_title_layout();
     }
 
     protected function slug_layout(): array
     {
-        return [
-            Text::make('Title', 'title'),
+        return array_merge($this->config_home_title_layout(), [
             Text::make('Slug', 'slug')
                 ->rules('required')
                 ->resolveUsing(function ($value) {
                     return $value ?: 'project';
                 }),
             Text::make('Image url', 'image_url'), // TODO: fare in modo di usare Media caricando un immagine e restituendo l'url
-        ];
+        ]);
     }
 
     protected function external_url_layout(): array
     {
-        return [
-            Text::make('Title', 'title'),
+        return array_merge($this->config_home_title_layout(), [
             Text::make('Url', 'url')->rules('required'),
             Text::make('Image url', 'image_url'), // TODO: fare in modo di usare Media caricando un immagine e restituendo l'url
-        ];
+        ]);
+    }
+
+    protected function config_home_title_layout(): array
+    {
+        return $this->translatableFields('Title', 'title', required: true);
     }
 
     protected function base_layout(): array
