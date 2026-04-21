@@ -31,9 +31,12 @@ use Wm\WmPackage\Nova\Actions\ReindexAppScoutAction;
 use Wm\WmPackage\Nova\Fields\StoreVersionField;
 use Wm\WmPackage\Nova\Flexible\Resolvers\ConfigHomeResolver;
 use Wm\WmPackage\Nova\Flexible\Resolvers\ConfigOverlaysResolver;
+use Wm\WmPackage\Nova\Traits\HasFlexibleTranslatableFields;
 
 class App extends Resource
 {
+    use HasFlexibleTranslatableFields;
+
     public static $model = \Wm\WmPackage\Models\App::class;
 
     protected function tiptapButtons(): array
@@ -173,14 +176,7 @@ class App extends Resource
 
     protected function overlays_title_layout(): array
     {
-        $languages = Config::get('wm-app-languages.languages', []);
-        $fields = [];
-
-        foreach ($languages as $locale => $name) {
-            $fields[] = Text::make($name, 'label_'.$locale);
-        }
-
-        return $fields;
+        return $this->translatableFields('Label', 'label');
     }
 
     protected function feature_collection_layout(): array
@@ -584,7 +580,7 @@ class App extends Resource
                         ->orderBy('id')
                         ->get()
                         ->mapWithKeys(function ($layer) {
-                            $title = $layer->getStringName() ?: ('Layer #'.$layer->id);
+                            $title = $layer->getStringName() ?: ('Layer #' . $layer->id);
 
                             return [$layer->id => $title];
                         })
@@ -722,24 +718,7 @@ class App extends Resource
 
     protected function config_home_title_layout(): array
     {
-        $languages = Config::get('wm-app-languages.languages', []);
-        $fields = [];
-        $requiredLocales = $this->config_home_required_locales();
-
-        foreach ($languages as $locale => $name) {
-            $field = Text::make($name, 'title_'.$locale);
-            if (in_array($locale, $requiredLocales, true)) {
-                $field->rules('required');
-            }
-            $fields[] = $field;
-        }
-
-        return $fields;
-    }
-
-    protected function config_home_required_locales(): array
-    {
-        return ['it'];
+        return $this->translatableFields('Title', 'title', required: true);
     }
 
     protected function base_layout(): array
