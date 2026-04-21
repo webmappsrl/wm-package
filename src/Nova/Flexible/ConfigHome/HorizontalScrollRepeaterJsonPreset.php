@@ -158,29 +158,14 @@ class HorizontalScrollRepeaterJsonPreset extends JSON
      */
     private function horizontalScrollRepeaterFieldsFromRow(array $fieldSource, array $row): array
     {
-        $out = [
+        $customTitle = is_array($fieldSource['title'] ?? null) ? $fieldSource['title'] : [];
+        $rowTitle = is_array($row['title'] ?? null) ? $row['title'] : [];
+        $title = array_merge($rowTitle, array_filter($customTitle, fn($v) => $v !== null && $v !== ''));
+
+        return [
             'res' => $fieldSource['res'] ?? null,
             'image_url' => $fieldSource['image_url'] ?? null,
+            'title' => $title,
         ];
-
-        $languages = array_keys(Config::get('wm-app-languages.languages', []));
-        foreach ($languages as $locale) {
-            $k = 'title_'.$locale;
-            if (array_key_exists($k, $fieldSource)) {
-                $out[$k] = $fieldSource[$k];
-            }
-        }
-
-        $title = $row['title'] ?? null;
-        if (is_array($title)) {
-            foreach ($languages as $locale) {
-                $k = 'title_'.$locale;
-                if (! array_key_exists($k, $out) && array_key_exists($locale, $title)) {
-                    $out[$k] = $title[$locale];
-                }
-            }
-        }
-
-        return $out;
     }
 }

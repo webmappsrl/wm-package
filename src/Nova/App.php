@@ -33,6 +33,7 @@ use Wm\WmPackage\Nova\Actions\RegenerateAppPbfAction;
 use Wm\WmPackage\Nova\Actions\ReindexAppScoutAction;
 use Wm\WmPackage\Nova\Flexible\ConfigHome\HorizontalScrollRepeaterJsonPreset;
 use Wm\WmPackage\Nova\Fields\StoreVersionField;
+use Wm\WmPackage\Nova\Cards\ApiLinksCard\AppApiLinksCard;
 use Wm\WmPackage\Nova\Flexible\Resolvers\ConfigHomeResolver;
 use Wm\WmPackage\Nova\Flexible\Resolvers\ConfigOverlaysResolver;
 use Wm\WmPackage\Nova\Traits\HasFlexibleTranslatableFields;

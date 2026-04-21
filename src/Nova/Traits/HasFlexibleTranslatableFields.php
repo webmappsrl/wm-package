@@ -13,7 +13,7 @@ trait HasFlexibleTranslatableFields
         $default = array_fill_keys($locales, '');
 
         $field = KeyValue::make($label, $attribute)
-            ->keyLabel('Lingua')
+            ->keyLabel('')
             ->valueLabel('Traduzione')
             ->disableAddingRows()
             ->disableDeletingRows()
