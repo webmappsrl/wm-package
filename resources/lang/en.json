@@ -212,9 +212,7 @@
     "Items": "Items",
     "Optional in Nova; include in config when you have a card image URL.": "Optional in Nova; include in config when you have a card image URL.",
     "Overrides the default taxonomy label for this item in config JSON; leave empty to use the taxonomy name.": "Overrides the default taxonomy label for this item in config JSON; leave empty to use the taxonomy name.",
-    "Title": "Title"
-    "Tipologie di POI associate a questo punto di interesse": "POI types associated with this point of interest"
-    ,
+    "Title": "Title",
     "Accessibility": "Accessibility",
     "Last verification date": "Last verification date",
     "Accessibility PDF": "Accessibility PDF",
