@@ -3,23 +3,33 @@
 namespace Wm\WmPackage\Nova\Traits;
 
 use Illuminate\Support\Facades\Config;
-use Laravel\Nova\Fields\Text;
+use Laravel\Nova\Fields\KeyValue;
 
 trait HasFlexibleTranslatableFields
 {
     protected function translatableFields(string $label, string $attribute, bool $required = false): array
     {
-        $languages = Config::get('wm-app-languages.languages', []);
-        $fields = [];
+        $locales = Config::get('tab-translatable.locales', Config::get('wm-tab-translatable.locales', []));
+        $default = array_fill_keys($locales, '');
 
-        foreach ($languages as $locale => $name) {
-            $field = Text::make("{$name}", "{$attribute}->{$locale}");
-            if ($required && $locale === 'it') {
-                $field->rules('required');
-            }
-            $fields[] = $field;
+        $field = KeyValue::make($label, $attribute)
+            ->keyLabel('Lingua')
+            ->valueLabel('Traduzione')
+            ->disableAddingRows()
+            ->disableDeletingRows()
+            ->default($default)
+            ->resolveUsing(function ($value) use ($default) {
+                if (empty($value)) {
+                    return $default;
+                }
+
+                return array_merge($default, is_array($value) ? $value : []);
+            });
+
+        if ($required) {
+            $field->rules('required');
         }
 
-        return $fields;
+        return [$field];
     }
 }
