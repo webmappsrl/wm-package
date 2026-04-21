@@ -125,7 +125,7 @@ class HorizontalScrollItemRepeatable extends Repeatable
     /**
      * @param  mixed  $name
      */
-    private function taxonomyLabel($name, string $fallback): string
+    private function taxonomyLabel($name, ?string $fallback): string
     {
         if (is_array($name)) {
             return (string) ($name['it'] ?? $name['en'] ?? $fallback);
