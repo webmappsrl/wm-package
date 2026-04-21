@@ -81,6 +81,7 @@ class App extends Resource
                 Tab::make('app', $this->app_tab()),
                 Tab::make('map', $this->map_tab()),
                 Tab::make('pois', $this->pois_tab()),
+                Tab::make('theme', $this->theme_tab()),
                 Tab::make('release_data', $this->app_release_data_tab()),
                 Tab::make('pages', $this->pages_tab()),
                 Tab::make('acquisition_form', $this->acquisition_form_tab()),
@@ -268,6 +269,24 @@ class App extends Resource
                 ->default(false)
                 ->hideFromIndex()
                 ->help(__('Enable the Travel Mode feature on the app')),
+        ];
+    }
+
+    protected function theme_tab(): array
+    {
+        return [
+            Text::make(__('Font Family Header'), 'properties->theme->font_family_header')
+                ->hideFromIndex()
+                ->help(__('Font family used for headings in the app theme')),
+            Text::make(__('Font Family Content'), 'properties->theme->font_family_content')
+                ->hideFromIndex()
+                ->help(__('Font family used for body content in the app theme')),
+            Color::make(__('Primary color'), 'properties->theme->primary_color')
+                ->hideFromIndex()
+                ->help(__('Primary color for the app theme (e.g. buttons, links)')),
+            Color::make(__('Default feature color'), 'properties->theme->default_feature_color')
+                ->hideFromIndex()
+                ->help(__('Default color used for map features when no specific style is set')),
         ];
     }
 
