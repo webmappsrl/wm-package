@@ -79,7 +79,6 @@ class App extends Resource
         return [
             ID::make()->sortable(),
             Text::make('Name')->sortable(),
-            StoreVersionField::make(),
 
             Tab::group('Configuration', [
                 Tab::make('frontend', $this->app_tab()),
@@ -484,6 +483,8 @@ class App extends Resource
     protected function app_release_data_tab(): array
     {
         return [
+            StoreVersionField::make(),
+
             Text::make(__('Name'), 'name')
                 ->sortable()
                 ->required()
