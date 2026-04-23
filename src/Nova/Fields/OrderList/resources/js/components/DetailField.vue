@@ -22,6 +22,12 @@
                         @dragend="onDragEnd"
                     >
                         <span class="wm-order-list__handle" aria-hidden="true">⋮⋮</span>
+                        <span
+                            v-if="item.color"
+                            class="wm-order-list__swatch"
+                            aria-hidden="true"
+                            :style="{ backgroundColor: item.color }"
+                        />
                         <span class="wm-order-list__name">{{ item.label || ('#' + item.id) }}</span>
                         <span v-if="saving" class="wm-order-list__status">Salvataggio…</span>
                     </li>
