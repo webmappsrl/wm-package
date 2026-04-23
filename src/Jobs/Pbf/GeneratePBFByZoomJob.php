@@ -32,19 +32,19 @@ class GeneratePBFByZoomJob implements ShouldQueue
 
     private $zoomTreshold;
 
-    private $no_pbf_layer = false;
+    private $pbf_layer = false;
 
     /**
      * Create a new job instance.
      *
      * @return void
      */
-    public function __construct($bbox, $zoom, $app_id, $no_pbf_layer = false)
+    public function __construct($bbox, $zoom, $app_id, $pbf_layer = false)
     {
         $this->bbox = $bbox;
         $this->zoom = $zoom;
         $this->app_id = $app_id;
-        $this->no_pbf_layer = $no_pbf_layer;
+        $this->pbf_layer = $pbf_layer;
         $this->zoomTreshold = PBFGeneratorService::make()->getzoomTreshold();
     }
 
@@ -58,7 +58,7 @@ class GeneratePBFByZoomJob implements ShouldQueue
 
             foreach ($tiles as $tile) {
                 [$x, $y, $z] = $tile;
-                if ($z <= $this->zoomTreshold && ! $this->no_pbf_layer) {
+                if ($z <= $this->zoomTreshold && $this->pbf_layer) {
                     $jobs[] = new GenerateLayerPBFJob($z, $x, $y, $this->app_id);
                 } else {
                     $jobs[] = new GeneratePBFJob($z, $x, $y, $this->app_id);

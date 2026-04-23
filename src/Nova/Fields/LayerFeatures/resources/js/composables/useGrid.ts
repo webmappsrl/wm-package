@@ -83,16 +83,16 @@ export function useGrid(props: UseGridProps) {
             sortable: true,
             cellRenderer: (params: { data: any; api: GridApi; node: any; context: any; event: any }) => {
                 const checked = params.data.isSelected ? 'checked' : '';
+                const disabled = params.data.checkboxReadOnly ? 'disabled' : '';
                 return `
-                    <input type="checkbox" class="ag-checkbox-input" ${checked} data-id="${params.data.id}" />
+                    <input type="checkbox" class="ag-checkbox-input" ${checked} ${disabled} data-id="${params.data.id}" />
                 `;
             },
             onCellClicked: (params: { data: any; api: GridApi; node: any; context: any; event: any }) => {
                 const checkbox = params.event.target;
                 if (checkbox.tagName === 'INPUT' && checkbox.type === 'checkbox') {
-                    // Se siamo in modalità non-edit e la checkbox è checked, non permettiamo la deselection
-                    if (!params.context.edit && params.node.data.isSelected) {
-                        checkbox.checked = true;
+                    if (params.data.checkboxReadOnly) {
+                        checkbox.checked = !!params.data.isSelected;
                         return;
                     }
 

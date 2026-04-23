@@ -30,7 +30,7 @@ class EcPoi extends AbstractEcResource
 
     public static function singularLabel(): string
     {
-        return __('Poi');
+        return __('EC Poi');
     }
 
     public static $model = \Wm\WmPackage\Models\EcPoi::class;

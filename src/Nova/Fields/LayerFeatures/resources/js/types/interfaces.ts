@@ -7,6 +7,7 @@ export interface LayerFeatureProps {
         modelName?: string;
         layerId?: number;
         value?: any[];
+        trackMode?: 'auto' | 'manual';
     };
     edit?: boolean;
     value?: any[];
@@ -17,6 +18,7 @@ export interface GridData {
     name: string;
     boolean?: boolean;
     isSelected?: boolean;
+    checkboxReadOnly?: boolean;
 }
 
 export interface GridState {

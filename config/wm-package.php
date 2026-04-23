@@ -31,6 +31,7 @@ return [
             'min_zoom' => env('PBF_MIN_ZOOM', 5),
             'max_zoom' => env('PBF_MAX_ZOOM', 13),
             'zoom_treshold' => env('PBF_ZOOM_TRESHOLD', 6),
+            'pbf_layer' => env('PBF_LAYER', false),
         ],
     ],
     'clients' => [

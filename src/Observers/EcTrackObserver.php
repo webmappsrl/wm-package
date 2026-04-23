@@ -2,7 +2,9 @@
 
 namespace Wm\WmPackage\Observers;
 
+use Wm\WmPackage\Jobs\Layer\SyncAutoLayerAfterTrackTaxonomyChangeJob;
 use Wm\WmPackage\Models\EcTrack;
+use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Models\Layerable;
 use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Services\Models\EcTrackService;
@@ -17,7 +19,10 @@ class EcTrackObserver extends AbstractEcObserver
      */
     public $afterCommit = true;
 
-    public function __construct(protected GeometryComputationService $geometryComputationService, protected EcTrackService $ecTrackService) {}
+    public function __construct(
+        protected GeometryComputationService $geometryComputationService,
+        protected EcTrackService $ecTrackService
+    ) {}
 
     /**
      * Handle the EcTrack "created" event.
@@ -37,6 +42,7 @@ class EcTrackObserver extends AbstractEcObserver
     public function updated($ecTrack)
     {
         $this->ecTrackService->updateDataChain($ecTrack);
+        $this->syncAutoLayersAfterNovaTrackEdit($ecTrack);
 
         if ($user = auth()->user()) {
             //  UserService::make()->assigUserAppIdIfNeeded($user, null, $ecTrack->app_id); TODO: attualmente non c'e' una migrazione valutare se inserirla in caso come array di app_id
@@ -91,6 +97,8 @@ class EcTrackObserver extends AbstractEcObserver
         Layerable::where('layerable_id', $ecTrack->id)
             ->where('layerable_type', $ecTrackModelClass)
             ->delete();
+
+        app(StorageService::class)->deleteModelFiles($ecTrack);
     }
 
     /**
@@ -102,5 +110,41 @@ class EcTrackObserver extends AbstractEcObserver
     {
         $storageService = new StorageService;
         $storageService->deleteTrack($ecTrack->id);
+    }
+
+    private function syncAutoLayersAfterNovaTrackEdit(EcTrack $ecTrack): void
+    {
+        // Fallback robusto: alcuni aggiornamenti taxonomy da Nova non emettono eventi pivot.
+        // In quel caso forziamo qui il riallineamento dei layer auto.
+        $request = request();
+        $isNovaTrackRequest = $request && $request->is('nova-api/ec-tracks*');
+        if (! $isNovaTrackRequest) {
+            return;
+        }
+
+        $taxonomyIds = $ecTrack->taxonomyActivities()->pluck('taxonomy_activities.id')->toArray();
+        if (empty($taxonomyIds)) {
+            return;
+        }
+
+        $candidateLayers = Layer::query()
+            ->where(function ($query) use ($ecTrack) {
+                $query->where('app_id', $ecTrack->app_id)
+                    ->orWhereHas('associatedApps', fn ($q) => $q->where('apps.id', $ecTrack->app_id));
+            })
+            ->whereHas('taxonomyActivities', fn ($query) => $query->whereIn('taxonomy_activities.id', $taxonomyIds))
+            ->get()
+            ->filter(fn (Layer $layer) => $layer->isAutoTrackMode());
+        $debounceAt = now()->addSeconds($this->getDebounceDelaySeconds());
+
+        foreach ($candidateLayers as $layer) {
+            SyncAutoLayerAfterTrackTaxonomyChangeJob::dispatch($layer->id, $ecTrack->id)
+                ->delay($debounceAt);
+        }
+    }
+
+    private function getDebounceDelaySeconds(): int
+    {
+        return app()->isLocal() ? 5 : 300;
     }
 }

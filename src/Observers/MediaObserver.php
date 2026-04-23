@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\Media;
+use Wm\WmPackage\Models\Abstracts\GeometryModel;
 use Wm\WmPackage\Services\GeometryComputationService;
 
 class MediaObserver extends AbstractAuthorableObserver
@@ -120,19 +121,21 @@ class MediaObserver extends AbstractAuthorableObserver
      */
     private function setGeometryFromModel(Media $media, Model $model)
     {
-        try {
-            // Utilizziamo il servizio GeometryComputationService per gestire qualsiasi tipo di geometria
-            $geometryService = new GeometryComputationService;
+        if ($model instanceof GeometryModel) {
+            try {
+                $geometryService = new GeometryComputationService;
 
-            if (str_contains($model::class, 'Layer') && $model->bbox) {
-                $media->geometry = $geometryService->convertToPoint($model, 'bbox');
-            } elseif ($model->geometry) {
-                $media->geometry = $geometryService->convertToPoint($model);
-            } else {
-                $this->setDefaultGeometry($media);
+                if (str_contains($model::class, 'Layer') && $model->bbox) {
+                    $media->geometry = $geometryService->convertToPoint($model, 'bbox');
+                } elseif ($model->geometry) {
+                    $media->geometry = $geometryService->convertToPoint($model);
+                }
+            } catch (\Exception $e) {
+                $this->handleException($e, $media);
             }
-        } catch (\Exception $e) {
-            $this->handleException($e, $media);
+        }
+
+        if (empty($media->geometry)) {
             $this->setDefaultGeometry($media);
         }
     }

@@ -42,8 +42,6 @@ class WmGeneratePBFCommand extends Command
 
     protected $app_id;
 
-    protected $no_pbf_layer = false;
-
     /**
      * Create a new command instance.
      *
@@ -69,6 +67,7 @@ class WmGeneratePBFCommand extends Command
         }
 
         $optimized = $this->option('optimized');
+        $pbfLayer = $this->option('no_pbf_layer') ? false : null;
 
         if ($optimized) {
             $this->info('🚀 Utilizzo approccio ottimizzato con clustering geografico');
@@ -77,7 +76,7 @@ class WmGeneratePBFCommand extends Command
                 $app,
                 $this->option('min'),
                 $this->option('max'),
-                $this->no_pbf_layer
+                $pbfLayer
             );
         } else {
             $this->info('🔄 Utilizzo approccio tradizionale');
@@ -86,7 +85,7 @@ class WmGeneratePBFCommand extends Command
                 $app,
                 $this->option('min'),
                 $this->option('max'),
-                $this->no_pbf_layer
+                $pbfLayer
             );
         }
 

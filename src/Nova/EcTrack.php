@@ -13,6 +13,8 @@ use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
 use Wm\WmPackage\Jobs\UpdateModelWithGeometryTaxonomyWhere;
 use Wm\WmPackage\Nova\Actions\ExecuteEcTrackDataChainAction;
 use Wm\WmPackage\Nova\Actions\TranslateModelAction;
+use Wm\WmPackage\Nova\Cards\ApiLinksCard\EcTrackApiLinksCard;
+use Wm\WmPackage\Nova\Fields\TrackColor\src\TrackColor;
 use Wm\WmPackage\Nova\Filters\FeaturesByLayerFilter;
 use Wm\WmPackage\Nova\Filters\FeaturesExcludeByIds;
 use Wm\WmPackage\Nova\Filters\FeaturesIncludeByIds;
@@ -31,7 +33,7 @@ class EcTrack extends AbstractEcResource
 
     public static function singularLabel(): string
     {
-        return __('Track');
+        return __('EC Track');
     }
 
     public static $model = \Wm\WmPackage\Models\EcTrack::class;
@@ -47,13 +49,20 @@ class EcTrack extends AbstractEcResource
     {
         return [
             ...$this->fieldsTrait($request),
-            BelongsToMany::make('EcPois', 'ecPois', EcPoi::class)
-                ->searchable(),
-            MorphToMany::make('Layers', 'layers', Layer::class),
-            MorphToMany::make('Activities', 'taxonomyActivities', TaxonomyActivity::class)->display('name'),
             Tab::group(__('Details'), [
                 Tab::make(__('Info'), $this->getInfoTabFields()),
+                Tab::make(__('Style'), $this->getStyleTabFields()),
+                Tab::make(__('DEM'), $this->getDemTabFields()),
             ]),
+            BelongsToMany::make('EcPois', 'ecPois', EcPoi::class)
+                ->searchable()
+                ->collapsedByDefault(),
+            MorphToMany::make('Layers', 'layers', Layer::class)
+                ->collapsedByDefault(),
+            MorphToMany::make('Activities', 'taxonomyActivities', TaxonomyActivity::class)
+                ->display('name')
+                ->collapsedByDefault(),
+
         ];
     }
 
@@ -92,6 +101,17 @@ class EcTrack extends AbstractEcResource
         ];
     }
 
+    public function cards(NovaRequest $request): array
+    {
+        if (! $request->resourceId) {
+            return [];
+        }
+
+        return [
+            new EcTrackApiLinksCard($request->findModelOrFail()),
+        ];
+    }
+
     public function getInfoTabFields(): array
     {
         return [
@@ -101,6 +121,13 @@ class EcTrack extends AbstractEcResource
                 Textarea::make(__('Not Accessible Message'), 'properties->not_accessible_message'),
             ]),
 
+        ];
+    }
+
+    protected function getStyleTabFields(): array
+    {
+        return [
+            TrackColor::make(__('Color'), 'properties->color'),
         ];
     }
 }

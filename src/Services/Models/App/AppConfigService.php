@@ -285,6 +285,7 @@ class AppConfigService extends AppBaseService
                 'identifier' => $taxonomy->identifier,
                 'name' => $taxonomy->getTranslations('name'),
                 'color' => $taxonomy->color ?? null,
+                'icon_name' => $taxonomy->icon ?? null,
             ],
             function ($value) {
                 return ! is_null($value);
@@ -407,6 +408,8 @@ class AppConfigService extends AppBaseService
         $data['MAP']['flow_line_quote_show'] = $this->app->flow_line_quote_show;
         $data['MAP']['flow_line_quote_orange'] = $this->app->flow_line_quote_orange;
         $data['MAP']['flow_line_quote_red'] = $this->app->flow_line_quote_red;
+        $properties = $this->app->properties ?? [];
+        $data['MAP']['show_track_direction_arrow'] = (bool) ($properties['show_track_direction_arrow'] ?? false);
 
         // Tiles
         if ($this->app->tiles && ! empty(json_decode($this->app->tiles, true))) {
@@ -422,53 +425,71 @@ class AppConfigService extends AppBaseService
             array_push($data['MAP']['controls']['tiles'], ...$ta);
         }
 
-        // Overlays
-        // TODO: refactor as layers
-        // if ($this->app->overlayLayers->count() > 0) {
-        //     $data['MAP']['controls']['overlays'][] = ['label' => $this->app->getTranslations('overlays_label'), 'type' => 'title'];
-        //     $overlays = array_map(function ($overlay) {
-        //         $array = [];
-        //         $overlay = OverlayLayer::find($overlay['id']);
-        //         $array['label'] = $overlay->getTranslations('label');
-        //         if ($overlay['default']) {
-        //             $array['default'] = $overlay['default'];
-        //         }
-        //         if (isset($overlay['icon'])) {
-        //             $array['icon'] = $overlay['icon'];
-        //         }
-        //         if (isset($overlay['fill_color'])) {
-        //             $array['fillColor'] = hexToRgba($overlay['fill_color']);
-        //         } else {
-        //             $array['fillColor'] = hexToRgba($overlay->app->primary_color);
-        //         }
-        //         if (isset($overlay['stroke_color'])) {
-        //             $array['strokeColor'] = hexToRgba($overlay['stroke_color']);
-        //         } else {
-        //             $array['strokeColor'] = hexToRgba($overlay->app->primary_color);
-        //         }
-        //         if (isset($overlay['stroke_width'])) {
-        //             $array['strokeWidth'] = $overlay['stroke_width'];
-        //         }
-        //         if (isset($overlay['feature_collection'])) {
-        //             // if the feature collection is an external geojson URL then put it in the conf file
-        //             if (strpos($overlay['feature_collection'], 'http') === 0 || strpos($overlay['feature_collection'], 'https') === 0) {
-        //                 $array['url'] = $overlay['feature_collection'];
-        //             } else {
-        //                 $array['url'] = route('api.export.taxonomy.getOverlaysPath', explode('/', $overlay['feature_collection']));
-        //             }
-        //         }
-        //         if (isset($overlay['configuration'])) {
-        //             $configuration = json_decode($overlay['configuration'], true);
-        //             if (is_array($configuration)) {
-        //                 $array = array_merge($array, $configuration);
-        //             }
-        //         }
-        //         $array['type'] = 'button';
+        // FeatureCollections (overlays)
+        $rawOverlays = $this->app->config_overlays ?? [];
+        if (is_string($rawOverlays)) {
+            $rawOverlays = json_decode($rawOverlays, true) ?? [];
+        }
+        $overlayItems = $rawOverlays['OVERLAYS'] ?? [];
+        if (! empty($overlayItems)) {
+            $fcIds = collect($overlayItems)
+                ->where('box_type', 'feature_collection')
+                ->pluck('feature_collection')
+                ->filter()
+                ->all();
 
-        //         return $array;
-        //     }, json_decode($this->app->overlayLayers, true));
-        //     array_push($data['MAP']['controls']['overlays'], ...$overlays);
-        // }
+            $fcs = \Wm\WmPackage\Models\FeatureCollection::whereIn('id', $fcIds)
+                ->where('app_id', $this->app->id)
+                ->where('enabled', true)
+                ->get()
+                ->keyBy('id');
+
+            foreach ($overlayItems as $item) {
+                $boxType = $item['box_type'] ?? null;
+
+                if ($boxType === 'title') {
+                    $data['MAP']['controls']['overlays'][] = [
+                        'label' => $item['label'] ?? [],
+                        'type' => 'title',
+                    ];
+                    continue;
+                }
+
+                if ($boxType === 'feature_collection') {
+                    $fc = $fcs->get($item['feature_collection'] ?? null);
+                    if (! $fc) {
+                        continue;
+                    }
+
+                    $array = [];
+                    $array['label'] = $fc->getTranslations('label');
+
+                    if ($fc->default) {
+                        $array['default'] = true;
+                    }
+
+                    if ($fc->icon) {
+                        $array['icon'] = $fc->icon;
+                    }
+
+                    $primaryColor = $this->app->primary_color ?? '#000000';
+                    $array['fillColor'] = $fc->fill_color ? hexToRgba($fc->fill_color) : hexToRgba($primaryColor);
+                    $array['strokeColor'] = $fc->stroke_color ? hexToRgba($fc->stroke_color) : hexToRgba($primaryColor);
+
+                    if ($fc->stroke_width) {
+                        $array['strokeWidth'] = $fc->stroke_width;
+                    }
+
+                    if ($fc->configuration) {
+                        $array = array_merge($array, $fc->configuration);
+                    }
+
+                    $array['url'] = $fc->getUrl();
+                    $array['type'] = 'button';
+                    $data['MAP']['controls']['overlays'][] = $array;
+                }
+            }
+        }
 
         // data => turn the layers (pois,tracks) off an on
         if ($this->app->app_pois_api_layer || $this->app->layers->count() > 0) {
@@ -505,14 +526,36 @@ class AppConfigService extends AppBaseService
             ];
         }
 
-        //  Theme Filter
-        if ($this->app->filter_theme) {
-            $app_user_id = $this->app->user_id;
-            $options = $this->get_unique_taxonomies('taxonomyThemes');
+        //  Layer Filter
+        if ($this->app->filter_layer) {
+            $options = $this->app->filterLayers()
+                ->with('taxonomyActivities')
+                ->get()
+                ->map(function (Layer $layer) {
+                    $layerProperties = is_array($layer->properties) ? $layer->properties : [];
+                    $taxonomyActivity = $layer->taxonomyActivities->first();
 
-            $data['MAP']['filters']['themes'] = [
+                    $option = [
+                        'id' => $layer->id,
+                        'identifier' => $layer->id,
+                        'name' => [
+                            'it' => $layer->getStringName(),
+                        ],
+                        'color' => $layerProperties['fill_color'] ?? $layerProperties['color'] ?? null,
+                    ];
+
+                    if ($taxonomyActivity !== null) {
+                        $option['icon_name'] = $taxonomyActivity->icon;
+                    }
+
+                    return $option;
+                })
+                ->values()
+                ->all();
+
+            $data['MAP']['filters']['layers'] = [
                 'type' => 'select',
-                'name' => $this->app->getTranslations('filter_theme_label'),
+                'name' => $this->app->getTranslations('filter_layer_label'),
                 'options' => $options,
             ];
         }
@@ -590,10 +633,7 @@ class AppConfigService extends AppBaseService
         $data = [];
         // THEME section
 
-        $data['THEME']['fontFamilyHeader'] = $this->app->font_family_header;
-        $data['THEME']['fontFamilyContent'] = $this->app->font_family_content;
-        $data['THEME']['defaultFeatureColor'] = $this->app->default_feature_color;
-        $data['THEME']['primary'] = $this->app->primary_color;
+        $data['THEME'] = $this->app->properties['theme'];
 
         return $data;
     }
@@ -702,6 +742,13 @@ class AppConfigService extends AppBaseService
                 $data['OPTIONS'][$label] = $value;
             }
         }
+
+        // Ensure "new" options come from properties and are never overwritten by track_technical_details.
+        $properties = $this->app->properties ?? [];
+        $data['OPTIONS']['showTravelMode'] = (bool) ($properties['show_travel_mode'] ?? false);
+        $data['OPTIONS']['showFeaturesInViewport'] = (bool) ($properties['show_features_in_viewport'] ?? false);
+        $data['OPTIONS']['minZoomFeaturesInViewport'] = (int) ($properties['min_zoom_features_in_viewport'] ?? 10);
+        $data['OPTIONS']['maxZoomFeaturesInViewport'] = (int) ($properties['max_zoom_features_in_viewport'] ?? 12);
 
         return $data;
     }

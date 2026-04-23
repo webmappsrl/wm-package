@@ -1,0 +1,12 @@
+/**
+ * Global Nova UI overrides shared across shards.
+ *
+ * Keep selectors tight and scoped to Nova UI to avoid leaking into non-Nova pages.
+ */
+
+@media (min-width: 768px) {
+    .flex.md\:hidden {
+        display: none;
+    }
+}
+

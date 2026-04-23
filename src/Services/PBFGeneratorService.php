@@ -183,7 +183,7 @@ class PBFGeneratorService extends BaseService
         // Recupera il nome della tabella dal modello
         $tableName = config('wm-package.ec_track_table');
 
-        // TODO: add activities and wheres to match layers of the tracks
+        // TODO: add wheres to match layers of the tracks
         $sql = <<<SQL
     WITH 
     bounds AS (
@@ -214,13 +214,39 @@ class PBFGeneratorService extends BaseService
             ST_SimplifyPreserveTopology(geom_mercator, $simplificationFactor) as simplified_geom
         FROM validGeometries
     ),
+    trackLayerRows AS (
+        SELECT DISTINCT
+            la.layerable_id,
+            la.layer_id,
+            l.rank
+        FROM layerables la
+        JOIN layers l ON l.id = la.layer_id
+        WHERE la.layerable_type LIKE '%{$this->getTrackModelClassName()}'
+    ),
     trackLayers AS (
         SELECT
             layerable_id,
-            ARRAY_TO_JSON(ARRAY_AGG(layer_id))::text AS layers
-        FROM layerables
-        WHERE layerable_type LIKE '%{$this->getTrackModelClassName()}'
+            jsonb_agg(
+                layer_id
+                ORDER BY rank ASC NULLS LAST, layer_id ASC
+            )::text AS layers
+        FROM trackLayerRows
         GROUP BY layerable_id
+    ),
+    trackActivities AS (
+        SELECT
+            ta.taxonomy_activityable_id AS track_id,
+            jsonb_agg(
+                DISTINCT label
+                ORDER BY label
+            ) FILTER (WHERE label IS NOT NULL) AS activities
+        FROM taxonomy_activityables ta
+        JOIN taxonomy_activities tact ON tact.id = ta.taxonomy_activity_id
+        CROSS JOIN LATERAL (
+            SELECT NULLIF(btrim(tact.identifier), '') AS label
+        ) lbl
+        WHERE ta.taxonomy_activityable_type LIKE '%{$this->getTrackModelClassName()}'
+        GROUP BY ta.taxonomy_activityable_id
     ),
     ecTracks AS (
         SELECT
@@ -229,13 +255,23 @@ class PBFGeneratorService extends BaseService
             pg.name,
             pg.properties ->> 'ref' as ref,
             pg.properties ->> 'cai_scale' as cai_scale,
-            pg.properties -> 'distance' as distance,
-            pg.properties -> 'duration_forward' as duration_forward,
+            COALESCE(
+                NULLIF(pg.properties -> 'manual_data' ->> 'distance', '')::double precision,
+                NULLIF(pg.properties -> 'osm_data' ->> 'distance', '')::double precision,
+                NULLIF(pg.properties -> 'dem_data' ->> 'distance', '')::double precision
+            ) as distance,
+            COALESCE(
+                NULLIF(pg.properties -> 'manual_data' ->> 'duration_forward', '')::integer,
+                NULLIF(pg.properties -> 'osm_data' ->> 'duration_forward', '')::integer,
+                NULLIF(pg.properties -> 'dem_data' ->> 'duration_forward', '')::integer
+            ) as duration_forward,
+            ta.activities::text as activities,
             tl.layers,
             pg.properties ->> 'searchable' as searchable,
             pg.properties ->> 'color' as stroke_color
         FROM processedGeometries pg
         LEFT JOIN trackLayers tl ON tl.layerable_id = pg.id
+        LEFT JOIN trackActivities ta ON ta.track_id = pg.id
         CROSS JOIN bounds
     )
     SELECT ST_AsMVT(ecTracks.*, '{$tableName}') FROM ecTracks
@@ -314,8 +350,9 @@ class PBFGeneratorService extends BaseService
         SQL;
     }
 
-    public function generateWholeAppPbfs(App $app, $minZoom = null, $maxZoom = null, $noPbfLayer = false)
+    public function generateWholeAppPbfs(App $app, $minZoom = null, $maxZoom = null, $pbfLayer = null)
     {
+        $pbfLayer = $pbfLayer ?? (bool) config('wm-package.services.pbf.pbf_layer', false);
         $bbox = GeometryComputationService::make()->getTracksBboxFromQuery($app->ecTracks());
         if (empty($bbox)) {
             $bbox = json_decode($app->map_bbox);
@@ -331,7 +368,7 @@ class PBFGeneratorService extends BaseService
 
         $chain = [];
         for ($zoom = $minZoom; $zoom <= $maxZoom; $zoom++) {
-            $chain[] = new GeneratePBFByZoomJob($bbox, $zoom, $app->id, $noPbfLayer);
+            $chain[] = new GeneratePBFByZoomJob($bbox, $zoom, $app->id, $pbfLayer);
         }
         Bus::chain($chain)->onConnection('redis')->onQueue('pbf')->dispatch();
     }
@@ -353,8 +390,9 @@ class PBFGeneratorService extends BaseService
         App $app,
         $minZoom = null,
         $maxZoom = null,
-        $noPbfLayer = false
+        $pbfLayer = null
     ) {
+        $pbfLayer = $pbfLayer ?? (bool) config('wm-package.services.pbf.pbf_layer', false);
         // Verifica che l'app abbia tracce
         $trackCount = $app->ecTracks()->count();
         if ($trackCount === 0) {
@@ -384,7 +422,7 @@ class PBFGeneratorService extends BaseService
             $app->id,
             $maxZoom, // startZoom (dal più alto)
             $minZoom, // minZoom
-            $noPbfLayer,
+            $pbfLayer,
             $trackIds // Passa le track IDs già recuperate
         )->onConnection('redis')->onQueue('pbf');
 

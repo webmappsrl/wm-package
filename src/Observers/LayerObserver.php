@@ -3,6 +3,7 @@
 namespace Wm\WmPackage\Observers;
 
 use Illuminate\Database\Eloquent\Model;
+use Wm\WmPackage\Jobs\FeatureCollection\GenerateFeatureCollectionJob;
 use Wm\WmPackage\Jobs\UpdateAppConfigJob;
 use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Services\Models\LayerService;
@@ -22,7 +23,8 @@ class LayerObserver extends AbstractObserver
      */
     public function creating(Model $layer)
     {
-        $layer->rank = $this->layerService->getLayerMaxRank() + 1;
+        $appId = isset($layer->app_id) ? (int) $layer->app_id : null;
+        $layer->rank = $this->layerService->getLayerMaxRank($appId) + 1;
     }
 
     /**
@@ -35,6 +37,7 @@ class LayerObserver extends AbstractObserver
         // update layers properties on ec models ONLY if taxonomy_where properties have changed
         if ($this->hasTaxonomyWhereChanged($layer)) {
             $this->layerService->updateLayersPropertyOnAllLayeredFeaturesWithJobs($layer);
+            $this->regenerateAssociatedFeatureCollections($layer);
         }
 
         // Se il layer ha tassonomie di attività associate, assegna automaticamente le track
@@ -110,5 +113,13 @@ class LayerObserver extends AbstractObserver
         $this->pbfGeneratorService->regeneratePbfsForLayer($layer);
 
         $this->updateAppConf($layer);
+    }
+
+    private function regenerateAssociatedFeatureCollections(Layer $layer): void
+    {
+        $layer->featureCollections()
+            ->where('mode', 'generated')
+            ->pluck('id')
+            ->each(fn ($id) => GenerateFeatureCollectionJob::dispatch($id));
     }
 }

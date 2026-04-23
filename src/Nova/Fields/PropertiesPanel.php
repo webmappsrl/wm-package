@@ -20,6 +20,7 @@ use Laravel\Nova\Fields\Select;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Fields\Textarea;
 use Laravel\Nova\Panel;
+use Marshmallow\Tiptap\Tiptap;
 use Wm\WmPackage\Models\UgcPoi;
 use Wm\WmPackage\Models\User;
 
@@ -50,6 +51,30 @@ class PropertiesPanel extends Panel
 
         parent::__construct($name, []);
     }
+
+    protected function tiptapButtons(): array
+    {
+        return [
+            'heading',
+            '|',
+            'bold',
+            'italic',
+            'underline',
+            '|',
+            'bulletList',
+            'orderedList',
+            '|',
+            'link',
+            'image',
+            '|',
+            'textAlign',
+            '|',
+            'horizontalRule',
+            '|',
+            'editHtml',
+        ];
+    }
+
 
     /**
      * Determine if fields should be editable based on editable parameter
@@ -432,6 +457,17 @@ class PropertiesPanel extends Panel
                         ->displayUsing(function ($value) {
                             return $value;
                         });
+                }
+                break;
+
+            case 'tiptap':
+                $tiptap = Tiptap::make($label, $jsonPath)
+                    ->buttons($this->tiptapButtons())
+                    ->headingLevels([2, 3, 4]);
+                if ($isTranslatable) {
+                    $field = NovaTabTranslatable::make([$tiptap]);
+                } else {
+                    $field = $tiptap;
                 }
                 break;
 

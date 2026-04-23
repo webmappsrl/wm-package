@@ -57,6 +57,9 @@ class WmPackageServiceProvider extends PackageServiceProvider
         $this->app->register(\Wm\WmPackage\Nova\Fields\LayerFeatures\FieldServiceProvider::class);
         $this->app->register(\Wm\WmPackage\Nova\Fields\FeatureCollectionMap\FieldServiceProvider::class);
         $this->app->register(\Wm\WmPackage\Nova\Fields\FeatureCollectionGrid\FieldServiceProvider::class);
+        $this->app->register(\Wm\WmPackage\Nova\Fields\OrderList\FieldServiceProvider::class);
+        $this->app->register(\Wm\WmPackage\Nova\Fields\TrackColor\FieldServiceProvider::class);
+        $this->app->register(\Wm\WmPackage\Nova\Cards\ApiLinksCard\CardServiceProvider::class);
     }
 
     public static function getBasePath(): string
@@ -82,6 +85,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
         // Register Nova CSS assets
         Nova::serving(function () {
             Nova::style('wm-flexible-field', __DIR__.'/../resources/css/flexible-field.css');
+            Nova::style('wm-nova-overrides', __DIR__.'/../resources/css/nova.css');
             $this->addWmpackageToolsMenuItem();
         });
 
@@ -273,10 +277,13 @@ class WmPackageServiceProvider extends PackageServiceProvider
         // Configure logging channels
         // SOLUZIONE 1 - SEMPLICE: LE CONFIG DEI LOG BENGONO SOVRASCRITTE DOPO LA REGISRTAZIONE DEL PROVIDER
         if (isset($this->app->config['logging'])) {
-            $this->app->config['logging'] = array_merge(
-                $this->app->config['logging'],
-                config('wm-logging', []),
-            );
+            $wmLogging = config('wm-logging', []);
+            $appChannels = $this->app->config['logging']['channels'] ?? [];
+            $wmChannels = $wmLogging['channels'] ?? [];
+            $merged = array_merge($this->app->config['logging'], $wmLogging);
+            // Deep merge channels so app-defined channels are not lost
+            $merged['channels'] = array_merge($wmChannels, $appChannels);
+            $this->app->config['logging'] = $merged;
         }
         if (isset($this->app->config['logging.channels'])) {
             $this->app->config['logging.channels'] = array_merge(

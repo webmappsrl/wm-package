@@ -20,7 +20,7 @@ class UgcPoi extends AbstractUgcResource
 
     public static function singularLabel(): string
     {
-        return __('Poi');
+        return __('UGC Poi');
     }
 
     public function actions(NovaRequest $request): array

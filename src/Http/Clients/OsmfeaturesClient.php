@@ -3,6 +3,7 @@
 namespace Wm\WmPackage\Http\Clients;
 
 use Exception;
+use Illuminate\Support\Facades\Http;
 use Wm\WmPackage\Http\Clients\Abstracts\JsonClient;
 
 class OsmfeaturesClient extends JsonClient
@@ -86,7 +87,77 @@ class OsmfeaturesClient extends JsonClient
 
     protected function getAdminAreasIntersectsUrl()
     {
-        return $this->getHost().'/api/v1/features/admin-areas/geojson';
+        return $this->getHost() . '/api/v1/features/admin-areas/geojson';
+    }
+
+    public function getAdminAreasIds(string $bbox, int $adminLevel): array
+    {
+        $bbox = $this->normalizeBboxForQuery($bbox);
+
+        $items = [];
+        $page = 1;
+        do {
+            $response = Http::get($this->getHost() . '/api/v2/features/admin-areas/list', [
+                'bbox'        => $bbox,
+                'admin_level' => $adminLevel,
+                'tags'        => 'name',
+                'page'        => $page,
+            ]);
+
+            if (! $response->successful()) {
+                throw new Exception(
+                    "OSMFeatures admin-areas/list HTTP {$response->status()}: " . $response->body()
+                );
+            }
+
+            $data = $response->json('data', []);
+            foreach ($data as $item) {
+                $nameObj = $item['name'] ?? [];
+                $name = $nameObj['it'] ?? $nameObj['en'] ?? (is_array($nameObj) ? (reset($nameObj) ?: $item['id']) : $item['id']);
+                $items[] = [
+                    'id'         => $item['id'],
+                    'name'       => $name,
+                    'updated_at' => $item['updated_at'] ?? null,
+                ];
+            }
+            $page++;
+        } while (count($data) === 1000);
+
+        return $items;
+    }
+
+    /**
+     * L'API si aspetta tipicamente "minLon,minLat,maxLon,maxLat". Se map_bbox è JSON
+     * (es. salvato come array nel DB), la query string altrimenti risulta inutilizzabile e l'API risponde vuota.
+     */
+    protected function normalizeBboxForQuery(string $bbox): string
+    {
+        $trimmed = trim($bbox);
+        if ($trimmed === '') {
+            return $bbox;
+        }
+
+        if (str_starts_with($trimmed, '[')) {
+            $decoded = json_decode($trimmed, true);
+            if (is_array($decoded) && count($decoded) === 4) {
+                return implode(',', array_map(static fn($v) => (string) $v, $decoded));
+            }
+        }
+
+        return $bbox;
+    }
+
+    public function getAdminAreaDetail(string $osmfeaturesId): array
+    {
+        $response = Http::get($this->getHost() . '/api/v2/features/admin-areas/' . $osmfeaturesId);
+        $data = $response->json();
+
+        return [
+            'osmfeatures_id' => $osmfeaturesId,
+            'name'           => $data['properties']['name'] ?? $osmfeaturesId,
+            'admin_level'    => $data['properties']['admin_level'] ?? null,
+            'geometry'       => isset($data['geometry']) ? json_encode($data['geometry']) : null,
+        ];
     }
 
     protected function getHost(): string

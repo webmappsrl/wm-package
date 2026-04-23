@@ -31,7 +31,7 @@ class App extends Model implements HasMedia
 
     protected $guarded = [];
 
-    public array $translatable = ['welcome', 'tiles_label', 'overlays_label', 'data_label', 'pois_data_label', 'tracks_data_label', 'page_project', 'page_privacy', 'page_disclaimer', 'page_credits', 'filter_activity_label', 'filter_theme_label', 'filter_poi_type_label', 'filter_track_duration_label', 'filter_track_distance_label', 'social_share_text'];
+    public array $translatable = ['welcome', 'tiles_label', 'overlays_label', 'data_label', 'pois_data_label', 'tracks_data_label', 'page_project', 'page_privacy', 'page_disclaimer', 'page_credits', 'filter_activity_label', 'filter_layer_label', 'filter_poi_type_label', 'filter_track_duration_label', 'filter_track_distance_label', 'social_share_text'];
 
     protected $casts = [
         'keywords' => 'array',
@@ -42,6 +42,8 @@ class App extends Model implements HasMedia
         'track_technical_details' => 'array',
         'properties' => 'array',
         'config_home' => FlexibleCast::class,
+        'config_overlays' => 'array',
+        'overlays_label' => 'array',
         'map_def_zoom' => 'integer',
         'map_max_zoom' => 'integer',
         'map_min_zoom' => 'integer',
@@ -81,6 +83,11 @@ class App extends Model implements HasMedia
         return $this->belongsToMany(Layer::class, 'layer_associated_app');
     }
 
+    public function filterLayers()
+    {
+        return $this->belongsToMany(Layer::class, 'app_filter_layers');
+    }
+
     public function ugc_pois()
     {
         return $this->hasMany(UgcPoi::class);
@@ -101,6 +108,11 @@ class App extends Model implements HasMedia
     public function ecPois(): HasMany
     {
         return $this->hasMany(EcPoi::class);
+    }
+
+    public function featureCollections(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(\Wm\WmPackage\Models\FeatureCollection::class);
     }
 
     public function poiAcquisitionForm($formId = null)

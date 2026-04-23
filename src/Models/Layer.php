@@ -14,12 +14,13 @@ use Wm\WmPackage\Nova\Fields\FeatureCollectionMap\src\FeatureCollectionMapTrait;
 use Wm\WmPackage\Observers\LayerObserver;
 use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Traits\HasPackageFactory;
+use Wm\WmPackage\Traits\NormalizesHexColor;
 use Wm\WmPackage\Traits\TaxonomyAbleModel;
 use Wm\WmPackage\Traits\TaxonomyWhereAbleModel;
 
 class Layer extends Polygon
 {
-    use FeatureCollectionMapTrait, HasPackageFactory, HasTranslations, TaxonomyAbleModel, TaxonomyWhereAbleModel;
+    use FeatureCollectionMapTrait, HasPackageFactory, HasTranslations, NormalizesHexColor, TaxonomyAbleModel, TaxonomyWhereAbleModel;
 
     public $timestamps = false;
 
@@ -27,6 +28,15 @@ class Layer extends Polygon
     {
         parent::boot();
         Layer::observe(LayerObserver::class);
+
+        static::deleting(function (Layer $layer) {
+            $layer->featureCollections()
+                ->where('mode', 'generated')
+                ->where('enabled', true)
+                ->each(function ($fc) {
+                    \Wm\WmPackage\Jobs\FeatureCollection\GenerateFeatureCollectionJob::dispatch($fc->id);
+                });
+        });
 
         // Imposta un default per properties se è null
         static::creating(function ($model) {
@@ -74,6 +84,16 @@ class Layer extends Polygon
         return $this->belongsToMany(App::class, 'layer_associated_app');
     }
 
+    public function filterApps()
+    {
+        return $this->belongsToMany(App::class, 'app_filter_layers');
+    }
+
+    public function featureCollections(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(\Wm\WmPackage\Models\FeatureCollection::class, 'feature_collection_layer');
+    }
+
     /**
      * Get the user that owns the Layer.
      */
@@ -100,6 +120,41 @@ class Layer extends Polygon
             ->using(TaxonomyActivityable::class);
     }
 
+    public function taxonomyWheres(): MorphToMany
+    {
+        return $this->morphToMany(TaxonomyWhere::class, 'taxonomy_whereable', 'taxonomy_whereables', null, 'taxonomy_where_id')
+            ->using(TaxonomyWhereable::class);
+    }
+
+    public function getStrokeColorHex(): ?string
+    {
+        $properties = $this->properties;
+
+        if (is_string($properties) && $this->isJsonString($properties)) {
+            $decoded = json_decode($properties, true);
+            $properties = is_array($decoded) ? $decoded : [];
+        }
+
+        if (! is_array($properties)) {
+            $properties = [];
+        }
+
+        return $this->normalizeHexColor($properties['color'] ?? null);
+    }
+
+    public function isAutoTrackMode(): bool
+    {
+        return ($this->configuration['track_mode'] ?? 'auto') === 'auto';
+    }
+
+    public function setTrackMode(string $mode): void
+    {
+        $configuration = $this->configuration ?? [];
+        $configuration['track_mode'] = $mode;
+        $this->configuration = $configuration;
+        $this->save();
+    }
+
     /**
      * Move to a model mutator
      * https://laravel.com/docs/11.x/eloquent-mutators#defining-a-mutator
@@ -113,7 +168,7 @@ class Layer extends Polygon
         try {
             $this->bbox = $bbox ?? $defaultBBOX;
             $this->save();
-        } catch (Exception $e) {
+        } catch (Exception) {
             Log::channel('layer')->error('computeBB of layer with id: '.$this->id);
         }
     }
@@ -166,6 +221,8 @@ class Layer extends Polygon
         // Fallback finale
         return '';
     }
+
+    // normalizeHexColor estratto nel trait NormalizesHexColor
 
     /**
      * Controlla se una stringa è un JSON valido
@@ -252,33 +309,124 @@ class Layer extends Polygon
     public function getFeatureCollectionMap(): array
     {
         $this->clearAdditionalFeaturesForMap();
+        $layerProperties = is_array($this->properties) ? $this->properties : [];
+        $strokeWidth = isset($layerProperties['stroke_width']) && is_numeric($layerProperties['stroke_width'])
+            ? max(1, (int) $layerProperties['stroke_width'])
+            : 2;
+        $strokeOpacity = isset($layerProperties['stroke_opacity']) && is_numeric($layerProperties['stroke_opacity'])
+            ? min(1, max(0, (float) $layerProperties['stroke_opacity']))
+            : 1.0;
+        $fillOpacity = isset($layerProperties['fill_opacity']) && is_numeric($layerProperties['fill_opacity'])
+            ? min(1, max(0, (float) $layerProperties['fill_opacity']))
+            : 0.3;
+        $strokeColor = ! empty($layerProperties['color'])
+            ? hexToRgba($layerProperties['color'], $strokeOpacity)
+            : 'rgba(255, 0, 0, 1)';
+        $fillColor = ! empty($layerProperties['fill_color'])
+            ? hexToRgba($layerProperties['fill_color'], $fillOpacity)
+            : 'rgba(255, 0, 0, 0.3)';
 
-        $ecTrackModelClass = config('wm-package.ec_track_model', 'App\Models\EcTrack');
-        $EcTracks = DB::select($this->getFeaturesQuery(), [$this->id, $ecTrackModelClass]);
-        // Nova resource name per EcTrack - usa kebab-case del nome del modello
         $novaResourceName = 'ec-tracks';
+        $tableName = config('wm-package.ec_track_table', 'ec_tracks');
+        $trackIds = $this->ecTracks()->pluck($tableName.'.id')->toArray();
+        $taxonomyIds = $this->taxonomyActivities->pluck('id')->toArray();
+        $whereIds = $this->taxonomyWheres->pluck('id')->toArray();
 
-        foreach ($EcTracks as $ecTrack) {
-            $geometry = json_decode($ecTrack->geometry, true);
+        // Fallback in lettura: in auto, ricostruisce i trackIds da taxonomy activities/wheres
+        // quando il pivot layerables e' vuoto o non ancora riallineato.
+        if ($this->isAutoTrackMode() && ( ! empty($taxonomyIds) || ! empty($whereIds)) && empty($trackIds)) {
+            $ecTrackModelClass = config('wm-package.ec_track_model', 'Wm\WmPackage\Models\EcTrack');
+            $appIds = array_values(array_unique(array_filter([
+                $this->app_id,
+                ...$this->associatedApps->pluck('id')->toArray(),
+            ])));
 
-            // Decodifica il JSON del nome e estrai la traduzione italiana o la prima disponibile
-            $nameData = json_decode($ecTrack->name, true);
+            if (! empty($appIds)) {
+                $fallbackQuery = $ecTrackModelClass::query()
+                    ->whereIn('app_id', $appIds);
 
-            // Priorità: 1) Italiano, 2) Prima disponibile, 3) Nome non disponibile
-            $ecTrackName = $nameData['it'] ?? (is_array($nameData) && ! empty($nameData) ? reset($nameData) : 'Nome non disponibile');
+                if (! empty($taxonomyIds) && method_exists($ecTrackModelClass, 'taxonomyActivities')) {
+                    $fallbackQuery->whereHas('taxonomyActivities', fn ($q) => $q->whereIn('taxonomy_activities.id', $taxonomyIds));
+                }
 
-            if ($geometry) {
-                $routeFeature = [
-                    'type' => 'Feature',
-                    'geometry' => $geometry,
-                    'properties' => [
-                        'tooltip' => $ecTrackName,
-                        'link' => url('nova'.'/resources/'.$novaResourceName.'/'.$ecTrack->id),
-                        'strokeColor' => 'red',
-                        'strokeWidth' => 2,
-                    ],
-                ];
-                $this->addFeaturesForMap([$routeFeature]);
+                if (! empty($whereIds)) {
+                    $trackTable = (new $ecTrackModelClass)->getTable();
+                    $fallbackQuery->whereExists(function ($q) use ($whereIds, $trackTable) {
+                        $q->select(DB::raw(1))
+                            ->from('taxonomy_wheres')
+                            ->whereIn('taxonomy_wheres.id', $whereIds)
+                            ->whereNotNull('taxonomy_wheres.geometry')
+                            ->whereRaw("ST_Intersects({$trackTable}.geometry::geometry, taxonomy_wheres.geometry::geometry)");
+                    });
+                }
+
+                $trackIds = $fallbackQuery->pluck('id')->toArray();
+
+                // Mantiene coerente il pivot, così il dettaglio delle track riflette gli stessi layer.
+                if (! empty($trackIds)) {
+                    $now = now();
+                    $syncPayload = [];
+                    foreach ($trackIds as $trackId) {
+                        $syncPayload[$trackId] = [
+                            'created_at' => $now,
+                            'updated_at' => $now,
+                        ];
+                    }
+                    $this->ecTracks()->sync($syncPayload);
+                }
+            }
+        }
+
+        if (! empty($trackIds)) {
+            $placeholders = implode(',', array_fill(0, count($trackIds), '?'));
+            $sql = "SELECT id, name, ST_AsGeoJSON(geometry) as geometry FROM {$tableName} WHERE id IN ({$placeholders}) AND geometry IS NOT NULL";
+            $rows = DB::select($sql, $trackIds);
+
+            foreach ($rows as $ecTrack) {
+                $geometry = json_decode($ecTrack->geometry, true);
+                $nameData = json_decode($ecTrack->name, true);
+                $ecTrackName = $nameData['it'] ?? (is_array($nameData) && ! empty($nameData) ? reset($nameData) : 'Nome non disponibile');
+
+                if ($geometry) {
+                    $this->addFeaturesForMap([[
+                        'type' => 'Feature',
+                        'geometry' => $geometry,
+                        'properties' => [
+                            'tooltip' => $ecTrackName,
+                            'link' => url('nova/resources/'.$novaResourceName.'/'.$ecTrack->id),
+                            'strokeColor' => $strokeColor,
+                            'strokeWidth' => $strokeWidth,
+                            'fillColor' => $fillColor,
+                        ],
+                    ]]);
+                }
+            }
+        }
+
+        $whereIds = $this->taxonomyWheres()->pluck('taxonomy_wheres.id')->toArray();
+        if (! empty($whereIds)) {
+            $placeholders = implode(',', array_fill(0, count($whereIds), '?'));
+            $sql = "SELECT id, name, ST_AsGeoJSON(geometry) as geometry FROM taxonomy_wheres WHERE id IN ({$placeholders}) AND geometry IS NOT NULL";
+            $rows = DB::select($sql, $whereIds);
+
+            foreach ($rows as $taxonomyWhere) {
+                $geometry = json_decode($taxonomyWhere->geometry, true);
+                $nameData = json_decode($taxonomyWhere->name, true);
+                $whereName = $nameData['it'] ?? (is_array($nameData) && ! empty($nameData) ? reset($nameData) : 'Taxonomy Where');
+
+                if ($geometry) {
+                    $this->addFeaturesForMap([[
+                        'type' => 'Feature',
+                        'geometry' => $geometry,
+                        'properties' => [
+                            'tooltip' => $whereName,
+                            'link' => url('nova/resources/taxonomy-wheres/'.$taxonomyWhere->id),
+                            'strokeColor' => 'rgba(37, 99, 235, 1)',
+                            'strokeWidth' => 2,
+                            'fillColor' => 'rgba(37, 99, 235, 0.2)',
+                        ],
+                    ]]);
+                }
             }
         }
 
@@ -288,26 +436,4 @@ class Layer extends Polygon
         ];
     }
 
-    private function getFeaturesQuery()
-    {
-        // Ottieni il nome della tabella dalla configurazione, default è 'ec_tracks'
-        $tableName = config('wm-package.ec_track_table', 'ec_tracks');
-
-        $sql = "
-        SELECT 
-            hr.id,
-            hr.name,
-            hr.properties,
-            ST_AsGeoJSON(hr.geometry) as geometry
-        FROM {$tableName} hr
-        INNER JOIN layerables l ON hr.id = l.layerable_id
-        WHERE l.layer_id = ?
-            AND l.layerable_type = ?
-            AND hr.geometry IS NOT NULL
-            AND hr.geometry != ''
-        ORDER BY hr.id
-    ";
-
-        return $sql;
-    }
 }

@@ -7,6 +7,7 @@ use ChristianKuri\LaravelFavorite\Traits\Favoriteable;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Laravel\Scout\Searchable;
 use Wm\WmPackage\Models\Abstracts\MultiLineString;
@@ -15,13 +16,17 @@ use Wm\WmPackage\Observers\EcTrackObserver;
 use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Services\Models\EcTrackService;
 use Wm\WmPackage\Services\Models\MediaService;
+use Wm\WmPackage\Nova\Traits\HasDemClassification;
 use Wm\WmPackage\Traits\EcFeatureTrait;
+use Wm\WmPackage\Traits\NormalizesHexColor;
 use Wm\WmPackage\Traits\TaxonomyAbleModel;
 use Wm\WmPackage\Traits\TaxonomyWhereAbleModel;
 
 class EcTrack extends MultiLineString implements LayerRelatedModel
 {
-    use EcFeatureTrait, Favoriteable, Searchable, TaxonomyAbleModel, TaxonomyWhereAbleModel;
+    use EcFeatureTrait, Favoriteable, HasDemClassification, NormalizesHexColor, Searchable, TaxonomyAbleModel, TaxonomyWhereAbleModel;
+
+    public const DEFAULT_COLOR_HEX = '#FF0000';
 
     protected $table;
 
@@ -32,6 +37,22 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
         'properties',
         'user_id',
         'osmid',
+        'accessibility_validity_date',
+        'accessibility_pdf',
+        'access_mobility_check',
+        'access_mobility_level',
+        'access_mobility_description',
+        'access_hearing_check',
+        'access_hearing_level',
+        'access_hearing_description',
+        'access_vision_check',
+        'access_vision_level',
+        'access_vision_description',
+        'access_cognitive_check',
+        'access_cognitive_level',
+        'access_cognitive_description',
+        'access_food_check',
+        'access_food_description',
     ];
 
     public function __construct(array $attributes = [])
@@ -42,6 +63,7 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
 
     protected $casts = [
         'properties' => 'array',
+        'properties->accessibility_validity_date' => 'datetime',
     ];
 
     public $translatable = [
@@ -173,6 +195,87 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
     {
         return 'ecTracks';
     }
+
+    /**
+     * @return Collection<int, Layer>
+     */
+    public function layersOrderedByRankDesc(): Collection
+    {
+        $query = $this->layers()
+            ->orderBy('rank')
+            ->orderBy('id');
+
+        return $query->get();
+    }
+
+    public function getInheritedTrackColorHex(): string
+    {
+        /** @var \Illuminate\Support\Collection<int, Layer> $layers */
+        $layers = $this->layersOrderedByRankDesc();
+
+        /** @var Layer|null $layer */
+        $layer = $this->getPreferredLayerForInheritedColor($layers);
+
+        if (! $layer) {
+            return self::DEFAULT_COLOR_HEX;
+        }
+
+        $layerColor = $layer->getStrokeColorHex();
+
+        return $layerColor ?? self::DEFAULT_COLOR_HEX;
+    }
+
+    public function getTrackColorProvenance(): array
+    {
+        $properties = is_array($this->properties) ? $this->properties : [];
+
+        $storedHex = $this->normalizeHexColor($properties['color'] ?? null);
+
+        $inheritedHex = $this->getInheritedTrackColorHex();
+        $effectiveHex = $storedHex ?? $inheritedHex;
+
+        /** @var \Illuminate\Support\Collection<int, Layer> $layers */
+        $layers = $this->layersOrderedByRankDesc();
+        /** @var Layer|null $layer */
+        $layer = $this->getPreferredLayerForInheritedColor($layers);
+
+        $layerInfo = null;
+        if ($layer) {
+            $layerInfo = [
+                'id' => $layer->id,
+                'name' => $layer->getStringName(),
+            ];
+        }
+
+        $source = 'default';
+        if ($storedHex !== null && $storedHex !== '' && $storedHex !== $inheritedHex) {
+            $source = 'custom';
+        } elseif ($layer) {
+            $source = 'layer';
+        }
+        $result = [
+            'effective_hex' => $effectiveHex,
+            'inherited_hex' => $inheritedHex,
+            'source' => $source,
+            'layer' => $layerInfo,
+            'stored_hex' => $storedHex,
+        ];
+
+        return $result;
+    }
+
+    /**
+     * Sceglie il layer da cui ereditare il colore.
+     * Regola: prende SEMPRE il layer con rank più basso; se non ha colore -> default.
+     *
+     * @param  Collection<int, Layer>  $layersOrderedByRankAsc
+     */
+    private function getPreferredLayerForInheritedColor(Collection $layersOrderedByRankAsc): ?Layer
+    {
+        return $layersOrderedByRankAsc->first();
+    }
+
+    // normalizeHexColor estratto nel trait NormalizesHexColor
 
     /**
      * Return the json version of the ec track, avoiding the geometry
@@ -370,7 +473,7 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
     {
         $geojson = $this->getGeojson();
         // MAPPING
-        $geojson['properties']['id'] = 'ec_track_'.$this->id;
+        $geojson['properties']['id'] = 'ec_track_' . $this->id;
         $geojson = $this->_mapElbrusGeojsonProperties($geojson);
 
         if ($this->ecPois) {
@@ -405,9 +508,9 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
 
         $fields = ['kml', 'gpx'];
         foreach ($fields as $field) {
-            if (isset($geojson['properties'][$field.'_url'])) {
-                $geojson['properties'][$field] = $geojson['properties'][$field.'_url'];
-                unset($geojson['properties'][$field.'_url']);
+            if (isset($geojson['properties'][$field . '_url'])) {
+                $geojson['properties'][$field] = $geojson['properties'][$field . '_url'];
+                unset($geojson['properties'][$field . '_url']);
             }
         }
 
@@ -417,13 +520,13 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
 
                 if ($taxonomy === 'activity') {
                     $geojson['properties']['taxonomy'][$name] = array_map(function ($item) use ($name) {
-                        return $name.'_'.$item;
+                        return $name . '_' . $item;
                     }, array_map(function ($item) {
                         return $item['id'];
                     }, $values));
                 } else {
                     $geojson['properties']['taxonomy'][$name] = array_map(function ($item) use ($name) {
-                        return $name.'_'.$item;
+                        return $name . '_' . $item;
                     }, $values);
                 }
             }
@@ -628,8 +731,8 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
             'taxonomyWheres' => $this->getOrderedTaxonomyWheres(),
             'feature_image' => $firstMedia ? $mediaService->getThumbnailUrl($firstMedia) : '',
             'strokeColor' => isset($this->properties['color']) ? hexToRgba($this->properties['color']) : '',
-            'distance' => isset($this->properties['distance']) ? (float) ($this->properties['distance']) : 0,
-            'duration_forward' => $this->convertDurationToHours($this->properties['duration_forward'] ?? null),
+            'distance' => (float) ($this->classifyField($this, 'distance')['currentValue'] ?? 0),
+            'duration_forward' => (float) ($this->classifyField($this, 'duration_forward')['currentValue'] ?? 0),
             'ascent' => isset($this->properties['ascent']) ? (int) ($this->properties['ascent']) : 0,
             'taxonomyActivities' => $ecTrackService->getTaxonomyArray($this->taxonomyActivities),
             'taxonomyIcons' => $ecTrackService->getTaxonomyIcons($this),
@@ -657,36 +760,36 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
         }
 
         if (empty($searchables) || (in_array('name', $searchables) && ! empty($this->name))) {
-            $stringValue .= str_replace('"', '', json_encode($this->getTranslations('name'))).' ';
+            $stringValue .= str_replace('"', '', json_encode($this->getTranslations('name'))) . ' ';
         }
-        if (empty($searchables) || (in_array('description', $searchables) && ! empty($this->properties['description']))) {
+        if ((empty($searchables) || in_array('description', $searchables)) && ! empty($this->properties['description'] ?? null)) {
             $description = is_array($this->properties['description']) ? json_encode($this->properties['description']) : $this->properties['description'];
             $description = str_replace('"', '', $description);
             $description = str_replace('\\', '', $description);
-            $stringValue .= strip_tags($description).' ';
+            $stringValue .= strip_tags($description) . ' ';
         }
-        if (empty($searchables) || (in_array('excerpt', $searchables) && ! empty($this->properties['excerpt']))) {
+        if ((empty($searchables) || in_array('excerpt', $searchables)) && ! empty($this->properties['excerpt'] ?? null)) {
             $excerpt = str_replace('"', '', json_encode($this->properties['excerpt']));
             $excerpt = str_replace('\\', '', $excerpt);
-            $stringValue .= strip_tags($excerpt).' ';
+            $stringValue .= strip_tags($excerpt) . ' ';
         }
         if (isset($this->properties['ref']) && empty($searchables) || (in_array('ref', $searchables) && ! empty($this->properties['ref']))) {
-            $stringValue .= $this->properties['ref'].' ';
+            $stringValue .= $this->properties['ref'] . ' ';
         }
         if (isset($this->properties['osmid']) && empty($searchables) || (in_array('osmid', $searchables) && ! empty($this->properties['osmid']))) {
 
-            $stringValue .= $this->properties['osmid'].' ';
+            $stringValue .= $this->properties['osmid'] . ' ';
         }
 
         if (empty($searchables) || (in_array('taxonomyActivities', $searchables) && ! empty($this->taxonomyActivities))) {
             foreach ($this->taxonomyActivities as $tax) {
-                $stringValue .= str_replace('"', '', json_encode($tax->getTranslations('name'))).' ';
+                $stringValue .= str_replace('"', '', json_encode($tax->getTranslations('name'))) . ' ';
             }
         }
 
         $taxonomyWheres = $this->getOrderedTaxonomyWheres();
         if (empty($searchables) || (in_array('taxonomyWheres', $searchables) && ! empty($taxonomyWheres))) {
-            $stringValue .= implode(' ', $taxonomyWheres).' ';
+            $stringValue .= implode(' ', $taxonomyWheres) . ' ';
         }
 
         return html_entity_decode($stringValue);
@@ -706,7 +809,19 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
 
             if (! empty($geojson)) {
                 $feature = $this->getFeatureMap();
-                $feature['properties'] = $this->properties;
+
+                $provenance = $this->getTrackColorProvenance();
+                $effectiveHex = $provenance['effective_hex'] ?? self::DEFAULT_COLOR_HEX;
+
+                $feature['properties'] = array_merge(
+                    is_array($this->properties) ? $this->properties : [],
+                    [
+                        'strokeColor' => hexToRgba($effectiveHex),
+                        'strokeWidth' => 4,
+                        'effective_color' => $effectiveHex,
+                        'color_source' => $provenance['source'] ?? 'default',
+                    ]
+                );
                 $features[] = $feature;
             }
         }
@@ -717,7 +832,7 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
             if ($poiFeature) {
                 $lang = app()->getLocale() ?? 'it';
                 $tooltip = $poi->getTranslation('name', $lang) ?: $poi->getTranslation('name', 'it');
-                $linkPath = trim(config('nova.path', '/nova'), '/').'/resources/ec-pois/'.$poi->id;
+                $linkPath = trim(config('nova.path', '/nova'), '/') . '/resources/ec-pois/' . $poi->id;
 
                 $poiFeature['properties'] = [
                     ...($poiFeature['properties'] ?? []),

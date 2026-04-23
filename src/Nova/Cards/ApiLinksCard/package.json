@@ -1,0 +1,17 @@
+{
+  "name": "wm/api-links-card",
+  "description": "Nova card that renders API links",
+  "license": "MIT",
+  "scripts": {
+    "dev": "mix",
+    "watch": "mix watch",
+    "prod": "mix --production"
+  },
+  "devDependencies": {
+    "laravel-mix": "^6.0.49",
+    "laravel-nova-devtool": "file:vendor/laravel/nova-devtool",
+    "vue": "^3.2.31",
+    "vue-loader": "^17.0.0",
+    "@vue/compiler-sfc": "^3.2.31"
+  }
+}

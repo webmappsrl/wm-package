@@ -439,16 +439,16 @@ export default {
                     // Non mostrare il chart se disabilitato o se ci sono più linee nella FeatureCollection
                     selectedTrackForChart.value = null;
                 } else {
-                const geom = feature?.getGeometry?.();
-                const type = geom?.getType?.();
-                if (type === 'LineString' || type === 'MultiLineString') {
-                    const format = new GeoJSON();
-                    const obj = format.writeFeatureObject(feature, {
-                        featureProjection: 'EPSG:3857',
-                        dataProjection: 'EPSG:4326',
-                    });
-                    selectedTrackForChart.value = toLineStringFeatureObject(obj);
-                }
+                    const geom = feature?.getGeometry?.();
+                    const type = geom?.getType?.();
+                    if (type === 'LineString' || type === 'MultiLineString') {
+                        const format = new GeoJSON();
+                        const obj = format.writeFeatureObject(feature, {
+                            featureProjection: 'EPSG:3857',
+                            dataProjection: 'EPSG:4326',
+                        });
+                        selectedTrackForChart.value = toLineStringFeatureObject(obj);
+                    }
                 }
             } catch (e) {
                 console.warn('Impossibile impostare traccia per slope chart', e);
@@ -519,14 +519,14 @@ export default {
 
             if (feature) {
                 const featureProps = feature.getProperties();
-                
+
                 // Mostra il cursore pointer solo se c'è un link o un'azione di click
                 if (featureProps.link || featureProps.clickAction === 'popup') {
                     map.value.getTargetElement().style.cursor = 'pointer';
                 } else {
                     map.value.getTargetElement().style.cursor = 'default';
                 }
-                
+
                 // Mostra sempre il tooltip se presente, indipendentemente dal link
                 const tooltip = featureProps.tooltip || featureProps.name;
 
@@ -717,7 +717,8 @@ export default {
                 }),
                 interactions: defaultInteractions({
                     mouseWheelZoom: props.mouseWheelZoom,
-                    dragPan: props.dragPan
+                    dragPan: props.dragPan,
+                    keyboard: false
                 })
             });
 
@@ -739,9 +740,16 @@ export default {
         // Cleanup
         onUnmounted(() => {
             if (map.value) {
+                // Importante: setTarget(null) NON rimuove i listener globali dei drag interaction.
+                // dispose() esegue il teardown completo (pointermove/pointerup su document inclusi).
+                map.value.un('click', handleClick);
+                map.value.un('pointermove', handlePointerMove);
                 map.value.setTarget(null);
+                map.value.dispose();
                 map.value = null;
             }
+            tooltipOverlay.value = null;
+            tooltipVisible.value = false;
         });
 
         watch(() => props.geojsonUrl, (newUrl, oldUrl) => {

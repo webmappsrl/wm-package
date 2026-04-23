@@ -33,6 +33,22 @@ class EcPoi extends Point implements LayerRelatedModel
         'properties',
         'user_id',
         'global',
+        'accessibility_validity_date',
+        'accessibility_pdf',
+        'access_mobility_check',
+        'access_mobility_level',
+        'access_mobility_description',
+        'access_hearing_check',
+        'access_hearing_level',
+        'access_hearing_description',
+        'access_vision_check',
+        'access_vision_level',
+        'access_vision_description',
+        'access_cognitive_check',
+        'access_cognitive_level',
+        'access_cognitive_description',
+        'access_food_check',
+        'access_food_description',
     ];
 
     public array $translatable = ['name', 'description', 'excerpt', 'audio', 'properties->description', 'properties->excerpt'];
@@ -46,8 +62,8 @@ class EcPoi extends Point implements LayerRelatedModel
      */
     protected $casts = [
         'related_url' => 'array',
-        'accessibility_validity_date' => 'datetime',
         'properties' => 'array',
+        'properties->accessibility_validity_date' => 'datetime',
     ];
 
     protected static function boot()

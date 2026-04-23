@@ -7,6 +7,8 @@ use Wm\WmPackage\Services\GeometryComputationService;
 
 class UpdateEcTrack3DDemJob extends BaseEcTrackJob
 {
+    public $queue = 'dem';
+
     /**
      * Execute the job.
      *

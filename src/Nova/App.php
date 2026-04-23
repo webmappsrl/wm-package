@@ -11,6 +11,7 @@ use Laravel\Nova\Fields\Color;
 use Laravel\Nova\Fields\Heading;
 use Laravel\Nova\Fields\ID;
 use Laravel\Nova\Fields\Number;
+use Laravel\Nova\Fields\Repeater;
 use Laravel\Nova\Fields\Select;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Fields\Textarea;
@@ -22,16 +23,51 @@ use Outl1ne\MultiselectField\Multiselect;
 use Whitecube\NovaFlexibleContent\Flexible;
 use Wm\WmPackage\Enums\AppTiles;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
+use Wm\WmPackage\Models\App as ModelsApp;
+use Wm\WmPackage\Models\FeatureCollection as FeatureCollectionModel;
 use Wm\WmPackage\Models\Layer;
+use Wm\WmPackage\Models\TaxonomyActivity as TaxonomyActivityModel;
+use Wm\WmPackage\Models\TaxonomyPoiType as TaxonomyPoiTypeModel;
+use Wm\WmPackage\Nova\Flexible\ConfigHome\HorizontalScrollItemRepeatable;
 use Wm\WmPackage\Nova\Actions\ExecuteEcTrackDataChainAction;
 use Wm\WmPackage\Nova\Actions\RegenerateAppPbfAction;
 use Wm\WmPackage\Nova\Actions\ReindexAppScoutAction;
+use Wm\WmPackage\Nova\Flexible\ConfigHome\HorizontalScrollRepeaterJsonPreset;
 use Wm\WmPackage\Nova\Fields\StoreVersionField;
+use Wm\WmPackage\Nova\Cards\ApiLinksCard\AppApiLinksCard;
 use Wm\WmPackage\Nova\Flexible\Resolvers\ConfigHomeResolver;
+use Wm\WmPackage\Nova\Flexible\Resolvers\ConfigOverlaysResolver;
+use Wm\WmPackage\Nova\Traits\HasFlexibleTranslatableFields;
+use Wm\WmPackage\Nova\Fields\OrderList\src\OrderList;
 
 class App extends Resource
 {
+    use HasFlexibleTranslatableFields;
+
     public static $model = \Wm\WmPackage\Models\App::class;
+
+    protected function tiptapButtons(): array
+    {
+        return [
+            'heading',
+            '|',
+            'bold',
+            'italic',
+            'underline',
+            '|',
+            'bulletList',
+            'orderedList',
+            '|',
+            'link',
+            'image',
+            '|',
+            'textAlign',
+            '|',
+            'horizontalRule',
+            '|',
+            'editHtml',
+        ];
+    }
 
     /**
      * The single value that should be used to represent the resource when being displayed.
@@ -45,15 +81,15 @@ class App extends Resource
         return [
             ID::make()->sortable(),
             Text::make('Name')->sortable(),
-            StoreVersionField::make(),
 
-            Tab::group('App', [
+            Tab::group('Configuration', [
+                Tab::make('frontend', $this->app_tab()),
+                Tab::make('Release', $this->app_release_data_tab()),
                 Tab::make('home', $this->home_tab()),
-                Tab::make('webapp', $this->webapp_tab()),
-                Tab::make('app', $this->app_tab()),
+                Tab::make('translations', $this->translations_tab()),
                 Tab::make('map', $this->map_tab()),
                 Tab::make('pois', $this->pois_tab()),
-                Tab::make('release_data', $this->app_release_data_tab()),
+                Tab::make('theme', $this->theme_tab()),
                 Tab::make('pages', $this->pages_tab()),
                 Tab::make('acquisition_form', $this->acquisition_form_tab()),
                 Tab::make('filters', $this->filters_tab()),
@@ -61,9 +97,21 @@ class App extends Resource
                 Tab::make('languages', $this->languages_tab()),
                 Tab::make('seachable', $this->seachable_tab()),
                 Tab::make('analytics', $this->analytics_tab()),
+                Tab::make('overlays', $this->overlays_tab()),
             ]),
 
             // TODO: implement fields
+        ];
+    }
+
+    public function cards(NovaRequest $request): array
+    {
+        if (! $request->resourceId) {
+            return [];
+        }
+
+        return [
+            new AppApiLinksCard($request->findModelOrFail()),
         ];
     }
 
@@ -81,7 +129,7 @@ class App extends Resource
                 ->confirmButtonText(__('Yes, reindex'))
                 ->cancelButtonText(__('Cancel')),
             ExecuteEcTrackDataChainAction::make([
-                fn ($track) => new UpdateEcTrackAwsJob($track),
+                fn($track) => new UpdateEcTrackAwsJob($track),
             ], __('Update Tracks on AWS'))
                 ->onlyOnDetail()
                 ->confirmText(__('Are you sure you want to update all tracks of this app on AWS?'))
@@ -98,10 +146,110 @@ class App extends Resource
     protected function webapp_tab(): array
     {
         return [
+            Heading::make(
+                <<<'HTML'
+                <h2><strong>WEBAPP</strong></h2>
+                HTML
+            )->asHtml()->hideFromIndex(),
             Boolean::make(__('Show Auth at startup'), 'webapp_auth_show_at_startup')
                 ->default(false)
                 ->hideFromIndex()
-                ->help(__('Shows the authentication and registration page for users')),
+                ->help(__('Shows the authentication and registration page for users'))
+        ];
+    }
+
+    protected function mobile_tab(): array
+    {
+        return [
+            Heading::make(
+                <<<'HTML'
+                <h2><strong>MOBILE</strong></h2>
+                HTML
+            )->asHtml()->hideFromIndex(),
+            Boolean::make(__('Show Auth at startup'), 'auth_show_at_startup')
+            ->default(false)
+            ->hideFromIndex()
+            ->help(__('Shows the authentication and registration page for users')),
+            Boolean::make(__('Geolocation Record Enable'), 'geolocation_record_enable')
+                ->default(false)
+                ->hideFromIndex()
+                ->help(__('Enables user geolocation recording on tracks')),
+            Boolean::make(__('Show Download Tiles'), 'properties->show_download_tiles')
+                ->default(false)
+                ->hideFromIndex()
+                ->help(__('Shows the download tiles button on the map')),
+        ];
+    }
+
+    protected function overlays_tab(): array
+    {
+        return [
+            Flexible::make('config_overlays')
+                ->resolver(ConfigOverlaysResolver::class)
+                ->menu('flexible-search-menu')
+                ->button('Aggiungi elemento')
+                ->help("Configurazione degli overlay della mappa")
+                ->addLayout('Titolo', 'title', $this->overlays_title_layout())
+                ->addLayout('Feature Collection', 'feature_collection', $this->feature_collection_layout())
+                ->confirmRemove('Sei sicuro di voler eliminare questo elemento?', 'Elimina', 'Annulla'),
+        ];
+    }
+
+    protected function map_layers_rank_tab(): array
+    {
+        return [
+            OrderList::make(__('Layer Rank'))
+                ->model(Layer::class)
+                ->scope('app_id', fn ($resource) => (int) $resource->id)
+                ->orderColumn('rank')
+                ->labelColumn('name')
+                ->color(fn (Layer $layer) => $layer->getStrokeColorHex())
+                ->gate('update', fn ($resource) => $resource)
+                ->onlyOnDetail(),
+        ];
+    }
+
+    protected function map_tab(): array
+    {
+        return array_merge(
+            $this->map_settings_tab(),
+            [
+                Heading::make(
+                    <<<'HTML'
+                    <hr style="margin: 2rem 0 1rem; border: none; border-top: 2px solid #e5e7eb;">
+                    <h2 style="font-size: 1.25rem; font-weight: 700; margin: 0;">LAYERS RANK</h2>
+                    <p style="margin-top: 0.25rem;">
+                        Ordina i layer della mappa per <strong>priorità di visualizzazione</strong> nel frontend.
+                        I layer in cima alla lista sono disegnati <strong>sopra</strong> gli altri e quindi più visibili;
+                        quelli in fondo vengono coperti dai layer con priorità maggiore.
+                    </p>
+                    <p style="margin-top: 0.25rem;">
+                        Trascina gli elementi per cambiare l'ordine: la modifica viene salvata automaticamente.
+                    </p>
+                    HTML
+                )->asHtml()->onlyOnDetail(),
+            ],
+            $this->map_layers_rank_tab(),
+        );
+    }
+
+    protected function overlays_title_layout(): array
+    {
+        return $this->translatableFields('Label', 'label');
+    }
+
+    protected function feature_collection_layout(): array
+    {
+        return [
+            Select::make('Feature Collection', 'feature_collection')
+                ->options(function () {
+                    return FeatureCollectionModel::where('app_id', $this->model()->id)
+                        ->get()
+                        ->pluck('name', 'id')
+                        ->all();
+                })
+                ->rules('required')
+                ->displayUsingLabels(),
         ];
     }
 
@@ -160,22 +308,35 @@ class App extends Resource
     protected function app_tab(): array
     {
         return [
-            Boolean::make(__('Show Auth at startup'), 'auth_show_at_startup')
-                ->default(false)
-                ->hideFromIndex()
-                ->help(__('Shows the authentication and registration page for users')),
-            Boolean::make(__('Geolocation Record Enable'), 'geolocation_record_enable')
-                ->default(false)
-                ->hideFromIndex()
-                ->help(__('Enables user geolocation recording on tracks')),
             Boolean::make(__('Show Download Tracks'), 'download_track_enable')
                 ->default(false)
                 ->hideFromIndex()
                 ->help(__('Shows download track in GPX, KML, GEOJSON')),
-            Boolean::make(__('Show Download Tiles'), 'properties->show_download_tiles')
+            Boolean::make(__('Show Travel Mode'), 'properties->show_travel_mode')
                 ->default(false)
                 ->hideFromIndex()
-                ->help(__('Shows the download tiles button on the map')),
+                ->help(__('Enable the Travel Mode feature on the app')),
+
+                Tab::make('FEwebapp', $this->webapp_tab()),
+                Tab::make('FE: mobile', $this->mobile_tab()),
+        ];
+    }
+
+    protected function theme_tab(): array
+    {
+        return [
+            Text::make(__('Font Family Header'), 'properties->theme->font_family_header')
+                ->hideFromIndex()
+                ->help(__('Font family used for headings in the app theme')),
+            Text::make(__('Font Family Content'), 'properties->theme->font_family_content')
+                ->hideFromIndex()
+                ->help(__('Font family used for body content in the app theme')),
+            Color::make(__('Primary color'), 'properties->theme->primary_color')
+                ->hideFromIndex()
+                ->help(__('Primary color for the app theme (e.g. buttons, links)')),
+            Color::make(__('Default feature color'), 'properties->theme->default_feature_color')
+                ->hideFromIndex()
+                ->help(__('Default color used for map features when no specific style is set')),
         ];
     }
 
@@ -235,14 +396,38 @@ class App extends Resource
         ];
     }
 
+    protected function translations_tab(): array
+    {
+        return [
+            Code::make(__('Italian Translations'), 'translations_it')
+                ->language('json')
+                ->rules('nullable', 'json')
+                ->hideFromIndex()
+                ->help(__('Enter the Italian translations in JSON format here')),
+            Code::make(__('English Translations'), 'translations_en')
+                ->language('json')
+                ->rules('nullable', 'json')
+                ->hideFromIndex()
+                ->help(__('Enter the English translations in JSON format here')),
+        ];
+    }
+
     protected function pages_tab(): array
     {
         return [
             NovaTabTranslatable::make([
-                Tiptap::make('Page Project', 'page_project'),
-                Tiptap::make('Page Disclaimer', 'page_disclaimer'),
-                Tiptap::make('Page Credits', 'page_credits'),
-                Tiptap::make('Page Privacy', 'page_privacy'),
+                Tiptap::make('Page Project', 'page_project')
+                    ->buttons($this->tiptapButtons())
+                    ->headingLevels([2, 3, 4]),
+                Tiptap::make('Page Disclaimer', 'page_disclaimer')
+                    ->buttons($this->tiptapButtons())
+                    ->headingLevels([2, 3, 4]),
+                Tiptap::make('Page Credits', 'page_credits')
+                    ->buttons($this->tiptapButtons())
+                    ->headingLevels([2, 3, 4]),
+                Tiptap::make('Page Privacy', 'page_privacy')
+                    ->buttons($this->tiptapButtons())
+                    ->headingLevels([2, 3, 4]),
             ]),
         ];
     }
@@ -291,6 +476,11 @@ class App extends Resource
     protected function home_tab(): array
     {
         return [
+            Images::make('Home Images', 'home_images'),
+            Boolean::make(__('Show searchbar'), 'show_search')
+                ->default(true)
+                ->hideFromIndex()
+                ->help(__('Activate to show the search bar on the home')),
             NovaTabTranslatable::make([
                 Code::make('Welcome', 'welcome'),
                 /*   Tiptap::make('Welcome', 'welcome')
@@ -321,6 +511,8 @@ class App extends Resource
                 ->button('Aggiungi contenuto')
                 ->help("Configurazione della home page dell'app")
                 ->addLayout('Titolo', 'title', $this->title_layout())
+                ->addLayout(__('Horizontal Scroll Activities'), 'horizontal_scroll_activities', $this->horizontal_scroll_activities_layout())
+                ->addLayout(__('Horizontal Scroll POI Types'), 'horizontal_scroll_poi_types', $this->horizontal_scroll_poi_types_layout())
                 ->addLayout('Layer', 'layer', $this->layer_layout())
                 ->addLayout('Slug', 'slug', $this->slug_layout())
                 ->addLayout('External URL', 'external_url', $this->external_url_layout())
@@ -331,6 +523,8 @@ class App extends Resource
     protected function app_release_data_tab(): array
     {
         return [
+            StoreVersionField::make(),
+
             Text::make(__('Name'), 'name')
                 ->sortable()
                 ->required()
@@ -370,12 +564,12 @@ class App extends Resource
                 ->language('json')
                 ->rules('json')
                 ->default($this->getDefaultPoiForm())
-                ->help(__('This JSON structures the acquisition form for UGC POIs. Knowledge of JSON format required.').view('wm-package::poi-forms')->render()),
+                ->help(__('This JSON structures the acquisition form for UGC POIs. Knowledge of JSON format required.') . view('wm-package::poi-forms')->render()),
             Code::Make(__('TRACK acquisition forms'), 'track_acquisition_form')
                 ->language('json')
                 ->rules('json')
                 ->default($this->getDefaultTrackForm())
-                ->help(__('This JSON structures the acquisition form for UGC Tracks. Knowledge of JSON format required.').view('wm-package::track-forms')->render()),
+                ->help(__('This JSON structures the acquisition form for UGC Tracks. Knowledge of JSON format required.') . view('wm-package::track-forms')->render()),
         ];
     }
 
@@ -391,6 +585,10 @@ class App extends Resource
                 ->default(false)
                 ->hideFromIndex()
                 ->help(__('Activates the activity filter for tracks')),
+            Boolean::make(__('Layer Filter'), 'filter_layer')
+                ->default(false)
+                ->hideFromIndex()
+                ->help(__('Activates the layer-based filter for tracks and data')),
             Boolean::make(__('POI Type Filter'), 'filter_poi_type')
                 ->default(false)
                 ->hideFromIndex()
@@ -413,7 +611,7 @@ class App extends Resource
                 <br/>
                 <ul>
                     <li><p><strong>Activity Filter Label</strong>: Text to be displayed for the Activity filter.</p></li>
-                    <li><p><strong>Theme Filter Label</strong>: Text to be displayed for the Theme filter.</p></li>
+                    <li><p><strong>Layer Filter Label</strong>: Text to be displayed for the Layer filter.</p></li>
                     <li><p><strong>Poi Type Filter Label</strong>: Text to be displayed for the Poi Type filter.</p></li>
                     <li><p><strong>Duration Filter Label</strong>: Text to be displayed for the tracks duration filter.</p></li>
                     <li><p><strong>Distance Filter Label</strong>: Text to be displayed for the tracks distance filter.</p></li>
@@ -421,38 +619,61 @@ class App extends Resource
                 HTML
             )->asHtml()->hideFromIndex(),
             NovaTabTranslatable::make([
-                Text::make('Activity Filter Label', 'filter_activity_label'),
-                Text::make('Theme Filter Label', 'filter_theme_label'),
-                Text::make('Poi Type Filter Label', 'filter_poi_type_label'),
-                Text::make('Duration Filter Label', 'filter_track_duration_label'),
-                Text::make('Distance Filter Label', 'filter_track_distance_label'),
+                Text::make(__('Activity Filter Label'), 'filter_activity_label'),
+                Text::make(__('Layer Filter Label'), 'filter_layer_label'),
+                Text::make(__('Poi Type Filter Label'), 'filter_poi_type_label'),
+                Text::make(__('Duration Filter Label'), 'filter_track_duration_label'),
+                Text::make(__('Distance Filter Label'), 'filter_track_distance_label'),
             ])->hideFromIndex(),
 
-            Text::make('Activity Exclude Filter', 'filter_activity_exclude')
+            Text::make(__('Activity Exclude Filter'), 'filter_activity_exclude')
                 ->hideFromIndex()
                 ->help(__('Insert the activities you want to exclude from the filter, separated by commas')),
-            Text::make('Theme Exclude Filter', 'filter_theme_exclude')
-                ->hideFromIndex()
-                ->help(__('Insert the themes you want to exclude from the filter, separated by commas')),
-            Text::make('Poi Type Exclude Filter', 'filter_poi_type_exclude')
+            Multiselect::make(__('Filterable layers'), 'filter_layers_ids')
+                ->onlyOnForms()
+                ->options(function () {
+                    $app = $this->model();
+
+                    return $app->layers()
+                        ->orderBy('id')
+                        ->get()
+                        ->mapWithKeys(function ($layer) {
+                            $title = $layer->getStringName() ?: ('Layer #' . $layer->id);
+
+                            return [$layer->id => $title];
+                        })
+                        ->toArray();
+                })
+                ->resolveUsing(function () {
+                    return $this->model()
+                        ->filterLayers()
+                        ->pluck('layers.id')
+                        ->all();
+                })
+                ->fillUsing(function ($request, $model, $attribute, $requestAttribute) {
+                    $ids = $request->input($requestAttribute, []);
+                    $model->filterLayers()->sync($ids ?? []);
+                })
+                ->help(__('Select which layers will be available as filters')),
+            Text::make(__('Poi Type Exclude Filter'), 'filter_poi_type_exclude')
                 ->hideFromIndex()
                 ->help(__('Insert the poi types you want to exclude from the filter, separated by commas')),
-            Number::make('Track Min Duration Filter', 'filter_track_duration_min')
+            Number::make(__('Track Min Duration Filter'), 'filter_track_duration_min')
                 ->hideFromIndex()
                 ->help(__('Set the minimum duration of the duration filter')),
-            Number::make('Track Max Duration Filter', 'filter_track_duration_max')
+            Number::make(__('Track Max Duration Filter'), 'filter_track_duration_max')
                 ->hideFromIndex()
                 ->help(__('Set the maximum duration of the duration filter')),
-            Number::make('Track Duration Steps Filter', 'filter_track_duration_steps')
+            Number::make(__('Track Duration Steps Filter'), 'filter_track_duration_steps')
                 ->hideFromIndex()
                 ->help(__('Set the steps of the duration filter')),
-            Number::make('Track Min Distance Filter', 'filter_track_distance_min')
+            Number::make(__('Track Min Distance Filter'), 'filter_track_distance_min')
                 ->hideFromIndex()
                 ->help(__('Set the minimum distance of the distance filter')),
-            Number::make('Track Max Distance Filter', 'filter_track_distance_max')
+            Number::make(__('Track Max Distance Filter'), 'filter_track_distance_max')
                 ->hideFromIndex()
                 ->help(__('Set the maximum distance of the distance filter')),
-            Number::make('Track Distance Step Filter', 'filter_track_distance_steps')
+            Number::make(__('Track Distance Step Filter'), 'filter_track_distance_steps')
                 ->hideFromIndex()
                 ->help(__('Set the steps of the distance filter')),
         ];
@@ -530,31 +751,105 @@ class App extends Resource
 
     protected function title_layout(): array
     {
-        return [
-            Text::make('Titolo', 'title')->rules('required'),
-        ];
+        return $this->config_home_title_layout();
+    }
+
+    protected function horizontal_scroll_activities_layout(): array
+    {
+        $fields = $this->config_home_title_layout();
+        $fields[] = $this->horizontalScrollItemsRepeater(
+            HorizontalScrollItemRepeatable::make($this->horizontalScrollActivityOptions())
+        );
+
+        return $fields;
+    }
+
+    protected function horizontal_scroll_poi_types_layout(): array
+    {
+        $fields = $this->config_home_title_layout();
+        $fields[] = $this->horizontalScrollItemsRepeater(
+            HorizontalScrollItemRepeatable::make($this->horizontalScrollPoiTypeOptions())
+        );
+
+        return $fields;
+    }
+
+    /**
+     * JSON preset for config_home horizontal scroll layouts: reliable hydration of `items` from the Whitecube layout.
+     */
+    protected function horizontalScrollItemsRepeater(HorizontalScrollItemRepeatable $repeatable): Repeater
+    {
+        return Repeater::make(__('Items'), 'items')
+            ->repeatables([$repeatable])
+            ->preset(new HorizontalScrollRepeaterJsonPreset())
+            ->rules('required', 'array')
+            ->help(__('Add one or more items for this horizontal scroll.'));
+    }
+
+    protected function horizontalScrollActivityOptions(): array
+    {
+        return TaxonomyActivityModel::query()
+            ->get(['identifier', 'name'])
+            ->mapWithKeys(function (TaxonomyActivityModel $activity) {
+                return [
+                    $activity->identifier => $this->getTaxonomyLabel($activity->name, $activity->identifier),
+                ];
+            })
+            ->sort()
+            ->toArray();
+    }
+
+    protected function horizontalScrollPoiTypeOptions(): array
+    {
+        return TaxonomyPoiTypeModel::query()
+            ->get(['identifier', 'name'])
+            ->mapWithKeys(function (TaxonomyPoiTypeModel $poiType) {
+                $identifier = 'poi_type_' . $poiType->identifier;
+
+                return [
+                    $identifier => $this->getTaxonomyLabel($poiType->name, $identifier),
+                ];
+            })
+            ->sort()
+            ->toArray();
+    }
+
+    protected function getTaxonomyLabel($name, ?string $fallback): string
+    {
+        if (is_array($name)) {
+            return $name['it'] ?? $name['en'] ?? (string) $fallback;
+        }
+
+        if (is_string($name) && $name !== '') {
+            return $name;
+        }
+
+        return (string) $fallback;
     }
 
     protected function slug_layout(): array
     {
-        return [
-            Text::make('Title', 'title'),
+        return array_merge($this->config_home_title_layout(), [
             Text::make('Slug', 'slug')
                 ->rules('required')
                 ->resolveUsing(function ($value) {
                     return $value ?: 'project';
                 }),
             Text::make('Image url', 'image_url'), // TODO: fare in modo di usare Media caricando un immagine e restituendo l'url
-        ];
+        ]);
     }
 
     protected function external_url_layout(): array
     {
-        return [
-            Text::make('Title', 'title'),
+        return array_merge($this->config_home_title_layout(), [
             Text::make('Url', 'url')->rules('required'),
             Text::make('Image url', 'image_url'), // TODO: fare in modo di usare Media caricando un immagine e restituendo l'url
-        ];
+        ]);
+    }
+
+    protected function config_home_title_layout(): array
+    {
+        return $this->translatableFields('Title', 'title', required: true);
     }
 
     protected function base_layout(): array
@@ -578,9 +873,9 @@ class App extends Resource
                             $title = $layer->getStringName();
                             if (is_array($title)) {
                                 // Se è un array, prendi prima la versione italiana, poi quella inglese, altrimenti usa l'ID
-                                $title = $title['it'] ?? $title['en'] ?? ('Layer #'.$layer->id);
+                                $title = $title['it'] ?? $title['en'] ?? ('Layer #' . $layer->id);
                             } elseif (is_null($title)) {
-                                $title = 'Layer #'.$layer->id;
+                                $title = 'Layer #' . $layer->id;
                             }
 
                             return [
@@ -599,7 +894,7 @@ class App extends Resource
         ];
     }
 
-    protected function map_tab(): array
+    protected function map_settings_tab(): array
     {
         $selectedTileLayers = is_null($this->model()->tiles) ? [] : json_decode($this->model()->tiles, true);
         $appTiles = new AppTiles;
@@ -640,7 +935,7 @@ class App extends Resource
                 ->hideFromIndex()
                 ->help(__('Turn this option off if you do not want to show POIs by default on the map.')),
             Text::make('POI Data Icon', 'pois_data_icon', function () {
-                return '<div style="width:64px;height:64px;">'.$this->pois_data_icon.'</div>';
+                return '<div style="width:64px;height:64px;">' . $this->pois_data_icon . '</div>';
             })->asHtml()->onlyOnDetail(),
             Textarea::make('POI Data Icon SVG', 'pois_data_icon')
                 ->onlyOnForms()
@@ -649,7 +944,7 @@ class App extends Resource
                 ->hideFromIndex()
                 ->help(__('Turn this option off if you do not want to show all track layers by default on the map')),
             Text::make('Track Data Icon', 'tracks_data_icon', function () {
-                return '<div style="width:64px;height:64px;">'.$this->tracks_data_icon.'</div>';
+                return '<div style="width:64px;height:64px;">' . $this->tracks_data_icon . '</div>';
             })->asHtml()->onlyOnDetail(),
             Textarea::make('Track Data Icon SVG', 'tracks_data_icon')
                 ->onlyOnForms()
@@ -717,7 +1012,7 @@ class App extends Resource
                         }
                         $decoded = json_decode($value);
                         if (! is_array($decoded)) {
-                            $fail('The '.$attribute.' is invalid. Follow the example [9.9456,43.9116,11.3524,45.0186]');
+                            $fail('The ' . $attribute . ' is invalid. Follow the example [9.9456,43.9116,11.3524,45.0186]');
                         }
                     },
                 ])
@@ -729,14 +1024,42 @@ class App extends Resource
                 <p><strong>Advanced map display settings.</strong></p>
                 HTML
             )->asHtml()->hideFromIndex(),
+            Boolean::make(__('Start/End Icons Show'), 'start_end_icons_show')
+                ->default(false)
+                ->hideFromIndex()
+                ->help(__('Displays start and end icons on the map')),
             Number::make(__('start_end_icons_min_zoom'))
                 ->min(10)->max(20)
                 ->hideFromIndex()
                 ->help(__('Set minimum zoom at which start and end icons are shown in general maps (start_end_icons_show must be true)')),
+            Boolean::make(__('Ref on Track Show'), 'ref_on_track_show')
+                ->default(false)
+                ->hideFromIndex()
+                ->help(__('Displays reference labels on tracks')),
             Number::make(__('ref_on_track_min_zoom'))
                 ->min(10)->max(20)
                 ->hideFromIndex()
                 ->help(__('Set minimum zoom at which ref parameter is shown on tracks line in general maps (ref_on_track_show must be true)')),
+            Boolean::make(__('Show Features In Viewport'), 'properties->show_features_in_viewport')
+                ->default(false)
+                ->hideFromIndex()
+                ->help(__('Enable the Features In Viewport on the app')),
+            Number::make(__('Min Zoom Features In Viewport'), 'properties->min_zoom_features_in_viewport')
+                ->min(1)
+                ->max(20)
+                ->default(10)
+                ->hideFromIndex()
+                ->help(__('Minimum zoom level for enabling Features In Viewport')),
+            Number::make(__('Max Zoom Features In Viewport'), 'properties->max_zoom_features_in_viewport')
+                ->min(1)
+                ->max(20)
+                ->default(12)
+                ->hideFromIndex()
+                ->help(__('Maximum zoom level for enabling Features In Viewport')),
+            Boolean::make(__('Show Track Direction Arrow'), 'properties->show_track_direction_arrow')
+                ->default(false)
+                ->hideFromIndex()
+                ->help(__('Enables the track direction arrow in the map.')),
             Number::make(__('alert_poi_radius'))
                 ->default(100)
                 ->hideFromIndex()
