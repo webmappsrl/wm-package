@@ -2,7 +2,7 @@
 
 namespace Wm\WmPackage\Events;
 
-class OrderListReordered
+class OrderListReorderedEvent
 {
     /**
      * @param  class-string  $modelClass

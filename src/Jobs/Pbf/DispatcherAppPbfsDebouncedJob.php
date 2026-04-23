@@ -20,7 +20,7 @@ use Wm\WmPackage\Services\PBFGeneratorService;
  * a +5 minuti (delay impostato da chi dispatcha). I dispatch successivi entro
  * la finestra vengono scartati, cosi' la rigenerazione parte una sola volta.
  */
-class RegenerateAppPbfsDebouncedJob implements ShouldBeUnique, ShouldQueue
+class DispatcherAppPbfsDebouncedJob implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
@@ -45,7 +45,7 @@ class RegenerateAppPbfsDebouncedJob implements ShouldBeUnique, ShouldQueue
     {
         $app = App::find($this->appId);
         if (! $app) {
-            Log::warning('RegenerateAppPbfsDebouncedJob: app non trovata', [
+            Log::warning('DispatcherAppPbfsDebouncedJob: app non trovata', [
                 'app_id' => $this->appId,
             ]);
 
@@ -55,7 +55,7 @@ class RegenerateAppPbfsDebouncedJob implements ShouldBeUnique, ShouldQueue
         try {
             $pbfGeneratorService->generateWholeAppPbfsOptimized($app);
         } catch (Throwable $e) {
-            Log::error('RegenerateAppPbfsDebouncedJob: errore nella rigenerazione PBF', [
+            Log::error('DispatcherAppPbfsDebouncedJob: errore nella rigenerazione PBF', [
                 'app_id' => $this->appId,
                 'error' => $e->getMessage(),
             ]);

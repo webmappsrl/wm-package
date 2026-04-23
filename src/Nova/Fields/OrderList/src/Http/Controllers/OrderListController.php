@@ -9,7 +9,7 @@ use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
-use Wm\WmPackage\Events\OrderListReordered;
+use Wm\WmPackage\Events\OrderListReorderedEvent;
 use Wm\WmPackage\Nova\Fields\OrderList\src\OrderList;
 
 class OrderListController extends Controller
@@ -81,7 +81,7 @@ class OrderListController extends Controller
             }
         });
 
-        Event::dispatch(new OrderListReordered(
+        Event::dispatch(new OrderListReorderedEvent(
             modelClass: $modelClass,
             scopeColumn: $scopeColumn,
             scopeValue: $scopeValue,

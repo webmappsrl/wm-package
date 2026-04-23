@@ -55,7 +55,7 @@ class TrackColor extends Field
         $inheritedHex = $resource->getInheritedTrackColorHex();
         $effectiveHex = $storedHex ?? $inheritedHex;
 
-        $layers = $resource->getTrackLayersOrderedByRankDesc();
+        $layers = $resource->layersOrderedByRankDesc();
         $layer = $layers->first();
         $layerInfo = $layer ? [
             'id' => $layer->id,
@@ -157,12 +157,6 @@ class TrackColor extends Field
             $raw = Arr::get($container, $path);
         }
 
-        if (! is_string($raw) || $raw === '') {
-            return null;
-        }
-
         return $this->normalizeHexColor($raw);
     }
-
-    // normalizeHexColor estratto nel trait NormalizesHexColor
 }

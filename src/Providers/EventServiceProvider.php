@@ -8,7 +8,7 @@ use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 use Illuminate\Queue\Events\JobFailed;
 use Spatie\Backup\Events\BackupWasSuccessful;
-use Wm\WmPackage\Events\OrderListReordered;
+use Wm\WmPackage\Events\OrderListReorderedEvent;
 use Wm\WmPackage\Listeners\BackupCompletedListener;
 use Wm\WmPackage\Listeners\FailedJobsListener;
 use Wm\WmPackage\Listeners\OrderListReorderedListener;
@@ -34,7 +34,7 @@ class EventServiceProvider extends ServiceProvider
         JobFailed::class => [
             FailedJobsListener::class,
         ],
-        OrderListReordered::class => [
+        OrderListReorderedEvent::class => [
             OrderListReorderedListener::class,
         ],
     ];

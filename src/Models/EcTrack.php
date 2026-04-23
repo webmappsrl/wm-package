@@ -199,7 +199,7 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
     /**
      * @return Collection<int, Layer>
      */
-    public function getTrackLayersOrderedByRankDesc(): Collection
+    public function layersOrderedByRankDesc(): Collection
     {
         $query = $this->layers()
             ->orderBy('rank')
@@ -211,7 +211,7 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
     public function getInheritedTrackColorHex(): string
     {
         /** @var \Illuminate\Support\Collection<int, Layer> $layers */
-        $layers = $this->getTrackLayersOrderedByRankDesc();
+        $layers = $this->layersOrderedByRankDesc();
 
         /** @var Layer|null $layer */
         $layer = $this->getPreferredLayerForInheritedColor($layers);
@@ -229,15 +229,13 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
     {
         $properties = is_array($this->properties) ? $this->properties : [];
 
-        $storedHex = isset($properties['color']) && is_string($properties['color']) && $properties['color'] !== ''
-            ? $this->normalizeHexColor($properties['color'])
-            : null;
+        $storedHex = $this->normalizeHexColor($properties['color'] ?? null);
 
         $inheritedHex = $this->getInheritedTrackColorHex();
         $effectiveHex = $storedHex ?? $inheritedHex;
 
         /** @var \Illuminate\Support\Collection<int, Layer> $layers */
-        $layers = $this->getTrackLayersOrderedByRankDesc();
+        $layers = $this->layersOrderedByRankDesc();
         /** @var Layer|null $layer */
         $layer = $this->getPreferredLayerForInheritedColor($layers);
 

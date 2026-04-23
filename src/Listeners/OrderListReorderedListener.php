@@ -2,13 +2,13 @@
 
 namespace Wm\WmPackage\Listeners;
 
-use Wm\WmPackage\Events\OrderListReordered;
-use Wm\WmPackage\Jobs\Pbf\RegenerateAppPbfsDebouncedJob;
+use Wm\WmPackage\Events\OrderListReorderedEvent;
+use Wm\WmPackage\Jobs\Pbf\DispatcherAppPbfsDebouncedJob;
 use Wm\WmPackage\Models\Layer;
 
 class OrderListReorderedListener
 {
-    public function handle(OrderListReordered $event): void
+    public function handle(OrderListReorderedEvent $event): void
     {
         if (
             $event->modelClass === Layer::class
@@ -16,7 +16,7 @@ class OrderListReorderedListener
             && $event->scopeColumn === 'app_id'
             && is_numeric($event->scopeValue)
         ) {
-            RegenerateAppPbfsDebouncedJob::dispatch((int) $event->scopeValue)
+            DispatcherAppPbfsDebouncedJob::dispatch((int) $event->scopeValue)
                 ->delay(now()->addMinutes(5));
         }
     }

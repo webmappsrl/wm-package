@@ -139,15 +139,7 @@ class Layer extends Polygon
             $properties = [];
         }
 
-        $color = $properties['color'] ?? null;
-
-        if (! is_string($color) || $color === '') {
-            return null;
-        }
-
-        $normalized = $this->normalizeHexColor($color);
-
-        return $normalized;
+        return $this->normalizeHexColor($properties['color'] ?? null);
     }
 
     public function isAutoTrackMode(): bool

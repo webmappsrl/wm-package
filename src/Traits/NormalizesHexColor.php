@@ -4,12 +4,16 @@ namespace Wm\WmPackage\Traits;
 
 trait NormalizesHexColor
 {
-    protected function normalizeHexColor(string $hex): string
+    protected function normalizeHexColor(mixed $hex): ?string
     {
+        if (! is_string($hex)) {
+            return null;
+        }
+
         $hex = trim($hex);
 
         if ($hex === '') {
-            return $hex;
+            return null;
         }
 
         if (! str_starts_with($hex, '#')) {
