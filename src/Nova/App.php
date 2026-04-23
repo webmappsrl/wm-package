@@ -766,14 +766,14 @@ class App extends Resource
     protected function getTaxonomyLabel($name, ?string $fallback): string
     {
         if (is_array($name)) {
-            return $name['it'] ?? $name['en'] ?? $fallback;
+            return $name['it'] ?? $name['en'] ?? (string) $fallback;
         }
 
         if (is_string($name) && $name !== '') {
             return $name;
         }
 
-        return $fallback;
+        return (string) $fallback;
     }
 
     protected function slug_layout(): array
