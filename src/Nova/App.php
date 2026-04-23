@@ -81,16 +81,14 @@ class App extends Resource
             Text::make('Name')->sortable(),
             StoreVersionField::make(),
 
-            Tab::group('App', [
+            Tab::group('Configuration', [
+                Tab::make('frontend', $this->app_tab()),
+                Tab::make('Release', $this->app_release_data_tab()),
                 Tab::make('home', $this->home_tab()),
-                Tab::make('webapp', $this->webapp_tab()),
-                Tab::make('mobile', $this->mobile_tab()),
                 Tab::make('translations', $this->translations_tab()),
-                Tab::make('app', $this->app_tab()),
                 Tab::make('map', $this->map_tab()),
                 Tab::make('pois', $this->pois_tab()),
                 Tab::make('theme', $this->theme_tab()),
-                Tab::make('release_data', $this->app_release_data_tab()),
                 Tab::make('pages', $this->pages_tab()),
                 Tab::make('acquisition_form', $this->acquisition_form_tab()),
                 Tab::make('filters', $this->filters_tab()),
@@ -147,13 +145,30 @@ class App extends Resource
     protected function webapp_tab(): array
     {
         return [
-            //
+            Heading::make(
+                <<<'HTML'
+                <h2><strong>WEBAPP</strong></h2>
+                HTML
+            )->asHtml()->hideFromIndex(),
+            Boolean::make(__('Show Auth at startup'), 'webapp_auth_show_at_startup')
+                ->default(false)
+                ->hideFromIndex()
+                ->help(__('Shows the authentication and registration page for users'))
         ];
     }
 
     protected function mobile_tab(): array
     {
         return [
+            Heading::make(
+                <<<'HTML'
+                <h2><strong>MOBILE</strong></h2>
+                HTML
+            )->asHtml()->hideFromIndex(),
+            Boolean::make(__('Show Auth at startup'), 'auth_show_at_startup')
+            ->default(false)
+            ->hideFromIndex()
+            ->help(__('Shows the authentication and registration page for users')),
             Boolean::make(__('Geolocation Record Enable'), 'geolocation_record_enable')
                 ->default(false)
                 ->hideFromIndex()
@@ -254,14 +269,6 @@ class App extends Resource
     protected function app_tab(): array
     {
         return [
-            Boolean::make(__('Show Auth at startup'), 'auth_show_at_startup')
-                ->default(false)
-                ->hideFromIndex()
-                ->help(__('Shows the authentication and registration page for users')),
-            Boolean::make(__('Show Auth at startup'), 'webapp_auth_show_at_startup')
-                ->default(false)
-                ->hideFromIndex()
-                ->help(__('Shows the authentication and registration page for users')),
             Boolean::make(__('Show Download Tracks'), 'download_track_enable')
                 ->default(false)
                 ->hideFromIndex()
@@ -270,6 +277,9 @@ class App extends Resource
                 ->default(false)
                 ->hideFromIndex()
                 ->help(__('Enable the Travel Mode feature on the app')),
+
+                Tab::make('FEwebapp', $this->webapp_tab()),
+                Tab::make('FE: mobile', $this->mobile_tab()),
         ];
     }
 
