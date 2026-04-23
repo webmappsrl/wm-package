@@ -48,13 +48,19 @@ class EcTrack extends AbstractEcResource
     {
         return [
             ...$this->fieldsTrait($request),
-            BelongsToMany::make('EcPois', 'ecPois', EcPoi::class)
-                ->searchable(),
-            MorphToMany::make('Layers', 'layers', Layer::class),
-            MorphToMany::make('Activities', 'taxonomyActivities', TaxonomyActivity::class)->display('name'),
             Tab::group(__('Details'), [
                 Tab::make(__('Info'), $this->getInfoTabFields()),
+                Tab::make(__('DEM'), $this->getDemTabFields()),
             ]),
+            BelongsToMany::make('EcPois', 'ecPois', EcPoi::class)
+                ->searchable()
+                ->collapsedByDefault(),
+            MorphToMany::make('Layers', 'layers', Layer::class)
+                ->collapsedByDefault(),
+            MorphToMany::make('Activities', 'taxonomyActivities', TaxonomyActivity::class)
+                ->display('name')
+                ->collapsedByDefault(),
+
         ];
     }
 
