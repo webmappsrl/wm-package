@@ -5,10 +5,12 @@ namespace Wm\WmPackage\Models;
 use App\Models\User;
 use Exception;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Spatie\Translatable\HasTranslations;
+use Wm\WmPackage\Jobs\FeatureCollection\GenerateFeatureCollectionJob;
 use Wm\WmPackage\Models\Abstracts\Polygon;
 use Wm\WmPackage\Nova\Fields\FeatureCollectionMap\src\FeatureCollectionMapTrait;
 use Wm\WmPackage\Observers\LayerObserver;
@@ -34,7 +36,7 @@ class Layer extends Polygon
                 ->where('mode', 'generated')
                 ->where('enabled', true)
                 ->each(function ($fc) {
-                    \Wm\WmPackage\Jobs\FeatureCollection\GenerateFeatureCollectionJob::dispatch($fc->id);
+                    GenerateFeatureCollectionJob::dispatch($fc->id);
                 });
         });
 
@@ -89,9 +91,9 @@ class Layer extends Polygon
         return $this->belongsToMany(App::class, 'app_filter_layers');
     }
 
-    public function featureCollections(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    public function featureCollections(): BelongsToMany
     {
-        return $this->belongsToMany(\Wm\WmPackage\Models\FeatureCollection::class, 'feature_collection_layer');
+        return $this->belongsToMany(FeatureCollection::class, 'feature_collection_layer');
     }
 
     /**
@@ -334,7 +336,7 @@ class Layer extends Polygon
 
         // Fallback in lettura: in auto, ricostruisce i trackIds da taxonomy activities/wheres
         // quando il pivot layerables e' vuoto o non ancora riallineato.
-        if ($this->isAutoTrackMode() && ( ! empty($taxonomyIds) || ! empty($whereIds)) && empty($trackIds)) {
+        if ($this->isAutoTrackMode() && (! empty($taxonomyIds) || ! empty($whereIds)) && empty($trackIds)) {
             $ecTrackModelClass = config('wm-package.ec_track_model', 'Wm\WmPackage\Models\EcTrack');
             $appIds = array_values(array_unique(array_filter([
                 $this->app_id,
@@ -435,5 +437,4 @@ class Layer extends Polygon
             'features' => $this->getAdditionalFeaturesForMap(),
         ];
     }
-
 }

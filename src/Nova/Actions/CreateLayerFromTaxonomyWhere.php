@@ -52,8 +52,8 @@ class CreateLayerFromTaxonomyWhere extends Action
         foreach ($models as $taxonomyWhere) {
             $layerName = $this->resolveLayerName($taxonomyWhere);
             $layer = Layer::create([
-                'name'    => $layerName,
-                'app_id'  => $appId,
+                'name' => $layerName,
+                'app_id' => $appId,
                 'user_id' => $app->user_id,
             ]);
 

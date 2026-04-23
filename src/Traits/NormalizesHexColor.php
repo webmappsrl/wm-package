@@ -41,4 +41,3 @@ trait NormalizesHexColor
         return $hex;
     }
 }
-

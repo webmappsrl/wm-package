@@ -313,7 +313,7 @@ class LayerService extends BaseService
         }
 
         $layerTaxonomyIds = $layer->taxonomyActivities->pluck('id')->toArray();
-        $layerWhereIds    = $layer->taxonomyWheres->pluck('id')->filter()->toArray();
+        $layerWhereIds = $layer->taxonomyWheres->pluck('id')->filter()->toArray();
 
         $layerAppIds = [
             $layer->app_id,
@@ -327,8 +327,8 @@ class LayerService extends BaseService
         }
 
         $ecTrackModelClass = config('wm-package.ec_track_model', 'App\Models\EcTrack');
-        $trackTable        = (new $ecTrackModelClass)->getTable();
-        $trackMorphTypes   = array_values(array_unique([
+        $trackTable = (new $ecTrackModelClass)->getTable();
+        $trackMorphTypes = array_values(array_unique([
             $ecTrackModelClass,
             EcTrack::class,
             'App\\Models\\EcTrack',
@@ -364,8 +364,8 @@ class LayerService extends BaseService
 
         $trackIds = $query->distinct()->pluck("{$trackTable}.id")->toArray();
 
-        $now          = now();
-        $syncPayload  = [];
+        $now = now();
+        $syncPayload = [];
         foreach ($trackIds as $trackId) {
             $syncPayload[$trackId] = [
                 'created_at' => $now,
@@ -376,10 +376,10 @@ class LayerService extends BaseService
         $layer->ecTracks()->sync($syncPayload);
 
         Log::info('Track sincronizzate automaticamente al layer', [
-            'layer_id'     => $layer->id,
-            'track_count'  => count($trackIds),
+            'layer_id' => $layer->id,
+            'track_count' => count($trackIds),
             'taxonomy_ids' => $layerTaxonomyIds,
-            'where_ids'    => $layerWhereIds,
+            'where_ids' => $layerWhereIds,
         ]);
     }
 }

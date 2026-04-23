@@ -4,9 +4,9 @@ namespace Wm\WmPackage\Observers;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
+use Wm\WmPackage\Models\Abstracts\GeometryModel;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\Media;
-use Wm\WmPackage\Models\Abstracts\GeometryModel;
 use Wm\WmPackage\Services\GeometryComputationService;
 
 class MediaObserver extends AbstractAuthorableObserver

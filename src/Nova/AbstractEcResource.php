@@ -2,19 +2,20 @@
 
 namespace Wm\WmPackage\Nova;
 
+use Carbon\Carbon;
 use Ebess\AdvancedNovaMediaLibrary\Fields\Images;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
 use Laravel\Nova\Fields\Boolean;
-use Laravel\Nova\Fields\Field;
 use Laravel\Nova\Fields\DateTime;
+use Laravel\Nova\Fields\Field;
 use Laravel\Nova\Fields\File;
 use Laravel\Nova\Fields\Select;
 use Laravel\Nova\Fields\Textarea;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Tabs\Tab;
-use Carbon\Carbon;
+use Laravel\Nova\Tabs\Tabs;
 use Wm\WmPackage\Nova\Filters\FeaturesByLayerFilter;
 use Wm\WmPackage\Services\StorageService;
 
@@ -58,7 +59,7 @@ abstract class AbstractEcResource extends AbstractGeometryResource
      * The resulting API/GeoJSON still exposes them as flat keys in `properties`
      * (same external shape as GeoHub).
      *
-     * @return array<int, \Laravel\Nova\Fields\Field>
+     * @return array<int, Field>
      */
     protected function getAccessibilityTabFields(): array
     {
@@ -165,6 +166,7 @@ abstract class AbstractEcResource extends AbstractGeometryResource
         return Boolean::make($name, $key)
             ->resolveUsing(function ($value, $resource) use ($key) {
                 $raw = data_get($resource->properties ?? [], $key);
+
                 return $raw ? true : false;
             })
             ->fillUsing(function ($request, $model, $attribute, $requestAttribute) use ($key) {
@@ -188,8 +190,8 @@ abstract class AbstractEcResource extends AbstractGeometryResource
     /**
      * Shared "Details" tabs builder to avoid duplicating tabs across EC resources.
      *
-     * @param  array<int, \Laravel\Nova\Fields\Field>  $infoFields
-     * @return array<int, \Laravel\Nova\Fields\Field|\Laravel\Nova\Tabs\Tabs>
+     * @param  array<int, Field>  $infoFields
+     * @return array<int, Field|Tabs>
      */
     protected function makeDetailsTabs(array $infoFields): array
     {

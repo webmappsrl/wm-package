@@ -28,6 +28,7 @@ use Wm\WmPackage\Commands\WmPackageCommand;
 use Wm\WmPackage\Commands\WmRestoreDbCommand;
 use Wm\WmPackage\ElasticSearch\HitsIteratorAggregate as ElasticSearchHitsIteratorAggregate;
 use Wm\WmPackage\Jobs\Import\ImportEcMediaJob;
+use Wm\WmPackage\Nova\Cards\ApiLinksCard\CardServiceProvider;
 use Wm\WmPackage\Nova\Fields\IconSelect\FieldServiceProvider;
 use Wm\WmPackage\Providers\EventServiceProvider;
 use Wm\WmPackage\Providers\ScheduleServiceProvider;
@@ -59,7 +60,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
         $this->app->register(\Wm\WmPackage\Nova\Fields\FeatureCollectionGrid\FieldServiceProvider::class);
         $this->app->register(\Wm\WmPackage\Nova\Fields\OrderList\FieldServiceProvider::class);
         $this->app->register(\Wm\WmPackage\Nova\Fields\TrackColor\FieldServiceProvider::class);
-        $this->app->register(\Wm\WmPackage\Nova\Cards\ApiLinksCard\CardServiceProvider::class);
+        $this->app->register(CardServiceProvider::class);
     }
 
     public static function getBasePath(): string

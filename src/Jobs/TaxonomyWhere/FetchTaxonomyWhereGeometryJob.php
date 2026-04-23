@@ -17,6 +17,7 @@ class FetchTaxonomyWhereGeometryJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries = 3;
+
     public int $backoff = 60;
 
     public function __construct(public int $taxonomyWhereId) {}
@@ -31,6 +32,7 @@ class FetchTaxonomyWhereGeometryJob implements ShouldQueue
             Log::warning('TaxonomyWhere non ha osmfeatures_id, skip geometry fetch', [
                 'taxonomy_where_id' => $this->taxonomyWhereId,
             ]);
+
             return;
         }
 
@@ -39,8 +41,9 @@ class FetchTaxonomyWhereGeometryJob implements ShouldQueue
         if (empty($detail['geometry'])) {
             Log::warning('TaxonomyWhere geometry not available from OSMFeatures', [
                 'taxonomy_where_id' => $this->taxonomyWhereId,
-                'osmfeatures_id'    => $osmfeaturesId,
+                'osmfeatures_id' => $osmfeaturesId,
             ]);
+
             return;
         }
 
@@ -54,7 +57,7 @@ class FetchTaxonomyWhereGeometryJob implements ShouldQueue
     {
         Log::error('FetchTaxonomyWhereGeometryJob failed after all retries', [
             'taxonomy_where_id' => $this->taxonomyWhereId,
-            'error'             => $e->getMessage(),
+            'error' => $e->getMessage(),
         ]);
     }
 }

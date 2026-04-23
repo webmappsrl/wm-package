@@ -21,7 +21,7 @@ class AddLayersToConfigHomeAction extends Action
 
     public function handle(ActionFields $fields, Collection $models): mixed
     {
-        $added   = 0;
+        $added = 0;
         $skipped = 0;
 
         // Raggruppa i layer per app per fare un solo UPDATE per app
@@ -31,10 +31,11 @@ class AddLayersToConfigHomeAction extends Action
             $app = $layers->first()->appOwner;
             if (! $app) {
                 $skipped += $layers->count();
+
                 continue;
             }
 
-            $raw  = $app->getRawOriginal('config_home');
+            $raw = $app->getRawOriginal('config_home');
             $data = ! empty($raw) ? json_decode($raw, true) : [];
             $home = $data['HOME'] ?? [];
 
@@ -48,14 +49,15 @@ class AddLayersToConfigHomeAction extends Action
             foreach ($layers as $layer) {
                 if (in_array($layer->id, $presentIds, true)) {
                     $skipped++;
+
                     continue;
                 }
 
-                $title  = $layer->getStringName();
+                $title = $layer->getStringName();
                 $home[] = [
                     'box_type' => 'layer',
-                    'layer'    => $layer->id,
-                    'title'    => ! empty($title) ? $title : 'Layer #' . $layer->id,
+                    'layer' => $layer->id,
+                    'title' => ! empty($title) ? $title : 'Layer #'.$layer->id,
                 ];
                 $presentIds[] = $layer->id;
                 $added++;

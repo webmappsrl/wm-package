@@ -3,6 +3,7 @@
 namespace Wm\WmPackage\Nova\Flexible\ConfigHome;
 
 use Illuminate\Support\Facades\Config;
+use Laravel\Nova\Fields\Field;
 use Laravel\Nova\Fields\Repeater\Repeatable;
 use Laravel\Nova\Fields\Select;
 use Laravel\Nova\Fields\Text;
@@ -68,7 +69,7 @@ class HorizontalScrollItemRepeatable extends Repeatable
     }
 
     /**
-     * @return array<int, \Laravel\Nova\Fields\Field>
+     * @return array<int, Field>
      */
     public function fields(NovaRequest $request): array
     {

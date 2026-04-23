@@ -25,7 +25,7 @@ class TaxonomyWhereHasGeometryFilter extends Filter
     {
         return [
             __('Presente') => 'yes',
-            __('Assente')  => 'no',
+            __('Assente') => 'no',
         ];
     }
 }

@@ -7,6 +7,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Collection;
 use Laravel\Nova\Actions\Action;
 use Laravel\Nova\Fields\ActionFields;
+use Laravel\Nova\Http\Requests\NovaRequest;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Services\GeometryComputationService;
 
@@ -29,7 +30,7 @@ class SyncTracksTaxonomyWhereAction extends Action
         return Action::message("taxonomy_where aggiornata su {$count} tracks.");
     }
 
-    public function fields(\Laravel\Nova\Http\Requests\NovaRequest $request): array
+    public function fields(NovaRequest $request): array
     {
         return [];
     }

@@ -1,11 +1,12 @@
 <?php
 
+use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Tests\TestCase;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\FeatureCollection;
 use Wm\WmPackage\Services\Models\App\AppConfigService;
-use Illuminate\Foundation\Testing\DatabaseTransactions;
 
-uses(Tests\TestCase::class, DatabaseTransactions::class);
+uses(TestCase::class, DatabaseTransactions::class);
 
 it('includes enabled feature collections in MAP.controls.overlays ordered by config_overlays', function () {
     $app = App::factory()->createQuietly([

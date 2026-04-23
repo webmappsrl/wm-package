@@ -5,9 +5,9 @@ namespace Wm\WmPackage\Observers;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Wm\WmPackage\Jobs\BuildAppPoisGeojsonJob;
 use Wm\WmPackage\Models\EcPoi;
-use Wm\WmPackage\Services\StorageService;
 use Wm\WmPackage\Services\Models\EcPoiService;
 use Wm\WmPackage\Services\Models\EcTrackService;
+use Wm\WmPackage\Services\StorageService;
 
 class EcPoiObserver extends AbstractEcObserver
 {

@@ -2,6 +2,7 @@
 
 namespace Wm\WmPackage\Nova;
 
+use Kongulov\NovaTabTranslatable\NovaTabTranslatable;
 use Laravel\Nova\Actions\Action;
 use Laravel\Nova\Card;
 use Laravel\Nova\Fields\Code;
@@ -13,7 +14,6 @@ use Laravel\Nova\Filters\Filter;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Lenses\Lens;
 use Laravel\Nova\Resource;
-use Kongulov\NovaTabTranslatable\NovaTabTranslatable;
 use Wm\WmPackage\Nova\Fields\IconSelect\IconSelect;
 
 abstract class AbstractTaxonomyResource extends Resource
@@ -96,4 +96,3 @@ abstract class AbstractTaxonomyResource extends Resource
         return [];
     }
 }
-

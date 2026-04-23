@@ -3,6 +3,7 @@
 namespace Wm\WmPackage\Models;
 
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
+use Illuminate\Support\Carbon;
 use Wm\WmPackage\Models\Abstracts\Taxonomy;
 use Wm\WmPackage\Nova\Fields\FeatureCollectionMap\src\FeatureCollectionMapTrait;
 
@@ -11,8 +12,8 @@ use Wm\WmPackage\Nova\Fields\FeatureCollectionMap\src\FeatureCollectionMapTrait;
  * @property string|null $name
  * @property string|null $geometry
  * @property array|null $properties
- * @property \Illuminate\Support\Carbon|null $created_at
- * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
  */
 class TaxonomyWhere extends Taxonomy
 {
@@ -28,6 +29,7 @@ class TaxonomyWhere extends Taxonomy
     public function getAdminLevel(): ?int
     {
         $v = $this->properties['admin_level'] ?? null;
+
         return $v !== null ? (int) $v : null;
     }
 

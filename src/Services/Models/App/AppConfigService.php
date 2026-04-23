@@ -11,8 +11,8 @@ use Illuminate\Support\Str;
 use Wm\WmPackage\Enums\AppTiles;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcTrack;
+use Wm\WmPackage\Models\FeatureCollection;
 use Wm\WmPackage\Models\Layer;
-use Wm\WmPackage\Models\OverlayLayer;
 use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Services\Models\MediaService;
 use Wm\WmPackage\Services\StorageService;
@@ -438,7 +438,7 @@ class AppConfigService extends AppBaseService
                 ->filter()
                 ->all();
 
-            $fcs = \Wm\WmPackage\Models\FeatureCollection::whereIn('id', $fcIds)
+            $fcs = FeatureCollection::whereIn('id', $fcIds)
                 ->where('app_id', $this->app->id)
                 ->where('enabled', true)
                 ->get()
@@ -452,6 +452,7 @@ class AppConfigService extends AppBaseService
                         'label' => $item['label'] ?? [],
                         'type' => 'title',
                     ];
+
                     continue;
                 }
 

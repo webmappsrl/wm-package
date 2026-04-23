@@ -2,8 +2,8 @@
 
 namespace Wm\WmPackage\Nova\Fields\OrderList\src;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
@@ -217,4 +217,3 @@ class OrderList extends Field
         return $decoded;
     }
 }
-

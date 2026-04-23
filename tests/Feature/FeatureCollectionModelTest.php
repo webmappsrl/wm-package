@@ -1,11 +1,12 @@
 <?php
 
+use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Tests\TestCase;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\FeatureCollection;
 use Wm\WmPackage\Models\Layer;
-use Illuminate\Foundation\Testing\DatabaseTransactions;
 
-uses(Tests\TestCase::class, DatabaseTransactions::class);
+uses(TestCase::class, DatabaseTransactions::class);
 
 it('belongs to an app', function () {
     $app = App::factory()->createQuietly();

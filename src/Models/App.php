@@ -110,9 +110,9 @@ class App extends Model implements HasMedia
         return $this->hasMany(EcPoi::class);
     }
 
-    public function featureCollections(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function featureCollections(): HasMany
     {
-        return $this->hasMany(\Wm\WmPackage\Models\FeatureCollection::class);
+        return $this->hasMany(FeatureCollection::class);
     }
 
     public function poiAcquisitionForm($formId = null)

@@ -92,4 +92,3 @@ class OrderListController extends Controller
         return response()->json(['ok' => true]);
     }
 }
-

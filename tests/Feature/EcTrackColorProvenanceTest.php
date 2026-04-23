@@ -95,4 +95,3 @@ it('marks color as custom when properties color differs from inherited', functio
         ->and($provenance['inherited_hex'])->toBe('#FF0000')
         ->and($provenance['effective_hex'])->toBe('#00FF00');
 });
-

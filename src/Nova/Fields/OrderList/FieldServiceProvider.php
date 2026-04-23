@@ -26,4 +26,3 @@ class FieldServiceProvider extends ServiceProvider
             ->group(__DIR__.'/Routes/api.php');
     }
 }
-

@@ -14,6 +14,7 @@ use Wm\WmPackage\Nova\Traits\HasFlexibleTranslatableFields;
 class ConfigHomeResolver implements ResolverInterface
 {
     use HasFlexibleTranslatableFields;
+
     public function get($resource, $attribute, $layouts): Collection
     {
         $value = is_object($resource) && method_exists($resource, 'getRawOriginal')
@@ -85,8 +86,8 @@ class ConfigHomeResolver implements ResolverInterface
         if (($item['box_type'] ?? null) === 'horizontal_scroll') {
             return match ($item['item_type'] ?? null) {
                 'activities' => 'horizontal_scroll_activities',
-                'poi_types'  => 'horizontal_scroll_poi_types',
-                default      => 'horizontal_scroll',
+                'poi_types' => 'horizontal_scroll_poi_types',
+                default => 'horizontal_scroll',
             };
         }
 
@@ -95,7 +96,7 @@ class ConfigHomeResolver implements ResolverInterface
 
     private function getAttributesForItem(array $item): array
     {
-        $attributes = array_filter($item, fn($key) => $key !== 'box_type', ARRAY_FILTER_USE_KEY);
+        $attributes = array_filter($item, fn ($key) => $key !== 'box_type', ARRAY_FILTER_USE_KEY);
 
         if (($item['box_type'] ?? null) === 'horizontal_scroll') {
             $attributes['items'] = $this->toRepeaterItems(
@@ -115,10 +116,10 @@ class ConfigHomeResolver implements ResolverInterface
     private function buildElement($resource, string $attribute, Layout $layout, int $groupIndex): array
     {
         return match ($layout->name()) {
-            'layer'                        => $this->buildLayerElement($layout),
+            'layer' => $this->buildLayerElement($layout),
             'horizontal_scroll_activities' => $this->buildHorizontalScrollElement($resource, $attribute, $layout, $groupIndex, 'activities'),
-            'horizontal_scroll_poi_types'  => $this->buildHorizontalScrollElement($resource, $attribute, $layout, $groupIndex, 'poi_types'),
-            default                        => $this->buildGenericElement($layout),
+            'horizontal_scroll_poi_types' => $this->buildHorizontalScrollElement($resource, $attribute, $layout, $groupIndex, 'poi_types'),
+            default => $this->buildGenericElement($layout),
         };
     }
 
@@ -200,11 +201,11 @@ class ConfigHomeResolver implements ResolverInterface
             }
 
             return [
-                'type'   => HorizontalScrollItemRepeatable::key(),
+                'type' => HorizontalScrollItemRepeatable::key(),
                 'fields' => [
-                    'res'       => $item['res'] ?? null,
+                    'res' => $item['res'] ?? null,
                     'image_url' => $item['image_url'] ?? null,
-                    'title'     => is_array($item['title'] ?? null) ? $item['title'] : [],
+                    'title' => is_array($item['title'] ?? null) ? $item['title'] : [],
                 ],
             ];
         }, $items));
@@ -241,8 +242,8 @@ class ConfigHomeResolver implements ResolverInterface
             }
 
             $normalized[] = [
-                'title'     => $title,
-                'res'       => $taxonomyItem['res'],
+                'title' => $title,
+                'res' => $taxonomyItem['res'],
                 'image_url' => is_string($fields['image_url'] ?? '') ? ($fields['image_url'] ?? '') : '',
             ];
         }
@@ -269,9 +270,9 @@ class ConfigHomeResolver implements ResolverInterface
 
             if (! empty($res)) {
                 return [
-                    'res'       => $res,
+                    'res' => $res,
                     'image_url' => is_string($candidate['image_url'] ?? '') ? ($candidate['image_url'] ?? '') : '',
-                    'title'     => is_array($candidate['title'] ?? null) ? $candidate['title'] : [],
+                    'title' => is_array($candidate['title'] ?? null) ? $candidate['title'] : [],
                 ];
             }
         }
@@ -353,22 +354,22 @@ class ConfigHomeResolver implements ResolverInterface
     private function finalizeHorizontalScrollElement(array $element): array
     {
         $title = is_array($element['title'] ?? null)
-            ? array_filter($element['title'], static fn($v) => ! is_null($v) && $v !== '')
+            ? array_filter($element['title'], static fn ($v) => ! is_null($v) && $v !== '')
             : [];
 
         $items = array_values(array_map(function ($row) {
             if (is_array($row) && is_array($row['title'] ?? null)) {
-                $row['title'] = array_filter($row['title'], static fn($v) => ! is_null($v) && $v !== '');
+                $row['title'] = array_filter($row['title'], static fn ($v) => ! is_null($v) && $v !== '');
             }
 
             return $row;
         }, is_array($element['items'] ?? null) ? $element['items'] : []));
 
         return [
-            'box_type'  => 'horizontal_scroll',
+            'box_type' => 'horizontal_scroll',
             'item_type' => $element['item_type'] ?? null,
-            'title'     => $title,
-            'items'     => $items,
+            'title' => $title,
+            'items' => $items,
         ];
     }
 

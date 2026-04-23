@@ -2,8 +2,8 @@
 
 namespace Wm\WmPackage\Nova;
 
+use Kongulov\NovaTabTranslatable\NovaTabTranslatable;
 use Laravel\Nova\Fields\BelongsTo;
-use Wm\WmPackage\Nova\Fields\FeatureCollectionMap\src\FeatureCollectionMap;
 use Laravel\Nova\Fields\BelongsToMany;
 use Laravel\Nova\Fields\Boolean;
 use Laravel\Nova\Fields\Code;
@@ -15,9 +15,9 @@ use Laravel\Nova\Fields\Textarea;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Panel;
 use Laravel\Nova\Resource;
-use Kongulov\NovaTabTranslatable\NovaTabTranslatable;
 use Wm\WmPackage\Nova\Actions\FeatureCollection\GenerateFeatureCollectionAction;
 use Wm\WmPackage\Nova\Cards\ApiLinksCard\FeatureCollectionApiLinksCard;
+use Wm\WmPackage\Nova\Fields\FeatureCollectionMap\src\FeatureCollectionMap;
 
 class FeatureCollection extends Resource
 {

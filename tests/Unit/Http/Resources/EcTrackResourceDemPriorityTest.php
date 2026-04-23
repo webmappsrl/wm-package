@@ -13,7 +13,8 @@ class EcTrackResourceDemPriorityTest extends TestCase
 {
     private function makeResource(): object
     {
-        return new class (null) extends EcTrackResource {
+        return new class(null) extends EcTrackResource
+        {
             public function publicApplyDemFields(array $properties, object $model): array
             {
                 return $this->applyDemFields($properties, $model);
@@ -23,7 +24,8 @@ class EcTrackResourceDemPriorityTest extends TestCase
 
     private function makeModel(?array $properties, ?int $osmid = null): object
     {
-        return new class ($properties, $osmid) {
+        return new class($properties, $osmid)
+        {
             public function __construct(
                 public readonly ?array $properties,
                 public readonly ?int $osmid,

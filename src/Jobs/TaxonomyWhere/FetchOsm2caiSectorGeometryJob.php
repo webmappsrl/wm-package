@@ -18,6 +18,7 @@ class FetchOsm2caiSectorGeometryJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries = 3;
+
     public int $backoff = 60;
 
     public function __construct(public int $taxonomyWhereId) {}
@@ -25,7 +26,7 @@ class FetchOsm2caiSectorGeometryJob implements ShouldQueue
     public function handle(Osm2caiClient $client): void
     {
         $taxonomyWhere = TaxonomyWhere::findOrFail($this->taxonomyWhereId);
-        $osm2caiId     = $taxonomyWhere->properties['osm2cai_id'] ?? null;
+        $osm2caiId = $taxonomyWhere->properties['osm2cai_id'] ?? null;
 
         if (empty($osm2caiId)) {
             Log::warning('TaxonomyWhere non ha osm2cai_id, skip geometry fetch', [
@@ -40,8 +41,8 @@ class FetchOsm2caiSectorGeometryJob implements ShouldQueue
         } catch (Exception $e) {
             Log::warning('FetchOsm2caiSectorGeometryJob: detail non disponibile', [
                 'taxonomy_where_id' => $this->taxonomyWhereId,
-                'osm2cai_id'        => $osm2caiId,
-                'error'             => $e->getMessage(),
+                'osm2cai_id' => $osm2caiId,
+                'error' => $e->getMessage(),
             ]);
 
             return;
@@ -50,7 +51,7 @@ class FetchOsm2caiSectorGeometryJob implements ShouldQueue
         if (empty($detail['geometry'])) {
             Log::warning('FetchOsm2caiSectorGeometryJob: geometry vuota', [
                 'taxonomy_where_id' => $this->taxonomyWhereId,
-                'osm2cai_id'        => $osm2caiId,
+                'osm2cai_id' => $osm2caiId,
             ]);
 
             return;
@@ -58,10 +59,10 @@ class FetchOsm2caiSectorGeometryJob implements ShouldQueue
 
         // Merge extra properties from detail into stored properties
         $extraProperties = array_filter([
-            'code'       => $detail['code'],
-            'full_code'  => $detail['full_code'],
+            'code' => $detail['code'],
+            'full_code' => $detail['full_code'],
             'human_name' => $detail['human_name'],
-            'manager'    => $detail['manager'],
+            'manager' => $detail['manager'],
         ]);
 
         if (! empty($extraProperties)) {
@@ -80,7 +81,7 @@ class FetchOsm2caiSectorGeometryJob implements ShouldQueue
     {
         Log::error('FetchOsm2caiSectorGeometryJob failed after all retries', [
             'taxonomy_where_id' => $this->taxonomyWhereId,
-            'error'             => $e->getMessage(),
+            'error' => $e->getMessage(),
         ]);
     }
 }

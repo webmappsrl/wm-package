@@ -11,6 +11,7 @@ use Wm\WmPackage\Nova\Traits\HasFlexibleTranslatableFields;
 class ConfigOverlaysResolver implements ResolverInterface
 {
     use HasFlexibleTranslatableFields;
+
     /**
      * Resolve the Flexible field's content.
      *
@@ -40,7 +41,7 @@ class ConfigOverlaysResolver implements ResolverInterface
                 $layout = $layouts->find($item['box_type']);
 
                 if ($layout) {
-                    $attributes = array_filter($item, fn($key) => $key !== 'box_type', ARRAY_FILTER_USE_KEY);
+                    $attributes = array_filter($item, fn ($key) => $key !== 'box_type', ARRAY_FILTER_USE_KEY);
                     $result->push($layout->duplicateAndHydrate(uniqid('', true), $attributes));
                 }
             }

@@ -114,4 +114,3 @@ it('resolve meta contains effective/inherited/stored and attribute_path', functi
         ->and($meta['effective_hex'])->toBe('#FF0000')
         ->and($meta['source'])->toBe('custom');
 });
-

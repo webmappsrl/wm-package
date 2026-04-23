@@ -2,11 +2,13 @@
 
 namespace Wm\WmPackage\Nova\Flexible\ConfigHome;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Config;
 use Laravel\Nova\Fields\Repeater\Presets\JSON;
 use Laravel\Nova\Fields\Repeater\RepeatableCollection;
 use Laravel\Nova\Http\Requests\NovaRequest;
+use Laravel\Nova\Support\Fluent;
 
 /**
  * JSON preset for the `items` Repeater on `config_home` horizontal-scroll layouts.
@@ -20,7 +22,7 @@ class HorizontalScrollRepeaterJsonPreset extends JSON
     /**
      * Hydrate the repeater from the model (Flexible layout) attributes.
      *
-     * @param  \Illuminate\Database\Eloquent\Model|\Laravel\Nova\Support\Fluent|object|array  $model
+     * @param  Model|Fluent|object|array  $model
      */
     public function get(NovaRequest $request, $model, string $attribute, RepeatableCollection $repeatables): Collection
     {
@@ -70,7 +72,6 @@ class HorizontalScrollRepeaterJsonPreset extends JSON
     }
 
     /**
-     * @param  mixed  $raw
      * @return array<int, array{type: string, fields: array<string, mixed>}>
      */
     private function normalizeToBlocks(mixed $raw): array
@@ -153,14 +154,14 @@ class HorizontalScrollRepeaterJsonPreset extends JSON
 
     /**
      * @param  array<string, mixed>  $fieldSource  Nova repeater `fields` or flat saved row
-     * @param  array<string, mixed>  $row          Full row (for `title` object from config JSON)
+     * @param  array<string, mixed>  $row  Full row (for `title` object from config JSON)
      * @return array<string, mixed>
      */
     private function horizontalScrollRepeaterFieldsFromRow(array $fieldSource, array $row): array
     {
         $customTitle = is_array($fieldSource['title'] ?? null) ? $fieldSource['title'] : [];
         $rowTitle = is_array($row['title'] ?? null) ? $row['title'] : [];
-        $title = array_merge($rowTitle, array_filter($customTitle, fn($v) => $v !== null && $v !== ''));
+        $title = array_merge($rowTitle, array_filter($customTitle, fn ($v) => $v !== null && $v !== ''));
 
         return [
             'res' => $fieldSource['res'] ?? null,

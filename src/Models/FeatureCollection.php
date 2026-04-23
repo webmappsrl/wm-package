@@ -5,6 +5,7 @@ namespace Wm\WmPackage\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Support\Facades\Storage;
 use Spatie\Translatable\HasTranslations;
 use Wm\WmPackage\Jobs\FeatureCollection\GenerateFeatureCollectionJob;
 use Wm\WmPackage\Jobs\UpdateAppConfigJob;
@@ -80,7 +81,7 @@ class FeatureCollection extends Model
         }
 
         if ($this->file_path) {
-            return \Illuminate\Support\Facades\Storage::disk('wmfe')->url($this->file_path);
+            return Storage::disk('wmfe')->url($this->file_path);
         }
 
         return null;

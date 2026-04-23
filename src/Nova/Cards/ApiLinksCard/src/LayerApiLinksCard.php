@@ -25,7 +25,7 @@ class LayerApiLinksCard extends ApiLinksCard
             ->whereNotNull('file_path')
             ->each(function ($fc) {
                 $this->addLink(
-                    'FeatureCollection: ' . ($fc->name),
+                    'FeatureCollection: '.($fc->name),
                     $fc->getUrl()
                 );
             });

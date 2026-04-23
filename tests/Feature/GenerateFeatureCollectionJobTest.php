@@ -1,13 +1,14 @@
 <?php
 
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Queue;
+use Tests\TestCase;
 use Wm\WmPackage\Jobs\FeatureCollection\GenerateFeatureCollectionJob;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\FeatureCollection;
 use Wm\WmPackage\Models\Layer;
-use Illuminate\Foundation\Testing\DatabaseTransactions;
 
-uses(Tests\TestCase::class, DatabaseTransactions::class);
+uses(TestCase::class, DatabaseTransactions::class);
 
 it('dispatches GenerateFeatureCollectionJob when layer is deleted', function () {
     Queue::fake();

@@ -9,12 +9,12 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
-use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Models\EcTrack;
+use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Services\Models\LayerService;
 use Wm\WmPackage\Services\PBFGeneratorService;
 
-class SyncAutoLayerAfterTrackTaxonomyChangeJob implements ShouldQueue, ShouldBeUnique
+class SyncAutoLayerAfterTrackTaxonomyChangeJob implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
@@ -27,8 +27,7 @@ class SyncAutoLayerAfterTrackTaxonomyChangeJob implements ShouldQueue, ShouldBeU
     public function __construct(
         public int $layerId,
         public ?int $trackId = null
-    )
-    {
+    ) {
         $this->onQueue('default');
     }
 

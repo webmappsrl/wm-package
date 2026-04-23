@@ -15,7 +15,8 @@ class HasDemClassificationTest extends TestCase
         ?array $manualData,
         ?string $osmid = null
     ): object {
-        return new class ($demData, $osmData, $manualData, $osmid) {
+        return new class($demData, $osmData, $manualData, $osmid)
+        {
             public function __construct(
                 private readonly ?array $dem,
                 private readonly ?array $osm,
@@ -27,8 +28,8 @@ class HasDemClassificationTest extends TestCase
             {
                 if ($name === 'properties') {
                     return [
-                        'dem_data'    => $this->dem,
-                        'osm_data'    => $this->osm,
+                        'dem_data' => $this->dem,
+                        'osm_data' => $this->osm,
                         'manual_data' => $this->manual,
                     ];
                 }

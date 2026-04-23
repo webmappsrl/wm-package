@@ -4,17 +4,19 @@ namespace Wm\WmPackage\Traits;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Log;
+use Wm\WmPackage\Jobs\FeatureCollection\GenerateFeatureCollectionJob;
+use Wm\WmPackage\Models\Layer;
 
 trait TaxonomyWhereAbleModel
 {
     public function dispatchFeatureCollectionRegeneration(): void
     {
-        if ($this instanceof \Wm\WmPackage\Models\Layer) {
+        if ($this instanceof Layer) {
             $this->featureCollections()
                 ->where('mode', 'generated')
                 ->where('enabled', true)
                 ->each(function ($fc) {
-                    \Wm\WmPackage\Jobs\FeatureCollection\GenerateFeatureCollectionJob::dispatch($fc->id);
+                    GenerateFeatureCollectionJob::dispatch($fc->id);
                 });
         }
     }

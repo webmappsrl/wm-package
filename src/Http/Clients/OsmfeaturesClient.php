@@ -87,7 +87,7 @@ class OsmfeaturesClient extends JsonClient
 
     protected function getAdminAreasIntersectsUrl()
     {
-        return $this->getHost() . '/api/v1/features/admin-areas/geojson';
+        return $this->getHost().'/api/v1/features/admin-areas/geojson';
     }
 
     public function getAdminAreasIds(string $bbox, int $adminLevel): array
@@ -97,16 +97,16 @@ class OsmfeaturesClient extends JsonClient
         $items = [];
         $page = 1;
         do {
-            $response = Http::get($this->getHost() . '/api/v2/features/admin-areas/list', [
-                'bbox'        => $bbox,
+            $response = Http::get($this->getHost().'/api/v2/features/admin-areas/list', [
+                'bbox' => $bbox,
                 'admin_level' => $adminLevel,
-                'tags'        => 'name',
-                'page'        => $page,
+                'tags' => 'name',
+                'page' => $page,
             ]);
 
             if (! $response->successful()) {
                 throw new Exception(
-                    "OSMFeatures admin-areas/list HTTP {$response->status()}: " . $response->body()
+                    "OSMFeatures admin-areas/list HTTP {$response->status()}: ".$response->body()
                 );
             }
 
@@ -115,8 +115,8 @@ class OsmfeaturesClient extends JsonClient
                 $nameObj = $item['name'] ?? [];
                 $name = $nameObj['it'] ?? $nameObj['en'] ?? (is_array($nameObj) ? (reset($nameObj) ?: $item['id']) : $item['id']);
                 $items[] = [
-                    'id'         => $item['id'],
-                    'name'       => $name,
+                    'id' => $item['id'],
+                    'name' => $name,
                     'updated_at' => $item['updated_at'] ?? null,
                 ];
             }
@@ -140,7 +140,7 @@ class OsmfeaturesClient extends JsonClient
         if (str_starts_with($trimmed, '[')) {
             $decoded = json_decode($trimmed, true);
             if (is_array($decoded) && count($decoded) === 4) {
-                return implode(',', array_map(static fn($v) => (string) $v, $decoded));
+                return implode(',', array_map(static fn ($v) => (string) $v, $decoded));
             }
         }
 
@@ -149,14 +149,14 @@ class OsmfeaturesClient extends JsonClient
 
     public function getAdminAreaDetail(string $osmfeaturesId): array
     {
-        $response = Http::get($this->getHost() . '/api/v2/features/admin-areas/' . $osmfeaturesId);
+        $response = Http::get($this->getHost().'/api/v2/features/admin-areas/'.$osmfeaturesId);
         $data = $response->json();
 
         return [
             'osmfeatures_id' => $osmfeaturesId,
-            'name'           => $data['properties']['name'] ?? $osmfeaturesId,
-            'admin_level'    => $data['properties']['admin_level'] ?? null,
-            'geometry'       => isset($data['geometry']) ? json_encode($data['geometry']) : null,
+            'name' => $data['properties']['name'] ?? $osmfeaturesId,
+            'admin_level' => $data['properties']['admin_level'] ?? null,
+            'geometry' => isset($data['geometry']) ? json_encode($data['geometry']) : null,
         ];
     }
 

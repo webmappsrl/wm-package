@@ -23,7 +23,7 @@ class TaxonomyWhereSourceFilter extends Filter
     {
         return [
             'OSMFeatures' => 'osmfeatures',
-            'OSM2CAI'     => 'osm2cai',
+            'OSM2CAI' => 'osm2cai',
         ];
     }
 }

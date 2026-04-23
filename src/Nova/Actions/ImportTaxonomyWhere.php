@@ -81,14 +81,14 @@ class ImportTaxonomyWhere extends Action
         try {
             $items = $client->getAdminAreasIds($bbox, $adminLevel);
         } catch (Exception $e) {
-            return Action::danger('Errore OSMFeatures: ' . $e->getMessage());
+            return Action::danger('Errore OSMFeatures: '.$e->getMessage());
         }
 
         if (count($items) === 0) {
             return Action::danger('OSMFeatures ha restituito 0 aree (verifica bbox e admin level).');
         }
 
-        $count   = 0;
+        $count = 0;
         $skipped = 0;
 
         foreach ($items as $item) {
@@ -103,27 +103,28 @@ class ImportTaxonomyWhere extends Action
 
                 if ($storedUpdatedAt && $storedUpdatedAt->gte($apiUpdatedAt)) {
                     $skipped++;
+
                     continue;
                 }
             }
 
             $properties = [
-                'osmfeatures_id'   => $item['id'],
-                'admin_level'      => $adminLevel,
-                'source'           => 'osmfeatures',
+                'osmfeatures_id' => $item['id'],
+                'admin_level' => $adminLevel,
+                'source' => 'osmfeatures',
                 'source_updated_at' => $apiUpdatedAt?->toIso8601String(),
             ];
 
             if ($existing) {
                 $existing->update([
-                    'name'       => $item['name'],
+                    'name' => $item['name'],
                     'properties' => array_merge($existing->properties ?? [], $properties),
                 ]);
                 $this->assignTaxonomyUserFromApp($existing, $app);
                 FetchTaxonomyWhereGeometryJob::dispatch($existing->id);
             } else {
                 $taxonomyWhere = TaxonomyWhere::create([
-                    'name'       => $item['name'],
+                    'name' => $item['name'],
                     'properties' => $properties,
                 ]);
                 $this->assignTaxonomyUserFromApp($taxonomyWhere, $app);
@@ -178,14 +179,14 @@ class ImportTaxonomyWhere extends Action
         try {
             $sectors = $client->getSectorsList($bbox);
         } catch (Exception $e) {
-            return Action::danger('Errore OSM2CAI: ' . $e->getMessage());
+            return Action::danger('Errore OSM2CAI: '.$e->getMessage());
         }
 
         if (count($sectors) === 0) {
             return Action::danger('OSM2CAI ha restituito 0 settori.');
         }
 
-        $count   = 0;
+        $count = 0;
         $skipped = 0;
 
         foreach ($sectors as $sector) {
@@ -200,26 +201,27 @@ class ImportTaxonomyWhere extends Action
 
                 if ($storedUpdatedAt && $storedUpdatedAt->gte($apiUpdatedAt)) {
                     $skipped++;
+
                     continue;
                 }
             }
 
             $properties = [
-                'osm2cai_id'       => $sector['id'],
-                'source'           => 'osm2cai',
+                'osm2cai_id' => $sector['id'],
+                'source' => 'osm2cai',
                 'source_updated_at' => $apiUpdatedAt?->toIso8601String(),
             ];
 
             if ($existing) {
                 $existing->update([
-                    'name'       => $sector['name'],
+                    'name' => $sector['name'],
                     'properties' => array_merge($existing->properties ?? [], $properties),
                 ]);
                 $this->assignTaxonomyUserFromApp($existing, $app);
                 FetchOsm2caiSectorGeometryJob::dispatch($existing->id);
             } else {
                 $created = TaxonomyWhere::create([
-                    'name'       => $sector['name'],
+                    'name' => $sector['name'],
                     'properties' => $properties,
                 ]);
                 $this->assignTaxonomyUserFromApp($created, $app);
@@ -247,12 +249,12 @@ class ImportTaxonomyWhere extends Action
 
         $fields[] = Select::make('Sorgente', 'source_type')
             ->options([
-                'osmfeatures_4'  => 'OSMFeatures — Regione (L4)',
-                'osmfeatures_6'  => 'OSMFeatures — Provincia (L6)',
-                'osmfeatures_8'  => 'OSMFeatures — Comune (L8)',
-                'osmfeatures_9'  => 'OSMFeatures — Municipio (L9)',
+                'osmfeatures_4' => 'OSMFeatures — Regione (L4)',
+                'osmfeatures_6' => 'OSMFeatures — Provincia (L6)',
+                'osmfeatures_8' => 'OSMFeatures — Comune (L8)',
+                'osmfeatures_9' => 'OSMFeatures — Municipio (L9)',
                 'osmfeatures_10' => 'OSMFeatures — Quartiere (L10)',
-                'osm2cai'        => 'OSM2CAI — Settori CAI',
+                'osm2cai' => 'OSM2CAI — Settori CAI',
             ])
             ->rules('required');
 

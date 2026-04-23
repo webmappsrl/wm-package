@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\URL;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Nova\Fields\OrderList\src\Http\Controllers\OrderListController;
@@ -32,7 +33,7 @@ it('normalizza rank 1..n quando riordino i layer di una app', function () {
     $authModel = rtrim(strtr($authModel, '+/', '-_'), '=');
 
     $url = url("/nova-vendor/order-list/reorder/{$model}/app_id/{$app->id}/rank");
-    $signed = \Illuminate\Support\Facades\URL::signedUrl($url, [
+    $signed = URL::signedUrl($url, [
         'authorizeAbility' => 'update',
         'authorizeModel' => $authModel,
         'authorizeId' => (string) $app->id,
@@ -139,4 +140,3 @@ it('non include il colore negli items quando ->color() non è configurato', func
         expect($item)->not->toHaveKey('color');
     }
 });
-

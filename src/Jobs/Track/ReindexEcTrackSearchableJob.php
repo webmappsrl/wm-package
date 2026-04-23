@@ -10,7 +10,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Wm\WmPackage\Models\EcTrack;
 
-class ReindexEcTrackSearchableJob implements ShouldQueue, ShouldBeUnique
+class ReindexEcTrackSearchableJob implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 

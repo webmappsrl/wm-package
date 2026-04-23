@@ -133,14 +133,14 @@ abstract class AbstractGeometryResource extends Resource
     public function getDemTabFields(): array
     {
         $mainFields = [
-            'ascent'            => __('Ascent'),
-            'descent'           => __('Descent'),
-            'distance'          => __('Distance'),
-            'ele_max'           => __('Maximum Elevation'),
-            'ele_min'           => __('Minimum Elevation'),
-            'ele_from'          => __('Starting Point Elevation'),
-            'ele_to'            => __('Ending Point Elevation'),
-            'duration_forward'  => __('Duration Forward'),
+            'ascent' => __('Ascent'),
+            'descent' => __('Descent'),
+            'distance' => __('Distance'),
+            'ele_max' => __('Maximum Elevation'),
+            'ele_min' => __('Minimum Elevation'),
+            'ele_from' => __('Starting Point Elevation'),
+            'ele_to' => __('Ending Point Elevation'),
+            'duration_forward' => __('Duration Forward'),
             'duration_backward' => __('Duration Backward'),
         ];
 

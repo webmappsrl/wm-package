@@ -15,11 +15,11 @@ use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Panel;
 use Wm\WmPackage\Nova\Actions\AddLayersToConfigHomeAction;
 use Wm\WmPackage\Nova\Actions\ExecuteEcTrackDataChainAction;
+use Wm\WmPackage\Nova\Cards\ApiLinksCard\LayerApiLinksCard;
 use Wm\WmPackage\Nova\Fields\FeatureCollectionMap\src\FeatureCollectionMap;
 use Wm\WmPackage\Nova\Fields\LayerFeatures\LayerFeatures;
 use Wm\WmPackage\Nova\Fields\PropertiesPanel;
 use Wm\WmPackage\Nova\Filters\AppFilter;
-use Wm\WmPackage\Nova\Cards\ApiLinksCard\LayerApiLinksCard;
 use Wm\WmPackage\Nova\Traits\MultiPolygonResourceTrait;
 
 class Layer extends AbstractGeometryResource
@@ -86,7 +86,7 @@ class Layer extends AbstractGeometryResource
             Images::make(__('Image'), 'default'),
             PropertiesPanel::makeWithModel(__('Properties'), 'properties', $this, true)->collapsible(),
             MorphToMany::make(__('Activities'), 'taxonomyActivities', TaxonomyActivity::class),
-            MorphToMany::make('Taxonomy Where', 'taxonomyWheres', \Wm\WmPackage\Nova\TaxonomyWhere::class)
+            MorphToMany::make('Taxonomy Where', 'taxonomyWheres', TaxonomyWhere::class)
                 ->actions(fn () => []),
             Panel::make('Ec Tracks', [
                 FeatureCollectionMap::make(__('Geometry'), 'geometry')->onlyOnDetail(),

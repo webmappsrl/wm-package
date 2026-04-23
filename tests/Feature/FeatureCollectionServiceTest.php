@@ -1,13 +1,14 @@
 <?php
 
+use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Facades\DB;
+use Tests\TestCase;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\FeatureCollection;
 use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Services\Models\FeatureCollectionService;
-use Illuminate\Foundation\Testing\DatabaseTransactions;
-use Illuminate\Support\Facades\DB;
 
-uses(Tests\TestCase::class, DatabaseTransactions::class);
+uses(TestCase::class, DatabaseTransactions::class);
 
 it('generates a valid geojson feature collection from layers taxonomy wheres', function () {
     $app = App::factory()->createQuietly();

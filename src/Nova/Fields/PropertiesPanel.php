@@ -75,7 +75,6 @@ class PropertiesPanel extends Panel
         ];
     }
 
-
     /**
      * Determine if fields should be editable based on editable parameter
      *

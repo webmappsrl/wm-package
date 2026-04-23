@@ -24,8 +24,7 @@ trait HasFlexibleTranslatableFields
                 }
 
                 return array_merge($default, is_array($value) ? $value : []);
-            })
-;
+            });
 
         if ($required) {
             $field->rules('required');
@@ -44,6 +43,6 @@ trait HasFlexibleTranslatableFields
             return [];
         }
 
-        return array_filter($val, static fn($v) => $v !== null && $v !== '');
+        return array_filter($val, static fn ($v) => $v !== null && $v !== '');
     }
 }

@@ -26,16 +26,16 @@ class Osm2caiClient extends JsonClient
             $params['bbox'] = $this->normalizeBboxForQuery($bbox);
         }
 
-        $response = Http::get($this->getHost() . '/api/v3/sectors/list', $params);
+        $response = Http::get($this->getHost().'/api/v3/sectors/list', $params);
 
         if (! $response->successful()) {
-            throw new Exception("OSM2CAI sectors/list HTTP {$response->status()}: " . $response->body());
+            throw new Exception("OSM2CAI sectors/list HTTP {$response->status()}: ".$response->body());
         }
 
         return array_map(fn ($s) => [
-            'id'         => $s['id'],
+            'id' => $s['id'],
             'updated_at' => $s['updated_at'],
-            'name'       => $s['name']['it'] ?? $s['name']['en'] ?? (string) $s['id'],
+            'name' => $s['name']['it'] ?? $s['name']['en'] ?? (string) $s['id'],
         ], $response->json() ?? []);
     }
 
@@ -47,23 +47,23 @@ class Osm2caiClient extends JsonClient
      */
     public function getSectorDetail(int $id): array
     {
-        $response = $this->getHttpClient()->get($this->getHost() . '/api/v3/sectors/' . $id);
+        $response = $this->getHttpClient()->get($this->getHost().'/api/v3/sectors/'.$id);
 
         if (! $response->successful()) {
-            throw new Exception("OSM2CAI sectors/{$id} HTTP {$response->status()}: " . $response->body());
+            throw new Exception("OSM2CAI sectors/{$id} HTTP {$response->status()}: ".$response->body());
         }
 
-        $data       = $response->json();
+        $data = $response->json();
         $properties = $data['properties'] ?? [];
 
         return [
             'osm2cai_id' => $id,
-            'name'       => $properties['name']['it'] ?? $properties['name']['en'] ?? (string) $id,
-            'code'       => $properties['code'] ?? null,
-            'full_code'  => $properties['full_code'] ?? null,
+            'name' => $properties['name']['it'] ?? $properties['name']['en'] ?? (string) $id,
+            'code' => $properties['code'] ?? null,
+            'full_code' => $properties['full_code'] ?? null,
             'human_name' => $properties['human_name']['it'] ?? $properties['human_name']['en'] ?? null,
-            'manager'    => $properties['manager'] ?? null,
-            'geometry'   => isset($data['geometry']) ? json_encode($data['geometry']) : null,
+            'manager' => $properties['manager'] ?? null,
+            'geometry' => isset($data['geometry']) ? json_encode($data['geometry']) : null,
         ];
     }
 

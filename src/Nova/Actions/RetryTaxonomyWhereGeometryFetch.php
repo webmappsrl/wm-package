@@ -30,7 +30,7 @@ class RetryTaxonomyWhereGeometryFetch extends Action
             FetchTaxonomyWhereGeometryJob::dispatch($model->id);
         }
 
-        return Action::message('Job di recupero geometry rilancati per ' . $models->count() . ' record.');
+        return Action::message('Job di recupero geometry rilancati per '.$models->count().' record.');
     }
 
     /**

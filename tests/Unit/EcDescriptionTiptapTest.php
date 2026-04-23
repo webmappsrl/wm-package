@@ -19,6 +19,7 @@ use Wm\WmPackage\Tests\TestCase;
 class EcDescriptionTiptapTest extends TestCase
 {
     use DatabaseTransactions;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -142,4 +143,3 @@ class EcDescriptionTiptapTest extends TestCase
         $this->assertSame($plain, $layer->getTranslation('properties->description', 'it'));
     }
 }
-

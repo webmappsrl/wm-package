@@ -28,23 +28,23 @@ use Wm\WmPackage\Models\FeatureCollection as FeatureCollectionModel;
 use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Models\TaxonomyActivity as TaxonomyActivityModel;
 use Wm\WmPackage\Models\TaxonomyPoiType as TaxonomyPoiTypeModel;
-use Wm\WmPackage\Nova\Flexible\ConfigHome\HorizontalScrollItemRepeatable;
 use Wm\WmPackage\Nova\Actions\ExecuteEcTrackDataChainAction;
 use Wm\WmPackage\Nova\Actions\RegenerateAppPbfAction;
 use Wm\WmPackage\Nova\Actions\ReindexAppScoutAction;
-use Wm\WmPackage\Nova\Flexible\ConfigHome\HorizontalScrollRepeaterJsonPreset;
-use Wm\WmPackage\Nova\Fields\StoreVersionField;
 use Wm\WmPackage\Nova\Cards\ApiLinksCard\AppApiLinksCard;
+use Wm\WmPackage\Nova\Fields\OrderList\src\OrderList;
+use Wm\WmPackage\Nova\Fields\StoreVersionField;
+use Wm\WmPackage\Nova\Flexible\ConfigHome\HorizontalScrollItemRepeatable;
+use Wm\WmPackage\Nova\Flexible\ConfigHome\HorizontalScrollRepeaterJsonPreset;
 use Wm\WmPackage\Nova\Flexible\Resolvers\ConfigHomeResolver;
 use Wm\WmPackage\Nova\Flexible\Resolvers\ConfigOverlaysResolver;
 use Wm\WmPackage\Nova\Traits\HasFlexibleTranslatableFields;
-use Wm\WmPackage\Nova\Fields\OrderList\src\OrderList;
 
 class App extends Resource
 {
     use HasFlexibleTranslatableFields;
 
-    public static $model = \Wm\WmPackage\Models\App::class;
+    public static $model = ModelsApp::class;
 
     protected function tiptapButtons(): array
     {
@@ -129,7 +129,7 @@ class App extends Resource
                 ->confirmButtonText(__('Yes, reindex'))
                 ->cancelButtonText(__('Cancel')),
             ExecuteEcTrackDataChainAction::make([
-                fn($track) => new UpdateEcTrackAwsJob($track),
+                fn ($track) => new UpdateEcTrackAwsJob($track),
             ], __('Update Tracks on AWS'))
                 ->onlyOnDetail()
                 ->confirmText(__('Are you sure you want to update all tracks of this app on AWS?'))
@@ -154,7 +154,7 @@ class App extends Resource
             Boolean::make(__('Show Auth at startup'), 'webapp_auth_show_at_startup')
                 ->default(false)
                 ->hideFromIndex()
-                ->help(__('Shows the authentication and registration page for users'))
+                ->help(__('Shows the authentication and registration page for users')),
         ];
     }
 
@@ -167,9 +167,9 @@ class App extends Resource
                 HTML
             )->asHtml()->hideFromIndex(),
             Boolean::make(__('Show Auth at startup'), 'auth_show_at_startup')
-            ->default(false)
-            ->hideFromIndex()
-            ->help(__('Shows the authentication and registration page for users')),
+                ->default(false)
+                ->hideFromIndex()
+                ->help(__('Shows the authentication and registration page for users')),
             Boolean::make(__('Geolocation Record Enable'), 'geolocation_record_enable')
                 ->default(false)
                 ->hideFromIndex()
@@ -188,7 +188,7 @@ class App extends Resource
                 ->resolver(ConfigOverlaysResolver::class)
                 ->menu('flexible-search-menu')
                 ->button('Aggiungi elemento')
-                ->help("Configurazione degli overlay della mappa")
+                ->help('Configurazione degli overlay della mappa')
                 ->addLayout('Titolo', 'title', $this->overlays_title_layout())
                 ->addLayout('Feature Collection', 'feature_collection', $this->feature_collection_layout())
                 ->confirmRemove('Sei sicuro di voler eliminare questo elemento?', 'Elimina', 'Annulla'),
@@ -317,8 +317,8 @@ class App extends Resource
                 ->hideFromIndex()
                 ->help(__('Enable the Travel Mode feature on the app')),
 
-                Tab::make('FEwebapp', $this->webapp_tab()),
-                Tab::make('FE: mobile', $this->mobile_tab()),
+            Tab::make('FEwebapp', $this->webapp_tab()),
+            Tab::make('FE: mobile', $this->mobile_tab()),
         ];
     }
 
@@ -564,12 +564,12 @@ class App extends Resource
                 ->language('json')
                 ->rules('json')
                 ->default($this->getDefaultPoiForm())
-                ->help(__('This JSON structures the acquisition form for UGC POIs. Knowledge of JSON format required.') . view('wm-package::poi-forms')->render()),
+                ->help(__('This JSON structures the acquisition form for UGC POIs. Knowledge of JSON format required.').view('wm-package::poi-forms')->render()),
             Code::Make(__('TRACK acquisition forms'), 'track_acquisition_form')
                 ->language('json')
                 ->rules('json')
                 ->default($this->getDefaultTrackForm())
-                ->help(__('This JSON structures the acquisition form for UGC Tracks. Knowledge of JSON format required.') . view('wm-package::track-forms')->render()),
+                ->help(__('This JSON structures the acquisition form for UGC Tracks. Knowledge of JSON format required.').view('wm-package::track-forms')->render()),
         ];
     }
 
@@ -638,7 +638,7 @@ class App extends Resource
                         ->orderBy('id')
                         ->get()
                         ->mapWithKeys(function ($layer) {
-                            $title = $layer->getStringName() ?: ('Layer #' . $layer->id);
+                            $title = $layer->getStringName() ?: ('Layer #'.$layer->id);
 
                             return [$layer->id => $title];
                         })
@@ -781,7 +781,7 @@ class App extends Resource
     {
         return Repeater::make(__('Items'), 'items')
             ->repeatables([$repeatable])
-            ->preset(new HorizontalScrollRepeaterJsonPreset())
+            ->preset(new HorizontalScrollRepeaterJsonPreset)
             ->rules('required', 'array')
             ->help(__('Add one or more items for this horizontal scroll.'));
     }
@@ -804,7 +804,7 @@ class App extends Resource
         return TaxonomyPoiTypeModel::query()
             ->get(['identifier', 'name'])
             ->mapWithKeys(function (TaxonomyPoiTypeModel $poiType) {
-                $identifier = 'poi_type_' . $poiType->identifier;
+                $identifier = 'poi_type_'.$poiType->identifier;
 
                 return [
                     $identifier => $this->getTaxonomyLabel($poiType->name, $identifier),
@@ -873,9 +873,9 @@ class App extends Resource
                             $title = $layer->getStringName();
                             if (is_array($title)) {
                                 // Se è un array, prendi prima la versione italiana, poi quella inglese, altrimenti usa l'ID
-                                $title = $title['it'] ?? $title['en'] ?? ('Layer #' . $layer->id);
+                                $title = $title['it'] ?? $title['en'] ?? ('Layer #'.$layer->id);
                             } elseif (is_null($title)) {
-                                $title = 'Layer #' . $layer->id;
+                                $title = 'Layer #'.$layer->id;
                             }
 
                             return [
@@ -935,7 +935,7 @@ class App extends Resource
                 ->hideFromIndex()
                 ->help(__('Turn this option off if you do not want to show POIs by default on the map.')),
             Text::make('POI Data Icon', 'pois_data_icon', function () {
-                return '<div style="width:64px;height:64px;">' . $this->pois_data_icon . '</div>';
+                return '<div style="width:64px;height:64px;">'.$this->pois_data_icon.'</div>';
             })->asHtml()->onlyOnDetail(),
             Textarea::make('POI Data Icon SVG', 'pois_data_icon')
                 ->onlyOnForms()
@@ -944,7 +944,7 @@ class App extends Resource
                 ->hideFromIndex()
                 ->help(__('Turn this option off if you do not want to show all track layers by default on the map')),
             Text::make('Track Data Icon', 'tracks_data_icon', function () {
-                return '<div style="width:64px;height:64px;">' . $this->tracks_data_icon . '</div>';
+                return '<div style="width:64px;height:64px;">'.$this->tracks_data_icon.'</div>';
             })->asHtml()->onlyOnDetail(),
             Textarea::make('Track Data Icon SVG', 'tracks_data_icon')
                 ->onlyOnForms()
@@ -1012,7 +1012,7 @@ class App extends Resource
                         }
                         $decoded = json_decode($value);
                         if (! is_array($decoded)) {
-                            $fail('The ' . $attribute . ' is invalid. Follow the example [9.9456,43.9116,11.3524,45.0186]');
+                            $fail('The '.$attribute.' is invalid. Follow the example [9.9456,43.9116,11.3524,45.0186]');
                         }
                     },
                 ])

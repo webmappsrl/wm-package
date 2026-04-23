@@ -22,10 +22,10 @@ class TaxonomyWhereAdminLevelFilter extends Filter
     public function options(Request $request): array
     {
         return [
-            'Regione (L4)'    => 4,
-            'Provincia (L6)'  => 6,
-            'Comune (L8)'     => 8,
-            'Municipio (L9)'  => 9,
+            'Regione (L4)' => 4,
+            'Provincia (L6)' => 6,
+            'Comune (L8)' => 8,
+            'Municipio (L9)' => 9,
             'Quartiere (L10)' => 10,
         ];
     }
