@@ -7,6 +7,7 @@ use ChristianKuri\LaravelFavorite\Traits\Favoriteable;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Laravel\Scout\Searchable;
 use Wm\WmPackage\Models\Abstracts\MultiLineString;
@@ -17,12 +18,15 @@ use Wm\WmPackage\Services\Models\EcTrackService;
 use Wm\WmPackage\Services\Models\MediaService;
 use Wm\WmPackage\Nova\Traits\HasDemClassification;
 use Wm\WmPackage\Traits\EcFeatureTrait;
+use Wm\WmPackage\Traits\NormalizesHexColor;
 use Wm\WmPackage\Traits\TaxonomyAbleModel;
 use Wm\WmPackage\Traits\TaxonomyWhereAbleModel;
 
 class EcTrack extends MultiLineString implements LayerRelatedModel
 {
-    use EcFeatureTrait, Favoriteable, HasDemClassification, Searchable, TaxonomyAbleModel, TaxonomyWhereAbleModel;
+    use EcFeatureTrait, Favoriteable, HasDemClassification, NormalizesHexColor, Searchable, TaxonomyAbleModel, TaxonomyWhereAbleModel;
+
+    public const DEFAULT_COLOR_HEX = '#FF0000';
 
     protected $table;
 
@@ -191,6 +195,87 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
     {
         return 'ecTracks';
     }
+
+    /**
+     * @return Collection<int, Layer>
+     */
+    public function layersOrderedByRankDesc(): Collection
+    {
+        $query = $this->layers()
+            ->orderBy('rank')
+            ->orderBy('id');
+
+        return $query->get();
+    }
+
+    public function getInheritedTrackColorHex(): string
+    {
+        /** @var \Illuminate\Support\Collection<int, Layer> $layers */
+        $layers = $this->layersOrderedByRankDesc();
+
+        /** @var Layer|null $layer */
+        $layer = $this->getPreferredLayerForInheritedColor($layers);
+
+        if (! $layer) {
+            return self::DEFAULT_COLOR_HEX;
+        }
+
+        $layerColor = $layer->getStrokeColorHex();
+
+        return $layerColor ?? self::DEFAULT_COLOR_HEX;
+    }
+
+    public function getTrackColorProvenance(): array
+    {
+        $properties = is_array($this->properties) ? $this->properties : [];
+
+        $storedHex = $this->normalizeHexColor($properties['color'] ?? null);
+
+        $inheritedHex = $this->getInheritedTrackColorHex();
+        $effectiveHex = $storedHex ?? $inheritedHex;
+
+        /** @var \Illuminate\Support\Collection<int, Layer> $layers */
+        $layers = $this->layersOrderedByRankDesc();
+        /** @var Layer|null $layer */
+        $layer = $this->getPreferredLayerForInheritedColor($layers);
+
+        $layerInfo = null;
+        if ($layer) {
+            $layerInfo = [
+                'id' => $layer->id,
+                'name' => $layer->getStringName(),
+            ];
+        }
+
+        $source = 'default';
+        if ($storedHex !== null && $storedHex !== '' && $storedHex !== $inheritedHex) {
+            $source = 'custom';
+        } elseif ($layer) {
+            $source = 'layer';
+        }
+        $result = [
+            'effective_hex' => $effectiveHex,
+            'inherited_hex' => $inheritedHex,
+            'source' => $source,
+            'layer' => $layerInfo,
+            'stored_hex' => $storedHex,
+        ];
+
+        return $result;
+    }
+
+    /**
+     * Sceglie il layer da cui ereditare il colore.
+     * Regola: prende SEMPRE il layer con rank più basso; se non ha colore -> default.
+     *
+     * @param  Collection<int, Layer>  $layersOrderedByRankAsc
+     */
+    private function getPreferredLayerForInheritedColor(Collection $layersOrderedByRankAsc): ?Layer
+    {
+        return $layersOrderedByRankAsc->first();
+    }
+
+    // normalizeHexColor estratto nel trait NormalizesHexColor
 
     /**
      * Return the json version of the ec track, avoiding the geometry
@@ -724,7 +809,19 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
 
             if (! empty($geojson)) {
                 $feature = $this->getFeatureMap();
-                $feature['properties'] = $this->properties;
+
+                $provenance = $this->getTrackColorProvenance();
+                $effectiveHex = $provenance['effective_hex'] ?? self::DEFAULT_COLOR_HEX;
+
+                $feature['properties'] = array_merge(
+                    is_array($this->properties) ? $this->properties : [],
+                    [
+                        'strokeColor' => hexToRgba($effectiveHex),
+                        'strokeWidth' => 4,
+                        'effective_color' => $effectiveHex,
+                        'color_source' => $provenance['source'] ?? 'default',
+                    ]
+                );
                 $features[] = $feature;
             }
         }

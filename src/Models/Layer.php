@@ -14,12 +14,13 @@ use Wm\WmPackage\Nova\Fields\FeatureCollectionMap\src\FeatureCollectionMapTrait;
 use Wm\WmPackage\Observers\LayerObserver;
 use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Traits\HasPackageFactory;
+use Wm\WmPackage\Traits\NormalizesHexColor;
 use Wm\WmPackage\Traits\TaxonomyAbleModel;
 use Wm\WmPackage\Traits\TaxonomyWhereAbleModel;
 
 class Layer extends Polygon
 {
-    use FeatureCollectionMapTrait, HasPackageFactory, HasTranslations, TaxonomyAbleModel, TaxonomyWhereAbleModel;
+    use FeatureCollectionMapTrait, HasPackageFactory, HasTranslations, NormalizesHexColor, TaxonomyAbleModel, TaxonomyWhereAbleModel;
 
     public $timestamps = false;
 
@@ -125,6 +126,22 @@ class Layer extends Polygon
             ->using(TaxonomyWhereable::class);
     }
 
+    public function getStrokeColorHex(): ?string
+    {
+        $properties = $this->properties;
+
+        if (is_string($properties) && $this->isJsonString($properties)) {
+            $decoded = json_decode($properties, true);
+            $properties = is_array($decoded) ? $decoded : [];
+        }
+
+        if (! is_array($properties)) {
+            $properties = [];
+        }
+
+        return $this->normalizeHexColor($properties['color'] ?? null);
+    }
+
     public function isAutoTrackMode(): bool
     {
         return ($this->configuration['track_mode'] ?? 'auto') === 'auto';
@@ -204,6 +221,8 @@ class Layer extends Polygon
         // Fallback finale
         return '';
     }
+
+    // normalizeHexColor estratto nel trait NormalizesHexColor
 
     /**
      * Controlla se una stringa è un JSON valido
