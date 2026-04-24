@@ -88,6 +88,14 @@ class App extends Model implements HasMedia
         return $this->belongsToMany(Layer::class, 'app_filter_layers');
     }
 
+    public function tiles()
+    {
+        return $this->belongsToMany(Tile::class, 'app_tile')
+            ->withPivot('sort_order')
+            ->withTimestamps()
+            ->orderBy('app_tile.sort_order');
+    }
+
     public function ugc_pois()
     {
         return $this->hasMany(UgcPoi::class);

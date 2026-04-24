@@ -259,5 +259,15 @@
     "To download an empty template with these headers only, run the :action action from this resource menu without selecting any rows.": "To download an empty template with these headers only, run the :action action from this resource menu without selecting any rows.",
     "The id is required. Other fields update properties only when filled.": "The id is required. Other fields update properties only when filled.",
     "All selected tracks must belong to the same app.": "All selected tracks must belong to the same app.",
-    "No valid geometry found for the selected tracks.": "No valid geometry found for the selected tracks."
+    "No valid geometry found for the selected tracks.": "No valid geometry found for the selected tracks.",
+    "Tiles": "Tiles",
+    "Tile": "Tile",
+    "Attribution": "Attribution",
+    "Label": "Label",
+    "Server XYZ": "Server XYZ",
+    "Link": "Link",
+    "Search an icon for the tile...": "Search an icon for the tile...",
+    "Select an icon name from icons.json": "Select an icon name from icons.json",
+    "URL template for the tile server (e.g. https://example.com/{z}/{x}/{y}.png)": "URL template for the tile server (e.g. https://example.com/{z}/{x}/{y}.png)",
+    "Link used over the attribution tag in the app (optional)": "Link used over the attribution tag in the app (optional)"
 }
