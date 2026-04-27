@@ -135,8 +135,10 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
     public function ecPois(): BelongsToMany
     {
         $pivotTable = config('wm-package.ec_poi_track_pivot_table', 'ec_poi_ec_track');
+        $trackModel = config('wm-package.ec_track_model', self::class);
+        $foreignKey = \Illuminate\Support\Str::snake(class_basename($trackModel)).'_id';
 
-        return $this->belongsToMany(EcPoi::class, $pivotTable)
+        return $this->belongsToMany(EcPoi::class, $pivotTable, $foreignKey)
             ->using(EcPoiEcTrack::class)
             ->withPivot('order')
             ->orderByPivot('order');
