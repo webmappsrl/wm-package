@@ -127,7 +127,7 @@ class EcTrack extends AbstractEcResource
     protected function getStyleTabFields(): array
     {
         return [
-            TrackColor::make(__('Color'), 'properties->color'),
+            TrackColor::make(__('Color'), 'properties->color')->hideFromIndex(),
         ];
     }
 }
