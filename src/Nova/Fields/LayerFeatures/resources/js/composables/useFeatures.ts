@@ -147,7 +147,7 @@ export function useFeatures(props: LayerFeatureProps, isManual: Ref<boolean>) {
             const readOnlyCheckbox = !props.edit || !isManual.value;
             const newFeatures: GridData[] = data.features.map(feature => ({
                 id: feature.id,
-                name: typeof feature.name === 'object' ? feature.name.it || feature.name.en || Object.values(feature.name)[0] : feature.name,
+                name: (feature.name !== null && typeof feature.name === 'object') ? feature.name.it || feature.name.en || Object.values(feature.name)[0] : (feature.name ?? ''),
                 isSelected:
                     !props.edit ||
                     !isManual.value ||
