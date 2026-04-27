@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Laravel\Scout\Searchable;
 use Wm\WmPackage\Models\Abstracts\MultiLineString;
 use Wm\WmPackage\Models\Interfaces\LayerRelatedModel;
@@ -136,7 +137,7 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
     {
         $pivotTable = config('wm-package.ec_poi_track_pivot_table', 'ec_poi_ec_track');
         $trackModel = config('wm-package.ec_track_model', self::class);
-        $foreignKey = \Illuminate\Support\Str::snake(class_basename($trackModel)).'_id';
+        $foreignKey = Str::snake(class_basename($trackModel)).'_id';
 
         return $this->belongsToMany(EcPoi::class, $pivotTable, $foreignKey)
             ->using(EcPoiEcTrack::class)
