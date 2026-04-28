@@ -24,13 +24,13 @@ class EditFields extends Action
 
     protected $fields = [];
 
-    protected $resource = null;
+    protected $resourceClass = null;
 
-    public function __construct($name = 'Edit', array $fields = [], $resource = null)
+    public function __construct($name = 'Edit', array $fields = [], $resourceClass = null)
     {
         $this->fields = $fields;
         $this->name = __($name);
-        $this->resource = $resource;
+        $this->resourceClass = $resourceClass;
     }
 
     /**
@@ -58,7 +58,7 @@ class EditFields extends Action
     public function fields(NovaRequest $request)
     {
         if ($this->resource) {
-            $resourceInstance = new $this->resource($this->resource::newModel());
+            $resourceInstance = new $this->resourceClass($this->resourceClass::newModel());
             $resourceFields = $resourceInstance->fields($request);
 
             $filteredFields = collect($resourceFields)
