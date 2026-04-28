@@ -219,13 +219,16 @@ class PBFGeneratorService extends BaseService
             la.layerable_id,
             la.layer_id,
             l.rank
-        FROM layerables la
+        FROM processedGeometries pg
+        JOIN layerables la ON la.layerable_id = pg.id
         JOIN layers l ON l.id = la.layer_id
         WHERE la.layerable_type LIKE '%{$this->getTrackModelClassName()}'
+            AND l.app_id = $app_id
     ),
     trackLayers AS (
         SELECT
             layerable_id,
+            MIN(rank) AS min_rank,
             jsonb_agg(
                 layer_id
                 ORDER BY rank ASC NULLS LAST, layer_id ASC
@@ -267,14 +270,20 @@ class PBFGeneratorService extends BaseService
             ) as duration_forward,
             ta.activities::text as activities,
             tl.layers,
+            tl.min_rank,
             pg.properties ->> 'searchable' as searchable,
             pg.properties ->> 'color' as stroke_color
         FROM processedGeometries pg
-        LEFT JOIN trackLayers tl ON tl.layerable_id = pg.id
+        JOIN trackLayers tl ON tl.layerable_id = pg.id
         LEFT JOIN trackActivities ta ON ta.track_id = pg.id
         CROSS JOIN bounds
     )
-    SELECT ST_AsMVT(ecTracks.*, '{$tableName}') FROM ecTracks
+    SELECT ST_AsMVT(t.*, '{$tableName}')
+    FROM (
+        SELECT *
+        FROM ecTracks
+        ORDER BY min_rank DESC NULLS LAST, id DESC
+    ) t
     WHERE EXISTS (SELECT 1 FROM ecTracks WHERE geom IS NOT NULL AND ST_IsValid(geom)); -- Controllo finale che ci siano geometrie valide
     SQL;
 
@@ -345,6 +354,7 @@ class PBFGeneratorService extends BaseService
                 AND ST_Dimension(ec.{$tbl['geomColumn']}::geometry) > 0
                 AND NOT ST_IsEmpty(ec.{$tbl['geomColumn']}::geometry)
                 AND ec.{$tbl['geomColumn']} IS NOT NULL
+            ORDER BY l.rank DESC NULLS LAST, l.id DESC
         )
         SELECT ST_AsMVT(mvtgeom.*, 'layers') FROM mvtgeom;
         SQL;
