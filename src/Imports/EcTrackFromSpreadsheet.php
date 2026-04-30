@@ -50,4 +50,3 @@ class EcTrackFromSpreadsheet extends AbstractExcelSpreadsheetImporter
         }
     }
 }
-

@@ -203,7 +203,7 @@ class EcTrackExcelExporter implements FromCollection, WithHeadings, WithMapping
                 $items = $model->{$relation}()->get();
             }
 
-            if (! $items instanceof \Illuminate\Support\Collection) {
+            if (! $items instanceof Collection) {
                 $items = collect($items);
             }
 
@@ -263,4 +263,3 @@ class EcTrackExcelExporter implements FromCollection, WithHeadings, WithMapping
         return json_encode($value, JSON_UNESCAPED_UNICODE) ?: '';
     }
 }
-

@@ -121,4 +121,3 @@ abstract class AbstractDownloadMultiFormatAction extends Action
         ];
     }
 }
-

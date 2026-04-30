@@ -26,4 +26,3 @@ class EcPoiImportTemplateExporter implements FromCollection, WithHeadings
         return AbstractExcelSpreadsheetImporter::ecPoiImportValidHeaderNames();
     }
 }
-

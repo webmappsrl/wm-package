@@ -2,6 +2,7 @@
 
 namespace Wm\WmPackage\Imports;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 use Maatwebsite\Excel\Row;
@@ -69,7 +70,7 @@ class EcPoiFromSpreadsheet extends AbstractExcelSpreadsheetImporter
             }
 
             if ($model->getAttribute('app_id') === null) {
-                /** @var \App\Models\User|null $user */
+                /** @var User|null $user */
                 $user = Auth::user();
                 $appId = null;
 
@@ -115,4 +116,3 @@ class EcPoiFromSpreadsheet extends AbstractExcelSpreadsheetImporter
         }
     }
 }
-

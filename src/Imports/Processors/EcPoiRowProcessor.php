@@ -121,10 +121,12 @@ final class EcPoiRowProcessor
 
             if ($key === 'lat') {
                 $lat = is_string($value) ? str_replace(',', '.', $value) : $value;
+
                 continue;
             }
             if ($key === 'lng') {
                 $lng = is_string($value) ? str_replace(',', '.', $value) : $value;
+
                 continue;
             }
 
@@ -134,6 +136,7 @@ final class EcPoiRowProcessor
                 } else {
                     $properties['name_it'] = $value;
                 }
+
                 continue;
             }
             if ($key === 'name_en') {
@@ -142,35 +145,42 @@ final class EcPoiRowProcessor
                 } else {
                     $properties['name_en'] = $value;
                 }
+
                 continue;
             }
 
             if ($key === 'description_it') {
                 $properties['description'] = $this->setLocaleValue($properties['description'] ?? [], 'it', $value);
+
                 continue;
             }
             if ($key === 'description_en') {
                 $properties['description'] = $this->setLocaleValue($properties['description'] ?? [], 'en', $value);
+
                 continue;
             }
             if ($key === 'excerpt_it') {
                 $properties['excerpt'] = $this->setLocaleValue($properties['excerpt'] ?? [], 'it', $value);
+
                 continue;
             }
             if ($key === 'excerpt_en') {
                 $properties['excerpt'] = $this->setLocaleValue($properties['excerpt'] ?? [], 'en', $value);
+
                 continue;
             }
 
             // addr_complete, capacity, contact_*, related_url: solo in properties (schema ec_pois senza colonne dedicate).
             if (in_array($key, ['addr_complete', 'capacity', 'contact_phone', 'contact_email'], true)) {
                 $properties[$key] = $value;
+
                 continue;
             }
 
             if ($key === 'related_url') {
                 $existingRel = $properties['related_url'] ?? null;
                 $properties['related_url'] = $this->mergeRelatedUrl($value, $existingRel);
+
                 continue;
             }
 

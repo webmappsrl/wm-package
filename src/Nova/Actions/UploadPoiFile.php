@@ -12,8 +12,10 @@ use Laravel\Nova\Fields\File;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Maatwebsite\Excel\Facades\Excel;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use Wm\WmPackage\Exporters\EcPoiImportTemplateExporter;
 use Wm\WmPackage\Imports\AbstractExcelSpreadsheetImporter;
@@ -314,7 +316,7 @@ class UploadPoiFile extends Action
             if (! $this->hasError($row, $errors)) {
                 $worksheet->setCellValue($errorColumn.$row, '');
                 $worksheet->getStyle("A{$row}:{$lastColumn}{$row}")->getFill()
-                    ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_NONE);
+                    ->setFillType(Fill::FILL_NONE);
             }
         }
     }
@@ -366,7 +368,7 @@ class UploadPoiFile extends Action
             $worksheet->getCell($idColumn.$row)
                 ->setValueExplicit(
                     (string) ($poiId['id'] ?? ''),
-                    \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING
+                    DataType::TYPE_STRING
                 );
         }
     }
@@ -374,7 +376,7 @@ class UploadPoiFile extends Action
     private function highlightErrorRow(Worksheet $worksheet, int $row, string $lastColumn): void
     {
         $worksheet->getStyle("A{$row}:{$lastColumn}{$row}")->getFill()
-            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+            ->setFillType(Fill::FILL_SOLID)
             ->getStartColor()->setRGB(PoiFileAction::ERROR_HIGHLIGHT_COLOR);
     }
 
