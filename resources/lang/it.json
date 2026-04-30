@@ -229,7 +229,7 @@
     "Items": "Elementi",
     "Optional in Nova; include in config when you have a card image URL.": "Opzionale in Nova; includi nel config se hai un URL immagine per la scheda.",
     "Overrides the default taxonomy label for this item in config JSON; leave empty to use the taxonomy name.": "Sostituisce l’etichetta predefinita della taxonomy per questo elemento nel JSON di config; lascia vuoto per usare il nome della taxonomy.",
-    "Title": "Titolo"
+    "Title": "Titolo",
     "Please upload a valid file.": "Carica un file valido.",
     "Data imported successfully": "Importazione completata con successo",
     "Upload File": "Carica file",
@@ -245,6 +245,8 @@
     "Download EcPois Excel": "Scarica Excel EcPois",
     "Download EcTracks": "Scarica EcTracks",
     "Download EcPois": "Scarica EcPois",
+    "Download Tracks": "Scarica Tracce",
+    "Download Pois": "Scarica POI",
     "Download UgcTracks": "Scarica Tracce UGC",
     "Download UgcTracks GeoJSON": "Scarica Tracce UGC (GeoJSON)",
     "Download GeoJSON": "Scarica GeoJSON",

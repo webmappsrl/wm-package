@@ -18,7 +18,7 @@ class DownloadEcTrackAction extends AbstractDownloadMultiFormatAction
 {
     public function name()
     {
-        return __('Download EcTracks');
+        return __('Download Tracks');
     }
 
     protected function filePrefix(): string

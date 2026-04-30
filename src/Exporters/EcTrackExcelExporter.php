@@ -31,10 +31,8 @@ class EcTrackExcelExporter implements FromCollection, WithHeadings, WithMapping
             'name_it',
             'name_en',
             'name_fr',
-            'geohub_backend',
-            'geohub_backend_edit',
-            'geohub_frontend',
-            'public_app_link',
+            'backend',
+            'backend_edit',
             'description',
             'description_it',
             'description_en',
@@ -57,7 +55,6 @@ class EcTrackExcelExporter implements FromCollection, WithHeadings, WithMapping
             'difficulty',
             'slope',
             'mbtiles',
-            'elevation_chart_image',
             'out_source_feature_id',
             'from',
             'ref',
@@ -93,15 +90,8 @@ class EcTrackExcelExporter implements FromCollection, WithHeadings, WithMapping
 
         $excerpt = $this->getTranslatable($track, 'properties.excerpt');
 
-        $geohub_backend = url('/').'/resources/ec-tracks/'.$id;
-        $geohub_frontend = url('/').'/track/'.$id;
-        $geohub_backend_edit = 'https://geohub.webmapp.it/resources/ec-tracks/'.$id.'/edit';
-
-        // In questo progetto il concetto di "public_app_link" come in Geohub
-        // non è garantito (e la relazione apps sull'utente può non esistere
-        // o fallire dentro una transazione fallita). Per evitare di rompere
-        // l'export, lasciamo il campo vuoto.
-        $public_app_link = '';
+        $backend = url('/').'/resources/ec-tracks/'.$id;
+        $backend_edit = url('/').'/resources/ec-tracks/'.$id.'/edit';
 
         $featureImage = $this->getFeatureImageUrl($track);
         $image_gallery = $this->getGalleryUrls($track);
@@ -120,10 +110,8 @@ class EcTrackExcelExporter implements FromCollection, WithHeadings, WithMapping
             $name_it,
             $name_en,
             $name_fr,
-            $geohub_backend,
-            $geohub_backend_edit,
-            // $geohub_frontend, TODO: esiste su geohub non attualmente su wmpackage esempio: https://geohub.webmapp.it/track/89727
-            $public_app_link,
+            $backend,
+            $backend_edit,
             $description,
             $description_it,
             $description_en,
@@ -146,7 +134,6 @@ class EcTrackExcelExporter implements FromCollection, WithHeadings, WithMapping
             $this->getTranslatable($track, 'properties.difficulty'),
             data_get($track, 'properties.slope'),
             data_get($track, 'properties.mbtiles'),
-            data_get($track, 'properties.elevation_chart_image'),
             data_get($track, 'properties.out_source_feature_id') ?? data_get($track, 'out_source_feature_id'),
             data_get($track, 'properties.from'),
             data_get($track, 'properties.ref'),

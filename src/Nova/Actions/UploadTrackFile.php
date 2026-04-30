@@ -64,7 +64,7 @@ class UploadTrackFile extends Action
                     .e(__('The id is required. Other fields update properties only when filled.'))
                     .'<br><br>'
                     .e(__('To download an empty template with these headers only, run the :action action from this resource menu without selecting any rows.', [
-                        'action' => __('Download EcTracks'),
+                        'action' => __('Download Tracks'),
                     ]))
                 ),
         ];

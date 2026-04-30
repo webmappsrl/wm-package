@@ -229,7 +229,7 @@
     "Access Cognitive Level": "Access Cognitive Level",
     "Access Cognitive Description": "Access Cognitive Description",
     "Access Food Check": "Access Food Check",
-    "Access Food Description": "Access Food Description"
+    "Access Food Description": "Access Food Description",
     "Please upload a valid file.": "Please upload a valid file.",
     "Data imported successfully": "Data imported successfully",
     "Upload File": "Upload File",
@@ -245,6 +245,8 @@
     "Download EcPois Excel": "Download EcPois Excel",
     "Download EcTracks": "Download EcTracks",
     "Download EcPois": "Download EcPois",
+    "Download Tracks": "Download Tracks",
+    "Download Pois": "Download Pois",
     "Download UgcTracks": "Download UgcTracks",
     "Download UgcTracks GeoJSON": "Download UgcTracks GeoJSON",
     "Download GeoJSON": "Download GeoJSON",

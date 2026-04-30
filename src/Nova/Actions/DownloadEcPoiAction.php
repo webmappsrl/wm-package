@@ -12,7 +12,7 @@ class DownloadEcPoiAction extends AbstractDownloadMultiFormatAction
 {
     public function name()
     {
-        return __('Download EcPois');
+        return __('Download Pois');
     }
 
     protected function filePrefix(): string
