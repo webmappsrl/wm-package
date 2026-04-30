@@ -13,6 +13,7 @@ use Illuminate\Support\Carbon;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 use Tymon\JWTAuth\Contracts\JWTSubject;
+use Wm\WmPackage\Nova\Filters\AppFilter;
 use Wm\WmPackage\Traits\HasPackageFactory;
 
 /**
@@ -101,7 +102,7 @@ class User extends Authenticatable implements JWTSubject
 
     /**
      * Limit users to those who own at least one UGC POI or UGC track for the given app.
-     * Used by {@see \Wm\WmPackage\Nova\Filters\AppFilter} when the table has no `app_id` column.
+     * Used by {@see AppFilter} when the table has no `app_id` column.
      * From a query builder: `Model::query()->getAppsFromUgc($appId)`.
      */
     public function scopeGetAppsFromUgc(Builder $query, mixed $appId): Builder

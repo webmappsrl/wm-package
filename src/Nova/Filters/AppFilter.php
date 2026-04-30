@@ -40,7 +40,7 @@ class AppFilter extends Filter
         $hasAppIdColumn = $tableHasAppId[$table] ??= Schema::hasColumn($table, 'app_id');
 
         // If the table doesn't have `app_id` (e.g. users), fall back to UGC relations via model scope.
-        if (!$hasAppIdColumn && method_exists($model, 'scopeGetAppsFromUgc')) {
+        if (! $hasAppIdColumn && method_exists($model, 'scopeGetAppsFromUgc')) {
             return $query->getAppsFromUgc($value);
         }
 
