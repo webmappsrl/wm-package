@@ -1,5 +1,55 @@
 # Changelog
 
+## [1.5.0](https://github.com/webmappsrl/wm-package/compare/v1.4.0...v1.5.0) (2026-04-30)
+
+
+### Features
+
+* **ApiLinksCard:** ✨ add new component for displaying API links ([5e93752](https://github.com/webmappsrl/wm-package/commit/5e93752670277d24608c790a2ec95cac682c7593))
+* **AppTiles:** ✨ add CAI tile configuration with SVG icon ([09bda3f](https://github.com/webmappsrl/wm-package/commit/09bda3f7af9ebaae1a7404947ddd0d0408c9038e))
+* **config:** 🔧 update AppConfigService for feature collection overlays ([5e93752](https://github.com/webmappsrl/wm-package/commit/5e93752670277d24608c790a2ec95cac682c7593))
+* **factory:** 🔨 create factory for FeatureCollection ([5e93752](https://github.com/webmappsrl/wm-package/commit/5e93752670277d24608c790a2ec95cac682c7593))
+* **filter:** ✨ add dynamic app_id filtering with UGC fallback OC:6075 ([#209](https://github.com/webmappsrl/wm-package/issues/209)) ([e74f997](https://github.com/webmappsrl/wm-package/commit/e74f997d3b991859c4c98075912f3d586a1dc7ad))
+* **geometry:** ✨ add support for complex and point geometries in FeatureCollectionMap OC:7283 ([eb508d6](https://github.com/webmappsrl/wm-package/commit/eb508d6253fd550932ce2543f882c5510ba1c6c7))
+* **geometry:** ✨ add support for complex and point geometries in FeatureCollectionMap OC:7283 ([#185](https://github.com/webmappsrl/wm-package/issues/185)) ([eb508d6](https://github.com/webmappsrl/wm-package/commit/eb508d6253fd550932ce2543f882c5510ba1c6c7))
+* **geometry:** ✨ enhance FeatureCollectionMap with geometry kind detection and support ([eb508d6](https://github.com/webmappsrl/wm-package/commit/eb508d6253fd550932ce2543f882c5510ba1c6c7))
+* **import-export:** ✨ add enhanced Excel import/export functionality and remove legacy import command OC:7237 ([c3401f1](https://github.com/webmappsrl/wm-package/commit/c3401f18965aa8512208c147f056b4da3764a2bf))
+* **import-export:** ✨ add enhanced Excel import/export functionality and remove legacy import command OC:7237 ([#181](https://github.com/webmappsrl/wm-package/issues/181)) ([c3401f1](https://github.com/webmappsrl/wm-package/commit/c3401f18965aa8512208c147f056b4da3764a2bf))
+* **import-export:** ✨ add Excel import/export functionality for EcTracks and EcPois ([c3401f1](https://github.com/webmappsrl/wm-package/commit/c3401f18965aa8512208c147f056b4da3764a2bf))
+* **import-export:** ✨ enhance POI and track import/export functionality ([c3401f1](https://github.com/webmappsrl/wm-package/commit/c3401f18965aa8512208c147f056b4da3764a2bf))
+* **jobs:** 🏗️ add GenerateFeatureCollectionJob for async processing ([5e93752](https://github.com/webmappsrl/wm-package/commit/5e93752670277d24608c790a2ec95cac682c7593))
+* **layer-observer:** ✨ regenerate feature collections on taxonomy changes ([5e93752](https://github.com/webmappsrl/wm-package/commit/5e93752670277d24608c790a2ec95cac682c7593))
+* **localization:** add new download options for Tracks and Pois in English and Italian ([c3401f1](https://github.com/webmappsrl/wm-package/commit/c3401f18965aa8512208c147f056b4da3764a2bf))
+* **map-upload:** ✨ add CSV support for point geometry uploads OC:7283 ([eb508d6](https://github.com/webmappsrl/wm-package/commit/eb508d6253fd550932ce2543f882c5510ba1c6c7))
+* **models:** ✨ add configurable foreign key to EcTrack's ecPois relationship oc:7739 ([dfd8d62](https://github.com/webmappsrl/wm-package/commit/dfd8d62d5e6c4c6e885aea1e520b136d04c25005))
+* **models:** 🏗️ implement FeatureCollection model and relations ([5e93752](https://github.com/webmappsrl/wm-package/commit/5e93752670277d24608c790a2ec95cac682c7593))
+* **nova:** ✨ add export tracks to GeoJSON action OC:7561 ([c3401f1](https://github.com/webmappsrl/wm-package/commit/c3401f18965aa8512208c147f056b4da3764a2bf))
+* **nova:** ✨ improve taxonomy import and sync process ([5e93752](https://github.com/webmappsrl/wm-package/commit/5e93752670277d24608c790a2ec95cac682c7593))
+* **nova:** 🎨 add Nova resources for FeatureCollection management ([5e93752](https://github.com/webmappsrl/wm-package/commit/5e93752670277d24608c790a2ec95cac682c7593))
+* **nova:** add horizontal scroll config options OC:7498 ([5e93752](https://github.com/webmappsrl/wm-package/commit/5e93752670277d24608c790a2ec95cac682c7593))
+* **observers:** 👀 trigger regeneration on relevant changes ([5e93752](https://github.com/webmappsrl/wm-package/commit/5e93752670277d24608c790a2ec95cac682c7593))
+* **order-list:** ✨ add color support to OrderList field ([5e93752](https://github.com/webmappsrl/wm-package/commit/5e93752670277d24608c790a2ec95cac682c7593))
+* **order-list:** ✨ implement event and job for order list reordering ([5e93752](https://github.com/webmappsrl/wm-package/commit/5e93752670277d24608c790a2ec95cac682c7593))
+* **PBFGeneratorService:** ✨ enhance PBF generation with processed geometries and track layer ranking ([#208](https://github.com/webmappsrl/wm-package/issues/208)) ([371f9c6](https://github.com/webmappsrl/wm-package/commit/371f9c61b6dcfc64f330c12cc78cc666ce56cde0))
+* **resource:** 🚀 implement DEM priority logic in `EcTrackResource` ([5e93752](https://github.com/webmappsrl/wm-package/commit/5e93752670277d24608c790a2ec95cac682c7593))
+* **service:** 🛠️ add FeatureCollectionService for geojson generation ([5e93752](https://github.com/webmappsrl/wm-package/commit/5e93752670277d24608c790a2ec95cac682c7593))
+* **slope-chart:** ✨ add slope chart functionality to FeatureCollectionMap ([#189](https://github.com/webmappsrl/wm-package/issues/189)) ([eb508d6](https://github.com/webmappsrl/wm-package/commit/eb508d6253fd550932ce2543f882c5510ba1c6c7))
+* **slope-chart:** ✨ integrate Vitest for testing and enhance slope chart functionality ([5d5e014](https://github.com/webmappsrl/wm-package/commit/5d5e0144b0ad2c304055a444956c9620cc8b863d))
+* **storage:** 💾 implement storage for FeatureCollection geojson ([5e93752](https://github.com/webmappsrl/wm-package/commit/5e93752670277d24608c790a2ec95cac682c7593))
+* **track-color:** ✨ introduce TrackColor field for Nova ([5e93752](https://github.com/webmappsrl/wm-package/commit/5e93752670277d24608c790a2ec95cac682c7593))
+* **validation:** ✨ add zoom level validation rules OC:7548 ([#199](https://github.com/webmappsrl/wm-package/issues/199)) ([7826ea9](https://github.com/webmappsrl/wm-package/commit/7826ea944c00c266e1ca1ce0315ea4de6e9d0d0d))
+
+
+### Bug Fixes
+
+* **Controller:** handle validation failure for non-existent UGC ([#187](https://github.com/webmappsrl/wm-package/issues/187)) ([b6feba7](https://github.com/webmappsrl/wm-package/commit/b6feba7e892dde02c36c90a4e0d92d9e67c10681))
+* **feature-collection-service:** 🐛 handle storage failure with exception ([5e93752](https://github.com/webmappsrl/wm-package/commit/5e93752670277d24608c790a2ec95cac682c7593))
+* **FeatureCollectionMap:** 🐛 correct slope chart enabling logic and improve coordinate handling ([433f73c](https://github.com/webmappsrl/wm-package/commit/433f73c8c5bf2667abc2c189c1ea5b174e5424fc))
+* **LayerFeatureController:** 🐛 resolve morph type using relation morph map ([5e93752](https://github.com/webmappsrl/wm-package/commit/5e93752670277d24608c790a2ec95cac682c7593))
+* **Nova:** 🐛 correct string concatenation in ReindexAppScoutAction ([38f4037](https://github.com/webmappsrl/wm-package/commit/38f40374f63449701eb06350ab9c0e519777dc09))
+* **services:** 🐛 correct logging in GeometryComputationService ([5e93752](https://github.com/webmappsrl/wm-package/commit/5e93752670277d24608c790a2ec95cac682c7593))
+* **useFeatures:** 🐛 handle null feature name case oc: 7745 ([4f3b467](https://github.com/webmappsrl/wm-package/commit/4f3b46772fd4be88746249f3d787d42350244f93))
+
 ## [1.4.0](https://github.com/webmappsrl/wm-package/compare/v1.3.1...v1.4.0) (2026-03-23)
 
 
