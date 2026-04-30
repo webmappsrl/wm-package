@@ -4,6 +4,7 @@ namespace Wm\WmPackage\Nova\Filters;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Laravel\Nova\Filters\Filter;
 use Wm\WmPackage\Models\App;
 
@@ -28,6 +29,22 @@ class AppFilter extends Filter
      */
     public function apply(Request $request, $query, $value)
     {
+        if (blank($value)) {
+            return $query;
+        }
+
+        $model = $query->getModel();
+
+        $table = $model->getTable();
+        static $tableHasAppId = [];
+        $hasAppIdColumn = $tableHasAppId[$table] ??= Schema::hasColumn($table, 'app_id');
+
+        // If the table doesn't have `app_id` (e.g. users), fall back to UGC relations via model scope.
+        if (!$hasAppIdColumn && method_exists($model, 'scopeGetAppsFromUgc')) {
+            return $query->getAppsFromUgc($value);
+        }
+
+        // Default behaviour for resources that have a direct `app_id` column (UGC, Layer, etc.).
         return $query->where('app_id', $value);
     }
 

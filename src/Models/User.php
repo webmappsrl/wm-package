@@ -4,6 +4,7 @@ namespace Wm\WmPackage\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use ChristianKuri\LaravelFavorite\Traits\Favoriteability;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -96,6 +97,23 @@ class User extends Authenticatable implements JWTSubject
     public function ugc_tracks(): HasMany
     {
         return $this->hasMany(UgcTrack::class);
+    }
+
+    /**
+     * Limit users to those who own at least one UGC POI or UGC track for the given app.
+     * Used by {@see \Wm\WmPackage\Nova\Filters\AppFilter} when the table has no `app_id` column.
+     * From a query builder: `Model::query()->getAppsFromUgc($appId)`.
+     */
+    public function scopeGetAppsFromUgc(Builder $query, mixed $appId): Builder
+    {
+        if (blank($appId)) {
+            return $query;
+        }
+
+        return $query->where(function (Builder $q) use ($appId) {
+            $q->whereHas('ugc_pois', fn (Builder $pois) => $pois->where('app_id', $appId))
+                ->orWhereHas('ugc_tracks', fn (Builder $tracks) => $tracks->where('app_id', $appId));
+        });
     }
 
     public function taxonomy_targets(): HasMany
