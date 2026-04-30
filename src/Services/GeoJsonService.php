@@ -125,6 +125,33 @@ class GeoJsonService extends BaseService
         ];
     }
 
+    /**
+     * Crea una FeatureCollection a partire da una lista/collection di modelli che espongono getGeojson().
+     *
+     * @param  iterable<int, object>  $models
+     * @return array{type: string, features: array<int, array<string, mixed>>}
+     */
+    public function modelsToFeatureCollection(iterable $models): array
+    {
+        $features = [];
+
+        foreach ($models as $model) {
+            if (! is_object($model) || ! method_exists($model, 'getGeojson')) {
+                continue;
+            }
+
+            $feature = $model->getGeojson();
+            if (is_array($feature)) {
+                $features[] = $feature;
+            }
+        }
+
+        return [
+            'type' => 'FeatureCollection',
+            'features' => $features,
+        ];
+    }
+
     public function removeInvalidProperties(array $properties): array
     {
         return array_filter($properties, fn ($e) => ! is_array($e)

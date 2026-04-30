@@ -87,6 +87,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
         Nova::serving(function () {
             Nova::style('wm-flexible-field', __DIR__.'/../resources/css/flexible-field.css');
             Nova::style('wm-nova-overrides', __DIR__.'/../resources/css/nova.css');
+            Nova::style('wm-nova-dropzone', __DIR__.'/../resources/css/nova-dropzone.css');
             $this->addWmpackageToolsMenuItem();
         });
 
@@ -155,6 +156,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
                 'wm-backup',
                 'wm-media-library',
                 'wm-geohub-import',
+                'wm-excel-ec-import',
                 'wm-elasticsearch',
                 'wm-minio',
                 'wm-horizon',

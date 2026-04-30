@@ -1,0 +1,66 @@
+/*
+ * Campo File Nova (DropZone): bottone “Choose File” e area drag-and-drop più leggibili.
+ * Struttura: vendor/laravel/nova/.../DropZone/DropZone.vue
+ */
+div[role="button"][class*="border-dashed"].cursor-pointer {
+    border-width: 2px !important;
+    border-color: rgb(45 212 191 / 0.45) !important;
+    background: linear-gradient(180deg, rgb(240 253 250) 0%, rgb(250 250 249) 100%) !important;
+    padding: 1.125rem 1.25rem !important;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+div[role="button"][class*="border-dashed"].cursor-pointer:hover {
+    border-color: rgb(13 148 136 / 0.55) !important;
+    box-shadow: 0 2px 8px rgb(13 148 136 / 0.12);
+}
+
+div[role="button"][class*="border-dashed"].cursor-pointer > div.flex.items-center {
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    column-gap: 1.25rem !important;
+    row-gap: 0.75rem;
+}
+
+div[role="button"][class*="border-dashed"].cursor-pointer > div.flex.items-center > p:first-child {
+    flex: 0 0 auto;
+}
+
+/* Sostituisce il blocco pieno primary con pill outline, testo su una riga */
+div[role="button"][class*="border-dashed"].cursor-pointer > div.flex.items-center > p:first-child > * {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.5rem;
+    white-space: nowrap !important;
+    padding: 0.5rem 1.25rem !important;
+    min-height: 2.75rem;
+    border-radius: 0.5rem !important;
+    font-size: 0.9375rem !important;
+    font-weight: 600 !important;
+    line-height: 1.25 !important;
+    letter-spacing: 0.01em;
+    background-color: #fff !important;
+    color: rgb(13 148 136) !important;
+    border: 2px solid rgb(45 212 191) !important;
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
+}
+
+div[role="button"][class*="border-dashed"].cursor-pointer > div.flex.items-center > p:last-child {
+    flex: 1 1 12rem;
+    text-align: center;
+    line-height: 1.4;
+}
+
+/* Dark mode (Nova) */
+.dark div[role="button"][class*="border-dashed"].cursor-pointer {
+    background: linear-gradient(180deg, rgb(15 23 42) 0%, rgb(23 23 23) 100%) !important;
+    border-color: rgb(45 212 191 / 0.35) !important;
+}
+
+.dark div[role="button"][class*="border-dashed"].cursor-pointer > div.flex.items-center > p:first-child > * {
+    background-color: rgb(15 23 42) !important;
+    color: rgb(94 234 212) !important;
+    border-color: rgb(45 212 191 / 0.55) !important;
+}
