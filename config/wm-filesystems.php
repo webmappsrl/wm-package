@@ -82,6 +82,7 @@ return [
             'url' => env('AWS_WMFE_URL', env('AWS_URL')),
             'endpoint' => env('AWS_ENDPOINT'),
             'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
+            'visibility' => 'public',
         ],
         's3-osfmedia' => [
             'driver' => 's3',
