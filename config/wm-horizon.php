@@ -209,6 +209,22 @@ return [
             'timeout' => 180,
             'nice' => 0,
         ],
+        'supervisor-dem' => [
+            'connection' => 'redis',
+            'queue' => ['dem'],
+            'balance' => 'auto',
+            'autoScalingStrategy' => 'time',
+            'maxProcesses' => 6,
+            'minProcesses' => 1,
+            'balanceMaxShift' => 3,
+            'balanceCooldown' => 3,
+            'maxTime' => 3600,
+            'maxJobs' => 1000,
+            'memory' => 256,
+            'tries' => 3,
+            'timeout' => 120,
+            'nice' => 0,
+        ],
         'supervisor-layers' => [
             'connection' => 'redis',
             'queue' => ['layers'],
@@ -249,6 +265,14 @@ return [
                 'balanceMaxShift' => 1,
                 'balanceCooldown' => 3,
             ],
+            'supervisor-dem' => [
+                'maxProcesses' => 3,
+                'minProcesses' => 1,
+                'balance' => 'auto',
+                'autoScalingStrategy' => 'time',
+                'balanceMaxShift' => 1,
+                'balanceCooldown' => 3,
+            ],
         ],
         'local' => [
             'supervisor-default' => [
@@ -260,6 +284,10 @@ return [
                 'balance' => 'simple',
             ],
             'supervisor-layers' => [
+                'maxProcesses' => 1,
+                'balance' => 'simple',
+            ],
+            'supervisor-dem' => [
                 'maxProcesses' => 1,
                 'balance' => 'simple',
             ],
@@ -284,6 +312,14 @@ return [
             'supervisor-layers' => [
                 'maxProcesses' => 1,
                 'balance' => 'simple',
+            ],
+            'supervisor-dem' => [
+                'maxProcesses' => 2,
+                'minProcesses' => 1,
+                'balance' => 'auto',
+                'autoScalingStrategy' => 'time',
+                'balanceMaxShift' => 1,
+                'balanceCooldown' => 3,
             ],
         ],
     ],
