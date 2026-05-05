@@ -59,8 +59,9 @@ return [
             'bucket' => env('AWS_BUCKET'),
             'url' => env('AWS_URL'),
             'endpoint' => env('AWS_ENDPOINT'),
-            'visibility' => 'public',
+            'visibility' => env('AWS_VISIBILITY'),
             'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
+            'throw' => env('AWS_THROW', false),
         ],
         // the dumps disk could have a dedicated aws configuration
         'wmdumps' => [
@@ -82,7 +83,7 @@ return [
             'url' => env('AWS_WMFE_URL', env('AWS_URL')),
             'endpoint' => env('AWS_ENDPOINT'),
             'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
-            'visibility' => 'public',
+            'visibility' => env('AWS_VISIBILITY'),
         ],
         's3-osfmedia' => [
             'driver' => 's3',
