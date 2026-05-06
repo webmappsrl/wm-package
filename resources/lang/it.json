@@ -118,6 +118,8 @@
     "Required size is :widthx:heightpx": "Dimensione richiesta: :widthx:heightpx",
     "Restore DB": "Ripristina DB",
     "Rigenera PBF Layer": "Rigenera PBF Layer",
+    "Min App Version": "Versione minima app",
+    "Minimum app version required. Versions below this value will be blocked and forced to update. Format: X.Y.Z (e.g. 3.1.10, 0.12.55, 12.55.32).": "Versione minima richiesta. Le versioni inferiori verranno bloccate e obbligate ad aggiornare. Formato: X.Y.Z (es. 3.1.10, 0.12.55, 12.55.32).",
     "Roles": "Ruoli",
     "Save Models": "Salva Modelli",
     "Scout reindexing completed for :count app": "Reindicizzazione Scout completata per :count app",
