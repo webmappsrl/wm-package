@@ -48,6 +48,7 @@
     "Layer Filter": "Filtro livelli",
     "Layer Filter Label": "Etichetta filtro livelli",
     "Select which layers will be available as filters": "Seleziona quali livelli saranno disponibili come filtri",
+    "Select which tile layers the app will use; order follows insertion order, so the last one inserted appears first on the map. The first tile type in the list is used to download tiles for offline mode in the frontend.": "Seleziona quali layer di tiles utilizzerà l'app; l'ordine è quello di inserimento, quindi l'ultimo inserito sarà quello visibile per primo sulla mappa. La prima tipologia di tile presente nell'elenco viene utilizzata per il download delle tiles destinate alla modalità offline del frontend.",
     "Track Distance Step Filter": "Passi filtro distanza tracce",
     "Track Duration Steps Filter": "Passi filtro durata tracce",
     "Track Max Distance Filter": "Distanza massima filtro tracce",

@@ -48,6 +48,7 @@
     "Layer Filter": "Layer Filter",
     "Layer Filter Label": "Layer Filter Label",
     "Select which layers will be available as filters": "Select which layers will be available as filters",
+    "Select which tile layers the app will use; order follows insertion order, so the last one inserted appears first on the map. The first tile type in the list is used to download tiles for offline mode in the frontend.": "Select which tile layers the app will use; order follows insertion order, so the last one inserted appears first on the map. The first tile type in the list is used to download tiles for offline mode in the frontend.",
     "Track Distance Step Filter": "Track Distance Step Filter",
     "Track Duration Steps Filter": "Track Duration Steps Filter",
     "Track Max Distance Filter": "Track Max Distance Filter",
