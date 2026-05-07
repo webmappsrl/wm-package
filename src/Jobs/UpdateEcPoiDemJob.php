@@ -18,14 +18,15 @@ class UpdateEcPoiDemJob implements ShouldQueue
     use Queueable;
     use SerializesModels;
 
-    public $queue = 'dem';
-
     /**
      * Create a new job instance.
      *
      * @return void
      */
-    public function __construct(protected EcPoi $ecPoi) {}
+    public function __construct(protected EcPoi $ecPoi)
+    {
+        $this->onQueue('dem');
+    }
 
     /**
      * Execute the job.
