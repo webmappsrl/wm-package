@@ -914,7 +914,7 @@ class App extends Resource
                 ->options($t, $selectedTileLayers)
                 ->reorderable()
                 ->hideFromIndex()
-                ->help(__('Select which tile layers the app will use; order follows insertion order, so the last one inserted appears first on the map. The first tile type in the list is used to download tiles for offline mode in the frontend.')),
+                ->help(__('Select which tile layers the app will use; order follows insertion order. The first tile type in the list is used to download tiles for offline mode in the frontend.')),
 
             // --- DATA CONTROLS ---
             Heading::make(
