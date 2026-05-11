@@ -6257,7 +6257,7 @@
       "isMulticolor2": true,
       "grid": 0,
       "tags": [
-        "tile-muta"
+        "tile-mute"
       ],
       "defaultCode": 59653
     },
@@ -6841,7 +6841,7 @@
       "isMulticolor2": true,
       "grid": 0,
       "tags": [
-        "tile-webmapp"
+        "tile-default"
       ],
       "defaultCode": 60367
     }
@@ -10378,7 +10378,7 @@
     },
     {
       "order": 1784,
-      "name": "tile-muta",
+      "name": "tile-mute",
       "prevSize": 32,
       "codes": [
         59653,
@@ -10528,7 +10528,7 @@
     },
     {
       "order": 1782,
-      "name": "tile-webmapp",
+      "name": "tile-default",
       "prevSize": 32,
       "codes": [
         60367,
