@@ -33,7 +33,7 @@
         "laravel/scout": "^10.11",
         "league/flysystem-aws-s3-v3": "^3.0",
         "maatwebsite/excel": "^3.1",
-        "marshmallow/nova-tiptap": "^5.1",
+        "marshmallow/nova-tiptap": "^5.1 || ^6.0",
         "matchish/laravel-scout-elasticsearch": "^7.10",
         "ndamiens/gisconverter": "^1.0",
         "predis/predis": "^2.3",
