@@ -95,7 +95,7 @@ class App extends Resource
                 Tab::make('filters', $this->filters_tab()),
                 Tab::make('wordpress', $this->wordpress_tab()),
                 Tab::make('languages', $this->languages_tab()),
-                Tab::make('seachable', $this->seachable_tab()),
+                Tab::make('searchable', $this->searchable_tab()),
                 Tab::make('analytics', $this->analytics_tab()),
                 Tab::make('overlays', $this->overlays_tab()),
             ]),
@@ -450,7 +450,7 @@ class App extends Resource
         ];
     }
 
-    protected function seachable_tab(): array
+    protected function searchable_tab(): array
     {
         $track_selected = is_null($this->model()->track_searchables) ? [] : json_decode($this->model()->track_searchables, true);
         $poi_selected = is_null($this->model()->poi_searchables) ? [] : json_decode($this->model()->poi_searchables, true);
