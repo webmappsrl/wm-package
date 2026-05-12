@@ -50,6 +50,22 @@ return [
                     'end' => [
                         'type' => 'geo_point',
                     ],
+                    'from' => [
+                        'type' => 'text',
+                        'fields' => [
+                            'keyword' => [
+                                'type' => 'keyword',
+                            ],
+                        ],
+                    ],
+                    'to' => [
+                        'type' => 'text',
+                        'fields' => [
+                            'keyword' => [
+                                'type' => 'keyword',
+                            ],
+                        ],
+                    ],
                     'taxonomyActivities' => [
                         'type' => 'keyword',
                     ],
