@@ -728,8 +728,12 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
             'end' => $end,
             'cai_scale' => $this->properties['cai_scale'] ?? '',
             'app_id' => $this->app_id,
-            // 'from' => $this->getActualOrOSFValue('from'),
-            // 'to' => $this->getActualOrOSFValue('to'),
+            'from' => $this->properties['from']
+                ?? data_get($this->osmfeatures_data ?? null, 'properties.from')
+                ?? '',
+            'to' => $this->properties['to']
+                ?? data_get($this->osmfeatures_data ?? null, 'properties.to')
+                ?? '',
             'name' => $this->getTranslation('name', 'it'),
             'taxonomyWheres' => $this->getOrderedTaxonomyWheres(),
             'feature_image' => $firstMedia ? $mediaService->getThumbnailUrl($firstMedia) : '',
