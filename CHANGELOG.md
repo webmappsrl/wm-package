@@ -1,5 +1,30 @@
 # Changelog
 
+## [1.6.0](https://github.com/webmappsrl/wm-package/compare/v1.5.0...v1.6.0) (2026-05-14)
+
+
+### Features
+
+* **command:** ✨ add config option to wm:backup-run command ([45df1ba](https://github.com/webmappsrl/wm-package/commit/45df1ba980ef9b1764afcbdd8c4692765c5f9fd1))
+* **config:** ✨ add 'from' and 'to' fields to wm-elasticsearch configuration ([#214](https://github.com/webmappsrl/wm-package/issues/214)) ([fd77c39](https://github.com/webmappsrl/wm-package/commit/fd77c3956f296bd44d855d8d2913bb242db0b896))
+* **config:** ✨ add supervisor-dem configuration to wm-horizon ([d14655a](https://github.com/webmappsrl/wm-package/commit/d14655a55ca0aba26aa7652e30881899edcf070b))
+* **config:** ✨ update AWS configuration with environment variables ([77a4cde](https://github.com/webmappsrl/wm-package/commit/77a4cde30e958e51d1bdbac1e5c8e9dc45593b85))
+* **localization:** 🌐 add new tile layer selection description OC:7806 ([#211](https://github.com/webmappsrl/wm-package/issues/211)) ([92b6464](https://github.com/webmappsrl/wm-package/commit/92b6464d1a39bfc7fefb1c2cfc3ccf6c3cb96905))
+
+
+### Bug Fixes
+
+* **AppTiles:** 🔧 update tile URL for improved resource access ([c4f1a55](https://github.com/webmappsrl/wm-package/commit/c4f1a55481eb58e17696546795089579b356350d))
+* **config:** 🐛 resolve URL fallback logic for wmfeUrl OC:7896 ([#216](https://github.com/webmappsrl/wm-package/issues/216)) ([6f6bdb7](https://github.com/webmappsrl/wm-package/commit/6f6bdb7df93fb6e19883b3b53ac958904f43c3c5))
+* **config:** 🛠️ add visibility setting to wm-s3 filesystem ([6547351](https://github.com/webmappsrl/wm-package/commit/65473514ee5c18091350349a387f288905d39a82))
+* **typo:** 🐛 correct misspellings of 'searchable' in method and tab name OC:7833 ([#213](https://github.com/webmappsrl/wm-package/issues/213)) ([6028446](https://github.com/webmappsrl/wm-package/commit/6028446a35e724067fb385c7d66182f1091a222a))
+
+
+### Miscellaneous Chores
+
+* **dependencies:** 🔄 update marshmallow/nova-tiptap version constraint ([ff34028](https://github.com/webmappsrl/wm-package/commit/ff3402845c252ad0000e996ba41bf621ba56b031))
+* **dependencies:** 🔧 update illuminate/contracts and laravel/sanctum version constraints ([d2418b3](https://github.com/webmappsrl/wm-package/commit/d2418b308f84d338532e447a2738bb3ee4f9d14f))
+
 ## [1.5.0](https://github.com/webmappsrl/wm-package/compare/v1.4.0...v1.5.0) (2026-04-30)
 
 
