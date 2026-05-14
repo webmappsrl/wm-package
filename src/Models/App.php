@@ -562,6 +562,8 @@ class App extends Model implements HasMedia
         $this->addMediaCollection('icon');
         $this->addMediaCollection('icon_small');
         $this->addMediaCollection('splash');
+        $this->addMediaCollection('my_routes_image');
+        $this->addMediaCollection('my_downloads_image');
     }
 
     // Le funzioni custom per config_home sono state spostate nel resolver layerBoxResolver
