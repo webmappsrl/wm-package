@@ -21,11 +21,11 @@ use Laravel\Nova\Tabs\Tab;
 use Marshmallow\Tiptap\Tiptap;
 use Outl1ne\MultiselectField\Multiselect;
 use Whitecube\NovaFlexibleContent\Flexible;
-use Wm\WmPackage\Enums\AppTiles;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
 use Wm\WmPackage\Models\App as ModelsApp;
 use Wm\WmPackage\Models\FeatureCollection as FeatureCollectionModel;
 use Wm\WmPackage\Models\Layer;
+use Wm\WmPackage\Models\Tile;
 use Wm\WmPackage\Models\TaxonomyActivity as TaxonomyActivityModel;
 use Wm\WmPackage\Models\TaxonomyPoiType as TaxonomyPoiTypeModel;
 use Wm\WmPackage\Nova\Actions\ExecuteEcTrackDataChainAction;
@@ -896,9 +896,15 @@ class App extends Resource
 
     protected function map_settings_tab(): array
     {
-        $selectedTileLayers = is_null($this->model()->tiles) ? [] : json_decode($this->model()->tiles, true);
-        $appTiles = new AppTiles;
-        $t = $appTiles->oldval();
+        $tileOptions = Tile::query()
+            ->orderBy('attribution')
+            ->get()
+            ->mapWithKeys(function (Tile $tile) {
+                $label = is_array($tile->label) ? ($tile->label[app()->getLocale()] ?? $tile->label['it'] ?? null) : null;
+
+                return [$tile->id => ($label ?? $tile->attribution)];
+            })
+            ->all();
 
         return [
             // --- TILES ---
@@ -911,9 +917,39 @@ class App extends Resource
                 Text::make('Tiles Label'),
             ])->hideFromIndex(),
             Multiselect::make(__('Tiles'), 'tiles')
-                ->options($t, $selectedTileLayers)
+                ->options($tileOptions)
                 ->reorderable()
                 ->hideFromIndex()
+                ->resolveUsing(function () {
+                    $model = $this->model();
+                    if (! $model || ! $model->exists) {
+                        return [];
+                    }
+
+                    return $model->tiles()->pluck('tiles.id')->all();
+                })
+                ->fillUsing(function ($request, $model, $attribute, $requestAttribute) {
+                    $input = $request->input($requestAttribute);
+
+                    if (is_string($input)) {
+                        $decoded = json_decode($input, true);
+                        $input = is_array($decoded) ? $decoded : array_filter(array_map('trim', explode(',', $input)));
+                    }
+
+                    $ids = array_values(array_filter((array) ($input ?? []), fn ($v) => $v !== null && $v !== ''));
+
+                    $sync = [];
+                    foreach ($ids as $index => $tileId) {
+                        $sync[(int) $tileId] = ['sort_order' => $index];
+                    }
+
+                    $model::saved(function ($saved) use ($model, $sync) {
+                        if ($saved !== $model) {
+                            return;
+                        }
+                        $saved->tiles()->sync($sync);
+                    });
+                })
                 ->help(__('Select which tile layers the app will use; order follows insertion order. The first tile type in the list is used to download tiles for offline mode in the frontend.')),
 
             // --- DATA CONTROLS ---

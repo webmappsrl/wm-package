@@ -8,12 +8,12 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Wm\WmPackage\Enums\AppTiles;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\FeatureCollection;
 use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Services\GeometryComputationService;
+use Wm\WmPackage\Services\IconSvgService;
 use Wm\WmPackage\Services\Models\MediaService;
 use Wm\WmPackage\Services\StorageService;
 
@@ -303,10 +303,10 @@ class AppConfigService extends AppBaseService
         $data['MAP']['maxStrokeWidth'] = $this->app->map_max_stroke_width;
         $data['MAP']['minStrokeWidth'] = $this->app->map_min_stroke_width;
 
-        $decoded_tiles = json_decode($this->app->tiles, true);
-        $data['MAP']['tiles'] = array_map(function ($v) {
-            return json_decode($v);
-        }, is_array($decoded_tiles) ? $decoded_tiles : []);
+        $appTiles = $this->app->tiles()->get();
+        $data['MAP']['tiles'] = $appTiles->map(function ($tile) {
+            return (object) [$tile->attribution => $tile->server_xyz];
+        })->values()->all();
 
         if (is_null($this->app->map_bbox)) {
             $bbox = GeometryComputationService::make()->getEcTracksBboxByAppId($this->app->id);
@@ -412,17 +412,23 @@ class AppConfigService extends AppBaseService
         $data['MAP']['show_track_direction_arrow'] = (bool) ($properties['show_track_direction_arrow'] ?? false);
 
         // Tiles
-        if ($this->app->tiles && ! empty(json_decode($this->app->tiles, true))) {
-            $appTiles = new AppTiles;
-            $data['MAP']['controls']['tiles'][] = ['label' => $this->app->getTranslations('tiles_label'), 'type' => 'title'];
-            $ta = array_map(function ($v) use ($appTiles) {
-                $v = json_decode($v, true);
-                $tile = $appTiles->getConstant(key($v));
-                $tile['type'] = 'button';
+        if ($appTiles->isNotEmpty()) {
+            $iconService = new IconSvgService;
+            $iconSvgByName = $iconService->getSvgMapByName(
+                $appTiles->pluck('icon')->filter()->unique()->values()->all()
+            );
 
-                return $tile;
-            }, json_decode($this->app->tiles, true));
-            array_push($data['MAP']['controls']['tiles'], ...$ta);
+            $data['MAP']['controls']['tiles'][] = ['label' => $this->app->getTranslations('tiles_label'), 'type' => 'title'];
+            foreach ($appTiles as $tile) {
+                $data['MAP']['controls']['tiles'][] = [
+                    'name' => $tile->attribution,
+                    'label' => $tile->getTranslations('label'),
+                    'icon' => $iconSvgByName[$tile->icon] ?? null,
+                    'url' => $tile->server_xyz,
+                    'link' => $tile->link,
+                    'type' => 'button',
+                ];
+            }
         }
 
         // FeatureCollections (overlays)
