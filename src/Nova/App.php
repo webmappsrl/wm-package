@@ -178,6 +178,11 @@ class App extends Resource
                 ->default(false)
                 ->hideFromIndex()
                 ->help(__('Shows the download tiles button on the map')),
+            Text::make(__('Min App Version'), 'properties->min_app_version')
+                ->hideFromIndex()
+                ->placeholder('0.0.0')
+                ->rules('nullable', 'regex:/^\\d+\\.\\d+\\.\\d+$/')
+                ->help(__('Minimum app version required. Versions below this value will be blocked and forced to update. Format: X.Y.Z (e.g. 3.1.10, 0.12.55, 12.55.32).')),
         ];
     }
 

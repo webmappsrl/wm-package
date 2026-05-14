@@ -133,6 +133,10 @@ class AppConfigService extends AppBaseService
             ];
         }
 
+        if (isset($properties['min_app_version']) && trim((string) $properties['min_app_version']) !== '') {
+            $data['APP']['minAppVersion'] = $properties['min_app_version'];
+        }
+
         return $data;
     }
 
