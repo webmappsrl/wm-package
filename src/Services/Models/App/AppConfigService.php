@@ -634,7 +634,7 @@ class AppConfigService extends AppBaseService
         $data = [];
         // THEME section
 
-        $data['THEME'] = $this->app->properties['theme'];
+        $data['THEME'] = $this->app->properties['theme'] ?? [];
 
         return $data;
     }

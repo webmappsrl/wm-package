@@ -66,9 +66,6 @@ class AppFactory extends Factory
                 'show_duration_forward' => true,
                 'show_duration_backward' => true,
             ]),
-            'properties' => [
-                'theme' => [],
-            ],
         ];
     }
 }
