@@ -4,11 +4,12 @@ namespace Wm\WmPackage\Support;
 
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Http\Request;
+use Laravel\Nova\Actions\Action;
 
 /**
  * Verifica accesso basata su allowlist email per utenti super-admin (staff interno).
  *
- * Riutilizzabile da Nova ({@see \Laravel\Nova\Actions\Action}, risorse),
+ * Riutilizzabile da Nova ({@see Action}, risorse),
  * middleware, comandi HTTP o CLI (tramite {@see self::allowsUser} / {@see self::allowsEmail}).
  */
 final class SuperAdminService
