@@ -29,6 +29,7 @@ use Wm\WmPackage\Commands\WmRestoreDbCommand;
 use Wm\WmPackage\ElasticSearch\HitsIteratorAggregate as ElasticSearchHitsIteratorAggregate;
 use Wm\WmPackage\Jobs\Import\ImportEcMediaJob;
 use Wm\WmPackage\Nova\Cards\ApiLinksCard\CardServiceProvider;
+use Wm\WmPackage\Nova\Cards\LayerAnalytics\CardServiceProvider as LayerAnalyticsCardServiceProvider;
 use Wm\WmPackage\Nova\Fields\IconSelect\FieldServiceProvider;
 use Wm\WmPackage\Providers\EventServiceProvider;
 use Wm\WmPackage\Providers\ScheduleServiceProvider;
@@ -61,6 +62,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
         $this->app->register(\Wm\WmPackage\Nova\Fields\OrderList\FieldServiceProvider::class);
         $this->app->register(\Wm\WmPackage\Nova\Fields\TrackColor\FieldServiceProvider::class);
         $this->app->register(CardServiceProvider::class);
+        $this->app->register(LayerAnalyticsCardServiceProvider::class);
     }
 
     public static function getBasePath(): string
@@ -106,6 +108,12 @@ class WmPackageServiceProvider extends PackageServiceProvider
 
             Route::middleware('web')
                 ->group($packageDirPath.'routes/web.php');
+
+            Route::middleware(['nova'])
+                ->prefix('nova-vendor/layer-analytics')
+                ->group(function () {
+                    Route::get('/{layer}', [\Wm\WmPackage\Http\Controllers\Nova\AnalyticsController::class, 'layer']);
+                });
         });
 
         // Register policies

@@ -1,0 +1,187 @@
+<?php
+
+namespace Wm\WmPackage\Tests\Unit;
+
+use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Wm\WmPackage\Services\PostHog\AnalyticsService;
+use Orchestra\Testbench\TestCase;
+
+class AnalyticsServiceTest extends TestCase
+{
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        config([
+            'services.posthog.host'               => 'https://posthog.example.com',
+            'services.posthog.project_id'         => '1',
+            'services.posthog.personal_api_key'   => 'phx_test',
+            'services.posthog.analytics_cache_ttl' => 900,
+        ]);
+    }
+
+    // -------------------------------------------------------------------------
+    // Cache
+    // -------------------------------------------------------------------------
+
+    public function test_second_call_uses_cache_and_does_not_hit_http(): void
+    {
+        Http::fake([
+            '*' => Http::sequence()
+                ->push($this->fakePostHogResponses())
+                ->push($this->fakePostHogResponses())
+                ->push($this->fakePostHogResponses()),
+        ]);
+
+        $service = new AnalyticsService();
+        $service->getLayerUsage(1);
+        $service->getLayerUsage(1);
+
+        // 3 query per la prima chiamata (daily, breakdown, unique_users), zero per la seconda
+        Http::assertSentCount(3);
+    }
+
+    public function test_cache_key_is_scoped_per_model_id(): void
+    {
+        Http::fake(['*' => Http::response($this->fakePostHogResponses())]);
+
+        Cache::flush();
+        $service = new AnalyticsService();
+        $service->getLayerUsage(1);
+        $service->getLayerUsage(2);
+
+        // 3 query per layer 1 + 3 query per layer 2 = 6 totali
+        Http::assertSentCount(6);
+    }
+
+    // -------------------------------------------------------------------------
+    // Output normalizzato
+    // -------------------------------------------------------------------------
+
+    public function test_getLayerUsage_returns_expected_structure(): void
+    {
+        Http::fake([
+            '*' => Http::sequence()
+                ->push(['results' => [['2026-05-01', 'posthog-android', 10], ['2026-05-01', 'posthog-ios', 3]]])  // daily breakdown
+                ->push(['results' => [['posthog-android', 10], ['posthog-ios', 3]]])                              // breakdown
+                ->push(['results' => [[7]]]),                                                                      // unique users
+        ]);
+
+        $result = (new AnalyticsService())->getLayerUsage(55);
+
+        $this->assertSame(55, $result['id']);
+        $this->assertSame('layerOpened', $result['event']);
+        $this->assertSame('last_30_days', $result['range']);
+        $this->assertSame(13, $result['total']); // 10 + 3
+        $this->assertSame(7, $result['unique_users']);
+        $this->assertCount(2, $result['daily_breakdown']);
+        $this->assertCount(2, $result['breakdown']);
+    }
+
+    public function test_daily_breakdown_rows_are_normalized_correctly(): void
+    {
+        Http::fake([
+            '*' => Http::sequence()
+                ->push(['results' => [['2026-05-01', 'posthog-android', 10]]])
+                ->push(['results' => []])
+                ->push(['results' => [[0]]]),
+        ]);
+
+        $result = (new AnalyticsService())->getLayerUsage(1);
+
+        $this->assertSame('2026-05-01', $result['daily_breakdown'][0]['date']);
+        $this->assertSame('posthog-android', $result['daily_breakdown'][0]['lib']);
+        $this->assertSame(10, $result['daily_breakdown'][0]['total']);
+    }
+
+    public function test_breakdown_rows_are_normalized_correctly(): void
+    {
+        Http::fake([
+            '*' => Http::sequence()
+                ->push(['results' => []])
+                ->push(['results' => [['posthog-ios', 42]]])
+                ->push(['results' => [[0]]]),
+        ]);
+
+        $result = (new AnalyticsService())->getLayerUsage(1);
+
+        $this->assertSame('posthog-ios', $result['breakdown'][0]['lib']);
+        $this->assertSame(42, $result['breakdown'][0]['total']);
+    }
+
+    // -------------------------------------------------------------------------
+    // Gestione errori HTTP
+    // -------------------------------------------------------------------------
+
+    public function test_failed_http_response_returns_empty_results_without_throwing(): void
+    {
+        Http::fake(['*' => Http::response('Internal Server Error', 500)]);
+        Log::shouldReceive('error')->times(3); // una per ogni query
+
+        $result = (new AnalyticsService())->getLayerUsage(1);
+
+        $this->assertSame(0, $result['total']);
+        $this->assertSame([], $result['daily_breakdown']);
+        $this->assertSame([], $result['breakdown']);
+        $this->assertSame(0, $result['unique_users']);
+    }
+
+    public function test_failed_http_response_logs_error(): void
+    {
+        Http::fake(['*' => Http::response('Bad Request', 400)]);
+        Log::shouldReceive('error')
+            ->atLeast()->once()
+            ->withArgs(fn ($msg) => $msg === 'PostHog query failed');
+
+        (new AnalyticsService())->getLayerUsage(1);
+    }
+
+    // -------------------------------------------------------------------------
+    // Query HTTP
+    // -------------------------------------------------------------------------
+
+    public function test_query_sends_correct_authorization_header(): void
+    {
+        Http::fake(['*' => Http::response($this->fakePostHogResponses())]);
+
+        (new AnalyticsService())->getLayerUsage(1);
+
+        Http::assertSent(fn (Request $request) =>
+            $request->hasHeader('Authorization', 'Bearer phx_test')
+        );
+    }
+
+    public function test_query_posts_to_correct_endpoint(): void
+    {
+        Http::fake(['*' => Http::response($this->fakePostHogResponses())]);
+
+        (new AnalyticsService())->getLayerUsage(1);
+
+        Http::assertSent(fn (Request $request) =>
+            $request->url() === 'https://posthog.example.com/api/projects/1/query'
+        );
+    }
+
+    public function test_query_sends_hogql_kind(): void
+    {
+        Http::fake(['*' => Http::response($this->fakePostHogResponses())]);
+
+        (new AnalyticsService())->getLayerUsage(1);
+
+        Http::assertSent(fn (Request $request) =>
+            $request->data()['query']['kind'] === 'HogQLQuery'
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // Helpers
+    // -------------------------------------------------------------------------
+
+    private function fakePostHogResponses(): array
+    {
+        return ['results' => []];
+    }
+}

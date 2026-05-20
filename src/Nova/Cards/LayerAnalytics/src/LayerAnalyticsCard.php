@@ -1,0 +1,33 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Wm\WmPackage\Nova\Cards\LayerAnalytics;
+
+use Laravel\Nova\Card;
+use Wm\WmPackage\Models\Layer;
+
+class LayerAnalyticsCard extends Card
+{
+    public $component = 'layer-analytics-card';
+
+    public $width = 'full';
+
+    public $onlyOnDetail = true;
+
+    private ?int $layerId;
+
+    public function __construct(Layer $layer)
+    {
+        parent::__construct();
+        $this->layerId = $layer->id ?? null;
+    }
+
+    public function jsonSerialize(): array
+    {
+        return array_merge(parent::jsonSerialize(), [
+            'endpoint' => '/nova-vendor/layer-analytics/' . $this->layerId,
+            'layer_id' => $this->layerId,
+        ]);
+    }
+}

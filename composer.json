@@ -73,6 +73,9 @@
             "Wm\\WmPackage\\Nova\\Fields\\IconSelect\\": "src/Nova/Fields/IconSelect/src/",
             "Wm\\WmPackage\\Nova\\Fields\\LayerFeatures\\": "src/Nova/Fields/LayerFeatures/src/",
             "Wm\\WmPackage\\Nova\\Fields\\FeatureCollectionMap\\": "src/Nova/Fields/FeatureCollectionMap/src/",
+            "Wm\\WmPackage\\Nova\\Cards\\LayerAnalytics\\": "src/Nova/Cards/LayerAnalytics/src/",
+            "Wm\\WmPackage\\Services\\PostHog\\": "src/Services/PostHog/",
+            "Wm\\WmPackage\\Http\\Controllers\\Nova\\": "src/Http/Controllers/Nova/",
             "Wm\\WmPackage\\Nova\\Fields\\FeatureCollectionGrid\\": "src/Nova/Fields/FeatureCollectionGrid/src/",
             "Wm\\WmPackage\\Nova\\Cards\\ApiLinksCard\\": "src/Nova/Cards/ApiLinksCard/src/"
         },

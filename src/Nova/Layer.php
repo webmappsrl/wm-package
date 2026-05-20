@@ -15,6 +15,7 @@ use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Panel;
 use Wm\WmPackage\Nova\Actions\AddLayersToConfigHomeAction;
 use Wm\WmPackage\Nova\Actions\ExecuteEcTrackDataChainAction;
+use Wm\WmPackage\Nova\Cards\LayerAnalytics\LayerAnalyticsCard;
 use Wm\WmPackage\Nova\Cards\ApiLinksCard\LayerApiLinksCard;
 use Wm\WmPackage\Nova\Fields\FeatureCollectionMap\src\FeatureCollectionMap;
 use Wm\WmPackage\Nova\Fields\LayerFeatures\LayerFeatures;
@@ -124,8 +125,19 @@ class Layer extends AbstractGeometryResource
             return [];
         }
 
-        return [
-            new LayerApiLinksCard($request->findModelOrFail()),
-        ];
+        /** @var \Wm\WmPackage\Models\Layer $layer */
+        $layer = $request->findModelOrFail();
+        $cards = [new LayerApiLinksCard($layer)];
+
+        $app = $layer->appOwner;
+        $analyticsEnabled = $app &&
+            (($app->properties['analytics_app_enabled'] ?? false) ||
+             ($app->properties['analytics_webapp_enabled'] ?? false));
+
+        if ($analyticsEnabled) {
+            $cards[] = new LayerAnalyticsCard($layer);
+        }
+
+        return $cards;
     }
 }
