@@ -28,7 +28,9 @@ use Wm\WmPackage\Models\FeatureCollection as FeatureCollectionModel;
 use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Models\TaxonomyActivity as TaxonomyActivityModel;
 use Wm\WmPackage\Models\TaxonomyPoiType as TaxonomyPoiTypeModel;
+use Wm\WmPackage\Nova\Actions\BuildAppPoisGeojsonAction;
 use Wm\WmPackage\Nova\Actions\ExecuteEcTrackDataChainAction;
+use Wm\WmPackage\Nova\Actions\GenerateAppIconsAction;
 use Wm\WmPackage\Nova\Actions\RegenerateAppPbfAction;
 use Wm\WmPackage\Nova\Actions\ReindexAppScoutAction;
 use Wm\WmPackage\Nova\Cards\ApiLinksCard\AppApiLinksCard;
@@ -39,6 +41,7 @@ use Wm\WmPackage\Nova\Flexible\ConfigHome\HorizontalScrollRepeaterJsonPreset;
 use Wm\WmPackage\Nova\Flexible\Resolvers\ConfigHomeResolver;
 use Wm\WmPackage\Nova\Flexible\Resolvers\ConfigOverlaysResolver;
 use Wm\WmPackage\Nova\Traits\HasFlexibleTranslatableFields;
+use Wm\WmPackage\Support\SuperAdminService;
 
 class App extends Resource
 {
@@ -117,14 +120,20 @@ class App extends Resource
 
     public function actions(NovaRequest $request): array
     {
+        $superAdminOnly = fn (NovaRequest $req) => SuperAdminService::allows($req);
+
         return [
-            new RegenerateAppPbfAction()
+            (new RegenerateAppPbfAction)
                 ->onlyOnDetail()
+                ->canSee($superAdminOnly)
+                ->canRun($superAdminOnly)
                 ->confirmText(__('Are you sure you want to regenerate all PBFs for this app? This operation may take a long time.'))
                 ->confirmButtonText(__('Yes, regenerate'))
                 ->cancelButtonText(__('Cancel')),
-            new ReindexAppScoutAction()
+            (new ReindexAppScoutAction)
                 ->onlyOnDetail()
+                ->canSee($superAdminOnly)
+                ->canRun($superAdminOnly)
                 ->confirmText(__('Are you sure you want to reindex the search for this app? This operation may take a long time.'))
                 ->confirmButtonText(__('Yes, reindex'))
                 ->cancelButtonText(__('Cancel')),
@@ -132,14 +141,32 @@ class App extends Resource
                 fn ($track) => new UpdateEcTrackAwsJob($track),
             ], __('Update Tracks on AWS'))
                 ->onlyOnDetail()
+                ->canSee($superAdminOnly)
+                ->canRun($superAdminOnly)
                 ->confirmText(__('Are you sure you want to update all tracks of this app on AWS?'))
                 ->confirmButtonText(__('Yes, update'))
                 ->cancelButtonText(__('No, cancel')),
             ExecuteEcTrackDataChainAction::make()
                 ->onlyOnDetail()
+                ->canSee($superAdminOnly)
+                ->canRun($superAdminOnly)
                 ->confirmText(__('Are you sure you want to process all tracks of this app?'))
                 ->confirmButtonText(__('Yes, process'))
                 ->cancelButtonText(__('No, cancel')),
+            (new BuildAppPoisGeojsonAction)
+                ->onlyOnDetail()
+                ->canSee($superAdminOnly)
+                ->canRun($superAdminOnly)
+                ->confirmText(__('Are you sure you want to regenerate pois.geojson for this app? The job will be queued and may take a while.'))
+                ->confirmButtonText(__('Yes, regenerate'))
+                ->cancelButtonText(__('Cancel')),
+            (new GenerateAppIconsAction)
+                ->onlyOnDetail()
+                ->canSee($superAdminOnly)
+                ->canRun($superAdminOnly)
+                ->confirmText(__('Are you sure you want to regenerate icons.json for this app? This operation may take a while.'))
+                ->confirmButtonText(__('Yes, regenerate'))
+                ->cancelButtonText(__('Cancel')),
         ];
     }
 
