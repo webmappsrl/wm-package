@@ -41,7 +41,7 @@ use Wm\WmPackage\Nova\Flexible\ConfigHome\HorizontalScrollRepeaterJsonPreset;
 use Wm\WmPackage\Nova\Flexible\Resolvers\ConfigHomeResolver;
 use Wm\WmPackage\Nova\Flexible\Resolvers\ConfigOverlaysResolver;
 use Wm\WmPackage\Nova\Traits\HasFlexibleTranslatableFields;
-use Wm\WmPackage\Support\SuperAdminGate;
+use Wm\WmPackage\Support\SuperAdminService;
 
 class App extends Resource
 {
@@ -120,17 +120,17 @@ class App extends Resource
 
     public function actions(NovaRequest $request): array
     {
-        $superAdminOnly = fn (NovaRequest $req) => SuperAdminGate::allows($req);
+        $superAdminOnly = fn (NovaRequest $req) => SuperAdminService::allows($req);
 
         return [
-            (new RegenerateAppPbfAction())
+            (new RegenerateAppPbfAction)
                 ->onlyOnDetail()
                 ->canSee($superAdminOnly)
                 ->canRun($superAdminOnly)
                 ->confirmText(__('Are you sure you want to regenerate all PBFs for this app? This operation may take a long time.'))
                 ->confirmButtonText(__('Yes, regenerate'))
                 ->cancelButtonText(__('Cancel')),
-            (new ReindexAppScoutAction())
+            (new ReindexAppScoutAction)
                 ->onlyOnDetail()
                 ->canSee($superAdminOnly)
                 ->canRun($superAdminOnly)

@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Artisan;
 use Laravel\Nova\Actions\Action;
 use Laravel\Nova\Fields\ActionFields;
 use Wm\WmPackage\Models\App;
-use Wm\WmPackage\Support\SuperAdminGate;
+use Wm\WmPackage\Support\SuperAdminService;
 
 class GenerateAppIconsAction extends Action
 {
@@ -19,7 +19,7 @@ class GenerateAppIconsAction extends Action
 
     public function authorizedToRun(Request $request, $model): bool
     {
-        return SuperAdminGate::allows($request);
+        return SuperAdminService::allows($request);
     }
 
     /**

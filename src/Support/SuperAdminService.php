@@ -6,12 +6,12 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Http\Request;
 
 /**
- * Allowlist basata su email per utenti equivalenti a super-admin (staff interno).
+ * Verifica accesso basata su allowlist email per utenti super-admin (staff interno).
  *
  * Riutilizzabile da Nova ({@see \Laravel\Nova\Actions\Action}, risorse),
  * middleware, comandi HTTP o CLI (tramite {@see self::allowsUser} / {@see self::allowsEmail}).
  */
-final class SuperAdminGate
+final class SuperAdminService
 {
     public static function allows(?Request $request): bool
     {
