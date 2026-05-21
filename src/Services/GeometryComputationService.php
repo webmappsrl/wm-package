@@ -602,6 +602,57 @@ class GeometryComputationService extends BaseService
         )->get();
     }
 
+    public function getClosestIntersecting(GeometryModel $model, string $targetModelClass): ?object
+    {
+        $sourceTable = $model->getTable();
+        $targetTable = (new $targetModelClass)->getTable();
+
+        $result = DB::selectOne("
+            SELECT id
+            FROM {$targetTable}
+            WHERE geometry IS NOT NULL
+              AND ST_Intersects(
+                  geometry::geometry,
+                  ST_Force2D((SELECT geometry FROM {$sourceTable} WHERE id = ?)::geometry)
+              )
+            ORDER BY ST_Distance(
+                ST_Centroid(geometry::geometry),
+                ST_Force2D((SELECT geometry FROM {$sourceTable} WHERE id = ?)::geometry)
+            ) ASC
+            LIMIT 1
+        ", [$model->id, $model->id]);
+
+        return $result ? $targetModelClass::find($result->id) : null;
+    }
+
+    /**
+     * Finds the closest model of a given class whose geometry is within $distanceMeters
+     * of the given model's geometry. Returns null if none found within the distance.
+     */
+    public function getClosestWithinDistance(GeometryModel $model, string $targetModelClass, int $distanceMeters): ?object
+    {
+        $sourceTable = $model->getTable();
+        $targetTable = (new $targetModelClass)->getTable();
+
+        $result = DB::selectOne("
+            SELECT id
+            FROM {$targetTable}
+            WHERE geometry IS NOT NULL
+              AND ST_DWithin(
+                  geometry::geography,
+                  (SELECT geometry::geography FROM {$sourceTable} WHERE id = ?),
+                  ?
+              )
+            ORDER BY ST_Distance(
+                geometry::geography,
+                (SELECT geometry::geography FROM {$sourceTable} WHERE id = ?)
+            ) ASC
+            LIMIT 1
+        ", [$model->id, $distanceMeters, $model->id]);
+
+        return $result ? $targetModelClass::find($result->id) : null;
+    }
+
     public function generateTiles($bbox, $zoom, $zoomTreshold, $app_id)
     {
         [$minLon, $minLat, $maxLon, $maxLat] = $bbox;

@@ -3,8 +3,10 @@
 namespace Wm\WmPackage\Observers;
 
 use Illuminate\Database\Eloquent\Model;
+use Wm\WmPackage\Models\Abstracts\GeometryModel;
 use Wm\WmPackage\Models\UgcTrack;
 use Wm\WmPackage\Services\GeometryComputationService;
+use Wm\WmPackage\Services\UgcService;
 
 class UgcObserver extends AbstractAuthorableObserver
 {
@@ -19,6 +21,33 @@ class UgcObserver extends AbstractAuthorableObserver
      * Nova updates send 2D WKT from FeatureCollectionMap (ST_Force2D). The DB column is MultiLineStringZ;
      * without this, PostgreSQL can reject the write. Creating already runs normalizeGeometry above.
      */
+    public function created(Model $model): void
+    {
+        if (! $model instanceof GeometryModel) {
+            return;
+        }
+
+        $this->populateLayerId($model);
+    }
+
+    private function populateLayerId(GeometryModel $model): void
+    {
+        if (! empty($model->properties['layer_id'])) {
+            return;
+        }
+
+        $layer = UgcService::make()->resolveLayer($model);
+
+        if (! $layer) {
+            return;
+        }
+
+        $properties = $model->properties ?? [];
+        $properties['layer_id'] = $layer->id;
+        $model->properties = $properties;
+        $model->saveQuietly();
+    }
+
     public function updating(Model $model)
     {
         if ($model->isDirty('geometry')) {
