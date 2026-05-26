@@ -208,6 +208,21 @@ class App extends Resource
         ];
     }
 
+    protected function widget_tab(): array
+    {
+        return [
+            Heading::make(
+                <<<'HTML'
+                <h2><strong>WIDGET</strong></h2>
+                HTML
+            )->asHtml()->hideFromIndex(),
+            Boolean::make(__('Enable Layer Web Component'), 'properties->layer_web_component_enabled')
+                ->default(false)
+                ->hideFromIndex()
+                ->help(__('Shows a button in layer details to copy the wm-layer-map web component snippet')),
+        ];
+    }
+
     protected function overlays_tab(): array
     {
         return [
@@ -346,6 +361,7 @@ class App extends Resource
 
             Tab::make('FEwebapp', $this->webapp_tab()),
             Tab::make('FE: mobile', $this->mobile_tab()),
+            Tab::make('FE: widget', $this->widget_tab()),
         ];
     }
 

@@ -34,6 +34,18 @@ return [
             'pbf_layer' => env('PBF_LAYER', false),
         ],
     ],
+    'web_components' => [
+        'layer_map' => [
+            'example_url' => 'https://raw.githubusercontent.com/webmappsrl/wm-layer-map/refs/heads/main/test/index.html',
+            'cache_ttl' => 1800,
+            'timeout' => 10,
+            'fallback' => [
+                'tag_name' => 'wm-layer-map',
+                'script_url' => 'https://cdn.jsdelivr.net/gh/webmappsrl/wm-layer-map@refs/heads/main/src/wm-layer-map.js',
+                'default_style' => 'display:block;width:100%;height:600px',
+            ],
+        ],
+    ],
     'clients' => [
         'dem' => [
             'host' => env('DEM_HOST', 'https://dem.maphub.it'),
