@@ -20,6 +20,7 @@ use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Tymon\JWTAuth\Providers\LaravelServiceProvider;
 use Wm\WmPackage\Commands\WmBackupCommand;
 use Wm\WmPackage\Commands\WmBuildAppPoisGeojsonCommand;
+use Wm\WmPackage\Commands\WmSyncUgcTaxonomyWhereCommand;
 use Wm\WmPackage\Commands\WmDownloadDbBackupCommand;
 use Wm\WmPackage\Commands\WmGenerateIconsCommand;
 use Wm\WmPackage\Commands\WmGeneratePBFCommand;
@@ -178,6 +179,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
                 WmGeneratePBFCommand::class,
                 WmDownloadDbBackupCommand::class,
                 WmBuildAppPoisGeojsonCommand::class,
+                WmSyncUgcTaxonomyWhereCommand::class,
                 WmRestoreDbCommand::class,
                 WmGenerateIconsCommand::class,
             ])
