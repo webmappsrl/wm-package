@@ -35,7 +35,7 @@ beforeEach(function () {
 });
 
 afterEach(function () {
-    \Mockery::close();
+    Mockery::close();
 });
 
 it('dispatches UpdateModelWithGeometryTaxonomyWhere async when dispatchSync fails', function () {
@@ -49,19 +49,19 @@ it('dispatches UpdateModelWithGeometryTaxonomyWhere async when dispatchSync fail
     ]);
 
     // Mock del Dispatcher così possiamo distinguere dispatchSync (che fallisce) da dispatch (async)
-    $dispatcher = \Mockery::mock(Dispatcher::class);
+    $dispatcher = Mockery::mock(Dispatcher::class);
     $dispatcher->shouldReceive('dispatchSync')
         ->once()
-        ->with(\Mockery::type(UpdateModelWithGeometryTaxonomyWhere::class))
+        ->with(Mockery::type(UpdateModelWithGeometryTaxonomyWhere::class))
         ->andThrow(new RuntimeException('simulated dispatchSync failure'));
     $dispatcher->shouldReceive('dispatch')
         ->once()
-        ->with(\Mockery::type(UpdateModelWithGeometryTaxonomyWhere::class));
+        ->with(Mockery::type(UpdateModelWithGeometryTaxonomyWhere::class));
 
     app()->instance(Dispatcher::class, $dispatcher);
 
     $controller = app(UgcPoiController::class);
-    $method = new \ReflectionMethod(UgcController::class, 'enrichUgcWithTaxonomyWhere');
+    $method = new ReflectionMethod(UgcController::class, 'enrichUgcWithTaxonomyWhere');
     $method->setAccessible(true);
     $method->invoke($controller, $poi);
 
@@ -79,16 +79,16 @@ it('does not push async job when dispatchSync completes without throwing', funct
         'app_id' => $app->id,
     ]);
 
-    $dispatcher = \Mockery::mock(Dispatcher::class);
+    $dispatcher = Mockery::mock(Dispatcher::class);
     $dispatcher->shouldReceive('dispatchSync')
         ->once()
-        ->with(\Mockery::type(UpdateModelWithGeometryTaxonomyWhere::class));
+        ->with(Mockery::type(UpdateModelWithGeometryTaxonomyWhere::class));
     $dispatcher->shouldNotReceive('dispatch');
 
     app()->instance(Dispatcher::class, $dispatcher);
 
     $controller = app(UgcPoiController::class);
-    $method = new \ReflectionMethod(UgcController::class, 'enrichUgcWithTaxonomyWhere');
+    $method = new ReflectionMethod(UgcController::class, 'enrichUgcWithTaxonomyWhere');
     $method->setAccessible(true);
     $method->invoke($controller, $poi);
 
