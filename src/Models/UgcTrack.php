@@ -7,6 +7,8 @@ use Wm\WmPackage\Models\Abstracts\MultiLineString;
 use Wm\WmPackage\Models\Interfaces\UserOwnedModelInterface;
 use Wm\WmPackage\Observers\UgcObserver;
 use Wm\WmPackage\Traits\OwnedByUserModel;
+use Wm\WmPackage\Traits\TaxonomyAbleModel;
+use Wm\WmPackage\Traits\TaxonomyWhereAbleModel;
 
 /**
  * Class UgcTrack
@@ -22,7 +24,7 @@ use Wm\WmPackage\Traits\OwnedByUserModel;
  */
 class UgcTrack extends MultiLineString implements UserOwnedModelInterface
 {
-    use OwnedByUserModel;
+    use OwnedByUserModel, TaxonomyAbleModel, TaxonomyWhereAbleModel;
 
     protected $fillable = [
         'user_id',

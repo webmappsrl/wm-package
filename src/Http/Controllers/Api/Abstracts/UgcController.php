@@ -6,7 +6,9 @@ use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 use Wm\WmPackage\Http\Controllers\Controller;
+use Wm\WmPackage\Jobs\UpdateModelWithGeometryTaxonomyWhere;
 use Wm\WmPackage\Models\Abstracts\GeometryModel;
 use Wm\WmPackage\Services\GeometryComputationService;
 
@@ -43,6 +45,8 @@ abstract class UgcController extends Controller
 
         $model = $this->fillModelWithRequest($this->getModelIstance($request), $request, $validated);
 
+        $this->enrichUgcWithTaxonomyWhere($model);
+
         return response()->json(['id' => $model->id, 'message' => 'Created successfully'], 201);
     }
 
@@ -74,6 +78,8 @@ abstract class UgcController extends Controller
         $this->validateUser($model);
 
         $model = $this->fillModelWithRequest($model, $request, $validated);
+
+        $this->enrichUgcWithTaxonomyWhere($model);
 
         return response()->json(['id' => $model->id, 'message' => 'Updated successfully'], 200);
     }
@@ -160,5 +166,23 @@ abstract class UgcController extends Controller
         }
 
         return response()->json($featureCollection);
+    }
+
+    /**
+     * Runs taxonomy_where sync (osmfeatures) synchronously.
+     * On failure logs a warning, dispatches the same job asynchronously as fallback,
+     * and does not alter the successful HTTP response.
+     */
+    protected function enrichUgcWithTaxonomyWhere(GeometryModel $model): void
+    {
+        try {
+            UpdateModelWithGeometryTaxonomyWhere::dispatchSync($model);
+        } catch (Throwable $e) {
+            Log::channel('ugc')->warning('UpdateModelWithGeometryTaxonomyWhere failed: '.$e->getMessage(), [
+                'model' => $model::class,
+                'id' => $model->id,
+            ]);
+            UpdateModelWithGeometryTaxonomyWhere::dispatch($model);
+        }
     }
 }

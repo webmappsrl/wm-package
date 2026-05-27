@@ -26,6 +26,7 @@ use Wm\WmPackage\Commands\WmGeneratePBFCommand;
 use Wm\WmPackage\Commands\WmImportFromGeohubCommand;
 use Wm\WmPackage\Commands\WmPackageCommand;
 use Wm\WmPackage\Commands\WmRestoreDbCommand;
+use Wm\WmPackage\Commands\WmSyncUgcTaxonomyWhereCommand;
 use Wm\WmPackage\ElasticSearch\HitsIteratorAggregate as ElasticSearchHitsIteratorAggregate;
 use Wm\WmPackage\Jobs\Import\ImportEcMediaJob;
 use Wm\WmPackage\Nova\Cards\ApiLinksCard\CardServiceProvider;
@@ -178,6 +179,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
                 WmGeneratePBFCommand::class,
                 WmDownloadDbBackupCommand::class,
                 WmBuildAppPoisGeojsonCommand::class,
+                WmSyncUgcTaxonomyWhereCommand::class,
                 WmRestoreDbCommand::class,
                 WmGenerateIconsCommand::class,
             ])

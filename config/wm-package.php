@@ -60,4 +60,13 @@ return [
     'ec_track_table' => env('EC_TRACK_TABLE', 'ec_tracks'),
     'ec_track_model' => env('EC_TRACK_MODEL', 'App\Models\EcTrack'),
     'ec_poi_track_pivot_table' => env('EC_POI_TRACK_PIVOT_TABLE', 'ec_poi_ec_track'),
+
+    /*
+    | Email allowlist super-admin {@see \Wm\WmPackage\Support\SuperAdminService} (comma-separated).
+    | Fallback env: WM_SUPER_ADMIN_EMAILS → default team@webmapp.it.
+    */
+    'super_admin_emails' => array_values(array_filter(array_map(
+        'trim',
+        explode(',', (string) env('WM_SUPER_ADMIN_EMAILS', 'team@webmapp.it'))
+    ))),
 ];
