@@ -21,7 +21,7 @@ class IconSvgServicePhpUnitTest extends TestCase
         $heightProp->setValue(null, $height);
     }
 
-    public function testGeneraSvgIncludendoAttrsLegacy(): void
+    public function test_genera_svg_includendo_attrs_legacy(): void
     {
         $this->setIconSvgServiceCache([
             'muta-tile' => [
@@ -39,7 +39,7 @@ class IconSvgServicePhpUnitTest extends TestCase
         $this->assertStringContainsString('d="M0 0h10v10H0z"', $svg);
     }
 
-    public function testGeneraSvgIncludendoAttrsMulticolor(): void
+    public function test_genera_svg_includendo_attrs_multicolor(): void
     {
         $this->setIconSvgServiceCache([
             'webmapp-tile' => [
@@ -58,4 +58,3 @@ class IconSvgServicePhpUnitTest extends TestCase
         $this->assertStringContainsString('opacity="0.5"', $svg);
     }
 }
-
