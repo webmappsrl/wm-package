@@ -5,6 +5,7 @@ namespace Wm\WmPackage\Nova\Fields\IconSelect;
 use Illuminate\Support\Facades\Log;
 use Laravel\Nova\Fields\Field;
 use Wm\WmPackage\Helpers\GlobalFileHelper;
+use Wm\WmPackage\Services\IconSvgService;
 
 class IconSelect extends Field
 {
@@ -73,33 +74,44 @@ class IconSelect extends Field
     public function loadFromIconsFile()
     {
         try {
+            $iconService = new IconSvgService;
             // Usa il metodo statico del GlobalFileHelper
             $iconsData = GlobalFileHelper::getJsonContent('icons.json', 'icons');
-
-            if ($iconsData && isset($iconsData['icons']) && is_array($iconsData['icons'])) {
-                $options = [];
-
-                foreach ($iconsData['icons'] as $icon) {
-                    if (isset($icon['properties']['name']) && isset($icon['icon']['paths'])) {
-                        $name = $icon['properties']['name'];
-                        $paths = $icon['icon']['paths'];
-
-                        // Crea l'SVG dai paths
-                        $svgPaths = '';
-                        foreach ($paths as $path) {
-                            $svgPaths .= '<path d="'.htmlspecialchars($path).'"></path>';
+            $names = [];
+            if (is_array($iconsData)) {
+                // legacy format
+                if (is_array($iconsData['icons'] ?? null) && isset($iconsData['icons'][0]['properties'])) {
+                    foreach ($iconsData['icons'] as $icon) {
+                        $name = data_get($icon, 'properties.name');
+                        if (is_string($name) && $name !== '') {
+                            $names[] = $name;
                         }
-
-                        $options[] = [
-                            'value' => $name,
-                            'label' => ucfirst(str_replace(['-', '_'], ' ', $name)),
-                            'svg' => $svgPaths,
-                        ];
+                    }
+                } elseif (is_array($iconsData['selection'] ?? null)) {
+                    foreach ($iconsData['selection'] as $sel) {
+                        $name = $sel['name'] ?? null;
+                        if (is_string($name) && $name !== '') {
+                            $names[] = $name;
+                        }
                     }
                 }
-
-                return $this->options($options);
             }
+
+            $options = [];
+            foreach (array_values(array_unique($names)) as $name) {
+                $svgPaths = $iconService->getSvgByName($name, wrapSvg: false);
+                if (! is_string($svgPaths) || $svgPaths === '') {
+                    continue;
+                }
+
+                $options[] = [
+                    'value' => $name,
+                    'label' => ucfirst(str_replace(['-', '_'], ' ', $name)),
+                    'svg' => $svgPaths,
+                ];
+            }
+
+            return $this->options($options);
         } catch (\Exception $e) {
             // In caso di errore, usa le opzioni predefinite
             Log::warning('Errore nel caricamento delle icone da icons.json: '.$e->getMessage());

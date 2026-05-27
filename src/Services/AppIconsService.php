@@ -3,7 +3,6 @@
 namespace Wm\WmPackage\Services;
 
 use Illuminate\Support\Facades\DB;
-use Wm\WmPackage\Helpers\GlobalFileHelper;
 
 class AppIconsService extends BaseService
 {
@@ -32,36 +31,36 @@ class AppIconsService extends BaseService
             $this->getIconsFromTable('taxonomy_activities'),
         );
 
-        $iconsData = GlobalFileHelper::getJsonContent('icons.json', 'icons');
-        $height = ($iconsData['height']) ? $iconsData['height'] : 1024;
+        $iconService = new IconSvgService;
+        $height = $iconService->getHeight();
         $height2 = $height / 2;
 
-        foreach ($iconsData['icons'] as $icon) {
-            if (isset($icon['properties']['name']) && isset($icon['icon']['paths'])) {
-                $name = $icon['properties']['name'];
-
-                if (in_array($name, $iconNames)) {
-                    $prevSize = isset($icon['properties']['prevSize']) ? $icon['properties']['prevSize'] : 32;
-                    $paths = $icon['icon']['paths'];
-
-                    $svg =
-                    <<<SVG
-                        <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 {$height} {$height}' width='{$prevSize}' height='{$prevSize}'>
-                            <circle fill="darkorange" cx='{$height2}' cy='{$height2}' r='{$height2}'/>
-                            <g fill="white" transform='scale(0.8 0.8) translate(100, 100)'>
-                    SVG;
-                    foreach ($paths as $path) {
-                        $svg .= "<path d='{$path}'/>";
-                    }
-                    $svg .=
-                    <<<'SVG'
-                            </g>
-                        </svg>
-                    SVG;
-
-                    $icons[$name] = $svg;
-                }
+        foreach ($iconNames as $name) {
+            if (! is_string($name) || $name === '') {
+                continue;
             }
+
+            $itemsSvg = $iconService->getSvgByName($name, wrapSvg: false);
+            if (! is_string($itemsSvg) || $itemsSvg === '') {
+                continue;
+            }
+
+            $previewPx = IconSvgService::PREVIEW_PIXEL_SIZE;
+
+            $svg =
+            <<<SVG
+                <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 {$height} {$height}' width='{$previewPx}' height='{$previewPx}'>
+                    <circle fill="darkorange" cx='{$height2}' cy='{$height2}' r='{$height2}'/>
+                    <g fill="white" transform='scale(0.8 0.8) translate(100, 100)'>
+            SVG;
+            $svg .= $itemsSvg;
+            $svg .=
+            <<<'SVG'
+                    </g>
+                </svg>
+            SVG;
+
+            $icons[$name] = $svg;
         }
 
         return $icons;
