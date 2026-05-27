@@ -45,4 +45,3 @@ class TilePolicy
         return $user->hasRole('Administrator');
     }
 }
-

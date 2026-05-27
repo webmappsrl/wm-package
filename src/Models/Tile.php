@@ -37,4 +37,3 @@ class Tile extends Model
             ->withTimestamps();
     }
 }
-

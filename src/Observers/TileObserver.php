@@ -20,4 +20,3 @@ class TileObserver extends AbstractObserver
         }
     }
 }
-

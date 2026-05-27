@@ -7,7 +7,7 @@ use Wm\WmPackage\Helpers\GlobalFileHelper;
 class IconSvgService
 {
     /**
-     * Lato in pixel dell'anteprima SVG (es. icone su storage / liste) quando si imposta width/height sull'outer {@see \Wm\WmPackage\Services\AppIconsService}.
+     * Lato in pixel dell'anteprima SVG (es. icone su storage / liste) quando si imposta width/height sull'outer {@see AppIconsService}.
      */
     public const PREVIEW_PIXEL_SIZE = 32;
 
@@ -18,9 +18,6 @@ class IconSvgService
 
     private static ?int $height = null;
 
-    /**
-     * @return int
-     */
     public function getHeight(): int
     {
         $this->ensureLoaded();
@@ -226,4 +223,3 @@ class IconSvgService
         return $parts ? ' '.implode(' ', $parts) : '';
     }
 }
-
