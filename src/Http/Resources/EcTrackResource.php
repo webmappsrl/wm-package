@@ -85,7 +85,7 @@ class EcTrackResource extends JsonResource
             return $this->ecPois
                 ->whereNull('osmfeatures_id') // TODO: da rimuovere, aggiunto per osm2cai, evita che i poi presi da osm vengano aggiunti ai related
                 ->map(function (EcPoi $ecPoi) {
-                    return EcPoiResource::make($ecPoi);
+                    return RelatedEcPoiResource::make($ecPoi);
                 })
                 ->toArray();
         } catch (\Exception $e) {

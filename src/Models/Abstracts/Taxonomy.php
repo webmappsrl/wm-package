@@ -68,6 +68,11 @@ abstract class Taxonomy extends Polygon
         return $json;
     }
 
+    public function getUseImageAsIcon(): bool
+    {
+        return (bool) ($this->properties['use_image_as_icon'] ?? false);
+    }
+
     private function removeUnnecessaryFields(array $json): array
     {
         unset($json['pivot']);

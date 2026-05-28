@@ -274,5 +274,12 @@
     "To download an empty template with these headers only, run the :action action from this resource menu without selecting any rows.": "Per scaricare un template vuoto con le sole intestazioni esegui l'azione :action dal menu di questa risorsa senza selezionare righe.",
     "The id is required. Other fields update properties only when filled.": "L'id è obbligatorio. Gli altri campi aggiornano le proprietà solo se compilati.",
     "All selected tracks must belong to the same app.": "Tutte le tracce selezionate devono appartenere alla stessa app.",
-    "No valid geometry found for the selected tracks.": "Nessuna geometria valida trovata per le tracce selezionate."
+    "No valid geometry found for the selected tracks.": "Nessuna geometria valida trovata per le tracce selezionate.",
+    "Map icon display": "Visualizzazione icona mappa",
+    "Use category icon (default)": "Usa icona categoria (default)",
+    "Use image as icon": "Usa immagine come icona",
+    "Inherit from category": "Eredita dalla categoria",
+    "Use category icon": "Usa icona categoria",
+    "Default behaviour for all related POIs of this type when displayed on a track map: show the category icon or the feature image.": "Comportamento predefinito per tutti i POI correlati di questo tipo visualizzati sulla mappa di una traccia: mostra l'icona della categoria o l'immagine.",
+    "Override the category default for this specific POI. Leave empty to inherit from the associated POI type.": "Sovrascrive il default della categoria per questo POI specifico. Lascia vuoto per ereditare dal tipo POI associato."
 }

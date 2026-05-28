@@ -115,6 +115,31 @@ class EcPoi extends Point implements LayerRelatedModel
         // https://github.com/chelout/laravel-relationship-events/issues/16;;
     }
 
+    public function getUseImageAsIcon(): ?bool
+    {
+        $value = ($this->properties ?? [])['use_image_as_icon'] ?? null;
+        if ($value === null) {
+            return null;
+        }
+
+        return (bool) $value;
+    }
+
+    public function resolveUseImageAsIcon(): bool
+    {
+        $override = $this->getUseImageAsIcon();
+        if ($override !== null) {
+            return $override;
+        }
+
+        $category = $this->taxonomyPoiTypes()->orderBy('id', 'asc')->first();
+        if ($category !== null) {
+            return $category->getUseImageAsIcon();
+        }
+
+        return false;
+    }
+
     // /**
     //  * Return the json version of the ec poi, avoiding the geometry
     //  * TODO: unit TEST
