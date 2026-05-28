@@ -5,6 +5,7 @@ namespace Wm\WmPackage\Nova;
 use Laravel\Nova\Actions\Action;
 use Laravel\Nova\Fields\BelongsToMany;
 use Laravel\Nova\Fields\Boolean;
+use Laravel\Nova\Fields\Select;
 use Laravel\Nova\Fields\KeyValue;
 use Laravel\Nova\Fields\MorphToMany;
 use Laravel\Nova\Fields\Text;
@@ -57,6 +58,15 @@ class EcPoi extends AbstractEcResource
             Boolean::make(__('Global'), 'global')
                 ->default(true)
                 ->help(__('Indicates if the POI is global and visible always on the map')),
+            Select::make(__('Map icon display'), 'properties->use_image_as_icon')
+                ->options([
+                    '' => __('Inherit from category'),
+                    '0' => __('Use category icon'),
+                    '1' => __('Use image as icon'),
+                ])
+                ->nullable()
+                ->displayUsingLabels()
+                ->help(__('Override the category default for this specific POI. Leave empty to inherit from the associated POI type.')),
             Tab::group(__('Details'), [
                 Tab::make(__('Info'), $this->getInfoTabFields()),
             ]),
