@@ -48,6 +48,11 @@ class EcPoi extends AbstractEcResource
     {
         return [
             ...$this->fieldsTrait($request),
+            Boolean::make(__('Show image on map'), 'properties->show_image_on_map')
+                ->nullable()
+                ->readonly(fn ($request) => $this->resource->getMedia()->isEmpty())
+                ->help(__('Show the feature image on the track map instead of the category icon. Only has effect if the POI has an image.'))
+                ->showOnIndex(),
             MorphToMany::make(__('Taxonomy Poi Types'), 'taxonomyPoiTypes', TaxonomyPoiType::class)
                 ->display('name')
                 ->help(__('Tipologie di POI associate a questo punto di interesse')),
@@ -57,11 +62,6 @@ class EcPoi extends AbstractEcResource
             Boolean::make(__('Global'), 'global')
                 ->default(true)
                 ->help(__('Indicates if the POI is global and visible always on the map')),
-            Boolean::make(__('Show image on map'), 'properties->show_image_on_map')
-                ->nullable()
-                ->readonly(fn ($request) => $this->resource->getMedia()->isEmpty())
-                ->help(__('Show the feature image on the track map instead of the category icon. Only has effect if the POI has an image.'))
-                ->showOnIndex(),
             Tab::group(__('Details'), [
                 Tab::make(__('Info'), $this->getInfoTabFields()),
             ]),
