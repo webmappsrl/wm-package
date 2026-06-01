@@ -2,37 +2,44 @@
 
 declare(strict_types=1);
 
-use Wm\WmPackage\Models\TaxonomyPoiType;
 use Wm\WmPackage\Models\EcPoi;
 
-it('returns use_image_as_icon from properties when set on taxonomy', function () {
-    $taxonomy = TaxonomyPoiType::factory()->create([
-        'properties' => ['use_image_as_icon' => true],
-    ]);
-
-    expect($taxonomy->getUseImageAsIcon())->toBeTrue();
-});
-
-it('returns false as default when use_image_as_icon is not set on taxonomy', function () {
-    $taxonomy = TaxonomyPoiType::factory()->create([
-        'properties' => [],
-    ]);
-
-    expect($taxonomy->getUseImageAsIcon())->toBeFalse();
-});
-
-it('returns use_image_as_icon from properties when set on ec poi', function () {
+it('returns show_image_on_map from properties when set to true', function () {
     $poi = EcPoi::factory()->create([
-        'properties' => ['use_image_as_icon' => true],
+        'properties' => ['show_image_on_map' => true],
     ]);
 
-    expect($poi->getUseImageAsIcon())->toBeTrue();
+    expect($poi->getShowImageOnMap())->toBeTrue();
 });
 
-it('returns null when use_image_as_icon is not set on ec poi', function () {
+it('returns show_image_on_map from properties when set to false', function () {
+    $poi = EcPoi::factory()->create([
+        'properties' => ['show_image_on_map' => false],
+    ]);
+
+    expect($poi->getShowImageOnMap())->toBeFalse();
+});
+
+it('returns null when show_image_on_map is not set on ec poi', function () {
     $poi = EcPoi::factory()->create([
         'properties' => [],
     ]);
 
-    expect($poi->getUseImageAsIcon())->toBeNull();
+    expect($poi->getShowImageOnMap())->toBeNull();
+});
+
+it('resolveShowImageOnMap returns false when not set', function () {
+    $poi = EcPoi::factory()->create([
+        'properties' => [],
+    ]);
+
+    expect($poi->resolveShowImageOnMap())->toBeFalse();
+});
+
+it('resolveShowImageOnMap returns true when explicitly set', function () {
+    $poi = EcPoi::factory()->create([
+        'properties' => ['show_image_on_map' => true],
+    ]);
+
+    expect($poi->resolveShowImageOnMap())->toBeTrue();
 });

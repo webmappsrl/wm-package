@@ -115,9 +115,9 @@ class EcPoi extends Point implements LayerRelatedModel
         // https://github.com/chelout/laravel-relationship-events/issues/16;;
     }
 
-    public function getUseImageAsIcon(): ?bool
+    public function getShowImageOnMap(): ?bool
     {
-        $value = ($this->properties ?? [])['use_image_as_icon'] ?? null;
+        $value = ($this->properties ?? [])['show_image_on_map'] ?? null;
         if ($value === null) {
             return null;
         }
@@ -125,19 +125,9 @@ class EcPoi extends Point implements LayerRelatedModel
         return (bool) $value;
     }
 
-    public function resolveUseImageAsIcon(): bool
+    public function resolveShowImageOnMap(): bool
     {
-        $override = $this->getUseImageAsIcon();
-        if ($override !== null) {
-            return $override;
-        }
-
-        $category = $this->taxonomyPoiTypes()->orderBy('id', 'asc')->first();
-        if ($category !== null) {
-            return $category->getUseImageAsIcon();
-        }
-
-        return false;
+        return $this->getShowImageOnMap() ?? false;
     }
 
     // /**
