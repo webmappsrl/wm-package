@@ -11,7 +11,7 @@ class RelatedEcPoiResource extends EcPoiResource
         $data = parent::toArray($request);
 
         if ($this->getMedia()->isNotEmpty()) {
-            $data['properties']['feature_image']['use_image_as_icon'] = $this->resolveUseImageAsIcon();
+            $data['properties']['feature_image']['show_image_on_map'] = $this->resolveShowImageOnMap();
         }
 
         return $data;

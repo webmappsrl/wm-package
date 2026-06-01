@@ -275,11 +275,6 @@
     "The id is required. Other fields update properties only when filled.": "The id is required. Other fields update properties only when filled.",
     "All selected tracks must belong to the same app.": "All selected tracks must belong to the same app.",
     "No valid geometry found for the selected tracks.": "No valid geometry found for the selected tracks.",
-    "Map icon display": "Map icon display",
-    "Use category icon (default)": "Use category icon (default)",
-    "Use image as icon": "Use image as icon",
-    "Inherit from category": "Inherit from category",
-    "Use category icon": "Use category icon",
-    "Default behaviour for all related POIs of this type when displayed on a track map: show the category icon or the feature image.": "Default behaviour for all related POIs of this type when displayed on a track map: show the category icon or the feature image.",
-    "Override the category default for this specific POI. Leave empty to inherit from the associated POI type.": "Override the category default for this specific POI. Leave empty to inherit from the associated POI type."
+    "Show image on map": "Show image on map",
+    "Show the feature image on the track map instead of the category icon. Only has effect if the POI has an image.": "Show the feature image on the track map instead of the category icon. Only has effect if the POI has an image."
 }

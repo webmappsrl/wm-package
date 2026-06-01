@@ -16,8 +16,8 @@ class EcPoiFactory extends Factory
         $geojson = json_encode([
             'type' => 'Point',
             'coordinates' => [
-                $this->faker->latitude(),
-                $this->faker->longitude(),
+                $this->faker->randomFloat(6, -90, 90),
+                $this->faker->randomFloat(6, -180, 180),
                 $this->faker->randomFloat(2, 0, 1000),
             ],
         ]);
