@@ -10,8 +10,15 @@ class RelatedEcPoiResource extends EcPoiResource
     {
         $data = parent::toArray($request);
 
+        unset($data['properties']['show_image_on_map']);
+
         if ($this->getMedia()->isNotEmpty()) {
-            $data['properties']['feature_image']['show_image_on_map'] = $this->resolveShowImageOnMap();
+            $featureImage = $data['properties']['feature_image'];
+            $featureImageArray = $featureImage instanceof \Illuminate\Http\Resources\Json\JsonResource
+                ? $featureImage->toArray($request)
+                : (array) $featureImage;
+            $featureImageArray['show_image_on_map'] = $this->resolveShowImageOnMap();
+            $data['properties']['feature_image'] = $featureImageArray;
         }
 
         return $data;
