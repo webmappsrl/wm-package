@@ -2,8 +2,11 @@
 
 namespace Wm\WmPackage\Nova;
 
+use App\Nova\User as NovaUser;
 use Ebess\AdvancedNovaMediaLibrary\Fields\Images;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Validation\Rule;
+use Laravel\Nova\Fields\BelongsTo;
 use Kongulov\NovaTabTranslatable\NovaTabTranslatable;
 use Laravel\Nova\Fields\Boolean;
 use Laravel\Nova\Fields\Code;
@@ -104,6 +107,24 @@ class App extends Resource
             ]),
 
             // TODO: implement fields
+        ];
+    }
+
+    public function fieldsForCreate(NovaRequest $request): array
+    {
+        return [
+            Text::make('Name')
+                ->rules('required'),
+            Text::make(__('Customer Name'), 'customer_name')
+                ->rules('required')
+                ->help(__('Name of the customer or organization that owns this app.')),
+            Text::make(__('Sku'), 'sku')
+                ->rules('required', 'unique:apps,sku')
+                ->help(__('Unique app identifier on the stores (App Store and Play Store).')),
+            BelongsTo::make(__('Author'), 'author', NovaUser::class)
+                ->nullable()
+                ->searchable()
+                ->help(__('User responsible for this app. Leave empty if not applicable.')),
         ];
     }
 
@@ -469,6 +490,8 @@ class App extends Resource
                 ->hideFromIndex()
                 ->options($languages)
                 ->displayUsingLabels()
+                ->default('it')
+                ->rules('required')
                 ->help(__('This is the default language displayed by the app.')),
             Multiselect::make(__('Available Languages'), 'available_languages')
                 ->hideFromIndex()
@@ -566,6 +589,7 @@ class App extends Resource
                 ->help(__('App name on the stores (App Store and Playstore).')),
             Text::make(__('Sku'), 'sku')
                 ->required()
+                ->updateRules(Rule::unique('apps', 'sku')->ignore($this->resource->id ?? null))
                 ->help(__('App name on the stores (App Store and Playstore).')),
             Text::make(__('Play Store link (android)'), 'android_store_link')
                 ->hideFromIndex()
@@ -1101,6 +1125,8 @@ class App extends Resource
                 ->help(__('Displays start and end icons on the map')),
             Number::make(__('start_end_icons_min_zoom'))
                 ->min(10)->max(20)
+                ->default(10)
+                ->rules('required')
                 ->hideFromIndex()
                 ->help(__('Set minimum zoom at which start and end icons are shown in general maps (start_end_icons_show must be true)')),
             Boolean::make(__('Ref on Track Show'), 'ref_on_track_show')
@@ -1109,6 +1135,8 @@ class App extends Resource
                 ->help(__('Displays reference labels on tracks')),
             Number::make(__('ref_on_track_min_zoom'))
                 ->min(10)->max(20)
+                ->default(10)
+                ->rules('required')
                 ->hideFromIndex()
                 ->help(__('Set minimum zoom at which ref parameter is shown on tracks line in general maps (ref_on_track_show must be true)')),
             Boolean::make(__('Show Features In Viewport'), 'properties->show_features_in_viewport')
