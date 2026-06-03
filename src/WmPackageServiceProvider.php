@@ -19,8 +19,6 @@ use Spatie\Backup\Config\Config as BackupConfig;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Tymon\JWTAuth\Providers\LaravelServiceProvider;
-use Wm\WmPackage\Models\App as AppModel;
-use Wm\WmPackage\Policies\AppPolicy;
 use Wm\WmPackage\Commands\WmBackupCommand;
 use Wm\WmPackage\Commands\WmBuildAppPoisGeojsonCommand;
 use Wm\WmPackage\Commands\WmDownloadDbBackupCommand;
@@ -32,8 +30,10 @@ use Wm\WmPackage\Commands\WmRestoreDbCommand;
 use Wm\WmPackage\Commands\WmSyncUgcTaxonomyWhereCommand;
 use Wm\WmPackage\ElasticSearch\HitsIteratorAggregate as ElasticSearchHitsIteratorAggregate;
 use Wm\WmPackage\Jobs\Import\ImportEcMediaJob;
+use Wm\WmPackage\Models\App as AppModel;
 use Wm\WmPackage\Nova\Cards\ApiLinksCard\CardServiceProvider;
 use Wm\WmPackage\Nova\Fields\IconSelect\FieldServiceProvider;
+use Wm\WmPackage\Policies\AppPolicy;
 use Wm\WmPackage\Providers\EventServiceProvider;
 use Wm\WmPackage\Providers\ScheduleServiceProvider;
 use Wm\WmPackage\Services\Import\EcMediaImportService;
@@ -222,7 +222,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
             'App\Models\EcPoi' => Models\EcPoi::class,
             'App\Models\EcTrack' => Models\EcTrack::class,
             'App\Models\Layer' => Models\Layer::class,
-            'App\Models\App' => Models\App::class,
+            'App\Models\App' => AppModel::class,
         ]);
 
         // #######
