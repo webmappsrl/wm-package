@@ -493,9 +493,17 @@ class App extends Resource
                     'taxonomyThemes' => 'Themes',
                     'taxonomyWheres' => 'Wheres',
                     'taxonomyActivities' => 'Activity',
-                ], $track_selected)
+                ])
                 ->help(__('Select one or more criteria from "name", "description", "excerpt", "ref", "osmid", "taxonomy themes", "taxonomy activity"')),
-            Multiselect::make(__('POI Search In'), 'poi_searchables'),
+            Multiselect::make(__('POI Search In'), 'poi_searchables')
+                ->options([
+                    'name' => 'Name',
+                    'description' => 'Description',
+                    'excerpt' => 'Excerpt',
+                    'osmid' => 'OSMID',
+                    'taxonomyPoiTypes' => 'POI Types',
+                ])
+                ->help(__('Select one or more criteria from "name", "description", "excerpt", "osmid", "poi types"')),
 
         ];
     }
