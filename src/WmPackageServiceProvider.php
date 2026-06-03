@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
 use Laravel\Nova\Menu\MenuItem;
 use Laravel\Nova\Menu\MenuSection;
@@ -18,6 +19,8 @@ use Spatie\Backup\Config\Config as BackupConfig;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Tymon\JWTAuth\Providers\LaravelServiceProvider;
+use Wm\WmPackage\Models\App as AppModel;
+use Wm\WmPackage\Policies\AppPolicy;
 use Wm\WmPackage\Commands\WmBackupCommand;
 use Wm\WmPackage\Commands\WmBuildAppPoisGeojsonCommand;
 use Wm\WmPackage\Commands\WmDownloadDbBackupCommand;
@@ -119,6 +122,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
         //     //dump($t);
         //     return $t;
         // });
+        Gate::policy(AppModel::class, AppPolicy::class);
 
         // SENTRY
         $this->app->booted(function () {

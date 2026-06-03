@@ -17,6 +17,11 @@ class AppPolicy
      */
     public function __construct() {}
 
+    public function create(User $user): bool
+    {
+        return $user->hasRole('Administrator');
+    }
+
     public function viewAny(User $user): bool
     {
         return true;
