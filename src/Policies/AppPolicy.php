@@ -5,6 +5,7 @@ namespace Wm\WmPackage\Policies;
 use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 use Wm\WmPackage\Models\App;
+use Wm\WmPackage\Support\SuperAdminService;
 
 class AppPolicy
 {
@@ -19,7 +20,7 @@ class AppPolicy
 
     public function create(User $user): bool
     {
-        return $user->hasRole('Administrator');
+        return SuperAdminService::allowsUser($user);
     }
 
     public function viewAny(User $user): bool

@@ -3,7 +3,7 @@
 # Notes — Aggiungere create app
 
 ## Deviazioni dal piano
-- Nessuna deviazione. Tutti gli step sono stati implementati come pianificato.
+- **`AppPolicy::create()`**: inizialmente implementato con `hasRole('Administrator')`; successivamente allineato a `SuperAdminService::allowsUser()` per coerenza con le action Nova sulla stessa risorsa (PBF, Scout, AWS, ecc.) e per limitare la creazione allo staff in allowlist, non a tutti gli Administrator del tenant.
 
 ## Bug trovati
 - **FK errata su `author()`**: `belongsTo(User::class)` senza foreign key esplicita inferiva `author_id` (inesistente), mentre la colonna reale è `user_id`. Corretto in Step 1 come bug latente del model.
@@ -11,6 +11,7 @@
 
 ## Decisioni
 - La registrazione di `AppPolicy` è stata messa in `WmPackageServiceProvider` (e non nel progetto host) per garantire che valga per tutti i progetti che usano il package.
+- `AppPolicy::create()` usa `SuperAdminService` (allowlist `wm-package.super_admin_emails` / `WM_SUPER_ADMIN_EMAILS`), non il ruolo Spatie `Administrator`, in linea con `Nova/App::actions()`.
 - `fieldsForCreate()` usa `App\Nova\User` come classe Nova per il `BelongsTo`, seguendo il pattern già stabilito in `Nova/Layer.php`.
 - I fix da oc:7757 (`->default()` e `->rules('required')` su `default_language`, `start_end_icons_min_zoom`, `ref_on_track_min_zoom`) sono stati incorporati in questo ciclo come Step 6, chiudendo di fatto anche quel ticket.
 

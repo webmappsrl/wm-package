@@ -35,16 +35,18 @@ public function author(): BelongsTo
 
 **File:** `src/Policies/AppPolicy.php`
 
-Aggiungere il metodo `create()` seguendo il pattern di `TilePolicy` (`$user->hasRole('Administrator')`).
+Aggiungere il metodo `create()` usando `SuperAdminService` (stesso criterio delle action Nova su `App`: allowlist email, env `WM_SUPER_ADMIN_EMAILS`).
 
 ```php
+use Wm\WmPackage\Support\SuperAdminService;
+
 public function create(User $user): bool
 {
-    return $user->hasRole('Administrator');
+    return SuperAdminService::allowsUser($user);
 }
 ```
 
-**Commit:** `feat(oc:7749): add create() to AppPolicy — Administrator only`
+**Commit:** `feat(oc:7749): add create() to AppPolicy — SuperAdmin allowlist`
 
 ---
 
@@ -200,6 +202,7 @@ Number::make(__('ref_on_track_min_zoom'))
 - [ ] Step 4: `fieldsForCreate()` aggiunto con 4 campi
 - [ ] Step 5: `->updateRules(unique...)` su `sku` in edit
 - [ ] Step 6: `->default()` e `->rules('required')` su `default_language`, `start_end_icons_min_zoom`, `ref_on_track_min_zoom`
-- [ ] Test manuale: login come Administrator → compare pulsante "Create App" → form mostra solo i 4 campi → salvataggio senza errori NOT NULL
-- [ ] Test manuale: login come non-Administrator → pulsante "Create App" non compare
+- [ ] Test manuale: login con email in `WM_SUPER_ADMIN_EMAILS` → compare pulsante "Create App" → form mostra solo i 4 campi → salvataggio senza errori NOT NULL
+- [ ] Test manuale: login come Administrator **senza** email in allowlist → pulsante "Create App" non compare
+- [ ] Test manuale: utente non in allowlist (qualsiasi ruolo) → pulsante "Create App" non compare
 - [ ] Test manuale: inserire sku duplicato → messaggio di validazione (non errore 500)
