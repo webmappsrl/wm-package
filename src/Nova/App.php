@@ -44,7 +44,7 @@ use Wm\WmPackage\Nova\Flexible\ConfigHome\HorizontalScrollRepeaterJsonPreset;
 use Wm\WmPackage\Nova\Flexible\Resolvers\ConfigHomeResolver;
 use Wm\WmPackage\Nova\Flexible\Resolvers\ConfigOverlaysResolver;
 use Wm\WmPackage\Nova\Traits\HasFlexibleTranslatableFields;
-use Wm\WmPackage\Support\SuperAdminService;
+use Wm\WmPackage\Services\RolesAndPermissionsService;
 
 class App extends Resource
 {
@@ -141,7 +141,7 @@ class App extends Resource
 
     public function actions(NovaRequest $request): array
     {
-        $superAdminOnly = fn (NovaRequest $req) => SuperAdminService::allows($req);
+        $superAdminOnly = fn (NovaRequest $req) => RolesAndPermissionsService::allows($req);
 
         return [
             (new RegenerateAppPbfAction)

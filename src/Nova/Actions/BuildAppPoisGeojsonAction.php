@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Artisan;
 use Laravel\Nova\Actions\Action;
 use Laravel\Nova\Fields\ActionFields;
 use Wm\WmPackage\Models\App;
-use Wm\WmPackage\Support\SuperAdminService;
+use Wm\WmPackage\Services\RolesAndPermissionsService;
 
 class BuildAppPoisGeojsonAction extends Action
 {
@@ -19,7 +19,7 @@ class BuildAppPoisGeojsonAction extends Action
 
     public function authorizedToRun(Request $request, $model): bool
     {
-        return SuperAdminService::allows($request);
+        return RolesAndPermissionsService::allows($request);
     }
 
     /**

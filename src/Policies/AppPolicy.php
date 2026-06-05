@@ -5,7 +5,7 @@ namespace Wm\WmPackage\Policies;
 use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 use Wm\WmPackage\Models\App;
-use Wm\WmPackage\Support\SuperAdminService;
+use Wm\WmPackage\Services\RolesAndPermissionsService;
 
 class AppPolicy
 {
@@ -20,7 +20,7 @@ class AppPolicy
 
     public function create(User $user): bool
     {
-        return SuperAdminService::allowsUser($user);
+        return RolesAndPermissionsService::allowsUser($user);
     }
 
     public function viewAny(User $user): bool
