@@ -2,6 +2,7 @@
 
 namespace Wm\WmPackage\Tests\Unit\Services;
 
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Http\Request;
 use Mockery;
 use Wm\WmPackage\Services\RolesAndPermissionsService;
@@ -52,7 +53,7 @@ class RolesAndPermissionsServiceTest extends TestCase
 
     public function test_allows_user_returns_false_when_email_property_is_not_a_string(): void
     {
-        $user = Mockery::mock(\Illuminate\Contracts\Auth\Authenticatable::class);
+        $user = Mockery::mock(Authenticatable::class);
         $user->email = new \stdClass;
 
         $this->assertFalse(RolesAndPermissionsService::allowsUser($user));
@@ -62,7 +63,7 @@ class RolesAndPermissionsServiceTest extends TestCase
     {
         config(['wm-package.super_admin_emails' => ['dev@webmapp.it']]);
 
-        $user = Mockery::mock(\Illuminate\Contracts\Auth\Authenticatable::class);
+        $user = Mockery::mock(Authenticatable::class);
         $user->email = 'dev@webmapp.it';
 
         $this->assertTrue(RolesAndPermissionsService::allowsUser($user));
@@ -72,7 +73,7 @@ class RolesAndPermissionsServiceTest extends TestCase
     {
         config(['wm-package.super_admin_emails' => ['dev@webmapp.it']]);
 
-        $user = Mockery::mock(\Illuminate\Contracts\Auth\Authenticatable::class);
+        $user = Mockery::mock(Authenticatable::class);
         $user->email = 'stranger@example.com';
 
         $this->assertFalse(RolesAndPermissionsService::allowsUser($user));
