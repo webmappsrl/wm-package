@@ -13,7 +13,7 @@ abstract class ImportTaxonomyJob extends BaseImportJob
 
     protected function processDependencies(array $transformedData, Model $model): void
     {
-        $recordsToImport = $this->geohubImportService->getTaxonomyMorphableRecords($this->getModelKey(), $model->id);
+        $recordsToImport = $this->geohubImportService->getTaxonomyMorphableRecords($this->getModelKey(), $this->entityId);
 
         if ($recordsToImport->isEmpty()) {
             \Log::debug("No records to import for taxonomy model: {$model->id}");
