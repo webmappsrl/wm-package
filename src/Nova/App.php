@@ -5,7 +5,6 @@ namespace Wm\WmPackage\Nova;
 use App\Nova\User as NovaUser;
 use Ebess\AdvancedNovaMediaLibrary\Fields\Images;
 use Illuminate\Support\Facades\Config;
-use Illuminate\Validation\Rule;
 use Kongulov\NovaTabTranslatable\NovaTabTranslatable;
 use Laravel\Nova\Fields\BelongsTo;
 use Laravel\Nova\Fields\Boolean;
@@ -589,7 +588,9 @@ class App extends Resource
                 ->help(__('App name on the stores (App Store and Playstore).')),
             Text::make(__('Sku'), 'sku')
                 ->required()
-                ->updateRules(Rule::unique('apps', 'sku')->ignore($this->resource->id ?? null))
+                ->rules('required')
+                ->creationRules('unique:apps,sku')
+                ->updateRules('unique:apps,sku,{{resourceId}}')
                 ->help(__('App name on the stores (App Store and Playstore).')),
             Text::make(__('Play Store link (android)'), 'android_store_link')
                 ->hideFromIndex()
