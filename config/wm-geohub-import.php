@@ -7,6 +7,7 @@ use Wm\WmPackage\Jobs\Import\ImportEcTrackJob;
 use Wm\WmPackage\Jobs\Import\ImportLayerJob;
 use Wm\WmPackage\Jobs\Import\ImportTaxonomyActivityJob;
 use Wm\WmPackage\Jobs\Import\ImportTaxonomyPoiTypeJob;
+use Wm\WmPackage\Jobs\Import\ImportTaxonomyThemeJob;
 use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Services\Import\DataTransformer;
 
@@ -153,7 +154,7 @@ return [
     |
     */
     'default_dependencies' => [
-        'app' => ['ec_poi', 'ec_track', 'taxonomy_activity', 'layer', 'ec_media'], // Import all dependencies by default
+        'app' => ['ec_poi', 'ec_track', 'taxonomy_activity', 'taxonomy_theme', 'layer', 'ec_media'],
     ],
 
     /*
@@ -628,11 +629,22 @@ return [
         */
         'taxonomy_theme' => [
             'namespace' => 'Wm\\WmPackage\\Models\\TaxonomyTheme',
-            'job' => '',
+            'job' => ImportTaxonomyThemeJob::class,
             'geohub_table' => 'taxonomy_themes',
             'identifier' => 'properties->geohub_id',
-            'fields' => [],
-            'properties' => [],
+            'fields' => [
+                'name' => ['field' => 'name', 'transformer' => [DataTransformer::class, 'jsonToArray']],
+                'description' => ['field' => 'description', 'transformer' => [DataTransformer::class, 'jsonToArray']],
+                'excerpt' => ['field' => 'excerpt', 'transformer' => [DataTransformer::class, 'jsonToArray']],
+                'identifier' => 'identifier',
+                'created_at' => 'created_at',
+                'updated_at' => 'updated_at',
+                'icon' => ['field' => 'icon', 'transformer' => [DataTransformer::class, 'svgIconToNameIcon']],
+            ],
+            'properties' => [
+                'column_name' => 'properties',
+                'mapping' => [],
+            ],
             'relations' => [
                 'morphable_table' => 'taxonomy_themeables',
                 'foreign_key' => 'taxonomy_theme_id',

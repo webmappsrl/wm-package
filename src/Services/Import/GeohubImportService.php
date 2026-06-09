@@ -37,6 +37,7 @@ class GeohubImportService
     protected const MODEL_IMPORT_ORDER = [
         'app',
         'taxonomy_activity',
+        'taxonomy_theme',
         'taxonomy_poi_types',
         'ec_poi',
         'ec_track',

@@ -75,7 +75,7 @@ class WmImportFromGeohubCommand extends Command
     protected function prepareJobData(bool $skipDependencies, array $dependencies): array
     {
         // All available dependencies
-        $allDependencies = ['taxonomy_activity', 'taxonomy_poi_types', 'ec_poi', 'ec_track', 'layer', 'ec_media'];
+        $allDependencies = ['taxonomy_activity', 'taxonomy_theme', 'taxonomy_poi_types', 'ec_poi', 'ec_track', 'layer', 'ec_media'];
 
         if ($skipDependencies) {
             // Skip all dependencies

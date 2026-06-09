@@ -5,6 +5,7 @@
 | Feature | Ticket | Moduli toccati | Note |
 |---|---|---|---|
 | Fix import Excel POI: nomi mancanti in pois.geojson | oc:8063 | `src/Imports/Processors/EcPoiRowProcessor.php`, `tests/Unit/Imports/Processors/EcPoiRowProcessorTest.php` | Sync `properties['name']` da `getTranslations('name')` in `apply()` — replica logica observer bypassata da `saveQuietly()` |
+| ImportTaxonomyThemeJob | oc:8014 | `src/Jobs/Import/ImportTaxonomyThemeJob.php`, `src/Services/Import/GeohubImportService.php`, `config/wm-geohub-import.php` | Aggiunge il job mancante per importare TaxonomyTheme da GeoHub; registra taxonomy_theme in MODEL_IMPORT_ORDER e default_dependencies |
 | Fix getTaxonomyMorphableRecords | oc:8013 | `src/Jobs/Import/ImportTaxonomyJob.php` | Corregge il parametro passato a getTaxonomyMorphableRecords: entityId (GeoHub) invece di model->id (Maphub) |
 | Refactor SuperAdminService | oc:8006 | `src/Services/RolesAndPermissionsService.php`, `src/Support/SuperAdminService.php` (rimosso), `src/Nova/App.php`, `src/Nova/Actions/GenerateAppIconsAction.php`, `src/Nova/Actions/BuildAppPoisGeojsonAction.php`, `src/Policies/AppPolicy.php` | Sposta i check super-admin email-based in RolesAndPermissionsService; rimuove SuperAdminService |
 
@@ -16,10 +17,14 @@
 - In update mode il merge delle traduzioni è implicito: il modello caricato dal DB porta già tutte le lingue, `setTranslation` aggiorna solo la locale fornita
 - `EcTrackRowProcessor` non è affetto: non usa `setTranslation` per il nome
 
+### ImportTaxonomyThemeJob (oc:8014)
+- `Log::error()` aggiunto nel catch di `handle()` rispetto al pattern originale di `ImportTaxonomyActivityJob` — senza di esso i fallimenti appaiono come "completed" in Horizon e sono impossibili da diagnosticare
+- Campo `icon` commentato nel config `wm-geohub-import.php` con TODO: verificare con il capo se GeoHub ha la colonna `icon` in `taxonomy_themes` prima di attivarlo
+- Dopo merge: i progetti con config già pubblicato devono aggiornare manualmente `default_dependencies['app']` in `wm-geohub-import.php` oppure ri-pubblicare con `--force`
+- `taxonomy_when` e `taxonomy_target` hanno lo stesso problema (`'job' => ''`) — esclusi da questo ticket, servono ticket separati
+
 ### Fix getTaxonomyMorphableRecords (oc:8013)
 - `processDependencies()` deve passare `$this->entityId` (ID GeoHub) a `getTaxonomyMorphableRecords()`, non `$model->id` (ID Maphub locale) — i due ID sono diversi e il metodo interroga il DB GeoHub
-
-
 
 ### Refactor SuperAdminService (oc:8006)
 
