@@ -5,6 +5,7 @@ namespace Wm\WmPackage\Nova;
 use App\Nova\User as NovaUser;
 use Ebess\AdvancedNovaMediaLibrary\Fields\Images;
 use Illuminate\Support\Facades\Config;
+use Wm\WmPackage\Nova\Fields\BboxField\BboxField;
 use Kongulov\NovaTabTranslatable\NovaTabTranslatable;
 use Laravel\Nova\Fields\BelongsTo;
 use Laravel\Nova\Fields\Boolean;
@@ -1098,7 +1099,7 @@ class App extends Resource
                 ->help(__('Set min stroke width of line string, applied at min zoom level')),
 
             // --- BBOX ---
-            Text::make(__('Bounding BOX'), 'map_bbox')
+            BboxField::make(__('Bounding BOX'), 'map_bbox')
                 ->nullable()
                 ->hideFromIndex()
                 ->rules([
@@ -1106,13 +1107,24 @@ class App extends Resource
                         if ($value === null || $value === '') {
                             return;
                         }
-                        $decoded = json_decode($value);
-                        if (! is_array($decoded)) {
-                            $fail('The '.$attribute.' is invalid. Follow the example [9.9456,43.9116,11.3524,45.0186]');
+                        $decoded = json_decode($value, true);
+                        if (! is_array($decoded) || count($decoded) !== 4) {
+                            $fail(__('The :attribute must be a JSON array of 4 numbers. Example: [9.9456,43.9116,11.3524,45.0186]', ['attribute' => $attribute]));
+
+                            return;
+                        }
+                        [$minLon, $minLat, $maxLon, $maxLat] = array_map('floatval', $decoded);
+                        if ($minLon < -180 || $maxLon > 180 || $minLat < -90 || $maxLat > 90) {
+                            $fail(__('The :attribute has coordinates out of WGS84 range (lon: -180/180, lat: -90/90).', ['attribute' => $attribute]));
+
+                            return;
+                        }
+                        if ($minLon >= $maxLon || $minLat >= $maxLat) {
+                            $fail(__('The :attribute min values must be less than max values.', ['attribute' => $attribute]));
                         }
                     },
                 ])
-                ->help(__('Bounding the map view. Example: [9.9456,43.9116,11.3524,45.0186]')),
+                ->help(__('Automatically calculated from the tracks associated with the app. To visualize the area: <a href="https://boundingbox.klokantech.com/" target="_blank">boundingbox.klokantech.com</a>')),
 
             // --- ADVANCED MAP SETTINGS ---
             Heading::make(
