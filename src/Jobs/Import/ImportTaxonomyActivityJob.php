@@ -2,8 +2,6 @@
 
 namespace Wm\WmPackage\Jobs\Import;
 
-use Wm\WmPackage\Services\Import\GeohubImportService;
-
 class ImportTaxonomyActivityJob extends ImportTaxonomyJob
 {
     /**
@@ -24,18 +22,5 @@ class ImportTaxonomyActivityJob extends ImportTaxonomyJob
     protected function getRelationshipName(): string
     {
         return 'taxonomyActivities';
-    }
-
-    /**
-     * Override handle method to prevent queue blocking on errors
-     */
-    public function handle(GeohubImportService $importService): void
-    {
-        try {
-            parent::handle($importService);
-        } catch (\Exception $e) {
-            // Don't throw the exception - complete the job successfully
-            // This prevents the job from failing and blocking the queue
-        }
     }
 }

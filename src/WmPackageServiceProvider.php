@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
 use Laravel\Nova\Menu\MenuItem;
 use Laravel\Nova\Menu\MenuSection;
@@ -29,8 +30,10 @@ use Wm\WmPackage\Commands\WmRestoreDbCommand;
 use Wm\WmPackage\Commands\WmSyncUgcTaxonomyWhereCommand;
 use Wm\WmPackage\ElasticSearch\HitsIteratorAggregate as ElasticSearchHitsIteratorAggregate;
 use Wm\WmPackage\Jobs\Import\ImportEcMediaJob;
+use Wm\WmPackage\Models\App as AppModel;
 use Wm\WmPackage\Nova\Cards\ApiLinksCard\CardServiceProvider;
 use Wm\WmPackage\Nova\Fields\IconSelect\FieldServiceProvider;
+use Wm\WmPackage\Policies\AppPolicy;
 use Wm\WmPackage\Providers\EventServiceProvider;
 use Wm\WmPackage\Providers\ScheduleServiceProvider;
 use Wm\WmPackage\Services\Import\EcMediaImportService;
@@ -58,6 +61,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
         $this->app->register(FieldServiceProvider::class);
         $this->app->register(\Wm\WmPackage\Nova\Fields\LayerFeatures\FieldServiceProvider::class);
         $this->app->register(\Wm\WmPackage\Nova\Fields\FeatureCollectionMap\FieldServiceProvider::class);
+        $this->app->register(\Wm\WmPackage\Nova\Fields\BboxField\FieldServiceProvider::class);
         $this->app->register(\Wm\WmPackage\Nova\Fields\FeatureCollectionGrid\FieldServiceProvider::class);
         $this->app->register(\Wm\WmPackage\Nova\Fields\OrderList\FieldServiceProvider::class);
         $this->app->register(\Wm\WmPackage\Nova\Fields\TrackColor\FieldServiceProvider::class);
@@ -119,6 +123,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
         //     //dump($t);
         //     return $t;
         // });
+        Gate::policy(AppModel::class, AppPolicy::class);
 
         // SENTRY
         $this->app->booted(function () {
@@ -218,7 +223,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
             'App\Models\EcPoi' => Models\EcPoi::class,
             'App\Models\EcTrack' => Models\EcTrack::class,
             'App\Models\Layer' => Models\Layer::class,
-            'App\Models\App' => Models\App::class,
+            'App\Models\App' => AppModel::class,
         ]);
 
         // #######
