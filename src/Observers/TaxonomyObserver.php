@@ -16,9 +16,15 @@ class TaxonomyObserver extends AbstractObserver
      */
     public function creating(Model $taxonomy)
     {
+        if (empty($taxonomy->identifier)) {
+            $taxonomy->identifier = self::generateIdentifierFromName($taxonomy);
+        }
+
         if ($taxonomy->identifier != null) {
-            $validateTaxonomyWhere = $taxonomy::where('identifier', 'LIKE', $taxonomy->identifier)->first();
-            if (! $validateTaxonomyWhere == null) {
+            $taxonomy->identifier = Str::slug($taxonomy->identifier, '-');
+
+            $existing = $taxonomy::where('identifier', $taxonomy->identifier)->first();
+            if ($existing !== null) {
                 self::validationError("The inserted 'identifier' field already exists.");
             }
         }
@@ -31,9 +37,45 @@ class TaxonomyObserver extends AbstractObserver
      */
     public function updating(Model $taxonomy)
     {
+        if (empty($taxonomy->identifier)) {
+            $taxonomy->identifier = self::generateIdentifierFromName($taxonomy);
+        }
+
         if ($taxonomy->identifier !== null) {
             $taxonomy->identifier = Str::slug($taxonomy->identifier, '-');
         }
+    }
+
+    /**
+     * Genera un identifier dallo slug del nome del modello, scegliendo la prima
+     * traduzione disponibile (preferenza: locale corrente, poi 'it', poi qualunque).
+     */
+    private static function generateIdentifierFromName(Model $taxonomy): ?string
+    {
+        if (! method_exists($taxonomy, 'getTranslations')) {
+            return null;
+        }
+
+        $translations = $taxonomy->getTranslations('name');
+        $candidates = [
+            app()->getLocale(),
+            'it',
+            'en',
+        ];
+
+        foreach ($candidates as $locale) {
+            if (! empty($translations[$locale])) {
+                return $translations[$locale];
+            }
+        }
+
+        foreach ($translations as $value) {
+            if (! empty($value)) {
+                return $value;
+            }
+        }
+
+        return null;
     }
 
     /**
