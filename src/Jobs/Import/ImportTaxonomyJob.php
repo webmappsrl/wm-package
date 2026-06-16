@@ -23,16 +23,8 @@ abstract class ImportTaxonomyJob extends BaseImportJob
 
         \Log::info("Processing {$recordsToImport->count()} records for taxonomy model: {$model->id}");
 
-        // Prepare sync data for batch operation
-        $syncData = [];
         foreach ($recordsToImport as $record) {
-            $pivotData = $record->pivot_data ?? [];
-            $syncData[$record->id] = $pivotData;
-        }
-
-        // Use sync for efficient batch operation
-        foreach ($recordsToImport as $record) {
-            $record->{$this->getRelationshipName()}()->sync([$model->id => $record->pivot_data ?? []]);
+            $record->{$this->getRelationshipName()}()->syncWithoutDetaching([$model->id => $record->pivot_data ?? []]);
         }
     }
 
