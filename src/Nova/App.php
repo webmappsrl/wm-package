@@ -2,9 +2,11 @@
 
 namespace Wm\WmPackage\Nova;
 
+use App\Nova\User as NovaUser;
 use Ebess\AdvancedNovaMediaLibrary\Fields\Images;
 use Illuminate\Support\Facades\Config;
 use Kongulov\NovaTabTranslatable\NovaTabTranslatable;
+use Laravel\Nova\Fields\BelongsTo;
 use Laravel\Nova\Fields\Boolean;
 use Laravel\Nova\Fields\Code;
 use Laravel\Nova\Fields\Color;
@@ -21,19 +23,20 @@ use Laravel\Nova\Tabs\Tab;
 use Marshmallow\Tiptap\Tiptap;
 use Outl1ne\MultiselectField\Multiselect;
 use Whitecube\NovaFlexibleContent\Flexible;
-use Wm\WmPackage\Enums\AppTiles;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
 use Wm\WmPackage\Models\App as ModelsApp;
 use Wm\WmPackage\Models\FeatureCollection as FeatureCollectionModel;
 use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Models\TaxonomyActivity as TaxonomyActivityModel;
 use Wm\WmPackage\Models\TaxonomyPoiType as TaxonomyPoiTypeModel;
+use Wm\WmPackage\Models\Tile;
 use Wm\WmPackage\Nova\Actions\BuildAppPoisGeojsonAction;
 use Wm\WmPackage\Nova\Actions\ExecuteEcTrackDataChainAction;
 use Wm\WmPackage\Nova\Actions\GenerateAppIconsAction;
 use Wm\WmPackage\Nova\Actions\RegenerateAppPbfAction;
 use Wm\WmPackage\Nova\Actions\ReindexAppScoutAction;
 use Wm\WmPackage\Nova\Cards\ApiLinksCard\AppApiLinksCard;
+use Wm\WmPackage\Nova\Fields\BboxField\BboxField;
 use Wm\WmPackage\Nova\Fields\OrderList\src\OrderList;
 use Wm\WmPackage\Nova\Fields\StoreVersionField;
 use Wm\WmPackage\Nova\Flexible\ConfigHome\HorizontalScrollItemRepeatable;
@@ -41,7 +44,7 @@ use Wm\WmPackage\Nova\Flexible\ConfigHome\HorizontalScrollRepeaterJsonPreset;
 use Wm\WmPackage\Nova\Flexible\Resolvers\ConfigHomeResolver;
 use Wm\WmPackage\Nova\Flexible\Resolvers\ConfigOverlaysResolver;
 use Wm\WmPackage\Nova\Traits\HasFlexibleTranslatableFields;
-use Wm\WmPackage\Support\SuperAdminService;
+use Wm\WmPackage\Services\RolesAndPermissionsService;
 
 class App extends Resource
 {
@@ -107,6 +110,24 @@ class App extends Resource
         ];
     }
 
+    public function fieldsForCreate(NovaRequest $request): array
+    {
+        return [
+            Text::make('Name')
+                ->rules('required'),
+            Text::make(__('Customer Name'), 'customer_name')
+                ->rules('required')
+                ->help(__('Name of the customer or organization that owns this app.')),
+            Text::make(__('Sku'), 'sku')
+                ->rules('required', 'unique:apps,sku')
+                ->help(__('Unique app identifier on the stores (App Store and Play Store).')),
+            BelongsTo::make(__('Author'), 'author', NovaUser::class)
+                ->nullable()
+                ->searchable()
+                ->help(__('User responsible for this app. Leave empty if not applicable.')),
+        ];
+    }
+
     public function cards(NovaRequest $request): array
     {
         if (! $request->resourceId) {
@@ -120,7 +141,7 @@ class App extends Resource
 
     public function actions(NovaRequest $request): array
     {
-        $superAdminOnly = fn (NovaRequest $req) => SuperAdminService::allows($req);
+        $superAdminOnly = fn (NovaRequest $req) => RolesAndPermissionsService::allows($req);
 
         return [
             (new RegenerateAppPbfAction)
@@ -485,6 +506,8 @@ class App extends Resource
                 ->hideFromIndex()
                 ->options($languages)
                 ->displayUsingLabels()
+                ->default('it')
+                ->rules('required')
                 ->help(__('This is the default language displayed by the app.')),
             Multiselect::make(__('Available Languages'), 'available_languages')
                 ->hideFromIndex()
@@ -509,9 +532,17 @@ class App extends Resource
                     'taxonomyThemes' => 'Themes',
                     'taxonomyWheres' => 'Wheres',
                     'taxonomyActivities' => 'Activity',
-                ], $track_selected)
+                ])
                 ->help(__('Select one or more criteria from "name", "description", "excerpt", "ref", "osmid", "taxonomy themes", "taxonomy activity"')),
-            Multiselect::make(__('POI Search In'), 'poi_searchables'),
+            Multiselect::make(__('POI Search In'), 'poi_searchables')
+                ->options([
+                    'name' => 'Name',
+                    'description' => 'Description',
+                    'excerpt' => 'Excerpt',
+                    'osmid' => 'OSMID',
+                    'taxonomyPoiTypes' => 'POI Types',
+                ])
+                ->help(__('Select one or more criteria from "name", "description", "excerpt", "osmid", "poi types"')),
 
         ];
     }
@@ -574,6 +605,9 @@ class App extends Resource
                 ->help(__('App name on the stores (App Store and Playstore).')),
             Text::make(__('Sku'), 'sku')
                 ->required()
+                ->rules('required')
+                ->creationRules('unique:apps,sku')
+                ->updateRules('unique:apps,sku,{{resourceId}}')
                 ->help(__('App name on the stores (App Store and Playstore).')),
             Text::make(__('Play Store link (android)'), 'android_store_link')
                 ->hideFromIndex()
@@ -939,9 +973,15 @@ class App extends Resource
 
     protected function map_settings_tab(): array
     {
-        $selectedTileLayers = is_null($this->model()->tiles) ? [] : json_decode($this->model()->tiles, true);
-        $appTiles = new AppTiles;
-        $t = $appTiles->oldval();
+        $tileOptions = Tile::query()
+            ->orderBy('attribution')
+            ->get()
+            ->mapWithKeys(function (Tile $tile) {
+                $label = is_array($tile->label) ? ($tile->label[app()->getLocale()] ?? $tile->label['it'] ?? null) : null;
+
+                return [$tile->id => ($label ?? $tile->attribution)];
+            })
+            ->all();
 
         return [
             // --- TILES ---
@@ -954,9 +994,39 @@ class App extends Resource
                 Text::make('Tiles Label'),
             ])->hideFromIndex(),
             Multiselect::make(__('Tiles'), 'tiles')
-                ->options($t, $selectedTileLayers)
+                ->options($tileOptions)
                 ->reorderable()
                 ->hideFromIndex()
+                ->resolveUsing(function () {
+                    $model = $this->model();
+                    if (! $model || ! $model->exists) {
+                        return [];
+                    }
+
+                    return $model->tiles()->pluck('tiles.id')->all();
+                })
+                ->fillUsing(function ($request, $model, $attribute, $requestAttribute) {
+                    $input = $request->input($requestAttribute);
+
+                    if (is_string($input)) {
+                        $decoded = json_decode($input, true);
+                        $input = is_array($decoded) ? $decoded : array_filter(array_map('trim', explode(',', $input)));
+                    }
+
+                    $ids = array_values(array_filter((array) ($input ?? []), fn ($v) => $v !== null && $v !== ''));
+
+                    $sync = [];
+                    foreach ($ids as $index => $tileId) {
+                        $sync[(int) $tileId] = ['sort_order' => $index];
+                    }
+
+                    $model::saved(function ($saved) use ($model, $sync) {
+                        if ($saved !== $model) {
+                            return;
+                        }
+                        $saved->tiles()->sync($sync);
+                    });
+                })
                 ->help(__('Select which tile layers the app will use; order follows insertion order. The first tile type in the list is used to download tiles for offline mode in the frontend.')),
 
             // --- DATA CONTROLS ---
@@ -1045,7 +1115,7 @@ class App extends Resource
                 ->help(__('Set min stroke width of line string, applied at min zoom level')),
 
             // --- BBOX ---
-            Text::make(__('Bounding BOX'), 'map_bbox')
+            BboxField::make(__('Bounding BOX'), 'map_bbox')
                 ->nullable()
                 ->hideFromIndex()
                 ->rules([
@@ -1053,13 +1123,24 @@ class App extends Resource
                         if ($value === null || $value === '') {
                             return;
                         }
-                        $decoded = json_decode($value);
-                        if (! is_array($decoded)) {
-                            $fail('The '.$attribute.' is invalid. Follow the example [9.9456,43.9116,11.3524,45.0186]');
+                        $decoded = json_decode($value, true);
+                        if (! is_array($decoded) || count($decoded) !== 4) {
+                            $fail(__('The :attribute must be a JSON array of 4 numbers. Example: [9.9456,43.9116,11.3524,45.0186]', ['attribute' => $attribute]));
+
+                            return;
+                        }
+                        [$minLon, $minLat, $maxLon, $maxLat] = array_map('floatval', $decoded);
+                        if ($minLon < -180 || $maxLon > 180 || $minLat < -90 || $maxLat > 90) {
+                            $fail(__('The :attribute has coordinates out of WGS84 range (lon: -180/180, lat: -90/90).', ['attribute' => $attribute]));
+
+                            return;
+                        }
+                        if ($minLon >= $maxLon || $minLat >= $maxLat) {
+                            $fail(__('The :attribute min values must be less than max values.', ['attribute' => $attribute]));
                         }
                     },
                 ])
-                ->help(__('Bounding the map view. Example: [9.9456,43.9116,11.3524,45.0186]')),
+                ->help(__('Automatically calculated from the tracks associated with the app. To visualize the area: <a href="https://boundingbox.klokantech.com/" target="_blank">boundingbox.klokantech.com</a>')),
 
             // --- ADVANCED MAP SETTINGS ---
             Heading::make(
@@ -1073,6 +1154,8 @@ class App extends Resource
                 ->help(__('Displays start and end icons on the map')),
             Number::make(__('start_end_icons_min_zoom'))
                 ->min(10)->max(20)
+                ->default(10)
+                ->rules('required')
                 ->hideFromIndex()
                 ->help(__('Set minimum zoom at which start and end icons are shown in general maps (start_end_icons_show must be true)')),
             Boolean::make(__('Ref on Track Show'), 'ref_on_track_show')
@@ -1081,6 +1164,8 @@ class App extends Resource
                 ->help(__('Displays reference labels on tracks')),
             Number::make(__('ref_on_track_min_zoom'))
                 ->min(10)->max(20)
+                ->default(10)
+                ->rules('required')
                 ->hideFromIndex()
                 ->help(__('Set minimum zoom at which ref parameter is shown on tracks line in general maps (ref_on_track_show must be true)')),
             Boolean::make(__('Show Features In Viewport'), 'properties->show_features_in_viewport')

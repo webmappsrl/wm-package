@@ -7,6 +7,8 @@ use Wm\WmPackage\Models\Abstracts\Point;
 use Wm\WmPackage\Models\Interfaces\UserOwnedModelInterface;
 use Wm\WmPackage\Observers\UgcObserver;
 use Wm\WmPackage\Traits\OwnedByUserModel;
+use Wm\WmPackage\Traits\TaxonomyAbleModel;
+use Wm\WmPackage\Traits\TaxonomyWhereAbleModel;
 
 /**
  * Class UgcPoi
@@ -23,7 +25,7 @@ use Wm\WmPackage\Traits\OwnedByUserModel;
  */
 class UgcPoi extends Point implements UserOwnedModelInterface
 {
-    use OwnedByUserModel;
+    use OwnedByUserModel, TaxonomyAbleModel, TaxonomyWhereAbleModel;
 
     /**
      * @var mixed|string

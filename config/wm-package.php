@@ -74,7 +74,7 @@ return [
     'ec_poi_track_pivot_table' => env('EC_POI_TRACK_PIVOT_TABLE', 'ec_poi_ec_track'),
 
     /*
-    | Email allowlist super-admin {@see \Wm\WmPackage\Support\SuperAdminService} (comma-separated).
+    | Email allowlist super-admin {@see \Wm\WmPackage\Services\RolesAndPermissionsService} (comma-separated).
     | Fallback env: WM_SUPER_ADMIN_EMAILS → default team@webmapp.it.
     */
     'super_admin_emails' => array_values(array_filter(array_map(

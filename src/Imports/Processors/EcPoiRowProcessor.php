@@ -194,6 +194,13 @@ final class EcPoiRowProcessor
             $model->setAttribute('geometry', "POINT Z ({$lngF} {$latF} 0)");
         }
 
+        if (method_exists($model, 'getTranslations')) {
+            $name = $model->getTranslations('name');
+            if ($name !== []) {
+                $properties['name'] = $name;
+            }
+        }
+
         $model->setAttribute('properties', $properties);
     }
 

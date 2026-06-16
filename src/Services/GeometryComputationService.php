@@ -1124,7 +1124,7 @@ GROUP BY
             return null;
         }
 
-        $bbox = array_map('trim', $bbox);
+        $bbox = array_map('floatval', array_map('trim', $bbox));
 
         return $bbox;
     }

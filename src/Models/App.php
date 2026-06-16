@@ -70,7 +70,7 @@ class App extends Model implements HasMedia
 
     public function author(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class, 'user_id');
     }
 
     public function layers()
@@ -86,6 +86,14 @@ class App extends Model implements HasMedia
     public function filterLayers()
     {
         return $this->belongsToMany(Layer::class, 'app_filter_layers');
+    }
+
+    public function tiles()
+    {
+        return $this->belongsToMany(Tile::class, 'app_tile')
+            ->withPivot('sort_order')
+            ->withTimestamps()
+            ->orderBy('app_tile.sort_order');
     }
 
     public function ugc_pois()

@@ -8,6 +8,7 @@ use Laravel\Nova\Card;
 use Laravel\Nova\Fields\BelongsTo;
 use Laravel\Nova\Fields\Field;
 use Laravel\Nova\Fields\ID;
+use Laravel\Nova\Fields\MorphToMany;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Wm\WmPackage\Nova\Actions\CopyUgc;
@@ -41,6 +42,9 @@ abstract class AbstractUgcResource extends AbstractGeometryResource
             PropertiesPanel::makeWithModel(__('Device'), 'properties->device', $this, false)->collapsible()->collapsedByDefault(),
             PropertiesPanel::makeWithModel(__('Nominatim'), 'properties->nominatim', $this, false)->collapsible()->collapsedByDefault(),
             PropertiesPanel::makeWithModel(__('Properties'), 'properties', $this, false)->collapsible()->collapsedByDefault(),
+            MorphToMany::make(__('Taxonomy Wheres'), 'taxonomyWheres', TaxonomyWhere::class)
+                ->display('name')
+                ->collapsedByDefault(),
             Images::make(__('Image'), 'default')->hideFromIndex(),
             Text::make(__('Media'))
                 ->resolveUsing(function ($value, $model) {
