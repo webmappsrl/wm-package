@@ -9,12 +9,10 @@ use Wm\WmPackage\Models\Layer;
 
 class UgcService extends BaseService
 {
-    private const LAYER_SEARCH_DISTANCE_METERS = 500;
-
     /**
      * Risolve il Layer di appartenenza di un UGC (UgcPoi o UgcTrack).
      * Prima controlla properties->layer_id, poi cerca la EcTrack più vicina
-     * entro 500m e risale al suo layer.
+     * entro la distanza configurata e risale al suo layer.
      */
     public function resolveLayer(GeometryModel $ugc): ?Layer
     {
@@ -27,13 +25,18 @@ class UgcService extends BaseService
             }
         }
 
-        return $this->resolveLayerByNearestEcTrack($ugc);
+        return $this->resolveLayerByProximity($ugc);
     }
 
-    private function resolveLayerByNearestEcTrack(GeometryModel $ugc): ?Layer
+    private function searchDistanceMeters(): int
+    {
+        return (int) env('UGC_LAYER_SEARCH_DISTANCE_METERS', 500);
+    }
+
+    public function resolveLayerByProximity(GeometryModel $ugc): ?Layer
     {
         $closestTrack = GeometryComputationService::make()
-            ->getClosestWithinDistance($ugc, EcTrack::class, self::LAYER_SEARCH_DISTANCE_METERS);
+            ->getClosestWithinDistance($ugc, EcTrack::class, $this->searchDistanceMeters());
 
         if (! $closestTrack) {
             return null;
