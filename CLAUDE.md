@@ -29,7 +29,8 @@
 
 ### ImportTaxonomyThemeJob (oc:8014)
 - `Log::error()` aggiunto nel catch di `handle()` rispetto al pattern originale di `ImportTaxonomyActivityJob` — senza di esso i fallimenti appaiono come "completed" in Horizon e sono impossibili da diagnosticare
-- Campo `icon` commentato nel config `wm-geohub-import.php` con TODO: verificare con il capo se GeoHub ha la colonna `icon` in `taxonomy_themes` prima di attivarlo
+- Campo `icon` **attivo** nel config `wm-geohub-import.php`: GeoHub ha la colonna `icon` in `taxonomy_themes` con formato SVG, identico a `taxonomy_activity`. Il transformer `svgIconToNameIcon` è corretto.
+- `ImportTaxonomyJob::processDependencies()` usa `syncWithoutDetaching()` (non `sync()`): `sync()` azzerava tutte le associazioni del record lasciando solo l'ultimo tema importato — bug critico confermato su app 63.
 - Dopo merge: i progetti con config già pubblicato devono aggiornare manualmente `default_dependencies['app']` in `wm-geohub-import.php` oppure ri-pubblicare con `--force`
 - `taxonomy_when` e `taxonomy_target` hanno lo stesso problema (`'job' => ''`) — esclusi da questo ticket, servono ticket separati
 

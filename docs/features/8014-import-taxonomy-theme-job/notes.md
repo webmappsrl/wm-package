@@ -2,6 +2,12 @@
 
 # Notes — ImportTaxonomyThemeJob
 
+## Fix da review (Rubens Garofalo, 16-06-2026)
+
+- **`sync()` → `syncWithoutDetaching()` in `ImportTaxonomyJob`:** bloccante. `sync()` sovrascriveva tutte le associazioni del record con l'ultimo tema importato; ogni job azzerava i temi precedenti. Confermato su app 63: EcTrack 82756 e EcPoi 38201 con 3 temi ciascuno — ne rimaneva 1 dopo l'import. Fix: `syncWithoutDetaching()` in `processDependencies()`.
+- **Rimosso dead code `$syncData`:** il loop che costruiva `$syncData` era unreachable (il dato veniva ricostruito inline nel loop successivo). Rimosso per chiarezza.
+- **Nota `icon` in CLAUDE.md aggiornata:** la decisione di attivare il campo `icon` era stata presa e registrata in notes.md, ma CLAUDE.md riportava ancora la nota "commentato/TBD". Allineato.
+
 ## Deviazioni dal piano
 
 - **`ImportAppJob.php` non era nel piano originale:** il piano e l'overview iniziali non includevano la modifica a `ImportAppJob`. Il ticket ha segnalato esplicitamente la lacuna nella description — il blocco `if (in_array('taxonomy_theme', ...))` in `processDependencies()` e l'aggiornamento del fallback `$allDependencies` in `getAllowedDependencies()` sono stati aggiunti come fix critico. Overview e plan aggiornati di conseguenza.
