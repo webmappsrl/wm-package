@@ -133,6 +133,28 @@ Verificare che l'import della classe sia presente tra gli `use` in testa al file
 
 ---
 
+## Step 4b — Aggiorna `ImportAppJob` (fix critico)
+
+**File:** `src/Jobs/Import/ImportAppJob.php`
+
+**Modifica 1 — `processDependencies()`**: aggiungere il blocco `taxonomy_theme` dopo `taxonomy_poi_types` e prima di `ec_poi`:
+
+```php
+if (in_array('taxonomy_theme', $allowedDependencies)) {
+    $this->queueEntityImport('taxonomy_theme', $data['user_id'], 'user_id', $model->id);
+}
+```
+
+**Modifica 2 — `getAllowedDependencies()`**: aggiungere `'taxonomy_theme'` al fallback `$allDependencies`, mantenendo l'ordine: tutti i taxonomy prima delle entità EC:
+
+```php
+$allDependencies = ['taxonomy_activity', 'taxonomy_poi_types', 'taxonomy_theme', 'ec_poi', 'ec_track', 'layer', 'ec_media'];
+```
+
+Il `queueEntityImport` gestisce già i taxonomy genericamente tramite `strpos($entityModelKey, 'taxonomy') !== false` → `$whereCondition = null`. Nessuna modifica allo switch.
+
+---
+
 ## Step 5 — Verifica pre-test
 
 Prima di testare su un ambiente con GeoHub accessibile:

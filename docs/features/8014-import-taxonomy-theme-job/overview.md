@@ -6,6 +6,8 @@
 
 Il sistema acquisirà la capacità di importare i `TaxonomyTheme` da GeoHub durante l'import completo di un'app. Attualmente il job mancava e la taxonomy Theme non veniva mai importata, rendendo non funzionanti i filtri per tema nelle app.
 
+**Aggiornamento (fix critico):** anche dopo la creazione di `ImportTaxonomyThemeJob`, l'import non funzionava perché `ImportAppJob::processDependencies()` usa blocchi `if` espliciti per ogni dipendenza — il blocco per `taxonomy_theme` era assente. Il job veniva ignorato anche quando presente nel config.
+
 ## Perché
 
 Le app GeoHub che usano filtri per tema non vengono importate correttamente su Maphub perché il job `ImportTaxonomyThemeJob` non esiste. Il modello `TaxonomyTheme` e la configurazione in `wm-geohub-import.php` esistono già, mancano solo il job e la sua registrazione.
@@ -22,6 +24,8 @@ Le app GeoHub che usano filtri per tema non vengono importate correttamente su M
 - [ ] Aggiungere `taxonomy_theme` a `default_dependencies['app']` in `wm-geohub-import.php`
 - [ ] Popolare `'job'` per `taxonomy_theme` in `wm-geohub-import.php` con `ImportTaxonomyThemeJob::class`
 - [ ] Popolare `'fields'` per `taxonomy_theme` in `wm-geohub-import.php` con: `name`, `description`, `excerpt`, `identifier`, `created_at`, `updated_at`, `icon` (allineato al pattern `taxonomy_activity`)
+- [ ] Aggiungere blocco `if (in_array('taxonomy_theme', $allowedDependencies))` in `ImportAppJob::processDependencies()`, dopo `taxonomy_poi_types` e prima di `ec_poi` (ordine: tutti i taxonomy prima delle entità EC)
+- [ ] Aggiungere `taxonomy_theme` a `$allDependencies` in `ImportAppJob::getAllowedDependencies()` per allineare il fallback hardcoded al config
 
 ## Rischi
 
@@ -29,6 +33,7 @@ Le app GeoHub che usano filtri per tema non vengono importate correttamente su M
 - **Campo `icon` da verificare con il capo (decisione pendente):** non è confermato che GeoHub abbia la colonna `icon` nella tabella `taxonomy_themes`. Se manca o ha formato diverso, il transformer `svgIconToNameIcon` genera un'eccezione inghiottita silenziosamente: i job appaiono completati in Horizon ma i theme non vengono importati. Chiedere conferma prima di includere `icon` nel mapping `fields`.
 - **Eccezioni silenziose:** il try/catch non logga gli errori — aggiungere `Log::error()` nel catch per rendere i fallimenti visibili nei log senza far fallire il job.
 - **Tabella `taxonomy_themes` locale:** verificare che le migrazioni del wm-package siano state pubblicate ed eseguite nel progetto target prima del test.
+- **`ImportAppJob` non dinamico:** `getAllowedDependencies()` usa un array hardcoded come fallback — aggiungendo `taxonomy_theme` al fallback e al blocco `if`, si chiude il flusso. Se in futuro si aggiungono nuove taxonomy, lo stesso pattern va ripetuto manualmente.
 
 ## Out of scope
 
@@ -45,6 +50,7 @@ Repo **`wm-package`**:
 | `src/Nova/TaxonomyTheme.php` | Nuovo file — Nova resource |
 | `src/Services/Import/GeohubImportService.php` | Aggiunta di `taxonomy_theme` in `MODEL_IMPORT_ORDER` |
 | `config/wm-geohub-import.php` | `job`, `fields`, `default_dependencies` per `taxonomy_theme` |
+| `src/Jobs/Import/ImportAppJob.php` | Aggiunta `taxonomy_theme` in `processDependencies()` e `getAllowedDependencies()` |
 
 Repo **`maphub`** (boilerplate):
 
