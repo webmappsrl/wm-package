@@ -35,6 +35,13 @@ class EcPoiRowProcessorTest extends TestCase
                 $map[$locale] = $value;
                 $this->setAttribute($key, $map);
             }
+
+            public function getTranslations(string $key): array
+            {
+                $map = $this->getAttribute($key) ?? [];
+
+                return is_array($map) ? $map : [];
+            }
         };
 
         $data = [
@@ -60,6 +67,7 @@ class EcPoiRowProcessorTest extends TestCase
         $properties = $model->getAttribute('properties');
         $this->assertSame('Rifugio', $model->getAttribute('name')['it'] ?? null);
         $this->assertSame('Refuge', $model->getAttribute('name')['en'] ?? null);
+        $this->assertSame(['it' => 'Rifugio', 'en' => 'Refuge'], $properties['name']);
         $this->assertSame(['it' => 'desc it'], $properties['description']);
         $this->assertSame('rifugio', $properties['poi_type']);
         $this->assertSame('Via Roma 1', $properties['addr_complete']);
@@ -68,5 +76,75 @@ class EcPoiRowProcessorTest extends TestCase
         $this->assertSame(['https://example.com' => 'https://example.com'], $properties['related_url']);
         $this->assertArrayNotHasKey('errors', $properties);
         $this->assertArrayNotHasKey('unknown_column', $properties);
+    }
+
+    /** @test */
+    public function apply_writes_only_provided_translations_to_properties_name(): void
+    {
+        $model = new class extends Model
+        {
+            protected $guarded = [];
+
+            public $timestamps = false;
+
+            public function setTranslation(string $key, string $locale, string $value): void
+            {
+                $map = $this->getAttribute($key) ?? [];
+                $map = is_array($map) ? $map : [];
+                $map[$locale] = $value;
+                $this->setAttribute($key, $map);
+            }
+
+            public function getTranslations(string $key): array
+            {
+                $map = $this->getAttribute($key) ?? [];
+
+                return is_array($map) ? $map : [];
+            }
+        };
+
+        $data = [
+            'name_it' => 'Rifugio',
+            'poi_type' => 'rifugio',
+            'lat' => '45.5',
+            'lng' => '10.25',
+        ];
+
+        (new EcPoiRowProcessor)->apply($model, $data);
+
+        $properties = $model->getAttribute('properties');
+        $this->assertSame(['it' => 'Rifugio'], $properties['name']);
+        $this->assertArrayNotHasKey('en', $properties['name']);
+    }
+
+    /** @test */
+    public function apply_does_not_write_properties_name_when_model_has_no_get_translations(): void
+    {
+        $model = new class extends Model
+        {
+            protected $guarded = [];
+
+            public $timestamps = false;
+
+            public function setTranslation(string $key, string $locale, string $value): void
+            {
+                $map = $this->getAttribute($key) ?? [];
+                $map = is_array($map) ? $map : [];
+                $map[$locale] = $value;
+                $this->setAttribute($key, $map);
+            }
+        };
+
+        $data = [
+            'name_it' => 'Rifugio',
+            'poi_type' => 'rifugio',
+            'lat' => '45.5',
+            'lng' => '10.25',
+        ];
+
+        (new EcPoiRowProcessor)->apply($model, $data);
+
+        $properties = $model->getAttribute('properties');
+        $this->assertArrayNotHasKey('name', $properties);
     }
 }
