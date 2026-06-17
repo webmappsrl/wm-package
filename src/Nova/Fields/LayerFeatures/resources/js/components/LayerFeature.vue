@@ -222,6 +222,7 @@ export default defineComponent({
         } = useGrid({
             resourceName: props.resourceName,
             modelName: props.field?.modelName,
+            novaPath: props.field?.novaPath,
         });
 
         const showConfirmModal = ref<boolean>(false);
