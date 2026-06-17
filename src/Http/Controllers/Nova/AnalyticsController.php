@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Wm\WmPackage\Http\Controllers\Nova;
 
-use Illuminate\Routing\Controller;
-use Wm\WmPackage\Services\PostHog\AnalyticsService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Routing\Controller;
 use Wm\WmPackage\Models\Layer;
+use Wm\WmPackage\Services\PostHog\AnalyticsService;
 
 class AnalyticsController extends Controller
 {

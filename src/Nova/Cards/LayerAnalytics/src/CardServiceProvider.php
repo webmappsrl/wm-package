@@ -13,7 +13,7 @@ class CardServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Nova::serving(function (ServingNova $event) {
-            Nova::mix('layer-analytics-card', __DIR__ . '/../dist/mix-manifest.json');
+            Nova::mix('layer-analytics-card', __DIR__.'/../dist/mix-manifest.json');
         });
     }
 

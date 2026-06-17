@@ -26,7 +26,7 @@ class LayerAnalyticsCard extends Card
     public function jsonSerialize(): array
     {
         return array_merge(parent::jsonSerialize(), [
-            'endpoint' => '/nova-vendor/layer-analytics/' . $this->layerId,
+            'endpoint' => '/nova-vendor/layer-analytics/'.$this->layerId,
             'layer_id' => $this->layerId,
         ]);
     }

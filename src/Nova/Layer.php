@@ -16,16 +16,16 @@ use Laravel\Nova\Fields\Number;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Panel;
+use Wm\WmPackage\Models\Layer as LayerModel;
 use Wm\WmPackage\Nova\Actions\AddLayersToConfigHomeAction;
 use Wm\WmPackage\Nova\Actions\ExecuteEcTrackDataChainAction;
-use Wm\WmPackage\Nova\Cards\LayerAnalytics\LayerAnalyticsCard;
 use Wm\WmPackage\Nova\Cards\ApiLinksCard\LayerApiLinksCard;
+use Wm\WmPackage\Nova\Cards\LayerAnalytics\LayerAnalyticsCard;
 use Wm\WmPackage\Nova\Fields\FeatureCollectionMap\src\FeatureCollectionMap;
 use Wm\WmPackage\Nova\Fields\LayerFeatures\LayerFeatures;
 use Wm\WmPackage\Nova\Fields\PropertiesPanel;
 use Wm\WmPackage\Nova\Filters\AppFilter;
 use Wm\WmPackage\Nova\Traits\MultiPolygonResourceTrait;
-use Wm\WmPackage\Models\Layer as LayerModel;
 
 class Layer extends AbstractGeometryResource
 {
@@ -35,7 +35,7 @@ class Layer extends AbstractGeometryResource
 
     public static $with = ['ecTracks', 'manualEcPois', 'appOwner', 'associatedApps'];
 
-    public static $model = \Wm\WmPackage\Models\Layer::class;
+    public static $model = LayerModel::class;
 
     public static $title = 'name';
 
@@ -49,7 +49,7 @@ class Layer extends AbstractGeometryResource
         return [
             ID::make()->sortable(),
             Boolean::make('In Home', function () {
-                /** @var \Wm\WmPackage\Models\Layer $layer */
+                /** @var LayerModel $layer */
                 $layer = $this->resource;
 
                 if (! $layer->app_id) {
@@ -143,7 +143,7 @@ class Layer extends AbstractGeometryResource
             return [];
         }
 
-        /** @var \Wm\WmPackage\Models\Layer $layer */
+        /** @var LayerModel $layer */
         $layer = $request->findModelOrFail();
         $app = $layer->appOwner;
         $appProperties = $this->getLayerAppProperties($layer);
