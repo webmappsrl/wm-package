@@ -38,6 +38,7 @@ interface ColumnDefinition extends ColDef {
 interface UseGridProps {
     resourceName?: string;
     modelName?: string;
+    novaPath?: string;
 }
 
 export function useGrid(props: UseGridProps) {
@@ -160,9 +161,10 @@ export function useGrid(props: UseGridProps) {
             filter: false,
             cellRenderer: (params: { data: any }) => {
                 const resourcePath = props.modelName ? camelToKebabCase(props.modelName) : 'ec-tracks';
-                
+                const novaPath = props.novaPath || '/nova';
+
                 return `
-                    <a href="/resources/${resourcePath}/${params.data.id}"
+                    <a href="${novaPath}/resources/${resourcePath}/${params.data.id}"
                        target="_blank"
                        class="flex items-center justify-center"
                        style="color: rgb(var(--colors-gray-500))">

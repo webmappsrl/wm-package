@@ -8,6 +8,7 @@ export interface LayerFeatureProps {
         layerId?: number;
         value?: any[];
         trackMode?: 'auto' | 'manual';
+        novaPath?: string;
     };
     edit?: boolean;
     value?: any[];

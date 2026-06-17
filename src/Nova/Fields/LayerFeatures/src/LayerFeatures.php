@@ -4,6 +4,7 @@ namespace Wm\WmPackage\Nova\Fields\LayerFeatures;
 
 use Illuminate\Support\Facades\Log;
 use Laravel\Nova\Fields\Field;
+use Laravel\Nova\Nova;
 use Wm\WmPackage\Models\Layer;
 
 class LayerFeatures extends Field
@@ -79,6 +80,7 @@ class LayerFeatures extends Field
             'modelClass' => $modelClass,
             'model_class' => $modelClass,
             'trackMode' => $layer->isAutoTrackMode() ? 'auto' : 'manual',
+            'novaPath' => '/'.trim(Nova::path(), '/'),
         ]);
     }
 }
