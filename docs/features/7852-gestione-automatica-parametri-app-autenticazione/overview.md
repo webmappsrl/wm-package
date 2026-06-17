@@ -4,27 +4,30 @@
 
 ## Cosa cambia
 
-Nel form di edit/create Nova del modello App, i campi che dipendono dall'autenticazione appaiono oscurati (visibili ma non modificabili, grayed out) quando il campo principale "Show Auth at startup" è `false`. Il comportamento è puramente visivo: il valore nel database non viene mai letto, scritto o modificato da questa logica.
+Nel form edit/create Nova del modello App, i campi che dipendono dall'autenticazione appaiono oscurati (visibili ma non modificabili, grayed out) quando il campo principale "Show Auth at startup" è `false`.
+
+Nella detail view Nova, lo stesso campo viene renderizzato come HTML con valore calcolato: icona verde se `auth_show_at_startup=true` AND `geolocation_record_enable=true` nel DB, icona rossa altrimenti.
+
+Il valore nel database non viene mai toccato da questa logica.
 
 ## Perché
 
-Evitare configurazioni incoerenti: un admin potrebbe abilitare la geolocalizzazione senza rendersi conto che richiede l'autenticazione disabilitata. Il feedback visivo immediato chiarisce la dipendenza senza forzare modifiche ai dati.
+Evitare configurazioni incoerenti: un admin potrebbe abilitare la geolocalizzazione senza rendersi conto che richiede l'autenticazione abilitata. Il feedback visivo immediato (grayed-out in edit, icona calcolata in detail) chiarisce la dipendenza senza forzare modifiche ai dati.
 
 ## Requisiti
 
-- [x] Nel form edit/create, quando `auth_show_at_startup` è `false`, il campo `geolocation_record_enable` appare oscurato (grayed out) tramite `->readonly(true)` nel callback `dependsOn` — il valore reale del DB rimane visibile
-- [x] Il valore di `geolocation_record_enable` nel database **non viene mai modificato** da questa feature
-- [x] `AppConfigService` non viene modificato — continua a leggere il valore reale dal DB
-- [x] Il tab Mobile espone un helper privato `mobileAuthDependent(Boolean $field): Boolean` riutilizzabile per futuri campi dipendenti da `auth_show_at_startup`
-- [x] L'helper `webappAuthDependent()` **non viene creato ora** — rimandato a quando esisterà un consumatore reale nel tab Webapp (documentato in `notes.md`)
-- [x] I campi dipendenti rimangono raggruppati visivamente subito sotto il rispettivo campo principale (ordine già corretto nel codice attuale)
-- [x] Il campo grayed out mostra un help text che spiega la dipendenza ("Requires authentication at startup to be enabled"), concatenato all'help text originale del campo
-- [ ] Verifica empirica che `dependsOn` su `Boolean` funzioni nei tab annidati di Nova 5 (da eseguire manualmente in browser)
+- [ ] In **detail view**: `geolocation_record_enable` viene renderizzato come HTML con icona calcolata: verde se `auth_show_at_startup && geolocation_record_enable`, rossa altrimenti (identica al rendering nativo dei Boolean field di Nova — heroicons 24/solid, `w-6 h-6`)
+- [ ] In **edit/create**: quando `auth_show_at_startup` è `false`, `geolocation_record_enable` appare grayed-out tramite `mobileAuthDependent()` (`->readonly(true)` nel callback `dependsOn`) con lockMessage — il valore reale del DB rimane visibile
+- [ ] Il valore di `geolocation_record_enable` nel database **non viene mai modificato** da questa feature
+- [ ] `AppConfigService` non viene modificato — continua a leggere il valore reale dal DB
+- [ ] Il tab Mobile espone un helper privato `mobileAuthDependent(Boolean $field): Boolean` riutilizzabile per futuri campi dipendenti da `auth_show_at_startup`
+- [ ] L'helper `webappAuthDependent()` **non viene creato ora** — rimandato a quando esisterà un consumatore reale nel tab Webapp
+- [ ] I campi dipendenti rimangono raggruppati visivamente subito sotto il rispettivo campo principale
 
 ## Rischi
 
-- **`dependsOn` in tab annidati non testato:** `auth_show_at_startup` e `geolocation_record_enable` vivono entrambi dentro `mobile_tab()` → `Tab::group`. Se i due campi finiscono in componenti Vue separati il reactive binding potrebbe non propagarsi. Mitigazione: verifica manuale prima del merge — se non funziona, alternativa è un custom Vue component.
-- **Stato incoerente preesistente non sanato:** app già configurate con `geolocation_record_enable = true` e `auth_show_at_startup = false` non ricevono nessun segnale correttivo. Accettato: la feature gestisce solo le nuove interazioni via Nova, il DB non viene toccato.
+- **Split field (HTML+Boolean sullo stesso attributo):** pattern già usato nel file per `pois_data_icon` e `tracks_data_icon` — nessun rischio architetturale nuovo.
+- **Stato incoerente preesistente non sanato:** app già configurate con `geolocation_record_enable = true` e `auth_show_at_startup = false` vedranno il campo come falso in detail ma il DB mantiene il valore reale. Accettato: la detail view riflette l'effetto reale sull'app, il DB mantiene la preconfigurazione admin.
 
 ## Out of scope
 
@@ -38,5 +41,5 @@ Evitare configurazioni incoerenti: un admin potrebbe abilitare la geolocalizzazi
 
 | File | Repo | Modifica |
 |------|------|----------|
-| `src/Nova/App.php` | `wm-package` | Aggiunta metodo privato `mobileAuthDependent()`; `geolocation_record_enable` wrappato con `mobileAuthDependent()`; aggiunto import `FormData` |
-| `resources/lang/it.json` | `wm-package` | Aggiunta traduzione italiana per "Requires authentication at startup to be enabled" |
+| `src/Nova/App.php` | `wm-package` | Aggiunto HTML field `onlyOnDetail()` per `geolocation_record_enable`; Boolean wrappato con `mobileAuthDependent()->onlyOnForms()` |
+| `resources/lang/it.json` | `wm-package` | Traduzione lockMessage già presente — invariata |

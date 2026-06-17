@@ -4,8 +4,9 @@
 
 ## Deviazioni dal piano
 
-- **Step 1 skippato:** la verifica empirica `dependsOn` nei tab annidati richiede browser — non eseguita durante l'implementazione automatica. Deve essere eseguita manualmente prima del merge (vedi Step 5 del plan).
-- **Help text aggiunto (non nel plan originale):** l'utente ha richiesto che il campo grayed out mostri un testo esplicativo. Il metodo `mobileAuthDependent()` appende dinamicamente il lockMessage all'help text originale del campo tramite `implode(' — ', array_filter([$field->helpText, $lockMessage]))`.
+- **Step 1 originale (verifica empirica `dependsOn`) skippato:** richiede browser — da eseguire manualmente prima del merge.
+- **HTML field aggiunto per detail view (non nel piano originale):** decisione di riunione con Giuseppe — la detail view deve mostrare il valore effettivo calcolato (false se padre è false), non il valore grezzo del DB.
+- **Boolean cambiato da `hideFromIndex()` a `onlyOnForms()`:** necessario per evitare che il Boolean appaia anche in detail view dove già c'è l'HTML field (duplicazione). `mobileAuthDependent()` rimane attivo in edit.
 
 ## Bug trovati
 
@@ -13,12 +14,11 @@ Nessuno.
 
 ## Decisioni
 
-- **Solo UI, nessuna modifica al DB:** l'approccio finale è puramente visivo — `->readonly(true)` + help text concatenato nel callback `dependsOn`. Il DB non viene mai toccato, il valore reale rimane visibile (grayed out).
-- **Backup-restore via observer scartato:** durante l'implementazione è stato esplorato un approccio in cui l'observer salvava il valore originale in `properties['_auth_backup_geolocation']` e lo ripristinava al cambio di `auth_show_at_startup`. Abbandonato perché aumentava la complessità senza beneficio reale: il valore DB rimane sempre quello scelto dall'admin.
-- **`webappAuthDependent()` non creato:** rimandato a quando esisterà un consumatore reale nel tab Webapp.
-- **`AppConfigService` non modificato:** il config generato legge il valore reale dal DB, indipendentemente dallo stato UI.
+- **HTML field in detail view:** `Text::make(..., fn() => ...)->asHtml()->onlyOnDetail()` mostra icona verde se `auth_show_at_startup && geolocation_record_enable`, rossa altrimenti. SVG da `@heroicons/vue@2.2.0` 24/solid (`w-6 h-6`) — stessa dimensione del Boolean nativo Nova. Pattern già usato nel file per `pois_data_icon`/`tracks_data_icon`.
+- **`mobileAuthDependent()` mantenuto in edit:** il grayed-out in edit rimane attivo — l'utente può ancora modificare il campo ma riceve feedback visivo. Non rimosso per decisione esplicita.
+- **`AppConfigService` non modificato:** il config generato legge il valore reale dal DB, indipendentemente dalla visualizzazione Nova.
 
 ## Follow-up
 
-- Creare `webappAuthDependent()` quando vengono aggiunti campi dipendenti da `webapp_auth_show_at_startup` nel tab Webapp.
+- Creare `webappAuthDependent()` (o equivalente HTML) quando vengono aggiunti campi dipendenti da `webapp_auth_show_at_startup` nel tab Webapp.
 - Se in futuro si vuole enforced coerenza nel config, aggiornare `AppConfigService::config_section_geolocation()` per sopprimere `GEOLOCATION.record.enable` quando `auth_show_at_startup = false`.
