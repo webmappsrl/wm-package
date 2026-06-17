@@ -10,6 +10,7 @@ use Laravel\Nova\Fields\BelongsTo;
 use Laravel\Nova\Fields\Boolean;
 use Laravel\Nova\Fields\Code;
 use Laravel\Nova\Fields\Color;
+use Laravel\Nova\Fields\FormData;
 use Laravel\Nova\Fields\Heading;
 use Laravel\Nova\Fields\ID;
 use Laravel\Nova\Fields\Number;
@@ -206,6 +207,17 @@ class App extends Resource
         ];
     }
 
+    private function mobileAuthDependent(Boolean $field): Boolean
+    {
+        return $field->dependsOn('auth_show_at_startup', function (Boolean $field, NovaRequest $request, FormData $formData) {
+            if (! $formData->boolean('auth_show_at_startup')) {
+                $lockMessage = __('Requires authentication at startup to be enabled');
+                $field->readonly(true)
+                    ->help(implode(' — ', array_filter([$field->helpText, $lockMessage])));
+            }
+        });
+    }
+
     protected function mobile_tab(): array
     {
         return [
@@ -218,10 +230,12 @@ class App extends Resource
                 ->default(false)
                 ->hideFromIndex()
                 ->help(__('Shows the authentication and registration page for users')),
-            Boolean::make(__('Geolocation Record Enable'), 'geolocation_record_enable')
-                ->default(false)
-                ->hideFromIndex()
-                ->help(__('Enables user geolocation recording on tracks')),
+            $this->mobileAuthDependent(
+                Boolean::make(__('Geolocation Record Enable'), 'geolocation_record_enable')
+                    ->default(false)
+                    ->hideFromIndex()
+                    ->help(__('Enables user geolocation recording on tracks'))
+            ),
             Boolean::make(__('Show Download Tiles'), 'properties->show_download_tiles')
                 ->default(false)
                 ->hideFromIndex()
