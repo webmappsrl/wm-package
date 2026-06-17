@@ -4,6 +4,7 @@
     "Activates the POI type filter for points of interest": "Activates the POI type filter for points of interest",
     "Activates the activity filter for tracks": "Activates the activity filter for tracks",
     "Activities": "Activities",
+    "Activity": "Activity",
     "Activity Filter": "Activity Filter",
     "App": "App",
     "App Name": "App Name",
@@ -104,6 +105,8 @@
     "POI Max Radius": "POI Max Radius",
     "POI Min Radius": "POI Min Radius",
     "POI Min Zoom": "POI Min Zoom",
+    "POI Type": "POI Type",
+    "POI Types": "POI Types",
     "POI Type Filter": "POI Type Filter",
     "POI acquisition forms": "POI acquisition forms",
     "Permissions": "Permissions",
@@ -187,6 +190,8 @@
     "TRACK acquisition forms": "TRACK acquisition forms",
     "Taxonomy Poi Types": "Taxonomy Poi Types",
     "Test the copied code by pasting it into": "Test the copied code by pasting it into",
+    "Theme": "Theme",
+    "Themes": "Themes",
     "This JSON structures the acquisition form for UGC POIs. Knowledge of JSON format required.": "This JSON structures the acquisition form for UGC POIs. Knowledge of JSON format required.",
     "This JSON structures the acquisition form for UGC Tracks. Knowledge of JSON format required.": "This JSON structures the acquisition form for UGC Tracks. Knowledge of JSON format required.",
     "Tools": "Tools",
@@ -286,5 +291,7 @@
     "Search an icon for the tile...": "Search an icon for the tile...",
     "Select an icon name from icons.json": "Select an icon name from icons.json",
     "URL template for the tile server (e.g. https://example.com/{z}/{x}/{y}.png)": "URL template for the tile server (e.g. https://example.com/{z}/{x}/{y}.png)",
-    "Link used over the attribution tag in the app (optional)": "Link used over the attribution tag in the app (optional)"
+    "Link used over the attribution tag in the app (optional)": "Link used over the attribution tag in the app (optional)",
+    "Where": "Where",
+    "Wheres": "Wheres"
 }

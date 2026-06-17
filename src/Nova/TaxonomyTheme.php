@@ -9,6 +9,16 @@ class TaxonomyTheme extends AbstractTaxonomyResource
 {
     public static $model = \Wm\WmPackage\Models\TaxonomyTheme::class;
 
+    public static function label(): string
+    {
+        return __('Themes');
+    }
+
+    public static function singularLabel(): string
+    {
+        return __('Theme');
+    }
+
     public static $title = 'name';
 
     public function fields(NovaRequest $request): array
