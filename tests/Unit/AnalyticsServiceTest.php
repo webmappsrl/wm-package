@@ -6,8 +6,8 @@ use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Wm\WmPackage\Services\PostHog\AnalyticsService;
 use Orchestra\Testbench\TestCase;
+use Wm\WmPackage\Services\PostHog\AnalyticsService;
 
 class AnalyticsServiceTest extends TestCase
 {
@@ -16,9 +16,9 @@ class AnalyticsServiceTest extends TestCase
         parent::setUp();
 
         config([
-            'services.posthog.host'               => 'https://posthog.example.com',
-            'services.posthog.project_id'         => '1',
-            'services.posthog.personal_api_key'   => 'phx_test',
+            'services.posthog.host' => 'https://posthog.example.com',
+            'services.posthog.project_id' => '1',
+            'services.posthog.personal_api_key' => 'phx_test',
             'services.posthog.analytics_cache_ttl' => 900,
         ]);
     }
@@ -36,7 +36,7 @@ class AnalyticsServiceTest extends TestCase
                 ->push($this->fakePostHogResponses()),
         ]);
 
-        $service = new AnalyticsService();
+        $service = new AnalyticsService;
         $service->getLayerUsage(1);
         $service->getLayerUsage(1);
 
@@ -49,7 +49,7 @@ class AnalyticsServiceTest extends TestCase
         Http::fake(['*' => Http::response($this->fakePostHogResponses())]);
 
         Cache::flush();
-        $service = new AnalyticsService();
+        $service = new AnalyticsService;
         $service->getLayerUsage(1);
         $service->getLayerUsage(2);
 
@@ -61,7 +61,7 @@ class AnalyticsServiceTest extends TestCase
     // Output normalizzato
     // -------------------------------------------------------------------------
 
-    public function test_getLayerUsage_returns_expected_structure(): void
+    public function test_get_layer_usage_returns_expected_structure(): void
     {
         Http::fake([
             '*' => Http::sequence()
@@ -70,7 +70,7 @@ class AnalyticsServiceTest extends TestCase
                 ->push(['results' => [[7]]]),                                                                      // unique users
         ]);
 
-        $result = (new AnalyticsService())->getLayerUsage(55);
+        $result = (new AnalyticsService)->getLayerUsage(55);
 
         $this->assertSame(55, $result['id']);
         $this->assertSame('layerOpened', $result['event']);
@@ -90,7 +90,7 @@ class AnalyticsServiceTest extends TestCase
                 ->push(['results' => [[0]]]),
         ]);
 
-        $result = (new AnalyticsService())->getLayerUsage(1);
+        $result = (new AnalyticsService)->getLayerUsage(1);
 
         $this->assertSame('2026-05-01', $result['daily_breakdown'][0]['date']);
         $this->assertSame('posthog-android', $result['daily_breakdown'][0]['lib']);
@@ -106,7 +106,7 @@ class AnalyticsServiceTest extends TestCase
                 ->push(['results' => [[0]]]),
         ]);
 
-        $result = (new AnalyticsService())->getLayerUsage(1);
+        $result = (new AnalyticsService)->getLayerUsage(1);
 
         $this->assertSame('posthog-ios', $result['breakdown'][0]['lib']);
         $this->assertSame(42, $result['breakdown'][0]['total']);
@@ -121,7 +121,7 @@ class AnalyticsServiceTest extends TestCase
         Http::fake(['*' => Http::response('Internal Server Error', 500)]);
         Log::shouldReceive('error')->times(3); // una per ogni query
 
-        $result = (new AnalyticsService())->getLayerUsage(1);
+        $result = (new AnalyticsService)->getLayerUsage(1);
 
         $this->assertSame(0, $result['total']);
         $this->assertSame([], $result['daily_breakdown']);
@@ -136,7 +136,7 @@ class AnalyticsServiceTest extends TestCase
             ->atLeast()->once()
             ->withArgs(fn ($msg) => $msg === 'PostHog query failed');
 
-        (new AnalyticsService())->getLayerUsage(1);
+        (new AnalyticsService)->getLayerUsage(1);
     }
 
     // -------------------------------------------------------------------------
@@ -147,10 +147,9 @@ class AnalyticsServiceTest extends TestCase
     {
         Http::fake(['*' => Http::response($this->fakePostHogResponses())]);
 
-        (new AnalyticsService())->getLayerUsage(1);
+        (new AnalyticsService)->getLayerUsage(1);
 
-        Http::assertSent(fn (Request $request) =>
-            $request->hasHeader('Authorization', 'Bearer phx_test')
+        Http::assertSent(fn (Request $request) => $request->hasHeader('Authorization', 'Bearer phx_test')
         );
     }
 
@@ -158,10 +157,9 @@ class AnalyticsServiceTest extends TestCase
     {
         Http::fake(['*' => Http::response($this->fakePostHogResponses())]);
 
-        (new AnalyticsService())->getLayerUsage(1);
+        (new AnalyticsService)->getLayerUsage(1);
 
-        Http::assertSent(fn (Request $request) =>
-            $request->url() === 'https://posthog.example.com/api/projects/1/query'
+        Http::assertSent(fn (Request $request) => $request->url() === 'https://posthog.example.com/api/projects/1/query'
         );
     }
 
@@ -169,10 +167,9 @@ class AnalyticsServiceTest extends TestCase
     {
         Http::fake(['*' => Http::response($this->fakePostHogResponses())]);
 
-        (new AnalyticsService())->getLayerUsage(1);
+        (new AnalyticsService)->getLayerUsage(1);
 
-        Http::assertSent(fn (Request $request) =>
-            $request->data()['query']['kind'] === 'HogQLQuery'
+        Http::assertSent(fn (Request $request) => $request->data()['query']['kind'] === 'HogQLQuery'
         );
     }
 

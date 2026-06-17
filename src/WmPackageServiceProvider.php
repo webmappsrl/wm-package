@@ -29,6 +29,7 @@ use Wm\WmPackage\Commands\WmPackageCommand;
 use Wm\WmPackage\Commands\WmRestoreDbCommand;
 use Wm\WmPackage\Commands\WmSyncUgcTaxonomyWhereCommand;
 use Wm\WmPackage\ElasticSearch\HitsIteratorAggregate as ElasticSearchHitsIteratorAggregate;
+use Wm\WmPackage\Http\Controllers\Nova\AnalyticsController;
 use Wm\WmPackage\Jobs\Import\ImportEcMediaJob;
 use Wm\WmPackage\Models\App as AppModel;
 use Wm\WmPackage\Nova\Cards\ApiLinksCard\CardServiceProvider;
@@ -117,7 +118,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
             Route::middleware(['nova'])
                 ->prefix('nova-vendor/layer-analytics')
                 ->group(function () {
-                    Route::get('/{layer}', [\Wm\WmPackage\Http\Controllers\Nova\AnalyticsController::class, 'layer']);
+                    Route::get('/{layer}', [AnalyticsController::class, 'layer']);
                 });
         });
 

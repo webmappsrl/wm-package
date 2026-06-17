@@ -13,8 +13,11 @@ class AnalyticsService
     private const LIBS = ['posthog-ios', 'posthog-android', 'web'];
 
     private string $host;
+
     private string $projectId;
+
     private string $apiKey;
+
     private int $cacheTtl;
 
     public function __construct()
@@ -58,18 +61,18 @@ class AnalyticsService
     private function fetchUsage(string $event, string $idProperty, int $id): array
     {
         $dailyBreakdown = $this->queryDailyBreakdown($event, $idProperty, $id);
-        $breakdown      = $this->queryBreakdown($event, $idProperty, $id);
-        $uniqueUsers    = $this->queryUniqueUsers($event, $idProperty, $id);
-        $total          = array_sum(array_column($breakdown, 'total'));
+        $breakdown = $this->queryBreakdown($event, $idProperty, $id);
+        $uniqueUsers = $this->queryUniqueUsers($event, $idProperty, $id);
+        $total = array_sum(array_column($breakdown, 'total'));
 
         return [
-            'id'              => $id,
-            'event'           => $event,
-            'range'           => 'last_30_days',
-            'total'           => $total,
+            'id' => $id,
+            'event' => $event,
+            'range' => 'last_30_days',
+            'total' => $total,
             'daily_breakdown' => $dailyBreakdown,
-            'breakdown'       => $breakdown,
-            'unique_users'    => $uniqueUsers,
+            'breakdown' => $breakdown,
+            'unique_users' => $uniqueUsers,
         ];
     }
 
@@ -91,8 +94,8 @@ ORDER BY day
 SQL;
 
         return array_map(fn ($row) => [
-            'date'  => (string) $row[0],
-            'lib'   => (string) $row[1],
+            'date' => (string) $row[0],
+            'lib' => (string) $row[1],
             'total' => (int) $row[2],
         ], $this->runQuery($sql));
     }
@@ -114,7 +117,7 @@ ORDER BY total DESC
 SQL;
 
         return array_map(fn ($row) => [
-            'lib'   => (string) $row[0],
+            'lib' => (string) $row[0],
             'total' => (int) $row[1],
         ], $this->runQuery($sql));
     }
@@ -155,7 +158,7 @@ SQL;
             ->timeout(10)
             ->post($url, [
                 'query' => [
-                    'kind'  => 'HogQLQuery',
+                    'kind' => 'HogQLQuery',
                     'query' => $sql,
                 ],
             ]);
@@ -163,8 +166,8 @@ SQL;
         if (! $response->successful()) {
             Log::error('PostHog query failed', [
                 'status' => $response->status(),
-                'body'   => $response->body(),
-                'sql'    => $sql,
+                'body' => $response->body(),
+                'sql' => $sql,
             ]);
 
             return [];

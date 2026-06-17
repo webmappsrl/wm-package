@@ -3,6 +3,7 @@
 namespace Wm\WmPackage\Http\Resources;
 
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
 
 class RelatedEcPoiResource extends EcPoiResource
 {
@@ -14,7 +15,7 @@ class RelatedEcPoiResource extends EcPoiResource
 
         if ($this->getMedia()->isNotEmpty()) {
             $featureImage = $data['properties']['feature_image'];
-            $featureImageArray = $featureImage instanceof \Illuminate\Http\Resources\Json\JsonResource
+            $featureImageArray = $featureImage instanceof JsonResource
                 ? $featureImage->toArray($request)
                 : (array) $featureImage;
             $featureImageArray['show_image_on_map'] = $this->resolveShowImageOnMap();
