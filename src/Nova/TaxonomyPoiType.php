@@ -9,6 +9,16 @@ class TaxonomyPoiType extends AbstractTaxonomyResource
 {
     public static $model = \Wm\WmPackage\Models\TaxonomyPoiType::class;
 
+    public static function label(): string
+    {
+        return __('POI Types');
+    }
+
+    public static function singularLabel(): string
+    {
+        return __('POI Type');
+    }
+
     /**
      * The single value that should be used to represent the resource when being displayed.
      *

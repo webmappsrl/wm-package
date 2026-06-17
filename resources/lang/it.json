@@ -4,6 +4,7 @@
     "Activates the POI type filter for points of interest": "Attiva il filtro tipo POI per i punti di interesse",
     "Activates the activity filter for tracks": "Attiva il filtro attività per le tracce",
     "Activities": "Attività",
+    "Activity": "Attività",
     "Activity Filter": "Filtro Attività",
     "App": "App",
     "App Name": "Nome App",
@@ -104,6 +105,8 @@
     "POI Max Radius": "Raggio Massimo POI",
     "POI Min Radius": "Raggio Minimo POI",
     "POI Min Zoom": "Zoom Minimo POI",
+    "POI Type": "Tipo POI",
+    "POI Types": "Tipi POI",
     "POI Type Filter": "Filtro Tipo POI",
     "POI acquisition forms": "Form di acquisizione POI",
     "Permissions": "Permessi",
@@ -180,7 +183,8 @@
     "Sku": "SKU",
     "Splash image": "Immagine splash",
     "TRACK acquisition forms": "Form di acquisizione TRACCE",
-    "Taxonomy Poi Types": "Tipi POI Tassonomia",
+    "Theme": "Tema",
+    "Themes": "Temi",
     "This JSON structures the acquisition form for UGC POIs. Knowledge of JSON format required.": "Questo JSON struttura il form di acquisizione per i POI UGC. È richiesta la conoscenza del formato JSON.",
     "This JSON structures the acquisition form for UGC Tracks. Knowledge of JSON format required.": "Questo JSON struttura il form di acquisizione per le Tracce UGC. È richiesta la conoscenza del formato JSON.",
     "Tools": "Strumenti",
@@ -277,5 +281,7 @@
     "Search an icon for the tile...": "Cerca un'icona per la tile...",
     "Select an icon name from icons.json": "Seleziona il nome di un'icona da icons.json",
     "URL template for the tile server (e.g. https://example.com/{z}/{x}/{y}.png)": "Template URL per il server delle tile (es. https://example.com/{z}/{x}/{y}.png)",
-    "Link used over the attribution tag in the app (optional)": "Link usato sul tag di attribution nell'app (opzionale)"
+    "Link used over the attribution tag in the app (optional)": "Link usato sul tag di attribution nell'app (opzionale)",
+    "Where": "Luogo",
+    "Wheres": "Luoghi"
 }

@@ -29,12 +29,12 @@ class TaxonomyWhere extends AbstractTaxonomyResource
 
     public static function label(): string
     {
-        return 'Taxonomies Where';
+        return __('Wheres');
     }
 
     public static function singularLabel(): string
     {
-        return 'Taxonomy Where';
+        return __('Where');
     }
 
     public function fields(NovaRequest $request): array

@@ -9,6 +9,16 @@ class TaxonomyActivity extends AbstractTaxonomyResource
 {
     public static $model = \Wm\WmPackage\Models\TaxonomyActivity::class;
 
+    public static function label(): string
+    {
+        return __('Activities');
+    }
+
+    public static function singularLabel(): string
+    {
+        return __('Activity');
+    }
+
     /**
      * The single value that should be used to represent the resource when being displayed.
      *
