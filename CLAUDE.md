@@ -22,6 +22,13 @@ protected static function newFactory(): Factory
 
 ## Decisioni architetturali
 
+### Inserire foto — my_paths e my_downloads (oc:7480)
+- `getOrDownloadIcon()` usava `isset($app->$type)` che restituisce sempre `false` per le media collection Spatie (non sono attributi Eloquent) — sostituito con `$app->getMedia($type)->first()` + null-check esplicito
+- `$mediaItem->mime_type` (attributo nativo Spatie) al posto di `getCustomProperty('mime-type')` che può restituire `null`
+- `($disk->getConfig()['driver'] ?? 'local')`: il fake disk nei test non ha la chiave `driver` nel config — il default `local` è corretto semanticamente
+- URL in `config.json` via `getFirstMediaUrl()` invece di `route()`: evita il conflitto di naming tra i due gruppi `webmapp` che condividono `->name('webmapp.')` in `routes/api.php`
+- `icon_notify` e `logo_homepage` hanno route e metodi controller ma **non** hanno `registerMediaCollections()` né campi Nova — non usarli come pattern di riferimento
+
 ### Fix mappa layer bounding box (oc:8093)
 - Il dist `field.js` di `FeatureCollectionMap` va sempre ricompilato dalla sorgente verificata — il commit `fb3c0555` conteneva `"inline-geojson":A.field.geojson||null` nel template del `DetailFeatureCollectionMap` (non presente in `DetailField.vue`) perché compilato da una working copy locale non committata
 - Prima di ogni `npm run prod` verificare che la sorgente `DetailField.vue` non abbia prop spurie; dopo la compilazione, grep `inline-geojson.*field.geojson` nel dist per controllo
@@ -40,6 +47,7 @@ protected static function newFactory(): Factory
 | Feature | Ticket | Moduli toccati | Note |
 |---|---|---|---|
 | Analytics Layer: selezione range temporale | oc:7648 | `src/Services/PostHog/AnalyticsService.php`, `src/Http/Controllers/Nova/AnalyticsController.php`, `src/Nova/Cards/LayerAnalytics/` | Dropdown 30/90/365gg + mesi da created_at; tabella download per traccia |
+| Inserire foto (my_paths, my_downloads) | oc:7480 | `src/Models/App.php`, `src/Nova/App.php`, `src/Http/Controllers/Api/AppController.php`, `routes/api.php`, `src/Services/Models/App/AppConfigService.php` | Media collection + Nova fields + route nei 3 gruppi + URL in APP section del config.json; fix getOrDownloadIcon() (isset→getMedia, mime_type, driver null-safe) |
 | EC POI map icon display | oc:7645 | `src/Models/EcPoi.php`, `src/Nova/EcPoi.php`, `src/Http/Resources/RelatedEcPoiResource.php` | `show_image_on_map` in `feature_image` dei related_pois dell'EcTrack; checkbox readonly se il POI non ha immagini |
 | Fix mappa layer bounding box | oc:8093 | `src/Nova/Fields/FeatureCollectionMap/dist/js/field.js` | Dist ricompilato: rimossa prop `inline-geojson:field.geojson` introdotta per errore in `fb3c0555` (oc:7756) |
 | Fix import Excel POI: nomi mancanti in pois.geojson | oc:8063 | `src/Imports/Processors/EcPoiRowProcessor.php`, `tests/Unit/Imports/Processors/EcPoiRowProcessorTest.php` | Sync `properties['name']` da `getTranslations('name')` in `apply()` — replica logica observer bypassata da `saveQuietly()` |
