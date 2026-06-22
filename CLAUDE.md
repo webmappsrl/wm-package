@@ -34,6 +34,7 @@ protected static function newFactory(): Factory
 | Fix mappa layer bounding box | oc:8093 | `src/Nova/Fields/FeatureCollectionMap/dist/js/field.js` | Dist ricompilato: rimossa prop `inline-geojson:field.geojson` introdotta per errore in `fb3c0555` (oc:7756) |
 | Fix import Excel POI: nomi mancanti in pois.geojson | oc:8063 | `src/Imports/Processors/EcPoiRowProcessor.php`, `tests/Unit/Imports/Processors/EcPoiRowProcessorTest.php` | Sync `properties['name']` da `getTranslations('name')` in `apply()` — replica logica observer bypassata da `saveQuietly()` |
 | ImportTaxonomyThemeJob | oc:8014 | `src/Jobs/Import/ImportTaxonomyThemeJob.php`, `src/Services/Import/GeohubImportService.php`, `config/wm-geohub-import.php` | Aggiunge il job mancante per importare TaxonomyTheme da GeoHub; registra taxonomy_theme in MODEL_IMPORT_ORDER e default_dependencies |
+| Dipendenza visiva auth → geolocalizzazione in Nova | oc:7852 | `src/Nova/App.php`, `resources/lang/it.json` | HTML field `onlyOnDetail()` con valore calcolato; `mobileAuthDependent()` mantiene grayed-out in edit; Boolean `onlyOnForms()` evita duplicazione in detail |
 | Fix getTaxonomyMorphableRecords | oc:8013 | `src/Jobs/Import/ImportTaxonomyJob.php` | Corregge il parametro passato a getTaxonomyMorphableRecords: entityId (GeoHub) invece di model->id (Maphub) |
 | Refactor SuperAdminService | oc:8006 | `src/Services/RolesAndPermissionsService.php`, `src/Support/SuperAdminService.php` (rimosso), `src/Nova/App.php`, `src/Nova/Actions/GenerateAppIconsAction.php`, `src/Nova/Actions/BuildAppPoisGeojsonAction.php`, `src/Policies/AppPolicy.php` | Sposta i check super-admin email-based in RolesAndPermissionsService; rimuove SuperAdminService |
 
@@ -59,6 +60,12 @@ protected static function newFactory(): Factory
 - `ImportTaxonomyJob::processDependencies()` usa `syncWithoutDetaching()` (non `sync()`): `sync()` azzerava tutte le associazioni del record lasciando solo l'ultimo tema importato — bug critico confermato su app 63.
 - Dopo merge: i progetti con config già pubblicato devono aggiornare manualmente `default_dependencies['app']` in `wm-geohub-import.php` oppure ri-pubblicare con `--force`
 - `taxonomy_when` e `taxonomy_target` hanno lo stesso problema (`'job' => ''`) — esclusi da questo ticket, servono ticket separati
+
+### Dipendenza visiva auth → geolocalizzazione (oc:7852)
+- In detail view: `Text::make(..., fn() => ...)->asHtml()->onlyOnDetail()` mostra icona verde se `auth_show_at_startup && geolocation_record_enable`, rossa altrimenti — heroicons 24/solid `w-6 h-6`, stesso rendering dei Boolean nativi Nova
+- In edit/create: `mobileAuthDependent()` mantiene il grayed-out (`->readonly(true)`) quando `auth_show_at_startup=false`; Boolean con `->onlyOnForms()` (non `hideFromIndex()`) per evitare duplicazione in detail
+- `webappAuthDependent()` non creato: rimandato a quando esisterà un campo dipendente reale nel tab Webapp
+- `AppConfigService` non modificato: il config generato riflette sempre il valore reale nel DB
 
 ### Fix getTaxonomyMorphableRecords (oc:8013)
 - `processDependencies()` deve passare `$this->entityId` (ID GeoHub) a `getTaxonomyMorphableRecords()`, non `$model->id` (ID Maphub locale) — i due ID sono diversi e il metodo interroga il DB GeoHub
