@@ -56,8 +56,14 @@ protected static function newFactory(): Factory
 | Dipendenza visiva auth → geolocalizzazione in Nova | oc:7852 | `src/Nova/App.php`, `resources/lang/it.json` | HTML field `onlyOnDetail()` con valore calcolato; `mobileAuthDependent()` mantiene grayed-out in edit; Boolean `onlyOnForms()` evita duplicazione in detail |
 | Fix getTaxonomyMorphableRecords | oc:8013 | `src/Jobs/Import/ImportTaxonomyJob.php` | Corregge il parametro passato a getTaxonomyMorphableRecords: entityId (GeoHub) invece di model->id (Maphub) |
 | Refactor SuperAdminService | oc:8006 | `src/Services/RolesAndPermissionsService.php`, `src/Support/SuperAdminService.php` (rimosso), `src/Nova/App.php`, `src/Nova/Actions/GenerateAppIconsAction.php`, `src/Nova/Actions/BuildAppPoisGeojsonAction.php`, `src/Policies/AppPolicy.php` | Sposta i check super-admin email-based in RolesAndPermissionsService; rimuove SuperAdminService |
+| Fix esposizione assets API | oc:7913 | `src/Http/Controllers/Api/AppController.php` | `getOrDownloadIcon` usa `getMedia()->first()` invece di `isset($app->$type)` — fix 404 su app con media in Spatie e colonne null |
 
 ## Decisioni architetturali
+
+### Fix esposizione assets API (oc:7913)
+- `getOrDownloadIcon` usa `getMedia($type)->first()` come unica fonte di verità — `isset($app->$type)` controllava la colonna DB che su Maphub è sempre null (upload via Spatie Media Library)
+- Nessun fallback sulla colonna: app che hanno solo la colonna valorizzata (senza media in Spatie) ricevono 404 — comportamento atteso e diagnosticabile
+- `getCustomProperty('mime-type')` può restituire null (custom property non salvata al caricamento); il campo nativo corretto è `$mediaItem->mime_type` — fix separato tracciato in oc:8122
 
 ### EC POI map icon display (oc:7645)
 - `show_image_on_map` salvato in `properties` JSON di `EcPoi` — nessuna migration, il modello ha già il campo `properties` (jsonb)
