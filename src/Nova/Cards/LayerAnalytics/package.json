@@ -13,7 +13,7 @@
     "laravel-nova-devtool": "file:vendor/laravel/nova-devtool",
     "vue": "^3.2.31",
     "vue-loader": "^17.0.0",
-    "webpack": "^5.105.4"
+    "webpack": "^5.75.0"
   },
   "dependencies": {
     "chart.js": "^4.4.0",

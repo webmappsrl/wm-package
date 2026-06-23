@@ -2,15 +2,33 @@
   <card class="p-6" ref="cardRoot">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
       <h4 style="font-size:0.75rem; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:0.05em; margin:0;">
-        Analytics Layer — Ultimi 30 giorni
+        Analytics Layer — {{ rangeLabel }}
       </h4>
-      <button
-        v-if="!loading && !error"
-        @click="exportPng"
-        style="font-size:0.75rem; padding:4px 12px; border-radius:6px; border:1px solid #d1d5db; background:#fff; color:#6b7280; cursor:pointer;"
-      >
-        ↓ PNG
-      </button>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <select
+          v-model="selectedRange"
+          @change="onRangeChange"
+          style="font-size:0.75rem; padding:4px 8px; border-radius:6px; border:1px solid #d1d5db; background:#fff; color:#374151; cursor:pointer;"
+        >
+          <optgroup label="Finestre mobili">
+            <option value="days:30">Ultimi 30 giorni</option>
+            <option value="days:90">Ultimi 90 giorni</option>
+            <option value="days:365">Ultimi 365 giorni</option>
+          </optgroup>
+          <optgroup label="Mese specifico">
+            <option v-for="m in monthOptions" :key="m.value" :value="m.value">
+              {{ m.label }}
+            </option>
+          </optgroup>
+        </select>
+        <button
+          v-if="!loading && !error"
+          @click="exportPng"
+          style="font-size:0.75rem; padding:4px 12px; border-radius:6px; border:1px solid #d1d5db; background:#fff; color:#6b7280; cursor:pointer;"
+        >
+          ↓ PNG
+        </button>
+      </div>
     </div>
 
     <div v-if="loading" class="text-gray-400 text-sm">Caricamento...</div>
@@ -57,6 +75,29 @@
           </div>
         </div>
       </div>
+
+      <!-- Download per traccia -->
+      <div v-if="data.track_downloads && data.track_downloads.length" style="margin-top:24px;">
+        <p style="font-size:0.75rem; color:#6b7280; text-transform:uppercase; margin-bottom:8px;">Download per traccia</p>
+        <table style="width:100%; border-collapse:collapse; font-size:0.875rem;">
+          <thead>
+            <tr style="border-bottom:1px solid rgba(128,128,128,0.3);">
+              <th style="text-align:left; padding:6px 8px; font-weight:500; opacity:0.6;">Traccia</th>
+              <th style="text-align:right; padding:6px 8px; font-weight:500; opacity:0.6;">Download</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="row in data.track_downloads"
+              :key="row.track_id"
+              style="border-bottom:1px solid rgba(128,128,128,0.15);"
+            >
+              <td style="padding:6px 8px;">{{ row.name }}</td>
+              <td style="padding:6px 8px; text-align:right; font-weight:600; color:#10b981;">{{ row.downloads }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </template>
   </card>
 </template>
@@ -81,6 +122,9 @@ const PLATFORMS = [
   { lib: 'web',             label: 'Webapp',  color: '#f59e0b' },
 ]
 
+const MONTH_NAMES = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno',
+                     'Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre']
+
 export default {
   props: {
     card: { type: Object, required: true },
@@ -88,6 +132,7 @@ export default {
 
   data() {
     return {
+      selectedRange: 'days:30',
       loading: true,
       error: null,
       data: null,
@@ -96,10 +141,54 @@ export default {
   },
 
   computed: {
+    trackingSince() {
+      const raw = this.card.tracking_since
+      if (!raw || !/^\d{4}-\d{2}/.test(raw)) return '2026-01-01'
+      return raw
+    },
+
+    monthOptions() {
+      const start   = new Date(this.trackingSince)
+      const now     = new Date()
+      const options = []
+      const cursor  = new Date(start.getFullYear(), start.getMonth(), 1)
+
+      while (cursor <= now) {
+        const y = cursor.getFullYear()
+        const m = String(cursor.getMonth() + 1).padStart(2, '0')
+        options.push({
+          value: `month:${y}-${m}`,
+          label: `${MONTH_NAMES[cursor.getMonth()]} ${y}`,
+        })
+        cursor.setMonth(cursor.getMonth() + 1)
+      }
+
+      return options
+    },
+
+    rangeLabel() {
+      if (this.selectedRange.startsWith('month:')) {
+        const [y, m] = this.selectedRange.slice(6).split('-')
+        return `${MONTH_NAMES[parseInt(m, 10) - 1]} ${y}`
+      }
+      const days = this.selectedRange.split(':')[1]
+      return `Ultimi ${days} giorni`
+    },
+
     avgPerDay() {
       if (!this.data?.daily_breakdown?.length) return 0
       const days = new Set(this.data.daily_breakdown.map((r) => r.date)).size
       return days ? Math.round(this.data.total / days) : 0
+    },
+
+    fetchUrl() {
+      const base = this.card.endpoint
+      if (this.selectedRange.startsWith('month:')) {
+        const month = this.selectedRange.slice(6)
+        return `${base}?month=${month}`
+      }
+      const days = this.selectedRange.split(':')[1]
+      return `${base}?days=${days}`
     },
   },
 
@@ -118,11 +207,15 @@ export default {
   },
 
   methods: {
+    async onRangeChange() {
+      await this.fetchData()
+    },
+
     async fetchData() {
       this.loading = true
-      this.error = null
+      this.error   = null
       try {
-        const response = await fetch(this.card.endpoint, {
+        const response = await fetch(this.fetchUrl, {
           headers: {
             'X-Requested-With': 'XMLHttpRequest',
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
@@ -143,10 +236,8 @@ export default {
       if (!canvas || !this.data?.daily_breakdown) return
       if (this.chartInstance) this.chartInstance.destroy()
 
-      // Raccoglie tutti i giorni unici ordinati
       const days = [...new Set(this.data.daily_breakdown.map((r) => r.date))].sort()
 
-      // Mappa { 'day|lib' => total }
       const lookup = {}
       for (const row of this.data.daily_breakdown) {
         lookup[`${row.date}|${row.lib}`] = row.total
@@ -188,9 +279,9 @@ export default {
       const el = this.$refs.cardRoot?.$el ?? this.$refs.cardRoot
       if (!el) return
       const canvas = await html2canvas(el, { backgroundColor: '#ffffff', scale: 2 })
-      const link = document.createElement('a')
+      const link   = document.createElement('a')
       link.download = `layer-analytics-${this.card.layer_id}.png`
-      link.href = canvas.toDataURL('image/png')
+      link.href     = canvas.toDataURL('image/png')
       link.click()
     },
   },
