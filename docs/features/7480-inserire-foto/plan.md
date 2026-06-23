@@ -132,10 +132,10 @@ In `config_section_app()` aggiungere prima del `return $data`:
 
 ```php
 if ($this->app->getMedia('my_paths')->isNotEmpty()) {
-    $data['APP']['my_paths'] = $this->app->getFirstMediaUrl('my_paths');
+    $data['APP']['myPaths'] = $this->app->getFirstMediaUrl('my_paths');
 }
 if ($this->app->getMedia('my_downloads')->isNotEmpty()) {
-    $data['APP']['my_downloads'] = $this->app->getFirstMediaUrl('my_downloads');
+    $data['APP']['myDownloads'] = $this->app->getFirstMediaUrl('my_downloads');
 }
 ```
 
@@ -171,9 +171,9 @@ Test da coprire:
 1. `GET /{app}/resources/my_paths.png` → 404 se nessuna immagine caricata
 2. `GET /{app}/resources/my_paths.png` → 200 con `Content-Type` corretto se immagine caricata
 3. `GET /{app}/resources/my_downloads.png` → 404 / 200 analogo
-4. `config.json` NON contiene `APP.my_paths` se nessuna immagine caricata
-5. `config.json` contiene `APP.my_paths` con URL assoluta se immagine caricata
-6. `config.json` contiene `APP.my_downloads` con URL assoluta se immagine caricata
+4. `config.json` NON contiene `APP.myPaths` se nessuna immagine caricata
+5. `config.json` contiene `APP.myPaths` con URL assoluta se immagine caricata
+6. `config.json` contiene `APP.myDownloads` con URL assoluta se immagine caricata
 
 Pattern di riferimento: guardare i test esistenti per `splash` e `icon` in `tests/Feature/`.
 

@@ -18,7 +18,7 @@ it('config.json does not include my_paths when no image is uploaded', function (
 
     $config = (new AppConfigService($app))->config();
 
-    expect($config['APP'])->not->toHaveKey('my_paths');
+    expect($config['APP'])->not->toHaveKey('myPaths');
 });
 
 it('config.json does not include my_downloads when no image is uploaded', function () {
@@ -26,7 +26,7 @@ it('config.json does not include my_downloads when no image is uploaded', functi
 
     $config = (new AppConfigService($app))->config();
 
-    expect($config['APP'])->not->toHaveKey('my_downloads');
+    expect($config['APP'])->not->toHaveKey('myDownloads');
 });
 
 it('config.json includes my_paths when image is uploaded', function () {
@@ -38,8 +38,8 @@ it('config.json includes my_paths when image is uploaded', function () {
 
     $config = (new AppConfigService($app))->config();
 
-    expect($config['APP'])->toHaveKey('my_paths');
-    expect($config['APP']['my_paths'])->toBeString()->not->toBeEmpty();
+    expect($config['APP'])->toHaveKey('myPaths');
+    expect($config['APP']['myPaths'])->toBeString()->not->toBeEmpty();
 });
 
 it('config.json includes my_downloads when image is uploaded', function () {
@@ -51,8 +51,8 @@ it('config.json includes my_downloads when image is uploaded', function () {
 
     $config = (new AppConfigService($app))->config();
 
-    expect($config['APP'])->toHaveKey('my_downloads');
-    expect($config['APP']['my_downloads'])->toBeString()->not->toBeEmpty();
+    expect($config['APP'])->toHaveKey('myDownloads');
+    expect($config['APP']['myDownloads'])->toBeString()->not->toBeEmpty();
 });
 
 // ── routes ─────────────────────────────────────────────────────────────────────

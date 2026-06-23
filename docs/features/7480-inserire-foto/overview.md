@@ -17,7 +17,7 @@ L'app mobile usa immagini nei box "I miei percorsi" e "I miei download". Attualm
 - [ ] Route `GET /{app}/resources/my_paths.png` e `GET /{app}/resources/my_downloads.png` aggiunte in tutti e tre i gruppi di route (`elbrus`, `webmapp`, `v2/webmapp`)
 - [ ] `AppController` aggiunge i metodi `myPaths()` e `myDownloads()` che delegano a `getOrDownloadIcon()`
 - [ ] `getOrDownloadIcon()` usa `$app->getMedia($type)->isNotEmpty()` (non `isset($app->$type)`) e null-check su `$mediaItem` prima di `getPath()`; usa `$mediaItem->mime_type` (attributo nativo Spatie, non custom property) per il `Content-Type`
-- [ ] `AppConfigService::config_section_app()` include `APP.my_paths` e `APP.my_downloads` come URL assolute **solo se `$app->getMedia('my_paths')->isNotEmpty()`** — mai `->first()->getUrl()` senza guard
+- [ ] `AppConfigService::config_section_app()` include `APP.myPaths` e `APP.myDownloads` come URL assolute **solo se `$app->getMedia('my_paths')->isNotEmpty()`** — mai `->first()->getUrl()` senza guard
 - [ ] Test Feature in wm-package: route 200/404 e presenza/assenza chiave in config.json
 
 ## Rischi

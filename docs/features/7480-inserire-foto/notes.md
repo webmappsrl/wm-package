@@ -21,6 +21,6 @@
 
 ## Follow-up
 
-- **Gulp task** (wm-webmapp): scaricare `APP.my_paths` e `APP.my_downloads` dal config.json e sovrascrivere `assets/images/profile/my-path.webp` e `assets/images/profile/downloads.webp` nel bundle — stesso pattern della splash screen. Ticket separato da creare.
+- **Gulp task** (wm-webmapp): scaricare `APP.myPaths` e `APP.myDownloads` dal config.json e sovrascrivere `assets/images/profile/my-path.webp` e `assets/images/profile/downloads.webp` nel bundle — stesso pattern della splash screen. Ticket separato da creare.
 - `icon_notify` e `logo_homepage` hanno route e controller ma **non** hanno `registerMediaCollections()` né campi Nova — pattern incompleto da completare in un ticket dedicato.
-- Config.json su S3 cached: dopo rollback del codice le chiavi `APP.my_paths`/`APP.my_downloads` rimangono nel file cached finché non si forza rigenerazione con `base-config.json`. Comportamento noto per tutti i campi del config.
+- Config.json su S3 cached: dopo rollback del codice le chiavi `APP.myPaths`/`APP.myDownloads` rimangono nel file cached finché non si forza rigenerazione con `base-config.json`. Comportamento noto per tutti i campi del config.

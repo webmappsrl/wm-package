@@ -134,10 +134,10 @@ class AppConfigService extends AppBaseService
         }
 
         if ($this->app->getMedia('my_paths')->isNotEmpty()) {
-            $data['APP']['my_paths'] = $this->app->getFirstMediaUrl('my_paths');
+            $data['APP']['myPaths'] = $this->app->getFirstMediaUrl('my_paths');
         }
         if ($this->app->getMedia('my_downloads')->isNotEmpty()) {
-            $data['APP']['my_downloads'] = $this->app->getFirstMediaUrl('my_downloads');
+            $data['APP']['myDownloads'] = $this->app->getFirstMediaUrl('my_downloads');
         }
 
         return $data;

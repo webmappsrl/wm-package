@@ -27,6 +27,7 @@ protected static function newFactory(): Factory
 - `$mediaItem->mime_type` (attributo nativo Spatie) al posto di `getCustomProperty('mime-type')` che può restituire `null`
 - `($disk->getConfig()['driver'] ?? 'local')`: il fake disk nei test non ha la chiave `driver` nel config — il default `local` è corretto semanticamente
 - URL in `config.json` via `getFirstMediaUrl()` invece di `route()`: evita il conflitto di naming tra i due gruppi `webmapp` che condividono `->name('webmapp.')` in `routes/api.php`
+- **Naming chiave config.json in camelCase**: nel `config.json` le chiavi sono `APP.myPaths`/`APP.myDownloads` (contratto col frontend), mentre media collection Spatie (`getMedia('my_paths')`), route API (`/resources/my_paths.png`, `->name('my_paths')`) e attributi campi Nova restano in snake_case
 - `icon_notify` e `logo_homepage` hanno route e metodi controller ma **non** hanno `registerMediaCollections()` né campi Nova — non usarli come pattern di riferimento
 
 ### Fix mappa layer bounding box (oc:8093)
