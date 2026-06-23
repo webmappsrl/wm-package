@@ -15,9 +15,9 @@ class AnalyticsController extends Controller
     public function layer(Request $request, Layer $layer): JsonResponse
     {
         $service = app(AnalyticsService::class);
-        $range   = $this->resolveRange($request);
+        $range = $this->resolveRange($request);
 
-        $usage          = $service->getLayerUsage($layer->id, $range);
+        $usage = $service->getLayerUsage($layer->id, $range);
         $trackDownloads = $service->getLayerTrackDownloads($layer, $range);
 
         return response()->json(array_merge($usage, [

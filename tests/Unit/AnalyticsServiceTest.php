@@ -2,11 +2,13 @@
 
 namespace Wm\WmPackage\Tests\Unit;
 
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Orchestra\Testbench\TestCase;
+use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Services\PostHog\AnalyticsService;
 
 class AnalyticsServiceTest extends TestCase
@@ -27,9 +29,9 @@ class AnalyticsServiceTest extends TestCase
     {
         $app['config']->set('database.default', 'testing');
         $app['config']->set('database.connections.testing', [
-            'driver'   => 'sqlite',
+            'driver' => 'sqlite',
             'database' => ':memory:',
-            'prefix'   => '',
+            'prefix' => '',
         ]);
     }
 
@@ -306,10 +308,10 @@ class AnalyticsServiceTest extends TestCase
 
     private function createLayerMockWithTrackIds(array $ids): object
     {
-        $relation = \Mockery::mock(\Illuminate\Database\Eloquent\Relations\MorphToMany::class);
+        $relation = \Mockery::mock(MorphToMany::class);
         $relation->shouldReceive('pluck')->with('ec_tracks.id')->andReturn(collect($ids));
 
-        $layer = \Mockery::mock(\Wm\WmPackage\Models\Layer::class)->makePartial();
+        $layer = \Mockery::mock(Layer::class)->makePartial();
         $layer->shouldReceive('ecTracks')->andReturn($relation);
         $layer->id = 99;
 
