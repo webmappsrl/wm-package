@@ -23,6 +23,24 @@ class AnalyticsServiceTest extends TestCase
         ]);
     }
 
+    protected function getEnvironmentSetUp($app): void
+    {
+        $app['config']->set('database.default', 'testing');
+        $app['config']->set('database.connections.testing', [
+            'driver'   => 'sqlite',
+            'database' => ':memory:',
+            'prefix'   => '',
+        ]);
+    }
+
+    protected function defineDatabaseMigrations(): void
+    {
+        $this->app['db']->connection()->getSchemaBuilder()->create('ec_tracks', function ($table) {
+            $table->id();
+            $table->json('name')->nullable();
+        });
+    }
+
     // -------------------------------------------------------------------------
     // Cache
     // -------------------------------------------------------------------------
@@ -174,11 +192,127 @@ class AnalyticsServiceTest extends TestCase
     }
 
     // -------------------------------------------------------------------------
+    // Range dinamico
+    // -------------------------------------------------------------------------
+
+    public function test_range_is_included_in_cache_key(): void
+    {
+        Http::fake([
+            '*' => Http::sequence()
+                ->push(['results' => []])
+                ->push(['results' => []])
+                ->push(['results' => [[0]]])
+                ->push(['results' => []])
+                ->push(['results' => []])
+                ->push(['results' => [[0]]]),
+        ]);
+
+        Cache::flush();
+        $service = new AnalyticsService;
+        $service->getLayerUsage(1, 'last_30_days');
+        $service->getLayerUsage(1, 'last_90_days');
+
+        // 3 query per 30gg + 3 query per 90gg = 6 (nessuna cache hit tra range diversi)
+        Http::assertSentCount(6);
+    }
+
+    public function test_same_range_second_call_uses_cache(): void
+    {
+        Http::fake([
+            '*' => Http::sequence()
+                ->push(['results' => []])
+                ->push(['results' => []])
+                ->push(['results' => [[0]]]),
+        ]);
+
+        Cache::flush();
+        $service = new AnalyticsService;
+        $service->getLayerUsage(1, 'last_90_days');
+        $service->getLayerUsage(1, 'last_90_days');
+
+        Http::assertSentCount(3); // solo la prima chiamata va su PostHog
+    }
+
+    public function test_month_range_returns_correct_range_field(): void
+    {
+        Http::fake([
+            '*' => Http::sequence()
+                ->push(['results' => []])
+                ->push(['results' => []])
+                ->push(['results' => [[0]]]),
+        ]);
+
+        $result = (new AnalyticsService)->getLayerUsage(1, 'month:2026-03');
+
+        $this->assertSame('month:2026-03', $result['range']);
+    }
+
+    public function test_365_days_range_returns_correct_range_field(): void
+    {
+        Http::fake([
+            '*' => Http::sequence()
+                ->push(['results' => []])
+                ->push(['results' => []])
+                ->push(['results' => [[0]]]),
+        ]);
+
+        $result = (new AnalyticsService)->getLayerUsage(1, 'last_365_days');
+
+        $this->assertSame('last_365_days', $result['range']);
+    }
+
+    // -------------------------------------------------------------------------
+    // Track downloads
+    // -------------------------------------------------------------------------
+
+    public function test_get_layer_track_downloads_returns_normalized_structure(): void
+    {
+        Http::fake([
+            '*' => Http::sequence()
+                ->push(['results' => [['42', 15], ['7', 3]]]),
+        ]);
+
+        $layer = $this->createLayerMockWithTrackIds([42, 7]);
+
+        $result = (new AnalyticsService)->getLayerTrackDownloads($layer, 'last_30_days');
+
+        $this->assertCount(2, $result);
+        $this->assertSame(42, $result[0]['track_id']);
+        $this->assertSame(15, $result[0]['downloads']);
+        $this->assertArrayHasKey('name', $result[0]);
+        $this->assertSame(7, $result[1]['track_id']);
+        $this->assertSame(3, $result[1]['downloads']);
+        $this->assertArrayHasKey('name', $result[1]);
+    }
+
+    public function test_get_layer_track_downloads_returns_empty_when_no_tracks(): void
+    {
+        $layer = $this->createLayerMockWithTrackIds([]);
+
+        $result = (new AnalyticsService)->getLayerTrackDownloads($layer, 'last_30_days');
+
+        $this->assertSame([], $result);
+        Http::assertNothingSent();
+    }
+
+    // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
 
     private function fakePostHogResponses(): array
     {
         return ['results' => []];
+    }
+
+    private function createLayerMockWithTrackIds(array $ids): object
+    {
+        $relation = \Mockery::mock(\Illuminate\Database\Eloquent\Relations\MorphToMany::class);
+        $relation->shouldReceive('pluck')->with('ec_tracks.id')->andReturn(collect($ids));
+
+        $layer = \Mockery::mock(\Wm\WmPackage\Models\Layer::class)->makePartial();
+        $layer->shouldReceive('ecTracks')->andReturn($relation);
+        $layer->id = 99;
+
+        return $layer;
     }
 }
