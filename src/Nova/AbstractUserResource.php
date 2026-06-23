@@ -19,6 +19,7 @@ use Vyuldashev\NovaPermission\PermissionBooleanGroup;
 use Vyuldashev\NovaPermission\RoleBooleanGroup;
 use Wm\WmPackage\Models\App as AppModel;
 use Wm\WmPackage\Nova\Filters\AppFilter;
+use Wm\WmPackage\Services\RolesAndPermissionsService;
 
 abstract class AbstractUserResource extends Resource
 {
@@ -68,12 +69,44 @@ abstract class AbstractUserResource extends Resource
                 ->updateRules('nullable', Rules\Password::defaults()),
             ...array_filter([$this->getAppFieldForIndex()]),
             RoleBooleanGroup::make(__('Roles'), 'roles')
-                ->readonly(function () {
-                    return ! auth()->user()->hasRole('Administrator') && ! auth()->user()->hasPermissionTo('manage roles and permissions');
+                ->readonly(fn () => ! RolesAndPermissionsService::allowsUser(auth()->user()))
+                ->fillUsing(function (NovaRequest $request, $model, $attribute, $requestAttribute) {
+                    if (! RolesAndPermissionsService::allowsUser($request->user())) {
+                        return;
+                    }
+
+                    if (! $request->exists($requestAttribute)) {
+                        return;
+                    }
+
+                    $roles = collect(json_decode($request[$requestAttribute], true))
+                        ->filter(fn ($value) => $value)
+                        ->keys();
+
+                    // Prevent super-admin from removing their own Administrator role
+                    if ($request->user()->id === $model->id) {
+                        $roles = $roles->merge(['Administrator'])->unique();
+                    }
+
+                    $model->syncRoles($roles->toArray());
                 }),
             PermissionBooleanGroup::make(__('Permissions'), 'permissions')
-                ->readonly(function () {
-                    return ! auth()->user()->hasRole('Administrator') && ! auth()->user()->hasPermissionTo('manage roles and permissions');
+                ->readonly(fn () => ! RolesAndPermissionsService::allowsUser(auth()->user()))
+                ->fillUsing(function (NovaRequest $request, $model, $attribute, $requestAttribute) {
+                    if (! RolesAndPermissionsService::allowsUser($request->user())) {
+                        return;
+                    }
+
+                    if (! $request->exists($requestAttribute)) {
+                        return;
+                    }
+
+                    $values = collect(json_decode($request[$requestAttribute], true))
+                        ->filter(fn ($value) => $value)
+                        ->keys()
+                        ->toArray();
+
+                    $model->syncPermissions($values);
                 })
                 ->dependsOn('roles', function (PermissionBooleanGroup $field, NovaRequest $request, FormData $formData) {
                     $roles = $formData->get('roles');

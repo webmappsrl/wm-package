@@ -60,7 +60,7 @@ class FormSchemaFilter extends Filter
         foreach ($allApps as $app) {
             $acquisition_form = $this->type instanceof UgcPoi ? $app->poi_acquisition_form : $app->track_acquisition_form;
             $schemas = json_decode($acquisition_form, true);
-            foreach ($schemas as $schema) {
+            foreach ($schemas ?? [] as $schema) {
                 $label = reset($schema['label']);
                 // Salta se il label è vuoto per evitare chiavi vuote
                 if (! empty($label)) {
