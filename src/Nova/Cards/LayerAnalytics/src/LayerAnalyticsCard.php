@@ -17,17 +17,23 @@ class LayerAnalyticsCard extends Card
 
     private ?int $layerId;
 
+    private ?string $trackingSince;
+
     public function __construct(Layer $layer)
     {
         parent::__construct();
-        $this->layerId = $layer->id ?? null;
+        $this->layerId       = $layer->id ?? null;
+        $this->trackingSince = $layer->created_at
+            ? \Carbon\Carbon::parse($layer->created_at)->format('Y-m-d')
+            : '2026-01-01';
     }
 
     public function jsonSerialize(): array
     {
         return array_merge(parent::jsonSerialize(), [
-            'endpoint' => '/nova-vendor/layer-analytics/'.$this->layerId,
-            'layer_id' => $this->layerId,
+            'endpoint'       => '/nova-vendor/layer-analytics/'.$this->layerId,
+            'layer_id'       => $this->layerId,
+            'tracking_since' => $this->trackingSince,
         ]);
     }
 }

@@ -26,10 +26,20 @@ protected static function newFactory(): Factory
 - Il dist `field.js` di `FeatureCollectionMap` va sempre ricompilato dalla sorgente verificata — il commit `fb3c0555` conteneva `"inline-geojson":A.field.geojson||null` nel template del `DetailFeatureCollectionMap` (non presente in `DetailField.vue`) perché compilato da una working copy locale non committata
 - Prima di ogni `npm run prod` verificare che la sorgente `DetailField.vue` non abbia prop spurie; dopo la compilazione, grep `inline-geojson.*field.geojson` nel dist per controllo
 
+## Decisioni architetturali
+
+### Analytics Layer: selezione range temporale (oc:7648)
+- WHERE per mesi usa `timestamp >= 'YYYY-MM-01' AND timestamp < 'YYYY-MM+1-01'` — `toYYYYMM`/`toUInt32` non supportati da PostHog HogQL
+- `getTranslation('name', locale)` può restituire stringa vuota (non null) su EcTrack — usare cascade `['it', 'en', locale]` con `empty()` check
+- `Collection->get($key)` invece di `$collection[$key]` per evitare `ErrorException` su chiavi assenti
+- `webpack` pinnato a `^5.75.0` in `LayerAnalytics/package.json` per compatibilità con `laravel-mix@6`
+- `LayerAnalyticsCard.php`: `created_at` arriva come stringa, non Carbon — usare `Carbon::parse()` invece di `?->format()`
+
 ## Feature disponibili
 
 | Feature | Ticket | Moduli toccati | Note |
 |---|---|---|---|
+| Analytics Layer: selezione range temporale | oc:7648 | `src/Services/PostHog/AnalyticsService.php`, `src/Http/Controllers/Nova/AnalyticsController.php`, `src/Nova/Cards/LayerAnalytics/` | Dropdown 30/90/365gg + mesi da created_at; tabella download per traccia |
 | EC POI map icon display | oc:7645 | `src/Models/EcPoi.php`, `src/Nova/EcPoi.php`, `src/Http/Resources/RelatedEcPoiResource.php` | `show_image_on_map` in `feature_image` dei related_pois dell'EcTrack; checkbox readonly se il POI non ha immagini |
 | Fix mappa layer bounding box | oc:8093 | `src/Nova/Fields/FeatureCollectionMap/dist/js/field.js` | Dist ricompilato: rimossa prop `inline-geojson:field.geojson` introdotta per errore in `fb3c0555` (oc:7756) |
 | Fix import Excel POI: nomi mancanti in pois.geojson | oc:8063 | `src/Imports/Processors/EcPoiRowProcessor.php`, `tests/Unit/Imports/Processors/EcPoiRowProcessorTest.php` | Sync `properties['name']` da `getTranslations('name')` in `apply()` — replica logica observer bypassata da `saveQuietly()` |
