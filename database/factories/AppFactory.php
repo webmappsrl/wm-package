@@ -35,6 +35,8 @@ class AppFactory extends Factory
             'icon' => null,
             'splash' => null,
             'icon_small' => null,
+            'my_routes_image' => null,
+            'my_downloads_image' => null,
             'default_language' => 'it',
             'available_languages' => json_encode(['it', 'en']),
             'auth_show_at_startup' => $this->faker->boolean(),
