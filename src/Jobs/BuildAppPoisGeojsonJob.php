@@ -61,13 +61,13 @@ class BuildAppPoisGeojsonJob implements ShouldBeUnique, ShouldQueue
 
     /**
      * Get the cache store that should be used to acquire the job lock.
-     * Uses Redis for better performance and reliability.
+     * Uses the default cache store to remain environment-agnostic (Redis in prod, array in CI).
      *
      * @return Store
      */
     public function uniqueVia()
     {
-        return Cache::store('redis');
+        return Cache::store();
     }
 
     /**
