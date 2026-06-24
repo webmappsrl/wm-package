@@ -50,17 +50,28 @@ class AppController extends Controller
         return $this->getOrDownloadIcon($app, 'logo_homepage');
     }
 
+    public function myPaths(App $app)
+    {
+        return $this->getOrDownloadIcon($app, 'my_paths');
+    }
+
+    public function myDownloads(App $app)
+    {
+        return $this->getOrDownloadIcon($app, 'my_downloads');
+    }
+
     protected function getOrDownloadIcon(App $app, $type = 'icon')
     {
-        if (! isset($app->$type)) {
+        $mediaItem = $app->getMedia($type)->first();
+
+        if (! $mediaItem) {
             return response()->json(['code' => 404, 'error' => 'Not Found'], 404);
         }
 
-        $mediaItem = $app->getMedia($type)->first();
         $disk = StorageService::make()->getMediaDisk();
         $path = $mediaItem->getPath();
 
-        if ($disk->getConfig()['driver'] === 'local') {
+        if (($disk->getConfig()['driver'] ?? 'local') === 'local') {
             // Per disco locale: converti path assoluto in relativo e pulisci doppi slash
             $diskRoot = rtrim($disk->path(''), '/');
             $relativePath = str_replace($diskRoot, '', $path);
@@ -78,7 +89,7 @@ class AppController extends Controller
         return response()->stream(function () use ($file) {
             fpassthru($file);
         }, 200, [
-            'Content-Type' => $mediaItem->getCustomProperty('mime-type'),
+            'Content-Type' => $mediaItem->mime_type,
             'Content-Disposition' => 'attachment; filename="'.$mediaItem->file_name.'"',
             'Content-Length' => $mediaItem->size,
         ]);

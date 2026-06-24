@@ -648,6 +648,12 @@ class App extends Resource
                 // ->rules('image', 'mimes:png', 'dimensions:width=512,height=512')
                 ->help(__('Required size is :widthx:heightpx', ['width' => 512, 'height' => 512]))
                 ->hideFromIndex(),
+            Images::make(__('My paths image'), 'my_paths')
+                ->help(__('Box image (ratio 2.2:1, object-fit cover). Minimum :minwx:minhpx, recommended :recwx:rechpx or larger for retina screens.', ['minw' => 800, 'minh' => 360, 'recw' => 2214, 'rech' => 1013]))
+                ->hideFromIndex(),
+            Images::make(__('My downloads image'), 'my_downloads')
+                ->help(__('Box image (ratio 2.2:1, object-fit cover). Minimum :minwx:minhpx, recommended :recwx:rechpx or larger for retina screens.', ['minw' => 800, 'minh' => 360, 'recw' => 2214, 'rech' => 1013]))
+                ->hideFromIndex(),
             Boolean::make(__('Force to Release Update'), 'properties->force_to_release_update')
                 ->default(false)
                 ->hideFromIndex()
