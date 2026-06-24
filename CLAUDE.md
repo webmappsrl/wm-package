@@ -24,6 +24,7 @@ protected static function newFactory(): Factory
 
 ### Fix import POI taxonomy type (oc:8041)
 - `processDependencies()` usa `$model->properties['geohub_id']` come ID autoritativo per `getTaxonomyMorphableRecords()` — `$this->entityId` può divergere in scenari di re-import
+- `taxonomy_poi_types` aggiunto a `default_dependencies.app` in `wm-geohub-import.php` — era assente a differenza di `taxonomy_activity` e `taxonomy_theme`, rendendo il fix ID ininfluente nel flusso standard
 - Timing del dispatch (taxonomy prima degli EcPoi) è un rischio noto ma lasciato fuori scope — da riaprire se il bug persiste dopo questo fix
 
 ### Inserire foto — my_paths e my_downloads (oc:7480)
