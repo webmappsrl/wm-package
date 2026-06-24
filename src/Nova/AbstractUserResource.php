@@ -69,7 +69,7 @@ abstract class AbstractUserResource extends Resource
                 ->updateRules('nullable', Rules\Password::defaults()),
             ...array_filter([$this->getAppFieldForIndex()]),
             RoleBooleanGroup::make(__('Roles'), 'roles')
-                ->readonly(fn () => ! RolesAndPermissionsService::allowsUser(auth()->user()))
+                ->readonly(fn (NovaRequest $request) => ! RolesAndPermissionsService::allowsUser($request->user()))
                 ->fillUsing(function (NovaRequest $request, $model, $attribute, $requestAttribute) {
                     if (! RolesAndPermissionsService::allowsUser($request->user())) {
                         return;
@@ -79,19 +79,23 @@ abstract class AbstractUserResource extends Resource
                         return;
                     }
 
-                    $roles = collect(json_decode($request[$requestAttribute], true))
+                    $decoded = json_decode($request[$requestAttribute], true);
+                    if (! is_array($decoded)) {
+                        return;
+                    }
+
+                    $roles = collect($decoded)
                         ->filter(fn ($value) => $value)
                         ->keys();
 
-                    // Prevent super-admin from removing their own Administrator role
-                    if ($request->user()->id === $model->id) {
+                    if ($request->user()->id === $model->id && $model->hasRole('Administrator')) {
                         $roles = $roles->merge(['Administrator'])->unique();
                     }
 
                     $model->syncRoles($roles->toArray());
                 }),
             PermissionBooleanGroup::make(__('Permissions'), 'permissions')
-                ->readonly(fn () => ! RolesAndPermissionsService::allowsUser(auth()->user()))
+                ->readonly(fn (NovaRequest $request) => ! RolesAndPermissionsService::allowsUser($request->user()))
                 ->fillUsing(function (NovaRequest $request, $model, $attribute, $requestAttribute) {
                     if (! RolesAndPermissionsService::allowsUser($request->user())) {
                         return;
@@ -101,10 +105,20 @@ abstract class AbstractUserResource extends Resource
                         return;
                     }
 
-                    $values = collect(json_decode($request[$requestAttribute], true))
+                    $decoded = json_decode($request[$requestAttribute], true);
+                    if (! is_array($decoded)) {
+                        return;
+                    }
+
+                    $values = collect($decoded)
                         ->filter(fn ($value) => $value)
                         ->keys()
                         ->toArray();
+
+                    if ($request->user()->id === $model->id) {
+                        $existing = $model->getDirectPermissions()->pluck('name')->toArray();
+                        $values = array_unique(array_merge($values, $existing));
+                    }
 
                     $model->syncPermissions($values);
                 })
@@ -128,14 +142,10 @@ abstract class AbstractUserResource extends Resource
                 }),
             HasMany::make(__('UGC POIs'), 'ugc_pois', UgcPoi::class)
                 ->onlyOnDetail()
-                ->canSee(function () {
-                    return optional(auth()->user())->hasRole('Administrator');
-                }),
+                ->canSee(fn (NovaRequest $request) => optional($request->user())->hasRole('Administrator')),
             HasMany::make(__('UGC Tracks'), 'ugc_tracks', UgcTrack::class)
                 ->onlyOnDetail()
-                ->canSee(function () {
-                    return optional(auth()->user())->hasRole('Administrator');
-                }),
+                ->canSee(fn (NovaRequest $request) => optional($request->user())->hasRole('Administrator')),
         ];
     }
 
