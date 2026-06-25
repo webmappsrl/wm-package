@@ -154,7 +154,7 @@ return [
     |
     */
     'default_dependencies' => [
-        'app' => ['ec_poi', 'ec_track', 'taxonomy_activity', 'taxonomy_theme', 'layer', 'ec_media'],
+        'app' => ['ec_poi', 'ec_track', 'taxonomy_activity', 'taxonomy_theme', 'taxonomy_poi_types', 'layer', 'ec_media'],
     ],
 
     /*
