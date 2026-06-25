@@ -111,15 +111,9 @@ class Layer extends Polygon
         return $this->morphedByMany($ecTrackModelClass, 'layerable')->using(Layerable::class);
     }
 
-    public function ecPois(): MorphToMany
-    {
-        return $this->morphedByMany(EcPoi::class, 'layerable')->using(Layerable::class);
-    }
-
-    /** @deprecated use ecPois() */
     public function manualEcPois(): MorphToMany
     {
-        return $this->ecPois();
+        return $this->morphedByMany(EcPoi::class, 'layerable')->using(Layerable::class);
     }
 
     public function taxonomyActivities(): MorphToMany
