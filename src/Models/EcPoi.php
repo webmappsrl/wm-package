@@ -286,7 +286,7 @@ class EcPoi extends Point implements LayerRelatedModel
 
     public function getLayerRelationName(): string
     {
-        return 'manualEcPois';
+        return 'ecPois';
     }
 
     private function getValuesOfMorphToMany($relation, $slug): array

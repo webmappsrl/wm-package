@@ -33,7 +33,7 @@ class Layer extends AbstractGeometryResource
         fields as protected fieldsTrait;
     }
 
-    public static $with = ['ecTracks', 'manualEcPois', 'appOwner', 'associatedApps'];
+    public static $with = ['ecTracks', 'ecPois', 'appOwner', 'associatedApps'];
 
     public static $model = LayerModel::class;
 
@@ -98,6 +98,11 @@ class Layer extends AbstractGeometryResource
                 LayerFeatures::make(__('tracks'), $this->resource, config('wm-package.ec_track_model', 'Wm\WmPackage\Models\EcTrack'))
                     ->hideWhenCreating()
                     ->withMeta(['model_class' => config('wm-package.ec_track_model', 'Wm\WmPackage\Models\EcTrack')]),
+            ]),
+            Panel::make('Ec Pois', [
+                LayerFeatures::make(__('pois'), $this->resource, config('wm-package.ec_poi_model', 'Wm\WmPackage\Models\EcPoi'))
+                    ->hideWhenCreating()
+                    ->withMeta(['model_class' => config('wm-package.ec_poi_model', 'Wm\WmPackage\Models\EcPoi')]),
             ]),
             Text::make(__('Web Component'), function () {
                 /** @var LayerModel $layer */
