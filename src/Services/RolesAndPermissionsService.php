@@ -47,6 +47,7 @@ class RolesAndPermissionsService
     public static function seedDatabase()
     {
         Role::firstOrCreate(['name' => 'Administrator']);
+        Role::firstOrCreate(['name' => 'Editor']);
         Role::firstOrCreate(['name' => 'Validator']);
         Role::firstOrCreate(['name' => 'Guest']); // can login but no permissions
 
