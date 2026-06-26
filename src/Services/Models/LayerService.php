@@ -212,6 +212,12 @@ class LayerService extends BaseService
         UpdateLayerGeometryJob::dispatch($layer);
     }
 
+    private function hasValidAutoModeFilter(Layer $layer): bool
+    {
+        return ! empty($layer->properties['taxonomy_where'] ?? [])
+            || $layer->taxonomyActivities->isNotEmpty();
+    }
+
     /**
      * Update the layers property on the features related to a specific layer
      *
@@ -222,22 +228,30 @@ class LayerService extends BaseService
      */
     public function updateLayersPropertyOnLayeredFeature(Layer $layer, string $ecModelClass): array
     {
+        // When a layer has no manual models and no valid taxonomy filter, it owns zero features.
+        // The add path is skipped entirely; the remove path still runs to clean up stale layer IDs
+        // written by the old buggy behaviour (byWhereProperty early-return with no filter).
+        $noValidFilter = ! $this->hasRelatedManualModels($layer, $ecModelClass)
+            && ! $this->hasValidAutoModeFilter($layer);
+
         // https://neon.tech/postgresql/postgresql-json-functions/postgresql-jsonb-operators
 
-        // Features where add the layer
-        $newLayerFeatures = $this->getRelatedModelsQuery($ecModelClass, $layer)
-            ->whereRaw(
-                "(
-                    NOT \"properties\"->'layers' @> '[{$layer->id}]'::jsonb
-                    OR \"properties\"->'layers' is null
-                )" // where the feature doesn't have the layer
-            );
-
-        // Log::info($newLayerFeatures->toSql());
-        $newLayerFeatures = $newLayerFeatures->get();
+        // Features where add the layer (empty when no valid filter)
+        $newLayerFeatures = $noValidFilter
+            ? collect()
+            : $this->getRelatedModelsQuery($ecModelClass, $layer)
+                ->whereRaw(
+                    "(
+                        NOT \"properties\"->'layers' @> '[{$layer->id}]'::jsonb
+                        OR \"properties\"->'layers' is null
+                    )" // where the feature doesn't have the layer
+                )->get();
 
         // Features where remove the layer
-        $layerFeaturesIds = $this->getRelatedModels($layer, $ecModelClass)->pluck('id')->toArray();
+        // When noValidFilter, $layerFeaturesIds is empty → all features with this layer ID get cleaned up
+        $layerFeaturesIds = $noValidFilter
+            ? []
+            : $this->getRelatedModels($layer, $ecModelClass)->pluck('id')->toArray();
         $oldLayerFeatures = $ecModelClass::whereNotIn('id', $layerFeaturesIds)
             ->whereRaw(
                 "\"properties\"->'layers' @> '[{$layer->id}]'::jsonb" // where the feature has the layer
