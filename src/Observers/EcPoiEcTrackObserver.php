@@ -8,47 +8,70 @@ use Wm\WmPackage\Services\Models\EcTrackService;
 
 class EcPoiEcTrackObserver
 {
-    /**
-     * Handle the EcPoiEcTrack "created" event.
-     * Triggered when a POI is attached to a track.
-     *
-     * @return void
-     */
-    public function created(EcPoiEcTrack $pivot)
+    public function created(EcPoiEcTrack $pivot): void
+    {
+        $this->updateEcTrackDataChain($pivot);
+        $this->syncPoiToLayers($pivot, 'attach');
+    }
+
+    public function updated(EcPoiEcTrack $pivot): void
     {
         $this->updateEcTrackDataChain($pivot);
     }
 
-    /**
-     * Handle the EcPoiEcTrack "updated" event.
-     * Triggered when a pivot record is updated (e.g., order changed).
-     *
-     * @return void
-     */
-    public function updated(EcPoiEcTrack $pivot)
+    public function deleted(EcPoiEcTrack $pivot): void
     {
         $this->updateEcTrackDataChain($pivot);
+        $this->syncPoiToLayers($pivot, 'detach');
     }
 
     /**
-     * Handle the EcPoiEcTrack "deleted" event.
-     * Triggered when a POI is detached from a track.
+     * Sync the EcPoi with the layers of its EcTrack.
+     * On attach: associate the POI with all layers of the track.
+     * On detach: dissociate the POI from a layer only if no other track
+     *            in that layer still has the POI as a related poi.
      *
-     * @return void
+     * NOTE: This observer fires in wm-package but relies on LayerableObserver
+     * (registered in the consumer project) to handle ownership transfer on
+     * the created layerable. This cross-layer dependency is intentional —
+     * same pattern as oc:8080. If LayerableObserver is absent, ownership
+     * transfer will not occur, but the association itself will.
      */
-    public function deleted(EcPoiEcTrack $pivot)
+    private function syncPoiToLayers(EcPoiEcTrack $pivot, string $action): void
     {
-        $this->updateEcTrackDataChain($pivot);
+        $fkName = EcPoiEcTrack::getTrackForeignKeyName();
+        $ecTrackId = $pivot->getAttribute($fkName);
+        $ecPoiId = $pivot->getAttribute('ec_poi_id');
+
+        if (! $ecTrackId || ! $ecPoiId) {
+            return;
+        }
+
+        $ecTrackModelClass = config('wm-package.ec_track_model', EcTrack::class);
+        $ecTrack = $ecTrackModelClass::find($ecTrackId);
+
+        if (! $ecTrack || ! method_exists($ecTrack, 'associatedLayers')) {
+            return;
+        }
+
+        $layers = $ecTrack->associatedLayers;
+
+        if ($layers->isEmpty()) {
+            return;
+        }
+
+        foreach ($layers as $layer) {
+            if ($action === 'attach') {
+                $layer->ecPois()->syncWithoutDetaching([$ecPoiId]);
+            } else {
+                if (! EcPoiEcTrack::poiStillLinkedToLayerViaOtherTrack($layer->id, $ecPoiId, $ecTrackId)) {
+                    $layer->ecPois()->detach($ecPoiId);
+                }
+            }
+        }
     }
 
-    /**
-     * Update the EcTrack data chain when POI relationships change.
-     * Uses config('wm-package.ec_track_model') to resolve the correct model class,
-     * and EcPoiEcTrack::getTrackForeignKeyName() to resolve the correct FK,
-     *
-     * @return void
-     */
-    private function updateEcTrackDataChain(EcPoiEcTrack $pivot)
+    private function updateEcTrackDataChain(EcPoiEcTrack $pivot): void
     {
         $ecTrackModelClass = config('wm-package.ec_track_model', EcTrack::class);
         $fkName = EcPoiEcTrack::getTrackForeignKeyName();

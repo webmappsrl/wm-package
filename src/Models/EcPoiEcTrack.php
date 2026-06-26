@@ -4,6 +4,8 @@ namespace Wm\WmPackage\Models;
 
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\Pivot;
+use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Support\Facades\DB;
 use Wm\WmPackage\Observers\EcPoiEcTrackObserver;
 
 class EcPoiEcTrack extends Pivot
@@ -51,5 +53,28 @@ class EcPoiEcTrack extends Pivot
         $tableName = config('wm-package.ec_track_table', 'ec_tracks');
 
         return rtrim($tableName, 's').'_id';
+    }
+
+    /**
+     * Check whether a POI is still linked to a layer via at least one other track
+     * (excluding $excludeTrackId). Used by observers to decide whether to detach a POI
+     * when a track-POI or track-layer association is removed.
+     */
+    public static function poiStillLinkedToLayerViaOtherTrack(int $layerId, int $ecPoiId, int $excludeTrackId): bool
+    {
+        $fkName = self::getTrackForeignKeyName();
+        $pivotTable = config('wm-package.ec_poi_track_pivot_table', 'ec_poi_ec_track');
+        $ecTrackModelClass = config('wm-package.ec_track_model', EcTrack::class);
+        $ecTrackMorphType = array_search($ecTrackModelClass, Relation::morphMap()) ?: $ecTrackModelClass;
+
+        return DB::table($pivotTable)
+            ->join('layerables', function ($join) use ($layerId, $fkName, $ecTrackMorphType, $pivotTable) {
+                $join->on('layerables.layerable_id', '=', "{$pivotTable}.{$fkName}")
+                    ->where('layerables.layerable_type', $ecTrackMorphType)
+                    ->where('layerables.layer_id', $layerId);
+            })
+            ->where("{$pivotTable}.ec_poi_id", $ecPoiId)
+            ->where("{$pivotTable}.{$fkName}", '!=', $excludeTrackId)
+            ->exists();
     }
 }
