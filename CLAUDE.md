@@ -52,6 +52,7 @@ protected static function newFactory(): Factory
 
 | Feature | Ticket | Moduli toccati | Note |
 |---|---|---|---|
+| BulkEditAction: bulk edit dinamico da Nova Resource | oc:8133 | `src/Nova/Actions/BulkEditAction.php`, `tests/Unit/Nova/Actions/BulkEditActionTest.php`, `tests/Feature/Nova/Actions/BulkEditActionFeatureTest.php` | Action parametrica: `new BulkEditAction(Resource::class, ['field'])` — filtra campi da Resource, appiattisce Panel/Tab, `saveQuietly()` in `DB::transaction()` |
 | Analytics Layer: selezione range temporale | oc:7648 | `src/Services/PostHog/AnalyticsService.php`, `src/Http/Controllers/Nova/AnalyticsController.php`, `src/Nova/Cards/LayerAnalytics/` | Dropdown 30/90/365gg + mesi da created_at; tabella download per traccia |
 | Inserire foto (my_paths, my_downloads) | oc:7480 | `src/Models/App.php`, `src/Nova/App.php`, `src/Http/Controllers/Api/AppController.php`, `routes/api.php`, `src/Services/Models/App/AppConfigService.php` | Media collection + Nova fields + route nei 3 gruppi + URL in APP section del config.json; fix getOrDownloadIcon() (isset→getMedia, mime_type, driver null-safe) |
 | EC POI map icon display | oc:7645 | `src/Models/EcPoi.php`, `src/Nova/EcPoi.php`, `src/Http/Resources/RelatedEcPoiResource.php` | `show_image_on_map` in `feature_image` dei related_pois dell'EcTrack; checkbox readonly se il POI non ha immagini |
@@ -65,6 +66,15 @@ protected static function newFactory(): Factory
 | Fix esposizione assets API | oc:7913 | `src/Http/Controllers/Api/AppController.php` | `getOrDownloadIcon` usa `getMedia()->first()` invece di `isset($app->$type)` — fix 404 su app con media in Spatie e colonne null |
 
 ## Decisioni architetturali
+
+### BulkEditAction (oc:8133)
+- Contratto: `new BulkEditAction(Resource::class, $fields = [], $exclude = ['name', 'geometry', 'description'])` — `$exclude` default protegge da bulk edit accidentale di nome, geometria e descrizione; override con `[]` per disabilitare
+- `BelongsToMany`/`MorphToMany` implementano `ListableField`, non `RelatableField` — il filtro deve controllare entrambe le interfacce per escludere tutti i campi relazionali
+- Readonly dinamico (closure): azzerare con `->readonly(false)` prima di restituire il campo — evalutare la closure su `::newModel()` (modello vuoto) darebbe sempre `true` per field tipo `getMedia()->isEmpty()`
+- `showOnUpdate === false` come criterio di esclusione: corregge il mismatch tra `ActionRequest` e `UpdateRequest` in `fields()` 
+- Attributi piatti: `forceFill([$attribute => $value])`. Path arrow notation (`properties->*`): merge esplicito — legge l'array corrente della colonna, `Arr::set()` sul solo path, riassegna l'intero array così i sibling non modificati restano invariati
+- Nova serializza i campi `properties->*` come oggetto annidato sotto `properties` in `ActionFields` (il `Fluent::forceFill()` di Nova converte `->` in path dot e fa `Arr::set()`), NON come chiavi letterali `properties->*`. `handle()` non deve iterare le chiavi top-level di `ActionFields` (tratterebbe `properties` come unico valore e sovrascriverebbe il JSON). Usare `resolveChanges()`: cicla sui campi di `fields()` e legge ognuno con `array_key_exists` (flat) o `data_get()` con notazione dot (annidato)
+- Test wm-package che girano con `php artisan test` di camminiditalia devono usare `Tests\TestCase` (non `Wm\WmPackage\Tests\TestCase`) — quest'ultima non è in `autoload-dev` di camminiditalia
 
 ### Fix esposizione assets API (oc:7913)
 - `getOrDownloadIcon` usa `getMedia($type)->first()` come unica fonte di verità — `isset($app->$type)` controllava la colonna DB che su Maphub è sempre null (upload via Spatie Media Library)
