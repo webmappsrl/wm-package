@@ -267,14 +267,14 @@ it('fa rollback di tutte le modifiche se un save fallisce', function () {
     $poi2 = EcPoi::factory()->createQuietly(['properties' => [], 'global' => false]);
 
     // Forza un'eccezione DB durante la transazione
-    DB::shouldReceive('transaction')->once()->andThrow(new \RuntimeException('DB error'));
+    DB::shouldReceive('transaction')->once()->andThrow(new RuntimeException('DB error'));
 
     $fields = makeActionFields(['global' => true]);
 
     $action = new BulkEditAction(BulkEditFeatureTestResource::class);
 
     expect(fn () => $action->handle($fields, collect([$poi1, $poi2])))
-        ->toThrow(\RuntimeException::class);
+        ->toThrow(RuntimeException::class);
 
     // I record non devono essere modificati
     expect($poi1->fresh()->global)->toBeFalse();

@@ -58,8 +58,7 @@ class BulkEditAction extends Action
         }
 
         $filtered = collect($flat)
-            ->filter(fn ($field) =>
-                property_exists($field, 'attribute')
+            ->filter(fn ($field) => property_exists($field, 'attribute')
                 && ! ($field instanceof ID)
                 && ! ($field instanceof RelatableField)
                 && ! ($field instanceof ListableField)
