@@ -19,6 +19,7 @@ use Vyuldashev\NovaPermission\PermissionBooleanGroup;
 use Vyuldashev\NovaPermission\RoleBooleanGroup;
 use Wm\WmPackage\Models\App as AppModel;
 use Wm\WmPackage\Nova\Filters\AppFilter;
+use Wm\WmPackage\Services\RolesAndPermissionsService;
 
 abstract class AbstractUserResource extends Resource
 {
@@ -68,12 +69,58 @@ abstract class AbstractUserResource extends Resource
                 ->updateRules('nullable', Rules\Password::defaults()),
             ...array_filter([$this->getAppFieldForIndex()]),
             RoleBooleanGroup::make(__('Roles'), 'roles')
-                ->readonly(function () {
-                    return ! auth()->user()->hasRole('Administrator') && ! auth()->user()->hasPermissionTo('manage roles and permissions');
+                ->readonly(fn (NovaRequest $request) => ! RolesAndPermissionsService::allowsUser($request->user()))
+                ->fillUsing(function (NovaRequest $request, $model, $attribute, $requestAttribute) {
+                    if (! RolesAndPermissionsService::allowsUser($request->user())) {
+                        return;
+                    }
+
+                    if (! $request->exists($requestAttribute)) {
+                        return;
+                    }
+
+                    $decoded = json_decode($request[$requestAttribute], true);
+                    if (! is_array($decoded)) {
+                        return;
+                    }
+
+                    $roles = collect($decoded)
+                        ->filter(fn ($value) => $value)
+                        ->keys();
+
+                    if ($request->user()->id === $model->id && $model->hasRole('Administrator')) {
+                        $roles = $roles->merge(['Administrator'])->unique();
+                    }
+
+                    $model->syncRoles($roles->toArray());
                 }),
             PermissionBooleanGroup::make(__('Permissions'), 'permissions')
-                ->readonly(function () {
-                    return ! auth()->user()->hasRole('Administrator') && ! auth()->user()->hasPermissionTo('manage roles and permissions');
+                ->readonly(fn (NovaRequest $request) => ! RolesAndPermissionsService::allowsUser($request->user()))
+                ->fillUsing(function (NovaRequest $request, $model, $attribute, $requestAttribute) {
+                    if (! RolesAndPermissionsService::allowsUser($request->user())) {
+                        return;
+                    }
+
+                    if (! $request->exists($requestAttribute)) {
+                        return;
+                    }
+
+                    $decoded = json_decode($request[$requestAttribute], true);
+                    if (! is_array($decoded)) {
+                        return;
+                    }
+
+                    $values = collect($decoded)
+                        ->filter(fn ($value) => $value)
+                        ->keys()
+                        ->toArray();
+
+                    if ($request->user()->id === $model->id) {
+                        $existing = $model->getDirectPermissions()->pluck('name')->toArray();
+                        $values = array_unique(array_merge($values, $existing));
+                    }
+
+                    $model->syncPermissions($values);
                 })
                 ->dependsOn('roles', function (PermissionBooleanGroup $field, NovaRequest $request, FormData $formData) {
                     $roles = $formData->get('roles');
@@ -95,14 +142,10 @@ abstract class AbstractUserResource extends Resource
                 }),
             HasMany::make(__('UGC POIs'), 'ugc_pois', UgcPoi::class)
                 ->onlyOnDetail()
-                ->canSee(function () {
-                    return optional(auth()->user())->hasRole('Administrator');
-                }),
+                ->canSee(fn (NovaRequest $request) => optional($request->user())->hasRole('Administrator')),
             HasMany::make(__('UGC Tracks'), 'ugc_tracks', UgcTrack::class)
                 ->onlyOnDetail()
-                ->canSee(function () {
-                    return optional(auth()->user())->hasRole('Administrator');
-                }),
+                ->canSee(fn (NovaRequest $request) => optional($request->user())->hasRole('Administrator')),
         ];
     }
 
