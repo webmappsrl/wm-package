@@ -10,7 +10,8 @@ use Wm\WmPackage\Models\User;
 use Wm\WmPackage\Nova\AbstractUserResource;
 use Wm\WmPackage\Services\RolesAndPermissionsService;
 
-$makeUserResource = fn (User $user): AbstractUserResource => new class($user) extends AbstractUserResource {
+$makeUserResource = fn (User $user): AbstractUserResource => new class($user) extends AbstractUserResource
+{
     public static string $model = User::class;
 };
 
