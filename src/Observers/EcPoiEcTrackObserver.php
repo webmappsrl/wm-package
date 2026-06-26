@@ -2,8 +2,6 @@
 
 namespace Wm\WmPackage\Observers;
 
-use Illuminate\Database\Eloquent\Relations\Relation;
-use Illuminate\Support\Facades\DB;
 use Wm\WmPackage\Models\EcPoiEcTrack;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Services\Models\EcTrackService;
@@ -66,28 +64,11 @@ class EcPoiEcTrackObserver
             if ($action === 'attach') {
                 $layer->ecPois()->syncWithoutDetaching([$ecPoiId]);
             } else {
-                if (! $this->layerStillHasPoiViaOtherTrack($layer->id, $ecPoiId, $ecTrackId, $fkName)) {
+                if (! EcPoiEcTrack::poiStillLinkedToLayerViaOtherTrack($layer->id, $ecPoiId, $ecTrackId)) {
                     $layer->ecPois()->detach($ecPoiId);
                 }
             }
         }
-    }
-
-    private function layerStillHasPoiViaOtherTrack(int $layerId, int $ecPoiId, int $excludeTrackId, string $fkName): bool
-    {
-        $pivotTable = config('wm-package.ec_poi_track_pivot_table', 'ec_poi_ec_track');
-        $ecTrackModelClass = config('wm-package.ec_track_model', EcTrack::class);
-        $ecTrackMorphType = array_search($ecTrackModelClass, Relation::morphMap()) ?: $ecTrackModelClass;
-
-        return DB::table($pivotTable)
-            ->join('layerables', function ($join) use ($layerId, $fkName, $ecTrackMorphType, $pivotTable) {
-                $join->on('layerables.layerable_id', '=', "{$pivotTable}.{$fkName}")
-                    ->where('layerables.layerable_type', $ecTrackMorphType)
-                    ->where('layerables.layer_id', $layerId);
-            })
-            ->where("{$pivotTable}.ec_poi_id", $ecPoiId)
-            ->where("{$pivotTable}.{$fkName}", '!=', $excludeTrackId)
-            ->exists();
     }
 
     private function updateEcTrackDataChain(EcPoiEcTrack $pivot): void
