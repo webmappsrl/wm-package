@@ -118,7 +118,7 @@ class GeohubImportService
             ->allowFailures()
             ->dispatch();
 
-        $this->logger->info("Dispatched batch {$batch->id} with ".count($jobs)." jobs for {$modelKey}s");
+        $this->logger->info("Dispatched batch {$batch->id} with " . count($jobs) . " jobs for {$modelKey}s");
     }
 
     /**
@@ -223,7 +223,7 @@ class GeohubImportService
 
             return $model;
         } catch (\Exception $e) {
-            $this->logger->error("Error importing {$modelName} with ID {$entityId}: ".$e->getMessage());
+            $this->logger->error("Error importing {$modelName} with ID {$entityId}: " . $e->getMessage());
             throw $e;
         }
     }
@@ -304,7 +304,7 @@ class GeohubImportService
      */
     public function getGeohubIdsToImport(string $modelKey, ?array $wheres, ?array $data = null): array
     {
-        $this->logger->info("🔍 getGeohubIdsToImport called for model: {$modelKey}, wheres: ".json_encode($wheres).', data: '.json_encode($data));
+        $this->logger->info("🔍 getGeohubIdsToImport called for model: {$modelKey}, wheres: " . json_encode($wheres) . ', data: ' . json_encode($data));
 
         $connection = $this->dbConnection->table($this->importMapping[$modelKey]['geohub_table']);
 
@@ -398,7 +398,7 @@ class GeohubImportService
         // Combina tutti i media
         $allMediaIds = array_unique(array_merge($mediaIds, $mediaViaRelation, $featureImageMedia));
 
-        $this->logger->info('Found '.count($allMediaIds)." ec_media associated with app tracks (geohub user_id: {$appUserId})");
+        $this->logger->info('Found ' . count($allMediaIds) . " ec_media associated with app tracks (geohub user_id: {$appUserId})");
 
         return $allMediaIds;
     }
@@ -487,9 +487,29 @@ class GeohubImportService
             $shardUser = User::create($transformedData);
         }
 
-        $this->assignAdministratorRole($shardUser);
+        $this->assignEditorRole($shardUser);
 
         return $shardUser;
+    }
+
+    /**
+     * Assign the Editor role to the user if they have no roles yet.
+     *
+     * @param  User  $user  The user to assign the role to
+     */
+    protected function assignEditorRole(User $user): void
+    {
+        if ($user->roles->isNotEmpty()) {
+            return;
+        }
+
+        $role = Role::where('name', 'Editor')->first();
+        if (! $role) {
+            RolesAndPermissionsService::seedDatabase();
+            $role = Role::where('name', 'Editor')->first();
+        }
+
+        $user->assignRole($role);
     }
 
     /**
@@ -804,7 +824,7 @@ class GeohubImportService
 
             return $media;
         } catch (\Exception $e) {
-            Log::error("❌ Failed to add media from URL {$ecMedia->url}: ".$e->getMessage());
+            Log::error("❌ Failed to add media from URL {$ecMedia->url}: " . $e->getMessage());
 
             return null;
         }
@@ -834,7 +854,7 @@ class GeohubImportService
             ->where($morphableTypeKey, $morphableTypeValue)
             ->get();
 
-        $this->logger->info('📋 Layer taxonomy relations found: '.$layerTaxonomyRelations->count());
+        $this->logger->info('📋 Layer taxonomy relations found: ' . $layerTaxonomyRelations->count());
 
         $totalTracksAssigned = 0;
         $totalTracksAlreadyAssigned = 0;
@@ -848,7 +868,7 @@ class GeohubImportService
                 ->where($morphableTypeKey, 'App\\Models\\EcTrack')
                 ->get();
 
-            $this->logger->info("📋 Track taxonomy relations for {$relation->{$key}}: ".$trackTaxonomyRelations->count());
+            $this->logger->info("📋 Track taxonomy relations for {$relation->{$key}}: " . $trackTaxonomyRelations->count());
 
             foreach ($trackTaxonomyRelations as $trackRelation) {
                 $ecTrackModelClass = config('wm-package.ec_track_model', 'App\Models\EcTrack');
@@ -876,7 +896,7 @@ class GeohubImportService
         $this->logger->info("   • Tracks assigned: {$totalTracksAssigned}");
         $this->logger->info("   • Tracks already assigned: {$totalTracksAlreadyAssigned}");
         $this->logger->info("   • Tracks not found locally: {$totalTracksNotFound}");
-        $this->logger->info('   • Final layer track count: '.$model->ecTracks()->count());
+        $this->logger->info('   • Final layer track count: ' . $model->ecTracks()->count());
     }
 
     public function handleOverlayLayers(Model $model): void
@@ -942,7 +962,7 @@ class GeohubImportService
             }
             // Otherwise we need to download and upload to AWS
             else {
-                $fileUrl = config('wm-package.clients.geohub.host').'/storage/'.$featureCollection;
+                $fileUrl = config('wm-package.clients.geohub.host') . '/storage/' . $featureCollection;
                 $fileContent = $this->downloadFileContent($fileUrl);
 
                 if ($fileContent !== false) {
@@ -994,7 +1014,7 @@ class GeohubImportService
                 $fileContent
             );
         } catch (\Exception $e) {
-            $this->logger->error('Error storing layer feature collection: '.$e->getMessage());
+            $this->logger->error('Error storing layer feature collection: ' . $e->getMessage());
         }
 
         if ($path) {
@@ -1053,8 +1073,8 @@ class GeohubImportService
             $checkQueues = function () use ($redis, $queueKeyPrefix, $horizonPrefix, $queueName) {
                 // Code Redis: attesa, delayed, reserved
                 $pendingSize = (int) $redis->llen($queueKeyPrefix);
-                $delayedSize = (int) $redis->zcard($queueKeyPrefix.':delayed');
-                $reservedSize = (int) $redis->zcard($queueKeyPrefix.':reserved');
+                $delayedSize = (int) $redis->zcard($queueKeyPrefix . ':delayed');
+                $reservedSize = (int) $redis->zcard($queueKeyPrefix . ':reserved');
 
                 if (($pendingSize + $delayedSize + $reservedSize) > 0) {
                     Log::info("Coda '{$queueName}' non vuota (pending={$pendingSize}, delayed={$delayedSize}, reserved={$reservedSize})");
@@ -1063,9 +1083,9 @@ class GeohubImportService
                 }
 
                 // Horizon processing (job in esecuzione)
-                $processingSize = (int) $redis->zcard($horizonPrefix.'processing');
+                $processingSize = (int) $redis->zcard($horizonPrefix . 'processing');
                 if ($processingSize > 0) {
-                    $processingData = $redis->zrange($horizonPrefix.'processing', 0, -1);
+                    $processingData = $redis->zrange($horizonPrefix . 'processing', 0, -1);
                     foreach ($processingData as $jobData) {
                         $job = json_decode($jobData, true);
                         if (isset($job['queue']) && $job['queue'] === $queueName) {
@@ -1095,7 +1115,7 @@ class GeohubImportService
 
             return true;
         } catch (\Exception $e) {
-            Log::error("Errore nel controllo della coda '{$queueName}': ".$e->getMessage());
+            Log::error("Errore nel controllo della coda '{$queueName}': " . $e->getMessage());
 
             // In caso di errore, assumiamo che la coda non sia vuota per sicurezza
             return false;
