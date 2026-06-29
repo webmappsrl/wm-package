@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Wm\WmPackage\Jobs\UpdateLayeredFeaturesJob;
@@ -32,10 +31,6 @@ class LayerService extends BaseService
 
     public function hasRelatedManualModels(Layer $layer, string $model): bool
     {
-        // Log::info('RELATION', [
-        //     'model' => $model,
-        //     'relation' => (new $model)->getLayerRelationName()
-        // ]);
         return $layer->{(new $model)->getLayerRelationName()}->first() !== null;
     }
 
@@ -103,13 +98,8 @@ class LayerService extends BaseService
 
         // Verifica che ci siano tracce disponibili
         if ($allEcTracks->isEmpty()) {
-            // Log::channel('layer')->info('Nessuna traccia trovata da getTracks.');
-
-            return collect(); // Restituisci una collezione vuota
+            return collect();
         }
-
-        // Logga il numero di tracce filtrate dalla geometria e dalle tassonomie
-        // Log::channel('layer')->info('Numero di tracce finali filtrate da getTracks: ' . $allEcTracks->count());
 
         // Restituisci tracce uniche in base all'ID
         return $allEcTracks->unique('id');
@@ -160,17 +150,6 @@ class LayerService extends BaseService
         return $saved;
     }
 
-    // public function chainLayersFeaturedPropertiesUpdate($layers)
-    // {
-    //     $jobs = [];
-    //     foreach ($layers as $layer) {
-    //         foreach ($this->getModelsWithLayersInProperties() as $modelClass) {
-    //             $jobs[] = new UpdateLayeredFeaturesJob($layer, $modelClass);
-    //         }
-    //     }
-    //     Bus::chain($jobs)->delay($this->getUniqueJobDelay())->dispatch();
-    // }
-
     public function updateLayerIdsPropertyOnLayeredFeature(GeometryModel $geometryModel, array $layerIds, bool $add)
     {
         $properties = $geometryModel->properties;
@@ -198,7 +177,6 @@ class LayerService extends BaseService
         foreach ($this->getModelsWithLayersInProperties() as $modelClass) {
             $this->updateLayersPropertyOnLayeredFeatureWithJob($layer, $modelClass, $delay);
         }
-        // Bus::batch([$jobs])->name("Layer {$layer->id} features properties update")->dispatch(); //to avoid transactions errors
     }
 
     public function updateLayersPropertyOnLayeredFeatureWithJob(Layer $layer, string $ecModelClass, bool $delay = true)
@@ -212,6 +190,12 @@ class LayerService extends BaseService
         UpdateLayerGeometryJob::dispatch($layer);
     }
 
+    private function hasValidAutoModeFilter(Layer $layer): bool
+    {
+        return ! empty($layer->properties['taxonomy_where'] ?? [])
+            || $layer->taxonomyActivities->isNotEmpty();
+    }
+
     /**
      * Update the layers property on the features related to a specific layer
      *
@@ -222,28 +206,35 @@ class LayerService extends BaseService
      */
     public function updateLayersPropertyOnLayeredFeature(Layer $layer, string $ecModelClass): array
     {
+        // When a layer has no manual models and no valid taxonomy filter, it owns zero features.
+        // The add path is skipped entirely; the remove path still runs to clean up stale layer IDs
+        // written by the old buggy behaviour (byWhereProperty early-return with no filter).
+        $noValidFilter = ! $this->hasRelatedManualModels($layer, $ecModelClass)
+            && ! $this->hasValidAutoModeFilter($layer);
+
         // https://neon.tech/postgresql/postgresql-json-functions/postgresql-jsonb-operators
 
-        // Features where add the layer
-        $newLayerFeatures = $this->getRelatedModelsQuery($ecModelClass, $layer)
-            ->whereRaw(
-                "(
-                    NOT \"properties\"->'layers' @> '[{$layer->id}]'::jsonb
-                    OR \"properties\"->'layers' is null
-                )" // where the feature doesn't have the layer
-            );
-
-        // Log::info($newLayerFeatures->toSql());
-        $newLayerFeatures = $newLayerFeatures->get();
+        // Features where add the layer (empty when no valid filter)
+        $newLayerFeatures = $noValidFilter
+            ? collect()
+            : $this->getRelatedModelsQuery($ecModelClass, $layer)
+                ->whereRaw(
+                    "(
+                        NOT \"properties\"->'layers' @> '[{$layer->id}]'::jsonb
+                        OR \"properties\"->'layers' is null
+                    )" // where the feature doesn't have the layer
+                )->get();
 
         // Features where remove the layer
-        $layerFeaturesIds = $this->getRelatedModels($layer, $ecModelClass)->pluck('id')->toArray();
+        // When noValidFilter, $layerFeaturesIds is empty → all features with this layer ID get cleaned up
+        $layerFeaturesIds = $noValidFilter
+            ? []
+            : $this->getRelatedModels($layer, $ecModelClass)->pluck('id')->toArray();
         $oldLayerFeatures = $ecModelClass::whereNotIn('id', $layerFeaturesIds)
             ->whereRaw(
                 "\"properties\"->'layers' @> '[{$layer->id}]'::jsonb" // where the feature has the layer
             );
 
-        // Log::info($oldLayerFeatures->toSql());
         $oldLayerFeatures = $oldLayerFeatures->get();
 
         $added = [];
@@ -266,8 +257,8 @@ class LayerService extends BaseService
 
             // Add the layer to the features that don't have it
             foreach ($newLayerFeatures as $feature) {
-                // Save only features that don't have the layer
                 $properties = $feature->properties;
+                $properties['layers'] = $properties['layers'] ?? [];
                 $properties['layers'][] = $layer->id;
                 $feature->properties = $properties;
                 // Use saveQuietly to avoid triggering observers and prevent infinite loops
