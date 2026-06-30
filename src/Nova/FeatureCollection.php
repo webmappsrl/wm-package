@@ -8,6 +8,7 @@ use Laravel\Nova\Fields\BelongsToMany;
 use Laravel\Nova\Fields\Boolean;
 use Laravel\Nova\Fields\Code;
 use Laravel\Nova\Fields\DateTime;
+use Laravel\Nova\Fields\File;
 use Laravel\Nova\Fields\ID;
 use Laravel\Nova\Fields\Select;
 use Laravel\Nova\Fields\Text;
@@ -18,6 +19,7 @@ use Laravel\Nova\Resource;
 use Wm\WmPackage\Nova\Actions\FeatureCollection\GenerateFeatureCollectionAction;
 use Wm\WmPackage\Nova\Cards\ApiLinksCard\FeatureCollectionApiLinksCard;
 use Wm\WmPackage\Nova\Fields\FeatureCollectionMap\src\FeatureCollectionMap;
+use Wm\WmPackage\Services\StorageService;
 
 class FeatureCollection extends Resource
 {
@@ -64,6 +66,32 @@ class FeatureCollection extends Resource
                 Text::make(__('External URL'), 'external_url')
                     ->nullable()
                     ->help(__('Only used in external mode')),
+
+                File::make(__('GeoJSON File'), 'file_path')
+                    ->disk('wmfe')
+                    ->acceptedTypes('.geojson,.json')
+                    ->rules('max:20480')
+                    ->hideFromIndex()
+                    ->nullable()
+                    ->help(__('Only used in upload mode'))
+                    ->store(function ($request, $model, $attribute, $requestAttribute) {
+                        if ($request->input('mode') !== 'upload') {
+                            return null;
+                        }
+
+                        $file = $request->file($requestAttribute);
+                        if ($file === null || $model->id === null) {
+                            return null;
+                        }
+
+                        $path = app(StorageService::class)->storeFeatureCollection(
+                            $model->app_id,
+                            $model->id,
+                            $file->get()
+                        );
+
+                        return $path ?: null;
+                    }),
             ]),
 
             Panel::make(__('Style'), [
@@ -89,6 +117,23 @@ class FeatureCollection extends Resource
                 ->geojsonUrl(fn () => $this->resource->getUrl())
                 ->onlyOnDetail(),
         ];
+    }
+
+    public static function afterCreate(NovaRequest $request, \Illuminate\Database\Eloquent\Model $model): void
+    {
+        if ($request->input('mode') !== 'upload' || ! $request->hasFile('file_path')) {
+            return;
+        }
+
+        $path = app(StorageService::class)->storeFeatureCollection(
+            $model->app_id,
+            $model->id,
+            $request->file('file_path')->get()
+        );
+
+        if ($path) {
+            $model->update(['file_path' => $path]);
+        }
     }
 
     public function cards(NovaRequest $request): array
