@@ -52,6 +52,7 @@ protected static function newFactory(): Factory
 
 | Feature | Ticket | Moduli toccati | Note |
 |---|---|---|---|
+| Utenti importati: ruolo Editor in import GeoHub | oc:8042 | `src/Services/Import/GeohubImportService.php`, `src/Services/RolesAndPermissionsService.php`, `database/migrations/zz_2026_06_26_000001_add_editor_role.php.stub` | `assignEditorRole()` condizionale; Editor aggiunto a `seedDatabase()` |
 | BulkEditAction: bulk edit dinamico da Nova Resource | oc:8133 | `src/Nova/Actions/BulkEditAction.php`, `tests/Unit/Nova/Actions/BulkEditActionTest.php`, `tests/Feature/Nova/Actions/BulkEditActionFeatureTest.php` | Action parametrica: `new BulkEditAction(Resource::class, ['field'])` — filtra campi da Resource, appiattisce Panel/Tab, `saveQuietly()` in `DB::transaction()` |
 | Analytics Layer: selezione range temporale | oc:7648 | `src/Services/PostHog/AnalyticsService.php`, `src/Http/Controllers/Nova/AnalyticsController.php`, `src/Nova/Cards/LayerAnalytics/` | Dropdown 30/90/365gg + mesi da created_at; tabella download per traccia |
 | Inserire foto (my_paths, my_downloads) | oc:7480 | `src/Models/App.php`, `src/Nova/App.php`, `src/Http/Controllers/Api/AppController.php`, `routes/api.php`, `src/Services/Models/App/AppConfigService.php` | Media collection + Nova fields + route nei 3 gruppi + URL in APP section del config.json; fix getOrDownloadIcon() (isset→getMedia, mime_type, driver null-safe) |
@@ -67,6 +68,11 @@ protected static function newFactory(): Factory
 | Modifica ruolo utente in Nova | oc:8072 | `src/Nova/AbstractUserResource.php`, `tests/Feature/Nova/AbstractUserResourceRoleGuardTest.php` | Guard `RolesAndPermissionsService::allowsUser()` su ruoli/permessi; fillUsing server-side; anti-self-demotion |
 
 ## Decisioni architetturali
+
+### Utenti importati: ruolo Editor (oc:8042)
+- `assignEditorRole()` usa pattern `Role::where()` + `seedDatabase()` fallback (come `assignAdministratorRole`)
+- Assegnazione condizionale su `$user->roles->isEmpty()` — preserva ruoli già configurati manualmente
+- Migration stub usa `insertOrIgnore` per evitare eventi Eloquent Spatie in transazione PostgreSQL
 
 ### BulkEditAction (oc:8133)
 - Contratto: `new BulkEditAction(Resource::class, $fields = [], $exclude = ['name', 'geometry', 'description'])` — `$exclude` default protegge da bulk edit accidentale di nome, geometria e descrizione; override con `[]` per disabilitare
