@@ -298,5 +298,6 @@
     "Link used over the attribution tag in the app (optional)": "Link usato sul tag di attribution nell'app (opzionale)",
     "Where": "Luogo",
     "Wheres": "Luoghi",
-    "Requires authentication at startup to be enabled": "Richiede che l'autenticazione all'avvio sia attiva"
+    "Requires authentication at startup to be enabled": "Richiede che l'autenticazione all'avvio sia attiva",
+    "Map": "Mappa"
 }

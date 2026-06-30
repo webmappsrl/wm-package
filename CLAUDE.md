@@ -22,6 +22,11 @@ protected static function newFactory(): Factory
 
 ## Decisioni architetturali
 
+### Layer Nova: Map panel e EcPoi sulla mappa (oc:8160)
+- `addFeaturesForMap()` in `FeatureCollectionMapTrait` inietta `$this->id` (= ID del layer) in ogni feature — non causa problemi perché il click usa la property `link` (URL completo), non `id`. L'`id` è rilevante solo in modalità popup, non usata per EcTrack/EcPoi sulla mappa del layer
+- Tabella `ec_pois` hardcoded nella raw SQL di `getFeatureCollectionMap()` — stessa scelta di `taxonomy_wheres` nello stesso metodo; nessun `ec_poi_table` in config per simmetria con `ec_track_table`
+- I test per `getFeatureCollectionMap()` sono in `wm-package/tests/Feature/` con `Wm\WmPackage\Tests\TestCase` — girano dalla suite phpunit del package (DB `wm_package`), non da `php artisan test` di camminiditalia
+
 ### Fix import POI taxonomy type (oc:8041)
 - `processDependencies()` usa `$model->properties['geohub_id']` come ID autoritativo per `getTaxonomyMorphableRecords()` — `$this->entityId` può divergere in scenari di re-import
 - `taxonomy_poi_types` aggiunto a `default_dependencies.app` in `wm-geohub-import.php` — era assente a differenza di `taxonomy_activity` e `taxonomy_theme`, rendendo il fix ID ininfluente nel flusso standard
@@ -53,6 +58,7 @@ protected static function newFactory(): Factory
 | Feature | Ticket | Moduli toccati | Note |
 |---|---|---|---|
 | Utenti importati: ruolo Editor in import GeoHub | oc:8042 | `src/Services/Import/GeohubImportService.php`, `src/Services/RolesAndPermissionsService.php`, `database/migrations/zz_2026_06_26_000001_add_editor_role.php.stub` | `assignEditorRole()` condizionale; Editor aggiunto a `seedDatabase()` |
+| Layer Nova: Map panel dedicato + EcPoi sulla mappa | oc:8160 | `src/Nova/Layer.php`, `src/Models/Layer.php`, `resources/lang/it.json`, `resources/lang/en.json` | `FeatureCollectionMap` spostato in panel `__('Map')` separato; `getFeatureCollectionMap()` include EcPoi come Point features (tooltip nome, link `ec-pois/{id}`) |
 | BulkEditAction: bulk edit dinamico da Nova Resource | oc:8133 | `src/Nova/Actions/BulkEditAction.php`, `tests/Unit/Nova/Actions/BulkEditActionTest.php`, `tests/Feature/Nova/Actions/BulkEditActionFeatureTest.php` | Action parametrica: `new BulkEditAction(Resource::class, ['field'])` — filtra campi da Resource, appiattisce Panel/Tab, `saveQuietly()` in `DB::transaction()` |
 | Analytics Layer: selezione range temporale | oc:7648 | `src/Services/PostHog/AnalyticsService.php`, `src/Http/Controllers/Nova/AnalyticsController.php`, `src/Nova/Cards/LayerAnalytics/` | Dropdown 30/90/365gg + mesi da created_at; tabella download per traccia |
 | Inserire foto (my_paths, my_downloads) | oc:7480 | `src/Models/App.php`, `src/Nova/App.php`, `src/Http/Controllers/Api/AppController.php`, `routes/api.php`, `src/Services/Models/App/AppConfigService.php` | Media collection + Nova fields + route nei 3 gruppi + URL in APP section del config.json; fix getOrDownloadIcon() (isset→getMedia, mime_type, driver null-safe) |

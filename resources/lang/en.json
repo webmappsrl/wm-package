@@ -297,5 +297,6 @@
     "URL template for the tile server (e.g. https://example.com/{z}/{x}/{y}.png)": "URL template for the tile server (e.g. https://example.com/{z}/{x}/{y}.png)",
     "Link used over the attribution tag in the app (optional)": "Link used over the attribution tag in the app (optional)",
     "Where": "Where",
-    "Wheres": "Wheres"
+    "Wheres": "Wheres",
+    "Map": "Map"
 }
