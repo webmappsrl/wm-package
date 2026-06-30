@@ -93,8 +93,10 @@ class Layer extends AbstractGeometryResource
             MorphToMany::make(__('Activities'), 'taxonomyActivities', TaxonomyActivity::class),
             MorphToMany::make('Taxonomy Where', 'taxonomyWheres', TaxonomyWhere::class)
                 ->actions(fn () => []),
-            Panel::make('Ec Tracks', [
+            Panel::make(__('Map'), [
                 FeatureCollectionMap::make(__('Geometry'), 'geometry')->onlyOnDetail(),
+            ]),
+            Panel::make('Ec Tracks', [
                 LayerFeatures::make(__('tracks'), $this->resource, config('wm-package.ec_track_model', 'Wm\WmPackage\Models\EcTrack'))
                     ->hideWhenCreating()
                     ->withMeta(['model_class' => config('wm-package.ec_track_model', 'Wm\WmPackage\Models\EcTrack')]),

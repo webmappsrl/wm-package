@@ -411,6 +411,32 @@ class Layer extends Polygon
             }
         }
 
+        $poiNovaResourceName = 'ec-pois';
+        $poiIds = $this->ecPois()->pluck('ec_pois.id')->toArray();
+
+        if (! empty($poiIds)) {
+            $placeholders = implode(',', array_fill(0, count($poiIds), '?'));
+            $sql = "SELECT id, name, ST_AsGeoJSON(geometry) as geometry FROM ec_pois WHERE id IN ({$placeholders}) AND geometry IS NOT NULL";
+            $rows = DB::select($sql, $poiIds);
+
+            foreach ($rows as $ecPoi) {
+                $geometry = json_decode($ecPoi->geometry, true);
+                $nameData = json_decode($ecPoi->name, true);
+                $ecPoiName = $nameData['it'] ?? (is_array($nameData) && ! empty($nameData) ? reset($nameData) : 'Nome non disponibile');
+
+                if ($geometry) {
+                    $this->addFeaturesForMap([[
+                        'type' => 'Feature',
+                        'geometry' => $geometry,
+                        'properties' => [
+                            'tooltip' => $ecPoiName,
+                            'link' => url('nova/resources/'.$poiNovaResourceName.'/'.$ecPoi->id),
+                        ],
+                    ]]);
+                }
+            }
+        }
+
         $whereIds = $this->taxonomyWheres()->pluck('taxonomy_wheres.id')->toArray();
         if (! empty($whereIds)) {
             $placeholders = implode(',', array_fill(0, count($whereIds), '?'));
