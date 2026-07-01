@@ -1,72 +1,56 @@
-> Ticket: oc:8043
+> Ticket: oc:8043 — COMPLETATO
 
-# Plan — Import: gestione dei layer con POI non supportata
+# Plan — Import: associazione EcPoi ai Layer via taxonomy
 
-## Task 1 — Config: aggiungere relazione `taxonomy_poi_types` al mapping `layer`
+## Task 1 — Config: aggiungere relazioni taxonomy al mapping `layer` ✅
 
 **File:** `wm-package/config/wm-geohub-import.php`
 
-Nella sezione `import_mapping.layer.relations`, aggiungere:
-
-```php
-'taxonomy_poi_types' => [
-    'pivot_table' => 'taxonomy_poi_typeables',
-    'key' => 'taxonomy_poi_type_id',
-    'foreign_key' => 'taxonomy_poi_typeable_id',
-    'morphable_type' => ['key' => 'taxonomy_poi_typeable_type', 'value' => 'App\\Models\\Layer'],
-],
-```
+Nella sezione `import_mapping.layer.relations`, aggiunte:
+- `taxonomy_theme` (pivot `taxonomy_themeables`, key `taxonomy_theme_id`)
+- `taxonomy_poi_types` (pivot `taxonomy_poi_typeables`, key `taxonomy_poi_type_id`)
+- `taxonomy_where` (pivot `taxonomy_whereables`, key `taxonomy_where_id`)
 
 ---
 
-## Task 2 — Service: implementare `associateLayersWithEcPoi()` in `GeohubImportService`
+## Task 2 — Service: riscrivere `associateLayersWithEcPoi()` ✅
 
 **File:** `wm-package/src/Services/Import/GeohubImportService.php`
 
-Aggiungere il metodo pubblico `associateLayersWithEcPoi(Model $model)` seguendo
-esattamente il pattern di `associateLayersWithEcTrack()`:
+Il metodo cicla su tutti e tre i meccanismi (`taxonomy_theme`, `taxonomy_where`,
+`taxonomy_poi_types`). Per ognuno:
+1. Trova i taxonomy ID del layer in GeoHub
+2. Trova i geohub_poi_id degli EcPoi con quegli stessi taxonomy ID
+3. Merge nella collection totale
 
-1. Legge la config via `getRelationConfig('layer', 'taxonomy_poi_types')`
-2. Interroga `taxonomy_poi_typeables` su GeoHub per trovare i `taxonomy_poi_type_id`
-   del layer (WHERE `taxonomy_poi_typeable_id = $model->properties['geohub_id']`
-   AND `taxonomy_poi_typeable_type = 'App\Models\Layer'`)
-3. Se nessun tipo trovato → `$this->logger->warning(...)` e `return`
-4. Per ogni `taxonomy_poi_type_id`, interroga `taxonomy_poi_typeables` per trovare
-   gli EcPoi GeoHub (WHERE `taxonomy_poi_type_id = X`
-   AND `taxonomy_poi_typeable_type LIKE '%EcPoi%'`)
-5. Per ogni EcPoi GeoHub trovato, cerca il corrispondente locale via
-   `EcPoi::where('properties->geohub_id', $geohubPoiId)->first()`
-6. Se trovato e non già associato → `$model->ecPois()->attach($ecPoi->id, ['created_at' => now(), 'updated_at' => now()])`
-7. Log riepilogo: POI trovati in GeoHub / associati / già presenti / non trovati localmente
+Dopo il ciclo, deduplica e per ogni EcPoi locale trovato: `attach()` con check
+`alreadyExists` (idempotente).
 
 ---
 
-## Task 3 — Job: chiamare `associateLayersWithEcPoi()` in `ImportLayerJob`
+## Task 3 — Job: chiamare `associateLayersWithEcPoi()` in `ImportLayerJob` ✅
 
 **File:** `wm-package/src/Jobs/Import/ImportLayerJob.php`
 
-In `processDependencies()`, aggiungere la chiamata dopo `associateLayersWithEcTrack`:
-
-```php
-$this->geohubImportService->associateLayersWithEcPoi($model);
-```
+Aggiunta chiamata in `processDependencies()` dopo `associateLayersWithEcTrack()`.
 
 ---
 
-## Task 4 — Test: verificare la corretta associazione POI→Layer
+## Task 4 — Test: 7 casi Feature ✅
 
-**File:** `wm-package/tests/Feature/Services/Import/GeohubImportServiceAssociateLayerPoiTest.php`
+**File:** `wm-package/tests/Feature/GeohubImportServiceAssociateLayerPoiTest.php`
 
-Casi da coprire:
-- Layer con taxonomy_poi_types → i POI locali con quei tipi vengono associati
-- Layer senza taxonomy_poi_types → nessun attach, nessuna eccezione
-- EcPoi non ancora importato localmente → saltato, log "not found", nessuna eccezione
-- Re-import: POI già associato non viene duplicato (check `alreadyExists`)
+- `taxonomy_poi_type` → attach
+- nessuna taxonomy → skip
+- EcPoi non importato → skip
+- re-import → no duplicati
+- `taxonomy_theme` → attach (caso primario app 63 / app 44)
+- `taxonomy_where` → attach
+- POI in più meccanismi → attach una sola volta
 
 ---
 
-## Commit convention
+## Task 5 — Verifica su dati reali ✅
 
-```
-feat(oc:8043): associate ec_pois to layer via taxonomy_poi_type on import
-```
+- App 63 (Paneveggio): layer 431=48, 432=11, 433=4 EcPois ✅
+- App 44 (Metallifere Outdoor): tutti i 7 layer con 101-109 EcPois ✅
