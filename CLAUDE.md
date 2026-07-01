@@ -57,6 +57,7 @@ protected static function newFactory(): Factory
 
 | Feature | Ticket | Moduli toccati | Note |
 |---|---|---|---|
+| Import Layer: associazione EcPoi via taxonomy | oc:8043 | `src/Services/Import/GeohubImportService.php`, `src/Jobs/Import/ImportLayerJob.php`, `config/wm-geohub-import.php`, `tests/Feature/GeohubImportServiceAssociateLayerPoiTest.php` | `associateLayersWithEcPoi()` traversa tutti e tre i meccanismi taxonomy (theme, where, poi_types); chiamata in `ImportLayerJob::processDependencies()` |
 | Utenti importati: ruolo Editor in import GeoHub | oc:8042 | `src/Services/Import/GeohubImportService.php`, `src/Services/RolesAndPermissionsService.php`, `database/migrations/zz_2026_06_26_000001_add_editor_role.php.stub` | `assignEditorRole()` condizionale; Editor aggiunto a `seedDatabase()` |
 | Layer Nova: Map panel dedicato + EcPoi sulla mappa | oc:8160 | `src/Nova/Layer.php`, `src/Models/Layer.php`, `resources/lang/it.json`, `resources/lang/en.json` | `FeatureCollectionMap` spostato in panel `__('Map')` separato; `getFeatureCollectionMap()` include EcPoi come Point features (tooltip nome, link `ec-pois/{id}`) |
 | BulkEditAction: bulk edit dinamico da Nova Resource | oc:8133 | `src/Nova/Actions/BulkEditAction.php`, `tests/Unit/Nova/Actions/BulkEditActionTest.php`, `tests/Feature/Nova/Actions/BulkEditActionFeatureTest.php` | Action parametrica: `new BulkEditAction(Resource::class, ['field'])` — filtra campi da Resource, appiattisce Panel/Tab, `saveQuietly()` in `DB::transaction()` |
@@ -74,6 +75,12 @@ protected static function newFactory(): Factory
 | Modifica ruolo utente in Nova | oc:8072 | `src/Nova/AbstractUserResource.php`, `tests/Feature/Nova/AbstractUserResourceRoleGuardTest.php` | Guard `RolesAndPermissionsService::allowsUser()` su ruoli/permessi; fillUsing server-side; anti-self-demotion |
 
 ## Decisioni architetturali
+
+### Import Layer: associazione EcPoi via taxonomy (oc:8043)
+- `associateLayersWithEcPoi()` controlla tre meccanismi GeoHub in sequenza: `taxonomy_themeables`, `taxonomy_whereables`, `taxonomy_poi_typeables` — **taxonomy_theme è il meccanismo primario** (app 63: 48/11/4 poi; app 44: 101-109 poi per layer)
+- GeoHub non ha un rapporto diretto Layer→EcPoi: la relazione è indiretta tramite taxonomy condivise
+- `attach()` con `alreadyExists` check per idempotenza (re-import safe); i geohub_poi_id vengono deduplicati prima dell'attach per gestire POI trovati da più meccanismi
+- `$config['morphable_type']['value'] = 'App\Models\Layer'` non dipende dal tipo Maphub — è il type string di GeoHub
 
 ### Utenti importati: ruolo Editor (oc:8042)
 - `assignEditorRole()` usa pattern `Role::where()` + `seedDatabase()` fallback (come `assignAdministratorRole`)
