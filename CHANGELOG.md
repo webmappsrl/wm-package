@@ -1,5 +1,78 @@
 # Changelog
 
+## [1.6.0](https://github.com/webmappsrl/wm-package/compare/v1.5.0...v1.6.0) (2026-07-01)
+
+
+### Features
+
+* add BulkEditAction for dynamic bulk edits ([3d10f84](https://github.com/webmappsrl/wm-package/commit/3d10f840e0d09d05d07bc5b0157a31713a741bc0))
+* add BulkEditAction for dynamic bulk edits OC:8133 ([#233](https://github.com/webmappsrl/wm-package/issues/233)) ([3d10f84](https://github.com/webmappsrl/wm-package/commit/3d10f840e0d09d05d07bc5b0157a31713a741bc0))
+* add Layer component copying feature OC:7642 ([#218](https://github.com/webmappsrl/wm-package/issues/218)) ([6427643](https://github.com/webmappsrl/wm-package/commit/6427643ddda98934f15ee68a4dadc9d53d903d3d))
+* add super-admin email gating and new actions OC:7911_7912 ([#217](https://github.com/webmappsrl/wm-package/issues/217)) ([dec14bb](https://github.com/webmappsrl/wm-package/commit/dec14bbc35d0a076e60716e62bf695e6078ab98b))
+* **analytics:** ✨ add PostHog analytics integration for Nova ([2fa4ef1](https://github.com/webmappsrl/wm-package/commit/2fa4ef1ad3f7b3ee61ff24f951a46dc7cd124736))
+* **command:** ✨ add config option to wm:backup-run command ([45df1ba](https://github.com/webmappsrl/wm-package/commit/45df1ba980ef9b1764afcbdd8c4692765c5f9fd1))
+* **command:** ✨ add WmSyncUgcTaxonomyWhereCommand for UGC taxonomy synchronization oc:7377 ([#215](https://github.com/webmappsrl/wm-package/issues/215)) ([5ba9039](https://github.com/webmappsrl/wm-package/commit/5ba9039557a427b2807e90104de1b91d06f8ecec))
+* **config:** ✨ add 'from' and 'to' fields to wm-elasticsearch configuration ([#214](https://github.com/webmappsrl/wm-package/issues/214)) ([fd77c39](https://github.com/webmappsrl/wm-package/commit/fd77c3956f296bd44d855d8d2913bb242db0b896))
+* **config:** ✨ add supervisor-dem configuration to wm-horizon ([d14655a](https://github.com/webmappsrl/wm-package/commit/d14655a55ca0aba26aa7652e30881899edcf070b))
+* **config:** ✨ update AWS configuration with environment variables ([77a4cde](https://github.com/webmappsrl/wm-package/commit/77a4cde30e958e51d1bdbac1e5c8e9dc45593b85))
+* extend BulkEditAction default exclusions OC:8133 ([3d10f84](https://github.com/webmappsrl/wm-package/commit/3d10f840e0d09d05d07bc5b0157a31713a741bc0))
+* **geojson-upload:** ✨ add GeoJSON file upload to FeatureCollection OC:8175 ([#238](https://github.com/webmappsrl/wm-package/issues/238)) ([cb61dc2](https://github.com/webmappsrl/wm-package/commit/cb61dc2f39e2f329b29b4b65d148527102587b22))
+* **localization:** 🌐 add new tile layer selection description OC:7806 ([#211](https://github.com/webmappsrl/wm-package/issues/211)) ([92b6464](https://github.com/webmappsrl/wm-package/commit/92b6464d1a39bfc7fefb1c2cfc3ccf6c3cb96905))
+* **nova:** ✨ add role modification capability in Nova user resource OC:8072 ([#228](https://github.com/webmappsrl/wm-package/issues/228)) ([6e4e83b](https://github.com/webmappsrl/wm-package/commit/6e4e83bf7e7a48f62ebbc422b8c24d45ac639af0))
+* **nova:** disable geolocation field when auth_show_at_startup is off OC:7852 ([#227](https://github.com/webmappsrl/wm-package/issues/227)) ([320120e](https://github.com/webmappsrl/wm-package/commit/320120e988c743f529abb518d1a6aa46d0ba12f9))
+* **observer:** ✨ oc:7641 add layer association to new UGC models ([2a709e7](https://github.com/webmappsrl/wm-package/commit/2a709e781b3383f6cb665754649aecaf92897bfa))
+* **oc:7645:** add use_image_as_icon to EC POI related map display ([fc7ab80](https://github.com/webmappsrl/wm-package/commit/fc7ab80851f4e74fed40b4db8134c6841e9e6e27))
+* **oc:7648:** add dynamic range support to AnalyticsService with per-range cache and TTL ([ba9a255](https://github.com/webmappsrl/wm-package/commit/ba9a255b468bc1e86d59015523c8bed2b5cbf827))
+* **oc:7648:** add range selector dropdown and per-track download table to LayerAnalyticsCard ([441f3b2](https://github.com/webmappsrl/wm-package/commit/441f3b219bd7f5d053a0ca856b8c9d18de1d3df6))
+* **oc:7648:** Analytics Layer — selezione range temporale + download per traccia ([2e528ca](https://github.com/webmappsrl/wm-package/commit/2e528ca40a5c6e23ec0f8e504fc3b7a81a392f97))
+* **oc:7648:** AnalyticsController reads and validates ?days/?month query params ([e2c44ea](https://github.com/webmappsrl/wm-package/commit/e2c44eac111b792c5924468057d4883c24343a0c))
+* **oc:7648:** merge develop into feature branch — resolve conflicts keeping range support ([5474f5a](https://github.com/webmappsrl/wm-package/commit/5474f5ad7a3c8a3928c66226a931385c4e0f2328))
+* **oc:7648:** pass tracking_since prop from LayerAnalyticsCard ([bbe917a](https://github.com/webmappsrl/wm-package/commit/bbe917a4f917d3e0dd84a85ac36f33bcf7df7020))
+* **oc:7756:** add BboxField standalone Nova component for bounding box ([#223](https://github.com/webmappsrl/wm-package/issues/223)) ([fb3c055](https://github.com/webmappsrl/wm-package/commit/fb3c0555e823d9a988f2aee849a293cb1983a4f5))
+* **oc:8014:** add ImportTaxonomyThemeJob and TaxonomyTheme Nova resource ([#225](https://github.com/webmappsrl/wm-package/issues/225)) ([0f775ff](https://github.com/webmappsrl/wm-package/commit/0f775ff26b00934ad9b23690d784268dfe330159))
+* **oc:8079:** expose resolveLayerByProximity publicly and make search distance configurable via env ([91f44d6](https://github.com/webmappsrl/wm-package/commit/91f44d659a0bed3c6b1b3d9f3c15a23bd76ba7ea))
+* **oc:8079:** merge auto-assign layer_id on UGC reports ([efe029d](https://github.com/webmappsrl/wm-package/commit/efe029d06cb682a8146d14467124f8958d127d27))
+* **oc:8139:** auto-associate EcPoi to layer via track relation ([#234](https://github.com/webmappsrl/wm-package/issues/234)) ([c9f1081](https://github.com/webmappsrl/wm-package/commit/c9f10812193ae324b74d0318ad085d59570c1461))
+* **oc:8160:** move Geometry to dedicated Map panel and show EcPoi on layer map ([#237](https://github.com/webmappsrl/wm-package/issues/237)) ([a94a634](https://github.com/webmappsrl/wm-package/commit/a94a634f9afdd27dc04639c2e25932a921e7b845))
+* **tiles:** ✨ add tiles and app_tile migration, model, and Nova resource oc:7657 ([#207](https://github.com/webmappsrl/wm-package/issues/207)) ([78fa887](https://github.com/webmappsrl/wm-package/commit/78fa887fe933469527f358ed7050b78530a6f229))
+
+
+### Bug Fixes
+
+* **AppTiles:** 🔧 update tile URL for improved resource access ([c4f1a55](https://github.com/webmappsrl/wm-package/commit/c4f1a55481eb58e17696546795089579b356350d))
+* **config:** 🐛 resolve URL fallback logic for wmfeUrl OC:7896 ([#216](https://github.com/webmappsrl/wm-package/issues/216)) ([6f6bdb7](https://github.com/webmappsrl/wm-package/commit/6f6bdb7df93fb6e19883b3b53ac958904f43c3c5))
+* **config:** 🛠️ add visibility setting to wm-s3 filesystem ([6547351](https://github.com/webmappsrl/wm-package/commit/65473514ee5c18091350349a387f288905d39a82))
+* **nova:** update SKU field validation rules ([e456df8](https://github.com/webmappsrl/wm-package/commit/e456df839883a69e7c643233093b780194db172b))
+* **oc:7645:** move show_image_on_map field next to image in Nova index ([b2d3299](https://github.com/webmappsrl/wm-package/commit/b2d32997c328af7fa9c30db556e49aabb54b0e9e))
+* **oc:7645:** resolve show_image_on_map into feature_image, remove from properties ([5df0e0f](https://github.com/webmappsrl/wm-package/commit/5df0e0f9ce497d961a750d8669d49a2433ec6191))
+* **oc:7953:** 🐛 add missing options to POI Search In multiselect OC:7953 ([#220](https://github.com/webmappsrl/wm-package/issues/220)) ([e062019](https://github.com/webmappsrl/wm-package/commit/e06201971295a315fd5ef2a0f149896c48634369))
+* **oc:7953:** 🔧 update wm-package pointer ([e062019](https://github.com/webmappsrl/wm-package/commit/e06201971295a315fd5ef2a0f149896c48634369))
+* **oc:7984:** 🐛 use classifyField for DEM fields in EcTrackExcelExporter OC:7984 ([#219](https://github.com/webmappsrl/wm-package/issues/219)) ([caed72d](https://github.com/webmappsrl/wm-package/commit/caed72d38e4ba38c87daa14eb102e27a08666396))
+* **oc:8013:** use entityId instead of model-&gt;id in getTaxonomyMorphableRecords call ([#224](https://github.com/webmappsrl/wm-package/issues/224)) ([bcac90b](https://github.com/webmappsrl/wm-package/commit/bcac90b6f1f723a93ccfbc1bcae548272ed9157b))
+* **oc:8041:** use geohub_id from model properties in processDependencies ([#232](https://github.com/webmappsrl/wm-package/issues/232)) ([01ff3f6](https://github.com/webmappsrl/wm-package/commit/01ff3f636471859dfa23018c3958600359bcbcb0))
+* **oc:8042:** resolve role assignment errors ([1d1dc8e](https://github.com/webmappsrl/wm-package/commit/1d1dc8e6d789143a60aaa86d5d8b1f0b8eda3211))
+* **oc:8063:** sync properties['name'] from getTranslations in EcPoiRowProcessor ([#226](https://github.com/webmappsrl/wm-package/issues/226)) ([b919276](https://github.com/webmappsrl/wm-package/commit/b9192763ac845041f96739479f19f45087c4fd2b))
+* **oc:8089:** add novaPath prop to LayerFeatures field for correct eye-link URL ([60ee095](https://github.com/webmappsrl/wm-package/commit/60ee095d55ca11d5860c486917cdff5ca7859c55))
+* **oc:8089:** merge fix/oc-8089-fix-ui-layer-owner into oc_561 ([073260c](https://github.com/webmappsrl/wm-package/commit/073260c7bee533246d5f66db4ae6e4af3df71a79))
+* **oc:8093:** recompile FeatureCollectionMap dist to remove spurious inline-geojson prop ([3377f58](https://github.com/webmappsrl/wm-package/commit/3377f58931edd6ec465425f3bda5e57cfbbebdea))
+* **oc:8140:** skip updateLayersProperty when layer has no filters or manual models ([#235](https://github.com/webmappsrl/wm-package/issues/235)) ([f72224d](https://github.com/webmappsrl/wm-package/commit/f72224d22416362b6efb33ea6e24864ef964c727))
+* **taxonomy:** generate identifier from name if empty, fix uniqueness check ([02479f7](https://github.com/webmappsrl/wm-package/commit/02479f7bddcdda80d8f5c25cfd40828f8b4a5844))
+* **typo:** 🐛 correct misspellings of 'searchable' in method and tab name OC:7833 ([#213](https://github.com/webmappsrl/wm-package/issues/213)) ([6028446](https://github.com/webmappsrl/wm-package/commit/6028446a35e724067fb385c7d66182f1091a222a))
+* use default cache store in BuildAppPoisGeojsonJob uniqueVia ([e9c717d](https://github.com/webmappsrl/wm-package/commit/e9c717d51fe44414c2092e3f8dfd69c7bba24eda))
+
+
+### Reverts
+
+* restore Cache::store('redis') in BuildAppPoisGeojsonJob uniqueVia ([c51048a](https://github.com/webmappsrl/wm-package/commit/c51048a854538cd0ca1eac0cefb54b369f172f14))
+
+
+### Miscellaneous Chores
+
+* add translations and labels for Activity, POI Type, Theme, and Where resources ([d5130ec](https://github.com/webmappsrl/wm-package/commit/d5130ec875fd05aa36dc7c4c98d21fae274c4304))
+* **dependencies:** 🔄 update marshmallow/nova-tiptap version constraint ([ff34028](https://github.com/webmappsrl/wm-package/commit/ff3402845c252ad0000e996ba41bf621ba56b031))
+* **dependencies:** 🔧 update illuminate/contracts and laravel/sanctum version constraints ([d2418b3](https://github.com/webmappsrl/wm-package/commit/d2418b308f84d338532e447a2738bb3ee4f9d14f))
+* **oc:7648:** add package-lock.json for LayerAnalytics card ([9acdec2](https://github.com/webmappsrl/wm-package/commit/9acdec2d37a349d98a9d871c13df209fcbdff2b9))
+
 ## [1.5.0](https://github.com/webmappsrl/wm-package/compare/v1.4.0...v1.5.0) (2026-04-30)
 
 
