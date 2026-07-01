@@ -487,9 +487,29 @@ class GeohubImportService
             $shardUser = User::create($transformedData);
         }
 
-        $this->assignAdministratorRole($shardUser);
+        $this->assignEditorRole($shardUser);
 
         return $shardUser;
+    }
+
+    /**
+     * Assign the Editor role to the user if they have no roles yet.
+     *
+     * @param  User  $user  The user to assign the role to
+     */
+    protected function assignEditorRole(User $user): void
+    {
+        if ($user->roles->isNotEmpty()) {
+            return;
+        }
+
+        $role = Role::where('name', 'Editor')->first();
+        if (! $role) {
+            RolesAndPermissionsService::seedDatabase();
+            $role = Role::where('name', 'Editor')->first();
+        }
+
+        $user->assignRole($role);
     }
 
     /**
