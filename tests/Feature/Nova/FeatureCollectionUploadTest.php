@@ -79,7 +79,7 @@ it('store callback stores the file and returns its path when mode is upload with
     $app = makeApp();
     $fc = FeatureCollection::factory()->createQuietly([
         'app_id' => $app->id,
-        'mode'   => 'upload',
+        'mode' => 'upload',
     ]);
 
     $file = UploadedFile::fake()->createWithContent('map.geojson', '{"type":"FeatureCollection","features":[]}');
@@ -104,8 +104,8 @@ it('afterCreate stores the file and updates file_path in the database', function
 
     $app = makeApp();
     $fc = FeatureCollection::factory()->createQuietly([
-        'app_id'    => $app->id,
-        'mode'      => 'upload',
+        'app_id' => $app->id,
+        'mode' => 'upload',
         'file_path' => null,
     ]);
 
@@ -132,8 +132,8 @@ it('afterCreate throws RuntimeException when storage fails', function () {
 
     $app = makeApp();
     $fc = FeatureCollection::factory()->createQuietly([
-        'app_id'    => $app->id,
-        'mode'      => 'upload',
+        'app_id' => $app->id,
+        'mode' => 'upload',
         'file_path' => null,
     ]);
 

@@ -2,6 +2,7 @@
 
 namespace Wm\WmPackage\Nova;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
 use Kongulov\NovaTabTranslatable\NovaTabTranslatable;
 use Laravel\Nova\Fields\BelongsTo;
@@ -126,7 +127,7 @@ class FeatureCollection extends Resource
         ];
     }
 
-    public static function afterCreate(NovaRequest $request, \Illuminate\Database\Eloquent\Model $model): void
+    public static function afterCreate(NovaRequest $request, Model $model): void
     {
         if ($request->input('mode') !== 'upload' || ! $request->hasFile('file_path')) {
             return;
