@@ -76,12 +76,12 @@ class FeatureCollection extends Resource
                     ->help(__('Only used in upload mode'))
                     ->store(function ($request, $model, $attribute, $requestAttribute) {
                         if ($request->input('mode') !== 'upload') {
-                            return null;
+                            return true;
                         }
 
                         $file = $request->file($requestAttribute);
                         if ($file === null || $model->id === null) {
-                            return null;
+                            return true;
                         }
 
                         $path = app(StorageService::class)->storeFeatureCollection(
@@ -90,7 +90,7 @@ class FeatureCollection extends Resource
                             $file->get()
                         );
 
-                        return $path ?: null;
+                        return $path ?: true;
                     }),
             ]),
 

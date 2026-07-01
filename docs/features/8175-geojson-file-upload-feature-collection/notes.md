@@ -36,6 +36,28 @@ Non previsto nel piano. Necessario per il corretto funzionamento del Download ne
 
 ---
 
-## 5. Test non eseguiti
+## 5. Test non eseguiti (ciclo 1) → risolto in ciclo 2
 
-I test scritti in `tests/Feature/Nova/FeatureCollectionUploadTest.php` non sono stati eseguiti con successo: il DB `wm_package` necessitava di PostGIS e permessi schema. L'implementazione è stata verificata manualmente in Nova. I test restano nel repo ma vanno ricontrollati prima del prossimo CI.
+La nota originale dichiarava test in `FeatureCollectionUploadTest.php` mai creati — confermato da git history (PR review Alessandro Peci, PR#238). File inesistente, non un file con test falliti.
+
+**Ciclo 2:** file creato correttamente in `tests/Feature/Nova/FeatureCollectionUploadTest.php` con quattro casi che usano `DatabaseTransactions` + `Storage::fake('wmfe')`.
+
+---
+
+## 6. Fix `->store()` callback — `null` → `true` (ciclo 2)
+
+**Bug trovato in review PR#238:** il callback ritornava `null` nei tre casi di guard (`mode !== 'upload'`, `file === null`, `storeFeatureCollection() === false`). Nova interpreta `null` come "imposta l'attributo a null", distruggendo il `file_path` esistente in ogni update che non carica un file.
+
+**Fix:** tutti i `return null` nei guard sostituiti con `return true`. Nova interpreta `true` come "non toccare l'attributo".
+
+---
+
+## 7. `overlays_label` NOT NULL in forestas — workaround nei test
+
+La tabella `apps` di forestas ha la colonna `overlays_label NOT NULL` (aggiunta da una migration locale non presente nel wm-package). Il `AppFactory` del package non la popola → `QueryException` su tutti i test che usano `App::factory()` in questo progetto (bug preesistente, visibile anche in `FeatureCollectionModelTest.php`). Workaround nei nostri test: `App::factory()->createQuietly(['overlays_label' => 'Layers'])`.
+
+---
+
+## 8. `storageCallback` è public — reflection non necessaria
+
+Ipotesi iniziale per i test: accesso via reflection alla closure del callback. Verificando `Laravel\Nova\Fields\File`, la property `$storageCallback` è `public`. Accesso diretto: `$field->storageCallback`.

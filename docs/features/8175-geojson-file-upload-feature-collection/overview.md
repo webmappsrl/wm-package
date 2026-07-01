@@ -14,14 +14,15 @@ Attualmente `mode: upload` è inutilizzabile da Nova — il campo file manca e l
 
 - [x] Campo `File::make(__('GeoJSON File'), 'file_path')` nel panel `Source` di `FeatureCollection.php`
 - [x] Campo sempre visibile nei form con `->help('Only used in upload mode')` (come External URL)
-- [x] Guardia server-side nel callback `->store()`: se `mode !== 'upload'`, restituire `null` senza processare il file
-- [x] Se `storeFeatureCollection()` restituisce `false`, restituire `null` per preservare il `file_path` precedente
+- [x] Guardia server-side nel callback `->store()`: se `mode !== 'upload'`, restituire `true` (Nova non tocca l'attributo) senza processare il file
+- [x] Se `storeFeatureCollection()` restituisce `false`, restituire `true` per preservare il `file_path` precedente — **fix PR#238**: il valore `null` causava la sovrascrittura silenziosa del path esistente
 - [x] Upload in Create supportato tramite `afterCreate()` statico sulla Resource
 - [x] Re-upload sovrascrive il file esistente su MinIO (stesso path `/{shard}/{appId}/feature-collection/{id}.geojson`)
 - [x] Tipi accettati: `.geojson`, `.json`
 - [x] Dimensione massima: 20 MB (`->rules('max:20480')`)
 - [x] Campo nascosto dall'index (`->hideFromIndex()`)
 - [x] `->disk('wmfe')` per download corretto dal detail view
+- [ ] Test coverage in `tests/Feature/Nova/FeatureCollectionUploadTest.php`: guard mode≠upload, guard no-file, update happy path, create via afterCreate
 
 ## Rischi
 
@@ -41,4 +42,5 @@ Attualmente `mode: upload` è inutilizzabile da Nova — il campo file manca e l
 | File | Repo | Tipo |
 |---|---|---|
 | `src/Nova/FeatureCollection.php` | wm-package | Modifica |
+| `tests/Feature/Nova/FeatureCollectionUploadTest.php` | wm-package | Nuovo |
 | `docker/configs/phpfpm/php.ini` | forestas | Modifica |

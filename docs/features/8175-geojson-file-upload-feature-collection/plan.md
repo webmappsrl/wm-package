@@ -72,3 +72,37 @@ Aggiunto `upload_max_filesize = 20M` per supportare GeoJSON fino a 20MB.
 2. Create nuova FC con `mode: upload` e file allegato → `afterCreate` processa il file → `file_path` impostato ✓
 3. Download dal detail view → funziona tramite `->disk('wmfe')` ✓
 4. Upload con `mode !== 'upload'` → guardia server-side ignora il file ✓
+
+---
+
+## Ciclo 2 — Fix PR#238
+
+### Task 4 — Fix `->store()` callback: return `true` nei guard ✅
+
+**File:** `src/Nova/FeatureCollection.php`
+
+Il callback ritornava `null` nei casi di guard, causando la sovrascrittura di `file_path` con NULL su update.
+Tutti e tre i `return null` sostituiti con `return true` (Nova non tocca l'attributo):
+
+- `mode !== 'upload'` → `return true`
+- `file === null || model->id === null` → `return true`
+- `storeFeatureCollection() === false` → `return true`
+
+**Commit:** `fix(oc:8175): return true in store guard cases to preserve existing file_path`
+
+---
+
+### Task 5 — Test coverage ✅
+
+**File:** `tests/Feature/Nova/FeatureCollectionUploadTest.php`
+
+Quattro test con `DatabaseTransactions` + `Storage::fake('wmfe')`:
+
+1. `store callback returns true when mode is not upload` — guard mode
+2. `store callback returns true when mode is upload but no file is attached` — guard no-file
+3. `store callback stores the file and returns its path when mode is upload with a file` — happy path update
+4. `afterCreate stores the file and updates file_path in the database` — create flow
+
+`storageCallback` è `public` su `Laravel\Nova\Fields\File` → accesso diretto, reflection non necessaria.
+
+**Commit:** `test(oc:8175): add upload behavior tests for FeatureCollection Nova resource`
