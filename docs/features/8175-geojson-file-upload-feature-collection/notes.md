@@ -58,6 +58,22 @@ La tabella `apps` di forestas ha la colonna `overlays_label NOT NULL` (aggiunta 
 
 ---
 
-## 8. `storageCallback` è public — reflection non necessaria
+## 8. Fix post-review: `afterCreate` lancia eccezione su storage failure
+
+**Trovato in review:** se `storeFeatureCollection()` ritorna `false`, l'utente non riceveva nessun errore — il record veniva creato con `file_path = null` in silenzio.
+
+**Fix:** sostituito `if ($path) { $model->update(...) }` con eccezione esplicita quando `$path === false`. Nova cattura l'eccezione e mostra un messaggio di errore all'utente.
+
+---
+
+## 9. Fix post-review: `updateQuietly()` per evitare doppio dispatch observer
+
+**Trovato in review:** `$model->update(['file_path' => $path])` in `afterCreate` triggerava l'observer `saved` una seconda volta → `UpdateAppConfigJob` dispatched due volte su ogni create con file upload.
+
+**Fix:** sostituito con `$model->updateQuietly(['file_path' => $path])`.
+
+---
+
+## 10. `storageCallback` è public — reflection non necessaria
 
 Ipotesi iniziale per i test: accesso via reflection alla closure del callback. Verificando `Laravel\Nova\Fields\File`, la property `$storageCallback` è `public`. Accesso diretto: `$field->storageCallback`.

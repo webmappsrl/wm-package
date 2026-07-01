@@ -131,9 +131,11 @@ class FeatureCollection extends Resource
             $request->file('file_path')->get()
         );
 
-        if ($path) {
-            $model->update(['file_path' => $path]);
+        if (! $path) {
+            throw new \RuntimeException(__('Failed to store GeoJSON file. Please try again.'));
         }
+
+        $model->updateQuietly(['file_path' => $path]);
     }
 
     public function cards(NovaRequest $request): array
