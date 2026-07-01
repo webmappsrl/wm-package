@@ -77,3 +77,18 @@ La tabella `apps` di forestas ha la colonna `overlays_label NOT NULL` (aggiunta 
 ## 10. `storageCallback` è public — reflection non necessaria
 
 Ipotesi iniziale per i test: accesso via reflection alla closure del callback. Verificando `Laravel\Nova\Fields\File`, la property `$storageCallback` è `public`. Accesso diretto: `$field->storageCallback`.
+
+---
+
+## 11. `return $path ?: true` — ritorna la stringa del path nel happy path
+
+**Deviazione da plan.md §Task4:** il piano descriveva "tutti i return null sostituiti con return true", ma il terzo caso (storage riuscito) restituisce `$path` (stringa), non `true`. `return true` avrebbe detto a Nova "non toccare l'attributo" → `file_path` non sarebbe mai scritto su DB in update. La stringa ritornata viene usata da Nova come valore da persistere.
+
+In Ciclo 3 il codice è stato ristrutturato esplicitamente per chiarezza:
+```php
+if (! $path) {
+    Log::warning('FeatureCollection GeoJSON upload failed', ['fc_id' => $model->id]);
+    return true;
+}
+return $path;
+```

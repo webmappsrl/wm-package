@@ -12,8 +12,14 @@ use Tests\TestCase;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\FeatureCollection;
 use Wm\WmPackage\Nova\FeatureCollection as FeatureCollectionResource;
+use Wm\WmPackage\Services\StorageService;
 
 uses(TestCase::class, DatabaseTransactions::class);
+
+function makeApp(): App
+{
+    return App::factory()->createQuietly(['overlays_label' => 'Layers']);
+}
 
 /**
  * Extracts the File field with attribute 'file_path' from the FeatureCollection Nova resource.
@@ -37,13 +43,10 @@ function featureCollectionFileField(FeatureCollection $model): File
 it('store callback returns true when mode is not upload, preserving existing file_path', function () {
     Storage::fake('wmfe');
 
-    $app = App::factory()->createQuietly(['overlays_label' => 'Layers']);
-    $existingPath = '/'.config('wm-package.shard_name', 'webmapp').'/'.$app->id.'/feature-collection/99.geojson';
-    $fc = FeatureCollection::factory()->createQuietly([
-        'app_id' => $app->id,
-        'mode'      => 'upload',
-        'file_path' => $existingPath,
-    ]);
+    $app = makeApp();
+    $fc = FeatureCollection::factory()->createQuietly(['app_id' => $app->id, 'mode' => 'upload']);
+    $existingPath = '/'.config('wm-package.shard_name', 'webmapp').'/'.$app->id.'/feature-collection/'.$fc->id.'.geojson';
+    $fc->updateQuietly(['file_path' => $existingPath]);
 
     $request = NovaRequest::create('/nova-api/feature-collections/'.$fc->id, 'PUT', ['mode' => 'generated']);
     $callback = featureCollectionFileField($fc)->storageCallback;
@@ -57,13 +60,10 @@ it('store callback returns true when mode is not upload, preserving existing fil
 it('store callback returns true when mode is upload but no file is attached', function () {
     Storage::fake('wmfe');
 
-    $app = App::factory()->createQuietly(['overlays_label' => 'Layers']);
-    $existingPath = '/'.config('wm-package.shard_name', 'webmapp').'/'.$app->id.'/feature-collection/99.geojson';
-    $fc = FeatureCollection::factory()->createQuietly([
-        'app_id' => $app->id,
-        'mode'      => 'upload',
-        'file_path' => $existingPath,
-    ]);
+    $app = makeApp();
+    $fc = FeatureCollection::factory()->createQuietly(['app_id' => $app->id, 'mode' => 'upload']);
+    $existingPath = '/'.config('wm-package.shard_name', 'webmapp').'/'.$app->id.'/feature-collection/'.$fc->id.'.geojson';
+    $fc->updateQuietly(['file_path' => $existingPath]);
 
     $request = NovaRequest::create('/nova-api/feature-collections/'.$fc->id, 'PUT', ['mode' => 'upload']);
     $callback = featureCollectionFileField($fc)->storageCallback;
@@ -76,7 +76,7 @@ it('store callback returns true when mode is upload but no file is attached', fu
 it('store callback stores the file and returns its path when mode is upload with a file', function () {
     Storage::fake('wmfe');
 
-    $app = App::factory()->createQuietly(['overlays_label' => 'Layers']);
+    $app = makeApp();
     $fc = FeatureCollection::factory()->createQuietly([
         'app_id' => $app->id,
         'mode'   => 'upload',
@@ -102,7 +102,7 @@ it('store callback stores the file and returns its path when mode is upload with
 it('afterCreate stores the file and updates file_path in the database', function () {
     Storage::fake('wmfe');
 
-    $app = App::factory()->createQuietly(['overlays_label' => 'Layers']);
+    $app = makeApp();
     $fc = FeatureCollection::factory()->createQuietly([
         'app_id'    => $app->id,
         'mode'      => 'upload',
@@ -125,4 +125,31 @@ it('afterCreate stores the file and updates file_path in the database', function
 
     expect($fc->fresh()->file_path)->toBe($expectedPath);
     expect(Storage::disk('wmfe')->exists($expectedPath))->toBeTrue();
+});
+
+it('afterCreate throws RuntimeException when storage fails', function () {
+    Storage::fake('wmfe');
+
+    $app = makeApp();
+    $fc = FeatureCollection::factory()->createQuietly([
+        'app_id'    => $app->id,
+        'mode'      => 'upload',
+        'file_path' => null,
+    ]);
+
+    $mock = Mockery::mock(StorageService::class);
+    $mock->shouldReceive('storeFeatureCollection')->andReturn(false);
+    app()->instance(StorageService::class, $mock);
+
+    $file = UploadedFile::fake()->createWithContent('map.geojson', '{"type":"FeatureCollection","features":[]}');
+    $request = NovaRequest::create(
+        '/nova-api/feature-collections',
+        'POST',
+        ['mode' => 'upload'],
+        [],
+        ['file_path' => $file]
+    );
+
+    expect(fn () => FeatureCollectionResource::afterCreate($request, $fc))
+        ->toThrow(RuntimeException::class);
 });

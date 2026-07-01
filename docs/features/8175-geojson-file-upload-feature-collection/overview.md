@@ -22,7 +22,7 @@ Attualmente `mode: upload` è inutilizzabile da Nova — il campo file manca e l
 - [x] Dimensione massima: 20 MB (`->rules('max:20480')`)
 - [x] Campo nascosto dall'index (`->hideFromIndex()`)
 - [x] `->disk('wmfe')` per download corretto dal detail view
-- [ ] Test coverage in `tests/Feature/Nova/FeatureCollectionUploadTest.php`: guard mode≠upload, guard no-file, update happy path, create via afterCreate
+- [x] Test coverage in `tests/Feature/Nova/FeatureCollectionUploadTest.php`: guard mode≠upload, guard no-file, update happy path, create via afterCreate, afterCreate RuntimeException on storage failure
 
 ## Rischi
 

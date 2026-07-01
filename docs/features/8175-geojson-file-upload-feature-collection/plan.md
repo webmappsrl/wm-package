@@ -106,3 +106,21 @@ Quattro test con `DatabaseTransactions` + `Storage::fake('wmfe')`:
 `storageCallback` è `public` su `Laravel\Nova\Fields\File` → accesso diretto, reflection non necessaria.
 
 **Commit:** `test(oc:8175): add upload behavior tests for FeatureCollection Nova resource`
+
+---
+
+## Ciclo 3 — Cleanup review PR#238 (seconda iterazione)
+
+### Task 6 — Log::warning in store callback su update failure ✅
+
+**File:** `src/Nova/FeatureCollection.php`
+
+Storage failure silenzioso in update: `return $path ?: true` non lasciava nessuna traccia diagnosticabile. Aggiunto `Log::warning('FeatureCollection GeoJSON upload failed', ['fc_id' => ...])` prima del `return true` nel caso negativo. Il callback ora ritorna esplicitamente `$path` nel caso positivo per maggiore chiarezza.
+
+### Task 7 — Cleanup test file ✅
+
+**File:** `tests/Feature/Nova/FeatureCollectionUploadTest.php`
+
+- Helper `makeApp()` estratto per `App::factory()->createQuietly(['overlays_label' => 'Layers'])` (era ripetuto 4 volte)
+- Path hardcoded `99` sostituiti con `$fc->id` nei test 1 e 2 (creazione FC separata da impostazione `file_path`)
+- Aggiunto 5° test: `afterCreate throws RuntimeException when storage fails` — usa `Mockery` per simulare `storeFeatureCollection()` che ritorna `false`

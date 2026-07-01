@@ -2,6 +2,7 @@
 
 namespace Wm\WmPackage\Nova;
 
+use Illuminate\Support\Facades\Log;
 use Kongulov\NovaTabTranslatable\NovaTabTranslatable;
 use Laravel\Nova\Fields\BelongsTo;
 use Laravel\Nova\Fields\BelongsToMany;
@@ -90,7 +91,13 @@ class FeatureCollection extends Resource
                             $file->get()
                         );
 
-                        return $path ?: true;
+                        if (! $path) {
+                            Log::warning('FeatureCollection GeoJSON upload failed', ['fc_id' => $model->id]);
+
+                            return true;
+                        }
+
+                        return $path;
                     }),
             ]),
 
