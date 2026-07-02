@@ -875,10 +875,7 @@ class GeohubImportService
                 $ecTrack = $ecTrackModelClass::where('properties->geohub_id', $trackRelation->{$foreignKey})->first();
 
                 if ($ecTrack) {
-                    $alreadyExists = $model->ecTracks()->where('layerable_type', $ecTrackModelClass)->where('layerable_id', $ecTrack->id)->exists();
-
-                    if (! $alreadyExists) {
-                        $model->ecTracks()->attach($ecTrack->id, ['created_at' => now(), 'updated_at' => now()]);
+                    if ($this->attachEcModelToLayer($model, 'ecTracks', $ecTrack, $ecTrackModelClass)) {
                         $totalTracksAssigned++;
                         $this->logger->info("✅ Track assigned: Geohub ID {$trackRelation->{$foreignKey}} -> Local ID {$ecTrack->id}");
                     } else {
@@ -929,7 +926,7 @@ class GeohubImportService
 
             $poiIds = $this->dbConnection->table($table)
                 ->whereIn($taxonomyIdCol, $layerTaxonomyIds)
-                ->where($morphableTypeCol, 'like', '%EcPoi%')
+                ->where($morphableTypeCol, 'App\\Models\\EcPoi')
                 ->pluck($morphableIdCol);
 
             $this->logger->info("  [{$configKey}] {$layerTaxonomyIds->count()} term(s) → {$poiIds->count()} EcPoi ID(s)");
@@ -960,10 +957,7 @@ class GeohubImportService
                 continue;
             }
 
-            $alreadyExists = $model->ecPois()->where('layerable_id', $ecPoi->id)->exists();
-
-            if (! $alreadyExists) {
-                $model->ecPois()->attach($ecPoi->id, ['created_at' => now(), 'updated_at' => now()]);
+            if ($this->attachEcModelToLayer($model, 'ecPois', $ecPoi, 'App\\Models\\EcPoi')) {
                 $totalAssigned++;
                 $this->logger->info("✅ EcPoi assigned: Geohub ID {$geohubPoiId} → Local ID {$ecPoi->id}");
             } else {
@@ -972,6 +966,26 @@ class GeohubImportService
         }
 
         $this->logger->info("📊 SUMMARY for Layer {$model->id}: assigned={$totalAssigned}, already={$totalAlreadyAssigned}, not_found={$totalNotFound}, total=" . $model->ecPois()->count());
+    }
+
+    /**
+     * Attach a local EcTrack/EcPoi model to a layer via the given morph relation,
+     * unless the association already exists. Returns true if a new attach happened.
+     */
+    private function attachEcModelToLayer(Model $layer, string $relationMethod, Model $ecModel, string $morphableTypeClass): bool
+    {
+        $alreadyExists = $layer->{$relationMethod}()
+            ->where('layerable_type', $morphableTypeClass)
+            ->where('layerable_id', $ecModel->id)
+            ->exists();
+
+        if ($alreadyExists) {
+            return false;
+        }
+
+        $layer->{$relationMethod}()->attach($ecModel->id, ['created_at' => now(), 'updated_at' => now()]);
+
+        return true;
     }
 
     public function handleOverlayLayers(Model $model): void

@@ -3,8 +3,10 @@
 namespace Wm\WmPackage\Observers;
 
 use Illuminate\Support\Facades\Log;
+use Wm\WmPackage\Jobs\Layer\SyncAutoLayerAfterPoiTaxonomyChangeJob;
 use Wm\WmPackage\Jobs\Layer\SyncAutoLayerAfterTrackTaxonomyChangeJob;
 use Wm\WmPackage\Models\App;
+use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Models\TaxonomyActivityable;
@@ -48,8 +50,9 @@ class TaxonomyActivityablesObserver
         if (str_contains($relatedTypeClass, '\Layer')) {
             $layer = Layer::find($taxonomyActivityable->taxonomy_activityable_id);
             if ($layer !== null) {
-                // Ricalcola le track associate al layer in base alle tassonomie
+                // Ricalcola le track e i POI associati al layer in base alle tassonomie
                 $this->layerService->assignTracksByTaxonomy($layer);
+                $this->layerService->assignPoisByTaxonomy($layer);
 
                 // Aggiorna le features correlate
                 $this->layerService->updateLayersPropertyOnAllLayeredFeaturesWithJobs($layer);
@@ -91,6 +94,29 @@ class TaxonomyActivityablesObserver
 
                 Log::info('Auto layers resynced for track taxonomy change', [
                     'track_id' => $relatedModel->id,
+                    'candidate_layers_count' => $candidateLayers->count(),
+                    'candidate_layer_ids' => $candidateLayers->pluck('id')->toArray(),
+                ]);
+
+                // Reindex eseguito nel job di sync layer, dopo aggiornamento pivot.
+            } elseif ($relatedModel instanceof EcPoi) {
+                $debounceAt = now()->addSeconds($this->getDebounceDelaySeconds());
+                $candidateLayers = Layer::query()
+                    ->whereHas('taxonomyActivities', fn ($query) => $query->where('taxonomy_activities.id', $taxonomyActivityable->taxonomy_activity_id))
+                    ->where(function ($query) use ($relatedModel) {
+                        $query->where('app_id', $relatedModel->app_id)
+                            ->orWhereHas('associatedApps', fn ($q) => $q->where('apps.id', $relatedModel->app_id));
+                    })
+                    ->get()
+                    ->filter(fn (Layer $layer) => $layer->isAutoPoiMode());
+
+                foreach ($candidateLayers as $layer) {
+                    SyncAutoLayerAfterPoiTaxonomyChangeJob::dispatch($layer->id, $relatedModel->id)
+                        ->delay($debounceAt);
+                }
+
+                Log::info('Auto layers resynced for poi taxonomy change', [
+                    'poi_id' => $relatedModel->id,
                     'candidate_layers_count' => $candidateLayers->count(),
                     'candidate_layer_ids' => $candidateLayers->pluck('id')->toArray(),
                 ]);

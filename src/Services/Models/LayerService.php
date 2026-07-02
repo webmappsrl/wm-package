@@ -373,4 +373,86 @@ class LayerService extends BaseService
             'where_ids' => $layerWhereIds,
         ]);
     }
+
+    /**
+     * Assegna automaticamente i POI che hanno le stesse tassonomie del layer.
+     * Mirror di assignTracksByTaxonomy() per EcPoi: supporta filtro per TaxonomyActivity
+     * (JOIN) e TaxonomyWhere (ST_Intersects), o entrambi (AND).
+     */
+    public function assignPoisByTaxonomy(Layer $layer): void
+    {
+        if (! $layer->isAutoPoiMode()) {
+            return;
+        }
+
+        $layerTaxonomyIds = $layer->taxonomyActivities->pluck('id')->toArray();
+        $layerWhereIds = $layer->taxonomyWheres->pluck('id')->filter()->toArray();
+
+        $layerAppIds = [
+            $layer->app_id,
+            ...$layer->associatedApps->pluck('id')->toArray(),
+        ];
+
+        if (empty($layerAppIds) || (empty($layerTaxonomyIds) && empty($layerWhereIds))) {
+            $layer->ecPois()->sync([]);
+
+            return;
+        }
+
+        $ecPoiModelClass = config('wm-package.ec_poi_model', EcPoi::class);
+        $poiTable = (new $ecPoiModelClass)->getTable();
+        $poiMorphTypes = array_values(array_unique([
+            $ecPoiModelClass,
+            EcPoi::class,
+            'App\\Models\\EcPoi',
+        ]));
+
+        // Base query: app filter + geometry not null
+        $query = DB::table($poiTable)
+            ->whereIn("{$poiTable}.app_id", $layerAppIds)
+            ->whereNotNull("{$poiTable}.geometry");
+
+        // Filter by TaxonomyActivity via JOIN (se presenti)
+        if (! empty($layerTaxonomyIds)) {
+            $query->join(
+                'taxonomy_activityables',
+                'taxonomy_activityables.taxonomy_activityable_id',
+                '=',
+                "{$poiTable}.id"
+            )
+                ->whereIn('taxonomy_activityables.taxonomy_activityable_type', $poiMorphTypes)
+                ->whereIn('taxonomy_activityables.taxonomy_activity_id', $layerTaxonomyIds);
+        }
+
+        // Filter by TaxonomyWhere via ST_Intersects (se presenti)
+        if (! empty($layerWhereIds)) {
+            $query->whereExists(function ($sub) use ($layerWhereIds, $poiTable) {
+                $sub->select(DB::raw(1))
+                    ->from('taxonomy_wheres')
+                    ->whereIn('taxonomy_wheres.id', $layerWhereIds)
+                    ->whereNotNull('taxonomy_wheres.geometry')
+                    ->whereRaw("ST_Intersects({$poiTable}.geometry::geometry, taxonomy_wheres.geometry::geometry)");
+            });
+        }
+
+        $poiIds = $query->distinct()->pluck("{$poiTable}.id")->toArray();
+
+        $now = now();
+        $syncPayload = [];
+        foreach ($poiIds as $poiId) {
+            $syncPayload[$poiId] = [
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+        }
+
+        $layer->ecPois()->sync($syncPayload);
+
+        Log::info('POI sincronizzati automaticamente al layer', [
+            'layer_id' => $layer->id,
+            'poi_count' => count($poiIds),
+            'taxonomy_ids' => $layerTaxonomyIds,
+            'where_ids' => $layerWhereIds,
+        ]);
+    }
 }
