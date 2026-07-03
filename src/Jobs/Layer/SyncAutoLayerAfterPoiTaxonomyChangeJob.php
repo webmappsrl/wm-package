@@ -13,7 +13,6 @@ use Wm\WmPackage\Jobs\BuildAppPoisGeojsonJob;
 use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Services\Models\LayerService;
-use Wm\WmPackage\Services\PBFGeneratorService;
 
 class SyncAutoLayerAfterPoiTaxonomyChangeJob implements ShouldBeUnique, ShouldQueue
 {
@@ -37,10 +36,8 @@ class SyncAutoLayerAfterPoiTaxonomyChangeJob implements ShouldBeUnique, ShouldQu
         return 'sync-auto-layer-poi-taxonomy-'.$this->layerId;
     }
 
-    public function handle(
-        LayerService $layerService,
-        PBFGeneratorService $pbfGeneratorService
-    ): void {
+    public function handle(LayerService $layerService): void
+    {
         $layer = Layer::find($this->layerId);
         if (! $layer || ! $layer->isAutoPoiMode()) {
             return;
@@ -48,7 +45,6 @@ class SyncAutoLayerAfterPoiTaxonomyChangeJob implements ShouldBeUnique, ShouldQu
 
         $layerService->assignPoisByTaxonomy($layer);
         $layerService->updateLayersPropertyOnAllLayeredFeaturesWithJobs($layer);
-        $pbfGeneratorService->regeneratePbfsForLayer($layer);
 
         // Reindex solo dopo il sync del pivot, così `layers` in indice è coerente.
         if ($this->poiId) {

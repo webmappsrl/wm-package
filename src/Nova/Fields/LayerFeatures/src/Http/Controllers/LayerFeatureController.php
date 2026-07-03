@@ -249,7 +249,10 @@ class LayerFeatureController
             $layer->{$relationName}()->sync($validatedData['features'] ?? []);
         }
 
-        $this->pbfGeneratorService->regeneratePbfsForLayer($layer);
+        // I PBF non contengono mai contenuto POI: rigenerarli ha senso solo per ecTracks.
+        if ($relationName === 'ecTracks') {
+            $this->pbfGeneratorService->regeneratePbfsForLayer($layer);
+        }
 
         $tableName = $model->getTable();
         $assignedIds = $layer->{$relationName}()->select($tableName.'.id')->pluck('id')->toArray();
