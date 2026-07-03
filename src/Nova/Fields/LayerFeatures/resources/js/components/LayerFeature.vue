@@ -138,7 +138,7 @@ export default defineComponent({
         });
 
         const isManual = ref<boolean>(
-            props.edit ? props.field?.trackMode === 'manual' : true
+            props.edit ? props.field?.mode === 'manual' : true
         );
 
         const {
@@ -231,7 +231,7 @@ export default defineComponent({
         onMounted(() => {
             const savedIds = props.field?.selectedEcFeaturesIds;
             if (
-                props.field?.trackMode === 'manual' &&
+                props.field?.mode === 'manual' &&
                 Array.isArray(savedIds) &&
                 savedIds.length > 0
             ) {

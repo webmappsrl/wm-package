@@ -7,7 +7,7 @@ export interface LayerFeatureProps {
         modelName?: string;
         layerId?: number;
         value?: any[];
-        trackMode?: 'auto' | 'manual';
+        mode?: 'auto' | 'manual';
         novaPath?: string;
     };
     edit?: boolean;
