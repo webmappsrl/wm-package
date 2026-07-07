@@ -11,9 +11,7 @@ use Laravel\Fortify\Fortify;
 
 class EnforceNovaAccessOnLogin
 {
-    public function __construct(private Request $request)
-    {
-    }
+    public function __construct(private Request $request) {}
 
     public function handle(Login $event): void
     {

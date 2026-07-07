@@ -5,6 +5,7 @@ namespace Wm\WmPackage\Tests\Unit\Services;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Http\Request;
 use Mockery;
+use Spatie\Permission\Models\Role;
 use Wm\WmPackage\Services\RolesAndPermissionsService;
 use Wm\WmPackage\Tests\TestCase;
 
@@ -99,10 +100,10 @@ class RolesAndPermissionsServiceTest extends TestCase
     {
         RolesAndPermissionsService::seedDatabase();
 
-        $admin = \Spatie\Permission\Models\Role::findByName('Administrator');
-        $editor = \Spatie\Permission\Models\Role::findByName('Editor');
-        $validator = \Spatie\Permission\Models\Role::findByName('Validator');
-        $guest = \Spatie\Permission\Models\Role::findByName('Guest');
+        $admin = Role::findByName('Administrator');
+        $editor = Role::findByName('Editor');
+        $validator = Role::findByName('Validator');
+        $guest = Role::findByName('Guest');
 
         $this->assertTrue($admin->hasPermissionTo('access-nova'));
         $this->assertTrue($editor->hasPermissionTo('access-nova'));
