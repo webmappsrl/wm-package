@@ -72,6 +72,8 @@ class LayerFeatures extends Field
         $model = new $modelClass;
         $modelName = $model->getLayerRelationName();
 
+        $isAuto = $relationName === 'ecTracks' ? $layer->isAutoTrackMode() : $layer->isAutoPoiMode();
+
         $this->withMeta([
             'selectedEcFeaturesIds' => $selectedFeatureIds,
             'model' => $modelClass,
@@ -79,7 +81,7 @@ class LayerFeatures extends Field
             'layerId' => $layer->id,
             'modelClass' => $modelClass,
             'model_class' => $modelClass,
-            'trackMode' => $layer->isAutoTrackMode() ? 'auto' : 'manual',
+            'mode' => $isAuto ? 'auto' : 'manual',
             'novaPath' => '/'.trim(Nova::path(), '/'),
         ]);
     }

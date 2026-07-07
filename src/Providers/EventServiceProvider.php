@@ -10,6 +10,7 @@ use Illuminate\Queue\Events\JobFailed;
 use Spatie\Backup\Events\BackupWasSuccessful;
 use Wm\WmPackage\Events\OrderListReorderedEvent;
 use Wm\WmPackage\Listeners\BackupCompletedListener;
+use Wm\WmPackage\Listeners\EnforceNovaAccessOnLogin;
 use Wm\WmPackage\Listeners\FailedJobsListener;
 use Wm\WmPackage\Listeners\OrderListReorderedListener;
 use Wm\WmPackage\Listeners\UpdateLastLoginAt;
@@ -26,6 +27,7 @@ class EventServiceProvider extends ServiceProvider
             SendEmailVerificationNotification::class,
         ],
         Login::class => [
+            EnforceNovaAccessOnLogin::class,
             UpdateLastLoginAt::class,
         ],
         BackupWasSuccessful::class => [

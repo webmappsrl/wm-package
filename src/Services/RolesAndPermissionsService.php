@@ -55,11 +55,16 @@ class RolesAndPermissionsService
         Permission::firstOrCreate(['name' => 'validate pois']);
         Permission::firstOrCreate(['name' => 'validate tracks']);
         Permission::firstOrCreate(['name' => 'manage roles and permissions']);
+        Permission::firstOrCreate(['name' => 'access-nova']);
 
         $adminRole = Role::where('name', 'Administrator')->first();
         $adminRole->givePermissionTo('validate source surveys');
         $adminRole->givePermissionTo('validate pois');
         $adminRole->givePermissionTo('validate tracks');
         $adminRole->givePermissionTo('manage roles and permissions');
+        $adminRole->givePermissionTo('access-nova');
+
+        Role::where('name', 'Editor')->first()->givePermissionTo('access-nova');
+        Role::where('name', 'Validator')->first()->givePermissionTo('access-nova');
     }
 }

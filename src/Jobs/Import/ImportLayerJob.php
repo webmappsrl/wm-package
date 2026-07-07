@@ -22,6 +22,8 @@ class ImportLayerJob extends BaseImportJob
         $this->geohubImportService->associateLayersWithTaxonomy('taxonomy_activity', $model);
         // process ec_track relationship by finding if the ec track has relation with the same taxonomy_theme as the layer
         $this->geohubImportService->associateLayersWithEcTrack('taxonomy_theme', $model);
+        // process ec_poi relationship by finding if the ec poi has relation with the same taxonomy_poi_type as the layer
+        $this->geohubImportService->associateLayersWithEcPoi($model);
         // handle overlay_layers relationship
         $this->geohubImportService->handleOverlayLayers($model);
         // get feature images from taxonomies if necessary

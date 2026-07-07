@@ -92,4 +92,21 @@ class RolesAndPermissionsServiceTest extends TestCase
 
         $this->assertFalse(RolesAndPermissionsService::allows($request));
     }
+
+    // --- seedDatabase: access-nova permission ---
+
+    public function test_seed_database_grants_access_nova_to_management_roles(): void
+    {
+        RolesAndPermissionsService::seedDatabase();
+
+        $admin = \Spatie\Permission\Models\Role::findByName('Administrator');
+        $editor = \Spatie\Permission\Models\Role::findByName('Editor');
+        $validator = \Spatie\Permission\Models\Role::findByName('Validator');
+        $guest = \Spatie\Permission\Models\Role::findByName('Guest');
+
+        $this->assertTrue($admin->hasPermissionTo('access-nova'));
+        $this->assertTrue($editor->hasPermissionTo('access-nova'));
+        $this->assertTrue($validator->hasPermissionTo('access-nova'));
+        $this->assertFalse($guest->hasPermissionTo('access-nova'));
+    }
 }

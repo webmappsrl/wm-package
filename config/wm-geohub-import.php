@@ -260,6 +260,18 @@ return [
                     'foreign_key' => 'layerable_id',
                     'morphable_type' => ['key' => 'layerable_type', 'value' => 'App\\Models\\OverlayLayer'],
                 ],
+                'taxonomy_poi_types' => [
+                    'pivot_table' => 'taxonomy_poi_typeables',
+                    'key' => 'taxonomy_poi_type_id',
+                    'foreign_key' => 'taxonomy_poi_typeable_id',
+                    'morphable_type' => ['key' => 'taxonomy_poi_typeable_type', 'value' => 'App\\Models\\Layer'],
+                ],
+                'taxonomy_where' => [
+                    'pivot_table' => 'taxonomy_whereables',
+                    'key' => 'taxonomy_where_id',
+                    'foreign_key' => 'taxonomy_whereable_id',
+                    'morphable_type' => ['key' => 'taxonomy_whereable_type', 'value' => 'App\\Models\\Layer'],
+                ],
             ],
         ],
 

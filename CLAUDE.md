@@ -57,6 +57,7 @@ protected static function newFactory(): Factory
 
 | Feature | Ticket | Moduli toccati | Note |
 |---|---|---|---|
+| Import Layer: associazione EcPoi via taxonomy + poi_mode | oc:8043 | `src/Services/Import/GeohubImportService.php`, `src/Jobs/Import/ImportLayerJob.php`, `config/wm-geohub-import.php`, `src/Models/Layer.php`, `src/Services/Models/LayerService.php`, `src/Nova/Fields/LayerFeatures/**`, `src/Observers/{TaxonomyActivityablesObserver,TaxonomyWhereablesObserver,LayerObserver,EcPoiObserver}.php`, `src/Jobs/Layer/SyncAutoLayerAfterPoiTaxonomyChangeJob.php`, `tests/Feature/GeohubImportServiceAssociateLayerPoiTest.php`, `tests/Feature/LayerAssignPoisByTaxonomyTest.php` | Round 1: `associateLayersWithEcPoi()` traversa tutti e tre i meccanismi taxonomy (theme, where, poi_types) durante l'import GeoHub. Round 2 (fix review): cleanup morphable_type/idempotenza/duplicazione + nuovo `poi_mode` (auto/manuale) a piena parità con `track_mode` per l'associazione manuale POI↔Layer da Nova |
 | Utenti importati: ruolo Editor in import GeoHub | oc:8042 | `src/Services/Import/GeohubImportService.php`, `src/Services/RolesAndPermissionsService.php`, `database/migrations/zz_2026_06_26_000001_add_editor_role.php.stub` | `assignEditorRole()` condizionale; Editor aggiunto a `seedDatabase()` |
 | Layer Nova: Map panel dedicato + EcPoi sulla mappa | oc:8160 | `src/Nova/Layer.php`, `src/Models/Layer.php`, `resources/lang/it.json`, `resources/lang/en.json` | `FeatureCollectionMap` spostato in panel `__('Map')` separato; `getFeatureCollectionMap()` include EcPoi come Point features (tooltip nome, link `ec-pois/{id}`) |
 | BulkEditAction: bulk edit dinamico da Nova Resource | oc:8133 | `src/Nova/Actions/BulkEditAction.php`, `tests/Unit/Nova/Actions/BulkEditActionTest.php`, `tests/Feature/Nova/Actions/BulkEditActionFeatureTest.php` | Action parametrica: `new BulkEditAction(Resource::class, ['field'])` — filtra campi da Resource, appiattisce Panel/Tab, `saveQuietly()` in `DB::transaction()` |
@@ -72,8 +73,52 @@ protected static function newFactory(): Factory
 | Refactor SuperAdminService | oc:8006 | `src/Services/RolesAndPermissionsService.php`, `src/Support/SuperAdminService.php` (rimosso), `src/Nova/App.php`, `src/Nova/Actions/GenerateAppIconsAction.php`, `src/Nova/Actions/BuildAppPoisGeojsonAction.php`, `src/Policies/AppPolicy.php` | Sposta i check super-admin email-based in RolesAndPermissionsService; rimuove SuperAdminService |
 | Fix esposizione assets API | oc:7913 | `src/Http/Controllers/Api/AppController.php` | `getOrDownloadIcon` usa `getMedia()->first()` invece di `isset($app->$type)` — fix 404 su app con media in Spatie e colonne null |
 | Modifica ruolo utente in Nova | oc:8072 | `src/Nova/AbstractUserResource.php`, `tests/Feature/Nova/AbstractUserResourceRoleGuardTest.php` | Guard `RolesAndPermissionsService::allowsUser()` su ruoli/permessi; fillUsing server-side; anti-self-demotion |
+| Comandi migration stub wm-package | oc:8218 | `src/Commands/WmPackage{PublishMigration,PublishMissingMigrations}Command.php`, `src/Commands/Concerns/InteractsWithWmPackageMigrationStubs.php` | Stub obbligatori. CI: `publish-missing-migrations --dry-run`. Dev: `publish-missing-migrations` / `publish-migration`. Suffisso file non basta |
 
 ## Decisioni architetturali
+
+### Comandi migration stub wm-package (oc:8218)
+
+**Fonte di verità:** `docs/features/8218-cicd-migration-wm-package-permission-cache/overview.md`. Pipeline CI end-to-end: overview maphub (`maphub/docs/features/8218-.../overview.md`).
+
+- Stub in `database/migrations/*.php.stub` **obbligatori** per ogni consumer
+- **`publish-missing-migrations --dry-run`** — gate CI consumer (dopo `migrate`, stesso DB dei test); exit 1 se non allineato
+- **`publish-missing-migrations`** — workflow dev: pubblica stub con gap schema e senza file identico committato
+- **`publish-migration <stub>`** — singolo stub; non si ferma al suffisso se contenuto diverso (es. `create_users_table`)
+- Mai `vendor:publish` in deploy; mai `vendor:publish --force` in locale
+
+**Logica per stub** (`InteractsWithWmPackageMigrationStubs`):
+- `schemaGapsForStub` → colonne/tabelle/ruoli mancanti sul DB
+- `isAppliedToDatabase` → nessun gap (o migration eseguita per suffisso se stub non parsabile)
+- `needsPublishing` → gap + nessun file committato identico allo stub
+- `stubsPendingMigration` → file identico committato ma non in tabella `migrations`
+
+**Tabella casi d'uso (agenti):**
+
+| Scenario | `--dry-run` | Azione |
+|----------|-------------|--------|
+| Schema già completo | pass | Nessuna |
+| Gap schema, nessun file identico | fail | `publish-missing-migrations` / `publish-migration` |
+| File identico in git, non migrato | fail | `migrate` |
+| Suffisso uguale, contenuto diverso | fail | Pubblica stub wm-package |
+| Schema ok via migration custom | pass | Nessuna |
+
+### Import Layer: associazione EcPoi via taxonomy (oc:8043)
+- `associateLayersWithEcPoi()` controlla tre meccanismi GeoHub in sequenza: `taxonomy_themeables`, `taxonomy_whereables`, `taxonomy_poi_typeables` — **taxonomy_theme è il meccanismo primario** (app 63: 48/11/4 poi; app 44: 101-109 poi per layer)
+- GeoHub non ha un rapporto diretto Layer→EcPoi: la relazione è indiretta tramite taxonomy condivise
+- `attach()` con `alreadyExists` check per idempotenza (re-import safe); i geohub_poi_id vengono deduplicati prima dell'attach per gestire POI trovati da più meccanismi
+- `$config['morphable_type']['value'] = 'App\Models\Layer'` non dipende dal tipo Maphub — è il type string di GeoHub
+
+#### Round 2 — fix review + poi_mode (oc:8043)
+- **Morph map locale vs stringhe GeoHub**: `Relation::morphMap()` in `WmPackageServiceProvider` mappa `'App\Models\EcPoi'`/`'App\Models\EcTrack'`/`'App\Models\Layer'` alle classi del package. Il check idempotenza sulla pivot locale `layerables` deve confrontare con l'**alias** (`'App\Models\EcPoi'`), non con l'FQCN (`EcPoi::class`) — altrimenti l'idempotenza fallisce silenziosamente (duplica le righe al re-import). Il match esatto sul `morphable_type` nelle tabelle GeoHub (`taxonomy_themeables` ecc.) usa la stessa stringa `'App\Models\EcPoi'`, ma è un sistema diverso (DB GeoHub, non morph map locale) — coincidenza di stringa, non stesso meccanismo.
+- **`config('wm-package.ec_poi_model', ...)`**: il default corretto è `EcPoi::class` (`Wm\WmPackage\Models\EcPoi`), **non** la stringa `'App\Models\EcPoi'` come invece fa `ec_track_model` — in molti progetti (incluso questo) non esiste una classe applicativa `App\Models\EcPoi` che estenda il package, a differenza di `App\Models\EcTrack` che tipicamente esiste. La chiave `ec_poi_model` non è registrata in `config/wm-package.php` (a differenza di `ec_track_model`): non aggiungerla con un default `'App\Models\EcPoi'`, romperebbe silenziosamente ogni progetto senza quella classe applicativa.
+- **`EcPoi` non ha il trait `Laravel\Scout\Searchable`** (a differenza di `EcTrack`) — i POI non sono indicizzati su Scout/Elasticsearch. Qualsiasi job/observer che debba "reindicizzare" un EcPoi dopo un `saveQuietly()` deve dispatchare `BuildAppPoisGeojsonJob`, non chiamare `->searchable()`.
+- **`poi_mode` (auto/manuale su Layer) replica esattamente `track_mode`**: nuovo flag `configuration['poi_mode']` su `Layer` (`isAutoPoiMode()`/`setPoiMode()`), `LayerService::assignPoisByTaxonomy()` mirror di `assignTracksByTaxonomy()` (stesso JOIN `taxonomy_activityables` + `ST_Intersects` su `taxonomy_wheres`, **non** copre `taxonomy_poi_types`), stessi 4 observer reattivi (`TaxonomyActivityablesObserver`, `TaxonomyWhereablesObserver`, `LayerObserver`, `EcPoiObserver` mirror di `EcTrackObserver`) e nuovo job `SyncAutoLayerAfterPoiTaxonomyChangeJob`.
+- **Bug fix**: `LayerFeatureController::sync()`/`getFeatures()` avevano la logica auto/manuale hardcoded su `$relationName === 'ecTracks'` — nel pannello Ec Pois di Nova, cliccare "Selezione Automatica" eseguiva `$layer->ecPois()->sync([])`, cancellando tutte le associazioni POI. Resi relation-aware. Il meta key del field `LayerFeatures` è stato rinominato da `trackMode` a `mode` (generico) in `LayerFeatures.php`, `LayerFeature.vue` e `interfaces.ts` — dist ricompilato con `npm run prod` (verificare sempre che il diff del dist non contenga proprietà spurie, vedi decisione oc:8093 sotto).
+- **Limite noto, non risolto**: `setTrackMode()`/`setPoiMode()` non sono mai invocati da nessun endpoint/action in produzione — `isAutoTrackMode()`/`isAutoPoiMode()` sono quindi sempre `true` di default, e qualunque evento di tassonomia successivo sovrascrive una selezione manuale fatta da Nova con un `sync()` ricalcolato. Il toggle "manuale" funziona solo fino al prossimo evento reattivo. Comportamento ereditato da `track_mode` (mai risolto), replicato identico per `poi_mode` per parità esplicita — non un'omissione di questo ciclo. Da risolvere in un ticket dedicato se serve persistenza reale (es. campo Select in Nova con `fillUsing` che chiama `setTrackMode()`/`setPoiMode()`).
+- **Doppio meccanismo non coordinato sulla pivot `layerables`**: `associateLayersWithEcPoi()` (import GeoHub, `attach()` additivo) e `assignPoisByTaxonomy()` (auto mode, `sync()` a rimpiazzo totale) possono scrivere sulla stessa pivot per lo stesso layer con semantiche diverse. Un layer in `poi_mode: auto` può perdere POI aggiunti dall'import (specialmente quelli associati solo via `taxonomy_poi_types`, non coperto da `assignPoisByTaxonomy()`) al primo ricalcolo taxonomy-based. Stesso trade-off già esistente per `ecTracks`, non introdotto da questo ciclo — nessuna coordinazione (lock, flag "import in corso") implementata.
+- **`EcPoiFactory` (test)**: il default di `properties` è una stringa JSON-encoded assegnata a un campo con cast Eloquent `'array'` — produce doppia serializzazione se non sovrascritto esplicitamente con un array nei test (`'properties' => []`). Bug pre-esistente del factory, non corretto in questo ciclo.
+- **`regeneratePbfsForLayer()` non va chiamato per `ecPois`**: i PBF (`PBFGeneratorService`, `GenerateOptimizedPBFChainJob`, `GeneratePBFByZoomJob`) referenziano solo `ec_track_table` — non contengono mai contenuto POI. `SyncAutoLayerAfterPoiTaxonomyChangeJob` (bug trovato in review, corretto) non chiama più `regeneratePbfsForLayer()`; `LayerFeatureController::sync()` la chiama solo se `$relationName === 'ecTracks'`, stessa guardia già usata in `LayerableObserver::handleRelatedFeaturesUpdate()`. Senza questa guardia, un layer POI-only in un'app senza `map_bbox` fa fallire il job con eccezione non catturata, impedendo anche il reindex POI a valle.
 
 ### Utenti importati: ruolo Editor (oc:8042)
 - `assignEditorRole()` usa pattern `Role::where()` + `seedDatabase()` fallback (come `assignAdministratorRole`)
@@ -135,6 +180,27 @@ protected static function newFactory(): Factory
 - I metodi `allows()`, `allowsUser()`, `allowsEmail()` vivono in `RolesAndPermissionsService` — punto unico per logica di autorizzazione nel package
 - `SuperAdminService` è stata rimossa senza alias deprecato: breaking change da comunicare nel changelog prima di ogni rilascio
 - I metodi sono statici (non DI) per coerenza con il pattern preesistente; la logica legge solo `config('wm-package.super_admin_emails')` senza stato interno
+
+## Migration wm-package (stub obbligatori)
+
+Valido per ogni consumer (maphub, camminiditalia, osm2cai2, ...). Overview completa: `docs/features/8218-cicd-migration-wm-package-permission-cache/overview.md`.
+
+### Workflow
+
+```bash
+php artisan wm-package:publish-missing-migrations --dry-run
+php artisan wm-package:publish-missing-migrations   # se exit 1
+php artisan migrate
+git add database/migrations/ && git commit
+```
+
+### Se `--dry-run` fallisce
+
+1. Leggi stub in `database/migrations/<nome>.php.stub` (questo package)
+2. Cerca migration equivalente nel consumer (per **contenuto/schema**, non nome)
+3. Schema già allineato → nessuna azione
+4. Gap sul DB → `publish-migration <stub>` o `publish-missing-migrations` + `migrate` + commit
+5. File identico committato ma non migrato → `php artisan migrate`
 
 ## Documentazione
 
