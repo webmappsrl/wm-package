@@ -73,8 +73,35 @@ protected static function newFactory(): Factory
 | Refactor SuperAdminService | oc:8006 | `src/Services/RolesAndPermissionsService.php`, `src/Support/SuperAdminService.php` (rimosso), `src/Nova/App.php`, `src/Nova/Actions/GenerateAppIconsAction.php`, `src/Nova/Actions/BuildAppPoisGeojsonAction.php`, `src/Policies/AppPolicy.php` | Sposta i check super-admin email-based in RolesAndPermissionsService; rimuove SuperAdminService |
 | Fix esposizione assets API | oc:7913 | `src/Http/Controllers/Api/AppController.php` | `getOrDownloadIcon` usa `getMedia()->first()` invece di `isset($app->$type)` — fix 404 su app con media in Spatie e colonne null |
 | Modifica ruolo utente in Nova | oc:8072 | `src/Nova/AbstractUserResource.php`, `tests/Feature/Nova/AbstractUserResourceRoleGuardTest.php` | Guard `RolesAndPermissionsService::allowsUser()` su ruoli/permessi; fillUsing server-side; anti-self-demotion |
+| Comandi migration stub wm-package | oc:8218 | `src/Commands/WmPackage{PublishMigration,PublishMissingMigrations}Command.php`, `src/Commands/Concerns/InteractsWithWmPackageMigrationStubs.php` | Stub obbligatori. CI: `publish-missing-migrations --dry-run`. Dev: `publish-missing-migrations` / `publish-migration`. Suffisso file non basta |
 
 ## Decisioni architetturali
+
+### Comandi migration stub wm-package (oc:8218)
+
+**Fonte di verità:** `docs/features/8218-cicd-migration-wm-package-permission-cache/overview.md`. Pipeline CI end-to-end: overview maphub (`maphub/docs/features/8218-.../overview.md`).
+
+- Stub in `database/migrations/*.php.stub` **obbligatori** per ogni consumer
+- **`publish-missing-migrations --dry-run`** — gate CI consumer (dopo `migrate`, stesso DB dei test); exit 1 se non allineato
+- **`publish-missing-migrations`** — workflow dev: pubblica stub con gap schema e senza file identico committato
+- **`publish-migration <stub>`** — singolo stub; non si ferma al suffisso se contenuto diverso (es. `create_users_table`)
+- Mai `vendor:publish` in deploy; mai `vendor:publish --force` in locale
+
+**Logica per stub** (`InteractsWithWmPackageMigrationStubs`):
+- `schemaGapsForStub` → colonne/tabelle/ruoli mancanti sul DB
+- `isAppliedToDatabase` → nessun gap (o migration eseguita per suffisso se stub non parsabile)
+- `needsPublishing` → gap + nessun file committato identico allo stub
+- `stubsPendingMigration` → file identico committato ma non in tabella `migrations`
+
+**Tabella casi d'uso (agenti):**
+
+| Scenario | `--dry-run` | Azione |
+|----------|-------------|--------|
+| Schema già completo | pass | Nessuna |
+| Gap schema, nessun file identico | fail | `publish-missing-migrations` / `publish-migration` |
+| File identico in git, non migrato | fail | `migrate` |
+| Suffisso uguale, contenuto diverso | fail | Pubblica stub wm-package |
+| Schema ok via migration custom | pass | Nessuna |
 
 ### Import Layer: associazione EcPoi via taxonomy (oc:8043)
 - `associateLayersWithEcPoi()` controlla tre meccanismi GeoHub in sequenza: `taxonomy_themeables`, `taxonomy_whereables`, `taxonomy_poi_typeables` — **taxonomy_theme è il meccanismo primario** (app 63: 48/11/4 poi; app 44: 101-109 poi per layer)
@@ -153,6 +180,27 @@ protected static function newFactory(): Factory
 - I metodi `allows()`, `allowsUser()`, `allowsEmail()` vivono in `RolesAndPermissionsService` — punto unico per logica di autorizzazione nel package
 - `SuperAdminService` è stata rimossa senza alias deprecato: breaking change da comunicare nel changelog prima di ogni rilascio
 - I metodi sono statici (non DI) per coerenza con il pattern preesistente; la logica legge solo `config('wm-package.super_admin_emails')` senza stato interno
+
+## Migration wm-package (stub obbligatori)
+
+Valido per ogni consumer (maphub, camminiditalia, osm2cai2, ...). Overview completa: `docs/features/8218-cicd-migration-wm-package-permission-cache/overview.md`.
+
+### Workflow
+
+```bash
+php artisan wm-package:publish-missing-migrations --dry-run
+php artisan wm-package:publish-missing-migrations   # se exit 1
+php artisan migrate
+git add database/migrations/ && git commit
+```
+
+### Se `--dry-run` fallisce
+
+1. Leggi stub in `database/migrations/<nome>.php.stub` (questo package)
+2. Cerca migration equivalente nel consumer (per **contenuto/schema**, non nome)
+3. Schema già allineato → nessuna azione
+4. Gap sul DB → `publish-migration <stub>` o `publish-missing-migrations` + `migrate` + commit
+5. File identico committato ma non migrato → `php artisan migrate`
 
 ## Documentazione
 
