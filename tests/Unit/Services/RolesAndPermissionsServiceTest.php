@@ -5,6 +5,7 @@ namespace Wm\WmPackage\Tests\Unit\Services;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Http\Request;
 use Mockery;
+use Spatie\Permission\Models\Role;
 use Wm\WmPackage\Services\RolesAndPermissionsService;
 use Wm\WmPackage\Tests\TestCase;
 
@@ -91,5 +92,22 @@ class RolesAndPermissionsServiceTest extends TestCase
         $request = Request::create('/');
 
         $this->assertFalse(RolesAndPermissionsService::allows($request));
+    }
+
+    // --- seedDatabase: access-nova permission ---
+
+    public function test_seed_database_grants_access_nova_to_management_roles(): void
+    {
+        RolesAndPermissionsService::seedDatabase();
+
+        $admin = Role::findByName('Administrator');
+        $editor = Role::findByName('Editor');
+        $validator = Role::findByName('Validator');
+        $guest = Role::findByName('Guest');
+
+        $this->assertTrue($admin->hasPermissionTo('access-nova'));
+        $this->assertTrue($editor->hasPermissionTo('access-nova'));
+        $this->assertTrue($validator->hasPermissionTo('access-nova'));
+        $this->assertFalse($guest->hasPermissionTo('access-nova'));
     }
 }

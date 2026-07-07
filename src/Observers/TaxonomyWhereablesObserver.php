@@ -35,6 +35,7 @@ class TaxonomyWhereablesObserver
         }
 
         $this->layerService->assignTracksByTaxonomy($layer);
+        $this->layerService->assignPoisByTaxonomy($layer);
         $this->layerService->updateLayersPropertyOnAllLayeredFeaturesWithJobs($layer);
         $layer->dispatchFeatureCollectionRegeneration();
 

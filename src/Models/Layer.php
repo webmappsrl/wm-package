@@ -163,6 +163,19 @@ class Layer extends Polygon
         $this->save();
     }
 
+    public function isAutoPoiMode(): bool
+    {
+        return ($this->configuration['poi_mode'] ?? 'auto') === 'auto';
+    }
+
+    public function setPoiMode(string $mode): void
+    {
+        $configuration = $this->configuration ?? [];
+        $configuration['poi_mode'] = $mode;
+        $this->configuration = $configuration;
+        $this->save();
+    }
+
     /**
      * Move to a model mutator
      * https://laravel.com/docs/11.x/eloquent-mutators#defining-a-mutator

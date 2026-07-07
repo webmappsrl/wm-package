@@ -40,9 +40,10 @@ class LayerObserver extends AbstractObserver
             $this->regenerateAssociatedFeatureCollections($layer);
         }
 
-        // Se il layer ha tassonomie di attività associate, assegna automaticamente le track
+        // Se il layer ha tassonomie di attività associate, assegna automaticamente le track e i POI
         if ($this->hasTaxonomyActivitiesChanged($layer)) {
             $this->layerService->assignTracksByTaxonomy($layer);
+            $this->layerService->assignPoisByTaxonomy($layer);
         }
 
         // Update App conf when layer properties change

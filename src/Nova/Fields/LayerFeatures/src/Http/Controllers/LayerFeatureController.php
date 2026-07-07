@@ -102,7 +102,7 @@ class LayerFeatureController
             $featureTable = $model->getTable();
             $taxonomyIds = $layer->taxonomyActivities->pluck('id')->toArray();
             $hasTaxonomyRelation = method_exists($model, 'taxonomyActivities');
-            $isAuto = $layer->isAutoTrackMode();
+            $isAuto = $relationName === 'ecTracks' ? $layer->isAutoTrackMode() : $layer->isAutoPoiMode();
             $useAutoMode = ! $isManualRequest && $isAuto;
             $associatedQuery = $layer->{$relationName}()
                 ->select([$featureTable.'.id as id', $featureTable.'.name as name']);
@@ -113,9 +113,13 @@ class LayerFeatureController
             $associatedTracks = $associatedQuery->orderBy($featureTable.'.name', 'ASC')->get();
 
             // Fallback temporaneo in lettura: solo in auto, solo con taxonomy activities, solo se pivot vuoto.
-            if ($useAutoMode && ! empty($taxonomyIds) && $associatedTracks->isEmpty() && $relationName === 'ecTracks') {
+            if ($useAutoMode && ! empty($taxonomyIds) && $associatedTracks->isEmpty() && in_array($relationName, ['ecTracks', 'ecPois'])) {
                 // Se il pivot è vuoto in auto, prova prima a riallinearlo.
-                $this->layerService->assignTracksByTaxonomy($layer);
+                if ($relationName === 'ecTracks') {
+                    $this->layerService->assignTracksByTaxonomy($layer);
+                } else {
+                    $this->layerService->assignPoisByTaxonomy($layer);
+                }
 
                 $associatedQuery = $layer->{$relationName}()
                     ->select([$featureTable.'.id as id', $featureTable.'.name as name']);
@@ -233,15 +237,22 @@ class LayerFeatureController
             ], 400);
         }
 
-        $isAutoRequest = ! empty($validatedData['auto']) && $relationName === 'ecTracks';
+        $isAutoRequest = ! empty($validatedData['auto']) && in_array($relationName, ['ecTracks', 'ecPois']);
         if ($isAutoRequest) {
-            // In modalità automatica il pivot ecTracks viene ricalcolato da taxonomy
-            $this->layerService->assignTracksByTaxonomy($layer);
+            // In modalità automatica il pivot ecTracks/ecPois viene ricalcolato da taxonomy
+            if ($relationName === 'ecTracks') {
+                $this->layerService->assignTracksByTaxonomy($layer);
+            } else {
+                $this->layerService->assignPoisByTaxonomy($layer);
+            }
         } else {
             $layer->{$relationName}()->sync($validatedData['features'] ?? []);
         }
 
-        $this->pbfGeneratorService->regeneratePbfsForLayer($layer);
+        // I PBF non contengono mai contenuto POI: rigenerarli ha senso solo per ecTracks.
+        if ($relationName === 'ecTracks') {
+            $this->pbfGeneratorService->regeneratePbfsForLayer($layer);
+        }
 
         $tableName = $model->getTable();
         $assignedIds = $layer->{$relationName}()->select($tableName.'.id')->pluck('id')->toArray();
