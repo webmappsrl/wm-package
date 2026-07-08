@@ -70,6 +70,7 @@ class App extends Model implements HasMedia
 
     public function author(): BelongsTo
     {
+        // FK esplicita: la colonna è user_id, non l'inferita author_id (oc:8242).
         return $this->belongsTo(User::class, 'user_id');
     }
 
