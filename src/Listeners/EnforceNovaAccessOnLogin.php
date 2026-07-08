@@ -29,6 +29,17 @@ class EnforceNovaAccessOnLogin
             return;
         }
 
+        // Nova::impersonate()/stopImpersonating() effettuano un login interno (guard->login())
+        // per passare all'utente impersonato o tornare all'impersonatore. In quel momento la
+        // sessione ha già 'nova_impersonated_by' valorizzato (Nova lo scrive prima di chiamare
+        // login()). L'autorizzazione per questi login è già garantita da canImpersonate()/
+        // canBeImpersonated() a monte in ImpersonateController — questo gate non deve rivalutarla,
+        // altrimenti un target senza 'access-nova' (es. ruolo Guest) farebbe fallire il login
+        // interno e distruggerebbe la sessione dell'amministratore che sta impersonando.
+        if ($this->request->hasSession() && $this->request->session()->has('nova_impersonated_by')) {
+            return;
+        }
+
         if ($event->user->can('access-nova')) {
             return;
         }

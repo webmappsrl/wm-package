@@ -81,4 +81,15 @@ return [
         'trim',
         explode(',', (string) env('WM_SUPER_ADMIN_EMAILS', 'team@webmapp.it'))
     ))),
+
+    /*
+    | Ruoli abilitati a impersonare altri utenti da Nova {@see \Wm\WmPackage\Models\User::canImpersonate()}.
+    | Fallback env: WM_IMPERSONATION_ALLOWED_ROLES (comma-separated) → default Administrator.
+    */
+    'impersonation' => [
+        'allowed_roles' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) env('WM_IMPERSONATION_ALLOWED_ROLES', 'Administrator'))
+        ))),
+    ],
 ];

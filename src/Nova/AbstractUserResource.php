@@ -162,6 +162,22 @@ abstract class AbstractUserResource extends Resource
     }
 
     /**
+     * Nasconde l'azione "Impersonate" dalla pagina Detail: cliccarla da lì attiva un bug noto e mai
+     * risolto di Laravel Nova (redirect al login per token CSRF stantio nel meta tag della SPA — non
+     * rinfrescato durante la navigazione client-side, vedi docs/features/8231-aggiungere-impersonate/
+     * e laravel/nova-issues#5773, #6082). Dall'Index l'azione resta disponibile: lì il problema non si
+     * presenta perché la pagina viene sempre caricata "fresca".
+     */
+    public function authorizedToImpersonate(NovaRequest $request): bool
+    {
+        if ($request->isResourceDetailRequest()) {
+            return false;
+        }
+
+        return parent::authorizedToImpersonate($request);
+    }
+
+    /**
      * Restituisce un array di ID delle app associate all'utente attraverso i UGC.
      * La relazione è indiretta: utente -> UGC (ugc_pois/ugc_tracks) -> app
      *
