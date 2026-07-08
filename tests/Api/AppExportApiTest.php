@@ -54,7 +54,7 @@ it('filters the list with updated_after', function () {
 
     App::factory()->createQuietly(); // updated_at = now
 
-    $this->getJson('/api/v1/export/apps?updated_after=' . urlencode(now()->subDay()->toIso8601String()), [
+    $this->getJson('/api/v1/export/apps?updated_after='.urlencode(now()->subDay()->toIso8601String()), [
         'Authorization' => 'Bearer test-token',
     ])->assertOk()->assertJsonCount(1, 'data');
 });
@@ -68,7 +68,7 @@ it('rejects a malformed updated_after with 422', function () {
 it('shows a single app', function () {
     $app = App::factory()->createQuietly();
 
-    $this->getJson('/api/v1/export/apps/' . $app->id, ['Authorization' => 'Bearer test-token'])
+    $this->getJson('/api/v1/export/apps/'.$app->id, ['Authorization' => 'Bearer test-token'])
         ->assertOk()
         ->assertJsonPath('data.id', $app->id);
 });
