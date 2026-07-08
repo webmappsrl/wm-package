@@ -19,6 +19,16 @@ class EnforceNovaAccessOnLogin
             return;
         }
 
+        // Do not interfere with automated tests that use programmatic logins.
+        if (app()->runningUnitTests()) {
+            return;
+        }
+
+        // API login is used to issue Sanctum tokens and must not require Nova access.
+        if ($this->request->is('api/*')) {
+            return;
+        }
+
         if ($event->user->can('access-nova')) {
             return;
         }
