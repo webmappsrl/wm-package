@@ -16,6 +16,8 @@ use Wm\WmPackage\Http\Controllers\Api\UgcTrackController;
 use Wm\WmPackage\Http\Controllers\Api\V1\AppAPIController;
 use Wm\WmPackage\Http\Controllers\Api\WalletController;
 use Wm\WmPackage\Http\Controllers\Api\WebmappAppController;
+use Wm\WmPackage\Http\Controllers\Api\AppExportController;
+use Wm\WmPackage\Http\Middleware\EnsureExportToken;
 
 Route::post('/auth/login', [AppAuthController::class, 'login'])->name('auth.login');
 Route::middleware('throttle:100,1')->post('/auth/signup', [AppAuthController::class, 'signup'])->name('auth.signup');
@@ -273,3 +275,15 @@ Route::name('api.')->group(function () {
     //     });
     // });
 });
+
+/*
+ * Export M2M per Orchestrator (oc:8242) — contratto v1.
+ * NB: routes/api.php è registrato dal ServiceProvider sia sotto /api
+ * sia sotto /api/v2: l'URL canonico del contratto è /api/v1/export/apps.
+ */
+Route::prefix('v1/export')->name('export.')
+    ->middleware([EnsureExportToken::class, 'throttle:60,1'])
+    ->group(function () {
+        Route::get('/apps', [AppExportController::class, 'index'])->name('apps.index');
+        Route::get('/apps/{app}', [AppExportController::class, 'show'])->name('apps.show');
+    });
