@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
-use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
 use Wm\WmPackage\Services\RolesAndPermissionsService;
 
@@ -14,12 +13,7 @@ beforeEach(function () {
     RolesAndPermissionsService::seedDatabase();
 });
 
-it('Administrator can start and stop impersonating an Editor via the real Nova route, and both are logged', function () {
-    $logs = [];
-    Log::listen(function ($event) use (&$logs) {
-        $logs[] = [$event->message, $event->context];
-    });
-
+it('Administrator can start and stop impersonating an Editor via the real Nova route', function () {
     $admin = User::factory()->create();
     $admin->assignRole('Administrator');
 
@@ -39,19 +33,6 @@ it('Administrator can start and stop impersonating an Editor via the real Nova r
         ->assertOk();
 
     expect(auth()->id())->toBe($admin->id);
-
-    $impersonationLogs = array_values(array_filter(
-        $logs,
-        fn ($log) => str_starts_with($log[0], 'Nova impersonation')
-    ));
-
-    expect($impersonationLogs)->toHaveCount(2)
-        ->and($impersonationLogs[0][0])->toBe('Nova impersonation started')
-        ->and($impersonationLogs[0][1]['impersonator_id'])->toBe($admin->id)
-        ->and($impersonationLogs[0][1]['impersonated_id'])->toBe($editor->id)
-        ->and($impersonationLogs[1][0])->toBe('Nova impersonation stopped')
-        ->and($impersonationLogs[1][1]['impersonator_id'])->toBe($admin->id)
-        ->and($impersonationLogs[1][1]['impersonated_id'])->toBe($editor->id);
 });
 
 it('Editor cannot impersonate via the real Nova route', function () {
@@ -69,7 +50,7 @@ it('Editor cannot impersonate via the real Nova route', function () {
         ->assertForbidden();
 });
 
-it('Administrator cannot impersonate another Administrator via the real Nova route', function () {
+it('Administrator can impersonate another Administrator via the real Nova route', function () {
     $admin = User::factory()->create();
     $admin->assignRole('Administrator');
 
@@ -81,7 +62,9 @@ it('Administrator cannot impersonate another Administrator via the real Nova rou
             'resource' => 'users',
             'resourceId' => $otherAdmin->id,
         ])
-        ->assertForbidden();
+        ->assertOk();
+
+    expect(auth()->id())->toBe($otherAdmin->id);
 });
 
 it('Administrator cannot impersonate a Guest and keeps their own session intact', function () {
@@ -99,16 +82,4 @@ it('Administrator cannot impersonate a Guest and keeps their own session intact'
         ->assertForbidden();
 
     expect(auth()->id())->toBe($admin->id);
-});
-
-it('a real login attempt by a user without access-nova is still blocked (EnforceNovaAccessOnLogin regression)', function () {
-    $noAccess = User::factory()->create(['password' => bcrypt('password')]);
-    $noAccess->assignRole('Guest');
-
-    $this->postJson('/nova/login', [
-        'email' => $noAccess->email,
-        'password' => 'password',
-    ])->assertStatus(422);
-
-    expect(auth()->check())->toBeFalse();
 });

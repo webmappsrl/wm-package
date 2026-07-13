@@ -7,15 +7,11 @@ use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 use Illuminate\Queue\Events\JobFailed;
-use Laravel\Nova\Events\StartedImpersonating;
-use Laravel\Nova\Events\StoppedImpersonating;
 use Spatie\Backup\Events\BackupWasSuccessful;
 use Wm\WmPackage\Events\OrderListReorderedEvent;
 use Wm\WmPackage\Listeners\BackupCompletedListener;
 use Wm\WmPackage\Listeners\EnforceNovaAccessOnLogin;
 use Wm\WmPackage\Listeners\FailedJobsListener;
-use Wm\WmPackage\Listeners\LogImpersonationStarted;
-use Wm\WmPackage\Listeners\LogImpersonationStopped;
 use Wm\WmPackage\Listeners\OrderListReorderedListener;
 use Wm\WmPackage\Listeners\UpdateLastLoginAt;
 
@@ -42,12 +38,6 @@ class EventServiceProvider extends ServiceProvider
         ],
         OrderListReorderedEvent::class => [
             OrderListReorderedListener::class,
-        ],
-        StartedImpersonating::class => [
-            LogImpersonationStarted::class,
-        ],
-        StoppedImpersonating::class => [
-            LogImpersonationStopped::class,
         ],
     ];
 

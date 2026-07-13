@@ -4,12 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Log;
-use Laravel\Nova\Events\StartedImpersonating;
-use Laravel\Nova\Events\StoppedImpersonating;
 use Tests\TestCase;
-use Wm\WmPackage\Listeners\LogImpersonationStarted;
-use Wm\WmPackage\Listeners\LogImpersonationStopped;
 use Wm\WmPackage\Models\User;
 use Wm\WmPackage\Services\RolesAndPermissionsService;
 
@@ -47,11 +42,11 @@ it('Validator cannot impersonate', function () {
     expect($validator->canImpersonate())->toBeFalse();
 });
 
-it('Administrator cannot be impersonated', function () {
+it('Administrator can be impersonated by another Administrator', function () {
     $admin = User::factory()->create();
     $admin->assignRole('Administrator');
 
-    expect($admin->canBeImpersonated())->toBeFalse();
+    expect($admin->canBeImpersonated())->toBeTrue();
 });
 
 it('Editor can be impersonated by an Administrator', function () {
@@ -66,39 +61,4 @@ it('Guest cannot be impersonated (lacks access-nova, would get the admin stuck)'
     $guest->assignRole('Guest');
 
     expect($guest->canBeImpersonated())->toBeFalse();
-});
-
-it('respects a custom allowed_roles config', function () {
-    config(['wm-package.impersonation.allowed_roles' => ['Editor']]);
-
-    $editor = User::factory()->create();
-    $editor->assignRole('Editor');
-
-    $admin = User::factory()->create();
-    $admin->assignRole('Administrator');
-
-    expect($editor->canImpersonate())->toBeTrue()
-        ->and($admin->canImpersonate())->toBeFalse();
-});
-
-it('logs impersonation start', function () {
-    Log::shouldReceive('info')
-        ->once()
-        ->with('Nova impersonation started', Mockery::type('array'));
-
-    $admin = User::factory()->create(['email' => 'admin@test.com']);
-    $editor = User::factory()->create(['email' => 'editor@test.com']);
-
-    (new LogImpersonationStarted)->handle(new StartedImpersonating($admin, $editor, null));
-});
-
-it('logs impersonation stop', function () {
-    Log::shouldReceive('info')
-        ->once()
-        ->with('Nova impersonation stopped', Mockery::type('array'));
-
-    $admin = User::factory()->create(['email' => 'admin@test.com']);
-    $editor = User::factory()->create(['email' => 'editor@test.com']);
-
-    (new LogImpersonationStopped)->handle(new StoppedImpersonating($admin, $editor, null));
 });

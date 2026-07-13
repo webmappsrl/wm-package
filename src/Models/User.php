@@ -237,29 +237,24 @@ class User extends Authenticatable implements JWTSubject
      * Determine if the user can impersonate another user.
      *
      * Composes (does not replace) Nova's native `viewNova` check — defense in depth:
-     * even if `impersonation.allowed_roles` were misconfigured, the base Nova permission
-     * would still be required.
+     * only Administrator, and only if the base Nova permission also holds.
      */
     public function canImpersonate(): bool
     {
-        $allowedRoles = config('wm-package.impersonation.allowed_roles', ['Administrator']);
-
-        return $this->hasAnyRole($allowedRoles) && Gate::forUser($this)->check('viewNova');
+        return $this->hasRole('Administrator') && Gate::forUser($this)->check('viewNova');
     }
 
     /**
      * Determine if the user can be impersonated.
      *
-     * An Administrator can never be impersonated (not even by another Administrator), to
-     * limit the abuse surface between peers at the highest privilege level. The target must
-     * also have Nova access (`access-nova` permission): every `nova-api/*` route, including
+     * Requires Nova access (`access-nova` permission): every `nova-api/*` route, including
      * stop impersonating, requires the `viewNova` gate. Impersonating a user without
      * `access-nova` (e.g. Guest) would leave the administrator stuck with a 403 on any
      * Nova action, including "Stop impersonating".
      */
     public function canBeImpersonated(): bool
     {
-        return ! $this->hasRole('Administrator') && $this->can('access-nova');
+        return $this->can('access-nova');
     }
 
     /**
