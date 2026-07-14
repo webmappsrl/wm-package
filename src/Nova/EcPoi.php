@@ -14,6 +14,7 @@ use Laravel\Nova\Tabs\Tab;
 use Marshmallow\Tiptap\Tiptap;
 use Wm\WmPackage\Nova\Actions\DownloadEcPoiAction;
 use Wm\WmPackage\Nova\Actions\ExecuteEcPoiDataChainAction;
+use Wm\WmPackage\Nova\Actions\ImportEcPoiFromOsm;
 use Wm\WmPackage\Nova\Actions\TranslateModelAction;
 use Wm\WmPackage\Nova\Actions\UploadPoiFile;
 use Wm\WmPackage\Nova\Fields\PropertiesPanel;
@@ -100,6 +101,7 @@ class EcPoi extends AbstractEcResource
             new DownloadEcPoiAction,
             (new UploadPoiFile)->standalone(),
             new TranslateModelAction,
+            new ImportEcPoiFromOsm,
         ];
     }
 

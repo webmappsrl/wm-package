@@ -3,3 +3,18 @@ parameters:
     -
       identifier: larastan.noEnvCallsOutsideOfConfig
       path: config/wm-package.php
+    -
+      message: '#^Parameter \$related_url of method Wm\\WmPackage\\Dto\\EcPoiPropertiesData\:\:__construct\(\) expects array\<int, string\>\|null, array\<string, string\>\|null given\.$#'
+      identifier: argument.type
+      count: 1
+      path: src/Dto/OsmEcPoiPropertiesData.php
+    -
+      message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+      identifier: property.notFound
+      count: 1
+      path: src/Nova/Actions/ImportEcPoiFromOsm.php
+    -
+      message: '#^Method Wm\\WmPackage\\Nova\\Actions\\ImportEcPoiFromOsm\:\:resolveApp\(\) should return Wm\\WmPackage\\Models\\App\|null but returns Illuminate\\Database\\Eloquent\\Model\|null\.$#'
+      identifier: return.type
+      count: 2
+      path: src/Nova/Actions/ImportEcPoiFromOsm.php
