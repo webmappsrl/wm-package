@@ -642,15 +642,14 @@ class App extends Resource
                 ->hideFromIndex()
                 ->help(__('Link to the app on the App Store')),
             Images::make(__('Icon'), 'icon')
-                // ->rules('image', 'mimes:png', 'dimensions:width=1024,height=1024')
+                ->singleMediaRules(['image', 'mimes:png', 'dimensions:min_width=1024,min_height=1024,ratio=1/1'])
                 ->help(__('Required size is :widthx:heightpx', ['width' => 1024, 'height' => 1024]))
                 ->hideFromIndex(),
             Images::make(__('Splash image'), 'splash')
-                // ->rules('image', 'mimes:png', 'dimensions:width=2732,height=2732')
+                ->singleMediaRules(['image', 'mimes:png', 'dimensions:min_width=2732,min_height=2732,ratio=1/1'])
                 ->help(__('Required size is :widthx:heightpx', ['width' => 2732, 'height' => 2732]))
                 ->hideFromIndex(),
             Images::make(__('Icon small'), 'icon_small')
-                // ->rules('image', 'mimes:png', 'dimensions:width=512,height=512')
                 ->help(__('Required size is :widthx:heightpx', ['width' => 512, 'height' => 512]))
                 ->hideFromIndex(),
             Images::make(__('My paths image'), 'my_paths')
