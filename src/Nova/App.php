@@ -40,6 +40,8 @@ use Wm\WmPackage\Nova\Cards\ApiLinksCard\AppApiLinksCard;
 use Wm\WmPackage\Nova\Fields\BboxField\BboxField;
 use Wm\WmPackage\Nova\Fields\OrderList\src\OrderList;
 use Wm\WmPackage\Nova\Fields\StoreVersionField;
+use Wm\WmPackage\Nova\Flexible\ConfigHome\HorizontalScrollGeoItemRepeatable;
+use Wm\WmPackage\Nova\Flexible\ConfigHome\HorizontalScrollGeoRepeaterJsonPreset;
 use Wm\WmPackage\Nova\Flexible\ConfigHome\HorizontalScrollItemRepeatable;
 use Wm\WmPackage\Nova\Flexible\ConfigHome\HorizontalScrollRepeaterJsonPreset;
 use Wm\WmPackage\Nova\Flexible\Resolvers\ConfigHomeResolver;
@@ -613,6 +615,7 @@ class App extends Resource
                 ->addLayout('Titolo', 'title', $this->title_layout())
                 ->addLayout(__('Horizontal Scroll Activities'), 'horizontal_scroll_activities', $this->horizontal_scroll_activities_layout())
                 ->addLayout(__('Horizontal Scroll POI Types'), 'horizontal_scroll_poi_types', $this->horizontal_scroll_poi_types_layout())
+                ->addLayout(__('Horizontal Scroll Poi/Track'), 'horizontal_scroll_geo', $this->horizontal_scroll_geo_layout())
                 ->addLayout('Layer', 'layer', $this->layer_layout())
                 ->addLayout('Slug', 'slug', $this->slug_layout())
                 ->addLayout('External URL', 'external_url', $this->external_url_layout())
@@ -882,6 +885,13 @@ class App extends Resource
         return $fields;
     }
 
+    protected function horizontal_scroll_geo_layout(): array
+    {
+        return array_merge($this->config_home_title_layout(), [
+            $this->horizontalScrollGeoItemsRepeater(),
+        ]);
+    }
+
     /**
      * JSON preset for config_home horizontal scroll layouts: reliable hydration of `items` from the Whitecube layout.
      */
@@ -935,6 +945,19 @@ class App extends Resource
         return (string) $fallback;
     }
 
+    /**
+     * JSON preset for the config_home geo horizontal scroll layout: reliable hydration of `items` from the
+     * Whitecube layout. Each item is a Poi or a Track — see `HorizontalScrollGeoItemRepeatable`.
+     */
+    protected function horizontalScrollGeoItemsRepeater(): Repeater
+    {
+        return Repeater::make(__('Items'), 'items')
+            ->repeatables([HorizontalScrollGeoItemRepeatable::make()])
+            ->preset(new HorizontalScrollGeoRepeaterJsonPreset)
+            ->rules('required', 'array')
+            ->help(__('Add one or more items — each can be a Poi or a Track.'));
+    }
+
     protected function slug_layout(): array
     {
         return array_merge($this->config_home_title_layout(), [
@@ -958,15 +981,6 @@ class App extends Resource
     protected function config_home_title_layout(): array
     {
         return $this->translatableFields('Title', 'title', required: true);
-    }
-
-    protected function base_layout(): array
-    {
-        return [
-            Text::make('Title', 'title')->rules('required'),
-            Text::make('Url', 'url')->rules('required'),
-            // TODO: Items è un array, dove ogni elemento ha un titolo un image_url e un track_id (o poi_id)
-        ];
     }
 
     protected function layer_layout(): array

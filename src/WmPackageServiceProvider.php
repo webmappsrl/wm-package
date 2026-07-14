@@ -69,6 +69,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
         $this->app->register(\Wm\WmPackage\Nova\Fields\FeatureCollectionGrid\FieldServiceProvider::class);
         $this->app->register(\Wm\WmPackage\Nova\Fields\OrderList\FieldServiceProvider::class);
         $this->app->register(\Wm\WmPackage\Nova\Fields\TrackColor\FieldServiceProvider::class);
+        $this->app->register(\Wm\WmPackage\Nova\Fields\GeoReferenceField\FieldServiceProvider::class);
         $this->app->register(CardServiceProvider::class);
         $this->app->register(LayerAnalyticsCardServiceProvider::class);
     }

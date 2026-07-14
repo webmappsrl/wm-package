@@ -5,9 +5,12 @@ namespace Wm\WmPackage\Nova\Flexible\Resolvers;
 use Illuminate\Support\Collection;
 use Whitecube\NovaFlexibleContent\Layouts\Layout;
 use Whitecube\NovaFlexibleContent\Value\ResolverInterface;
+use Wm\WmPackage\Models\EcPoi as EcPoiModel;
+use Wm\WmPackage\Models\EcTrack as EcTrackModel;
 use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Models\TaxonomyActivity as TaxonomyActivityModel;
 use Wm\WmPackage\Models\TaxonomyPoiType as TaxonomyPoiTypeModel;
+use Wm\WmPackage\Nova\Flexible\ConfigHome\HorizontalScrollGeoItemRepeatable;
 use Wm\WmPackage\Nova\Flexible\ConfigHome\HorizontalScrollItemRepeatable;
 use Wm\WmPackage\Nova\Traits\HasFlexibleTranslatableFields;
 
@@ -106,6 +109,12 @@ class ConfigHomeResolver implements ResolverInterface
             unset($attributes['item'], $attributes['activity_item'], $attributes['poi_type_item']);
         }
 
+        if (($item['box_type'] ?? null) === 'horizontal_scroll_geo') {
+            $attributes['items'] = $this->toGeoRepeaterItems(
+                $this->normalizeHorizontalScrollItemsInput($item)
+            );
+        }
+
         return $attributes;
     }
 
@@ -119,6 +128,7 @@ class ConfigHomeResolver implements ResolverInterface
             'layer' => $this->buildLayerElement($layout),
             'horizontal_scroll_activities' => $this->buildHorizontalScrollElement($resource, $attribute, $layout, $groupIndex, 'activities'),
             'horizontal_scroll_poi_types' => $this->buildHorizontalScrollElement($resource, $attribute, $layout, $groupIndex, 'poi_types'),
+            'horizontal_scroll_geo' => $this->buildGeoElement($resource, $attribute, $layout, $groupIndex),
             default => $this->buildGenericElement($layout),
         };
     }
@@ -189,8 +199,40 @@ class ConfigHomeResolver implements ResolverInterface
         return $this->finalizeHorizontalScrollElement($element);
     }
 
+    /**
+     * Box `horizontal_scroll_geo`: each item points directly to a single `EcPoi`/`EcTrack`. Both Select
+     * fields (Poi, Track) in `HorizontalScrollGeoItemRepeatable` are always visible in Nova — `dependsOn()`
+     * does not work for fields nested this deep inside a Flexible > Repeater > Repeatable (verified reading
+     * `vendor/laravel/nova/src/Http/Controllers/UpdateFieldController.php`).
+     */
+    private function buildGeoElement($resource, string $attribute, Layout $layout, int $groupIndex): array
+    {
+        $element = ['box_type' => 'horizontal_scroll_geo'];
+
+        foreach ($layout->getAttributes() as $key => $val) {
+            if (! is_null($val) && $val !== '') {
+                $element[$key] = $val;
+            }
+        }
+
+        $itemsPayload = $this->resolveRepeaterItemsPayload($attribute, $layout, $element['items'] ?? null);
+        $normalizedItems = $this->fromGeoRepeaterItems($itemsPayload, $resource);
+        $rawGroupAttrs = $this->findRawFlexibleGroupAttributes($attribute, (string) $layout->inUseKey());
+
+        if (empty($normalizedItems) && $this->shouldPreserveRepeaterItemsFromDb($rawGroupAttrs, $itemsPayload, $normalizedItems)) {
+            $previousItems = $this->previousGeoItemsForGroup($resource, $attribute, $groupIndex);
+            if ($previousItems !== null && $previousItems !== []) {
+                $normalizedItems = $this->fromGeoRepeaterItems($previousItems, $resource);
+            }
+        }
+
+        $element['items'] = ! empty($normalizedItems) ? $normalizedItems : [];
+
+        return $this->finalizeGeoElement($element);
+    }
+
     // -------------------------------------------------------------------------
-    // Repeater helpers
+    // Taxonomy repeater helpers
     // -------------------------------------------------------------------------
 
     private function toRepeaterItems(array $items, string $itemType): array
@@ -348,6 +390,146 @@ class ConfigHomeResolver implements ResolverInterface
     }
 
     // -------------------------------------------------------------------------
+    // Geo repeater helpers
+    // -------------------------------------------------------------------------
+
+    private function toGeoRepeaterItems(array $items): array
+    {
+        return array_values(array_map(function ($item) {
+            if (is_array($item) && isset($item['fields']) && is_array($item['fields'])) {
+                $item = $item['fields'];
+            }
+
+            return [
+                'type' => HorizontalScrollGeoItemRepeatable::key(),
+                'fields' => [
+                    'poi_id' => $item['poi_id'] ?? null,
+                    'track_id' => $item['track_id'] ?? null,
+                    'image_url' => $item['image_url'] ?? null,
+                    'title' => is_array($item['title'] ?? null) ? $item['title'] : [],
+                ],
+            ];
+        }, $items));
+    }
+
+    /**
+     * Resolve `horizontal_scroll_geo` items against `EcPoi`/`EcTrack`, scoped to the App being saved so an
+     * item can never reference a record belonging to another app. `title`/`image_url` are inherited from
+     * the linked model (translatable `name`, first media of the default collection) when not specified as
+     * an override — same principle as `mergeItemTitle()` for taxonomy items, applied at save time because
+     * `AppConfigService::config_section_home()` reads the already-saved JSON without ever calling back into
+     * this resolver. Rows with neither or both of `poi_id`/`track_id` filled, or referencing a record that
+     * no longer exists (or belongs to another app), are discarded silently.
+     */
+    private function fromGeoRepeaterItems($items, $resource): array
+    {
+        $items = $this->normalizeRepeaterInput($items);
+
+        if (! is_array($items)) {
+            return [];
+        }
+
+        $appId = is_object($resource) ? ($resource->id ?? null) : null;
+
+        $normalized = [];
+
+        foreach ($items as $item) {
+            $fields = $this->extractGeoRepeaterFields($item);
+
+            $hasPoi = ! empty($fields['poi_id'] ?? null);
+            $hasTrack = ! empty($fields['track_id'] ?? null);
+
+            if ($hasPoi === $hasTrack) {
+                continue;
+            }
+
+            if (! $appId) {
+                continue;
+            }
+
+            if ($hasPoi) {
+                $poi = EcPoiModel::query()->where('app_id', $appId)->find($fields['poi_id']);
+
+                if (! $poi) {
+                    continue;
+                }
+
+                $title = $this->mergeItemTitle($fields, $poi->getTranslations('name'));
+
+                if ($title === []) {
+                    continue;
+                }
+
+                $normalized[] = [
+                    'title' => $title,
+                    'image_url' => $this->mergeItemImage($fields, (string) $poi->getFirstMediaUrl()),
+                    'poi_id' => (int) $poi->id,
+                ];
+
+                continue;
+            }
+
+            $track = EcTrackModel::query()->where('app_id', $appId)->find($fields['track_id']);
+
+            if (! $track) {
+                continue;
+            }
+
+            $title = $this->mergeItemTitle($fields, $track->getTranslations('name'));
+
+            if ($title === []) {
+                continue;
+            }
+
+            $normalized[] = [
+                'title' => $title,
+                'image_url' => $this->mergeItemImage($fields, (string) $track->getFirstMediaUrl()),
+                'track_id' => (int) $track->id,
+            ];
+        }
+
+        return $normalized;
+    }
+
+    private function mergeItemImage(array $fields, string $defaultImage): string
+    {
+        $custom = trim((string) ($fields['image_url'] ?? ''));
+
+        return $custom !== '' ? $custom : $defaultImage;
+    }
+
+    private function extractGeoRepeaterFields($item): array
+    {
+        $item = $this->normalizeRepeaterInput($item);
+
+        if (! is_array($item)) {
+            return [];
+        }
+
+        foreach ([$item['fields'] ?? null, $item['attributes'] ?? null, $item['value'] ?? null, $item] as $candidate) {
+            $candidate = $this->normalizeRepeaterInput($candidate);
+
+            if (! is_array($candidate)) {
+                continue;
+            }
+
+            $poiId = $candidate['poi_id'] ?? null;
+            $trackId = $candidate['track_id'] ?? null;
+
+            if (! empty($poiId) || ! empty($trackId)) {
+                return [
+                    'poi_id' => $poiId,
+                    'track_id' => $trackId,
+                    'image_url' => is_string($candidate['image_url'] ?? '') ? ($candidate['image_url'] ?? '') : '',
+                    'title' => is_array($candidate['title'] ?? null) ? $candidate['title'] : [],
+                ];
+            }
+        }
+
+        return [];
+    }
+
+    // -------------------------------------------------------------------------
     // Finalize helpers
     // -------------------------------------------------------------------------
 
@@ -368,6 +550,27 @@ class ConfigHomeResolver implements ResolverInterface
         return [
             'box_type' => 'horizontal_scroll',
             'item_type' => $element['item_type'] ?? null,
+            'title' => $title,
+            'items' => $items,
+        ];
+    }
+
+    private function finalizeGeoElement(array $element): array
+    {
+        $title = is_array($element['title'] ?? null)
+            ? array_filter($element['title'], static fn ($v) => ! is_null($v) && $v !== '')
+            : [];
+
+        $items = array_values(array_map(function ($row) {
+            if (is_array($row) && is_array($row['title'] ?? null)) {
+                $row['title'] = array_filter($row['title'], static fn ($v) => ! is_null($v) && $v !== '');
+            }
+
+            return $row;
+        }, is_array($element['items'] ?? null) ? $element['items'] : []));
+
+        return [
+            'box_type' => 'horizontal_scroll_geo',
             'title' => $title,
             'items' => $items,
         ];
@@ -487,6 +690,34 @@ class ConfigHomeResolver implements ResolverInterface
         $block = $this->normalizeRow($home[$groupIndex]);
 
         if (($block['box_type'] ?? null) !== 'horizontal_scroll' || ($block['item_type'] ?? null) !== $expectedItemType) {
+            return null;
+        }
+
+        $items = $block['items'] ?? null;
+
+        return is_array($items) && $items !== [] ? array_values($items) : null;
+    }
+
+    private function previousGeoItemsForGroup($resource, string $attribute, int $groupIndex): ?array
+    {
+        $value = is_object($resource) && method_exists($resource, 'getRawOriginal')
+            ? $resource->getRawOriginal($attribute)
+            : null;
+
+        if (($value === null || $value === '') && is_object($resource)) {
+            $value = $resource->{$attribute} ?? null;
+        }
+
+        $payload = $this->decodePayload($value);
+        $home = $payload['HOME'] ?? [];
+
+        if (! isset($home[$groupIndex])) {
+            return null;
+        }
+
+        $block = $this->normalizeRow($home[$groupIndex]);
+
+        if (($block['box_type'] ?? null) !== 'horizontal_scroll_geo') {
             return null;
         }
 
