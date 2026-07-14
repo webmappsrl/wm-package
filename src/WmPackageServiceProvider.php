@@ -90,6 +90,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
     {
         parent::boot();
         $this->loadJsonTranslationsFrom(__DIR__.'/../resources/lang');
+        $this->loadTranslationsFrom(__DIR__.'/../resources/lang');
 
         $packageDirPath = $this->package->basePath('/../');
 
