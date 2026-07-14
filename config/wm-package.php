@@ -74,6 +74,18 @@ return [
     'ec_poi_track_pivot_table' => env('EC_POI_TRACK_PIVOT_TABLE', 'ec_poi_ec_track'),
 
     /*
+    | Configurazione per la feature QR code deep link (oc:8251).
+    | - apple_team_id: Apple Developer Team ID di default, usato per comporre l'appID
+    |   (TEAMID.bundle_id) nell'entry apple-app-site-association quando la singola App non
+    |   ha un Team ID proprio impostato in Nova (properties->apple_team_id) — alcune app
+    |   potrebbero non essere pubblicate sotto l'account Developer Webmapp, da qui la
+    |   possibilità di override per-app. Nessun override da env: è una costante di codice.
+    */
+    'deep_link' => [
+        'apple_team_id' => 'BSTW6XXE23',
+    ],
+
+    /*
     | Email allowlist super-admin {@see \Wm\WmPackage\Services\RolesAndPermissionsService} (comma-separated).
     | Fallback env: WM_SUPER_ADMIN_EMAILS → default team@webmapp.it.
     */

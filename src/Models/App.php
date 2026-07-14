@@ -68,6 +68,11 @@ class App extends Model implements HasMedia
         return $this->properties['geohub_id'] ?? null;
     }
 
+    public function isNativeAppDeepLinkEnabled(): bool
+    {
+        return (bool) ($this->properties['native_app_deep_link_enabled'] ?? false);
+    }
+
     public function author(): BelongsTo
     {
         // FK esplicita: la colonna è user_id, non l'inferita author_id (oc:8242).
@@ -538,6 +543,95 @@ class App extends Model implements HasMedia
         StorageService::make()->storeAppQrCode($this->id, $svg);
 
         return $svg;
+    }
+
+    /**
+     * Resolves the domain used to build QR code deep link URLs: the custom `website_url`
+     * if set on this App, otherwise the default per-app subdomain `{app_id}.{APP_NAME}.webmapp.it`.
+     */
+    public function getDeepLinkDomain(): string
+    {
+        if (! empty($this->website_url)) {
+            return rtrim(preg_replace('#^https?://#', '', $this->website_url), '/');
+        }
+
+        return $this->id.'.'.config('app.name').'.webmapp.it';
+    }
+
+    /**
+     * Builds the deep link URL used to open the native app on a Track or Poi.
+     *
+     * @param  string  $type  'track' or 'poi'
+     */
+    public function getDeepLinkUrl(string $type, int $id): string
+    {
+        if (! in_array($type, ['track', 'poi'], true)) {
+            throw new \InvalidArgumentException("Invalid deep link type: {$type}. Expected 'track' or 'poi'.");
+        }
+
+        return 'https://'.$this->getDeepLinkDomain().'/map?'.$type.'='.$id;
+    }
+
+    /**
+     * Renders the QR code + copyable link markup for a Track/Poi deep link, shown
+     * directly on the Nova detail page (no download action needed). Returns null
+     * when the toggle is off, so the caller can hide the Nova field entirely.
+     *
+     * @param  string  $type  'track' or 'poi'
+     */
+    public function renderDeepLinkQrCodeHtml(string $type, int $id): ?string
+    {
+        if (! $this->isNativeAppDeepLinkEnabled()) {
+            return null;
+        }
+
+        $url = $this->getDeepLinkUrl($type, $id);
+
+        $options = new QROptions;
+        $options->outputBase64 = false;
+        $svg = (new QRCode($options))->render($url);
+        $base64 = base64_encode($svg);
+
+        $escapedUrl = e($url);
+        $downloadName = e("{$type}-{$id}-qrcode.svg");
+
+        return <<<HTML
+            <div class="wm-deep-link-qr flex flex-col gap-4 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800 sm:flex-row sm:items-start">
+                <div class="flex shrink-0 flex-col items-center gap-2 self-start">
+                    <div class="rounded-md border border-gray-200 bg-white p-2 shadow-sm">
+                        <img src="data:image/svg+xml;base64,{$base64}" width="140" height="140" alt="QR Code" class="block" />
+                    </div>
+                    <a
+                        href="data:image/svg+xml;base64,{$base64}"
+                        download="{$downloadName}"
+                        class="inline-flex items-center justify-center gap-1.5 rounded-md bg-primary-500 px-3 py-1.5 text-sm font-semibold text-white shadow hover:bg-primary-400 focus:outline-none focus:ring"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3v9m0 0l-3.5-3.5M10 12l3.5-3.5M4 14.5v1a1.5 1.5 0 001.5 1.5h9a1.5 1.5 0 001.5-1.5v-1"/></svg>
+                        Download QR
+                    </a>
+                </div>
+                <div class="flex min-w-0 flex-1 flex-col gap-3 items-center">
+                    <div class="flex w-full max-w-sm">
+                        <input
+                            type="text"
+                            readonly
+                            value="{$escapedUrl}"
+                            onclick="this.select();"
+                            class="min-w-0 flex-1 rounded-l-md border border-r-0 border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200"
+                        />
+                        <button
+                            type="button"
+                            data-copy-text="{$escapedUrl}"
+                            onclick="navigator.clipboard.writeText(this.dataset.copyText).then(() => { const label = this.querySelector('span'); const original = label.textContent; label.textContent = 'Copied!'; setTimeout(() => { label.textContent = original; }, 1500); })"
+                            class="inline-flex shrink-0 items-center gap-1.5 rounded-r-md border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-700"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="9" height="9" rx="1.5"/><path d="M4.5 13H4a1.5 1.5 0 01-1.5-1.5v-7A1.5 1.5 0 014 3h7A1.5 1.5 0 0112.5 4.5V5"/></svg>
+                            <span>Copy</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            HTML;
     }
 
     public function unique_multidim_array($array, $key)
