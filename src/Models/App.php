@@ -568,9 +568,9 @@ class App extends Model implements HasMedia
 
     public function registerMediaCollections(): void
     {
-        $this->addMediaCollection('icon');
-        $this->addMediaCollection('icon_small');
-        $this->addMediaCollection('splash');
+        $this->addMediaCollection('icon')->singleFile();
+        $this->addMediaCollection('icon_small')->singleFile();
+        $this->addMediaCollection('splash')->singleFile();
         $this->addMediaCollection('my_paths');
         $this->addMediaCollection('my_downloads');
     }
