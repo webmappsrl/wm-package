@@ -239,6 +239,8 @@
     "Fill in only one of Poi or Track for this item, not both.": "Fill in only one of Poi or Track for this item, not both.",
     "Leave empty to inherit the image from the linked Poi/Track, if it has one.": "Leave empty to inherit the image from the linked Poi/Track, if it has one.",
     "Leave empty to inherit the name from the linked Poi/Track.": "Leave empty to inherit the name from the linked Poi/Track.",
+    "Choose Poi or Track, then search among that model's records.": "Choose Poi or Track, then search among that model's records.",
+    "Automatically inherited from the linked Poi/Track. Read-only, shown after the item has been saved.": "Automatically inherited from the linked Poi/Track. Read-only, shown after the item has been saved.",
     "Horizontal Scroll Activities": "Horizontal Scroll Activities",
     "Horizontal Scroll POI Types": "Horizontal Scroll POI Types",
     "Horizontal Scroll Poi/Track": "Horizontal Scroll Poi/Track",

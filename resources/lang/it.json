@@ -256,6 +256,8 @@
     "Fill in only one of Poi or Track for this item, not both.": "Valorizza solo uno tra Poi e Traccia per questo elemento, non entrambi.",
     "Leave empty to inherit the image from the linked Poi/Track, if it has one.": "Lascia vuoto per ereditare l'immagine dal POI/traccia collegato, se disponibile.",
     "Leave empty to inherit the name from the linked Poi/Track.": "Lascia vuoto per ereditare il nome dal POI/traccia collegato.",
+    "Choose Poi or Track, then search among that model's records.": "Scegli Poi o Traccia, poi cerca tra i relativi elementi.",
+    "Automatically inherited from the linked Poi/Track. Read-only, shown after the item has been saved.": "Ereditato automaticamente dal Poi/Traccia collegato. Sola lettura, visibile dopo il salvataggio.",
     "Horizontal Scroll Activities": "Scorrimento orizzontale — Attività",
     "Horizontal Scroll POI Types": "Scorrimento orizzontale — Tipi POI",
     "Horizontal Scroll Poi/Track": "Scorrimento orizzontale — Poi/Traccia",
