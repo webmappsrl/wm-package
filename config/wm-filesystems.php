@@ -95,6 +95,19 @@ return [
             'endpoint' => env('AWS_ENDPOINT'),
             'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
         ],
+        // Disco verso il server della webapp che ospita il file well-known condiviso
+        // (apple-app-site-association / assetlinks.json) per la feature QR code deep link.
+        // Auth via password (WELLKNOWN_SFTP_PASSWORD) o chiave privata (WELLKNOWN_SFTP_PRIVATE_KEY_PATH) — impostare solo una delle due.
+        'well_known_registry' => [
+            'driver' => 'sftp',
+            'host' => env('WELLKNOWN_SFTP_HOST'),
+            'username' => env('WELLKNOWN_SFTP_USERNAME'),
+            'password' => env('WELLKNOWN_SFTP_PASSWORD'),
+            'privateKey' => env('WELLKNOWN_SFTP_PRIVATE_KEY_PATH'),
+            'port' => (int) env('WELLKNOWN_SFTP_PORT', 22),
+            'root' => env('WELLKNOWN_SFTP_ROOT', '/'),
+            'timeout' => 30,
+        ],
     ],
 
 ];
