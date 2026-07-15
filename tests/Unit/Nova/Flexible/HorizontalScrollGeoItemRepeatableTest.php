@@ -3,7 +3,9 @@
 namespace Wm\WmPackage\Tests\Unit\Nova\Flexible;
 
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
+use ReflectionMethod;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Models\EcTrack;
@@ -23,6 +25,19 @@ class HorizontalScrollGeoItemRepeatableTest extends TestCase
     private function geoReferenceField(array $fields): GeoReferenceField
     {
         return collect($fields)->first(fn ($field) => $field instanceof GeoReferenceField);
+    }
+
+    private function titleField(array $fields): Text
+    {
+        return collect($fields)->first(fn ($field) => $field instanceof Text && $field->attribute === 'title');
+    }
+
+    private function callPrivateMethod(object $object, string $method, array $args = []): mixed
+    {
+        $reflection = new ReflectionMethod($object, $method);
+        $reflection->setAccessible(true);
+
+        return $reflection->invokeArgs($object, $args);
     }
 
     public function test_poi_options_are_scoped_to_the_current_app(): void
@@ -65,5 +80,82 @@ class HorizontalScrollGeoItemRepeatableTest extends TestCase
 
         $this->assertSame([], $field->meta['poiOptions']);
         $this->assertSame([], $field->meta['trackOptions']);
+    }
+
+    public function test_model_field_has_updated_label(): void
+    {
+        $fields = (new HorizontalScrollGeoItemRepeatable)->fields($this->requestForApp(null));
+        $field = $this->geoReferenceField($fields);
+
+        $this->assertSame('Model', $field->name);
+    }
+
+    public function test_model_field_has_required_rule(): void
+    {
+        $fields = (new HorizontalScrollGeoItemRepeatable)->fields($this->requestForApp(null));
+        $field = $this->geoReferenceField($fields);
+
+        $this->assertContains('required', $field->rules);
+    }
+
+    public function test_title_field_is_readonly(): void
+    {
+        $fields = (new HorizontalScrollGeoItemRepeatable)->fields($this->requestForApp(null));
+        $field = $this->titleField($fields);
+
+        $this->assertTrue($field->isReadonly(NovaRequest::create('/', 'GET')));
+    }
+
+    public function test_readonly_title_field_is_empty_for_new_item(): void
+    {
+        $repeatable = new HorizontalScrollGeoItemRepeatable;
+
+        $title = $this->callPrivateMethod($repeatable, 'resolveInheritedTitle', [['poi_id' => null, 'track_id' => null]]);
+
+        $this->assertSame('', $title);
+    }
+
+    public function test_readonly_title_field_resolves_from_linked_poi(): void
+    {
+        $app = App::factory()->createQuietly();
+        $poi = EcPoi::factory()->createQuietly(['app_id' => $app->id, 'name' => ['it' => 'Fonte Sacra', 'en' => 'Sacred Spring']]);
+
+        $repeatable = new HorizontalScrollGeoItemRepeatable;
+        $title = $this->callPrivateMethod($repeatable, 'resolveInheritedTitle', [['poi_id' => $poi->id, 'track_id' => null]]);
+
+        $this->assertSame('Fonte Sacra', $title);
+    }
+
+    public function test_readonly_title_field_falls_back_through_locales(): void
+    {
+        $app = App::factory()->createQuietly();
+        $poi = EcPoi::factory()->createQuietly(['app_id' => $app->id, 'name' => ['fr' => 'Source Sacrée']]);
+
+        $repeatable = new HorizontalScrollGeoItemRepeatable;
+        $title = $this->callPrivateMethod($repeatable, 'resolveInheritedTitle', [['poi_id' => $poi->id, 'track_id' => null]]);
+
+        $this->assertSame('Source Sacrée', $title);
+    }
+
+    public function test_readonly_title_field_resolves_from_linked_track(): void
+    {
+        $app = App::factory()->createQuietly();
+        $track = EcTrack::factory()->createQuietly(['app_id' => $app->id, 'name' => ['en' => 'Ridge Trail']]);
+
+        $repeatable = new HorizontalScrollGeoItemRepeatable;
+        $title = $this->callPrivateMethod($repeatable, 'resolveInheritedTitle', [['poi_id' => null, 'track_id' => $track->id]]);
+
+        $this->assertSame('Ridge Trail', $title);
+    }
+
+    public function test_model_options_label_falls_back_through_all_configured_locales(): void
+    {
+        $app = App::factory()->createQuietly();
+        EcPoi::factory()->createQuietly(['app_id' => $app->id, 'name' => ['es' => 'Fuente Sagrada']]);
+
+        $fields = (new HorizontalScrollGeoItemRepeatable)->fields($this->requestForApp($app->id));
+        $field = $this->geoReferenceField($fields);
+
+        $this->assertContains('Fuente Sagrada', $field->meta['poiOptions']);
     }
 }

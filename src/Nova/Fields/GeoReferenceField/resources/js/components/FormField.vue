@@ -215,13 +215,16 @@ export default {
     },
 
     /**
-     * Fill the given FormData object with the field's internal value.
+     * Fill the given FormData object with the field's internal value. Omitted entirely when no
+     * option is selected (e.g. the Model toggle was switched without picking a new value), so the
+     * `required` rule on the PHP side rejects the save instead of silently clearing the item.
      */
     fill(formData) {
-      formData.append(
-        this.fieldAttribute,
-        JSON.stringify({ type: this.selectedId ? this.modelType : null, id: this.selectedId })
-      )
+      if (!this.selectedId) {
+        return
+      }
+
+      formData.append(this.fieldAttribute, JSON.stringify({ type: this.modelType, id: this.selectedId }))
     },
   },
 }

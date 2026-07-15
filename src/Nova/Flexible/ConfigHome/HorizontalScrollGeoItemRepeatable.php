@@ -9,7 +9,6 @@ use Laravel\Nova\Http\Requests\NovaRequest;
 use Wm\WmPackage\Models\EcPoi as EcPoiModel;
 use Wm\WmPackage\Models\EcTrack as EcTrackModel;
 use Wm\WmPackage\Nova\Fields\GeoReferenceField\src\GeoReferenceField;
-use Wm\WmPackage\Nova\Traits\HasFlexibleTranslatableFields;
 
 /**
  * Repeatable block for the `horizontal_scroll_geo` layout on `config_home`. Uses the custom
@@ -17,11 +16,13 @@ use Wm\WmPackage\Nova\Traits\HasFlexibleTranslatableFields;
  * always-visible Select fields — `dependsOn()` does not work for fields nested this deep inside a
  * Flexible > Repeater > Repeatable (verified reading `vendor/laravel/nova/src/Http/Controllers/UpdateFieldController.php`),
  * so the conditional filtering the ticket asks for had to be built as a standalone Vue component instead.
+ *
+ * The `title` field is read-only: the title always comes from the linked Poi/Track (`ConfigHomeResolver::
+ * mergeItemTitle()` already inherits it at save time when absent from the payload), it is never editable
+ * from the builder.
  */
 class HorizontalScrollGeoItemRepeatable extends Repeatable
 {
-    use HasFlexibleTranslatableFields;
-
     public static function key(): string
     {
         return 'horizontal-scroll-geo-item';
@@ -32,23 +33,47 @@ class HorizontalScrollGeoItemRepeatable extends Repeatable
      */
     public function fields(NovaRequest $request): array
     {
-        $fields = [
-            GeoReferenceField::make(__('Reference'), 'geo_ref')
+        return [
+            GeoReferenceField::make(__('Model'), 'geo_ref')
                 ->poiOptions($this->modelOptions(EcPoiModel::class, $request->resourceId))
                 ->trackOptions($this->modelOptions(EcTrackModel::class, $request->resourceId))
-                ->help(__('Choose Poi or Track, then search among that model\'s records.')),
-        ];
+                ->help(__('Choose Poi or Track, then search among that model\'s records.'))
+                ->rules('required'),
 
-        foreach ($this->translatableFields(__('Title'), 'title') as $field) {
-            $fields[] = $field->nullable()
-                ->help(__('Leave empty to inherit the name from the linked Poi/Track.'));
+            Text::make(__('Title'), 'title')
+                ->readonly()
+                ->resolveUsing(fn ($value, $resource) => $this->resolveInheritedTitle($resource))
+                ->help(__('Automatically inherited from the linked Poi/Track. Read-only, shown after the item has been saved.')),
+
+            Text::make(__('Image URL'), 'image_url')
+                ->nullable()
+                ->help(__('Leave empty to inherit the image from the linked Poi/Track, if it has one.')),
+        ];
+    }
+
+    /**
+     * @param  mixed  $resource
+     */
+    private function resolveInheritedTitle($resource): string
+    {
+        $data = is_array($resource) ? $resource : (array) $resource;
+
+        $poiId = $data['poi_id'] ?? null;
+        $trackId = $data['track_id'] ?? null;
+
+        if (! empty($poiId)) {
+            $poi = EcPoiModel::query()->find($poiId);
+
+            return $poi ? $this->cascadeTranslation($poi->getTranslations('name')) : '';
         }
 
-        $fields[] = Text::make(__('Image URL'), 'image_url')
-            ->nullable()
-            ->help(__('Leave empty to inherit the image from the linked Poi/Track, if it has one.'));
+        if (! empty($trackId)) {
+            $track = EcTrackModel::query()->find($trackId);
 
-        return $fields;
+            return $track ? $this->cascadeTranslation($track->getTranslations('name')) : '';
+        }
+
+        return '';
     }
 
     /**
@@ -67,25 +92,45 @@ class HorizontalScrollGeoItemRepeatable extends Repeatable
             ->where('app_id', $appId)
             ->get(['id', 'name'])
             ->mapWithKeys(function ($model) {
-                return [$model->id => $this->modelLabel($model->name, $model->id)];
+                return [$model->id => $this->modelLabel($model->getTranslations('name'), $model->id)];
             })
             ->sort()
             ->all();
     }
 
     /**
-     * @param  mixed  $name
+     * @param  array<string, mixed>  $translations
      */
-    private function modelLabel($name, int $fallbackId): string
+    private function modelLabel(array $translations, int $fallbackId): string
     {
-        if (is_array($name)) {
-            return (string) ($name['it'] ?? $name['en'] ?? ('#'.$fallbackId));
+        $cascaded = $this->cascadeTranslation($translations);
+
+        return $cascaded !== '' ? $cascaded : '#'.$fallbackId;
+    }
+
+    /**
+     * Cascade `it` -> `en` -> first non-empty translation, empty string if none is set.
+     *
+     * @param  array<string, mixed>  $translations
+     */
+    private function cascadeTranslation(array $translations): string
+    {
+        foreach (['it', 'en'] as $locale) {
+            $value = trim((string) ($translations[$locale] ?? ''));
+
+            if ($value !== '') {
+                return $value;
+            }
         }
 
-        if (is_string($name) && $name !== '') {
-            return $name;
+        foreach ($translations as $value) {
+            $value = trim((string) $value);
+
+            if ($value !== '') {
+                return $value;
+            }
         }
 
-        return '#'.$fallbackId;
+        return '';
     }
 }
