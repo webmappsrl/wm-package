@@ -38,3 +38,37 @@
 1. Il rischio "riferimenti orfani nel config pubblico" (`AppConfigService::config_section_home()` bypassa `ConfigHomeResolver`) resta aperto, invariato dai cicli precedenti — con l'ereditarietà ora implementata AL SALVATAGGIO questo rischio si estende anche a title/image_url: se EcPoi/EcTrack cambia nome o immagine dopo il salvataggio, il config pubblico non si aggiorna finché qualcuno non risalva l'App in Nova (stesso limite già noto e accettato per le tassonomie).
 2. Le stringhe nel componente Vue (`FormField.vue`, `DetailField.vue`, `IndexField.vue`) sono hardcoded in inglese, non passate per `__()` — coerente con `IconSelect` esistente (stesso limite), da considerare se serve i18n completa.
 3. Il `composer.json` del campo custom generato dall'utente punta a `laravel/nova-devtool` via repository `vcs` GitHub diretto (bypassa il repo privato Nova) — funziona, ma è un workaround da tenere a mente se altri sviluppatori clonano il progetto e provano a ricompilare senza sapere del blocco licenza.
+
+## Revisione 5 — Follow-up post-testing
+
+Riferimento: `overview.md`/`plan.md` sezione "Revisione 5". Il ticket è tornato `progress` (assegnato a Carla) dopo 3 correzioni emerse dal team in fase di test (Peppe, Rubens) + 1 bug critico trovato durante la Fase: challenge di questo stesso round.
+
+### Deviazioni dal piano
+
+- **Blocco ambientale nella build, diverso da quello già noto**: `npm run prod` in `GeoReferenceField/` falliva con `Error [ERR_REQUIRE_ESM]` su `postcss.config.js` — non il blocco di licenza Nova già documentato sopra, ma un problema distinto: **`GeoReferenceField` era l'unico campo custom del package senza un proprio `postcss.config.js` locale** (`IconSelect`, `TrackColor`, `OrderList`, `LayerFeatures`, `FeatureCollectionMap` lo hanno tutti). Senza quel file, `postcss-loader` risale l'albero delle cartelle e trova il `postcss.config.js` della root di Forestas (ESM `export default`), incompatibile col caricamento CommonJS del subpackage. **Gap pre-esistente della PR #246 originale**, non introdotto da questo round — corretto aggiungendo `postcss.config.js` (`module.exports = {}`, stesso identico contenuto degli altri campi). Dopo il fix, `npm run prod` ha compilato senza errori.
+- **`HasFlexibleTranslatableFields` non più usato in questa classe**: rimosso il `use` del trait da `HorizontalScrollGeoItemRepeatable` insieme al blocco `translatableFields()` per il titolo (ora readonly, non più un `KeyValue` editabile) — il trait resta ancora usato altrove nel package.
+
+### Bug trovati
+
+- **Bug critico pre-esistente (PR #246), trovato in Fase: challenge di questo round**: cambiare il toggle Model (Poi↔Traccia) su un item già salvato azzerava `selectedId` a `null` in `FormField.vue::selectModelType()`; se l'admin salvava senza riselezionare un valore, `ConfigHomeResolver::fromGeoRepeaterItems()` scartava l'item silenziosamente (nessun errore, nessun item nel box home). Fix in questo ciclo: `FormField.vue::fill()` non invia più il campo se `selectedId` è vuoto; `GeoReferenceField` in `HorizontalScrollGeoItemRepeatable::fields()` ha ora `->rules('required')`, verificato che Nova propaga correttamente la regola dentro un Repeater grazie a `Repeater::formatRules()` (letto in `vendor/laravel/nova/src/Fields/Repeater.php`, righe 204-254 — merge automatico delle rules di ogni field annidato con chiave `"{indice}.{attributo}"`).
+
+### Decisioni
+
+- **`modelOptions()`/`modelLabel()`: da `$model->name` a `$model->getTranslations('name')`** — `$model->name` (accesso magico Eloquent) passa dall'accessor di Spatie `HasTranslations`, che risolve **sempre** una stringa per la locale corrente (mai l'array grezzo delle traduzioni); il vecchio ramo `is_array($name)` in `modelLabel()` era quindi **codice morto**, mai realmente eseguito. Corretto leggendo `getTranslations('name')` esplicitamente, poi applicando la stessa cascade `it→en→prima disponibile` usata per il titolo readonly (nuovo metodo condiviso `cascadeTranslation()`). Scoperto perché il test `test_model_options_label_falls_back_through_all_configured_locales` (con nome valorizzato solo in `es`) falliva prima del fix.
+- **`resolveInheritedTitle()` legge `$resource` come array/Fluent del Repeatable, non il model App**: confermato leggendo `vendor/laravel/nova/src/Fields/Repeater/Repeatable.php::resolveFields()` — il `resolveUsing` di un field dentro un Repeatable riceve `$this->data` (i dati della riga corrente), esattamente lo stesso oggetto già letto da `GeoReferenceField::resolveAttribute()` per `poi_id`/`track_id`.
+
+### Verifica
+
+- Test unit: 27 passati (`HorizontalScrollGeoItemRepeatableTest.php` + `ConfigHomeResolverGeoTest.php`, quest'ultimo invariato) — girati con `docker exec php-forestas vendor/bin/pest` (DB `wm_package`, isolato)
+- Pint e PHPStan (livello del package): puliti sui file modificati
+- Dist ricompilato e verificato per contenuto (`fill()` col guard `selectedId &&`, nessuna proprietà spuria, `mix-manifest.json` con entrambe le chiavi)
+- **Verifica manuale in browser NON eseguita in questo ciclo** (nessun tooling da browser disponibile in questo ambiente) — resta da fare, coerente col fatto che il ticket va a Rubens per il test
+
+### Traduzioni mancanti (trovate in verifica manuale utente)
+
+Screenshot del box in Nova ha mostrato testo in inglese non tradotto. Due chiavi `__()` senza voce in `resources/lang/it.json`/`en.json`, aggiunte: help text del campo Model ("Choose Poi or Track, then search among that model's records." — pre-esistente alla PR #246, mai stata tradotta) e help text del nuovo campo Titolo readonly. Rimangono **deliberatamente non tradotte** (decisione utente, fuori scope): bottoni "Poi"/"Track", placeholder "Search a poi…"/"Search a track…", label "Add Horizontal Scroll Geo Item Repeatable" — hardcoded nel componente Vue, non passano per `__()`; tradurli richiederebbe passare le label da PHP come meta del campo, stesso limite già noto di `IconSelect`.
+
+### Fuori scope (deliberato, vedi overview.md)
+
+- Riferimenti orfani mostrati come campo vuoto, preload dataset senza paginazione, duplicati non impediti tra righe del repeater — tutti emersi in Fase: challenge, lasciati come rischio noto non risolto
+- Correzione `tester_id` del ticket oc:8241: **ancora da fare** — serve l'user_id Orchestrator di Rubens (nessun endpoint di ricerca utenti disponibile su Orchestrator per dedurlo)

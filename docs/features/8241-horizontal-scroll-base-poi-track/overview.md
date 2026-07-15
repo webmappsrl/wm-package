@@ -72,3 +72,52 @@ Il meccanismo nativo di Nova per campi condizionati (`dependsOn()`) non funziona
 - `wm-package/src/Nova/Flexible/ConfigHome/HorizontalScrollItemRepeatable.php`
 - `wm-package/src/Nova/Flexible/ConfigHome/HorizontalScrollRepeaterJsonPreset.php`
 - `wm-package/src/Nova/App.php`: `horizontal_scroll_activities_layout()`, `horizontal_scroll_poi_types_layout()`, `horizontalScrollItemsRepeater()`, `horizontalScrollActivityOptions()`, `horizontalScrollPoiTypeOptions()`, `getTaxonomyLabel()`, registrazione dei due `addLayout` originali
+
+## Revisione 5 — Follow-up post-testing (2026-07-15)
+
+Il ticket è tornato a `progress` dopo il testing per 3 correzioni emerse dal confronto col team (Peppe, Rubens). Tutte e tre confinate lato Nova/PHP, nessun impatto sul componente Vue esistente (`FormField.vue`/`DetailField.vue`/`IndexField.vue` restano invariati) né su `ConfigHomeResolver` (la logica di ereditarietà `mergeItemTitle()`/`mergeItemImage()` già gestisce correttamente un campo `title` assente dal payload, verificato leggendo `extractGeoRepeaterFields()` — nessuna modifica al resolver necessaria).
+
+### 1. Campo Titolo: da editabile a readonly (post-salvataggio)
+
+Il campo `title` in `HorizontalScrollGeoItemRepeatable::fields()` (attualmente un `KeyValue` editabile via `translatableFields()`) non deve più permettere l'override manuale — il titolo è sempre quello del modello Poi/Traccia collegato. Comportamento concordato:
+
+- **Prima del primo salvataggio** (item nuovo, non ancora persistito): nessun campo/testo visibile — coerente con quanto osservato in call.
+- **Dopo il salvataggio**: appare un `Text::make(__('Title'))->readonly()->resolveUsing(...)` che mostra il titolo ereditato, con help text che spiega la provenienza dal modello.
+- **Lingua mostrata**: solo la lingua di default dell'app (`it`, da `APP_LOCALE`), non tutte le 5 lingue configurate (`it/en/fr/es/de`) — a differenza del `KeyValue` multi-lingua attuale.
+- **Fallback traduzione mancante**: cascade `it → en → prima lingua disponibile` (pattern Spatie `HasTranslations::getTranslation('name', 'it', fallback: true)`, già in uso altrove nel package, es. `LayerAnalyticsCard` oc:7648).
+- Il valore resta **sempre inizializzato nel JSON** col titolo del modello — questa parte era già implementata (`mergeItemTitle()` in `ConfigHomeResolver` eredita già quando il campo è assente/vuoto), il cambio è **solo lato builder Nova**.
+
+### 2. Terminologia: "Reference" → "Model" (solo label)
+
+`GeoReferenceField::make(__('Reference'), 'geo_ref')` → `GeoReferenceField::make(__('Model'), 'geo_ref')` in `HorizontalScrollGeoItemRepeatable.php:36`. Solo la label tradotta cambia — class name (`GeoReferenceField`), attributo (`geo_ref`), namespace e componente Vue (`geo-reference-field`) restano invariati (scope volutamente ridotto, rifiuto esplicito del rename completo per rischio/beneficio). La chiave di traduzione `"Model"` esiste già in `resources/lang/{it,en}.json` (riga 99) — nessuna nuova voce di traduzione richiesta.
+
+### 3. Immagine: nessuna modifica
+
+Verificato nel codice: `Text::make(__('Image URL'), 'image_url')->nullable()->help(...)` in `HorizontalScrollGeoItemRepeatable.php:47-49` è già editabile con help text sull'ereditarietà. Già conforme, nessuna azione.
+
+### Requisiti (revisione 5)
+
+- [ ] `HorizontalScrollGeoItemRepeatable::fields()`: rimuovere il `KeyValue` editabile per `title`, sostituire con `Text::make(__('Title'), 'title')->readonly()->resolveUsing(fn ($value, $resource) => ...)` che risolve il titolo dal Poi/Traccia collegato con cascade `it→en→prima disponibile`, vuoto se l'item non è ancora salvato
+- [ ] Label del campo Model: `__('Reference')` → `__('Model')`
+- [ ] Test unit in `HorizontalScrollGeoItemRepeatableTest.php`: label del campo Model aggiornata, campo titolo readonly con cascade di fallback, campo titolo vuoto per un item nuovo/non salvato
+- [ ] **Fix bug perdita silenziosa dell'item al cambio Model** (trovato in Fase: challenge, non nei 3 punti originali del ticket): `FormField.vue::selectModelType()` azzera `selectedId` a `null` quando l'admin cambia Poi↔Traccia su un item esistente; se salva senza riselezionare un valore, `fill()` invia `{type: null, id: null}` e `ConfigHomeResolver::fromGeoRepeaterItems()` scarta l'item senza alcun errore visibile. Fix: (a) `FormField.vue::fill()` non invia il JSON `{type,id}` se `selectedId` è vuoto (appende stringa vuota/niente), (b) `GeoReferenceField` in `HorizontalScrollGeoItemRepeatable.php` riceve `->rules('required')` così un item con Model cambiato ma nessuna nuova selezione blocca il salvataggio con errore di validazione Nova invece di sparire silenziosamente. Verificare in browser che la validazione si propaghi correttamente dentro un Repeater annidato in un Flexible (stessa cautela già nota per `dependsOn()`).
+- [ ] **Fallback multilingua coerente**: allineare `HorizontalScrollGeoItemRepeatable::modelOptions()`/`modelLabel()` (oggi cascade `it→en→#id`) alla stessa cascade `it→en→prima lingua disponibile` usata per il titolo readonly, per coerenza tra le due parti del box che leggono lo stesso nome del modello.
+
+### Rischi (revisione 5)
+
+- **Titolo readonly non reattivo**: come per la UI attuale, un `Text::readonly()->resolveUsing()` risolve una sola volta al caricamento pagina dai dati salvati sul DB — se l'admin cambia Poi/Traccia nel widget e salva, il titolo aggiornato compare solo dopo il refresh della pagina (limite accettato esplicitamente, coerente col comportamento già presente per il resto del box).
+- **Determinare "item non ancora salvato"**: il `resolveUsing()` deve distinguere un item nuovo (nessun `poi_id`/`track_id` risolvibile ancora) da uno esistente con titolo vuoto per altre ragioni (es. modello senza traduzioni) — va verificato in browser che il campo non mostri un readonly vuoto fuorviante anche per item esistenti con modello privo di nome in tutte le lingue (caso limite raro, stesso comportamento di scarto già esistente in `mergeItemTitle()` quando `$title === []`).
+- **Validazione `required` dentro un Repeater annidato**: non c'è un precedente diretto nel package di regole di validazione su un campo custom dentro Repeater > Flexible — va verificato che Nova la applichi correttamente e mostri l'errore nel punto giusto della UI (stesso genere di limite già documentato per `dependsOn()` in questo stesso box).
+- **Riferimenti orfani mostrati come vuoti (non risolto in questo ciclo)**: se `poi_id`/`track_id` punta a un record di un'altra app o cancellato, `FormField.vue::labelFor()` e la resolve di `DetailField`/`IndexField` mostrano il campo vuoto/`—`, identico a un item mai valorizzato — rischio che un admin sovrascriva inconsapevolmente un riferimento esistente pensando di impostarlo per la prima volta. Emerso in Fase: challenge, deliberatamente lasciato fuori scope (vedi Out of scope).
+- **Preload dataset senza paginazione (non risolto in questo ciclo)**: `modelOptions()` carica l'intero dataset Poi/Traccia dell'app per ogni riga del repeater, senza limite — costo che cresce con la dimensione del dataset e col numero di righe. Nessun problema noto oggi con i volumi Forestas, ma non quantificato: da rivalutare se il box home cresce molto o su app con dataset molto più grandi.
+- **Duplicati non impediti (non risolto in questo ciclo)**: nulla vieta di selezionare lo stesso Poi/Traccia in due righe diverse del repeater.
+
+### Out of scope (revisione 5)
+
+- Rename completo di classe/namespace/componente Vue da "Reference" a "Model" (rischio non giustificato per un cambio richiesto solo a livello di label)
+- Vista multi-lingua del titolo readonly (mostrata solo la lingua di default, non le 5 configurate)
+- Reattività del titolo readonly al cambio di selezione Poi/Traccia prima del salvataggio
+- Correzione `tester_id` del ticket oc:8241 (gestita separatamente come aggiornamento Orchestrator, non è una modifica di codice)
+- Segnalazione visiva di riferimenti orfani (poi_id/track_id non risolvibile tra le opzioni caricate) — emerso in Fase: challenge, rischio noto non affrontato in questo ciclo
+- Paginazione/lazy-loading delle opzioni Poi/Traccia nel campo custom — emerso in Fase: challenge, nessun problema di performance noto oggi
+- Prevenzione di selezione duplicata dello stesso Poi/Traccia in più righe del repeater — emerso in Fase: challenge, non richiesto dal ticket

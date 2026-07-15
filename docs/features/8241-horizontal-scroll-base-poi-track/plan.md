@@ -62,3 +62,78 @@ File: `wm-package/src/Nova/Flexible/ConfigHome/HorizontalScrollGeoItemRepeatable
 1. `feat(oc:8241): add GeoReferenceField custom Nova field with Vue component`
 2. `feat(oc:8241): integrate GeoReferenceField into HorizontalScrollGeoItemRepeatable`
 3. `test(oc:8241): update tests for the custom geo reference field`
+
+---
+
+# Revisione 5 — Follow-up post-testing
+
+Riferimento: `overview.md` (sezione "Revisione 5", approvata). Tutti i file restano in `wm-package/` (branch `oc_8241`), nessun file custom Forestas coinvolto. Nessuna modifica prevista a `ConfigHomeResolver.php` — la logica di ereditarietà `mergeItemTitle()`/`mergeItemImage()` gestisce già correttamente un campo `title` assente dal payload.
+
+## Task 7 — Titolo: da editabile a readonly
+
+File: `wm-package/src/Nova/Flexible/ConfigHome/HorizontalScrollGeoItemRepeatable.php`
+
+- Rimuovere il blocco `foreach ($this->translatableFields(__('Title'), 'title') as $field) { ... }` (il `KeyValue` editabile multilingua)
+- Aggiungere un nuovo metodo privato `resolveInheritedTitle($resource): string`:
+  - Legge `$resource->poi_id` / `$resource->track_id` dal Fluent della riga corrente
+  - Se valorizzato, carica il modello (`EcPoiModel`/`EcTrackModel`) e restituisce il nome cascade `it → en → prima lingua disponibile` (vedi Task 9, metodo condiviso)
+  - Se l'item non ha ancora né `poi_id` né `track_id` (riga nuova, non salvata) o il modello non è trovato, restituisce stringa vuota
+- Sostituire con `Text::make(__('Title'), 'title')->readonly()->resolveUsing(fn ($value, $resource) => $this->resolveInheritedTitle($resource))->help(__('Automatically inherited from the linked Poi/Track. Read-only, shown after the item has been saved.'))`
+- **Non serve nessuna modifica a `ConfigHomeResolver`**: il campo essendo `readonly()` non viene incluso da Nova nel payload inviato al salvataggio, quindi `$fields['title']` risulta assente lato resolver esattamente come oggi con un `title` vuoto — `mergeItemTitle()` eredita già interamente dal modello in questo caso (verificato in Fase: challenge)
+
+## Task 8 — Terminologia: label "Reference" → "Model"
+
+File: `wm-package/src/Nova/Flexible/ConfigHome/HorizontalScrollGeoItemRepeatable.php`
+
+- `GeoReferenceField::make(__('Reference'), 'geo_ref')` → `GeoReferenceField::make(__('Model'), 'geo_ref')`
+- Nessuna nuova voce di traduzione: la chiave `"Model"` esiste già in `resources/lang/it.json`/`en.json` (riga 99)
+- Non toccare: nome classe `GeoReferenceField`, attributo `geo_ref`, namespace, componente Vue `geo-reference-field` (fuori scope per decisione esplicita)
+
+## Task 9 — Fallback multilingua coerente (cascade condiviso)
+
+File: `wm-package/src/Nova/Flexible/ConfigHome/HorizontalScrollGeoItemRepeatable.php`
+
+- Estrarre un nuovo metodo privato condiviso `cascadeTranslation(array $translations): string` — prova `it`, poi `en`, poi la prima entry non vuota tra le restanti; stringa vuota se nessuna traduzione è valorizzata (stesso pattern già in uso in `LayerAnalyticsCard`, oc:7648, citato in `wm-package/CLAUDE.md`)
+- Riusare `cascadeTranslation()` sia in `resolveInheritedTitle()` (Task 7) sia in `modelLabel()` (oggi cascade limitata a `it → en → '#id'`, ignora `fr`/`es`/`de`) — `modelLabel()` chiama `cascadeTranslation($name)` e ricade su `'#'.$fallbackId` solo se il risultato è vuoto
+
+## Task 10 — Fix bug perdita silenziosa dell'item al cambio Model
+
+File: `wm-package/src/Nova/Fields/GeoReferenceField/resources/js/components/FormField.vue`, `wm-package/src/Nova/Flexible/ConfigHome/HorizontalScrollGeoItemRepeatable.php`
+
+- **Vue** (`FormField.vue::fill()`): appendere il JSON `{type, id}` **solo se** `this.selectedId` è valorizzato; se l'admin ha cambiato Model (`selectModelType()` azzera `selectedId`) senza selezionare un nuovo valore, non appendere nulla per `this.fieldAttribute` (il campo risulta "assente" nella request, non `{type:null,id:null}`)
+- **PHP** (`HorizontalScrollGeoItemRepeatable::fields()`): aggiungere `->rules('required')` al `GeoReferenceField::make(...)`, cosi un item con Model cambiato ma nessuna nuova selezione blocca il salvataggio con un errore di validazione Nova invece di far sparire silenziosamente l'item (oggi: `ConfigHomeResolver::fromGeoRepeaterItems()` scarta silenziosamente un item con né `poi_id` né `track_id` valorizzati)
+- **Verifica manuale obbligatoria**: confermare in browser che Nova propaga e mostra l'errore di validazione per un campo custom dentro un Repeater annidato in un Flexible — nessun precedente diretto nel package per questa combinazione (stessa cautela già nota per `dependsOn()` in questo box)
+
+## Task 11 — Test
+
+File: `wm-package/tests/Unit/Nova/Flexible/HorizontalScrollGeoItemRepeatableTest.php`
+
+- `test_model_field_has_updated_label()` — label del `GeoReferenceField` è `"Model"`, non più `"Reference"`
+- `test_model_field_has_required_rule()` — il `GeoReferenceField` ha la regola `required` tra le sue `rules`
+- `test_readonly_title_field_falls_back_through_locales()` — per un item con `poi_id`/`track_id` valorizzato, il campo `title` risolve il nome cascade `it→en→prima disponibile` a seconda di quali traduzioni sono valorizzate sul modello collegato (coprire almeno: solo `it`, solo `en`, solo una terza lingua, nessuna)
+- `test_readonly_title_field_is_empty_for_new_item()` — per una riga senza `poi_id`/`track_id` (item nuovo, non salvato), il campo `title` risolve a stringa vuota
+- `test_model_options_label_falls_back_through_all_configured_locales()` — `modelOptions()`/`modelLabel()` usano lo stesso cascade `it→en→prima disponibile` (non più limitato a `it→en→#id`)
+- Nessun test automatico del componente Vue (fuori scope, coerente con la decisione originale)
+
+## Task 12 — Build dist e verifica manuale
+
+- `npm run prod` dentro `wm-package/src/Nova/Fields/GeoReferenceField/` (solo `FormField.vue` è cambiato in questo round) — **attenzione**: nel ciclo originale la build era bloccata da un problema di licenza Nova nell'ambiente (`notes.md`, "Blocco ambientale"), verificare che sia ancora un problema o sia stato risolto nel frattempo
+- Verificare che il `dist/js/field.js` ricompilato non contenga proprietà spurie rispetto alla sorgente (prassi da CLAUDE.md, decisione oc:8093)
+- **Verifica manuale in Nova** (checklist):
+  - Titolo: non visibile su un item nuovo non salvato; readonly con il nome corretto dopo il salvataggio; help text visibile
+  - Label "Model" al posto di "Reference"
+  - Cambiare Model su un item esistente senza riselezionare un valore, salvare → errore di validazione visibile, item **non** sparisce
+  - Immagine: comportamento invariato (già editabile, nessuna modifica in questo round)
+
+## Notes da aggiornare
+
+- Documentare in `notes.md` i rischi emersi in Fase: challenge **non risolti in questo ciclo** (fuori scope, per decisione esplicita): riferimenti orfani mostrati come campo vuoto, preload dataset senza paginazione, duplicati non impediti tra righe del repeater
+- Documentare la stima approvata dal dev (1h, esplicitamente sotto la stima proposta di 6h) e la decisione di non aggiornarla su Orchestrator
+
+## Commit (da eseguire manualmente dopo review, non automatici)
+
+4. `fix(oc:8241): make title read-only and inherited from linked Poi/Track`
+5. `feat(oc:8241): rename Reference field label to Model`
+6. `fix(oc:8241): require Model selection to prevent silent item loss on toggle`
+7. `fix(oc:8241): align model option labels to the it→en→fallback locale cascade`
+8. `test(oc:8241): cover read-only title, required validation and locale fallback`
