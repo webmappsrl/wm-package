@@ -255,6 +255,10 @@ class App extends Resource
                 ->placeholder('0.0.0')
                 ->rules('nullable', 'regex:/^\\d+\\.\\d+\\.\\d+$/')
                 ->help(__('Minimum app version required. Versions below this value will be blocked and forced to update. Format: X.Y.Z (e.g. 3.1.10, 0.12.55, 12.55.32).')),
+            Boolean::make(__('Native App Deep Link'), 'properties->native_app_deep_link_enabled')
+                ->default(false)
+                ->hideFromIndex()
+                ->help(__('When enabled, this app is registered in the shared well-known file so links open the native app directly instead of the browser, and a QR code / direct link field becomes available on Track and Poi detail pages.')),
         ];
     }
 
@@ -659,6 +663,25 @@ class App extends Resource
                 ->default(false)
                 ->hideFromIndex()
                 ->help(__('If enabled, the app will check for updates and show a popup when a new version is available.')),
+            Heading::make(
+                <<<'HTML'
+                <h2><strong>DEEP LINK WELL-KNOWN FILES</strong></h2>
+                HTML
+            )->asHtml()->hideFromIndex(),
+                Text::make(__('Android Certificate SHA-256'), 'properties->android_cert_sha256')
+                ->canSee(fn (NovaRequest $request) => optional($request->user())->hasRole('Administrator'))
+                ->rules('nullable', 'regex:/^([0-9A-Fa-f]{2}:){31}[0-9A-Fa-f]{2}(\s*,\s*([0-9A-Fa-f]{2}:){31}[0-9A-Fa-f]{2})*$/')
+                ->hideFromIndex()
+                ->help(__('SHA-256 signing certificate fingerprint(s) (format XX:XX:...), used to build the Android assetlinks.json entry for the QR code deep link feature. Separate multiple fingerprints with a comma (e.g. upload key + Play Store signing key).')),
+            Text::make(__('Apple Team ID'), 'properties->apple_team_id')
+                ->canSee(fn (NovaRequest $request) => optional($request->user())->hasRole('Administrator'))
+                ->rules('nullable', 'regex:/^[A-Z0-9]{10}$/')
+                ->hideFromIndex()
+                ->help(__("Apple Developer Team ID used to build the appID in apple-app-site-association for the QR code deep link feature. Leave empty to use Webmapp's default team.")),
+            Text::make(__('Website URL'), 'website_url')
+                ->nullable()
+                ->hideFromIndex()
+                ->help(__('Custom domain used to build QR code deep link URLs (Track/Poi). Leave empty to use the default {app_id}.{APP_NAME}.webmapp.it domain.')),
         ];
     }
 

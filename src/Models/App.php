@@ -68,6 +68,11 @@ class App extends Model implements HasMedia
         return $this->properties['geohub_id'] ?? null;
     }
 
+    public function isNativeAppDeepLinkEnabled(): bool
+    {
+        return (bool) ($this->properties['native_app_deep_link_enabled'] ?? false);
+    }
+
     public function author(): BelongsTo
     {
         // FK esplicita: la colonna è user_id, non l'inferita author_id (oc:8242).
@@ -538,6 +543,75 @@ class App extends Model implements HasMedia
         StorageService::make()->storeAppQrCode($this->id, $svg);
 
         return $svg;
+    }
+
+    /**
+     * Resolves the domain used to build QR code deep link URLs: the custom `website_url`
+     * if set on this App, otherwise the default per-app subdomain `{app_id}.{APP_NAME}.webmapp.it`.
+     */
+    public function getDeepLinkDomain(): string
+    {
+        if (! empty($this->website_url)) {
+            return rtrim(preg_replace('#^https?://#', '', $this->website_url), '/');
+        }
+
+        return $this->id.'.'.config('app.name').'.webmapp.it';
+    }
+
+    /**
+     * Builds the deep link URL used to open the native app on a Track or Poi.
+     *
+     * @param  string  $type  'track' or 'poi'
+     */
+    public function getDeepLinkUrl(string $type, int $id): string
+    {
+        if (! in_array($type, ['track', 'poi'], true)) {
+            throw new \InvalidArgumentException("Invalid deep link type: {$type}. Expected 'track' or 'poi'.");
+        }
+
+        return 'https://'.$this->getDeepLinkDomain().'/map?'.$type.'='.$id;
+    }
+
+    /**
+     * Renders the QR code + copyable link markup for a Track/Poi deep link, shown
+     * directly on the Nova detail page (no download action needed). Returns null
+     * when the toggle is off, so the caller can hide the Nova field entirely.
+     *
+     * @param  string  $type  'track' or 'poi'
+     */
+    public function renderDeepLinkQrCodeHtml(string $type, int $id): ?string
+    {
+        if (! $this->isNativeAppDeepLinkEnabled()) {
+            return null;
+        }
+
+        $url = $this->getDeepLinkUrl($type, $id);
+
+        $options = new QROptions;
+        $options->outputBase64 = false;
+        $svg = (new QRCode($options))->render($url);
+        $base64 = base64_encode($svg);
+
+        $escapedUrl = e($url);
+        $downloadName = e("{$type}-{$id}-qrcode.svg");
+
+        return <<<HTML
+            <div class="wm-deep-link-qr flex flex-col gap-4 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800 sm:flex-row sm:items-start">
+                <div class="flex shrink-0 flex-col items-center gap-2 self-start">
+                    <div class="rounded-md border border-gray-200 bg-white p-2 shadow-sm">
+                        <img src="data:image/svg+xml;base64,{$base64}" width="140" height="140" alt="QR Code" class="block" />
+                    </div>
+                    <a
+                        href="data:image/svg+xml;base64,{$base64}"
+                        download="{$downloadName}"
+                        class="inline-flex items-center justify-center gap-1.5 rounded-md bg-primary-500 px-3 py-1.5 text-sm font-semibold text-white shadow hover:bg-primary-400 focus:outline-none focus:ring"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3v9m0 0l-3.5-3.5M10 12l3.5-3.5M4 14.5v1a1.5 1.5 0 001.5 1.5h9a1.5 1.5 0 001.5-1.5v-1"/></svg>
+                        Download QR
+                    </a>
+                </div>
+            </div>
+            HTML;
     }
 
     public function unique_multidim_array($array, $key)
