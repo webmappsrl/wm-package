@@ -78,6 +78,12 @@ class EcPoi extends AbstractEcResource
             Text::make(__('House number'), 'properties->addr_housenumber'),
             KeyValue::make(__('Related URL'), 'properties->related_url'),
             Text::make(__('Complete address'), 'properties->addr_complete'),
+            Text::make(__('QR Code'), 'deep_link_qr_code', function () {
+                return $this->app?->renderDeepLinkQrCodeHtml('poi', $this->id);
+            })
+                ->asHtml()
+                ->onlyOnDetail()
+                ->canSee(fn () => optional($this->resource->app)->isNativeAppDeepLinkEnabled() ?? false),
         ];
     }
 
