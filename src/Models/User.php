@@ -10,6 +10,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Gate;
+use Laravel\Nova\Auth\Impersonatable;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 use Tymon\JWTAuth\Contracts\JWTSubject;
@@ -26,7 +28,7 @@ use Wm\WmPackage\Traits\HasPackageFactory;
  */
 class User extends Authenticatable implements JWTSubject
 {
-    use Favoriteability, HasApiTokens, HasPackageFactory, HasRoles, Notifiable;
+    use Favoriteability, HasApiTokens, HasPackageFactory, HasRoles, Impersonatable, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -229,6 +231,30 @@ class User extends Authenticatable implements JWTSubject
         }
 
         return $result;
+    }
+
+    /**
+     * Determine if the user can impersonate another user.
+     *
+     * Composes (does not replace) Nova's native `viewNova` check — defense in depth:
+     * only Administrator, and only if the base Nova permission also holds.
+     */
+    public function canImpersonate(): bool
+    {
+        return $this->hasRole('Administrator') && Gate::forUser($this)->check('viewNova');
+    }
+
+    /**
+     * Determine if the user can be impersonated.
+     *
+     * Requires Nova access (`access-nova` permission): every `nova-api/*` route, including
+     * stop impersonating, requires the `viewNova` gate. Impersonating a user without
+     * `access-nova` (e.g. Guest) would leave the administrator stuck with a 403 on any
+     * Nova action, including "Stop impersonating".
+     */
+    public function canBeImpersonated(): bool
+    {
+        return $this->can('access-nova');
     }
 
     /**
