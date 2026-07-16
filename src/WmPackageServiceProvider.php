@@ -121,6 +121,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
             Route::middleware(['nova'])
                 ->prefix('nova-vendor/layer-analytics')
                 ->group(function () {
+                    Route::get('/global', [AnalyticsController::class, 'global']);
                     Route::get('/{layer}', [AnalyticsController::class, 'layer']);
                 });
         });

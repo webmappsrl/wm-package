@@ -7,6 +7,7 @@ namespace Wm\WmPackage\Http\Controllers\Nova;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Wm\WmPackage\Exceptions\AnalyticsQueryException;
 use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Services\PostHog\AnalyticsService;
 
@@ -14,6 +15,11 @@ class AnalyticsController extends Controller
 {
     public function layer(Request $request, Layer $layer): JsonResponse
     {
+        abort_unless(
+            $request->user()?->hasRole('Administrator') || $layer->user_id === $request->user()?->id,
+            403
+        );
+
         $service = app(AnalyticsService::class);
         $range = $this->resolveRange($request);
 
@@ -22,6 +28,27 @@ class AnalyticsController extends Controller
 
         return response()->json(array_merge($usage, [
             'track_downloads' => $trackDownloads,
+        ]));
+    }
+
+    public function global(Request $request): JsonResponse
+    {
+        abort_unless($request->user()?->hasRole('Administrator'), 403);
+
+        $service = app(AnalyticsService::class);
+        $range = $this->resolveRange($request);
+
+        try {
+            $usage = $service->getGlobalUsage($range);
+            $rankingLayers = $service->getAllLayersUsage($range);
+            $rankingTracks = $service->getAllTracksDownloads($range);
+        } catch (AnalyticsQueryException $e) {
+            return response()->json(['error' => 'analytics_query_failed'], 502);
+        }
+
+        return response()->json(array_merge($usage, [
+            'ranking_layers' => $rankingLayers,
+            'ranking_tracks' => $rankingTracks,
         ]));
     }
 

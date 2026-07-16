@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Orchestra\Testbench\TestCase;
+use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Services\PostHog\AnalyticsService;
 
@@ -40,6 +41,12 @@ class AnalyticsServiceTest extends TestCase
         $this->app['db']->connection()->getSchemaBuilder()->create('ec_tracks', function ($table) {
             $table->id();
             $table->json('name')->nullable();
+        });
+
+        $this->app['db']->connection()->getSchemaBuilder()->create('layers', function ($table) {
+            $table->id();
+            $table->json('name')->nullable();
+            $table->timestamps();
         });
     }
 
@@ -132,6 +139,112 @@ class AnalyticsServiceTest extends TestCase
         $this->assertSame(42, $result['breakdown'][0]['total']);
     }
 
+    public function test_get_global_usage_aggregates_across_all_layers(): void
+    {
+        Http::fake([
+            '*' => Http::sequence()
+                ->push(['results' => [['2026-05-01', 'posthog-android', 100], ['2026-05-01', 'posthog-ios', 40]]])
+                ->push(['results' => [['posthog-android', 100], ['posthog-ios', 40]]])
+                ->push(['results' => [[55]]]),
+        ]);
+
+        $result = (new AnalyticsService)->getGlobalUsage('last_30_days');
+
+        $this->assertNull($result['id']);
+        $this->assertSame('layerOpened', $result['event']);
+        $this->assertSame(140, $result['total']);
+        $this->assertSame(55, $result['unique_users']);
+    }
+
+    public function test_get_all_layers_ranking_query_has_no_id_equality_filter(): void
+    {
+        Http::fake(['*' => Http::response(['results' => []])]);
+
+        $service = new AnalyticsService;
+        $method = new \ReflectionMethod($service, 'getUsage');
+        $method->setAccessible(true);
+        $method->invoke($service, 'layerOpened', 'layer_id', null, 'last_30_days');
+
+        Http::assertSent(function (Request $request) {
+            $sql = $request->data()['query']['query'];
+
+            return ! str_contains($sql, "properties.layer_id = '")
+                && str_contains($sql, 'properties.layer_id IS NOT NULL');
+        });
+    }
+
+    // -------------------------------------------------------------------------
+    // Ranking globale layer (getAllLayersUsage)
+    // -------------------------------------------------------------------------
+
+    public function test_get_all_layers_usage_returns_ranked_layers_with_names(): void
+    {
+        $this->seedLayersTable([
+            ['id' => 10, 'name' => 'Cammino di Santiago'],
+            ['id' => 20, 'name' => 'Via Francigena'],
+        ]);
+
+        Http::fake(['*' => Http::response(['results' => [['10', 50], ['20', 30]]])]);
+
+        $result = (new AnalyticsService)->getAllLayersUsage('last_30_days');
+
+        $this->assertCount(2, $result);
+        $this->assertSame(10, $result[0]['layer_id']);
+        $this->assertSame('Cammino di Santiago', $result[0]['name']);
+        $this->assertSame(50, $result[0]['total']);
+    }
+
+    public function test_get_all_layers_usage_excludes_deleted_layers(): void
+    {
+        $this->seedLayersTable([
+            ['id' => 10, 'name' => 'Cammino di Santiago'],
+        ]);
+
+        // layer_id 999 non esiste nel DB locale (cancellato) — deve essere scartato
+        Http::fake(['*' => Http::response(['results' => [['999', 80], ['10', 50]]])]);
+
+        $result = (new AnalyticsService)->getAllLayersUsage('last_30_days');
+
+        $this->assertCount(1, $result);
+        $this->assertSame(10, $result[0]['layer_id']);
+    }
+
+    public function test_get_all_layers_usage_truncates_to_20_after_filtering_orphans(): void
+    {
+        $seed = [];
+        for ($i = 1; $i <= 25; $i++) {
+            $seed[] = ['id' => $i, 'name' => "Layer {$i}"];
+        }
+        $this->seedLayersTable($seed);
+
+        // 25 righe valide (id 1..25, tutte seedate) + 5 righe orfane (layer_id inesistente nel DB
+        // locale) intervallate ogni 5 righe valide — verifica che gli orfani vengano scartati
+        // *durante* il conteggio verso il cap di 20, non solo in isolamento dal troncamento.
+        $orphanIds = [901, 902, 903, 904, 905];
+        $rows = [];
+        $total = 100;
+        for ($i = 1; $i <= 25; $i++) {
+            $rows[] = [(string) $i, $total--];
+            if ($i % 5 === 0) {
+                $rows[] = [(string) array_shift($orphanIds), $total--];
+            }
+        }
+
+        // 25 righe valide + 5 orfane = 30 righe totali.
+        $this->assertCount(30, $rows);
+
+        Http::fake(['*' => Http::response(['results' => $rows])]);
+
+        $result = (new AnalyticsService)->getAllLayersUsage('last_30_days');
+
+        $this->assertCount(20, $result);
+
+        $resultIds = array_column($result, 'layer_id');
+        foreach ([901, 902, 903, 904, 905] as $orphanId) {
+            $this->assertNotContains($orphanId, $resultIds);
+        }
+    }
+
     // -------------------------------------------------------------------------
     // Gestione errori HTTP
     // -------------------------------------------------------------------------
@@ -157,6 +270,44 @@ class AnalyticsServiceTest extends TestCase
             ->withArgs(fn ($msg) => $msg === 'PostHog query failed');
 
         (new AnalyticsService)->getLayerUsage(1);
+    }
+
+    public function test_strict_query_throws_analytics_exception_on_http_failure(): void
+    {
+        Http::fake(['*' => Http::response('Internal Server Error', 500)]);
+        Log::shouldReceive('error')->atLeast()->once();
+
+        $this->expectException(\Wm\WmPackage\Exceptions\AnalyticsQueryException::class);
+
+        $service = new AnalyticsService;
+        $method = new \ReflectionMethod($service, 'runQuery');
+        $method->setAccessible(true);
+        $method->invoke($service, 'SELECT 1', true);
+    }
+
+    public function test_non_strict_query_still_returns_empty_array_on_failure(): void
+    {
+        // Non-regressione: il comportamento di default (usato dal path per-layer) resta invariato
+        Http::fake(['*' => Http::response('Internal Server Error', 500)]);
+        Log::shouldReceive('error')->atLeast()->once();
+
+        $result = (new AnalyticsService)->getLayerUsage(1);
+
+        $this->assertSame(0, $result['total']);
+    }
+
+    public function test_get_all_layers_usage_propagates_failure_when_query_fails(): void
+    {
+        // getAllLayersUsage() usa runQuery(..., strict: true) al contrario del path per-layer:
+        // verifica che il metodo pubblico propaghi davvero l'eccezione end-to-end, non solo
+        // runQuery() isolato via reflection (vedi test_strict_query_throws_analytics_exception_on_http_failure).
+        Cache::flush();
+        Http::fake(['*' => Http::response('Internal Server Error', 500)]);
+        Log::shouldReceive('error')->atLeast()->once();
+
+        $this->expectException(\Wm\WmPackage\Exceptions\AnalyticsQueryException::class);
+
+        (new AnalyticsService)->getAllLayersUsage('last_30_days');
     }
 
     // -------------------------------------------------------------------------
@@ -298,8 +449,142 @@ class AnalyticsServiceTest extends TestCase
     }
 
     // -------------------------------------------------------------------------
+    // Ranking globale tracce (getAllTracksDownloads)
+    // -------------------------------------------------------------------------
+
+    public function test_get_all_tracks_downloads_returns_ranked_tracks_with_names(): void
+    {
+        $this->seedEcTracksTable([
+            ['id' => 1, 'name' => 'Tappa 1'],
+            ['id' => 2, 'name' => 'Tappa 2'],
+        ]);
+
+        Http::fake(['*' => Http::response(['results' => [['1', 40], ['2', 15]]])]);
+
+        $result = (new AnalyticsService)->getAllTracksDownloads('last_30_days');
+
+        $this->assertCount(2, $result);
+        $this->assertSame(1, $result[0]['track_id']);
+        $this->assertSame('Tappa 1', $result[0]['name']);
+        $this->assertSame(40, $result[0]['downloads']);
+        $this->assertSame(2, $result[1]['track_id']);
+        $this->assertSame('Tappa 2', $result[1]['name']);
+        $this->assertSame(15, $result[1]['downloads']);
+    }
+
+    public function test_get_all_tracks_downloads_excludes_deleted_tracks(): void
+    {
+        $this->seedEcTracksTable([
+            ['id' => 1, 'name' => 'Tappa 1'],
+        ]);
+
+        // track_id 999 non esiste nel DB locale (cancellato) — deve essere scartato
+        Http::fake(['*' => Http::response(['results' => [['999', 80], ['1', 40]]])]);
+
+        $result = (new AnalyticsService)->getAllTracksDownloads('last_30_days');
+
+        $this->assertCount(1, $result);
+        $this->assertSame(1, $result[0]['track_id']);
+    }
+
+    public function test_get_all_tracks_downloads_truncates_to_20_after_filtering_orphans(): void
+    {
+        $seed = [];
+        for ($i = 1; $i <= 25; $i++) {
+            $seed[] = ['id' => $i, 'name' => "Tappa {$i}"];
+        }
+        $this->seedEcTracksTable($seed);
+
+        // 25 righe valide (id 1..25, tutte seedate) + 5 righe orfane (track_id inesistente nel DB
+        // locale) intervallate ogni 5 righe valide — verifica che gli orfani vengano scartati
+        // *durante* il conteggio verso il cap di 20, non solo in isolamento dal troncamento.
+        $orphanIds = [901, 902, 903, 904, 905];
+        $rows = [];
+        $total = 100;
+        for ($i = 1; $i <= 25; $i++) {
+            $rows[] = [(string) $i, $total--];
+            if ($i % 5 === 0) {
+                $rows[] = [(string) array_shift($orphanIds), $total--];
+            }
+        }
+
+        $this->assertCount(30, $rows);
+
+        Http::fake(['*' => Http::response(['results' => $rows])]);
+
+        $result = (new AnalyticsService)->getAllTracksDownloads('last_30_days');
+
+        $this->assertCount(20, $result);
+
+        $resultIds = array_column($result, 'track_id');
+        foreach ([901, 902, 903, 904, 905] as $orphanId) {
+            $this->assertNotContains($orphanId, $resultIds);
+        }
+    }
+
+    public function test_get_all_tracks_downloads_propagates_failure_when_query_fails(): void
+    {
+        // getAllTracksDownloads() usa runQuery(..., strict: true) al contrario del path per-layer:
+        // verifica che il metodo pubblico propaghi davvero l'eccezione end-to-end.
+        Cache::flush();
+        Http::fake(['*' => Http::response('Internal Server Error', 500)]);
+        Log::shouldReceive('error')->atLeast()->once();
+
+        $this->expectException(\Wm\WmPackage\Exceptions\AnalyticsQueryException::class);
+
+        (new AnalyticsService)->getAllTracksDownloads('last_30_days');
+    }
+
+    public function test_query_track_downloads_with_null_ids_omits_in_clause(): void
+    {
+        Http::fake(['*' => Http::response(['results' => []])]);
+
+        $service = new AnalyticsService;
+        $method = new \ReflectionMethod($service, 'queryTrackDownloads');
+        $method->setAccessible(true);
+        $method->invoke($service, null, 'last_30_days');
+
+        Http::assertSent(function (Request $request) {
+            $sql = $request->data()['query']['query'];
+
+            return ! str_contains($sql, 'IN (')
+                && str_contains($sql, 'properties.track_id IS NOT NULL')
+                && str_contains($sql, 'LIMIT 50');
+        });
+    }
+
+    public function test_query_track_downloads_with_concrete_ids_uses_in_clause_and_no_limit(): void
+    {
+        // Non-regressione: il path esistente (getLayerTrackDownloads) passa un array concreto
+        // e non deve avere LIMIT né passare per lo strict mode.
+        Http::fake(['*' => Http::response(['results' => []])]);
+
+        $service = new AnalyticsService;
+        $method = new \ReflectionMethod($service, 'queryTrackDownloads');
+        $method->setAccessible(true);
+        $method->invoke($service, [42, 7], 'last_30_days');
+
+        Http::assertSent(function (Request $request) {
+            $sql = $request->data()['query']['query'];
+
+            return str_contains($sql, "properties.track_id IN ('42', '7')")
+                && ! str_contains($sql, 'LIMIT 50');
+        });
+    }
+
+    // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
+
+    private function seedEcTracksTable(array $tracks): void
+    {
+        foreach ($tracks as $track) {
+            EcTrack::query()->getConnection()->table('ec_tracks')->insert([
+                'id' => $track['id'],
+                'name' => json_encode(['it' => $track['name']]),
+            ]);
+        }
+    }
 
     private function fakePostHogResponses(): array
     {
@@ -316,5 +601,19 @@ class AnalyticsServiceTest extends TestCase
         $layer->id = 99;
 
         return $layer;
+    }
+
+    private function seedLayersTable(array $layers): void
+    {
+        // La tabella `layers` viene creata una sola volta in defineDatabaseMigrations()
+        // per evitare "table already exists" quando più test la seedano nella stessa run.
+        foreach ($layers as $layer) {
+            Layer::query()->getConnection()->table('layers')->insert([
+                'id' => $layer['id'],
+                'name' => json_encode(['it' => $layer['name']]),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
     }
 }

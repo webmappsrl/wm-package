@@ -176,7 +176,7 @@ class Layer extends AbstractGeometryResource
     }
 
     /** @return array<string, mixed> */
-    private function getLayerAppProperties(LayerModel $layer): array
+    protected function getLayerAppProperties(LayerModel $layer): array
     {
         $app = $layer->appOwner;
 
