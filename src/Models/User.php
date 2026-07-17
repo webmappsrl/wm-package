@@ -239,7 +239,7 @@ class User extends Authenticatable implements JWTSubject
      * Composes (does not replace) Nova's native `viewNova` check — defense in depth:
      * only Administrator, and only if the base Nova permission also holds.
      */
-    public function canImpersonate(): bool
+    public function canImpersonate()
     {
         return $this->hasRole('Administrator') && Gate::forUser($this)->check('viewNova');
     }
@@ -252,7 +252,7 @@ class User extends Authenticatable implements JWTSubject
      * `access-nova` (e.g. Guest) would leave the administrator stuck with a 403 on any
      * Nova action, including "Stop impersonating".
      */
-    public function canBeImpersonated(): bool
+    public function canBeImpersonated()
     {
         return $this->can('access-nova');
     }

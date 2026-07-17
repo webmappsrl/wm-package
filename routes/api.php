@@ -12,6 +12,7 @@ use Wm\WmPackage\Http\Controllers\Api\EcTrackController;
 use Wm\WmPackage\Http\Controllers\Api\EditorialContentController;
 use Wm\WmPackage\Http\Controllers\Api\ElasticsearchController;
 use Wm\WmPackage\Http\Controllers\Api\MediaController;
+use Wm\WmPackage\Http\Controllers\Api\ShareStoryImageController;
 use Wm\WmPackage\Http\Controllers\Api\UgcPoiController;
 use Wm\WmPackage\Http\Controllers\Api\UgcTrackController;
 use Wm\WmPackage\Http\Controllers\Api\V1\AppAPIController;
@@ -31,6 +32,13 @@ Route::prefix('auth')->middleware('auth:api')->group(function () {
 });
 
 Route::middleware('auth:api')->post('/wallet/buy', [WalletController::class, 'buy'])->name('wallet.buy');
+
+/*
+ * Stories share image compositing (oc:8183): intentionally NOT app-scoped in the path
+ * (no `{app}` segment) — the app is resolved server-side from the authenticated user's
+ * context (see ShareStoryImageController), never from a client-supplied parameter.
+ */
+Route::middleware('auth:api')->post('/share-story-image', [ShareStoryImageController::class, 'store'])->name('share_story_image');
 
 Route::name('ugc.')->prefix('ugc')->middleware('auth:api')->group(function () {
 
