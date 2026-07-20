@@ -43,9 +43,9 @@ class MapRenderService
 {
     private const TILE_SIZE = 256;
 
-    private const MIN_ZOOM = 0;
+    private const MIN_ZOOM = 7;
 
-    private const MAX_ZOOM = 18;
+    private const MAX_ZOOM = 16;
 
     /**
      * Simplify the geometry with `ST_Simplify` before extracting the polyline coordinates
@@ -295,8 +295,9 @@ class MapRenderService
 
     /**
      * Largest zoom (most detail) at which the padded bbox still fits entirely within the
-     * target width/height, in Web Mercator pixel space. Always terminates: at zoom 0 the
-     * whole world is exactly `TILE_SIZE` pixels wide, well under any realistic output size.
+     * target width/height, in Web Mercator pixel space. Bounded to [MIN_ZOOM, MAX_ZOOM] —
+     * the tile server doesn't have tiles outside that range — so always terminates, falling
+     * back to MIN_ZOOM if even that doesn't fit the target window.
      *
      * @param  array{xmin: float, ymin: float, xmax: float, ymax: float}  $bbox
      */

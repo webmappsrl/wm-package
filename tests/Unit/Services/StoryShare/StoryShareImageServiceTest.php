@@ -53,7 +53,7 @@ it('composes a 1080x1920 PNG when the app has a story_frame uploaded', function 
     expect($result->mime())->toBe('image/png');
 });
 
-it('falls back to a padded, unbranded 1080x1920 image when story_frame is missing', function () {
+it('falls back to a generic branded 1080x1920 image when story_frame is missing', function () {
     Storage::fake('wmfe');
 
     $app = App::factory()->createQuietly();
@@ -75,12 +75,16 @@ it('falls back to a padded, unbranded 1080x1920 image when story_frame is missin
     // asserted on on in this test to keep it green.
 });
 
-it('never crops the map image in the fallback path (contain, not cover)', function () {
+it('fits a non-9:16 map image into the fixed map card without crashing', function () {
     Storage::fake('wmfe');
 
     $app = App::factory()->createQuietly();
-    // A very wide (non-9:16) map image: if it were "cover"-cropped, most of it would be cut.
-    // Under "contain" it must be fully visible, letterboxed, never larger than the canvas.
+    // Production always passes a MAP_WIDTH x MAP_HEIGHT image (MapRenderService renders at
+    // exactly that size), but this guards the compositing step against any mismatched input:
+    // drawMapCard() "cover"-fits (crop-to-fill) into the fixed card in BOTH compose paths as
+    // of the rounded-corner-card redesign (oc:8183) - unlike the earlier client-screenshot
+    // revision, there is no longer a raw user-taken screenshot to preserve uncropped, so a
+    // single consistent card treatment replaces the old fallback-only "contain" behavior.
     $wideMap = fakeMapImage(1600, 200);
 
     $result = (new StoryShareImageService)->compose($app, $wideMap, storyShareStats());

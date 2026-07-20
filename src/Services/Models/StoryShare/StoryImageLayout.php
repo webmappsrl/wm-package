@@ -21,50 +21,102 @@ final class StoryImageLayout
 
     public const CANVAS_HEIGHT = 1920;
 
-    // --- Map screenshot window ---
-    // The screenshot (any source aspect ratio, e.g. square from an on-device OpenLayers
-    // capture) is "cover"-fitted (cropped to fill, never distorted/letterboxed) into this
-    // box when a story_frame is present.
+    // --- Header (logo/branding) reserved band, above the map window ---
+    // Shared vertical budget: a dedicated `story_frame` bakes its own logo/badge into this
+    // band (see the camminiditalia frame, resources/img/story-frames/), while
+    // composeFallback() draws a generic app-icon + app-name header into the same space, so
+    // MAP_Y stays a single source of truth regardless of which path produced the background.
+    public const HEADER_Y = 90;
+
+    public const HEADER_HEIGHT = 560; // = MAP_Y - HEADER_Y - HEADER_MAP_GAP
+
+    public const HEADER_MAP_GAP = 50;
+
+    // --- Map render window ---
+    // The map image (already exactly MAP_WIDTH x MAP_HEIGHT, see MapRenderService) is
+    // "cover"-fitted (cropped to fill, never distorted/letterboxed) into this box.
     public const MAP_X = 60;
 
-    public const MAP_Y = 260;
+    public const MAP_Y = self::HEADER_Y + self::HEADER_HEIGHT + self::HEADER_MAP_GAP; // 700
 
     public const MAP_WIDTH = 960; // = CANVAS_WIDTH - 2 * MAP_X
 
-    public const MAP_HEIGHT = 960; // square window
+    public const MAP_HEIGHT = 900;
+
+    // Rounded corners + a thin brand-colored border around the map, so it reads as a
+    // deliberately framed "card" rather than a raw screenshot pasted on top of the
+    // background (applies to both compose paths, since drawMapCard() wraps the map insert).
+    public const MAP_CORNER_RADIUS = 28;
+
+    public const MAP_BORDER_COLOR = '#ea9926';
+
+    public const MAP_BORDER_WIDTH = 6;
 
     // --- Statistics block (time / distance / ascent), 3 equal columns below the map ---
     public const STATS_BLOCK_X = self::MAP_X;
 
-    public const STATS_BLOCK_Y = 1280; // = MAP_Y + MAP_HEIGHT + 60px gap
+    public const STATS_BLOCK_Y = self::MAP_Y + self::MAP_HEIGHT + 40; // 1640
 
     public const STATS_BLOCK_WIDTH = self::MAP_WIDTH;
 
-    public const STATS_BLOCK_HEIGHT = 260;
+    public const STATS_BLOCK_HEIGHT = 220;
 
-    // Semi-transparent backing panel behind the stats, so the text stays legible
-    // regardless of the uploaded frame's own colors/design (decision: robustness over
-    // relying on every branded frame reserving a pre-designed high-contrast stats area).
-    public const STATS_PANEL_COLOR = 'rgba(0, 0, 0, 0.45)';
+    public const STATS_PANEL_CORNER_RADIUS = 24;
 
-    public const STATS_PANEL_PADDING = 20;
+    // Backing panel behind the stats, so the text stays legible regardless of the uploaded
+    // frame's own colors/design (decision: robustness over relying on every branded frame
+    // reserving a pre-designed high-contrast stats area). Deliberately OPAQUE, not
+    // semi-transparent: drawRoundedRectFilled() composites 2 rectangles + 4 circles to fake
+    // a rounded rect (see its docblock) — with a translucent color, the corner circles would
+    // double-blend where they overlap the rectangles, showing up as visibly darker "dots" at
+    // each corner (verified empirically). An opaque fill is idempotent under overlap, so this
+    // artifact only matters if this constant is ever changed back to an alpha color.
+    public const STATS_PANEL_COLOR = '#2a3639';
 
-    public const STATS_VALUE_FONT_SIZE = 56;
+    // Thin brand-gradient divider drawn along the top edge of the stats panel (echoes the
+    // sunset rings in the camminiditalia logo without hardcoding that logo into shared code).
+    public const STATS_ACCENT_COLORS = ['#ef5724', '#ef7821', '#ea9926'];
 
-    public const STATS_LABEL_FONT_SIZE = 28;
+    public const STATS_ACCENT_HEIGHT = 6;
 
-    public const STATS_TEXT_COLOR = '#FFFFFF';
+    public const STATS_PANEL_PADDING = 24;
 
-    public const STATS_VALUE_LABEL_GAP = 46; // vertical gap between value and label baselines
+    public const STATS_VALUE_FONT_SIZE = 52;
+
+    public const STATS_LABEL_FONT_SIZE = 24;
+
+    public const STATS_VALUE_COLOR = '#ea9926';
+
+    public const STATS_LABEL_COLOR = '#FFFFFF';
+
+    public const STATS_VALUE_LABEL_GAP = 44; // vertical gap between value and label baselines
+
+    // --- Generic fallback header (composeFallback() only): app icon + app name, used when
+    // no dedicated story_frame is uploaded for the app. Deliberately app-agnostic (reads
+    // $app->getFirstMedia('icon') + $app->name at render time) - no client-specific asset
+    // lives in this shared file. ---
+    public const FALLBACK_ICON_SIZE = 160;
+
+    public const FALLBACK_TITLE_FONT_SIZE = 44;
+
+    public const FALLBACK_TITLE_GAP = 28; // gap between icon and app name
 
     // --- Fonts bundled with the package (resources/fonts/), NOT the host's system fonts:
     // guarantees identical rendering regardless of which server/container this runs on
     // (verified DejaVu Sans is present in the shared dev Docker image, but that is not a
-    // safe assumption for every deployment target, so it's vendored here instead). ---
-    public const FONT_BOLD = __DIR__.'/../../../../resources/fonts/DejaVuSans-Bold.ttf';
+    // safe assumption for every deployment target, so it's vendored here instead). Brand
+    // typeface confirmed from camminiditalia.it's own compiled CSS (--font-Montserrat,
+    // font-weight-black on headings) - kept as the shared package default (not camminiditalia-
+    // specific: Montserrat is a generic, widely-used display face, not a client asset). ---
+    public const FONT_BLACK = __DIR__.'/../../../../resources/fonts/Montserrat-Black.ttf';
 
-    public const FONT_REGULAR = __DIR__.'/../../../../resources/fonts/DejaVuSans.ttf';
+    public const FONT_BOLD = __DIR__.'/../../../../resources/fonts/Montserrat-Bold.ttf';
 
-    // --- Fallback canvas background, used only when the app has no story_frame uploaded ---
-    public const FALLBACK_BACKGROUND_COLOR = '#12181f';
+    public const FONT_REGULAR = __DIR__.'/../../../../resources/fonts/Montserrat-Regular.ttf';
+
+    // --- Fallback canvas background, used only when the app has no story_frame uploaded.
+    // Confirmed as camminiditalia.it's own --color-cm-gray brand value; kept as the shared
+    // package default since a dark neutral background suits any outdoor/map app, not just
+    // this one. ---
+    public const FALLBACK_BACKGROUND_COLOR = '#1d282b';
 }

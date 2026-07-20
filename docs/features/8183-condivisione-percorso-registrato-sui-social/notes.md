@@ -194,3 +194,68 @@ Tutti eseguiti singolarmente/in gruppo con `docker exec laravel-camminiditalia b
 5. **`ST_Simplify`/`ST_Extent` operano sulla geometria PostGIS (`UgcTrack.geometry`), non su `properties.locations`**: le statistiche (punto 1 dell'overview) e il disegno della mappa (punto 2) leggono quindi due fonti dati distinte per lo stesso concetto di "traccia GPS" — scelta deliberata (separazione di responsabilità netta, ciascuna fonte è quella esplicitamente indicata dal ticket per quel calcolo), ma vale la pena una verifica umana che le due fonti siano sempre coerenti tra loro in produzione (stesso viaggio, stessi punti, nessuna divergenza per bug altrove nella pipeline di registrazione).
 6. **Bug pre-esistente `Log::spy()` / logger nullo in Testbench** (vedi sopra): ancora non risolto, fuori scope anche in questo giro — se altri test futuri hanno bisogno di asserire su `Log::warning()` in un contesto che tocca GD/Intervention, si scontreranno con lo stesso problema.
 7. **Suite di test del package rotta per 19 file pre-esistenti** (`Tests\TestCase` non risolvibile) — invariato, vedi punto aperto 4 della revisione precedente.
+
+## Revisione: redesign visivo dell'immagine di condivisione (brand camminiditalia)
+
+Motivata dal primo test reale su dispositivo (dopo il fix del bug tile-server, vedi sotto): l'immagine generata funzionava ma era visivamente spoglia (mappa in un rettangolo piatto, pannello statistiche grigio semi-trasparente senza identità di marca, nessun logo). Richiesta esplicita del developer: "abbellire l'immagine... usa il logo della app se c'è, poi un'immagine custom per camminiditalia guardando lo stile del sito, usa strumenti di design".
+
+### Bug di ambiente scoperto e corretto durante il test manuale (prerequisito di questa revisione)
+
+- **`MapRenderService::MAX_ZOOM = 18` era troppo alto per il tile server reale** (`api.webmapp.it/tiles`): a zoom 18 il tile server non ha risorse (nessun errore esplicito lato nostro finché non si è aggiunto un log temporaneo sul ramo "non-2xx" di `fetchTile()`, che non logga nulla di default su risposta HTTP fallita ma non-eccezione — gap di logging pre-esistente, non corretto qui perché fuori scope). Corretto a `MIN_ZOOM = 7` / `MAX_ZOOM = 16` su indicazione diretta del developer ("non credo esistano le tiles a 18, metti come massimo 16 e minimo 7"). Il commento del docblock di `fitZoom()` che citava "zoom 0 = mondo intero" è stato aggiornato di conseguenza.
+- Un secondo problema, distinto e più subdolo, ha preceduto questo: il primo test su dispositivo reale falliva con `The screenshot field is required` — non un bug di questa revisione, ma la prova che l'ambiente di staging (`camminiditalia.dev.maphub.it`, backend dietro l'istanza app `camminiditaliadev`) eseguiva ancora il controller della revisione precedente. Risolto con un deploy (fuori dal controllo di questa sessione) dopo il push del commit `bca8cb27`.
+
+### Palette e font: presi dal sito ufficiale, non inventati
+
+Verificati leggendo direttamente l'HTML/CSS compilato di `camminiditalia.it` (non dal solo splash screen dell'app, per evitare di scambiare un asset app-specific per il brand ufficiale):
+
+- `--color-cm-gray: #1d282b` (grigio/petrolio scuro, sfondo)
+- `--color-cm-orange: #ef7821`, `--color-cm-red: #ef5724`, `--color-cm-yellow: #ea9926` (rampa "tramonto", usata nella barra sfumata sopra il pannello statistiche e nel bordo della card mappa)
+- Font titoli: `Montserrat` (peso Black/ExtraBold sugli h1, confermato da `font-weight-black`/`var(--font-Montserrat)` nel CSS compilato)
+
+Il logo circolare "Cammini d'Italia" (silhouette escursionisti + cerchi concentrici arancio/ambra) proviene invece dall'asset `splash` già caricato per l'app (Spatie media, collection `splash`) — non dal sito, che non espone un asset isolato scaricabile via HTTP in questo contesto. Sfondo del crop verificato pixel-per-pixel identico (`#1d282b`) al colore ufficiale del sito, quindi il crop si inserisce senza bordi visibili.
+
+### Font: Montserrat non era disponibile come file statico Bold/Black
+
+`google/fonts` su GitHub distribuisce Montserrat solo come variable font (asse `wght`), e GD/`imagettftext` non supporta gli assi variabili (renderizza sempre al peso di default, ignorando l'asse). Risolto instanziando pesi statici con `fonttools varLib.instancer` (Bold=700, Black=900, Regular=400) in un venv Python isolato nello scratchpad, poi bundlati in `resources/fonts/` accanto ai DejaVu Sans preesistenti (sostituiti come default). Verificato il rendering reale via `imagettftext()` in GD prima di procedere (non solo "il font si carica", ma "il glifo è leggibile").
+
+### Architettura: separazione tra miglioramento generico e branding camminiditalia-specifico
+
+Decisione deliberata per non violare il multi-tenant del package:
+
+1. **`composeFallback()` (usato da QUALSIASI app senza `story_frame` caricato)**: sfondo scuro neutro (`#1d282b`, non più `#12181f`), header generico che legge `$app->getFirstMedia('icon')` + `$app->name` a runtime — nessun asset camminiditalia hardcoded in questo metodo. Questo è il "usa il logo della app se c'è" richiesto, generalizzato a qualunque app.
+2. **`story_frame` dedicato per camminiditalia**: generato come immagine 1080x1920 (script Python/Pillow) combinando texture "curve di livello" ritagliata dallo sfondo dello splash (zona senza badge, per evitare doppioni) + il badge circolare ritagliato e posizionato nella fascia header. **Né il PNG né lo script sono nel repo** (`story_frame` è per design un asset caricato via Nova, come `icon`/`splash`, non codice — su richiesta esplicita del developer questi due file restano solo locali, non committati): vanno caricati manualmente in Nova per l'app Cammini d'Italia in ogni ambiente (locale già fatto via tinker per il test, staging/produzione da fare a mano recuperando il PNG da chi ha generato questa revisione).
+
+### Elementi di design nuovi, condivisi da entrambi i percorsi (`drawMapCard()`/`drawStats()`)
+
+- **Card mappa con angoli arrotondati reali + bordo colore brand**: non tramite masking completo dell'immagine (costoso, richiederebbe un loop pixel-per-pixel su ~864k pixel per un'immagine 960x900 — latenza inaccettabile su un endpoint sincrono), ma tagliando la trasparenza solo nei 4 quadratini d'angolo (raggio 28px ciascuno, ~3k pixel totali) via GD raw (`imagesetpixel` + `imagesavealpha`) — economico, verificato via test visivo diretto prima di fidarsene.
+- **Pannello statistiche con angoli arrotondati "veri" ma economici**: essendo un riempimento a tinta unita (non una foto), si ottiene componendo 2 rettangoli pieni + 4 cerchi pieni (`drawRoundedRectFilled()`) — nessun masking necessario, il costo è quello di poche primitive GD.
+- **Bug scoperto e corretto durante l'iterazione visiva**: `STATS_PANEL_COLOR` era inizialmente `rgba(255,255,255,0.08)` (semi-trasparente, come il vecchio pannello nero) — ma componendo più forme semi-trasparenti sovrapposte (i cerchi d'angolo si sovrappongono ai rettangoli), l'alpha blend raddoppia esattamente dove le forme si intersecano, producendo un "pallino" visibilmente più scuro in ogni angolo. Corretto rendendo il colore opaco (`#2a3639`) — un riempimento opaco è idempotente sotto sovrapposizione, quindi l'artefatto sparisce strutturalmente, non solo visivamente nel caso testato.
+- **Barra sfumata brand sopra il pannello statistiche**: GD non ha un primitivo di gradiente lineare, quindi `drawGradientBar()` la fa disegnando N rettangoli 1px di larghezza con colore interpolato linearmente tra gli stop (`STATS_ACCENT_COLORS`) — stesso idioma già stabilito da `MapRenderService::drawThickLine()` per lo spessore linea.
+
+### Verifica visiva end-to-end
+
+Testato con una traccia GPS reale presente nel DB locale (id 238, non quella usata nei test manuali su device, che vive solo nel DB di staging) attraverso l'intera pipeline reale (`TrackStatsService` → `MapRenderService` → `StoryShareImageService`, con lo `story_frame` camminiditalia seminato localmente via `addMedia()` su `App::find(1)`) — non solo con immagini fittizie. Nessuna assunzione non verificata sul risultato finale.
+
+### File creati
+
+- `resources/fonts/Montserrat-{Black,Bold,Regular}.ttf`
+
+**Non committati** (su richiesta esplicita, restano solo nell'ambiente locale di sviluppo): `story-frame-camminiditalia.png` (l'asset da caricare in Nova) e `build_frame.py` (script sorgente per rigenerarlo). Chi deve caricare il frame in Nova per staging/produzione deve recuperarli separatamente da chi ha generato questa revisione.
+
+### File modificati
+
+- `src/Services/Models/StoryShare/StoryImageLayout.php` — palette/font/costanti completamente riviste (vedi sopra)
+- `src/Services/Models/StoryShare/StoryShareImageService.php` — riscritto: `composeFallback()` ora prende anche `App $app` (per icona/nome), nuovi metodi `drawMapCard()`, `drawRoundedRectFilled()`, `roundImageCorners()`, `drawGradientBar()`, `interpolateColor()`/`hexToRgb()`
+- `src/Services/Models/StoryShare/MapRenderService.php` — `MIN_ZOOM`/`MAX_ZOOM` corretti (vedi sopra)
+- `tests/Unit/Services/StoryShare/StoryShareImageServiceTest.php` — il test "never crops... contain not cover" riscritto: il comportamento non è più "mai croppare" (quel vincolo esisteva per non tagliare uno screenshot scattato dall'utente, che non esiste più in questa architettura) — ora entrambi i percorsi usano lo stesso trattamento "cover" tramite `drawMapCard()`, il test verifica solo che non vada in crash con input di aspect ratio diverso
+
+### Risultato dei test
+
+Tutti i 29 test della feature (stessi file della revisione precedente) rieseguiti dopo questa revisione: **29/29 passati**, nessuna regressione.
+
+### Punti aperti per review umana
+
+1. **Il frame `story_frame` per camminiditalia va caricato manualmente in Nova** in ogni ambiente (staging/produzione) — non essendo codice, non viaggia con il deploy automatico. Il file è in `docs/features/8183-.../assets/`.
+2. **Font Montserrat instanziato da variable font via `fonttools`, non scaricato come file statico ufficiale**: verificato che renderizzi correttamente in GD, ma non testato in altri contesti (es. PDF, altri sistemi di rendering) — se in futuro serve il font altrove, meglio procurarsi i file statici ufficiali invece di riusare questi.
+3. **Icona dell'app (`$app->getFirstMedia('icon')`) non testata visivamente con un'icona reale**: in locale il file dietro il record media risultava assente dallo storage (probabile disallineamento del seed locale, non un bug del codice) — il fallback silenzioso (nessuna icona, solo testo) è stato verificato, ma non l'aspetto con icona presente.
+4. **Soglie di design (raggio angoli, spessore bordo, altezza barra sfumata, dimensioni font) sono scelte soggettive di questa sessione**, non validate con il cliente/designer — ragionevoli e testate visivamente, ma non un mockup approvato.
