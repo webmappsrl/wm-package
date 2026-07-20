@@ -64,22 +64,34 @@ class AnalyticsService
             fn () => $this->queryAllLayersRanking($range)
         );
 
-        $layerIds = array_column($rows, 'layer_id');
+        $perLayer = [];
+        foreach ($rows as $row) {
+            $lid = $row['layer_id'];
+            if (! isset($perLayer[$lid])) {
+                $perLayer[$lid] = ['layer_id' => $lid, 'total' => 0, 'breakdown' => []];
+            }
+            $perLayer[$lid]['total'] += $row['total'];
+            $perLayer[$lid]['breakdown'][] = ['lib' => $row['lib'], 'total' => $row['total']];
+        }
+
+        $perLayer = array_values($perLayer);
+        usort($perLayer, fn ($a, $b) => $b['total'] <=> $a['total']);
+
+        $layerIds = array_column($perLayer, 'layer_id');
         $layers = Layer::whereIn('id', $layerIds)->get(['id', 'name'])->keyBy('id');
 
         $result = [];
-        foreach ($rows as $row) {
-            $layer = $layers->get($row['layer_id']);
+        foreach ($perLayer as $entry) {
+            $layer = $layers->get($entry['layer_id']);
             if (! $layer) {
                 continue;
             }
 
-            $name = $this->resolveLocalizedName($layer, 'Layer', $row['layer_id']);
-
             $result[] = [
-                'layer_id' => $row['layer_id'],
-                'name' => $name,
-                'total' => $row['total'],
+                'layer_id' => $entry['layer_id'],
+                'name' => $this->resolveLocalizedName($layer, 'Layer', $entry['layer_id']),
+                'total' => $entry['total'],
+                'breakdown' => $entry['breakdown'],
             ];
 
             if (count($result) >= 20) {
@@ -393,20 +405,20 @@ SQL;
         $sql = <<<SQL
 SELECT
     properties.layer_id AS layer_id,
+    properties.\$lib AS lib,
     count() AS total
 FROM events
 WHERE event = 'layerOpened'
   AND {$idFilter}
   AND properties.\$lib IN ({$libs})
   AND {$whereClause}
-GROUP BY layer_id
-ORDER BY total DESC
-LIMIT 50
+GROUP BY layer_id, lib
 SQL;
 
         return array_map(fn ($row) => [
             'layer_id' => (int) $row[0],
-            'total' => (int) $row[1],
+            'lib' => (string) $row[1],
+            'total' => (int) $row[2],
         ], $this->runQuery($sql, true));
     }
 

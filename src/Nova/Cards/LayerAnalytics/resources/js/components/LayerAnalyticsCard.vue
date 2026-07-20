@@ -104,23 +104,66 @@
       </div>
 
       <!-- Classifiche globali (solo modalità globale) -->
-      <div v-if="card.mode === 'global' && (data.ranking_layers?.length || data.ranking_tracks?.length || data.ranking_track_shares?.length)" style="margin-top:24px; overflow-x:auto;">
-        <div v-if="data.ranking_layers?.length" style="min-width:600px; margin-bottom:24px;">
+      <div v-if="card.mode === 'global' && (data.ranking_layers?.length || data.ranking_tracks?.length || data.ranking_track_shares?.length)" style="margin-top:24px;">
+        <div v-if="data.ranking_layers?.length" style="margin-bottom:24px;">
           <p style="font-size:0.75rem; color:#6b7280; text-transform:uppercase; margin-bottom:8px;">Cammini più aperti</p>
-          <table style="width:100%; border-collapse:collapse; font-size:0.875rem;">
-            <thead>
-              <tr style="border-bottom:1px solid rgba(128,128,128,0.3);">
-                <th style="text-align:left; padding:6px 8px; font-weight:500; opacity:0.6;">Cammino</th>
-                <th style="text-align:right; padding:6px 8px; font-weight:500; opacity:0.6;">Aperture</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="row in visibleLayerRanking" :key="row.layer_id" style="border-bottom:1px solid rgba(128,128,128,0.15);">
-                <td style="padding:6px 8px;">{{ row.name }}</td>
-                <td style="padding:6px 8px; text-align:right; font-weight:600; color:#10b981;">{{ row.total }}</td>
-              </tr>
-            </tbody>
-          </table>
+          <div style="display:flex; align-items:center; justify-content:center; gap:16px; margin-bottom:16px;">
+            <div v-for="p in platforms" :key="p.lib" style="display:flex; align-items:center; gap:6px;">
+              <span :style="{ display:'inline-block', width:'40px', height:'12px', borderRadius:'2px', background: p.color }"></span>
+              <span style="font-size:12px; color:#374151;">{{ p.label }}</span>
+            </div>
+          </div>
+          <div>
+            <div
+              v-for="row in visibleLayerRanking"
+              :key="row.layer_id"
+              style="display:flex; align-items:center; gap:12px; margin-bottom:8px;"
+            >
+              <a
+                :href="layerDetailUrl(row.layer_id)"
+                @mouseenter="hoveredLayerLinkId = row.layer_id"
+                @mouseleave="hoveredLayerLinkId = null"
+                @focus="hoveredLayerLinkId = row.layer_id"
+                @blur="hoveredLayerLinkId = null"
+                :style="{
+                  width: '220px', flexShrink: 0, fontSize: '0.8125rem',
+                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                  color: hoveredLayerLinkId === row.layer_id ? '#10b981' : '#374151',
+                  textDecoration: hoveredLayerLinkId === row.layer_id ? 'underline' : 'none',
+                  transition: 'color 150ms ease',
+                }"
+              >{{ row.name }}</a>
+              <div style="flex:1; display:flex; align-items:center; gap:8px; min-width:0;">
+                <div
+                  tabindex="0"
+                  style="position:relative; flex:1; background:#f3f4f6; border-radius:0 4px 4px 0; height:20px; overflow:visible; display:flex; outline:none;"
+                  @mouseenter="hoveredLayerId = row.layer_id"
+                  @mouseleave="hoveredLayerId = null"
+                  @focus="hoveredLayerId = row.layer_id"
+                  @blur="hoveredLayerId = null"
+                >
+                  <div style="position:absolute; inset:0; border-radius:0 4px 4px 0; overflow:hidden; display:flex;">
+                    <div
+                      v-for="seg in layerBarSegments(row)"
+                      :key="seg.lib"
+                      :style="{ width: seg.widthPercent + '%', height: '20px', background: seg.color, borderRadius: seg.isLast ? '0 4px 4px 0' : '0', filter: hoveredLayerId === row.layer_id ? 'brightness(1.1)' : 'none' }"
+                    ></div>
+                  </div>
+                  <div
+                    v-if="hoveredLayerId === row.layer_id"
+                    style="position:absolute; bottom:calc(100% + 6px); left:0; z-index:20; background:rgba(0,0,0,0.8); color:#fff; padding:6px; border-radius:6px; font-size:12px; white-space:nowrap;"
+                  >
+                    <div style="font-weight:bold; margin-bottom:6px;">{{ row.name }}</div>
+                    <div v-for="seg in layerBarTooltipRows(row)" :key="seg.lib" style="display:flex; align-items:center; gap:8px; line-height:1.4;">
+                      <span :style="{ display:'inline-block', width:'10px', height:'10px', borderRadius:'2px', background: seg.color, flexShrink:0 }"></span>
+                      <span>{{ seg.label }}: {{ seg.total }}</span>
+                    </div>
+                  </div>
+                </div>
+                <span style="width:44px; flex-shrink:0; font-size:0.8125rem; font-weight:600; color:#6b7280; text-align:right;">{{ row.total }}</span>
+              </div>
+            </div>
+          </div>
           <button
             v-if="data.ranking_layers.length > 10"
             @click="showAllLayers = !showAllLayers"
@@ -128,6 +171,7 @@
           >{{ showAllLayers ? 'Mostra meno' : `Mostra tutti (${data.ranking_layers.length})` }}</button>
         </div>
 
+        <div style="overflow-x:auto;">
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px; min-width:600px;">
           <div>
             <p style="font-size:0.75rem; color:#6b7280; text-transform:uppercase; margin-bottom:8px;">Tappe più scaricate</p>
@@ -174,6 +218,7 @@
             >{{ showAllTrackShares ? 'Mostra meno' : `Mostra tutti (${data.ranking_track_shares.length})` }}</button>
           </div>
         </div>
+        </div>
       </div>
     </template>
   </card>
@@ -217,6 +262,8 @@ export default {
       showAllLayers: false,
       showAllTracks: false,
       showAllTrackShares: false,
+      hoveredLayerId: null,
+      hoveredLayerLinkId: null,
     }
   },
 
@@ -284,6 +331,10 @@ export default {
     visibleTrackShares() {
       if (!this.data?.ranking_track_shares) return []
       return this.showAllTrackShares ? this.data.ranking_track_shares : this.data.ranking_track_shares.slice(0, 10)
+    },
+
+    platforms() {
+      return PLATFORMS
     },
   },
 
@@ -360,6 +411,34 @@ export default {
           },
         },
       })
+    },
+
+    layerDetailUrl(layerId) {
+      const novaPath = this.card.nova_path || '/nova'
+      return `${novaPath}/resources/layers/${layerId}`
+    },
+
+    layerBarSegments(row) {
+      const max = Math.max(...this.visibleLayerRanking.map((r) => r.total), 1)
+      const breakdown = row.breakdown || []
+
+      const segments = PLATFORMS.map(({ lib, color }) => {
+        const entry = breakdown.find((b) => b.lib === lib)
+        const value = entry ? entry.total : 0
+        return { lib, color, widthPercent: (value / max) * 100 }
+      }).filter((seg) => seg.widthPercent > 0)
+
+      return segments.map((seg, i) => ({ ...seg, isLast: i === segments.length - 1 }))
+    },
+
+    layerBarTooltipRows(row) {
+      const breakdown = row.breakdown || []
+      return PLATFORMS
+        .map(({ lib, label, color }) => {
+          const entry = breakdown.find((b) => b.lib === lib)
+          return entry ? { lib, label, color, total: entry.total } : null
+        })
+        .filter(Boolean)
     },
 
     platformColor(lib) {

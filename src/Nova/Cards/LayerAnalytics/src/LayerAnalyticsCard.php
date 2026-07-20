@@ -6,6 +6,7 @@ namespace Wm\WmPackage\Nova\Cards\LayerAnalytics;
 
 use Carbon\Carbon;
 use Laravel\Nova\Card;
+use Laravel\Nova\Nova;
 use Wm\WmPackage\Models\Layer;
 
 class LayerAnalyticsCard extends Card
@@ -51,6 +52,7 @@ class LayerAnalyticsCard extends Card
             'layer_id' => $this->layerId,
             'tracking_since' => $this->trackingSince,
             'mode' => $this->isGlobal ? 'global' : 'layer',
+            'nova_path' => '/'.trim(Nova::path(), '/'),
         ]);
     }
 }
