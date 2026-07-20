@@ -74,7 +74,18 @@ class Layer extends Polygon
      *
      * @var array
      */
-    // protected $appends = ['query_string'];
+    protected $appends = ['logo_image'];
+
+    public function registerMediaCollections(): void
+    {
+        parent::registerMediaCollections();
+        $this->addMediaCollection('logo')->singleFile();
+    }
+
+    public function getLogoImageAttribute(): ?string
+    {
+        return $this->getFirstMediaUrl('logo') ?: null;
+    }
 
     public function appOwner()
     {
