@@ -16,6 +16,8 @@ class AnalyticsService
 {
     private const LIBS = ['posthog-ios', 'posthog-android', 'web'];
 
+    private const MOBILE_LIBS = ['posthog-ios', 'posthog-android'];
+
     private const TTL_MAP = [
         'last_30_days' => 900,
         'last_90_days' => 3600,
@@ -149,6 +151,43 @@ class AnalyticsService
                 'track_id' => $row['track_id'],
                 'name' => $this->resolveLocalizedName($track, 'Track', $row['track_id']),
                 'downloads' => $row['downloads'],
+            ];
+
+            if (count($result) >= 20) {
+                break;
+            }
+        }
+
+        return $result;
+    }
+
+    public function getAllTracksShares(string $range = 'last_30_days'): array
+    {
+        $cacheKey = "posthog:contentShared:all:track:{$range}";
+        $ttl = $this->ttlFor($range);
+
+        $rows = Cache::remember(
+            $cacheKey,
+            now()->addSeconds($ttl),
+            fn () => $this->queryTrackShares($range)
+        );
+
+        $ecTrackModel = config('wm-package.ec_track_model', EcTrack::class);
+        $tracks = $ecTrackModel::whereIn('id', array_column($rows, 'track_id'))
+            ->get(['id', 'name'])
+            ->keyBy('id');
+
+        $result = [];
+        foreach ($rows as $row) {
+            $track = $tracks->get($row['track_id']);
+            if (! $track) {
+                continue;
+            }
+
+            $result[] = [
+                'track_id' => $row['track_id'],
+                'name' => $this->resolveLocalizedName($track, 'Track', $row['track_id']),
+                'shares' => $row['shares'],
             ];
 
             if (count($result) >= 20) {
@@ -318,6 +357,31 @@ SQL;
             'track_id' => (int) $row[0],
             'downloads' => (int) $row[1],
         ], $this->runQuery($sql, $strict));
+    }
+
+    private function queryTrackShares(string $range): array
+    {
+        $whereClause = $this->whereClause($range);
+        $mobileLibs = implode(', ', array_map(fn ($l) => "'{$l}'", self::MOBILE_LIBS));
+
+        $sql = <<<SQL
+SELECT
+    properties.track_id AS track_id,
+    count() AS shares
+FROM events
+WHERE event = 'contentShared'
+  AND properties.content_type = 'track'
+  AND properties.\$lib IN ({$mobileLibs})
+  AND {$whereClause}
+GROUP BY track_id
+ORDER BY shares DESC
+LIMIT 50
+SQL;
+
+        return array_map(fn ($row) => [
+            'track_id' => (int) $row[0],
+            'shares' => (int) $row[1],
+        ], $this->runQuery($sql, true));
     }
 
     private function queryAllLayersRanking(string $range): array

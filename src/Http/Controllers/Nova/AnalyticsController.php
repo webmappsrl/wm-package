@@ -42,6 +42,7 @@ class AnalyticsController extends Controller
             $usage = $service->getGlobalUsage($range);
             $rankingLayers = $service->getAllLayersUsage($range);
             $rankingTracks = $service->getAllTracksDownloads($range);
+            $rankingTrackShares = $service->getAllTracksShares($range);
         } catch (AnalyticsQueryException $e) {
             return response()->json(['error' => 'analytics_query_failed'], 502);
         }
@@ -49,6 +50,7 @@ class AnalyticsController extends Controller
         return response()->json(array_merge($usage, [
             'ranking_layers' => $rankingLayers,
             'ranking_tracks' => $rankingTracks,
+            'ranking_track_shares' => $rankingTrackShares,
         ]));
     }
 

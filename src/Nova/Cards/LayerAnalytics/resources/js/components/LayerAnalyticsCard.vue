@@ -57,7 +57,7 @@
 
       <!-- Stacked bar chart -->
       <div style="margin-bottom:24px;">
-        <p style="font-size:0.75rem; color:#6b7280; text-transform:uppercase; margin-bottom:8px;">Aperture giornaliere per piattaforma</p>
+        <p style="font-size:0.75rem; color:#6b7280; text-transform:uppercase; margin-bottom:8px;">Aperture cammini giornaliere per piattaforma</p>
         <canvas ref="dailyChart" style="width:100%; height:220px;"></canvas>
       </div>
 
@@ -104,30 +104,31 @@
       </div>
 
       <!-- Classifiche globali (solo modalità globale) -->
-      <div v-if="card.mode === 'global' && (data.ranking_layers?.length || data.ranking_tracks?.length)" style="margin-top:24px; overflow-x:auto;">
+      <div v-if="card.mode === 'global' && (data.ranking_layers?.length || data.ranking_tracks?.length || data.ranking_track_shares?.length)" style="margin-top:24px; overflow-x:auto;">
+        <div v-if="data.ranking_layers?.length" style="min-width:600px; margin-bottom:24px;">
+          <p style="font-size:0.75rem; color:#6b7280; text-transform:uppercase; margin-bottom:8px;">Cammini più aperti</p>
+          <table style="width:100%; border-collapse:collapse; font-size:0.875rem;">
+            <thead>
+              <tr style="border-bottom:1px solid rgba(128,128,128,0.3);">
+                <th style="text-align:left; padding:6px 8px; font-weight:500; opacity:0.6;">Cammino</th>
+                <th style="text-align:right; padding:6px 8px; font-weight:500; opacity:0.6;">Aperture</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="row in visibleLayerRanking" :key="row.layer_id" style="border-bottom:1px solid rgba(128,128,128,0.15);">
+                <td style="padding:6px 8px;">{{ row.name }}</td>
+                <td style="padding:6px 8px; text-align:right; font-weight:600; color:#10b981;">{{ row.total }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <button
+            v-if="data.ranking_layers.length > 10"
+            @click="showAllLayers = !showAllLayers"
+            style="margin-top:8px; font-size:0.75rem; padding:4px 12px; border-radius:6px; border:1px solid #d1d5db; background:#fff; color:#6b7280; cursor:pointer;"
+          >{{ showAllLayers ? 'Mostra meno' : `Mostra tutti (${data.ranking_layers.length})` }}</button>
+        </div>
+
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px; min-width:600px;">
-          <div>
-            <p style="font-size:0.75rem; color:#6b7280; text-transform:uppercase; margin-bottom:8px;">Cammini più aperti</p>
-            <table style="width:100%; border-collapse:collapse; font-size:0.875rem;">
-              <thead>
-                <tr style="border-bottom:1px solid rgba(128,128,128,0.3);">
-                  <th style="text-align:left; padding:6px 8px; font-weight:500; opacity:0.6;">Cammino</th>
-                  <th style="text-align:right; padding:6px 8px; font-weight:500; opacity:0.6;">Aperture</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="row in visibleLayerRanking" :key="row.layer_id" style="border-bottom:1px solid rgba(128,128,128,0.15);">
-                  <td style="padding:6px 8px;">{{ row.name }}</td>
-                  <td style="padding:6px 8px; text-align:right; font-weight:600; color:#10b981;">{{ row.total }}</td>
-                </tr>
-              </tbody>
-            </table>
-            <button
-              v-if="data.ranking_layers.length > 10"
-              @click="showAllLayers = !showAllLayers"
-              style="margin-top:8px; font-size:0.75rem; padding:4px 12px; border-radius:6px; border:1px solid #d1d5db; background:#fff; color:#6b7280; cursor:pointer;"
-            >{{ showAllLayers ? 'Mostra meno' : `Mostra tutti (${data.ranking_layers.length})` }}</button>
-          </div>
           <div>
             <p style="font-size:0.75rem; color:#6b7280; text-transform:uppercase; margin-bottom:8px;">Tappe più scaricate</p>
             <table style="width:100%; border-collapse:collapse; font-size:0.875rem;">
@@ -149,6 +150,28 @@
               @click="showAllTracks = !showAllTracks"
               style="margin-top:8px; font-size:0.75rem; padding:4px 12px; border-radius:6px; border:1px solid #d1d5db; background:#fff; color:#6b7280; cursor:pointer;"
             >{{ showAllTracks ? 'Mostra meno' : `Mostra tutti (${data.ranking_tracks.length})` }}</button>
+          </div>
+          <div>
+            <p style="font-size:0.75rem; color:#6b7280; text-transform:uppercase; margin-bottom:8px;">Tappe più condivise</p>
+            <table style="width:100%; border-collapse:collapse; font-size:0.875rem;">
+              <thead>
+                <tr style="border-bottom:1px solid rgba(128,128,128,0.3);">
+                  <th style="text-align:left; padding:6px 8px; font-weight:500; opacity:0.6;">Tappa</th>
+                  <th style="text-align:right; padding:6px 8px; font-weight:500; opacity:0.6;">Condivisioni</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="row in visibleTrackShares" :key="row.track_id" style="border-bottom:1px solid rgba(128,128,128,0.15);">
+                  <td style="padding:6px 8px;">{{ row.name }}</td>
+                  <td style="padding:6px 8px; text-align:right; font-weight:600; color:#10b981;">{{ row.shares }}</td>
+                </tr>
+              </tbody>
+            </table>
+            <button
+              v-if="data.ranking_track_shares.length > 10"
+              @click="showAllTrackShares = !showAllTrackShares"
+              style="margin-top:8px; font-size:0.75rem; padding:4px 12px; border-radius:6px; border:1px solid #d1d5db; background:#fff; color:#6b7280; cursor:pointer;"
+            >{{ showAllTrackShares ? 'Mostra meno' : `Mostra tutti (${data.ranking_track_shares.length})` }}</button>
           </div>
         </div>
       </div>
@@ -193,6 +216,7 @@ export default {
       chartInstance: null,
       showAllLayers: false,
       showAllTracks: false,
+      showAllTrackShares: false,
     }
   },
 
@@ -255,6 +279,11 @@ export default {
     visibleTrackRanking() {
       if (!this.data?.ranking_tracks) return []
       return this.showAllTracks ? this.data.ranking_tracks : this.data.ranking_tracks.slice(0, 10)
+    },
+
+    visibleTrackShares() {
+      if (!this.data?.ranking_track_shares) return []
+      return this.showAllTrackShares ? this.data.ranking_track_shares : this.data.ranking_track_shares.slice(0, 10)
     },
   },
 
