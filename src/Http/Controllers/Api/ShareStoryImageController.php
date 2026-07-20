@@ -2,46 +2,46 @@
 
 namespace Wm\WmPackage\Http\Controllers\Api;
 
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
-use RuntimeException;
-use Symfony\Component\HttpFoundation\Response;
 use Throwable;
 use Wm\WmPackage\Http\Controllers\Controller;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\UgcTrack;
+use Wm\WmPackage\Services\Models\StoryShare\MapRenderService;
+use Wm\WmPackage\Services\Models\StoryShare\StoryImageLayout;
 use Wm\WmPackage\Services\Models\StoryShare\StoryShareImageService;
+use Wm\WmPackage\Services\Models\StoryShare\TrackStatsService;
 
 /**
- * Compositing endpoint for the Instagram/Facebook Stories share image (oc:8183).
+ * Compositing endpoint for the Instagram/Facebook Stories share image (oc:8183, third
+ * revision).
  *
- * Receives a raw map screenshot + pre-computed track statistics from the client, along with
- * the `uuid` of the UgcTrack being shared, composes them with the owning app's branded
- * `story_frame` (see {@see StoryShareImageService}), and returns the final 1080x1920 PNG.
- * No persistence of the resulting image: the UgcTrack lookup is read-only, purely to
- * authenticate which app's branding applies.
+ * The client sends ONLY the `uuid` of the UgcTrack being shared — no screenshot, no
+ * statistics, no app_id (see docs/features/8183-condivisione-percorso-registrato-sui-social/
+ * overview.md for the full rationale). Everything else is computed server-side:
+ *   1. resolve the UgcTrack by `properties.uuid` and verify ownership (unchanged from the
+ *      previous revision — see notes.md "Revisione: nuovo meccanismo di risoluzione app");
+ *   2. compute statistics from `properties.locations` ({@see TrackStatsService});
+ *   3. render the map image from the track's own PostGIS geometry ({@see MapRenderService});
+ *   4. composite map + statistics + the app's `story_frame` ({@see StoryShareImageService});
+ *   5. persist the final image on the UgcTrack's `share_image` media collection, so the
+ *      public `GET /share/ugc-track/{uuid}` page can serve it later, asynchronously, to an
+ *      OG-unfurling crawler;
+ *   6. return both a direct URL to the persisted image and the public share page URL.
  */
 class ShareStoryImageController extends Controller
 {
-    /**
-     * Max accepted upload size in KB (plan.md task 9): coherent with the expected size of a
-     * map screenshot. No dedicated rate-limit in this cycle — explicit decision, see
-     * docs/features/8183-condivisione-percorso-registrato-sui-social/overview.md "Rischi".
-     */
-    private const MAX_SCREENSHOT_KB = 10240;
-
-    public function store(Request $request, StoryShareImageService $service): Response
-    {
+    public function store(
+        Request $request,
+        TrackStatsService $statsService,
+        MapRenderService $mapRenderService,
+        StoryShareImageService $compositingService
+    ): JsonResponse {
         $validator = Validator::make($request->all(), [
             'uuid' => ['required', 'string'],
-            // Accepted for client convenience/logging only — see the security note below,
-            // never used to decide which app's story_frame to load.
-            'app_id' => ['sometimes'],
-            'screenshot' => ['required', 'image', 'max:'.self::MAX_SCREENSHOT_KB],
-            'duration_seconds' => ['required', 'integer', 'min:0'],
-            'distance_km' => ['required', 'numeric', 'min:0'],
-            'ascent_meters' => ['required', 'numeric', 'min:0'],
         ]);
 
         if ($validator->fails()) {
@@ -51,17 +51,13 @@ class ShareStoryImageController extends Controller
             ], 422);
         }
 
-        $validated = $validator->validated();
+        $uuid = $validator->validated()['uuid'];
         $user = $request->user();
 
         // SECURITY (non-negotiable, oc:8183): the app is ALWAYS derived from the UgcTrack
-        // being shared — never from the `app_id` field the client may also send in the
-        // payload. The client sends `uuid` (properties.uuid of the UgcTrack, generated
-        // client-side when the track is registered), which lets the server look up the
-        // authoritative track record, verify the requesting user actually owns it, and
-        // read the app id from THAT record. This is what stands between one app's users
-        // and another app's story_frame branding.
-        $ugcTrack = UgcTrack::where('properties->uuid', $validated['uuid'])->first();
+        // being shared — never from a client-supplied parameter. See notes.md for the full
+        // history of why (the previous `User::app()`-based mechanism was reverted).
+        $ugcTrack = UgcTrack::where('properties->uuid', $uuid)->first();
 
         if ($ugcTrack === null) {
             return response()->json([
@@ -100,28 +96,38 @@ class ShareStoryImageController extends Controller
         }
 
         try {
-            $image = $service->compose($app, $request->file('screenshot'), [
-                'duration_seconds' => (int) $validated['duration_seconds'],
-                'distance_km' => (float) $validated['distance_km'],
-                'ascent_meters' => (float) $validated['ascent_meters'],
-            ]);
-        } catch (RuntimeException $e) {
-            // Invalid/corrupted screenshot, or an unreadable story_frame asset: both mean
-            // "could not produce a valid share image" — 4xx, never a 200 with a partial or
-            // corrupted image (plan.md task 11).
-            Log::warning('[oc:8183] share-story-image compositing failed: '.$e->getMessage(), [
-                'app_id' => $app->id,
-                'user_id' => $user->id,
-            ]);
+            $stats = $statsService->compute($ugcTrack->properties['locations'] ?? []);
+            $mapImage = $mapRenderService->render($ugcTrack, $app, StoryImageLayout::MAP_WIDTH, StoryImageLayout::MAP_HEIGHT);
+            $image = $compositingService->compose($app, $mapImage, $stats);
 
-            return response()->json([
-                'error' => 'Unable to process the provided screenshot.',
-                'code' => 422,
-            ], 422);
+            $media = $ugcTrack->addMediaFromString($image->getEncoded())
+                ->usingFileName('share-'.$ugcTrack->id.'.png')
+                ->toMediaCollection('share_image');
+
+            // Static snapshot (overview.md "Ciclo di vita della pagina pubblica"): the
+            // public page never recomputes anything, so the display data it needs (track
+            // name, stats, owning app's name) is frozen here, at share time, instead of
+            // being re-derived from possibly-changed live data when a crawler later visits
+            // the page. saveQuietly() to avoid re-triggering UgcObserver (geometry
+            // normalization etc. — same idiom already used by
+            // GeometryModel::populateProperties()/populatePropertyMedia()).
+            $ugcTrack->properties = array_merge($ugcTrack->properties ?? [], [
+                'share_snapshot' => [
+                    'name' => $ugcTrack->name,
+                    'app_name' => $app->name,
+                    'duration_seconds' => $stats['duration_seconds'],
+                    'distance_km' => $stats['distance_km'],
+                    'ascent_meters' => $stats['ascent_meters'],
+                    'shared_at' => now()->toIso8601String(),
+                ],
+            ]);
+            $ugcTrack->saveQuietly();
         } catch (Throwable $e) {
-            Log::error('[oc:8183] share-story-image unexpected failure: '.$e->getMessage(), [
+            Log::error('[oc:8183] share-story-image generation failed: '.$e->getMessage(), [
                 'app_id' => $app->id,
+                'ugc_track_id' => $ugcTrack->id,
                 'user_id' => $user->id,
+                'exception' => get_class($e),
             ]);
 
             return response()->json([
@@ -130,8 +136,9 @@ class ShareStoryImageController extends Controller
             ], 500);
         }
 
-        return response($image->getEncoded(), 200, [
-            'Content-Type' => 'image/png',
+        return response()->json([
+            'image_url' => $media->getUrl(),
+            'share_url' => route('share.ugc-track', ['uuid' => $uuid]),
         ]);
     }
 }

@@ -34,9 +34,12 @@ Route::prefix('auth')->middleware('auth:api')->group(function () {
 Route::middleware('auth:api')->post('/wallet/buy', [WalletController::class, 'buy'])->name('wallet.buy');
 
 /*
- * Stories share image compositing (oc:8183): intentionally NOT app-scoped in the path
- * (no `{app}` segment) — the app is resolved server-side from the authenticated user's
- * context (see ShareStoryImageController), never from a client-supplied parameter.
+ * Stories share image compositing (oc:8183, third revision): intentionally NOT app-scoped in
+ * the path (no `{app}` segment) — the app is resolved server-side from the UgcTrack matching
+ * the `uuid` in the request payload (see ShareStoryImageController), never from a
+ * client-supplied parameter. Client payload is now just `{uuid}`: the server computes
+ * statistics, renders the map and persists the final image itself. Response is JSON
+ * `{image_url, share_url}` — see notes.md for the full contract.
  */
 Route::middleware('auth:api')->post('/share-story-image', [ShareStoryImageController::class, 'store'])->name('share_story_image');
 

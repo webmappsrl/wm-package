@@ -1,51 +1,64 @@
 > Ticket: oc:8183
 
-# Condivisione percorso registrato sui social (stile Strava) — flag conf, asset branding e compositing (wm-package)
+# Condivisione percorso registrato sui social (stile Strava) — rendering mappa, statistiche e pagina pubblica (wm-package)
 
-## Cosa cambia
-- Nuovo flag conf `ugc_track_share_enabled` esposto nel config.json generico (stesso builder usato per altri flag opzionali per shard, es. `showTrackRemainingDistance`), per permettere al frontend di mostrare/nascondere il pulsante "Condividi" nel pannello proprietà traccia UGC in base all'attivazione per istanza.
-- Nuova media collection Spatie su `App` (es. `story_frame`), upload via Nova — pattern già consolidato su questo stesso modello per `icon`/`icon_small`/`splash`/`my_paths`/`my_downloads` (`wm-package/src/Models/App.php`, `wm-package/src/Nova/App.php`). Permette al team/cliente di cambiare lo sfondo brandizzato della Story senza toccare codice.
-- `AppConfigService.php` espone l'URL di `story_frame` in `config.json` (stesso meccanismo di `APP.myPaths`) — ma **non** viene scaricato/bundlato a build-time dal gulp (a differenza di `my_paths`/`my_downloads`, il cui download a build-time è legato a un vincolo specifico su iOS/webp, non una regola generale): l'app lo userà solo indirettamente, passandolo al nuovo endpoint di compositing (vedi sotto), non per uso diretto client-side.
-- **Endpoint di compositing (non più completamente stateless)**: riceve lo screenshot grezzo della traccia (generato on-device via OpenLayers, qualunque aspect ratio — vedi overview `map-core`), i dati statistici del percorso (tempo, km percorsi, dislivello), **più `app_id` e `uuid` della `UgcTrack` condivisa** (lo `uuid` è già generato client-side alla registrazione e presente in `properties.uuid`). Compone il tutto con il `story_frame` dell'app tramite `intervention/image` (già dipendenza esistente in `wm-package`) nel formato verticale Stories (9:16, es. 1080×1920), e ritorna l'immagine finale — nessun salvataggio dell'immagine risultante, ma l'endpoint ora legge (non scrive) la `UgcTrack` corrispondente per verifica.
-- **Il rispetto del formato Stories è responsabilità esclusiva di questo endpoint**: lo screenshot grezzo ricevuto può avere qualunque aspect ratio (es. quadrato) — il compositing lo inserisce in una posizione/dimensione prestabilita all'interno del frame 9:16, insieme al testo delle statistiche.
-- **App ricavata dalla `UgcTrack`, verificata via `uuid`, non dal contesto utente** (rivisto rispetto alla prima implementazione in Fase: challenge — vedi `notes.md` per la cronologia completa): il client manda sia `app_id` sia `uuid` nel payload, ma il server **non si fida del valore `app_id` inviato dal client** — cerca la `UgcTrack` tramite `uuid`, verifica che `UgcTrack.user_id` corrisponda all'utente autenticato (ownership check, altrimenti 403/404), e usa l'`app_id` letto da `properties` di quella traccia come unica fonte di verità per decidere quale `story_frame` caricare. Scelto al posto di derivare l'app da una relazione `User → App` (approccio esplorato e poi scartato: richiedeva un fix più ampio e fuori scope alla persistenza di `users.app_id` al signup, non necessario con questo meccanismo basato sul record della traccia stessa).
+## Cosa cambia rispetto alla revisione precedente
+
+Questa è la terza revisione architetturale della feature (vedi `notes.md` per la cronologia completa). Il developer ha deciso di spostare **tutto** il lavoro pesante sul backend, semplificando drasticamente il client:
+
+- **Il client manda solo `uuid`** — non più screenshot, non più statistiche calcolate lato TypeScript, non più `app_id` nel payload (restava comunque non fidato, ora è del tutto assente).
+- **Il backend calcola lui stesso durata/distanza/dislivello** da `properties.locations` della `UgcTrack` (array grezzo di punti GPS con `time`/`latitude`/`longitude`/`altitude`/`altitudeAccuracy`) — nessun valore precalcolato esiste oggi da nessuna parte (verificato: né nel frontend al salvataggio, né nel backend). Algoritmo di riferimento, porting dell'equivalente TypeScript già scritto per la versione precedente (`core/src/app/services/geoutils.service.ts`, ora rimosso da quell'uso):
+  - **Distanza**: somma haversine tra coordinate GPS consecutive
+  - **Durata**: `(ultimo time − primo time) / 1000`
+  - **Dislivello**: somma delle differenze positive di altitudine tra punti consecutivi, scartando come rumore quelle sotto la soglia `max(altitudeAccuracy dei due punti) / 6`
+- **Il backend genera lui stesso l'immagine della mappa** (non riceve più uno screenshot): compositing manuale in PHP — recupera i tile raster XYZ dallo stesso tile server già usato dall'app (`AppTiles.php`), li assembla per l'estensione (bounding box) della traccia, disegna la polyline del percorso sopra (`intervention/image`/GD), poi compone il risultato con `story_frame` + testo statistiche nel formato Stories (9:16, 1080×1920) — stessa logica di compositing già esistente, ora a monte anche del rendering mappa stesso, non solo dell'assemblaggio finale.
+- **L'immagine finale viene ora persistita** (Spatie Media Library, collection dedicata sulla `UgcTrack`, es. `share_image`) — necessario per poter servire la nuova pagina pubblica (vedi sotto), che un crawler (WhatsApp/Facebook/Twitter) può richiedere in un momento successivo alla generazione, non nella stessa request.
+- **Nuova pagina pubblica** `GET /share/ugc-track/{uuid}` (Blade), **una sola route/template parametrico** che serve contenuto diverso per traccia in base allo `uuid` nell'URL — con tag Open Graph (`og:title`, `og:description`, `og:image` → l'immagine persistita, `og:url`) e visualizzazione dell'immagine. Reintroduce l'approccio della primissima stesura del ticket (scartato durante la Fase: reverse-interaction quando si era deciso lo share nativo Stories, ora di nuovo utile perché il meccanismo di condivisione lato app è tornato ad essere `Share.share()` generico — vedi overview `webmapp-app`).
+- **Ciclo di vita della pagina pubblica**: snapshot statico generato al momento della condivisione (non si aggiorna se l'utente modifica la traccia dopo) — vive finché esiste la `UgcTrack`, **404 se la traccia viene eliminata** (i dati personali dietro non devono restare accessibili pubblicamente più a lungo della traccia stessa), nessuna scadenza temporale aggiuntiva.
+- **Risposta dell'endpoint**: ora deve fornire sia l'immagine (per l'allegato diretto nello share nativo del device) sia l'URL della pagina pubblica (per i canali che fanno unfurling OG) — formato esatto (JSON con entrambi i campi vs binario+header) da definire in `plan.md`.
 
 ## Perché
-Con lo share nativo Instagram/Facebook Stories (deciso in Fase: reverse-interaction) non serve più un link pubblico né uno stato persistito per traccia — ma il developer ha successivamente richiesto che il **compositing** (sfondo/frame brandizzato + screenshot mappa) avvenga lato backend anziché nell'app, per poter aggiornare il design della Story (frame, layout, eventuali testi/loghi) senza dover rilasciare una nuova build/submission sugli store. Il backend fornisce quindi sia l'asset di branding (Nova, come altri asset app) sia la logica di composizione, mentre il client resta responsabile solo della cattura della mappa.
+
+Il primo approccio (screenshot client-side + compositing backend) si è scontrato con un problema di WKWebView su iOS mai completamente isolato (persisteva anche dopo aver eliminato la dipendenza da `crossOrigin` con un caricamento tile via `fetch()`). Il developer ha scelto di eliminare interamente la generazione mappa lato client, spostandola sul backend — che non ha vincoli di CORS/WebView ed è più semplice da debuggare. Contestualmente, passando da un plugin nativo Stories a `Share.share()` generico (vedi overview `webmapp-app`), diventa utile avere anche un link condivisibile con anteprima (non solo l'immagine diretta) per i canali che non aprono Instagram/Facebook Stories nativamente — da qui il ritorno della pagina pubblica con OG tags.
 
 ## Requisiti
-- [ ] Flag conf `ugc_track_share_enabled` esposto nel config.json generico per shard (default assente/`false` → pulsante nascosto, zero impatto sugli shard che non lo attivano)
-- [ ] Media collection `story_frame` su `App`, upload via Nova (stesso pattern di `icon`/`splash`/`my_paths`)
-- [ ] URL `story_frame` esposto in `config.json` (per uso lato endpoint di compositing, non per fetch diretto client-side)
-- [ ] Nuovo endpoint (es. `POST /api/share-story-image`): riceve screenshot grezzo + valori statistici (tempo, km, dislivello) + `app_id`+`uuid` della `UgcTrack` condivisa. Cerca la `UgcTrack` per `uuid`, verifica ownership (`user_id` = utente autenticato, altrimenti 403/404), ricava l'`app_id` autentico da `properties` della traccia trovata (mai dal valore inviato dal client), compone il tutto (mappa + testo statistiche + frame) via `intervention/image` nel formato Stories (9:16, es. 1080×1920), ritorna immagine finale — nessuna persistenza dell'immagine risultante
-- [ ] Posizione/dimensione della mappa e di ciascun campo testo statistiche all'interno del frame 9:16: coordinate fisse lato codice (non configurabili da Nova in questo ciclo) — vedi Rischi per il vincolo che questo impone su futuri redesign del frame
-- [ ] Font/stile del testo statistiche: da definire in `plan.md` (font di sistema di `intervention/image`/GD o font custom da bundlare)
-- [ ] Comportamento se `story_frame` non è stato caricato per l'app: fallback ragionevole (es. ritorna lo screenshot grezzo non composito, oppure un frame di default) — da decidere in `plan.md`
-- [ ] Errore esplicito (HTTP 4xx/5xx) se il compositing fallisce (immagine ricevuta corrotta, formato non valido) — coerente con la decisione "errore chiaro + retry" del flusso complessivo
-- [ ] Endpoint protetto da autenticazione per evitare abuso/costo di elaborazione da chiamate anonime; app ricavata dalla `UgcTrack` verificata via `uuid`+ownership, mai dal parametro `app_id` inviato dal client (elimina il rischio cross-tenant, vedi Rischi)
-- [ ] Validazione dimensione massima del file in ingresso (limite esplicito in MB, coerente con la dimensione attesa di uno screenshot mappa) — nessun rate-limit dedicato per ora (decisione esplicita, vedi Rischi), solo il size limit per bloccare payload anomali
+
+- [ ] Flag conf `ugc_track_share_enabled` esposto nel config.json generico per shard (invariato dalla revisione precedente)
+- [ ] Media collection `story_frame` su `App`, upload via Nova (invariato)
+- [ ] **Servizio di calcolo statistiche** da `UgcTrack.properties.locations` (distanza haversine, durata, dislivello con soglia di rumore) — nuovo, porting dell'algoritmo TS esistente
+- [ ] **Servizio di rendering mappa**: dato un bounding box/estensione e la geometria della traccia, recupera i tile XYZ necessari dal tile server dell'app (stesso URL già usato altrove, `AppTiles.php`), li assembla in un'immagine, disegna la polyline del percorso proiettando le coordinate GPS in pixel — nuovo
+- [ ] Endpoint semplificato (`POST /api/share-story-image` o simile): accetta **solo `{uuid}`**, cerca la `UgcTrack`, verifica ownership (`user_id` = utente autenticato, altrimenti 403/404), calcola le statistiche, genera la mappa, compone con `story_frame` (frame+testo, invariato), **persiste l'immagine finale** (Spatie, nuova collection dedicata), ritorna `{immagine, shareUrl}` al client
+- [ ] Se `story_frame` non è caricato: stesso fallback già deciso (immagine non brandizzata, contain non crop, log warning) — invariato
+- [ ] **Nuova route pubblica** `GET /share/ugc-track/{uuid}` (nessuna autenticazione richiesta): risolve la traccia, legge l'immagine persistita, renderizza un Blade con tag OG (`og:title` da nome traccia+statistiche, `og:description` testo fisso per shard, `og:image` → immagine persistita, `og:url` → URL canonico) — **404 se la traccia non esiste o è stata eliminata**
+- [ ] Validazione dimensione massima e formato font/stile testo — invariati dalla revisione precedente
+- [ ] Traduzioni/testo della pagina pubblica: coerenti con la lingua principale del backend/shard (verificare pattern esistente per contenuti pubblici, es. pagine di errore o simili)
 
 ## Rischi
-- **Reintroduce una dipendenza di rete sincrona al momento della condivisione**: se il device non ha connettività, la condivisione non può completarsi (accettato consapevolmente per il beneficio di poter aggiornare il branding senza release app) — l'errore deve essere chiaro e il retry esplicito (già deciso per l'intero flusso).
-- **Nessuna cache/persistenza dell'immagine finale**: ogni tap "Condividi" ripete l'intera chiamata di compositing anche se traccia e frame non sono cambiati — accettabile dato il costo contenuto di un'operazione di image compositing sincrona, ma da monitorare se il volume di condivisioni cresce.
-- **Fallback frame mancante**: se un'app non ha ancora caricato `story_frame` su Nova, il comportamento di default va definito esplicitamente per non produrre un'esperienza rotta al primo utilizzo della feature su una nuova istanza.
-- **Coordinate di layout (mappa + testo statistiche) hardcoded lato codice, non configurabili da Nova**: l'upload di `story_frame` su Nova cambia solo l'immagine di sfondo, non dove vengono posizionati mappa/testo sopra di essa. Se un futuro redesign del frame sposta significativamente gli elementi grafici (es. la finestra dove va la mappa cambia posizione/dimensione), le coordinate hardcoded vanno aggiornate lato codice — quindi l'obiettivo dichiarato "aggiornare il branding senza release app" vale solo per lo sfondo in sé, non per un redesign strutturale del layout, che richiederebbe comunque un deploy backend (più veloce di una release store, ma non è comunque "zero codice").
-- **Costo/abuso endpoint**: essendo stateless e senza legame a una risorsa specifica, richiede comunque autenticazione e un limite di dimensione file esplicito. **Rate-limiting esplicito rimandato** (decisione presa in Fase: challenge, coerente col fatto che nessun altro endpoint media nel progetto ne ha uno oggi, unico precedente è il throttle sulla signup) — se in produzione emergono segnali di abuso o carico anomalo sul pool PHP-FPM condiviso tra tutte le app, va aggiunto in un ciclo successivo. Rischio residuo consapevolmente accettato.
+
+- **Rendering mappa manuale in PHP è un pezzo di codice nuovo e non banale**: proiezione coordinate GPS → pixel, math dei tile XYZ (calcolo z/x/y per un bounding box), stitching di più tile in un'unica immagine, disegno polyline — nessun precedente diretto in questo codebase (il pattern più vicino è il compositing statico già esistente in `StoryShareImageService`, che compone immagini già pronte, non ne genera di nuove da tile geografici).
+- **Persistenza immagine = nuovo spazio di storage per traccia condivisa**: a differenza della revisione stateless precedente, ogni condivisione ora occupa spazio permanente (Spatie media) finché la traccia esiste — da monitorare se il volume cresce, nessuna pulizia automatica prevista oltre alla cancellazione a cascata quando la traccia viene eliminata.
+- **Pagina pubblica non autenticata**: espone nome traccia e immagine a chiunque conosca lo `uuid` (non enumerable/indovinabile, ma pubblico una volta condiviso) — accettato, coerente con la natura "contenuto che l'utente sceglie di condividere pubblicamente".
+- **Snapshot statico**: se l'utente modifica la traccia dopo aver condiviso, la pagina pubblica mostra dati non aggiornati — comportamento scelto deliberatamente (semplicità, coerenza con "condivisione one-shot"), ma da comunicare chiaramente se il cliente chiede "perché il link non si aggiorna".
+- **Nessuna scadenza temporale sulla pagina pubblica**: vive indefinitamente finché la traccia esiste — se in futuro serve un limite (es. per motivi di storage/privacy), è una modifica successiva, non prevista in questo ciclo.
+- **Qualità visiva dipendente dai tile disponibili**: aree con basemap a bassa risoluzione o zone di scarsa copertura del tile server producono uno screenshot di qualità inferiore — stesso limite che avrebbe avuto qualunque approccio (client o backend).
 
 ## Out of scope
-- Persistenza dell'immagine finale o stato di condivisione per traccia (resta stateless, coerente con la natura effimera delle Stories)
-- Pagina pubblica con Open Graph tags (approccio della prima stesura del ticket, superato)
-- Configurazione Facebook App ID (vive lato frontend/instance in `webmapp-app`, non nel backend)
-- Editor visuale in Nova per posizionare/anteprima il frame prima dell'upload (upload diretto del file finale, come già avviene per `icon`/`splash`)
-- Configurabilità da Nova delle coordinate di layout (posizione mappa/testo statistiche) — hardcoded lato codice in questo ciclo (vedi Rischi)
-- Localizzazione delle etichette statistiche in più lingue (se il testo composito richiede label, es. "km"/"dislivello", vs solo numeri) — da chiarire in `plan.md`
-- Fix della persistenza di `users.app_id` al signup (`AppAuthController::createUser()`) e relazione `User::app()` — bug preesistente reale ma indipendente, scoperto durante l'implementazione e poi scartato da questo diff perché non più necessario col meccanismo basato su `UgcTrack.uuid`; da trattare come ticket separato se rilevante
+
+- Rate-limiting dedicato sull'endpoint (stessa decisione precedente: nessun altro endpoint media nel progetto ce l'ha, rivalutare se emergono segnali di abuso)
+- Configurabilità da Nova delle coordinate di layout (mappa/testo statistiche dentro il frame) — hardcoded lato codice
+- Editor visuale in Nova per il frame — upload diretto del file finale
+- Aggiornamento dinamico della pagina pubblica se la traccia cambia dopo la condivisione (snapshot statico per design)
+- Fix della persistenza di `users.app_id` al signup — bug preesistente indipendente, non più rilevante per questa feature (il meccanismo di risoluzione app resta basato su `UgcTrack.uuid`, invariato dalla revisione precedente)
 
 ## Moduli toccati
-- `wm-package/src/Models/App.php` (nuova media collection `story_frame`)
-- `wm-package/src/Nova/App.php` (nuovo campo upload immagine, sezione da definire in `plan.md`, es. accanto a `icon`/`splash`)
-- `wm-package/src/Services/AppConfigService.php` (esposizione URL `story_frame` in config.json)
-- `wm-package/src/Services/Models/MediaService.php` o nuovo servizio dedicato (compositing via `intervention/image`)
-- `wm-package/src/Http/Controllers/Api/...` (nuovo endpoint compositing)
-- `wm-package/routes/api.php`
-- Config builder del `config.json` generico (flag `ugc_track_share_enabled` per shard — file esatto da confermare in `plan.md`, probabile `AppController.php` già individuato per la generazione conf)
+
+- `wm-package/src/Models/App.php` (media collection `story_frame`, invariato)
+- `wm-package/src/Nova/App.php` (campo upload `story_frame`, invariato)
+- `wm-package/src/Models/UgcTrack.php` (nuova media collection per l'immagine persistita, es. `share_image`)
+- `wm-package/src/Services/Models/App/AppConfigService.php` (esposizione config, invariato)
+- `wm-package/src/Services/Models/StoryShare/StoryShareImageService.php` (esistente, da estendere o affiancare con la nuova logica statistiche+rendering mappa)
+- Nuovo servizio statistiche (percorso da definire in `plan.md`, es. `wm-package/src/Services/Models/StoryShare/TrackStatsService.php`)
+- Nuovo servizio rendering mappa (percorso da definire in `plan.md`, es. `wm-package/src/Services/Models/StoryShare/MapRenderService.php`)
+- `wm-package/src/Http/Controllers/Api/ShareStoryImageController.php` (esistente, da semplificare/estendere: solo `uuid` in input, persistenza output, risposta con `shareUrl`)
+- Nuovo controller/route per la pagina pubblica (es. `wm-package/src/Http/Controllers/ShareUgcTrackController.php` + vista Blade)
+- `wm-package/routes/api.php` (endpoint esistente, da aggiornare) e `wm-package/routes/web.php` o simile (nuova route pubblica non-API)

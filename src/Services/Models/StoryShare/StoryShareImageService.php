@@ -2,7 +2,6 @@
 
 namespace Wm\WmPackage\Services\Models\StoryShare;
 
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Facades\Image;
@@ -15,28 +14,29 @@ use Wm\WmPackage\Models\App;
 /**
  * Stateless compositing service for the Instagram/Facebook Stories share image (oc:8183).
  *
- * Given a raw map screenshot (any aspect ratio, captured on-device) and pre-computed track
- * statistics (time/distance/ascent — this service has no access to and does not need the
- * UgcTrack model), produces a single 1080x1920 (9:16) PNG by compositing:
+ * Given an already-rendered map image (produced by {@see MapRenderService} — this service no
+ * longer deals with a client-uploaded screenshot at all, see the third revision in
+ * docs/features/8183-condivisione-percorso-registrato-sui-social/notes.md) and pre-computed
+ * track statistics (time/distance/ascent, from {@see TrackStatsService} — this service has no
+ * access to and does not need the UgcTrack model itself), produces a single 1080x1920 (9:16)
+ * PNG by compositing:
  *   1. the app's branded `story_frame` media asset as background,
- *   2. the screenshot fitted into a fixed window on top of it,
+ *   2. the map image fitted into a fixed window on top of it,
  *   3. the statistics as text in a fixed position.
  *
- * No persistence, no state: everything happens in memory for the duration of one request.
- * See {@see StoryImageLayout} for every hardcoded coordinate/size used here.
+ * No persistence here: the caller (ShareStoryImageController) is responsible for persisting
+ * the returned image to the UgcTrack's `share_image` media collection. See
+ * {@see StoryImageLayout} for every hardcoded coordinate/size used here.
  */
 class StoryShareImageService
 {
     /**
      * @param  array{duration_seconds?: int|null, distance_km?: float|null, ascent_meters?: float|null}  $stats
      *
-     * @throws RuntimeException if the screenshot is not a valid/decodable image, or the
-     *                          app's story_frame asset cannot be read.
+     * @throws RuntimeException if the app's story_frame asset cannot be read.
      */
-    public function compose(App $app, UploadedFile $screenshot, array $stats): InterventionImage
+    public function compose(App $app, InterventionImage $mapImage, array $stats): InterventionImage
     {
-        $screenshotImage = $this->readScreenshot($screenshot);
-
         $frameMedia = $app->getFirstMedia('story_frame');
 
         if ($frameMedia === null) {
@@ -46,22 +46,10 @@ class StoryShareImageService
                 'app_id' => $app->id,
             ]);
 
-            return $this->composeFallback($screenshotImage, $stats);
+            return $this->composeFallback($mapImage, $stats);
         }
 
-        return $this->composeWithFrame($screenshotImage, $frameMedia, $stats);
-    }
-
-    /**
-     * @throws RuntimeException
-     */
-    private function readScreenshot(UploadedFile $screenshot): InterventionImage
-    {
-        try {
-            return Image::make($screenshot->getRealPath());
-        } catch (Throwable $e) {
-            throw new RuntimeException('Invalid or corrupted screenshot image: '.$e->getMessage(), 0, $e);
-        }
+        return $this->composeWithFrame($mapImage, $frameMedia, $stats);
     }
 
     /**

@@ -49,4 +49,22 @@ class UgcTrack extends MultiLineString implements UserOwnedModelInterface
     {
         return $this->belongsTo(User::class, 'user_id');
     }
+
+    /**
+     * Persisted final Stories share image (oc:8183, third revision) — needed so the public
+     * `GET /share/ugc-track/{uuid}` page (see ShareUgcTrackController) can serve it to OG
+     * crawlers (WhatsApp/Facebook/Twitter) asynchronously, potentially long after the share
+     * request that generated it. `singleFile()`: re-sharing the same track replaces the
+     * previous snapshot image rather than accumulating one per share.
+     *
+     * Overrides (does not replace) the parent's `registerMediaCollections()` — GeometryModel
+     * registers a generic `default` collection used elsewhere for UGC photos; that one is
+     * kept as-is.
+     */
+    public function registerMediaCollections(): void
+    {
+        parent::registerMediaCollections();
+
+        $this->addMediaCollection('share_image')->singleFile();
+    }
 }
