@@ -520,7 +520,8 @@ export default {
       if (!el) return
       const canvas = await html2canvas(el, { backgroundColor: '#ffffff', scale: 2 })
       const link   = document.createElement('a')
-      link.download = `layer-analytics-${this.card.layer_id}.png`
+      const suffix = this.card.mode === 'global' ? 'global' : this.card.layer_id
+      link.download = `layer-analytics-${suffix}.png`
       link.href     = canvas.toDataURL('image/png')
       link.click()
     },

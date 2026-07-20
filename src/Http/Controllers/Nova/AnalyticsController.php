@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Wm\WmPackage\Http\Controllers\Nova;
 
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -23,8 +24,12 @@ class AnalyticsController extends Controller
         $service = app(AnalyticsService::class);
         $range = $this->resolveRange($request);
 
-        $usage = $service->getLayerUsage($layer->id, $range);
-        $trackDownloads = $service->getLayerTrackDownloads($layer, $range);
+        try {
+            $usage = $service->getLayerUsage($layer->id, $range);
+            $trackDownloads = $service->getLayerTrackDownloads($layer, $range);
+        } catch (LockTimeoutException $e) {
+            return response()->json(['error' => 'analytics_query_failed'], 502);
+        }
 
         return response()->json(array_merge($usage, [
             'track_downloads' => $trackDownloads,
@@ -45,7 +50,7 @@ class AnalyticsController extends Controller
             $rankingTrackShares = $service->getAllTracksShares($range);
             $searchTotal = $service->getTotalSearches($range);
             $rankingSearchQueries = $service->getTopSearchQueries($range);
-        } catch (AnalyticsQueryException $e) {
+        } catch (AnalyticsQueryException|LockTimeoutException $e) {
             return response()->json(['error' => 'analytics_query_failed'], 502);
         }
 

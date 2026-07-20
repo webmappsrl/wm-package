@@ -52,4 +52,17 @@ class AnalyticsControllerGlobalTest extends TestCase
 
         $response->assertStatus(403);
     }
+
+    public function test_administrator_receives_502_when_posthog_query_fails(): void
+    {
+        Http::fake(['*' => Http::response('Internal Server Error', 500)]);
+
+        $admin = User::factory()->create();
+        $admin->assignRole('Administrator');
+
+        $response = $this->actingAs($admin)->getJson('/nova-vendor/layer-analytics/global');
+
+        $response->assertStatus(502);
+        $response->assertJson(['error' => 'analytics_query_failed']);
+    }
 }

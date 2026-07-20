@@ -141,8 +141,14 @@ class AnalyticsServiceTest extends TestCase
 
     public function test_get_global_usage_aggregates_across_all_layers(): void
     {
+        $this->seedLayersTable([
+            ['id' => 10, 'name' => 'Cammino di Santiago'],
+        ]);
+
         Http::fake([
+            // 1a chiamata: ranking layer, usata per risolvere il filtro "solo layer validi".
             '*' => Http::sequence()
+                ->push(['results' => [['10', 'web', 140]]])
                 ->push(['results' => [['2026-05-01', 'posthog-android', 100], ['2026-05-01', 'posthog-ios', 40]]])
                 ->push(['results' => [['posthog-android', 100], ['posthog-ios', 40]]])
                 ->push(['results' => [[55]]]),
@@ -154,6 +160,78 @@ class AnalyticsServiceTest extends TestCase
         $this->assertSame('layerOpened', $result['event']);
         $this->assertSame(140, $result['total']);
         $this->assertSame(55, $result['unique_users']);
+    }
+
+    public function test_get_global_usage_excludes_deleted_layers_from_total(): void
+    {
+        // Layer 10 esiste nel DB locale, layer 999 no (cancellato) — la query di
+        // ranking li vede entrambi in PostHog, ma il filtro extra deve restringere
+        // daily_breakdown/breakdown/unique_users al solo layer 10, escludendo 999.
+        $this->seedLayersTable([
+            ['id' => 10, 'name' => 'Cammino di Santiago'],
+        ]);
+
+        Http::fake([
+            '*' => Http::sequence()
+                ->push(['results' => [['10', 'web', 50], ['999', 'web', 30]]])
+                ->push(['results' => [['2026-05-01', 'web', 50]]])
+                ->push(['results' => [['web', 50]]])
+                ->push(['results' => [[7]]]),
+        ]);
+
+        (new AnalyticsService)->getGlobalUsage('last_30_days');
+
+        $requests = Http::recorded();
+        $this->assertCount(4, $requests);
+
+        // Le 3 query successive alla ranking (daily breakdown, breakdown, unique users)
+        // devono includere il filtro sul solo layer valido ed escludere l'orfano.
+        for ($i = 1; $i < 4; $i++) {
+            [$request] = $requests[$i];
+            $sql = $request->data()['query']['query'];
+            $this->assertStringContainsString("properties.layer_id IN ('10')", $sql);
+            $this->assertStringNotContainsString('999', $sql);
+        }
+    }
+
+    public function test_get_global_usage_forces_zero_when_all_layers_deleted(): void
+    {
+        // Nessun layer del ranking esiste più nel DB locale: il filtro deve forzare
+        // "1 = 0" (0 risultati) invece di omettere il filtro o generare "IN ()" non valido.
+        Http::fake([
+            '*' => Http::sequence()
+                ->push(['results' => [['999', 'web', 30]]])
+                ->push(['results' => [['2026-05-01', 'web', 30]]])
+                ->push(['results' => [['web', 30]]])
+                ->push(['results' => [[5]]]),
+        ]);
+
+        (new AnalyticsService)->getGlobalUsage('last_30_days');
+
+        $requests = Http::recorded();
+        $this->assertCount(4, $requests);
+
+        for ($i = 1; $i < 4; $i++) {
+            [$request] = $requests[$i];
+            $sql = $request->data()['query']['query'];
+            $this->assertStringContainsString('1 = 0', $sql);
+        }
+    }
+
+    public function test_get_layer_usage_sql_is_unaffected_by_extra_filter_mechanism(): void
+    {
+        // Regressione: il path per-layer non deve mai ricevere il filtro extra
+        // (getLayerUsage() non lo passa) — SQL identica a prima di questa fix.
+        Http::fake(['*' => Http::response(['results' => []])]);
+
+        (new AnalyticsService)->getLayerUsage(10, 'last_30_days');
+
+        $requests = Http::recorded();
+        foreach ($requests as [$request]) {
+            $sql = $request->data()['query']['query'];
+            $this->assertStringNotContainsString('1 = 0', $sql);
+            $this->assertStringNotContainsString('layer_id IN (', $sql);
+        }
     }
 
     public function test_get_all_layers_ranking_query_has_no_id_equality_filter(): void
@@ -184,7 +262,7 @@ class AnalyticsServiceTest extends TestCase
             ['id' => 20, 'name' => 'Via Francigena'],
         ]);
 
-        Http::fake(['*' => Http::response(['results' => [['10', 50], ['20', 30]]])]);
+        Http::fake(['*' => Http::response(['results' => [['10', 'web', 50], ['20', 'web', 30]]])]);
 
         $result = (new AnalyticsService)->getAllLayersUsage('last_30_days');
 
@@ -192,6 +270,7 @@ class AnalyticsServiceTest extends TestCase
         $this->assertSame(10, $result[0]['layer_id']);
         $this->assertSame('Cammino di Santiago', $result[0]['name']);
         $this->assertSame(50, $result[0]['total']);
+        $this->assertSame([['lib' => 'web', 'total' => 50]], $result[0]['breakdown']);
     }
 
     public function test_get_all_layers_usage_excludes_deleted_layers(): void
@@ -201,7 +280,7 @@ class AnalyticsServiceTest extends TestCase
         ]);
 
         // layer_id 999 non esiste nel DB locale (cancellato) — deve essere scartato
-        Http::fake(['*' => Http::response(['results' => [['999', 80], ['10', 50]]])]);
+        Http::fake(['*' => Http::response(['results' => [['999', 'web', 80], ['10', 'web', 50]]])]);
 
         $result = (new AnalyticsService)->getAllLayersUsage('last_30_days');
 
@@ -224,9 +303,9 @@ class AnalyticsServiceTest extends TestCase
         $rows = [];
         $total = 100;
         for ($i = 1; $i <= 25; $i++) {
-            $rows[] = [(string) $i, $total--];
+            $rows[] = [(string) $i, 'web', $total--];
             if ($i % 5 === 0) {
-                $rows[] = [(string) array_shift($orphanIds), $total--];
+                $rows[] = [(string) array_shift($orphanIds), 'web', $total--];
             }
         }
 
@@ -294,6 +373,22 @@ class AnalyticsServiceTest extends TestCase
         $result = (new AnalyticsService)->getLayerUsage(1);
 
         $this->assertSame(0, $result['total']);
+    }
+
+    public function test_get_global_usage_propagates_failure_when_query_fails(): void
+    {
+        // getGlobalUsage() (id: null) usa runQuery(..., strict: true) sulle 3 query
+        // condivise con il path per-layer — verifica che l'aggregato KPI propaghi
+        // davvero il fallimento invece di tornare 0 silenziosamente (vedi
+        // test_non_strict_query_still_returns_empty_array_on_failure per la
+        // non-regressione sul path per-layer, che deve restare lenient).
+        Cache::flush();
+        Http::fake(['*' => Http::response('Internal Server Error', 500)]);
+        Log::shouldReceive('error')->atLeast()->once();
+
+        $this->expectException(\Wm\WmPackage\Exceptions\AnalyticsQueryException::class);
+
+        (new AnalyticsService)->getGlobalUsage('last_30_days');
     }
 
     public function test_get_all_layers_usage_propagates_failure_when_query_fails(): void
@@ -535,6 +630,107 @@ class AnalyticsServiceTest extends TestCase
         (new AnalyticsService)->getAllTracksDownloads('last_30_days');
     }
 
+    // -------------------------------------------------------------------------
+    // Ranking globale condivisioni tracce (getAllTracksShares)
+    // -------------------------------------------------------------------------
+
+    public function test_get_all_tracks_shares_returns_ranked_tracks_with_names(): void
+    {
+        $this->seedEcTracksTable([
+            ['id' => 1, 'name' => 'Tappa 1'],
+            ['id' => 2, 'name' => 'Tappa 2'],
+        ]);
+
+        Http::fake(['*' => Http::response(['results' => [['1', 25], ['2', 10]]])]);
+
+        $result = (new AnalyticsService)->getAllTracksShares('last_30_days');
+
+        $this->assertCount(2, $result);
+        $this->assertSame(1, $result[0]['track_id']);
+        $this->assertSame('Tappa 1', $result[0]['name']);
+        $this->assertSame(25, $result[0]['shares']);
+        $this->assertSame(2, $result[1]['track_id']);
+        $this->assertSame('Tappa 2', $result[1]['name']);
+        $this->assertSame(10, $result[1]['shares']);
+    }
+
+    public function test_get_all_tracks_shares_excludes_deleted_tracks(): void
+    {
+        $this->seedEcTracksTable([
+            ['id' => 1, 'name' => 'Tappa 1'],
+        ]);
+
+        // track_id 999 non esiste nel DB locale (cancellato) — deve essere scartato
+        Http::fake(['*' => Http::response(['results' => [['999', 80], ['1', 25]]])]);
+
+        $result = (new AnalyticsService)->getAllTracksShares('last_30_days');
+
+        $this->assertCount(1, $result);
+        $this->assertSame(1, $result[0]['track_id']);
+    }
+
+    public function test_get_all_tracks_shares_truncates_to_20_after_filtering_orphans(): void
+    {
+        $seed = [];
+        for ($i = 1; $i <= 25; $i++) {
+            $seed[] = ['id' => $i, 'name' => "Tappa {$i}"];
+        }
+        $this->seedEcTracksTable($seed);
+
+        $orphanIds = [901, 902, 903, 904, 905];
+        $rows = [];
+        $total = 100;
+        for ($i = 1; $i <= 25; $i++) {
+            $rows[] = [(string) $i, $total--];
+            if ($i % 5 === 0) {
+                $rows[] = [(string) array_shift($orphanIds), $total--];
+            }
+        }
+
+        $this->assertCount(30, $rows);
+
+        Http::fake(['*' => Http::response(['results' => $rows])]);
+
+        $result = (new AnalyticsService)->getAllTracksShares('last_30_days');
+
+        $this->assertCount(20, $result);
+
+        $resultIds = array_column($result, 'track_id');
+        foreach ([901, 902, 903, 904, 905] as $orphanId) {
+            $this->assertNotContains($orphanId, $resultIds);
+        }
+    }
+
+    public function test_get_all_tracks_shares_propagates_failure_when_query_fails(): void
+    {
+        Cache::flush();
+        Http::fake(['*' => Http::response('Internal Server Error', 500)]);
+        Log::shouldReceive('error')->atLeast()->once();
+
+        $this->expectException(\Wm\WmPackage\Exceptions\AnalyticsQueryException::class);
+
+        (new AnalyticsService)->getAllTracksShares('last_30_days');
+    }
+
+    public function test_query_track_shares_filters_mobile_libs_only(): void
+    {
+        Http::fake(['*' => Http::response(['results' => []])]);
+
+        $service = new AnalyticsService;
+        $method = new \ReflectionMethod($service, 'queryTrackShares');
+        $method->setAccessible(true);
+        $method->invoke($service, 'last_30_days');
+
+        Http::assertSent(function (Request $request) {
+            $sql = $request->data()['query']['query'];
+
+            return str_contains($sql, "event = 'contentShared'")
+                && str_contains($sql, "properties.content_type = 'track'")
+                && str_contains($sql, "'posthog-ios', 'posthog-android'")
+                && ! str_contains($sql, "'web'");
+        });
+    }
+
     public function test_query_track_downloads_with_null_ids_omits_in_clause(): void
     {
         Http::fake(['*' => Http::response(['results' => []])]);
@@ -569,6 +765,46 @@ class AnalyticsServiceTest extends TestCase
 
             return str_contains($sql, "properties.track_id IN ('42', '7')")
                 && ! str_contains($sql, 'LIMIT 50');
+        });
+    }
+
+    // -------------------------------------------------------------------------
+    // Ricerche (getTotalSearches / getTopSearchQueries)
+    // -------------------------------------------------------------------------
+
+    public function test_get_total_searches_matches_sum_of_top_search_queries(): void
+    {
+        // Entrambe le sessioni valide (results_count > 0, query di almeno 4 caratteri)
+        // devono contribuire sia al totale sia alla classifica, con lo stesso filtro:
+        // il totale non deve contare sessioni a zero risultati o frammenti di digitazione
+        // che la classifica sotto scarta, altrimenti i due numeri non tornano.
+        Http::fake([
+            '*' => Http::sequence()
+                ->push(['results' => [[2]]])
+                ->push(['results' => [['cammino di santiago', 2]]]),
+        ]);
+
+        $service = new AnalyticsService;
+
+        $total = $service->getTotalSearches('last_30_days');
+        $topQueries = $service->getTopSearchQueries('last_30_days');
+
+        $this->assertSame(2, $total);
+        $this->assertSame(2, array_sum(array_column($topQueries, 'total')));
+    }
+
+    public function test_get_total_searches_query_applies_same_filters_as_top_search_queries(): void
+    {
+        Http::fake(['*' => Http::response(['results' => [[0]]])]);
+
+        (new AnalyticsService)->getTotalSearches('last_30_days');
+
+        Http::assertSent(function (Request $request) {
+            $sql = $request->data()['query']['query'];
+
+            return str_contains($sql, 'results_count > 0')
+                && str_contains($sql, 'length(query) >= 4')
+                && str_contains($sql, 'row_number() OVER (PARTITION BY session_id ORDER BY timestamp DESC)');
         });
     }
 
