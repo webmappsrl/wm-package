@@ -94,6 +94,10 @@ class ConfigHomeResolver implements ResolverInterface
             };
         }
 
+        if (($item['box_type'] ?? null) === 'base') {
+            return 'horizontal_scroll_geo';
+        }
+
         return $item['box_type'];
     }
 
@@ -109,7 +113,7 @@ class ConfigHomeResolver implements ResolverInterface
             unset($attributes['item'], $attributes['activity_item'], $attributes['poi_type_item']);
         }
 
-        if (($item['box_type'] ?? null) === 'horizontal_scroll_geo') {
+        if (in_array($item['box_type'] ?? null, ['horizontal_scroll_geo', 'base'], true)) {
             $attributes['items'] = $this->toGeoRepeaterItems(
                 $this->normalizeHorizontalScrollItemsInput($item)
             );
@@ -207,7 +211,7 @@ class ConfigHomeResolver implements ResolverInterface
      */
     private function buildGeoElement($resource, string $attribute, Layout $layout, int $groupIndex): array
     {
-        $element = ['box_type' => 'horizontal_scroll_geo'];
+        $element = ['box_type' => 'base'];
 
         foreach ($layout->getAttributes() as $key => $val) {
             if (! is_null($val) && $val !== '') {
@@ -570,7 +574,7 @@ class ConfigHomeResolver implements ResolverInterface
         }, is_array($element['items'] ?? null) ? $element['items'] : []));
 
         return [
-            'box_type' => 'horizontal_scroll_geo',
+            'box_type' => 'base',
             'title' => $title,
             'items' => $items,
         ];
@@ -717,7 +721,7 @@ class ConfigHomeResolver implements ResolverInterface
 
         $block = $this->normalizeRow($home[$groupIndex]);
 
-        if (($block['box_type'] ?? null) !== 'horizontal_scroll_geo') {
+        if (! in_array($block['box_type'] ?? null, ['horizontal_scroll_geo', 'base'], true)) {
             return null;
         }
 
