@@ -89,6 +89,8 @@ class Layer extends AbstractGeometryResource
                 ->nullable()
                 ->searchable(),
             Images::make(__('Image'), 'default'),
+            Images::make(__('Logo'), 'logo')
+                ->singleMediaRules(['mimes:png,webp', 'dimensions:ratio=1/1']),
             PropertiesPanel::makeWithModel(__('Properties'), 'properties', $this, true)->collapsible(),
             MorphToMany::make(__('Activities'), 'taxonomyActivities', TaxonomyActivity::class),
             MorphToMany::make('Taxonomy Where', 'taxonomyWheres', TaxonomyWhere::class)
