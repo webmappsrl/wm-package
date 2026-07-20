@@ -121,3 +121,34 @@ Verificato nel codice: `Text::make(__('Image URL'), 'image_url')->nullable()->he
 - Segnalazione visiva di riferimenti orfani (poi_id/track_id non risolvibile tra le opzioni caricate) — emerso in Fase: challenge, rischio noto non affrontato in questo ciclo
 - Paginazione/lazy-loading delle opzioni Poi/Traccia nel campo custom — emerso in Fase: challenge, nessun problema di performance noto oggi
 - Prevenzione di selezione duplicata dello stesso Poi/Traccia in più righe del repeater — emerso in Fase: challenge, non richiesto dal ticket
+
+## Revisione 6 — Fix box_type per compatibilità frontend (2026-07-20)
+
+Review (`wm-review-ticket`) di Rubens Garofalo del 2026-07-15 ha trovato 1 bug bloccante non coperto dalle revisioni precedenti: il `box_type` scritto in `config.json` da `ConfigHomeResolver::buildGeoElement()`/`finalizeGeoElement()` era `"horizontal_scroll_geo"` — valore che non esiste nel front-end (webmapp-app, submodule `wm-core`). Il box configurato in Nova risultava quindi invisibile in app, senza alcun errore visibile.
+
+### Cosa cambia (revisione 6)
+
+- `box_type` scritto nel JSON pubblico cambia da `"horizontal_scroll_geo"` a `"base"` — l'unico valore che il front-end riconosce per il box Poi/Traccia singolo (`wm-features-box`, montato da `*ngIf="box.box_type === 'base'"` in `home-landing.component.html`).
+- La chiave Nova-interna `addLayout(..., 'horizontal_scroll_geo', ...)` in `App.php` resta invariata — è solo il nome del layout lato builder Nova, distinto dal valore scritto nel JSON pubblico.
+- Il lato lettura (`resolveLayoutName()`, `getAttributesForItem()`, `previousGeoItemsForGroup()`) riconosce sia `'base'` (nuovo) sia `'horizontal_scroll_geo'` (vecchio) per non rompere l'edit in Nova dei `config_home` già salvati in produzione con il valore precedente.
+
+### Verifica (revisione 6)
+
+Prima di applicare il fix, verificato direttamente il codice sorgente di `wm-core` (via GitHub, non solo la review testuale):
+- `IBOX.box_type` (in `projects/wm-core/src/types/config.ts`) elenca i soli valori validi: non include mai `'horizontal_scroll_geo'`.
+- `home-landing.component.html` monta `<wm-features-box>` solo su `box_type === 'base'`.
+- `FeaturesBoxComponent` → `BoxComponent` leggono solo `title`, `image_url`, `poi_id`/`track_id` — tutti già prodotti dal resolver, nessun campo aggiuntivo richiesto nonostante `IHOMEITEMFEATURE` dichiari altri campi (`taxonomy_activities`, `taaxonomy_where`, `distance`, `cai_scale`) nel tipo TS: non sono letti da nessun componente in questa catena di rendering, quindi non necessari.
+
+### Requisiti (revisione 6)
+
+- [x] `buildGeoElement()`/`finalizeGeoElement()` scrivono `box_type: 'base'`
+- [x] Lato lettura aggiornato per riconoscere sia `'base'` che `'horizontal_scroll_geo'` (retrocompatibilità dati già in produzione)
+- [x] Test automatici invariati verdi (27/27)
+
+### Rischi (revisione 6)
+
+- Nessun nuovo rischio introdotto — fix isolato al valore di una chiave, nessuna modifica di struttura dati.
+
+### Out of scope (revisione 6)
+
+- Migrazione dei `config_home` già salvati in produzione con `box_type: 'horizontal_scroll_geo'` al nuovo valore `'base'` — gestita per compatibilità in lettura, non serve una migration attiva perché il prossimo salvataggio in Nova riscrive automaticamente il valore corretto.

@@ -137,3 +137,18 @@ File: `wm-package/tests/Unit/Nova/Flexible/HorizontalScrollGeoItemRepeatableTest
 6. `fix(oc:8241): require Model selection to prevent silent item loss on toggle`
 7. `fix(oc:8241): align model option labels to the it→en→fallback locale cascade`
 8. `test(oc:8241): cover read-only title, required validation and locale fallback`
+
+## Task 13 — Fix box_type "base" per compatibilità frontend (revisione 6)
+
+File: `wm-package/src/Nova/Flexible/Resolvers/ConfigHomeResolver.php`
+
+- `buildGeoElement()`: `$element = ['box_type' => 'horizontal_scroll_geo']` → `['box_type' => 'base']`
+- `finalizeGeoElement()`: stesso cambio nel return finale
+- `resolveLayoutName()`: aggiungere mapping esplicito `'base' → 'horizontal_scroll_geo'` (nome layout Nova), altrimenti il form Nova non ritrova più il layout in edit di un item già salvato
+- `getAttributesForItem()` e `previousGeoItemsForGroup()`: estendere il check da `=== 'horizontal_scroll_geo'` a `in_array(..., ['horizontal_scroll_geo', 'base'], true)` per retrocompatibilità con i `config_home` già salvati in produzione
+- Nessuna modifica ai test esistenti richiesta (nessuno assume il valore box_type sul lato scrittura)
+- Verifica preliminare obbligatoria: confermare sul codice sorgente reale di `wm-core` (non solo sul testo della review) che `'base'` è l'unico valore riconosciuto e cosa legge davvero la catena di rendering
+
+## Commit (revisione 6)
+
+9. `fix(oc:8241): write box_type "base" instead of "horizontal_scroll_geo" for Poi/Track box`

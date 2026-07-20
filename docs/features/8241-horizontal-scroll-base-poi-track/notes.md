@@ -72,3 +72,32 @@ Screenshot del box in Nova ha mostrato testo in inglese non tradotto. Due chiavi
 
 - Riferimenti orfani mostrati come campo vuoto, preload dataset senza paginazione, duplicati non impediti tra righe del repeater — tutti emersi in Fase: challenge, lasciati come rischio noto non risolto
 - Correzione `tester_id` del ticket oc:8241: **ancora da fare** — serve l'user_id Orchestrator di Rubens (nessun endpoint di ricerca utenti disponibile su Orchestrator per dedurlo)
+
+## Revisione 6 — Fix box_type per compatibilità frontend (2026-07-20)
+
+Riferimento: `overview.md`/`plan.md` sezione "Revisione 6". Il ticket è tornato bloccato dopo la review (`wm-review-ticket`) di Rubens Garofalo del 2026-07-15: codice PHP/Nova/test tutti corretti, ma bug bloccante sul valore di `box_type` scritto nel `config.json` pubblico.
+
+### Deviazioni dal piano
+
+- Nessun pivot di scope: fix puntuale su un valore di enum, nessuna modifica di struttura dati.
+
+### Bug trovati
+
+- **Bug bloccante segnalato da Rubens Garofalo (review)**: `ConfigHomeResolver::buildGeoElement()`/`finalizeGeoElement()` scrivevano `box_type: "horizontal_scroll_geo"`, valore inesistente nel front-end (`wm-core`) — il box configurato in Nova risultava invisibile in app, senza errori a schermo. Il valore corretto atteso dal front-end è `"base"`.
+- **Effetto collaterale non coperto dal fix minimo suggerito in review**: cambiare solo il lato scrittura avrebbe rotto il lato lettura (`resolveLayoutName()`), perché quest'ultimo usa `$item['box_type']` direttamente come nome del layout Nova da cercare — con `box_type: 'base'` non avrebbe trovato nessun layout corrispondente (nessun layout Nova si chiama `'base'`), facendo sparire silenziosamente l'item dal form Nova alla riapertura. Stessa classe di bug della "perdita silenziosa dell'item" già corretta in Revisione 5. Corretto estendendo anche `resolveLayoutName()`, `getAttributesForItem()` e `previousGeoItemsForGroup()`.
+
+### Decisioni
+
+- **Retrocompatibilità sul lato lettura**: mantenuto il riconoscimento del vecchio valore `'horizontal_scroll_geo'` accanto al nuovo `'base'` in tutti i punti di lettura, per non rompere l'edit Nova dei `config_home` già salvati in produzione con il valore precedente. Nessuna migration attiva sui dati esistenti — il prossimo salvataggio in Nova riscrive automaticamente il valore corretto.
+- **Verifica indipendente del contratto frontend prima di applicare il fix**: letto direttamente il codice sorgente di `wm-core` via GitHub (`gh api`) invece di fidarsi solo del testo della review — confermato che `IBOX.box_type` non include mai `'horizontal_scroll_geo'`, che `home-landing.component.html` monta `wm-features-box` solo su `box_type === 'base'`, e che l'intera catena di rendering (`FeaturesBoxComponent` → `BoxComponent`) legge solo `title`/`image_url`/`poi_id`/`track_id` — nessun altro campo richiesto nonostante il tipo TS `IHOMEITEMFEATURE` ne dichiari altri come obbligatori (non utilizzati da questa catena).
+
+### Verifica
+
+- Test unit: 27 passati (`ConfigHomeResolverGeoTest.php` + `HorizontalScrollGeoItemRepeatableTest.php`, invariati) — girati con `docker exec php-forestas vendor/bin/pest` (DB `wm_package`, isolato)
+- Verifica manuale in browser: non eseguita in questo ciclo (nessun tooling da browser disponibile in questo ambiente) — resta da fare da parte di Rubens in re-review
+- Commit: `5bc2e50a` su branch `oc_8241`
+- Ticket Orchestrator aggiornato: status → `testing`, nota dev con dettagli del fix
+
+### Follow-up rimasti aperti
+
+- Nessuno nuovo introdotto da questo round, oltre a quelli già tracciati in Revisione 5.
