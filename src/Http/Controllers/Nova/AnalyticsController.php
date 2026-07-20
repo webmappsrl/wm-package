@@ -44,8 +44,7 @@ class AnalyticsController extends Controller
             $rankingTracks = $service->getAllTracksDownloads($range);
             $rankingTrackShares = $service->getAllTracksShares($range);
             $searchTotal = $service->getTotalSearches($range);
-            $rankingSearchQueriesWithResults = $service->getTopSearchQueriesWithResults($range);
-            $rankingSearchQueriesNoResults = $service->getTopSearchQueriesWithoutResults($range);
+            $rankingSearchQueries = $service->getTopSearchQueries($range);
         } catch (AnalyticsQueryException $e) {
             return response()->json(['error' => 'analytics_query_failed'], 502);
         }
@@ -55,8 +54,7 @@ class AnalyticsController extends Controller
             'ranking_tracks' => $rankingTracks,
             'ranking_track_shares' => $rankingTrackShares,
             'search_total' => $searchTotal,
-            'ranking_search_queries' => $rankingSearchQueriesWithResults,
-            'ranking_search_queries_no_results' => $rankingSearchQueriesNoResults,
+            'ranking_search_queries' => $rankingSearchQueries,
         ]));
     }
 

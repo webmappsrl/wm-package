@@ -222,27 +222,15 @@ class AnalyticsService
         );
     }
 
-    public function getTopSearchQueriesWithResults(string $range = 'last_30_days'): array
+    public function getTopSearchQueries(string $range = 'last_30_days'): array
     {
-        $cacheKey = "posthog:searchPerformed:all:queries:with_results:{$range}";
+        $cacheKey = "posthog:searchPerformed:all:queries:{$range}";
         $ttl = $this->ttlFor($range);
 
         return Cache::remember(
             $cacheKey,
             now()->addSeconds($ttl),
-            fn () => $this->queryTopSearchQueries($range, hasResults: true)
-        );
-    }
-
-    public function getTopSearchQueriesWithoutResults(string $range = 'last_30_days'): array
-    {
-        $cacheKey = "posthog:searchPerformed:all:queries:no_results:{$range}";
-        $ttl = $this->ttlFor($range);
-
-        return Cache::remember(
-            $cacheKey,
-            now()->addSeconds($ttl),
-            fn () => $this->queryTopSearchQueries($range, hasResults: false)
+            fn () => $this->queryTopSearchQueries($range)
         );
     }
 
@@ -455,19 +443,17 @@ SQL;
         return isset($rows[0][0]) ? (int) $rows[0][0] : 0;
     }
 
-    private function queryTopSearchQueries(string $range, bool $hasResults): array
+    private function queryTopSearchQueries(string $range): array
     {
         $whereClause = $this->whereClause($range);
         $libs = $this->libList();
-        $resultsFilter = $hasResults ? 'results_count > 0' : 'results_count = 0';
 
         // Il search-as-you-type invia un evento ad ogni tasto premuto: senza deduplica,
         // la classifica sarebbe dominata dai prefissi intermedi ("c", "ca", "cam", ...)
         // invece che dalla ricerca effettiva. Si tiene solo l'ultimo evento per sessione
-        // (per timestamp) — la query più completa che l'utente ha effettivamente digitato,
-        // con il suo results_count finale — e si normalizza maiuscole/spazi per unire
-        // varianti dello stesso termine. Il filtro su results_count separa le ricerche
-        // andate a buon fine da quelle senza risultati (gap di contenuto).
+        // (per timestamp) — la query più completa che l'utente ha effettivamente digitato —
+        // e si normalizza maiuscole/spazi per unire varianti dello stesso termine.
+        // results_count > 0: solo ricerche andate a buon fine (coerente col nome "più frequenti").
         //
         // length(query) >= 4 scarta il rumore più evidente (frammenti di 1-3 caratteri
         // rimasti come ultimo evento di sessione, es. "ka", "c", "ca"). Non elimina ogni
@@ -489,7 +475,7 @@ FROM (
       AND properties.\$lib IN ({$libs})
       AND {$whereClause}
 )
-WHERE rn = 1 AND {$resultsFilter} AND length(query) >= 4
+WHERE rn = 1 AND results_count > 0 AND length(query) >= 4
 GROUP BY query
 ORDER BY total DESC
 LIMIT 20

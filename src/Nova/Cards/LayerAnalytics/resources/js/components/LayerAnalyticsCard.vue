@@ -104,7 +104,7 @@
       </div>
 
       <!-- Classifiche globali (solo modalità globale) -->
-      <div v-if="card.mode === 'global' && (data.ranking_layers?.length || data.ranking_tracks?.length || data.ranking_track_shares?.length || data.ranking_search_queries?.length || data.ranking_search_queries_no_results?.length)" style="margin-top:24px;">
+      <div v-if="card.mode === 'global' && (data.ranking_layers?.length || data.ranking_tracks?.length || data.ranking_track_shares?.length || data.ranking_search_queries?.length)" style="margin-top:24px;">
         <div v-if="data.ranking_layers?.length" style="margin-bottom:24px;">
           <p style="font-size:0.75rem; color:#6b7280; text-transform:uppercase; margin-bottom:8px;">Cammini più aperti</p>
           <div style="display:flex; align-items:center; justify-content:center; gap:16px; margin-bottom:16px;">
@@ -121,6 +121,8 @@
             >
               <a
                 :href="layerDetailUrl(row.layer_id)"
+                target="_blank"
+                rel="noopener noreferrer"
                 @mouseenter="hoveredLayerLinkId = row.layer_id"
                 @mouseleave="hoveredLayerLinkId = null"
                 @focus="hoveredLayerLinkId = row.layer_id"
@@ -220,60 +222,32 @@
         </div>
         </div>
 
-        <div v-if="data.ranking_search_queries?.length || data.ranking_search_queries_no_results?.length" style="margin-top:24px;">
+        <div v-if="data.ranking_search_queries?.length" style="margin-top:24px;">
           <p style="font-size:0.75rem; color:#6b7280; text-transform:uppercase; margin-bottom:8px;">Ricerche</p>
           <div style="background:#f9fafb; border-radius:8px; padding:16px; text-align:center; max-width:240px; margin-bottom:16px;">
             <p style="font-size:2rem; font-weight:700; color:#10b981; margin:0;">{{ data.search_total }}</p>
             <p style="font-size:0.75rem; color:#6b7280; margin:4px 0 0;">Ricerche totali</p>
           </div>
-          <div style="overflow-x:auto;">
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px; min-width:600px;">
-              <div>
-                <p style="font-size:0.75rem; color:#6b7280; text-transform:uppercase; margin-bottom:8px;">Ricerche più frequenti</p>
-                <table style="width:100%; border-collapse:collapse; font-size:0.875rem;">
-                  <thead>
-                    <tr style="border-bottom:1px solid rgba(128,128,128,0.3);">
-                      <th style="text-align:left; padding:6px 8px; font-weight:500; opacity:0.6;">Query</th>
-                      <th style="text-align:right; padding:6px 8px; font-weight:500; opacity:0.6;">Ricerche</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="row in visibleSearchQueries" :key="row.query" style="border-bottom:1px solid rgba(128,128,128,0.15);">
-                      <td style="padding:6px 8px;">{{ row.query }}</td>
-                      <td style="padding:6px 8px; text-align:right; font-weight:600; color:#10b981;">{{ row.total }}</td>
-                    </tr>
-                  </tbody>
-                </table>
-                <button
-                  v-if="data.ranking_search_queries.length > 10"
-                  @click="showAllSearchQueries = !showAllSearchQueries"
-                  style="margin-top:8px; font-size:0.75rem; padding:4px 12px; border-radius:6px; border:1px solid #d1d5db; background:#fff; color:#6b7280; cursor:pointer;"
-                >{{ showAllSearchQueries ? 'Mostra meno' : `Mostra tutti (${data.ranking_search_queries.length})` }}</button>
-              </div>
-              <div>
-                <p style="font-size:0.75rem; color:#6b7280; text-transform:uppercase; margin-bottom:8px;">Ricerche senza risultati</p>
-                <table style="width:100%; border-collapse:collapse; font-size:0.875rem;">
-                  <thead>
-                    <tr style="border-bottom:1px solid rgba(128,128,128,0.3);">
-                      <th style="text-align:left; padding:6px 8px; font-weight:500; opacity:0.6;">Query</th>
-                      <th style="text-align:right; padding:6px 8px; font-weight:500; opacity:0.6;">Ricerche</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="row in visibleSearchQueriesNoResults" :key="row.query" style="border-bottom:1px solid rgba(128,128,128,0.15);">
-                      <td style="padding:6px 8px;">{{ row.query }}</td>
-                      <td style="padding:6px 8px; text-align:right; font-weight:600; color:#f59e0b;">{{ row.total }}</td>
-                    </tr>
-                  </tbody>
-                </table>
-                <button
-                  v-if="data.ranking_search_queries_no_results.length > 10"
-                  @click="showAllSearchQueriesNoResults = !showAllSearchQueriesNoResults"
-                  style="margin-top:8px; font-size:0.75rem; padding:4px 12px; border-radius:6px; border:1px solid #d1d5db; background:#fff; color:#6b7280; cursor:pointer;"
-                >{{ showAllSearchQueriesNoResults ? 'Mostra meno' : `Mostra tutti (${data.ranking_search_queries_no_results.length})` }}</button>
-              </div>
-            </div>
-          </div>
+          <p style="font-size:0.75rem; color:#6b7280; text-transform:uppercase; margin-bottom:8px;">Ricerche più frequenti</p>
+          <table style="width:100%; border-collapse:collapse; font-size:0.875rem;">
+            <thead>
+              <tr style="border-bottom:1px solid rgba(128,128,128,0.3);">
+                <th style="text-align:left; padding:6px 8px; font-weight:500; opacity:0.6;">Query</th>
+                <th style="text-align:right; padding:6px 8px; font-weight:500; opacity:0.6;">Ricerche</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="row in visibleSearchQueries" :key="row.query" style="border-bottom:1px solid rgba(128,128,128,0.15);">
+                <td style="padding:6px 8px;">{{ row.query }}</td>
+                <td style="padding:6px 8px; text-align:right; font-weight:600; color:#10b981;">{{ row.total }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <button
+            v-if="data.ranking_search_queries.length > 10"
+            @click="showAllSearchQueries = !showAllSearchQueries"
+            style="margin-top:8px; font-size:0.75rem; padding:4px 12px; border-radius:6px; border:1px solid #d1d5db; background:#fff; color:#6b7280; cursor:pointer;"
+          >{{ showAllSearchQueries ? 'Mostra meno' : `Mostra tutti (${data.ranking_search_queries.length})` }}</button>
         </div>
       </div>
     </template>
@@ -321,7 +295,6 @@ export default {
       hoveredLayerId: null,
       hoveredLayerLinkId: null,
       showAllSearchQueries: false,
-      showAllSearchQueriesNoResults: false,
     }
   },
 
@@ -398,11 +371,6 @@ export default {
     visibleSearchQueries() {
       if (!this.data?.ranking_search_queries) return []
       return this.showAllSearchQueries ? this.data.ranking_search_queries : this.data.ranking_search_queries.slice(0, 10)
-    },
-
-    visibleSearchQueriesNoResults() {
-      if (!this.data?.ranking_search_queries_no_results) return []
-      return this.showAllSearchQueriesNoResults ? this.data.ranking_search_queries_no_results : this.data.ranking_search_queries_no_results.slice(0, 10)
     },
   },
 
