@@ -210,6 +210,42 @@ class AnalyticsService
         return $result;
     }
 
+    public function getTotalSearches(string $range = 'last_30_days'): int
+    {
+        $cacheKey = "posthog:searchPerformed:all:total:{$range}";
+        $ttl = $this->ttlFor($range);
+
+        return Cache::remember(
+            $cacheKey,
+            now()->addSeconds($ttl),
+            fn () => $this->queryTotalSearches($range)
+        );
+    }
+
+    public function getTopSearchQueriesWithResults(string $range = 'last_30_days'): array
+    {
+        $cacheKey = "posthog:searchPerformed:all:queries:with_results:{$range}";
+        $ttl = $this->ttlFor($range);
+
+        return Cache::remember(
+            $cacheKey,
+            now()->addSeconds($ttl),
+            fn () => $this->queryTopSearchQueries($range, hasResults: true)
+        );
+    }
+
+    public function getTopSearchQueriesWithoutResults(string $range = 'last_30_days'): array
+    {
+        $cacheKey = "posthog:searchPerformed:all:queries:no_results:{$range}";
+        $ttl = $this->ttlFor($range);
+
+        return Cache::remember(
+            $cacheKey,
+            now()->addSeconds($ttl),
+            fn () => $this->queryTopSearchQueries($range, hasResults: false)
+        );
+    }
+
     // -------------------------------------------------------------------------
     // Core generico
     // -------------------------------------------------------------------------
@@ -393,6 +429,75 @@ SQL;
         return array_map(fn ($row) => [
             'track_id' => (int) $row[0],
             'shares' => (int) $row[1],
+        ], $this->runQuery($sql, true));
+    }
+
+    private function queryTotalSearches(string $range): int
+    {
+        $whereClause = $this->whereClause($range);
+        $libs = $this->libList();
+
+        // Conta le sessioni di ricerca distinte, non i singoli eventi: il
+        // search-as-you-type invia un evento per ogni tasto premuto, quindi
+        // count() misurerebbe le interazioni di digitazione, non le ricerche
+        // effettive — e non tornerebbe con la somma della classifica sotto,
+        // che deduplica allo stesso modo (un solo risultato per sessione).
+        $sql = <<<SQL
+SELECT count(DISTINCT properties.\$session_id) AS total
+FROM events
+WHERE event = 'searchPerformed'
+  AND properties.\$lib IN ({$libs})
+  AND {$whereClause}
+SQL;
+
+        $rows = $this->runQuery($sql, true);
+
+        return isset($rows[0][0]) ? (int) $rows[0][0] : 0;
+    }
+
+    private function queryTopSearchQueries(string $range, bool $hasResults): array
+    {
+        $whereClause = $this->whereClause($range);
+        $libs = $this->libList();
+        $resultsFilter = $hasResults ? 'results_count > 0' : 'results_count = 0';
+
+        // Il search-as-you-type invia un evento ad ogni tasto premuto: senza deduplica,
+        // la classifica sarebbe dominata dai prefissi intermedi ("c", "ca", "cam", ...)
+        // invece che dalla ricerca effettiva. Si tiene solo l'ultimo evento per sessione
+        // (per timestamp) — la query più completa che l'utente ha effettivamente digitato,
+        // con il suo results_count finale — e si normalizza maiuscole/spazi per unire
+        // varianti dello stesso termine. Il filtro su results_count separa le ricerche
+        // andate a buon fine da quelle senza risultati (gap di contenuto).
+        //
+        // length(query) >= 4 scarta il rumore più evidente (frammenti di 1-3 caratteri
+        // rimasti come ultimo evento di sessione, es. "ka", "c", "ca"). Non elimina ogni
+        // frammento (es. "gran" da "gran sasso" può sopravvivere): un collasso corretto
+        // dei prefissi richiederebbe leadInFrame() per sessione, che in questo ambiente
+        // HogQL risulta non affidabile (ritorna sempre vuoto). Limite noto, accettato.
+        $sql = <<<SQL
+SELECT query, count() AS total
+FROM (
+    SELECT
+        lower(trim(properties.query)) AS query,
+        properties.\$session_id AS session_id,
+        properties.results_count AS results_count,
+        timestamp,
+        row_number() OVER (PARTITION BY session_id ORDER BY timestamp DESC) AS rn
+    FROM events
+    WHERE event = 'searchPerformed'
+      AND properties.query IS NOT NULL AND properties.query != ''
+      AND properties.\$lib IN ({$libs})
+      AND {$whereClause}
+)
+WHERE rn = 1 AND {$resultsFilter} AND length(query) >= 4
+GROUP BY query
+ORDER BY total DESC
+LIMIT 20
+SQL;
+
+        return array_map(fn ($row) => [
+            'query' => (string) $row[0],
+            'total' => (int) $row[1],
         ], $this->runQuery($sql, true));
     }
 
