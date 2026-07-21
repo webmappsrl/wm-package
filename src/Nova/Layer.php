@@ -148,10 +148,15 @@ class Layer extends AbstractGeometryResource
 
     public function cards(NovaRequest $request): array
     {
-        if (! $request->resourceId) {
-            return [];
+        if ($request->resourceId) {
+            return $this->detailCards($request);
         }
 
+        return $this->indexCards($request);
+    }
+
+    protected function detailCards(NovaRequest $request): array
+    {
         /** @var LayerModel $layer */
         $layer = $request->findModelOrFail();
         $app = $layer->appOwner;
@@ -168,6 +173,36 @@ class Layer extends AbstractGeometryResource
         return $cards;
     }
 
+    protected function indexCards(NovaRequest $request): array
+    {
+        if (! $this->canSeeGlobalAnalyticsCard($request)) {
+            return [];
+        }
+
+        /** @var LayerModel|null $anyLayer */
+        $anyLayer = static::newModel()->query()->first();
+        if (! $anyLayer) {
+            return [];
+        }
+
+        $app = $anyLayer->appOwner;
+        $appProperties = $this->getLayerAppProperties($anyLayer);
+        $analyticsEnabled = $app &&
+            (($appProperties['analytics_app_enabled'] ?? false) ||
+             ($appProperties['analytics_webapp_enabled'] ?? false));
+
+        return $analyticsEnabled ? [LayerAnalyticsCard::global()] : [];
+    }
+
+    /**
+     * Consumers with project-specific roles (e.g. Administrator-only dashboards)
+     * should override this to restrict the global analytics card on the Layer index.
+     */
+    protected function canSeeGlobalAnalyticsCard(NovaRequest $request): bool
+    {
+        return true;
+    }
+
     private function shouldShowLayerWebComponentCopyButton(LayerModel $layer): bool
     {
         $appProperties = $this->getLayerAppProperties($layer);
@@ -176,7 +211,7 @@ class Layer extends AbstractGeometryResource
     }
 
     /** @return array<string, mixed> */
-    private function getLayerAppProperties(LayerModel $layer): array
+    protected function getLayerAppProperties(LayerModel $layer): array
     {
         $app = $layer->appOwner;
 
