@@ -52,13 +52,13 @@ class StoryShareImageService
             return $this->composeFallback($app, $mapImage, $stats);
         }
 
-        return $this->composeWithFrame($mapImage, $frameMedia, $stats);
+        return $this->composeWithFrame($app, $mapImage, $frameMedia, $stats);
     }
 
     /**
      * @throws RuntimeException
      */
-    private function composeWithFrame(InterventionImage $screenshot, Media $frameMedia, array $stats): InterventionImage
+    private function composeWithFrame(App $app, InterventionImage $screenshot, Media $frameMedia, array $stats): InterventionImage
     {
         try {
             // Disk-agnostic read (works for local AND S3, unlike Media::getPath() which
@@ -70,8 +70,9 @@ class StoryShareImageService
             throw new RuntimeException("Unable to read the app's story_frame asset: ".$e->getMessage(), 0, $e);
         }
 
-        $this->drawMapCard($canvas, $screenshot);
-        $this->drawStats($canvas, $stats);
+        $accentColor = $this->resolveAccentColor($app);
+        $this->drawMapCard($canvas, $screenshot, $accentColor);
+        $this->drawStats($canvas, $stats, $accentColor);
 
         return $canvas->encode('png');
     }
@@ -90,11 +91,32 @@ class StoryShareImageService
             StoryImageLayout::FALLBACK_BACKGROUND_COLOR
         );
 
+        $accentColor = $this->resolveAccentColor($app);
         $this->drawFallbackHeader($canvas, $app);
-        $this->drawMapCard($canvas, $mapImage);
-        $this->drawStats($canvas, $stats);
+        $this->drawMapCard($canvas, $mapImage, $accentColor);
+        $this->drawStats($canvas, $stats, $accentColor);
 
         return $canvas->encode('png');
+    }
+
+    /**
+     * Per-app accent color for the map card border + stats value text/gradient — reads the
+     * SAME primary color the app's own UI theme uses (Nova `properties->theme->primary_color`,
+     * a native Color field also exposed to the frontend as `config.json` -> `THEME.primary_color`,
+     * see AppConfigService::config_section_theme()), so this feature automatically matches
+     * whatever brand color each tenant has already configured instead of hardcoding one app's
+     * color into shared package code. Falls back to white when unset/malformed, which reads
+     * fine against both the dark FALLBACK_BACKGROUND_COLOR and most uploaded story_frame designs.
+     */
+    private function resolveAccentColor(App $app): string
+    {
+        $color = $app->properties['theme']['primary_color'] ?? null;
+
+        if (is_string($color) && preg_match('/^#[0-9a-fA-F]{6}$/', $color)) {
+            return $color;
+        }
+
+        return StoryImageLayout::DEFAULT_ACCENT_COLOR;
     }
 
     /**
@@ -136,12 +158,12 @@ class StoryShareImageService
     }
 
     /**
-     * Frames the map as a rounded "card": a solid rounded-rect in the brand border color
+     * Frames the map as a rounded "card": a solid rounded-rect in the app's accent color
      * (cheap — flat fill, no masking needed) sits behind the map, which is itself inset by
      * MAP_BORDER_WIDTH and corner-cut to the same radius (see {@see roundImageCorners()}) so
      * the border shows as an even ring all the way around.
      */
-    private function drawMapCard(InterventionImage $canvas, InterventionImage $screenshot): void
+    private function drawMapCard(InterventionImage $canvas, InterventionImage $screenshot, string $accentColor): void
     {
         $border = StoryImageLayout::MAP_BORDER_WIDTH;
 
@@ -152,7 +174,7 @@ class StoryShareImageService
             StoryImageLayout::MAP_X + StoryImageLayout::MAP_WIDTH + $border,
             StoryImageLayout::MAP_Y + StoryImageLayout::MAP_HEIGHT + $border,
             StoryImageLayout::MAP_CORNER_RADIUS + $border,
-            StoryImageLayout::MAP_BORDER_COLOR
+            $accentColor
         );
 
         $map = clone $screenshot;
@@ -163,7 +185,7 @@ class StoryShareImageService
         $canvas->insert($map, 'top-left', StoryImageLayout::MAP_X, StoryImageLayout::MAP_Y);
     }
 
-    private function drawStats(InterventionImage $canvas, array $stats): void
+    private function drawStats(InterventionImage $canvas, array $stats, string $accentColor): void
     {
         $columns = [
             ['value' => $this->formatDuration($stats['duration_seconds'] ?? null), 'label' => 'TEMPO'],
@@ -182,7 +204,10 @@ class StoryShareImageService
         $y2 = $y1 + StoryImageLayout::STATS_BLOCK_HEIGHT;
 
         $this->drawRoundedRectFilled($canvas, $x1, $y1, $x2, $y2, StoryImageLayout::STATS_PANEL_CORNER_RADIUS, StoryImageLayout::STATS_PANEL_COLOR);
-        $this->drawGradientBar($canvas, $x1, $y1, $x2, StoryImageLayout::STATS_ACCENT_HEIGHT, StoryImageLayout::STATS_ACCENT_COLORS);
+        // Subtle 2-stop shimmer derived from the single accent color (darker -> the color
+        // itself), rather than a fixed 3-color hardcoded gradient - generalizes to any hex,
+        // not just camminiditalia's specific sunset-ring palette.
+        $this->drawGradientBar($canvas, $x1, $y1, $x2, StoryImageLayout::STATS_ACCENT_HEIGHT, [$this->shadeColor($accentColor, -0.35), $accentColor]);
 
         $columnWidth = StoryImageLayout::STATS_BLOCK_WIDTH / count($columns);
 
@@ -195,10 +220,10 @@ class StoryShareImageService
             $valueY = $y1 + StoryImageLayout::STATS_PANEL_PADDING + StoryImageLayout::STATS_ACCENT_HEIGHT;
             $labelY = $valueY + StoryImageLayout::STATS_VALUE_LABEL_GAP;
 
-            $canvas->text($column['value'], $centerX, $valueY, function ($font) {
+            $canvas->text($column['value'], $centerX, $valueY, function ($font) use ($accentColor) {
                 $font->file(StoryImageLayout::FONT_BLACK);
                 $font->size(StoryImageLayout::STATS_VALUE_FONT_SIZE);
-                $font->color(StoryImageLayout::STATS_VALUE_COLOR);
+                $font->color($accentColor);
                 $font->align('center');
                 $font->valign('top');
             });
@@ -306,6 +331,25 @@ class StoryShareImageService
                 $draw->background($color);
             });
         }
+    }
+
+    /**
+     * Shifts a hex color toward black (negative $amount) or white (positive $amount), by a
+     * fraction in [-1, 1]. Used to derive a 2-stop "shimmer" gradient from a single app accent
+     * color without needing a designer-picked second stop per app.
+     */
+    private function shadeColor(string $hex, float $amount): string
+    {
+        [$r, $g, $b] = $this->hexToRgb($hex);
+        $target = $amount < 0 ? 0 : 255;
+        $t = abs($amount);
+
+        return sprintf(
+            '#%02x%02x%02x',
+            (int) round($r + ($target - $r) * $t),
+            (int) round($g + ($target - $g) * $t),
+            (int) round($b + ($target - $b) * $t)
+        );
     }
 
     private function interpolateColor(string $from, string $to, float $t): string

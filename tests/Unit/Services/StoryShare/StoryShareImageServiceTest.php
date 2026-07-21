@@ -108,6 +108,34 @@ it('throws when the app story_frame media asset cannot be read', function () {
     (new StoryShareImageService)->compose($app->fresh(), fakeMapImage(), storyShareStats());
 })->throws(RuntimeException::class);
 
+it("derives the map card border color from the app's own theme primary_color", function () {
+    Storage::fake('wmfe');
+
+    $app = App::factory()->createQuietly([
+        'properties' => ['theme' => ['primary_color' => '#00ff00']],
+    ]);
+
+    $result = (new StoryShareImageService)->compose($app, fakeMapImage(), storyShareStats());
+
+    // Sample a pixel on the border ring itself (a few px outside the map window, inside the
+    // rounded card): must reflect THIS app's configured color, not any other tenant's brand.
+    $borderPixel = $result->pickColor(StoryImageLayout::MAP_X - 3, StoryImageLayout::MAP_Y + 200, 'hex');
+
+    expect(strtolower($borderPixel))->toBe('#00ff00');
+});
+
+it('falls back to a neutral white accent when the app has no theme primary_color configured', function () {
+    Storage::fake('wmfe');
+
+    $app = App::factory()->createQuietly(['properties' => []]);
+
+    $result = (new StoryShareImageService)->compose($app, fakeMapImage(), storyShareStats());
+
+    $borderPixel = $result->pickColor(StoryImageLayout::MAP_X - 3, StoryImageLayout::MAP_Y + 200, 'hex');
+
+    expect(strtolower($borderPixel))->toBe('#ffffff');
+});
+
 it('draws stats text without throwing when stats are empty', function () {
     Storage::fake('wmfe');
 

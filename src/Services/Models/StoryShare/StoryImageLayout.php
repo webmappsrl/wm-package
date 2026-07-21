@@ -43,12 +43,14 @@ final class StoryImageLayout
 
     public const MAP_HEIGHT = 900;
 
-    // Rounded corners + a thin brand-colored border around the map, so it reads as a
+    // Rounded corners + a thin accent-colored border around the map, so it reads as a
     // deliberately framed "card" rather than a raw screenshot pasted on top of the
     // background (applies to both compose paths, since drawMapCard() wraps the map insert).
+    // The border color itself is NOT here: it's resolved per-app at render time from the
+    // app's own UI theme color (see StoryShareImageService::resolveAccentColor()), not a
+    // fixed constant - a hardcoded hex here would leak one tenant's brand color into every
+    // other app's share image.
     public const MAP_CORNER_RADIUS = 28;
-
-    public const MAP_BORDER_COLOR = '#ea9926';
 
     public const MAP_BORDER_WIDTH = 6;
 
@@ -73,10 +75,10 @@ final class StoryImageLayout
     // artifact only matters if this constant is ever changed back to an alpha color.
     public const STATS_PANEL_COLOR = '#2a3639';
 
-    // Thin brand-gradient divider drawn along the top edge of the stats panel (echoes the
-    // sunset rings in the camminiditalia logo without hardcoding that logo into shared code).
-    public const STATS_ACCENT_COLORS = ['#ef5724', '#ef7821', '#ea9926'];
-
+    // Thin accent-gradient divider drawn along the top edge of the stats panel. Like
+    // MAP_BORDER_COLOR above, the actual colors are resolved per-app at render time
+    // (StoryShareImageService::resolveAccentColor() + shadeColor()) from the app's own theme
+    // color, not hardcoded here.
     public const STATS_ACCENT_HEIGHT = 6;
 
     public const STATS_PANEL_PADDING = 24;
@@ -85,9 +87,12 @@ final class StoryImageLayout
 
     public const STATS_LABEL_FONT_SIZE = 24;
 
-    public const STATS_VALUE_COLOR = '#ea9926';
-
     public const STATS_LABEL_COLOR = '#FFFFFF';
+
+    // Fallback accent color (map border + stats value text + gradient) when the app has no
+    // `properties->theme->primary_color` configured in Nova - white reads fine against both
+    // the dark FALLBACK_BACKGROUND_COLOR and most uploaded story_frame designs.
+    public const DEFAULT_ACCENT_COLOR = '#FFFFFF';
 
     public const STATS_VALUE_LABEL_GAP = 44; // vertical gap between value and label baselines
 
