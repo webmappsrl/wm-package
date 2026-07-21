@@ -39,12 +39,12 @@ function fakeMapImage(int $width = 960, int $height = 960)
     return Image::canvas($width, $height, '#336699');
 }
 
-it('composes a 1080x1920 PNG when the app has a story_frame uploaded', function () {
+it('composes a 1080x1920 PNG when the app has a share_frame uploaded', function () {
     Storage::fake('wmfe');
 
     $app = App::factory()->createQuietly();
     $app->addMedia(UploadedFile::fake()->image('frame.png', 1080, 1920))
-        ->toMediaCollection('story_frame');
+        ->toMediaCollection('share_frame');
 
     $result = (new StoryShareImageService)->compose($app->fresh(), fakeMapImage(), storyShareStats());
 
@@ -53,11 +53,11 @@ it('composes a 1080x1920 PNG when the app has a story_frame uploaded', function 
     expect($result->mime())->toBe('image/png');
 });
 
-it('falls back to a generic branded 1080x1920 image when story_frame is missing', function () {
+it('falls back to a generic branded 1080x1920 image when share_frame is missing', function () {
     Storage::fake('wmfe');
 
     $app = App::factory()->createQuietly();
-    expect($app->getFirstMedia('story_frame'))->toBeNull();
+    expect($app->getFirstMedia('share_frame'))->toBeNull();
 
     $result = (new StoryShareImageService)->compose($app, fakeMapImage(), storyShareStats());
 
@@ -93,16 +93,16 @@ it('fits a non-9:16 map image into the fixed map card without crashing', functio
     expect($result->height())->toBe(StoryImageLayout::CANVAS_HEIGHT);
 });
 
-it('throws when the app story_frame media asset cannot be read', function () {
+it('throws when the app share_frame media asset cannot be read', function () {
     Storage::fake('wmfe');
 
     $app = App::factory()->createQuietly();
     $app->addMedia(UploadedFile::fake()->image('frame.png', 1080, 1920))
-        ->toMediaCollection('story_frame');
+        ->toMediaCollection('share_frame');
 
     // Simulate a lost/corrupted stored file: delete the underlying disk file while the
     // Media DB record still exists.
-    $media = $app->fresh()->getFirstMedia('story_frame');
+    $media = $app->fresh()->getFirstMedia('share_frame');
     Storage::disk($media->disk)->delete($media->getPathRelativeToRoot());
 
     (new StoryShareImageService)->compose($app->fresh(), fakeMapImage(), storyShareStats());

@@ -12,7 +12,8 @@ use Throwable;
 use Wm\WmPackage\Models\App;
 
 /**
- * Stateless compositing service for the Instagram/Facebook Stories share image (oc:8183).
+ * Stateless compositing service for the track-share image (oc:8183) — shareable via any
+ * channel (Share.share()), not Instagram Stories specifically.
  *
  * Given an already-rendered map image (produced by {@see MapRenderService} — this service no
  * longer deals with a client-uploaded screenshot at all, see the third revision in
@@ -20,7 +21,7 @@ use Wm\WmPackage\Models\App;
  * track statistics (time/distance/ascent, from {@see TrackStatsService} — this service has no
  * access to and does not need the UgcTrack model itself), produces a single 1080x1920 (9:16)
  * PNG by compositing:
- *   1. either the app's branded `story_frame` media asset as background, or — if none is
+ *   1. either the app's branded `share_frame` media asset as background, or — if none is
  *      uploaded — a generic dark background with the app's own icon + name as a header
  *      ({@see composeFallback()});
  *   2. the map image, framed as a rounded "card" with a brand-colored border, fitted into a
@@ -36,16 +37,16 @@ class StoryShareImageService
     /**
      * @param  array{duration_seconds?: int|null, distance_km?: float|null, ascent_meters?: float|null}  $stats
      *
-     * @throws RuntimeException if the app's story_frame asset cannot be read.
+     * @throws RuntimeException if the app's share_frame asset cannot be read.
      */
     public function compose(App $app, InterventionImage $mapImage, array $stats): InterventionImage
     {
-        $frameMedia = $app->getFirstMedia('story_frame');
+        $frameMedia = $app->getFirstMedia('share_frame');
 
         if ($frameMedia === null) {
             // Fallback decided in plan.md task 7: never produce a broken experience on a
             // freshly configured instance that hasn't uploaded branding yet.
-            Log::warning('[oc:8183] story_frame not uploaded for app: falling back to unbranded story share image', [
+            Log::warning('[oc:8183] share_frame not uploaded for app: falling back to unbranded share image', [
                 'app_id' => $app->id,
             ]);
 
@@ -67,7 +68,7 @@ class StoryShareImageService
             $frameBytes = Storage::disk($frameMedia->disk)->get($frameMedia->getPathRelativeToRoot());
             $canvas = Image::make($frameBytes)->fit(StoryImageLayout::CANVAS_WIDTH, StoryImageLayout::CANVAS_HEIGHT);
         } catch (Throwable $e) {
-            throw new RuntimeException("Unable to read the app's story_frame asset: ".$e->getMessage(), 0, $e);
+            throw new RuntimeException("Unable to read the app's share_frame asset: ".$e->getMessage(), 0, $e);
         }
 
         $accentColor = $this->resolveAccentColor($app);
@@ -78,7 +79,7 @@ class StoryShareImageService
     }
 
     /**
-     * Generic branded background for apps with no dedicated `story_frame` uploaded: reads
+     * Generic branded background for apps with no dedicated `share_frame` uploaded: reads
      * $app->getFirstMedia('icon') + $app->name at render time — no client-specific asset lives
      * in this shared file (a dedicated frame, e.g. for camminiditalia, is a Nova-uploaded
      * asset, not code).
@@ -106,7 +107,7 @@ class StoryShareImageService
      * see AppConfigService::config_section_theme()), so this feature automatically matches
      * whatever brand color each tenant has already configured instead of hardcoding one app's
      * color into shared package code. Falls back to white when unset/malformed, which reads
-     * fine against both the dark FALLBACK_BACKGROUND_COLOR and most uploaded story_frame designs.
+     * fine against both the dark FALLBACK_BACKGROUND_COLOR and most uploaded share_frame designs.
      */
     private function resolveAccentColor(App $app): string
     {

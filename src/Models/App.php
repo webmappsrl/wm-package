@@ -647,9 +647,11 @@ class App extends Model implements HasMedia
         $this->addMediaCollection('splash')->singleFile();
         $this->addMediaCollection('my_paths');
         $this->addMediaCollection('my_downloads');
-        // Branded background frame for the Instagram/Facebook Stories share image (oc:8183).
-        // Single file: uploading a new one replaces the previous frame for this app.
-        $this->addMediaCollection('story_frame')->singleFile();
+        // Branded background frame for the generic track-share image (oc:8183) — shareable
+        // via any channel (Share.share()), not Instagram Stories specifically, hence
+        // `share_frame` rather than `story_frame`. Single file: uploading a new one replaces
+        // the previous frame for this app.
+        $this->addMediaCollection('share_frame')->singleFile();
     }
 
     // Le funzioni custom per config_home sono state spostate nel resolver layerBoxResolver

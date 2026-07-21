@@ -139,12 +139,12 @@ class AppConfigService extends AppBaseService
         if ($this->app->getMedia('my_downloads')->isNotEmpty()) {
             $data['APP']['myDownloads'] = $this->app->getFirstMediaUrl('my_downloads');
         }
-        // story_frame is NOT for direct client-side use: it is only consumed indirectly by
+        // share_frame is NOT for direct client-side use: it is only consumed indirectly by
         // POST /api/share-story-image (oc:8183), which resolves it server-side from the
         // authenticated user's app. Exposed here for parity with the other branding assets
         // and in case a future client needs to preview/reference it.
-        if ($this->app->getMedia('story_frame')->isNotEmpty()) {
-            $data['APP']['storyFrame'] = $this->app->getFirstMediaUrl('story_frame');
+        if ($this->app->getMedia('share_frame')->isNotEmpty()) {
+            $data['APP']['shareFrame'] = $this->app->getFirstMediaUrl('share_frame');
         }
 
         if (isset($properties['min_app_version']) && trim((string) $properties['min_app_version']) !== '') {

@@ -197,12 +197,12 @@ it('returns 500 when the track has no app_id resolvable to an existing App', fun
 
 // ── happy path / fallback — full pipeline, real MapRenderService + StoryShareImageService ──
 
-it('returns image_url and share_url and persists the share_image media when the app has a story_frame uploaded', function () {
+it('returns image_url and share_url and persists the share_image media when the app has a share_frame uploaded', function () {
     Http::fake(fn () => fakeTileResponse());
 
     $app = App::factory()->createQuietly();
     $app->addMedia(UploadedFile::fake()->image('frame.png', 1080, 1920))
-        ->toMediaCollection('story_frame');
+        ->toMediaCollection('share_frame');
     $user = User::factory()->create(['app_id' => $app->id]);
     $track = makeOwnedUgcTrack($user, $app);
     $this->actingAs($user, 'api');
@@ -219,7 +219,7 @@ it('returns image_url and share_url and persists the share_image media when the 
     expect($track->properties['share_snapshot'] ?? null)->not->toBeNull();
 });
 
-it('falls back to an unbranded image when the app has no story_frame uploaded', function () {
+it('falls back to an unbranded image when the app has no share_frame uploaded', function () {
     Http::fake(fn () => fakeTileResponse());
 
     $app = App::factory()->createQuietly();

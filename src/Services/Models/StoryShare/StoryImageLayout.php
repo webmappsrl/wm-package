@@ -6,9 +6,9 @@ namespace Wm\WmPackage\Services\Models\StoryShare;
  * Layout constants for the Instagram/Facebook Stories share image (oc:8183).
  *
  * SINGLE SOURCE OF TRUTH for every coordinate/size used by {@see StoryShareImageService}
- * to composite the map screenshot + statistics text on top of the app's `story_frame`
+ * to composite the map screenshot + statistics text on top of the app's `share_frame`
  * background. Hardcoded on purpose — not configurable from Nova in this cycle (see
- * plan.md/overview.md "Rischi": uploading a new `story_frame` on Nova only changes the
+ * plan.md/overview.md "Rischi": uploading a new `share_frame` on Nova only changes the
  * background image, not where the map window/stat blocks sit on top of it). If a future
  * frame redesign moves those elements, THIS is the only file that needs updating.
  *
@@ -22,8 +22,8 @@ final class StoryImageLayout
     public const CANVAS_HEIGHT = 1920;
 
     // --- Header (logo/branding) reserved band, above the map window ---
-    // Shared vertical budget: a dedicated `story_frame` bakes its own logo/badge into this
-    // band (see the camminiditalia frame, resources/img/story-frames/), while
+    // Shared vertical budget: a dedicated `share_frame` bakes its own logo/badge into this
+    // band (see the camminiditalia frame, resources/img/share-frames/), while
     // composeFallback() draws a generic app-icon + app-name header into the same space, so
     // MAP_Y stays a single source of truth regardless of which path produced the background.
     public const HEADER_Y = 90;
@@ -91,13 +91,13 @@ final class StoryImageLayout
 
     // Fallback accent color (map border + stats value text + gradient) when the app has no
     // `properties->theme->primary_color` configured in Nova - white reads fine against both
-    // the dark FALLBACK_BACKGROUND_COLOR and most uploaded story_frame designs.
+    // the dark FALLBACK_BACKGROUND_COLOR and most uploaded share_frame designs.
     public const DEFAULT_ACCENT_COLOR = '#FFFFFF';
 
     public const STATS_VALUE_LABEL_GAP = 44; // vertical gap between value and label baselines
 
     // --- Generic fallback header (composeFallback() only): app icon + app name, used when
-    // no dedicated story_frame is uploaded for the app. Deliberately app-agnostic (reads
+    // no dedicated share_frame is uploaded for the app. Deliberately app-agnostic (reads
     // $app->getFirstMedia('icon') + $app->name at render time) - no client-specific asset
     // lives in this shared file. ---
     public const FALLBACK_ICON_SIZE = 160;
@@ -119,7 +119,7 @@ final class StoryImageLayout
 
     public const FONT_REGULAR = __DIR__.'/../../../../resources/fonts/Montserrat-Regular.ttf';
 
-    // --- Fallback canvas background, used only when the app has no story_frame uploaded.
+    // --- Fallback canvas background, used only when the app has no share_frame uploaded.
     // Confirmed as camminiditalia.it's own --color-cm-gray brand value; kept as the shared
     // package default since a dark neutral background suits any outdoor/map app, not just
     // this one. ---

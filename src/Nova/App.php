@@ -666,9 +666,9 @@ class App extends Resource
             Images::make(__('My downloads image'), 'my_downloads')
                 ->help(__('Box image (ratio 2.2:1, object-fit cover). Minimum :minwx:minhpx, recommended :recwx:rechpx or larger for retina screens.', ['minw' => 800, 'minh' => 360, 'recw' => 2214, 'rech' => 1013]))
                 ->hideFromIndex(),
-            Images::make(__('Story frame image'), 'story_frame')
+            Images::make(__('Share frame image'), 'share_frame')
                 ->singleMediaRules(['image', 'mimes:png,jpg,jpeg', 'dimensions:min_width=1080,min_height=1920,ratio=9/16'])
-                ->help(__('Branded background frame used to compose the Instagram/Facebook Stories share image (9:16). Required size is :widthx:heightpx or larger with the same 9:16 ratio.', ['width' => 1080, 'height' => 1920]))
+                ->help(__('Branded background frame used to compose the track-share image (9:16), shared via any channel (not Instagram Stories specifically). Required size is :widthx:heightpx or larger with the same 9:16 ratio.', ['width' => 1080, 'height' => 1920]))
                 ->hideFromIndex(),
             Boolean::make(__('Force to Release Update'), 'properties->force_to_release_update')
                 ->default(false)

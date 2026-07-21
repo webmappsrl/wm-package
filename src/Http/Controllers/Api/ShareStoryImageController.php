@@ -26,7 +26,7 @@ use Wm\WmPackage\Services\Models\StoryShare\TrackStatsService;
  *      previous revision — see notes.md "Revisione: nuovo meccanismo di risoluzione app");
  *   2. compute statistics from `properties.locations` ({@see TrackStatsService});
  *   3. render the map image from the track's own PostGIS geometry ({@see MapRenderService});
- *   4. composite map + statistics + the app's `story_frame` ({@see StoryShareImageService});
+ *   4. composite map + statistics + the app's `share_frame` ({@see StoryShareImageService});
  *   5. persist the final image on the UgcTrack's `share_image` media collection, so the
  *      public `GET /share/ugc-track/{uuid}` page can serve it later, asynchronously, to an
  *      OG-unfurling crawler;
