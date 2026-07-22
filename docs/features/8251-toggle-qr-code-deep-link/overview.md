@@ -44,6 +44,17 @@ La feature di apertura dell'app nativa tramite QR/link diretto (universal link /
 - Sviluppo di un endpoint API sul server della webapp (resta puramente frontend)
 - Modifiche al repo `webmapp-app` (oc:7980, feature nativa già esistente e fuori scope di questo ticket)
 
+## Modifica (21-07-2026)
+
+Richiesta emersa in call (Davide Nanna, riportata da Giuseppe Bonfanti il 21-07-2026): oltre al QR code, mostrare accanto anche il link testuale/URL diretto, come già fatto per l'embed del widget (`Layer::renderLayerWebComponentCopyButton()`), così da avere un'alternativa quando la scansione del QR non è praticabile.
+
+**Nota:** `notes.md` (riga 7) documentava già l'intento originale di un "QR code e link copiabile", andato perso nell'implementazione finale (solo download). Il test `tests/Feature/DeepLinkQrFieldVisibilityTest.php` (righe 113, 115) asserisce già `/map?track={id}` visibile e `navigator.clipboard.writeText` — nessuna modifica al test necessaria, l'implementazione li farà tornare veri.
+
+### Requisiti aggiuntivi
+- [ ] URL diretto mostrato come testo cliccabile accanto al QR (a destra su desktop, sotto su mobile — sfruttando il layout responsive già esistente `flex-col sm:flex-row`)
+- [ ] Bottone "Copia link" con `navigator.clipboard.writeText` (stesso pattern/fallback di `Layer::renderLayerWebComponentCopyButton()`), copia l'URL invece dello snippet embed
+- [ ] Nuove traduzioni it/en: "Copy link"/"Copia link", "Link copied"/"Link copiato" (riuso di "Copy error" già esistente)
+
 ## Moduli toccati
 - `src/Models/App.php` — flag in `properties`, eventuale helper per risoluzione dominio deep-link
 - `src/Nova/App.php` — toggle Nova (frontend mobile), campo `android_cert_sha256` (Release Data)
