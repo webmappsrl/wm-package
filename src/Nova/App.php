@@ -409,6 +409,10 @@ class App extends Resource
                 ->default(false)
                 ->hideFromIndex()
                 ->help(__('Enable the Travel Mode feature on the app')),
+            Boolean::make(__('Ugc Track Share Enabled'), 'properties->ugc_track_share_enabled')
+                ->default(false)
+                ->hideFromIndex()
+                ->help(__('Shows the "Share" button on recorded UGC tracks (Instagram/Facebook Stories). Upload a Story frame image in the Release tab for branded compositing; falls back to an unbranded image otherwise.')),
 
             Tab::make('FEwebapp', $this->webapp_tab()),
             Tab::make('FE: mobile', $this->mobile_tab()),
@@ -662,6 +666,10 @@ class App extends Resource
             Images::make(__('My downloads image'), 'my_downloads')
                 ->help(__('Box image (ratio 2.2:1, object-fit cover). Minimum :minwx:minhpx, recommended :recwx:rechpx or larger for retina screens.', ['minw' => 800, 'minh' => 360, 'recw' => 2214, 'rech' => 1013]))
                 ->hideFromIndex(),
+            Images::make(__('Share frame image'), 'share_frame')
+                ->singleMediaRules(['image', 'mimes:png,jpg,jpeg', 'dimensions:min_width=1080,min_height=1920,ratio=9/16'])
+                ->help(__('Branded background frame used to compose the track-share image (9:16), shared via any channel (not Instagram Stories specifically). Required size is :widthx:heightpx or larger with the same 9:16 ratio.', ['width' => 1080, 'height' => 1920]))
+                ->hideFromIndex(),
             Boolean::make(__('Force to Release Update'), 'properties->force_to_release_update')
                 ->default(false)
                 ->hideFromIndex()
@@ -671,7 +679,7 @@ class App extends Resource
                 <h2><strong>DEEP LINK WELL-KNOWN FILES</strong></h2>
                 HTML
             )->asHtml()->hideFromIndex(),
-                Text::make(__('Android Certificate SHA-256'), 'properties->android_cert_sha256')
+            Text::make(__('Android Certificate SHA-256'), 'properties->android_cert_sha256')
                 ->canSee(fn (NovaRequest $request) => optional($request->user())->hasRole('Administrator'))
                 ->rules('nullable', 'regex:/^([0-9A-Fa-f]{2}:){31}[0-9A-Fa-f]{2}(\s*,\s*([0-9A-Fa-f]{2}:){31}[0-9A-Fa-f]{2})*$/')
                 ->hideFromIndex()
