@@ -179,6 +179,8 @@
     "Minimum zoom level for enabling Features In Viewport": "Livello di zoom minimo per abilitare Elementi nell'area visibile",
     "Maximum zoom level for enabling Features In Viewport": "Livello di zoom massimo per abilitare Elementi nell'area visibile",
     "Copy error": "Errore copia",
+    "Copy link": "Copia link",
+    "Link copied": "Link copiato",
     "Enables the track direction arrow in the map.": "Abilita la freccia di direzione della traccia sulla mappa.",
     "This is shown when a Track is being shared via mobile apps.": "Testo mostrato quando una traccia viene condivisa tramite app mobile.",
     "Code copied": "Codice copiato",

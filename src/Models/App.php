@@ -594,23 +594,99 @@ class App extends Model implements HasMedia
 
         $escapedUrl = e($url);
         $downloadName = e("{$type}-{$id}-qrcode.svg");
+        $copyButtonHtml = $this->renderDeepLinkCopyButton($url);
 
         return <<<HTML
-            <div class="wm-deep-link-qr flex flex-col gap-4 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800 sm:flex-row sm:items-start">
-                <div class="flex shrink-0 flex-col items-center gap-2 self-start">
-                    <div class="rounded-md border border-gray-200 bg-white p-2 shadow-sm">
-                        <img src="data:image/svg+xml;base64,{$base64}" width="140" height="140" alt="QR Code" class="block" />
+            <div class="wm-deep-link-qr" style="width:100%;box-sizing:border-box;padding:16px;border-radius:12px;border:1px solid #e5e7eb;background:#f9fafb;">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:12px;max-width:480px;width:100%;margin:0 auto;text-align:center;">
+                    <div style="border-radius:8px;border:1px solid #e5e7eb;background:#ffffff;padding:8px;box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+                        <img src="data:image/svg+xml;base64,{$base64}" width="140" height="140" alt="QR Code" style="display:block;" />
                     </div>
                     <a
                         href="data:image/svg+xml;base64,{$base64}"
                         download="{$downloadName}"
-                        class="inline-flex items-center justify-center gap-1.5 rounded-md bg-primary-500 px-3 py-1.5 text-sm font-semibold text-white shadow hover:bg-primary-400 focus:outline-none focus:ring"
+                        style="display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:8px;background:#19b7a1;color:#ffffff;padding:8px 20px;font-size:14px;font-weight:600;text-decoration:none;"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3v9m0 0l-3.5-3.5M10 12l3.5-3.5M4 14.5v1a1.5 1.5 0 001.5 1.5h9a1.5 1.5 0 001.5-1.5v-1"/></svg>
                         Download QR
                     </a>
+                    <div style="display:flex;align-items:center;gap:8px;width:100%;">
+                        <input
+                            type="text"
+                            readonly
+                            value="{$escapedUrl}"
+                            onclick="this.select()"
+                            style="flex:1;min-width:0;box-sizing:border-box;border-radius:8px;border:1px solid #d1d5db;background:#ffffff;color:#374151;padding:8px 12px;font-size:13px;text-align:center;"
+                        />
+                        {$copyButtonHtml}
+                    </div>
                 </div>
             </div>
+            HTML;
+    }
+
+    /**
+     * Renders a "Copy link" button (clipboard JS + execCommand fallback) for the
+     * deep link URL, matching the pattern already used for the Layer web component
+     * copy button (see Nova\Layer::renderLayerWebComponentCopyButton()).
+     */
+    private function renderDeepLinkCopyButton(string $url): string
+    {
+        $urlJson = json_encode($url, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT);
+        $defaultLabelJson = json_encode((string) __('Copy link'), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT);
+        $successLabelJson = json_encode((string) __('Link copied'), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT);
+        $errorLabelJson = json_encode((string) __('Copy error'), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT);
+
+        $onClick = <<<JS
+(async function(button) {
+  const text = {$urlJson};
+  const defaultLabel = {$defaultLabelJson};
+  const successLabel = {$successLabelJson};
+  const errorLabel = {$errorLabelJson};
+
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text);
+    } else {
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.setAttribute('readonly', '');
+      textArea.style.position = 'absolute';
+      textArea.style.left = '-9999px';
+      document.body.appendChild(textArea);
+      textArea.select();
+
+      const copied = document.execCommand('copy');
+
+      document.body.removeChild(textArea);
+
+      if (!copied) {
+        throw new Error('Clipboard copy failed');
+      }
+    }
+
+    button.textContent = successLabel;
+  } catch (error) {
+    button.textContent = errorLabel;
+  }
+
+  window.setTimeout(function() {
+    button.textContent = defaultLabel;
+  }, 2000);
+})(this); return false;
+JS;
+
+        $escapedOnClick = htmlspecialchars($onClick, ENT_QUOTES, 'UTF-8');
+        $buttonLabel = htmlspecialchars((string) __('Copy link'), ENT_QUOTES, 'UTF-8');
+
+        return <<<HTML
+            <button
+                type="button"
+                onclick="{$escapedOnClick}"
+                style="display:inline-flex;flex-shrink:0;white-space:nowrap;align-items:center;justify-content:center;gap:6px;border-radius:8px;border:1px solid #d1d5db;background:#ffffff;color:#374151;padding:8px 20px;font-size:14px;font-weight:600;cursor:pointer;"
+            >
+                {$buttonLabel}
+            </button>
             HTML;
     }
 

@@ -83,6 +83,20 @@ Convenzione commit: `feat(oc:8251): ...` / `fix(oc:8251): ...` / `test(oc:8251):
 
 ---
 
+## 11. Modifica (21-07-2026) — link diretto + bottone copia accanto al QR
+
+Riferimento: `overview.md`, sezione "Modifica (21-07-2026)".
+
+- In `src/Models/App.php::renderDeepLinkQrCodeHtml()`: aggiungere un secondo blocco `<div>` sibling (dentro il container flex esistente `sm:flex-row`) con:
+  - l'URL diretto come testo cliccabile (`<a href="{$escapedUrl}" target="_blank" rel="noopener noreferrer">`)
+  - un bottone "Copia link" con `onclick` JS (`navigator.clipboard.writeText` + fallback `execCommand('copy')`), stesso schema di `Layer::renderLayerWebComponentCopyButton()` ma copia `$url` invece dello snippet embed — estratto in un metodo privato dedicato `renderDeepLinkCopyButton(string $url): string` per non appesantire `renderDeepLinkQrCodeHtml()`
+- Nuove chiavi traduzione in `resources/lang/it.json` / `resources/lang/en.json`: `"Copy link"` / `"Copia link"`, `"Link copied"` / `"Link copiato"` (riuso di `"Copy error"` già esistente)
+- Nessuna modifica al test `tests/Feature/DeepLinkQrFieldVisibilityTest.php` (repo principale) — le assertion su `/map?track={id}`/`/map?poi={id}` visibile e `navigator.clipboard.writeText` esistono già (righe 113, 115) e verificano esattamente questo comportamento
+- Verifica: eseguire il test dopo l'implementazione (richiede che il DB di test abbia le migration applicate — problema ambientale pre-esistente e scorrelato, vedi nota separata)
+- Commit: `feat(oc:8251): show copyable direct link next to deep link QR code`
+
+---
+
 ## Note per l'esecuzione
 
 - Le credenziali SFTP reali non sono disponibili in questo ambiente (vedi overview, Rischi) — lo sviluppo e i test usano `Storage::fake()`/mock del disk. La verifica end-to-end contro il server reale della webapp resta un task successivo, da eseguire quando l'accesso SSH a chiave sarà configurato (fuori dallo scope di questo ciclo di sviluppo).
