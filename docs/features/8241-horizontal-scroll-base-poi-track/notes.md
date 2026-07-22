@@ -101,3 +101,33 @@ Riferimento: `overview.md`/`plan.md` sezione "Revisione 6". Il ticket è tornato
 ### Follow-up rimasti aperti
 
 - Nessuno nuovo introdotto da questo round, oltre a quelli già tracciati in Revisione 5.
+
+## Revisione 7 — Rename "Geo" → "PoiTrack" (2026-07-22)
+
+Riferimento: `overview.md` sezione "Revisione 7". Innescato da feedback diretto dell'utente in re-review: il naming interno "Geo" leakava nella UI Nova (pulsante "Add Horizontal Scroll Geo Item Repeatable").
+
+### Deviazioni dal piano
+
+- Nessun piano formale scritto per questo round (rename mirato, eseguito interattivamente durante la re-review su richiesta esplicita dell'utente) — documentato qui a posteriori invece che in un `plan.md` dedicato, coerente con la scala ridotta del cambiamento.
+
+### Decisioni
+
+- **Perché "PoiTrack" e non un'altra parola**: chiesto esplicitamente all'utente tra 3 opzioni (`PoiTrack`, `Reference`, "nessuna parola" con collisione da risolvere sul repeatable delle tassonomie) — scelto `PoiTrack` perché descrive esplicitamente cosa referenzia il box.
+- **Rinominato anche `GeoReferenceField`** (il campo Nova custom, non solo il Repeatable): chiesto esplicitamente all'utente se limitare il rename al solo Repeatable o estenderlo anche al campo — confermato "sì, rinomina anche" nonostante il costo di un rebuild dist obbligatorio.
+- **Distinzione dato persistito vs identificatore di codice**: verificato riga per riga in `ConfigHomeResolver.php` quali occorrenze di "Geo" fossero (a) il valore letterale `box_type: 'horizontal_scroll_geo'` già scritto nei `config_home` di produzione (revisione 6) — intoccabile, o (b) nomi di classi/metodi/chiavi di registro Nova puramente interni, mai persistiti — rinominabili senza rischio di rottura sui dati esistenti. Solo la categoria (b) è stata rinominata.
+- **Sblocco ambientale della build dist**: il blocco licenza Nova documentato nel ciclo originale (`laravel/nova-devtool` non scaricabile) non si è ripetuto in questo round — `auth.json` con credenziali Nova valide era già presente nella root del progetto maphub. Cambiato temporaneamente `composer.json` del campo custom da repository `vcs` GitHub (workaround del round originale) a repository `composer` privato Nova (`https://nova.laravel.com`), eseguito `composer install` dal container Docker (PHP 8.4, il `composer`/`php` di host è 7.4 e non risolve i requisiti), poi `npm install && npm run prod`. `vendor/`, `node_modules/`, `auth.json` locale e `composer.lock` restano ignorati da `.gitignore`, coerente con gli altri campi custom.
+
+### Bug trovati
+
+- Nessuno introdotto da questo round — rename puro, nessuna logica di business toccata. Il dispatcher `ConfigHomeResolver::buildElement()` (match su `$layout->name()`) e `resolveLayoutName()` sono stati aggiornati in coppia per usare la stessa nuova chiave di registro `'horizontal_scroll_poi_track'`, altrimenti si sarebbe ripetuta esattamente la classe di bug già corretta in revisione 6 (mismatch tra chiave di scrittura e chiave di lettura).
+
+### Verifica
+
+- `php -l`, Pint (10/10 file), autoload via tinker, dist ricompilato e verificato via grep, Nova boot OK — vedi `overview.md` per il dettaglio completo
+- **Test automatici del package non eseguiti** (nessun DB isolato `wm_package` disponibile in questo ambiente) — da eseguire prima del merge finale
+- PHPStan non eseguibile in questo ambiente per un problema di cache pre-esistente e non correlato (`build/phpstan/cache` — permessi/worker paralleli), confermato non causato da questo rename
+
+### Follow-up rimasti aperti
+
+- Eseguire la suite di test del package (`ConfigHomeResolverPoiTrackTest`, `HorizontalScrollPoiTrackItemRepeatableTest`, `PoiTrackReferenceFieldTest`) in un ambiente con DB `wm_package` isolato, prima del merge
+- Verifica manuale in browser del rename (invariato dal limite già noto delle revisioni precedenti)

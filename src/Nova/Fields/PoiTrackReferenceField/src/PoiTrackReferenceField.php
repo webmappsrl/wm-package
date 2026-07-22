@@ -1,6 +1,6 @@
 <?php
 
-namespace Wm\WmPackage\Nova\Fields\GeoReferenceField\src;
+namespace Wm\WmPackage\Nova\Fields\PoiTrackReferenceField\src;
 
 use Illuminate\Database\Eloquent\Model;
 use Laravel\Nova\Fields\Field;
@@ -10,19 +10,19 @@ use Laravel\Nova\Support\Fluent;
 /**
  * A single field that lets the admin pick a "Model" (Poi/Track) and then search among that model's
  * records, writing the result into two sibling attributes (`poi_id`/`track_id`) on the underlying Fluent —
- * exactly mirroring the shape `ConfigHomeResolver::fromGeoRepeaterItems()` already expects. The filtering
+ * exactly mirroring the shape `ConfigHomeResolver::fromPoiTrackRepeaterItems()` already expects. The filtering
  * happens entirely client-side (both option lists are preloaded), since Nova's native `dependsOn()` field
  * sync does not reach fields nested this deep inside a Flexible > Repeater > Repeatable (verified reading
  * `vendor/laravel/nova/src/Http/Controllers/UpdateFieldController.php`).
  */
-class GeoReferenceField extends Field
+class PoiTrackReferenceField extends Field
 {
     /**
      * The field's component.
      *
      * @var string
      */
-    public $component = 'geo-reference-field';
+    public $component = 'poi-track-reference-field';
 
     /**
      * @param  array<int, string>  $options  id => label

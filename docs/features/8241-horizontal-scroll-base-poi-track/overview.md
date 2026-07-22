@@ -152,3 +152,34 @@ Prima di applicare il fix, verificato direttamente il codice sorgente di `wm-cor
 ### Out of scope (revisione 6)
 
 - Migrazione dei `config_home` già salvati in produzione con `box_type: 'horizontal_scroll_geo'` al nuovo valore `'base'` — gestita per compatibilità in lettura, non serve una migration attiva perché il prossimo salvataggio in Nova riscrive automaticamente il valore corretto.
+
+## Revisione 7 — Rename "Geo" → "PoiTrack" nel naming interno (2026-07-22)
+
+In re-review (`wm-review-ticket`), l'utente ha notato che il naming interno "Geo" (residuo della revisione 6, quando il box_type persistito era ancora `horizontal_scroll_geo`) leakava nella UI Nova: il pulsante "Add" del Repeater mostrava "Add Horizontal Scroll Geo Item Repeatable" (Nova genera questa label di default umanizzando il nome della classe `HorizontalScrollGeoItemRepeatable`). Richiesta esplicita: rimuovere "Geo" da tutto il naming interno della feature, non solo dalla label.
+
+### Cosa cambia (revisione 7)
+
+Rinominate tutte le identità interne che usavano "Geo" (classi, file, metodi privati, chiave di layout Nova, attributo virtuale) in "PoiTrack":
+
+| Prima | Dopo |
+|---|---|
+| `HorizontalScrollGeoItemRepeatable` | `HorizontalScrollPoiTrackItemRepeatable` |
+| `HorizontalScrollGeoRepeaterJsonPreset` | `HorizontalScrollPoiTrackRepeaterJsonPreset` |
+| `GeoReferenceField` (+ cartella, componente Vue `geo-reference-field`, composer.json/package.json) | `PoiTrackReferenceField` (+ `poi-track-reference-field`) |
+| `ConfigHomeResolver::buildGeoElement()`/`finalizeGeoElement()`/`toGeoRepeaterItems()`/`fromGeoRepeaterItems()`/`extractGeoRepeaterFields()`/`previousGeoItemsForGroup()` | equivalenti `*PoiTrack*`/`*PoiTrackElement()` |
+| Chiave layout Nova `'horizontal_scroll_geo'` (2° argomento di `addLayout()`, interno, non persistito) | `'horizontal_scroll_poi_track'` |
+| Attributo virtuale del campo `'geo_ref'` | `'model_ref'` |
+
+**Non toccato — dato persistito**: il valore letterale `box_type: 'horizontal_scroll_geo'` nei `config_home` già salvati in produzione (revisione 6) resta riconosciuto in lettura per retrocompatibilità (`resolveLayoutName()`, `getAttributesForItem()`, `previousPoiTrackItemsForGroup()` accettano sia `'base'` che il legacy `'horizontal_scroll_geo'`). Rinominare il naming interno non ha alcun effetto su questo valore: è un dato, non un identificatore di codice.
+
+`label()`/`singularLabel()` del Repeatable sono stati overridden per riusare la label già esistente `__('Horizontal Scroll Poi/Track')` (stessa mostrata nel picker layout del Flexible), cosi il pulsante "Add" in Nova non mostra più il nome classe umanizzato di default.
+
+### Verifica (revisione 7)
+
+- `php -l` su tutti i file PHP toccati: OK
+- Pint: 10/10 file puliti
+- Autoload verificato via tinker: le nuove classi si caricano correttamente (`class_exists`), la vecchia `GeoReferenceField` non esiste più
+- Dist del campo Nova **ricompilato** (`npm run prod`, dopo aver ripristinato `vendor/laravel/nova-devtool` via `composer install` con le credenziali Nova già presenti in `auth.json` root — non più bloccato come nei round precedenti): grep confermato, nuovo nome `poi-track-reference-field` presente 3 volte nel bundle, vecchio nome assente
+- Nova boot verificato (`config:clear` + risoluzione servizio Nova) senza errori
+- **Test automatici del package NON eseguiti in questo round**: richiedono `RefreshDatabase` su un DB isolato `wm_package` non configurato in questo ambiente Docker locale — puntare al DB `maphub` di sviluppo reale senza un `.env.testing` dedicato sarebbe stato rischioso. Da eseguire in un ambiente con DB isolato prima del merge finale.
+- Verifica manuale in browser: non eseguita (stesso limite ambientale delle revisioni precedenti)

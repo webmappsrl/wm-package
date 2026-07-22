@@ -40,9 +40,9 @@ use Wm\WmPackage\Nova\Cards\ApiLinksCard\AppApiLinksCard;
 use Wm\WmPackage\Nova\Fields\BboxField\BboxField;
 use Wm\WmPackage\Nova\Fields\OrderList\src\OrderList;
 use Wm\WmPackage\Nova\Fields\StoreVersionField;
-use Wm\WmPackage\Nova\Flexible\ConfigHome\HorizontalScrollGeoItemRepeatable;
-use Wm\WmPackage\Nova\Flexible\ConfigHome\HorizontalScrollGeoRepeaterJsonPreset;
 use Wm\WmPackage\Nova\Flexible\ConfigHome\HorizontalScrollItemRepeatable;
+use Wm\WmPackage\Nova\Flexible\ConfigHome\HorizontalScrollPoiTrackItemRepeatable;
+use Wm\WmPackage\Nova\Flexible\ConfigHome\HorizontalScrollPoiTrackRepeaterJsonPreset;
 use Wm\WmPackage\Nova\Flexible\ConfigHome\HorizontalScrollRepeaterJsonPreset;
 use Wm\WmPackage\Nova\Flexible\Resolvers\ConfigHomeResolver;
 use Wm\WmPackage\Nova\Flexible\Resolvers\ConfigOverlaysResolver;
@@ -615,7 +615,7 @@ class App extends Resource
                 ->addLayout('Titolo', 'title', $this->title_layout())
                 ->addLayout(__('Horizontal Scroll Activities'), 'horizontal_scroll_activities', $this->horizontal_scroll_activities_layout())
                 ->addLayout(__('Horizontal Scroll POI Types'), 'horizontal_scroll_poi_types', $this->horizontal_scroll_poi_types_layout())
-                ->addLayout(__('Horizontal Scroll Poi/Track'), 'horizontal_scroll_geo', $this->horizontal_scroll_geo_layout())
+                ->addLayout(__('Horizontal Scroll Poi/Track'), 'horizontal_scroll_poi_track', $this->horizontal_scroll_poi_track_layout())
                 ->addLayout('Layer', 'layer', $this->layer_layout())
                 ->addLayout('Slug', 'slug', $this->slug_layout())
                 ->addLayout('External URL', 'external_url', $this->external_url_layout())
@@ -885,10 +885,10 @@ class App extends Resource
         return $fields;
     }
 
-    protected function horizontal_scroll_geo_layout(): array
+    protected function horizontal_scroll_poi_track_layout(): array
     {
         return array_merge($this->config_home_title_layout(), [
-            $this->horizontalScrollGeoItemsRepeater(),
+            $this->horizontalScrollPoiTrackItemsRepeater(),
         ]);
     }
 
@@ -946,16 +946,17 @@ class App extends Resource
     }
 
     /**
-     * JSON preset for the config_home geo horizontal scroll layout: reliable hydration of `items` from the
-     * Whitecube layout. Each item is a Poi or a Track — see `HorizontalScrollGeoItemRepeatable`.
+     * JSON preset for the config_home Poi/Track horizontal scroll layout: reliable hydration of `items` from
+     * the Whitecube layout. Each item is a Poi or a Track — see `HorizontalScrollPoiTrackItemRepeatable`.
      */
-    protected function horizontalScrollGeoItemsRepeater(): Repeater
+    protected function horizontalScrollPoiTrackItemsRepeater(): Repeater
     {
         return Repeater::make(__('Items'), 'items')
-            ->repeatables([HorizontalScrollGeoItemRepeatable::make()])
-            ->preset(new HorizontalScrollGeoRepeaterJsonPreset)
+            ->repeatables([HorizontalScrollPoiTrackItemRepeatable::make()])
+            ->preset(new HorizontalScrollPoiTrackRepeaterJsonPreset)
             ->rules('required', 'array')
-            ->help(__('Add one or more items — each can be a Poi or a Track.'));
+            ->help(__('Add one or more items — each can be a Poi or a Track.'))
+            ->showOnDetail();
     }
 
     protected function slug_layout(): array

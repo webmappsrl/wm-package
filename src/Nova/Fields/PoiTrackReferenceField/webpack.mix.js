@@ -8,5 +8,5 @@ mix
   .js('resources/js/field.js', 'js')
   .vue({ version: 3 })
   .css('resources/css/field.css', 'css')
-  .nova('webmapp/geo-reference-field')
+  .nova('webmapp/poi-track-reference-field')
   .version()

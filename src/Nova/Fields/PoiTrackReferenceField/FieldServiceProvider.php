@@ -1,6 +1,6 @@
 <?php
 
-namespace Wm\WmPackage\Nova\Fields\GeoReferenceField;
+namespace Wm\WmPackage\Nova\Fields\PoiTrackReferenceField;
 
 use Illuminate\Support\ServiceProvider;
 use Laravel\Nova\Events\ServingNova;
@@ -14,7 +14,7 @@ class FieldServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Nova::serving(function (ServingNova $event) {
-            Nova::mix('geo-reference-field', __DIR__.'/dist/mix-manifest.json');
+            Nova::mix('poi-track-reference-field', __DIR__.'/dist/mix-manifest.json');
         });
     }
 

@@ -8,11 +8,11 @@ use ReflectionMethod;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Models\EcTrack;
-use Wm\WmPackage\Nova\Flexible\ConfigHome\HorizontalScrollGeoItemRepeatable;
+use Wm\WmPackage\Nova\Flexible\ConfigHome\HorizontalScrollPoiTrackItemRepeatable;
 use Wm\WmPackage\Nova\Flexible\Resolvers\ConfigHomeResolver;
 use Wm\WmPackage\Tests\TestCase;
 
-class ConfigHomeResolverGeoTest extends TestCase
+class ConfigHomeResolverPoiTrackTest extends TestCase
 {
     use DatabaseTransactions;
 
@@ -27,7 +27,7 @@ class ConfigHomeResolverGeoTest extends TestCase
     private function repeaterRow(array $fields): array
     {
         return [
-            'type' => HorizontalScrollGeoItemRepeatable::key(),
+            'type' => HorizontalScrollPoiTrackItemRepeatable::key(),
             'fields' => $fields,
         ];
     }
@@ -47,7 +47,7 @@ class ConfigHomeResolverGeoTest extends TestCase
         $app = App::factory()->createQuietly();
         $poi = EcPoi::factory()->createQuietly(['app_id' => $app->id]);
 
-        $result = $this->callPrivateMethod(new ConfigHomeResolver, 'fromGeoRepeaterItems', [
+        $result = $this->callPrivateMethod(new ConfigHomeResolver, 'fromPoiTrackRepeaterItems', [
             [$this->repeaterRow($this->baseFields(['poi_id' => $poi->id, 'title' => ['it' => 'Custom Poi'], 'image_url' => 'http://example.com/a.jpg']))],
             $app,
         ]);
@@ -64,7 +64,7 @@ class ConfigHomeResolverGeoTest extends TestCase
         $app = App::factory()->createQuietly();
         $track = EcTrack::factory()->createQuietly(['app_id' => $app->id]);
 
-        $result = $this->callPrivateMethod(new ConfigHomeResolver, 'fromGeoRepeaterItems', [
+        $result = $this->callPrivateMethod(new ConfigHomeResolver, 'fromPoiTrackRepeaterItems', [
             [$this->repeaterRow($this->baseFields(['track_id' => $track->id]))],
             $app,
         ]);
@@ -81,7 +81,7 @@ class ConfigHomeResolverGeoTest extends TestCase
         $app = App::factory()->createQuietly();
         $poi = EcPoi::factory()->createQuietly(['app_id' => $app->id, 'name' => ['it' => 'Fonte Sacra', 'en' => 'Sacred Spring']]);
 
-        $result = $this->callPrivateMethod(new ConfigHomeResolver, 'fromGeoRepeaterItems', [
+        $result = $this->callPrivateMethod(new ConfigHomeResolver, 'fromPoiTrackRepeaterItems', [
             [$this->repeaterRow($this->baseFields(['poi_id' => $poi->id]))],
             $app,
         ]);
@@ -95,7 +95,7 @@ class ConfigHomeResolverGeoTest extends TestCase
         $app = App::factory()->createQuietly();
         $poi = EcPoi::factory()->createQuietly(['app_id' => $app->id, 'name' => ['it' => 'Fonte Sacra', 'en' => 'Sacred Spring']]);
 
-        $result = $this->callPrivateMethod(new ConfigHomeResolver, 'fromGeoRepeaterItems', [
+        $result = $this->callPrivateMethod(new ConfigHomeResolver, 'fromPoiTrackRepeaterItems', [
             [$this->repeaterRow($this->baseFields(['poi_id' => $poi->id, 'title' => ['it' => 'Custom Poi']]))],
             $app,
         ]);
@@ -108,7 +108,7 @@ class ConfigHomeResolverGeoTest extends TestCase
         $app = App::factory()->createQuietly();
         $poi = EcPoi::factory()->createQuietly(['app_id' => $app->id]);
 
-        $result = $this->callPrivateMethod(new ConfigHomeResolver, 'fromGeoRepeaterItems', [
+        $result = $this->callPrivateMethod(new ConfigHomeResolver, 'fromPoiTrackRepeaterItems', [
             [$this->repeaterRow($this->baseFields(['poi_id' => $poi->id]))],
             $app,
         ]);
@@ -121,7 +121,7 @@ class ConfigHomeResolverGeoTest extends TestCase
         $app = App::factory()->createQuietly();
         $poi = EcPoi::factory()->createQuietly(['app_id' => $app->id]);
 
-        $result = $this->callPrivateMethod(new ConfigHomeResolver, 'fromGeoRepeaterItems', [
+        $result = $this->callPrivateMethod(new ConfigHomeResolver, 'fromPoiTrackRepeaterItems', [
             [$this->repeaterRow($this->baseFields(['poi_id' => $poi->id, 'image_url' => 'http://example.com/custom.jpg']))],
             $app,
         ]);
@@ -156,7 +156,7 @@ class ConfigHomeResolverGeoTest extends TestCase
         $app = App::factory()->createQuietly();
         $track = EcTrack::factory()->createQuietly(['app_id' => $app->id, 'name' => ['it' => 'Sentiero del Monte', 'en' => 'Mountain Path']]);
 
-        $result = $this->callPrivateMethod(new ConfigHomeResolver, 'fromGeoRepeaterItems', [
+        $result = $this->callPrivateMethod(new ConfigHomeResolver, 'fromPoiTrackRepeaterItems', [
             [$this->repeaterRow($this->baseFields(['track_id' => $track->id]))],
             $app,
         ]);
@@ -169,7 +169,7 @@ class ConfigHomeResolverGeoTest extends TestCase
     {
         $app = App::factory()->createQuietly();
 
-        $result = $this->callPrivateMethod(new ConfigHomeResolver, 'fromGeoRepeaterItems', [
+        $result = $this->callPrivateMethod(new ConfigHomeResolver, 'fromPoiTrackRepeaterItems', [
             [$this->repeaterRow($this->baseFields())],
             $app,
         ]);
@@ -183,7 +183,7 @@ class ConfigHomeResolverGeoTest extends TestCase
         $poi = EcPoi::factory()->createQuietly(['app_id' => $app->id]);
         $track = EcTrack::factory()->createQuietly(['app_id' => $app->id]);
 
-        $result = $this->callPrivateMethod(new ConfigHomeResolver, 'fromGeoRepeaterItems', [
+        $result = $this->callPrivateMethod(new ConfigHomeResolver, 'fromPoiTrackRepeaterItems', [
             [$this->repeaterRow($this->baseFields(['poi_id' => $poi->id, 'track_id' => $track->id]))],
             $app,
         ]);
@@ -195,7 +195,7 @@ class ConfigHomeResolverGeoTest extends TestCase
     {
         $app = App::factory()->createQuietly();
 
-        $result = $this->callPrivateMethod(new ConfigHomeResolver, 'fromGeoRepeaterItems', [
+        $result = $this->callPrivateMethod(new ConfigHomeResolver, 'fromPoiTrackRepeaterItems', [
             [$this->repeaterRow($this->baseFields(['poi_id' => 999999999]))],
             $app,
         ]);
@@ -209,7 +209,7 @@ class ConfigHomeResolverGeoTest extends TestCase
         $otherApp = App::factory()->createQuietly();
         $poiFromOtherApp = EcPoi::factory()->createQuietly(['app_id' => $otherApp->id]);
 
-        $result = $this->callPrivateMethod(new ConfigHomeResolver, 'fromGeoRepeaterItems', [
+        $result = $this->callPrivateMethod(new ConfigHomeResolver, 'fromPoiTrackRepeaterItems', [
             [$this->repeaterRow($this->baseFields(['poi_id' => $poiFromOtherApp->id]))],
             $app,
         ]);
@@ -217,21 +217,21 @@ class ConfigHomeResolverGeoTest extends TestCase
         $this->assertSame([], $result);
     }
 
-    public function test_to_geo_repeater_items_shapes_rows_for_nova_hydration(): void
+    public function test_to_poi_track_repeater_items_shapes_rows_for_nova_hydration(): void
     {
-        $result = $this->callPrivateMethod(new ConfigHomeResolver, 'toGeoRepeaterItems', [
+        $result = $this->callPrivateMethod(new ConfigHomeResolver, 'toPoiTrackRepeaterItems', [
             [
                 ['poi_id' => 5, 'track_id' => null, 'title' => ['it' => 'A'], 'image_url' => 'u'],
             ],
         ]);
 
-        $this->assertSame(HorizontalScrollGeoItemRepeatable::key(), $result[0]['type']);
+        $this->assertSame(HorizontalScrollPoiTrackItemRepeatable::key(), $result[0]['type']);
         $this->assertSame(5, $result[0]['fields']['poi_id']);
         $this->assertNull($result[0]['fields']['track_id']);
         $this->assertSame('A', $result[0]['fields']['title']['it']);
     }
 
-    public function test_previous_geo_items_for_group_returns_saved_items_when_box_type_matches(): void
+    public function test_previous_poi_track_items_for_group_returns_saved_items_when_box_type_matches(): void
     {
         $app = App::factory()->createQuietly();
         $poi = EcPoi::factory()->createQuietly(['app_id' => $app->id]);
@@ -250,13 +250,13 @@ class ConfigHomeResolverGeoTest extends TestCase
         DB::table('apps')->where('id', $app->id)->update(['config_home' => $savedPayload]);
         $app->refresh();
 
-        $result = $this->callPrivateMethod(new ConfigHomeResolver, 'previousGeoItemsForGroup', [$app, 'config_home', 0]);
+        $result = $this->callPrivateMethod(new ConfigHomeResolver, 'previousPoiTrackItemsForGroup', [$app, 'config_home', 0]);
 
         $this->assertNotNull($result);
         $this->assertSame($poi->id, $result[0]['poi_id']);
     }
 
-    public function test_previous_geo_items_for_group_returns_null_for_different_box_type(): void
+    public function test_previous_poi_track_items_for_group_returns_null_for_different_box_type(): void
     {
         $app = App::factory()->createQuietly();
 
@@ -269,7 +269,7 @@ class ConfigHomeResolverGeoTest extends TestCase
         DB::table('apps')->where('id', $app->id)->update(['config_home' => $savedPayload]);
         $app->refresh();
 
-        $result = $this->callPrivateMethod(new ConfigHomeResolver, 'previousGeoItemsForGroup', [$app, 'config_home', 0]);
+        $result = $this->callPrivateMethod(new ConfigHomeResolver, 'previousPoiTrackItemsForGroup', [$app, 'config_home', 0]);
 
         $this->assertNull($result);
     }

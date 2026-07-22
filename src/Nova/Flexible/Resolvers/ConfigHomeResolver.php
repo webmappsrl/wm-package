@@ -10,8 +10,8 @@ use Wm\WmPackage\Models\EcTrack as EcTrackModel;
 use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Models\TaxonomyActivity as TaxonomyActivityModel;
 use Wm\WmPackage\Models\TaxonomyPoiType as TaxonomyPoiTypeModel;
-use Wm\WmPackage\Nova\Flexible\ConfigHome\HorizontalScrollGeoItemRepeatable;
 use Wm\WmPackage\Nova\Flexible\ConfigHome\HorizontalScrollItemRepeatable;
+use Wm\WmPackage\Nova\Flexible\ConfigHome\HorizontalScrollPoiTrackItemRepeatable;
 use Wm\WmPackage\Nova\Traits\HasFlexibleTranslatableFields;
 
 class ConfigHomeResolver implements ResolverInterface
@@ -94,8 +94,8 @@ class ConfigHomeResolver implements ResolverInterface
             };
         }
 
-        if (($item['box_type'] ?? null) === 'base') {
-            return 'horizontal_scroll_geo';
+        if (in_array($item['box_type'] ?? null, ['base', 'horizontal_scroll_geo'], true)) {
+            return 'horizontal_scroll_poi_track';
         }
 
         return $item['box_type'];
@@ -114,7 +114,7 @@ class ConfigHomeResolver implements ResolverInterface
         }
 
         if (in_array($item['box_type'] ?? null, ['horizontal_scroll_geo', 'base'], true)) {
-            $attributes['items'] = $this->toGeoRepeaterItems(
+            $attributes['items'] = $this->toPoiTrackRepeaterItems(
                 $this->normalizeHorizontalScrollItemsInput($item)
             );
         }
@@ -132,7 +132,7 @@ class ConfigHomeResolver implements ResolverInterface
             'layer' => $this->buildLayerElement($layout),
             'horizontal_scroll_activities' => $this->buildHorizontalScrollElement($resource, $attribute, $layout, $groupIndex, 'activities'),
             'horizontal_scroll_poi_types' => $this->buildHorizontalScrollElement($resource, $attribute, $layout, $groupIndex, 'poi_types'),
-            'horizontal_scroll_geo' => $this->buildGeoElement($resource, $attribute, $layout, $groupIndex),
+            'horizontal_scroll_poi_track' => $this->buildPoiTrackElement($resource, $attribute, $layout, $groupIndex),
             default => $this->buildGenericElement($layout),
         };
     }
@@ -204,12 +204,13 @@ class ConfigHomeResolver implements ResolverInterface
     }
 
     /**
-     * Box `horizontal_scroll_geo`: each item points directly to a single `EcPoi`/`EcTrack`. Both Select
-     * fields (Poi, Track) in `HorizontalScrollGeoItemRepeatable` are always visible in Nova — `dependsOn()`
-     * does not work for fields nested this deep inside a Flexible > Repeater > Repeatable (verified reading
+     * Box `horizontal_scroll_poi_track` (persisted `box_type: 'base'`, legacy `'horizontal_scroll_geo'`):
+     * each item points directly to a single `EcPoi`/`EcTrack`. Both Select fields (Poi, Track) in
+     * `HorizontalScrollPoiTrackItemRepeatable` are always visible in Nova — `dependsOn()` does not work for
+     * fields nested this deep inside a Flexible > Repeater > Repeatable (verified reading
      * `vendor/laravel/nova/src/Http/Controllers/UpdateFieldController.php`).
      */
-    private function buildGeoElement($resource, string $attribute, Layout $layout, int $groupIndex): array
+    private function buildPoiTrackElement($resource, string $attribute, Layout $layout, int $groupIndex): array
     {
         $element = ['box_type' => 'base'];
 
@@ -220,19 +221,19 @@ class ConfigHomeResolver implements ResolverInterface
         }
 
         $itemsPayload = $this->resolveRepeaterItemsPayload($attribute, $layout, $element['items'] ?? null);
-        $normalizedItems = $this->fromGeoRepeaterItems($itemsPayload, $resource);
+        $normalizedItems = $this->fromPoiTrackRepeaterItems($itemsPayload, $resource);
         $rawGroupAttrs = $this->findRawFlexibleGroupAttributes($attribute, (string) $layout->inUseKey());
 
         if (empty($normalizedItems) && $this->shouldPreserveRepeaterItemsFromDb($rawGroupAttrs, $itemsPayload, $normalizedItems)) {
-            $previousItems = $this->previousGeoItemsForGroup($resource, $attribute, $groupIndex);
+            $previousItems = $this->previousPoiTrackItemsForGroup($resource, $attribute, $groupIndex);
             if ($previousItems !== null && $previousItems !== []) {
-                $normalizedItems = $this->fromGeoRepeaterItems($previousItems, $resource);
+                $normalizedItems = $this->fromPoiTrackRepeaterItems($previousItems, $resource);
             }
         }
 
         $element['items'] = ! empty($normalizedItems) ? $normalizedItems : [];
 
-        return $this->finalizeGeoElement($element);
+        return $this->finalizePoiTrackElement($element);
     }
 
     // -------------------------------------------------------------------------
@@ -394,10 +395,10 @@ class ConfigHomeResolver implements ResolverInterface
     }
 
     // -------------------------------------------------------------------------
-    // Geo repeater helpers
+    // Poi/Track repeater helpers
     // -------------------------------------------------------------------------
 
-    private function toGeoRepeaterItems(array $items): array
+    private function toPoiTrackRepeaterItems(array $items): array
     {
         return array_values(array_map(function ($item) {
             if (is_array($item) && isset($item['fields']) && is_array($item['fields'])) {
@@ -405,7 +406,7 @@ class ConfigHomeResolver implements ResolverInterface
             }
 
             return [
-                'type' => HorizontalScrollGeoItemRepeatable::key(),
+                'type' => HorizontalScrollPoiTrackItemRepeatable::key(),
                 'fields' => [
                     'poi_id' => $item['poi_id'] ?? null,
                     'track_id' => $item['track_id'] ?? null,
@@ -417,15 +418,15 @@ class ConfigHomeResolver implements ResolverInterface
     }
 
     /**
-     * Resolve `horizontal_scroll_geo` items against `EcPoi`/`EcTrack`, scoped to the App being saved so an
-     * item can never reference a record belonging to another app. `title`/`image_url` are inherited from
-     * the linked model (translatable `name`, first media of the default collection) when not specified as
-     * an override — same principle as `mergeItemTitle()` for taxonomy items, applied at save time because
+     * Resolve `horizontal_scroll_poi_track` items against `EcPoi`/`EcTrack`, scoped to the App being saved
+     * so an item can never reference a record belonging to another app. `title`/`image_url` are inherited
+     * from the linked model (translatable `name`, first media of the default collection) when not specified
+     * as an override — same principle as `mergeItemTitle()` for taxonomy items, applied at save time because
      * `AppConfigService::config_section_home()` reads the already-saved JSON without ever calling back into
      * this resolver. Rows with neither or both of `poi_id`/`track_id` filled, or referencing a record that
      * no longer exists (or belongs to another app), are discarded silently.
      */
-    private function fromGeoRepeaterItems($items, $resource): array
+    private function fromPoiTrackRepeaterItems($items, $resource): array
     {
         $items = $this->normalizeRepeaterInput($items);
 
@@ -438,7 +439,7 @@ class ConfigHomeResolver implements ResolverInterface
         $normalized = [];
 
         foreach ($items as $item) {
-            $fields = $this->extractGeoRepeaterFields($item);
+            $fields = $this->extractPoiTrackRepeaterFields($item);
 
             $hasPoi = ! empty($fields['poi_id'] ?? null);
             $hasTrack = ! empty($fields['track_id'] ?? null);
@@ -502,7 +503,7 @@ class ConfigHomeResolver implements ResolverInterface
         return $custom !== '' ? $custom : $defaultImage;
     }
 
-    private function extractGeoRepeaterFields($item): array
+    private function extractPoiTrackRepeaterFields($item): array
     {
         $item = $this->normalizeRepeaterInput($item);
 
@@ -559,7 +560,7 @@ class ConfigHomeResolver implements ResolverInterface
         ];
     }
 
-    private function finalizeGeoElement(array $element): array
+    private function finalizePoiTrackElement(array $element): array
     {
         $title = is_array($element['title'] ?? null)
             ? array_filter($element['title'], static fn ($v) => ! is_null($v) && $v !== '')
@@ -702,7 +703,7 @@ class ConfigHomeResolver implements ResolverInterface
         return is_array($items) && $items !== [] ? array_values($items) : null;
     }
 
-    private function previousGeoItemsForGroup($resource, string $attribute, int $groupIndex): ?array
+    private function previousPoiTrackItemsForGroup($resource, string $attribute, int $groupIndex): ?array
     {
         $value = is_object($resource) && method_exists($resource, 'getRawOriginal')
             ? $resource->getRawOriginal($attribute)

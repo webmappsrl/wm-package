@@ -1,5 +1,5 @@
 {
-    "name": "wm/geo-reference-field",
+    "name": "wm/poi-track-reference-field",
     "description": "A Laravel Nova field.",
     "keywords": [
         "laravel",
@@ -15,13 +15,13 @@
     },
     "repositories": [
         {
-            "type": "vcs",
-            "url": "https://github.com/laravel/nova-devtool"
+            "type": "composer",
+            "url": "https://nova.laravel.com"
         }
     ],
     "autoload": {
         "psr-4": {
-            "Wm\\WmPackage\\Nova\\Fields\\GeoReferenceField\\": "src/"
+            "Wm\\WmPackage\\Nova\\Fields\\PoiTrackReferenceField\\": "src/"
         }
     },
     "extra": {

@@ -8,11 +8,11 @@ use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Wm\WmPackage\Models\EcPoi as EcPoiModel;
 use Wm\WmPackage\Models\EcTrack as EcTrackModel;
-use Wm\WmPackage\Nova\Fields\GeoReferenceField\src\GeoReferenceField;
+use Wm\WmPackage\Nova\Fields\PoiTrackReferenceField\src\PoiTrackReferenceField;
 
 /**
- * Repeatable block for the `horizontal_scroll_geo` layout on `config_home`. Uses the custom
- * `GeoReferenceField` (Model toggle Poi/Track + a single search filtered client-side) instead of two
+ * Repeatable block for the `horizontal_scroll_poi_track` layout on `config_home`. Uses the custom
+ * `PoiTrackReferenceField` (Model toggle Poi/Track + a single search filtered client-side) instead of two
  * always-visible Select fields — `dependsOn()` does not work for fields nested this deep inside a
  * Flexible > Repeater > Repeatable (verified reading `vendor/laravel/nova/src/Http/Controllers/UpdateFieldController.php`),
  * so the conditional filtering the ticket asks for had to be built as a standalone Vue component instead.
@@ -21,11 +21,25 @@ use Wm\WmPackage\Nova\Fields\GeoReferenceField\src\GeoReferenceField;
  * mergeItemTitle()` already inherits it at save time when absent from the payload), it is never editable
  * from the builder.
  */
-class HorizontalScrollGeoItemRepeatable extends Repeatable
+class HorizontalScrollPoiTrackItemRepeatable extends Repeatable
 {
     public static function key(): string
     {
-        return 'horizontal-scroll-geo-item';
+        return 'horizontal-scroll-poi-track-item';
+    }
+
+    /**
+     * Overridden so the Nova "Add" button reuses the same label already shown for this box in the
+     * Flexible layout picker, instead of Nova's default (humanized class name).
+     */
+    public static function label(): string
+    {
+        return __('Horizontal Scroll Poi/Track');
+    }
+
+    public static function singularLabel(): string
+    {
+        return __('Horizontal Scroll Poi/Track');
     }
 
     /**
@@ -34,7 +48,7 @@ class HorizontalScrollGeoItemRepeatable extends Repeatable
     public function fields(NovaRequest $request): array
     {
         return [
-            GeoReferenceField::make(__('Model'), 'geo_ref')
+            PoiTrackReferenceField::make(__('Model'), 'model_ref')
                 ->poiOptions($this->modelOptions(EcPoiModel::class, $request->resourceId))
                 ->trackOptions($this->modelOptions(EcTrackModel::class, $request->resourceId))
                 ->help(__('Choose Poi or Track, then search among that model\'s records.'))

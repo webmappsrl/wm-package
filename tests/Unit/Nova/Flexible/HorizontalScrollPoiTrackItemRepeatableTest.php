@@ -9,11 +9,11 @@ use ReflectionMethod;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Models\EcTrack;
-use Wm\WmPackage\Nova\Fields\GeoReferenceField\src\GeoReferenceField;
-use Wm\WmPackage\Nova\Flexible\ConfigHome\HorizontalScrollGeoItemRepeatable;
+use Wm\WmPackage\Nova\Fields\PoiTrackReferenceField\src\PoiTrackReferenceField;
+use Wm\WmPackage\Nova\Flexible\ConfigHome\HorizontalScrollPoiTrackItemRepeatable;
 use Wm\WmPackage\Tests\TestCase;
 
-class HorizontalScrollGeoItemRepeatableTest extends TestCase
+class HorizontalScrollPoiTrackItemRepeatableTest extends TestCase
 {
     use DatabaseTransactions;
 
@@ -22,9 +22,9 @@ class HorizontalScrollGeoItemRepeatableTest extends TestCase
         return NovaRequest::create('/', 'GET', $appId !== null ? ['resourceId' => $appId] : []);
     }
 
-    private function geoReferenceField(array $fields): GeoReferenceField
+    private function poiTrackReferenceField(array $fields): PoiTrackReferenceField
     {
-        return collect($fields)->first(fn ($field) => $field instanceof GeoReferenceField);
+        return collect($fields)->first(fn ($field) => $field instanceof PoiTrackReferenceField);
     }
 
     private function titleField(array $fields): Text
@@ -48,8 +48,8 @@ class HorizontalScrollGeoItemRepeatableTest extends TestCase
         $ownPoi = EcPoi::factory()->createQuietly(['app_id' => $app->id]);
         EcPoi::factory()->createQuietly(['app_id' => $otherApp->id]);
 
-        $fields = (new HorizontalScrollGeoItemRepeatable)->fields($this->requestForApp($app->id));
-        $field = $this->geoReferenceField($fields);
+        $fields = (new HorizontalScrollPoiTrackItemRepeatable)->fields($this->requestForApp($app->id));
+        $field = $this->poiTrackReferenceField($fields);
 
         $this->assertArrayHasKey($ownPoi->id, $field->meta['poiOptions']);
         $this->assertCount(1, $field->meta['poiOptions']);
@@ -63,8 +63,8 @@ class HorizontalScrollGeoItemRepeatableTest extends TestCase
         $ownTrack = EcTrack::factory()->createQuietly(['app_id' => $app->id]);
         EcTrack::factory()->createQuietly(['app_id' => $otherApp->id]);
 
-        $fields = (new HorizontalScrollGeoItemRepeatable)->fields($this->requestForApp($app->id));
-        $field = $this->geoReferenceField($fields);
+        $fields = (new HorizontalScrollPoiTrackItemRepeatable)->fields($this->requestForApp($app->id));
+        $field = $this->poiTrackReferenceField($fields);
 
         $this->assertArrayHasKey($ownTrack->id, $field->meta['trackOptions']);
         $this->assertCount(1, $field->meta['trackOptions']);
@@ -75,8 +75,8 @@ class HorizontalScrollGeoItemRepeatableTest extends TestCase
         $app = App::factory()->createQuietly();
         EcPoi::factory()->createQuietly(['app_id' => $app->id]);
 
-        $fields = (new HorizontalScrollGeoItemRepeatable)->fields($this->requestForApp(null));
-        $field = $this->geoReferenceField($fields);
+        $fields = (new HorizontalScrollPoiTrackItemRepeatable)->fields($this->requestForApp(null));
+        $field = $this->poiTrackReferenceField($fields);
 
         $this->assertSame([], $field->meta['poiOptions']);
         $this->assertSame([], $field->meta['trackOptions']);
@@ -84,23 +84,23 @@ class HorizontalScrollGeoItemRepeatableTest extends TestCase
 
     public function test_model_field_has_updated_label(): void
     {
-        $fields = (new HorizontalScrollGeoItemRepeatable)->fields($this->requestForApp(null));
-        $field = $this->geoReferenceField($fields);
+        $fields = (new HorizontalScrollPoiTrackItemRepeatable)->fields($this->requestForApp(null));
+        $field = $this->poiTrackReferenceField($fields);
 
         $this->assertSame('Model', $field->name);
     }
 
     public function test_model_field_has_required_rule(): void
     {
-        $fields = (new HorizontalScrollGeoItemRepeatable)->fields($this->requestForApp(null));
-        $field = $this->geoReferenceField($fields);
+        $fields = (new HorizontalScrollPoiTrackItemRepeatable)->fields($this->requestForApp(null));
+        $field = $this->poiTrackReferenceField($fields);
 
         $this->assertContains('required', $field->rules);
     }
 
     public function test_title_field_is_readonly(): void
     {
-        $fields = (new HorizontalScrollGeoItemRepeatable)->fields($this->requestForApp(null));
+        $fields = (new HorizontalScrollPoiTrackItemRepeatable)->fields($this->requestForApp(null));
         $field = $this->titleField($fields);
 
         $this->assertTrue($field->isReadonly(NovaRequest::create('/', 'GET')));
@@ -108,7 +108,7 @@ class HorizontalScrollGeoItemRepeatableTest extends TestCase
 
     public function test_readonly_title_field_is_empty_for_new_item(): void
     {
-        $repeatable = new HorizontalScrollGeoItemRepeatable;
+        $repeatable = new HorizontalScrollPoiTrackItemRepeatable;
 
         $title = $this->callPrivateMethod($repeatable, 'resolveInheritedTitle', [['poi_id' => null, 'track_id' => null]]);
 
@@ -120,7 +120,7 @@ class HorizontalScrollGeoItemRepeatableTest extends TestCase
         $app = App::factory()->createQuietly();
         $poi = EcPoi::factory()->createQuietly(['app_id' => $app->id, 'name' => ['it' => 'Fonte Sacra', 'en' => 'Sacred Spring']]);
 
-        $repeatable = new HorizontalScrollGeoItemRepeatable;
+        $repeatable = new HorizontalScrollPoiTrackItemRepeatable;
         $title = $this->callPrivateMethod($repeatable, 'resolveInheritedTitle', [['poi_id' => $poi->id, 'track_id' => null]]);
 
         $this->assertSame('Fonte Sacra', $title);
@@ -131,7 +131,7 @@ class HorizontalScrollGeoItemRepeatableTest extends TestCase
         $app = App::factory()->createQuietly();
         $poi = EcPoi::factory()->createQuietly(['app_id' => $app->id, 'name' => ['fr' => 'Source Sacrée']]);
 
-        $repeatable = new HorizontalScrollGeoItemRepeatable;
+        $repeatable = new HorizontalScrollPoiTrackItemRepeatable;
         $title = $this->callPrivateMethod($repeatable, 'resolveInheritedTitle', [['poi_id' => $poi->id, 'track_id' => null]]);
 
         $this->assertSame('Source Sacrée', $title);
@@ -142,7 +142,7 @@ class HorizontalScrollGeoItemRepeatableTest extends TestCase
         $app = App::factory()->createQuietly();
         $track = EcTrack::factory()->createQuietly(['app_id' => $app->id, 'name' => ['en' => 'Ridge Trail']]);
 
-        $repeatable = new HorizontalScrollGeoItemRepeatable;
+        $repeatable = new HorizontalScrollPoiTrackItemRepeatable;
         $title = $this->callPrivateMethod($repeatable, 'resolveInheritedTitle', [['poi_id' => null, 'track_id' => $track->id]]);
 
         $this->assertSame('Ridge Trail', $title);
@@ -153,8 +153,8 @@ class HorizontalScrollGeoItemRepeatableTest extends TestCase
         $app = App::factory()->createQuietly();
         EcPoi::factory()->createQuietly(['app_id' => $app->id, 'name' => ['es' => 'Fuente Sagrada']]);
 
-        $fields = (new HorizontalScrollGeoItemRepeatable)->fields($this->requestForApp($app->id));
-        $field = $this->geoReferenceField($fields);
+        $fields = (new HorizontalScrollPoiTrackItemRepeatable)->fields($this->requestForApp($app->id));
+        $field = $this->poiTrackReferenceField($fields);
 
         $this->assertContains('Fuente Sagrada', $field->meta['poiOptions']);
     }

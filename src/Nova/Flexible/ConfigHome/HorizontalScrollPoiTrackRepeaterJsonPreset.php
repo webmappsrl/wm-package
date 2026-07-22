@@ -10,12 +10,12 @@ use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Support\Fluent;
 
 /**
- * JSON preset for the `items` Repeater on the `config_home` `horizontal_scroll_geo` layout.
+ * JSON preset for the `items` Repeater on the `config_home` `horizontal_scroll_poi_track` layout.
  *
  * Normalizes Whitecube Flexible layout attributes (Collection, JSON string, or saved config rows with
  * `title`/`image_url`/`poi_id`/`track_id`) into Nova repeater blocks `{ type, fields }`.
  */
-class HorizontalScrollGeoRepeaterJsonPreset extends JSON
+class HorizontalScrollPoiTrackRepeaterJsonPreset extends JSON
 {
     /**
      * @param  Model|Fluent|object|array  $model
@@ -43,6 +43,10 @@ class HorizontalScrollGeoRepeaterJsonPreset extends JSON
      */
     private function extractRawItems($model, string $attribute): mixed
     {
+        if (is_array($model)) {
+            return $model[$attribute] ?? null;
+        }
+
         if (! is_object($model)) {
             return null;
         }
@@ -105,7 +109,7 @@ class HorizontalScrollGeoRepeaterJsonPreset extends JSON
             return [];
         }
 
-        $typeKey = HorizontalScrollGeoItemRepeatable::key();
+        $typeKey = HorizontalScrollPoiTrackItemRepeatable::key();
         $blocks = [];
 
         foreach ($rows as $row) {
@@ -131,7 +135,7 @@ class HorizontalScrollGeoRepeaterJsonPreset extends JSON
 
                 $blocks[] = [
                     'type' => $blockType,
-                    'fields' => $this->geoRepeaterFieldsFromRow($fields, $row),
+                    'fields' => $this->poiTrackRepeaterFieldsFromRow($fields, $row),
                 ];
 
                 continue;
@@ -139,7 +143,7 @@ class HorizontalScrollGeoRepeaterJsonPreset extends JSON
 
             $blocks[] = [
                 'type' => $typeKey,
-                'fields' => $this->geoRepeaterFieldsFromRow($row, $row),
+                'fields' => $this->poiTrackRepeaterFieldsFromRow($row, $row),
             ];
         }
 
@@ -151,7 +155,7 @@ class HorizontalScrollGeoRepeaterJsonPreset extends JSON
      * @param  array<string, mixed>  $row  Full row (fallback source)
      * @return array<string, mixed>
      */
-    private function geoRepeaterFieldsFromRow(array $fieldSource, array $row): array
+    private function poiTrackRepeaterFieldsFromRow(array $fieldSource, array $row): array
     {
         $customTitle = is_array($fieldSource['title'] ?? null) ? $fieldSource['title'] : [];
         $rowTitle = is_array($row['title'] ?? null) ? $row['title'] : [];
