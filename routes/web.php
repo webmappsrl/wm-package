@@ -7,6 +7,7 @@ use Wm\WmPackage\Http\Controllers\ImportController;
 use Wm\WmPackage\Http\Controllers\OsmImportReportController;
 use Wm\WmPackage\Http\Controllers\RankingController;
 use Wm\WmPackage\Http\Controllers\RestoreDbController;
+use Wm\WmPackage\Http\Controllers\ShareUgcTrackController;
 
 Route::get('/download-export/{fileName}', [ExportDownloadController::class, 'download'])
     ->name('download.export')
@@ -24,6 +25,14 @@ Route::post('/restore-db', [RestoreDbController::class, 'restore'])
 
 Route::get('/top-ten/{app}', [RankingController::class, 'showTopTen'])->name('top-ten');
 Route::get('/user-ranking/{app}/{user}', [RankingController::class, 'showUserRanking'])->name('user-ranking');
+
+/*
+ * Public (unauthenticated) OG-unfurling landing page for a shared UgcTrack (oc:8183, third
+ * revision). Not `{app}`-prefixed on purpose: the uuid alone resolves both the track and
+ * (internally, for the "app_name" already frozen in properties.share_snapshot) its owning
+ * app — see ShareUgcTrackController.
+ */
+Route::get('/share/ugc-track/{uuid}', [ShareUgcTrackController::class, 'show'])->name('share.ugc-track');
 
 // TODO: Use A middleware to switch the language
 // Route::get('language/{locale}', function ($locale) {

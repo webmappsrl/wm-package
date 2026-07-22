@@ -139,6 +139,13 @@ class AppConfigService extends AppBaseService
         if ($this->app->getMedia('my_downloads')->isNotEmpty()) {
             $data['APP']['myDownloads'] = $this->app->getFirstMediaUrl('my_downloads');
         }
+        // share_frame is NOT for direct client-side use: it is only consumed indirectly by
+        // POST /api/share-story-image (oc:8183), which resolves it server-side from the
+        // authenticated user's app. Exposed here for parity with the other branding assets
+        // and in case a future client needs to preview/reference it.
+        if ($this->app->getMedia('share_frame')->isNotEmpty()) {
+            $data['APP']['shareFrame'] = $this->app->getFirstMediaUrl('share_frame');
+        }
 
         if (isset($properties['min_app_version']) && trim((string) $properties['min_app_version']) !== '') {
             $data['APP']['minAppVersion'] = $properties['min_app_version'];
@@ -764,6 +771,9 @@ class AppConfigService extends AppBaseService
         // Ensure "new" options come from properties and are never overwritten by track_technical_details.
         $properties = $this->app->properties ?? [];
         $data['OPTIONS']['showTravelMode'] = (bool) ($properties['show_travel_mode'] ?? false);
+        // oc:8183 — gates the "Share" button on recorded UGC tracks in the app; default false/absent
+        // means the button stays hidden, zero impact on shards that don't opt in.
+        $data['OPTIONS']['ugcTrackShareEnabled'] = (bool) ($properties['ugc_track_share_enabled'] ?? false);
         $data['OPTIONS']['showFeaturesInViewport'] = (bool) ($properties['show_features_in_viewport'] ?? false);
         $data['OPTIONS']['minZoomFeaturesInViewport'] = (int) ($properties['min_zoom_features_in_viewport'] ?? 10);
         $data['OPTIONS']['maxZoomFeaturesInViewport'] = (int) ($properties['max_zoom_features_in_viewport'] ?? 12);
