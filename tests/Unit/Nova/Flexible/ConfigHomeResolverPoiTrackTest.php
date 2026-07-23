@@ -4,7 +4,6 @@ namespace Wm\WmPackage\Tests\Unit\Nova\Flexible;
 
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
-use ReflectionMethod;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Models\EcTrack;
@@ -15,14 +14,6 @@ use Wm\WmPackage\Tests\TestCase;
 class ConfigHomeResolverPoiTrackTest extends TestCase
 {
     use DatabaseTransactions;
-
-    private function callPrivateMethod(object $object, string $method, array $args = []): mixed
-    {
-        $reflection = new ReflectionMethod($object, $method);
-        $reflection->setAccessible(true);
-
-        return $reflection->invokeArgs($object, $args);
-    }
 
     private function repeaterRow(array $fields): array
     {
@@ -272,5 +263,25 @@ class ConfigHomeResolverPoiTrackTest extends TestCase
         $result = $this->callPrivateMethod(new ConfigHomeResolver, 'previousPoiTrackItemsForGroup', [$app, 'config_home', 0]);
 
         $this->assertNull($result);
+    }
+
+    public function test_finalize_poi_track_element_omits_title_key_when_empty(): void
+    {
+        $result = $this->callPrivateMethod(new ConfigHomeResolver, 'finalizePoiTrackElement', [
+            ['title' => [], 'items' => []],
+        ]);
+
+        $this->assertArrayNotHasKey('title', $result);
+        $this->assertSame('base', $result['box_type']);
+    }
+
+    public function test_finalize_poi_track_element_preserves_title_key_when_present(): void
+    {
+        $result = $this->callPrivateMethod(new ConfigHomeResolver, 'finalizePoiTrackElement', [
+            ['title' => ['it' => 'Legacy title'], 'items' => []],
+        ]);
+
+        $this->assertArrayHasKey('title', $result);
+        $this->assertSame('Legacy title', $result['title']['it']);
     }
 }

@@ -193,3 +193,45 @@ Riferimento: `overview.md` sezione "Revisione 9". Innescato da un confronto dire
 
 - Verificare se lo stesso disallineamento (`required: true` sul Title condiviso) si applica anche ad Activities/POI Types rispetto all'uso reale GeoHub — non richiesto in questo ciclo
 - Tutti i follow-up delle revisioni 7-8 restano invariati (test package su DB isolato, ticket separati per bug 1/2 tassonomie e per `wmtrans` in wm-core)
+
+## Revisione 10 — Aggiunti i test di regressione mancanti (2026-07-23)
+
+Riferimento: re-review (`wm-review-ticket`) di Rubens Garofalo sui commit `0d2ecb10`/`90f24924` — 4 finder su 5 hanno segnalato indipendentemente l'assenza di test permanenti per i tre bug fix della revisione 8 e la rimozione del Title della revisione 9 (verificati finora solo con reflection ad-hoc, poi cancellata).
+
+### Cosa cambia
+
+- `tests/Unit/Nova/Flexible/ConfigHomeResolverPoiTrackTest.php`: +2 test per `finalizePoiTrackElement()` (omissione/preservazione chiave `title`)
+- `tests/Unit/Nova/Flexible/HorizontalScrollPoiTrackRepeaterJsonPresetTest.php` (nuovo): 4 test per `extractRawItems()` — array (path Detail), oggetto Fluent (path form edit), chiave assente, valore non array/oggetto
+- `tests/Unit/Nova/Traits/HasFlexibleTranslatableFieldsTest.php` (nuovo): 4 test per `HasFlexibleTranslatableFields` — `readonlyKeys()`, filtro chiavi non valide in `resolveUsing()`, preservazione chiavi valide, fallback su default
+- `tests/Unit/Nova/AppConfigHomePoiTrackLayoutTest.php` (nuovo): 2 test strutturali — il layout Poi/Track ha 1 solo field (nessun Title), il Repeater ha `showOnDetail()` attivo
+
+### Verifica
+
+- `php -l`, Pint puliti su tutti i file
+- **Non eseguiti contro il DB reale** (stesso limite ambientale delle revisioni precedenti — nessun DB isolato `wm_package`): la logica di ogni test replica esattamente le chiamate reflection già verificate manualmente durante il debug delle revisioni 8/9, ma non è stata confermata da un'esecuzione reale della suite
+
+### Follow-up rimasti aperti
+
+- Eseguire l'intera suite (inclusi questi nuovi test) in un ambiente con DB `wm_package` isolato, prima del merge — invariato dalle revisioni precedenti, ora più urgente perché i nuovi test non sono mai stati eseguiti
+- Tutti gli altri follow-up delle revisioni 7-9 restano invariati
+
+## Revisione 11 — Cleanup da re-review (2026-07-23)
+
+Riferimento: seconda re-review (`wm-review-ticket`) sui cambiamenti non committati della revisione 10 — nessun bloccante, solo finding cleanup, tutti applicati.
+
+### Cosa cambia
+
+- **Documentati nel codice** (non solo nei markdown, come segnalato dalla review — lacuna rispetto alla prassi delle revisioni 1-9): 4 docblock in `src/Nova/App.php` (`horizontal_scroll_activities_layout()`, `horizontal_scroll_poi_types_layout()`, `horizontal_scroll_poi_track_layout()`, `horizontalScrollItemsRepeater()`) e 1 in `HorizontalScrollRepeaterJsonPreset::extractRawItems()` — spiegano perché il box Poi/Track non ha più un Title obbligatorio (design legittimo: per Activities/POI Types il titolo descrive una collezione tematica ed è realmente necessario, per Poi/Track è una lista di riferimenti singoli senza bisogno di intestazione, come in GeoHub) e segnalano i due bug noti non corretti nel box a tassonomie, con riferimento diretto al fix analogo già fatto sul box Poi/Track.
+- **Docblock corretto**: `HorizontalScrollRepeaterJsonPreset::extractRawItems()` non dice più che il fallback "errors" su un array — in realtà PHP genera solo un warning e il repeater risulta vuoto, non un'eccezione.
+- **Docblock sfrondati**: rimossi tutti i riferimenti a "revisione N"/"oc:8241" dal codice — restano descrizioni tecniche autosufficienti, con rimando a `CLAUDE.md` per il contesto storico invece di duplicarlo.
+- **`callPrivateMethod()` centralizzato**: rimosso da 5 file di test (4 con implementazione identica già committata/tracciata + `PoiTrackReferenceFieldTest.php`, che aveva la stessa cosa sotto il nome `callProtectedMethod`, individuato solo in un secondo giro di review) a un unico metodo protetto su `Wm\WmPackage\Tests\TestCase` (la classe base di tutti i test del package).
+- **Magic string eliminata**: `HorizontalScrollPoiTrackRepeaterJsonPresetTest.php` usa ora `HorizontalScrollPoiTrackItemRepeatable::key()` invece della stringa letterale `'horizontal-scroll-poi-track-item'`, coerente con l'altro file di test che già usava la costante.
+
+### Decisioni
+
+- **Non toccati**: il confronto `Fluent` vs `Layout` reale nel test dell'oggetto (`HorizontalScrollPoiTrackRepeaterJsonPresetTest::test_extract_raw_items_reads_from_object_model`) e la dimensione della classe `ConfigHomeResolverPoiTrackTest` (287 righe/18 test) — segnalati dalla review come cleanup minori ma di valore marginale rispetto al costo del cambiamento, lasciati come sono.
+
+### Verifica
+
+- `php -l`, Pint puliti su tutti i file toccati
+- Nessuna modifica di comportamento — solo documentazione e refactoring dei test (nessun assert cambiato)

@@ -240,3 +240,19 @@ L'utente ha condiviso un `config_home` reale e funzionante prodotto da GeoHub: `
 
 - Migrazione dei record già salvati con un `title` sul box Poi/Track (es. i dati di test "Vivi Lama" con `{"it":"titolo it",...}`) — resta in DB finché quel gruppo non viene risalvato in Nova, a quel punto la chiave `title` viene automaticamente omessa
 - Rimozione dello stesso Title "obbligatorio" sugli altri box `horizontal_scroll_*` (Activities, POI Types) — stesso possibile disallineamento con GeoHub, non verificato né richiesto in questo ciclo
+
+## Revisione 10 — Test di regressione per i fix delle revisioni 8-9 (2026-07-23)
+
+Una re-review (`wm-review-ticket`) sui commit `0d2ecb10`/`90f24924` ha segnalato, in modo indipendente da 4 finder su 5, l'assenza di test permanenti per i tre bug fix della revisione 8 e la rimozione del Title della revisione 9 — verificati solo con reflection ad-hoc durante il debug, poi cancellata.
+
+### Cosa cambia (revisione 10)
+
+- `ConfigHomeResolverPoiTrackTest.php`: +2 test per `finalizePoiTrackElement()` (omissione/preservazione `title`)
+- `HorizontalScrollPoiTrackRepeaterJsonPresetTest.php` (nuovo): `extractRawItems()` con array (path Detail) e oggetto (path form edit)
+- `HasFlexibleTranslatableFieldsTest.php` (nuovo): `readonlyKeys()` + filtro chiavi non valide in `resolveUsing()`
+- `AppConfigHomePoiTrackLayoutTest.php` (nuovo): struttura layout senza Title + `showOnDetail()` sul Repeater
+
+### Verifica (revisione 10)
+
+- `php -l`, Pint puliti
+- **Non eseguiti contro il DB reale** — stesso limite ambientale delle revisioni precedenti (nessun DB isolato `wm_package`); la logica replica le chiamate reflection già verificate manualmente nelle revisioni 8-9, ma la suite non è mai stata eseguita end-to-end in questo ciclo

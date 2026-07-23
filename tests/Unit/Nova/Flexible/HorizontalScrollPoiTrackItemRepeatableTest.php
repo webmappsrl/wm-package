@@ -5,7 +5,6 @@ namespace Wm\WmPackage\Tests\Unit\Nova\Flexible;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
-use ReflectionMethod;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Models\EcTrack;
@@ -30,14 +29,6 @@ class HorizontalScrollPoiTrackItemRepeatableTest extends TestCase
     private function titleField(array $fields): Text
     {
         return collect($fields)->first(fn ($field) => $field instanceof Text && $field->attribute === 'title');
-    }
-
-    private function callPrivateMethod(object $object, string $method, array $args = []): mixed
-    {
-        $reflection = new ReflectionMethod($object, $method);
-        $reflection->setAccessible(true);
-
-        return $reflection->invokeArgs($object, $args);
     }
 
     public function test_poi_options_are_scoped_to_the_current_app(): void

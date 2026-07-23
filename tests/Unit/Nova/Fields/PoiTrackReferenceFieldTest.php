@@ -4,25 +4,16 @@ namespace Wm\WmPackage\Tests\Unit\Nova\Fields;
 
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Support\Fluent;
-use ReflectionMethod;
 use Wm\WmPackage\Nova\Fields\PoiTrackReferenceField\src\PoiTrackReferenceField;
 use Wm\WmPackage\Tests\TestCase;
 
 class PoiTrackReferenceFieldTest extends TestCase
 {
-    private function callProtectedMethod(object $object, string $method, array $args = []): mixed
-    {
-        $reflection = new ReflectionMethod($object, $method);
-        $reflection->setAccessible(true);
-
-        return $reflection->invokeArgs($object, $args);
-    }
-
     public function test_resolve_attribute_returns_track_type_when_track_id_is_set(): void
     {
         $field = PoiTrackReferenceField::make('Reference', 'model_ref');
 
-        $result = $this->callProtectedMethod($field, 'resolveAttribute', [
+        $result = $this->callPrivateMethod($field, 'resolveAttribute', [
             ['poi_id' => null, 'track_id' => 7],
             'model_ref',
         ]);
@@ -34,7 +25,7 @@ class PoiTrackReferenceFieldTest extends TestCase
     {
         $field = PoiTrackReferenceField::make('Reference', 'model_ref');
 
-        $result = $this->callProtectedMethod($field, 'resolveAttribute', [
+        $result = $this->callPrivateMethod($field, 'resolveAttribute', [
             ['poi_id' => 12, 'track_id' => null],
             'model_ref',
         ]);
@@ -46,7 +37,7 @@ class PoiTrackReferenceFieldTest extends TestCase
     {
         $field = PoiTrackReferenceField::make('Reference', 'model_ref');
 
-        $result = $this->callProtectedMethod($field, 'resolveAttribute', [
+        $result = $this->callPrivateMethod($field, 'resolveAttribute', [
             ['poi_id' => null, 'track_id' => null],
             'model_ref',
         ]);
@@ -63,7 +54,7 @@ class PoiTrackReferenceFieldTest extends TestCase
             'model_ref' => json_encode(['type' => 'poi', 'id' => 9]),
         ]);
 
-        $this->callProtectedMethod($field, 'fillAttributeFromRequest', [$request, 'model_ref', $model, 'model_ref']);
+        $this->callPrivateMethod($field, 'fillAttributeFromRequest', [$request, 'model_ref', $model, 'model_ref']);
 
         $this->assertSame(9, $model->poi_id);
         $this->assertNull($model->track_id);
@@ -78,7 +69,7 @@ class PoiTrackReferenceFieldTest extends TestCase
             'model_ref' => json_encode(['type' => 'track', 'id' => 4]),
         ]);
 
-        $this->callProtectedMethod($field, 'fillAttributeFromRequest', [$request, 'model_ref', $model, 'model_ref']);
+        $this->callPrivateMethod($field, 'fillAttributeFromRequest', [$request, 'model_ref', $model, 'model_ref']);
 
         $this->assertSame(4, $model->track_id);
         $this->assertNull($model->poi_id);
@@ -93,7 +84,7 @@ class PoiTrackReferenceFieldTest extends TestCase
             'model_ref' => json_encode(['type' => null, 'id' => null]),
         ]);
 
-        $this->callProtectedMethod($field, 'fillAttributeFromRequest', [$request, 'model_ref', $model, 'model_ref']);
+        $this->callPrivateMethod($field, 'fillAttributeFromRequest', [$request, 'model_ref', $model, 'model_ref']);
 
         $this->assertNull($model->poi_id);
         $this->assertNull($model->track_id);

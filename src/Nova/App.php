@@ -865,6 +865,11 @@ class App extends Resource
         return $this->config_home_title_layout();
     }
 
+    /**
+     * Title is required here: this box shows a themed collection of items (an activity, a POI type) and
+     * needs a heading to explain what the collection is about. Unlike `horizontal_scroll_poi_track_layout()`
+     * below, this is not something to "align" — the two boxes have genuinely different needs.
+     */
     protected function horizontal_scroll_activities_layout(): array
     {
         $fields = $this->config_home_title_layout();
@@ -875,6 +880,9 @@ class App extends Resource
         return $fields;
     }
 
+    /**
+     * Title is required here, same reasoning as `horizontal_scroll_activities_layout()` above.
+     */
     protected function horizontal_scroll_poi_types_layout(): array
     {
         $fields = $this->config_home_title_layout();
@@ -885,6 +893,12 @@ class App extends Resource
         return $fields;
     }
 
+    /**
+     * No Title field here, unlike the taxonomy layouts above — this box shows individually picked Poi/Track
+     * references, not a themed collection, so it doesn't need a heading of its own. Confirmed against a real
+     * production `config_home` from GeoHub: `box_type: "base"` never carries a `title` key there; section
+     * headings are separate sibling `title` boxes instead. See `wm-package/CLAUDE.md` for full context.
+     */
     protected function horizontal_scroll_poi_track_layout(): array
     {
         return [
@@ -894,6 +908,11 @@ class App extends Resource
 
     /**
      * JSON preset for config_home horizontal scroll layouts: reliable hydration of `items` from the Whitecube layout.
+     *
+     * KNOWN BUG, not fixed here: missing `->showOnDetail()` — Nova's Repeater defaults to `onlyOnForms()`,
+     * a custom preset doesn't re-enable it like `->asJson()` would, so "Items" never shows on the Detail page
+     * for this box. Fixed on the sibling Poi/Track box in `horizontalScrollPoiTrackItemsRepeater()` — apply
+     * the same `->showOnDetail()` fix here too if/when this box gets the same treatment.
      */
     protected function horizontalScrollItemsRepeater(HorizontalScrollItemRepeatable $repeatable): Repeater
     {

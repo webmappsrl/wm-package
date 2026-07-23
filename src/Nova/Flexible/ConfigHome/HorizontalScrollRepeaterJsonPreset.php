@@ -45,6 +45,13 @@ class HorizontalScrollRepeaterJsonPreset extends JSON
     /**
      * Read the raw `items` from layout attributes or accessors (same source as the Flexible layout).
      *
+     * KNOWN BUG, not fixed here: `Layout::resolveForDisplay()` (Detail page) passes a plain array here, not
+     * the Layout object — `is_object($model)` returns false and this method returns null, falling through
+     * to Nova's core JSON preset, which then silently renders an empty repeater ("Items" never shows on the
+     * Detail page for this box; PHP raises a warning, not an exception). Fixed on the sibling Poi/Track
+     * preset in `HorizontalScrollPoiTrackRepeaterJsonPreset::extractRawItems()` by adding an `is_array($model)`
+     * branch — apply the same fix here too if/when this box gets the same treatment.
+     *
      * @param  object|array  $model
      */
     private function extractRawItems($model, string $attribute): mixed
