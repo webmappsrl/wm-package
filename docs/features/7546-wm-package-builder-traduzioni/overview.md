@@ -34,6 +34,7 @@ Le traduzioni di contenuto di un'app (mostrate agli utenti finali via `config.js
 - [ ] **[aggiunto in revisione, mitigazione rischio blast radius]** Bottone "Scarica traduzioni attuali" (per lingua o per l'intero set), disponibile prima di un import — serializza lo stato corrente come file JSON scaricabile, per dare una via di rollback manuale ora che l'editing diretto del JSON grezzo non è più possibile
 - [ ] Persistenza: aggiornamento standard Eloquent sulle colonne `translations_it`/`translations_en` di `App` — nessuna scrittura su file, nessun problema di commit/submodule (confermato: non sono coinvolti file del filesystem)
 - [ ] **[aggiunto in revisione, upgrade da test manuale ad automatico]** Test Feature che simula un salvataggio Nova reale (richiesta verso `nova-api` con payload del campo) e verifica che `AppConfigService::config_section_translations()` rifletta i valori salvati — chiude il gap descritto nei Rischi sotto
+- [ ] **[aggiunto in `wm-skills:wm-review-ticket`, 2026-07-23]** Azione "Elimina" per una chiave di traduzione — rimuove la chiave da **tutte** le lingue gestite in un'unica azione (coerente con la propagazione multi-lingua dell'aggiunta), disponibile dal modale di modifica (click su una riga esistente), con conferma esplicita (`window.confirm`) essendo un'operazione distruttiva senza undo. Corregge la decisione "Out of scope" della prima stesura di questo documento: in uso reale, senza questa azione, ogni chiave inserita per errore o obsoleta resta cruft permanente removibile solo intervenendo sul DB.
 
 ## Rischi
 
@@ -52,7 +53,6 @@ I due punti inizialmente sollevati (lingue fisse a DB, rimozione dei field `Code
 - Estensione dello schema `App` a colonne `translations_<lang>` oltre `it`/`en` — il parametro `langs` predispone il componente ma non introduce nuove colonne in questo ciclo.
 - Editing manuale della sintassi JSON grezza — i field `Code::make()` esistenti vengono rimossi/sostituiti: la gestione passa esclusivamente dal componente (ricerca/aggiungi/modifica/carica file), per design esplicito del ticket. Il caricamento di un file JSON resta disponibile in qualsiasi momento (non solo all'inizializzazione, vedi correzione in testa al documento e Requisiti) ma sempre tramite il componente, mai editando a mano la stringa JSON.
 - Automazione del trigger di rigenerazione `config.json` — il meccanismo (`AppObserver::saved()`) resta invariato; viene corretto solo il bug interno di `config_section_translations()` (vedi Requisiti), non il meccanismo di trigger.
-- Azione di **eliminazione** di una chiave di traduzione — il brief e la call menzionano solo ricerca/aggiungi/modifica; una chiave obsoleta resta come cruft in entrambi i JSON, rimovibile solo con intervento diretto sul DB. Gap noto, non richiesto esplicitamente in questo ciclo.
 - Filament — non utilizzato in questo progetto (refuso nel brief iniziale, confermato che si tratta di Nova).
 
 ## Moduli toccati

@@ -99,9 +99,13 @@
                 </div>
               </div>
 
-              <div class="flex justify-end bg-gray-50 border-t border-gray-100" style="padding: 20px; gap: 8px">
-                <Button variant="secondary" @click="closeForm">Annulla</Button>
-                <Button variant="primary" @click="submitForm">Salva</Button>
+              <div class="flex items-center justify-between bg-gray-50 border-t border-gray-100" style="padding: 20px">
+                <Button v-if="isEditingExistingKey" variant="danger" @click="deleteKey(formKey)">Elimina</Button>
+                <div v-else></div>
+                <div class="flex justify-end" style="gap: 8px">
+                  <Button variant="secondary" @click="closeForm">Annulla</Button>
+                  <Button variant="primary" @click="submitForm">Salva</Button>
+                </div>
               </div>
             </div>
           </div>
@@ -219,6 +223,27 @@ export default {
 
     keyExists(key) {
       return this.langs.some(lang => Object.prototype.hasOwnProperty.call(this.state[lang] || {}, key))
+    },
+
+    /**
+     * Unico punto di cancellazione dallo stato in memoria, simmetrico a
+     * upsertTranslation(): rimuove la chiave da tutte le lingue gestite in
+     * un'unica azione, coerente con la propagazione multi-lingua dell'aggiunta.
+     */
+    deleteTranslation(key) {
+      this.langs.forEach(lang => {
+        if (this.state[lang]) {
+          delete this.state[lang][key]
+        }
+      })
+    },
+
+    deleteKey(key) {
+      if (!window.confirm(`Eliminare la chiave "${key}" da tutte le lingue? L'operazione non è reversibile dall'interfaccia.`)) {
+        return
+      }
+      this.deleteTranslation(key)
+      this.showForm = false
     },
 
     openAddForm() {

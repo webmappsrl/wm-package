@@ -26,6 +26,9 @@ const VARIANTS = {
     'shadow bg-primary-500 border-primary-500 text-white hover:bg-primary-400 hover:border-primary-400',
   secondary: 'bg-transparent border-transparent text-gray-600 hover:bg-gray-100',
   outline: 'bg-white border-gray-200 text-gray-600 hover:text-primary-500',
+  // Stesse classi del bottone "danger" nativo di Nova (useButtonStyles.ts),
+  // garantite presenti nel CSS compilato perché Nova le usa nei propri modali di eliminazione.
+  danger: 'shadow bg-red-500 border-red-500 text-white hover:bg-red-400 hover:border-red-400',
 }
 
 export default {
