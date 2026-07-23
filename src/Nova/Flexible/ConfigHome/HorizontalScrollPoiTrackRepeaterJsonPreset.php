@@ -4,24 +4,20 @@ namespace Wm\WmPackage\Nova\Flexible\ConfigHome;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Config;
 use Laravel\Nova\Fields\Repeater\Presets\JSON;
 use Laravel\Nova\Fields\Repeater\RepeatableCollection;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Support\Fluent;
 
 /**
- * JSON preset for the `items` Repeater on `config_home` horizontal-scroll layouts.
+ * JSON preset for the `items` Repeater on the `config_home` `horizontal_scroll_poi_track` layout.
  *
  * Normalizes Whitecube Flexible layout attributes (Collection, JSON string, or saved config rows with
- * `title` / `res` / `image_url`) into Nova repeater blocks `{ type, fields }`. Other `config_home` layouts
- * do not use a Repeater.
+ * `title`/`image_url`/`poi_id`/`track_id`) into Nova repeater blocks `{ type, fields }`.
  */
-class HorizontalScrollRepeaterJsonPreset extends JSON
+class HorizontalScrollPoiTrackRepeaterJsonPreset extends JSON
 {
     /**
-     * Hydrate the repeater from the model (Flexible layout) attributes.
-     *
      * @param  Model|Fluent|object|array  $model
      */
     public function get(NovaRequest $request, $model, string $attribute, RepeatableCollection $repeatables): Collection
@@ -43,19 +39,14 @@ class HorizontalScrollRepeaterJsonPreset extends JSON
     }
 
     /**
-     * Read the raw `items` from layout attributes or accessors (same source as the Flexible layout).
-     *
-     * KNOWN BUG, not fixed here: `Layout::resolveForDisplay()` (Detail page) passes a plain array here, not
-     * the Layout object — `is_object($model)` returns false and this method returns null, falling through
-     * to Nova's core JSON preset, which then silently renders an empty repeater ("Items" never shows on the
-     * Detail page for this box; PHP raises a warning, not an exception). Fixed on the sibling Poi/Track
-     * preset in `HorizontalScrollPoiTrackRepeaterJsonPreset::extractRawItems()` by adding an `is_array($model)`
-     * branch — apply the same fix here too if/when this box gets the same treatment.
-     *
      * @param  object|array  $model
      */
     private function extractRawItems($model, string $attribute): mixed
     {
+        if (is_array($model)) {
+            return $model[$attribute] ?? null;
+        }
+
         if (! is_object($model)) {
             return null;
         }
@@ -118,7 +109,7 @@ class HorizontalScrollRepeaterJsonPreset extends JSON
             return [];
         }
 
-        $typeKey = HorizontalScrollItemRepeatable::key();
+        $typeKey = HorizontalScrollPoiTrackItemRepeatable::key();
         $blocks = [];
 
         foreach ($rows as $row) {
@@ -144,7 +135,7 @@ class HorizontalScrollRepeaterJsonPreset extends JSON
 
                 $blocks[] = [
                     'type' => $blockType,
-                    'fields' => $this->horizontalScrollRepeaterFieldsFromRow($fields, $row),
+                    'fields' => $this->poiTrackRepeaterFieldsFromRow($fields, $row),
                 ];
 
                 continue;
@@ -152,7 +143,7 @@ class HorizontalScrollRepeaterJsonPreset extends JSON
 
             $blocks[] = [
                 'type' => $typeKey,
-                'fields' => $this->horizontalScrollRepeaterFieldsFromRow($row, $row),
+                'fields' => $this->poiTrackRepeaterFieldsFromRow($row, $row),
             ];
         }
 
@@ -161,18 +152,19 @@ class HorizontalScrollRepeaterJsonPreset extends JSON
 
     /**
      * @param  array<string, mixed>  $fieldSource  Nova repeater `fields` or flat saved row
-     * @param  array<string, mixed>  $row  Full row (for `title` object from config JSON)
+     * @param  array<string, mixed>  $row  Full row (fallback source)
      * @return array<string, mixed>
      */
-    private function horizontalScrollRepeaterFieldsFromRow(array $fieldSource, array $row): array
+    private function poiTrackRepeaterFieldsFromRow(array $fieldSource, array $row): array
     {
         $customTitle = is_array($fieldSource['title'] ?? null) ? $fieldSource['title'] : [];
         $rowTitle = is_array($row['title'] ?? null) ? $row['title'] : [];
         $title = array_merge($rowTitle, array_filter($customTitle, fn ($v) => $v !== null && $v !== ''));
 
         return [
-            'res' => $fieldSource['res'] ?? null,
-            'image_url' => $fieldSource['image_url'] ?? null,
+            'poi_id' => $fieldSource['poi_id'] ?? $row['poi_id'] ?? null,
+            'track_id' => $fieldSource['track_id'] ?? $row['track_id'] ?? null,
+            'image_url' => $fieldSource['image_url'] ?? $row['image_url'] ?? null,
             'title' => $title,
         ];
     }

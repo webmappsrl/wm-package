@@ -41,6 +41,8 @@ use Wm\WmPackage\Nova\Fields\BboxField\BboxField;
 use Wm\WmPackage\Nova\Fields\OrderList\src\OrderList;
 use Wm\WmPackage\Nova\Fields\StoreVersionField;
 use Wm\WmPackage\Nova\Flexible\ConfigHome\HorizontalScrollItemRepeatable;
+use Wm\WmPackage\Nova\Flexible\ConfigHome\HorizontalScrollPoiTrackItemRepeatable;
+use Wm\WmPackage\Nova\Flexible\ConfigHome\HorizontalScrollPoiTrackRepeaterJsonPreset;
 use Wm\WmPackage\Nova\Flexible\ConfigHome\HorizontalScrollRepeaterJsonPreset;
 use Wm\WmPackage\Nova\Flexible\Resolvers\ConfigHomeResolver;
 use Wm\WmPackage\Nova\Flexible\Resolvers\ConfigOverlaysResolver;
@@ -613,6 +615,7 @@ class App extends Resource
                 ->addLayout('Titolo', 'title', $this->title_layout())
                 ->addLayout(__('Horizontal Scroll Activities'), 'horizontal_scroll_activities', $this->horizontal_scroll_activities_layout())
                 ->addLayout(__('Horizontal Scroll POI Types'), 'horizontal_scroll_poi_types', $this->horizontal_scroll_poi_types_layout())
+                ->addLayout(__('Horizontal Scroll Poi/Track'), 'horizontal_scroll_poi_track', $this->horizontal_scroll_poi_track_layout())
                 ->addLayout('Layer', 'layer', $this->layer_layout())
                 ->addLayout('Slug', 'slug', $this->slug_layout())
                 ->addLayout('External URL', 'external_url', $this->external_url_layout())
@@ -862,6 +865,11 @@ class App extends Resource
         return $this->config_home_title_layout();
     }
 
+    /**
+     * Title is required here: this box shows a themed collection of items (an activity, a POI type) and
+     * needs a heading to explain what the collection is about. Unlike `horizontal_scroll_poi_track_layout()`
+     * below, this is not something to "align" — the two boxes have genuinely different needs.
+     */
     protected function horizontal_scroll_activities_layout(): array
     {
         $fields = $this->config_home_title_layout();
@@ -872,6 +880,9 @@ class App extends Resource
         return $fields;
     }
 
+    /**
+     * Title is required here, same reasoning as `horizontal_scroll_activities_layout()` above.
+     */
     protected function horizontal_scroll_poi_types_layout(): array
     {
         $fields = $this->config_home_title_layout();
@@ -883,7 +894,25 @@ class App extends Resource
     }
 
     /**
+     * No Title field here, unlike the taxonomy layouts above — this box shows individually picked Poi/Track
+     * references, not a themed collection, so it doesn't need a heading of its own. Confirmed against a real
+     * production `config_home` from GeoHub: `box_type: "base"` never carries a `title` key there; section
+     * headings are separate sibling `title` boxes instead. See `wm-package/CLAUDE.md` for full context.
+     */
+    protected function horizontal_scroll_poi_track_layout(): array
+    {
+        return [
+            $this->horizontalScrollPoiTrackItemsRepeater(),
+        ];
+    }
+
+    /**
      * JSON preset for config_home horizontal scroll layouts: reliable hydration of `items` from the Whitecube layout.
+     *
+     * KNOWN BUG, not fixed here: missing `->showOnDetail()` — Nova's Repeater defaults to `onlyOnForms()`,
+     * a custom preset doesn't re-enable it like `->asJson()` would, so "Items" never shows on the Detail page
+     * for this box. Fixed on the sibling Poi/Track box in `horizontalScrollPoiTrackItemsRepeater()` — apply
+     * the same `->showOnDetail()` fix here too if/when this box gets the same treatment.
      */
     protected function horizontalScrollItemsRepeater(HorizontalScrollItemRepeatable $repeatable): Repeater
     {
@@ -935,6 +964,20 @@ class App extends Resource
         return (string) $fallback;
     }
 
+    /**
+     * JSON preset for the config_home Poi/Track horizontal scroll layout: reliable hydration of `items` from
+     * the Whitecube layout. Each item is a Poi or a Track — see `HorizontalScrollPoiTrackItemRepeatable`.
+     */
+    protected function horizontalScrollPoiTrackItemsRepeater(): Repeater
+    {
+        return Repeater::make(__('Items'), 'items')
+            ->repeatables([HorizontalScrollPoiTrackItemRepeatable::make()])
+            ->preset(new HorizontalScrollPoiTrackRepeaterJsonPreset)
+            ->rules('required', 'array')
+            ->help(__('Add one or more items — each can be a Poi or a Track.'))
+            ->showOnDetail();
+    }
+
     protected function slug_layout(): array
     {
         return array_merge($this->config_home_title_layout(), [
@@ -958,15 +1001,6 @@ class App extends Resource
     protected function config_home_title_layout(): array
     {
         return $this->translatableFields('Title', 'title', required: true);
-    }
-
-    protected function base_layout(): array
-    {
-        return [
-            Text::make('Title', 'title')->rules('required'),
-            Text::make('Url', 'url')->rules('required'),
-            // TODO: Items è un array, dove ogni elemento ha un titolo un image_url e un track_id (o poi_id)
-        ];
     }
 
     protected function layer_layout(): array

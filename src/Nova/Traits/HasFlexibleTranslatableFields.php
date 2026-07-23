@@ -17,13 +17,16 @@ trait HasFlexibleTranslatableFields
             ->valueLabel('Traduzione')
             ->disableAddingRows()
             ->disableDeletingRows()
+            ->disableEditingKeys()
             ->default($default)
             ->resolveUsing(function ($value) use ($default) {
                 if (empty($value)) {
                     return $default;
                 }
 
-                return array_merge($default, is_array($value) ? $value : []);
+                $valid = is_array($value) ? array_intersect_key($value, $default) : [];
+
+                return array_merge($default, $valid);
             });
 
         if ($required) {

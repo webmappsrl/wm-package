@@ -6,6 +6,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Maatwebsite\Excel\ExcelServiceProvider;
 use Orchestra\Testbench\Attributes\WithMigration;
 use Orchestra\Testbench\TestCase as Orchestra;
+use ReflectionMethod;
 use Tymon\JWTAuth\Providers\LaravelServiceProvider;
 use Wm\WmPackage\WmPackageServiceProvider;
 
@@ -15,6 +16,14 @@ use function Orchestra\Testbench\artisan;
 class TestCase extends Orchestra
 {
     use RefreshDatabase;
+
+    protected function callPrivateMethod(object $object, string $method, array $args = []): mixed
+    {
+        $reflection = new ReflectionMethod($object, $method);
+        $reflection->setAccessible(true);
+
+        return $reflection->invokeArgs($object, $args);
+    }
 
     protected function getPackageProviders($app)
     {
