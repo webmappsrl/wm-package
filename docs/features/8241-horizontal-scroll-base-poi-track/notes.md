@@ -131,3 +131,65 @@ Riferimento: `overview.md` sezione "Revisione 7". Innescato da feedback diretto 
 
 - Eseguire la suite di test del package (`ConfigHomeResolverPoiTrackTest`, `HorizontalScrollPoiTrackItemRepeatableTest`, `PoiTrackReferenceFieldTest`) in un ambiente con DB `wm_package` isolato, prima del merge
 - Verifica manuale in browser del rename (invariato dal limite già noto delle revisioni precedenti)
+
+## Revisione 8 — Fix Detail view + salvataggio Title (2026-07-23)
+
+Riferimento: `overview.md` sezione "Revisione 8". Innescato dal test manuale dell'utente subito dopo revisione 7 (commit `0d2ecb10`): pagina Detail vuota, poi errore di salvataggio sul titolo del box.
+
+### Deviazioni dal piano
+
+- Nessun piano formale scritto, stesso pattern di revisione 7 (fix interattivi durante il test dell'utente, non un ciclo wm-plan completo).
+
+### Bug trovati
+
+- **Bug 1 (preesistente, dal round 1 della feature)**: `Repeater::make()->preset(new ...)` senza `->showOnDetail()` — Nova nasconde il field da index/detail per default (`onlyOnForms()` nel costruttore), un preset custom non lo riattiva come farebbe `->asJson()`. Il repeater "Elementi" non è mai stato visibile in Detail per NESSUN box `horizontal_scroll_*`, da quando la feature esiste — non solo Poi/Track. Fix applicato solo a `horizontalScrollPoiTrackItemsRepeater()` (scope oc:8241); lo stesso bug sul box a tassonomie (`horizontalScrollItemsRepeater()`) resta non corretto, segnalato all'utente per ticket separato.
+- **Bug 2 (preesistente, dal round 3 — introduzione originale del box Poi/Track, commit `87eb29ad`)**: `HorizontalScrollGeoRepeaterJsonPreset::extractRawItems()` (ora `HorizontalScrollPoiTrackRepeaterJsonPreset`) faceva `if (! is_object($model)) return null;` — ma `Layout::resolveForDisplay()` (Detail) passa un array semplice, non l'oggetto Layout (solo `Layout::resolve()`, usato dal form edit, passa l'oggetto). Bug 1 mascherava completamente questo bug (codice mai eseguito). Scoperto e risolto solo perché il fix del bug 1 ha esposto il crash reale (`ErrorException` 500, non solo un warning silenzioso). Stesso identico bug presente in `HorizontalScrollRepeaterJsonPreset` (tassonomie) — non corretto, segnalato.
+- **Bug 3 (preesistente, condiviso da tutti i box tramite `HasFlexibleTranslatableFields`, non specifico a Poi/Track)**: il campo `KeyValue` per il titolo del box aveva la colonna delle chiavi (it/en/fr/es/de) editabile, senza alcuna label/guida (`keyLabel('')`) — l'admin può facilmente sovrascrivere il codice lingua stesso digitando nella riga, producendo `{"testo digitato": "testo digitato"}` invece di `{"it": "testo digitato"}`. Riprodotto al 100% simulando la richiesta di salvataggio reale con dati puliti (`{it: 'titolo it', en: 'titolo en', ...}` inviati come array nativo invece che come stringa JSON — dettaglio tecnico: `KeyValue::fillAttributeFromRequest()` fa sempre `json_decode($request[$attr], true)`, quindi il valore deve arrivare come stringa JSON, coerente con come lo serializza il componente Vue del browser). Effetto collaterale aggravante: `resolveUsing()` esistente (`array_merge($default, $value)`) manteneva la chiave estranea per sempre a ogni ricarico del form.
+
+### Decisioni
+
+- **Non ho corretto i bug 1 e 2 sul box a tassonomie originale**: stesso identico codice (`HorizontalScrollItemRepeatable`/`HorizontalScrollRepeaterJsonPreset`), mai toccato da oc:8241, fuori scope del ticket — segnalato esplicitamente all'utente, in attesa di decisione se aprire un ticket separato.
+- **Verifica del contratto frontend prima di concludere sul bug 3**: letto `wm-core` (clone locale temporaneo, poi rimosso) per confermare che `title` del box `base` deve essere un oggetto per-lingua (`iLocalString`, letto tramite pipe `wmtrans`) — stesso principio già applicato in revisione 6 per `box_type`. In questa verifica è emerso un **bug separato nel frontend**: `FeaturesBoxComponent` (che renderizza il box `base`) fa `{{title}}` senza la pipe `wmtrans`, a differenza del box gemello `box_type: 'title'` in `home-landing.component.html` (`{{box.title|wmtrans}}`) — quindi anche con il titolo salvato correttamente in tutte le lingue, l'app mostrerebbe oggi l'oggetto non tradotto. File: `wm-core/projects/wm-core/src/box/features-box/features-box.component.html`. Non risolto (repo/pipeline di deploy diversi), segnalato all'utente.
+- **Geohub non è il riferimento per l'admin builder**: verificato (clone locale temporaneo) che `geohub` non ha un builder Nova per `config_home` — usa uno schema più vecchio con chiave `view` invece di `box_type`, e legge `config_home` già salvato senza mai costruirlo via UI. Non rilevante per capire il bug del Title, utile solo per escludere che ci fosse un pattern di riferimento da riusare.
+
+### Verifica
+
+- Bug 1+2: riprodotti e verificati con un test HTTP reale (richiesta autenticata a `/nova-api/apps/{id}`), status 500→200 dopo il fix, 3 item recuperati correttamente. Test temporaneo cancellato dopo la verifica (non fa parte della suite permanente).
+- Bug 3: riprodotto con lo stesso approccio (richiesta di salvataggio reale simulata), confermato il pattern chiave=valore; fix verificato via reflection (`readonlyKeys()` → `true`, `resolveUsing()` scarta chiavi non valide preservando quelle valide).
+- `php -l`, Pint puliti su tutti i file toccati in questo round.
+- **Non ho potuto verificare il comportamento reale del blocco chiavi (`disableEditingKeys`) in un browser** — è un comportamento client-side, la mia verifica si limita a confermare che il flag è attivo lato server (`readonlyKeys() === true`); la conferma finale è quella dell'utente in Nova.
+
+### Follow-up rimasti aperti
+
+- Decidere se aprire un ticket separato per i bug 1 e 2 sul box a tassonomie (Activities/POI Types)
+- Decidere se/come segnalare il bug `wmtrans` mancante in `wm-core`/`FeaturesBoxComponent` (repo e pipeline di deploy diversi da wm-package)
+- Eseguire la suite di test del package (inclusi i nuovi fix di questo round) in un ambiente con DB `wm_package` isolato, prima del merge — invariato dal follow-up di revisione 7
+
+## Revisione 9 — Rimosso il Title del box, allineato a GeoHub (2026-07-23)
+
+Riferimento: `overview.md` sezione "Revisione 9". Innescato da un confronto diretto con l'utente: un `config_home` reale prodotto da GeoHub (funzionante in produzione) non ha mai la chiave `title` sul box `box_type: "base"` — le intestazioni sono box `title` separati, non un campo proprio del box `base`.
+
+### Deviazioni dal piano
+
+- Nessun piano formale, stesso pattern interattivo delle revisioni 7-8.
+
+### Bug trovati
+
+- **Disallineamento con l'uso reale (non un bug di codice in senso stretto, ma un vincolo di validazione sbagliato)**: `config_home_title_layout()` (condiviso da tutti i box `horizontal_scroll_*`) imposta `required: true` sul Title del box — l'admin non poteva salvare un box Poi/Track senza titolo, mentre GeoHub lo omette sempre. Spiega parte della difficoltà nei test di revisione 8 (l'admin cercava di "far funzionare" un campo che nell'uso reale non dovrebbe nemmeno esistere per questo box).
+
+### Decisioni
+
+- **Rimosso il campo, non solo `required`**: l'utente ha chiesto esplicitamente di rimuovere il Title "completamente", non di renderlo opzionale — per allinearsi esattamente al pattern GeoHub (nessuna chiave `title` nel JSON, non una chiave vuota). `horizontal_scroll_poi_track_layout()` non chiama più `config_home_title_layout()`; `finalizePoiTrackElement()` omette la chiave `title` dal risultato quando vuota, invece di scrivere sempre `"title": {}`.
+- **Scope limitato al box Poi/Track**: `config_home_title_layout()` resta invariato per gli altri box (`title` box_type, Activities, POI Types) — non toccato, stesso confine "fuori scope" già mantenuto nelle revisioni 8 per i bug 1/2. Il possibile stesso disallineamento su quei box non è stato verificato.
+- **Retrocompatibilità sui dati legacy**: `finalizePoiTrackElement()` preserva la chiave `title` se un record ha già un titolo salvato (es. i dati di test "Vivi Lama") — si autopulisce al prossimo salvataggio di quel gruppo in Nova, nessuna migration necessaria.
+
+### Verifica
+
+- Verificato via reflection: `horizontal_scroll_poi_track_layout()` → 1 field (`Repeater|items`), nessun `KeyValue|title`
+- Verificato via reflection: `finalizePoiTrackElement()` con title vuoto → chiave assente; con title legacy non vuoto → chiave preservata
+- `php -l`, Pint puliti
+
+### Follow-up rimasti aperti
+
+- Verificare se lo stesso disallineamento (`required: true` sul Title condiviso) si applica anche ad Activities/POI Types rispetto all'uso reale GeoHub — non richiesto in questo ciclo
+- Tutti i follow-up delle revisioni 7-8 restano invariati (test package su DB isolato, ticket separati per bug 1/2 tassonomie e per `wmtrans` in wm-core)

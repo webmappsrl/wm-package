@@ -887,9 +887,9 @@ class App extends Resource
 
     protected function horizontal_scroll_poi_track_layout(): array
     {
-        return array_merge($this->config_home_title_layout(), [
+        return [
             $this->horizontalScrollPoiTrackItemsRepeater(),
-        ]);
+        ];
     }
 
     /**

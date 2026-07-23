@@ -574,11 +574,16 @@ class ConfigHomeResolver implements ResolverInterface
             return $row;
         }, is_array($element['items'] ?? null) ? $element['items'] : []));
 
-        return [
+        $result = [
             'box_type' => 'base',
-            'title' => $title,
             'items' => $items,
         ];
+
+        if ($title !== []) {
+            $result['title'] = $title;
+        }
+
+        return $result;
     }
 
     // -------------------------------------------------------------------------
