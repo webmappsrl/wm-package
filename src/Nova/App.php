@@ -40,6 +40,7 @@ use Wm\WmPackage\Nova\Cards\ApiLinksCard\AppApiLinksCard;
 use Wm\WmPackage\Nova\Fields\BboxField\BboxField;
 use Wm\WmPackage\Nova\Fields\OrderList\src\OrderList;
 use Wm\WmPackage\Nova\Fields\StoreVersionField;
+use Wm\WmPackage\Nova\Fields\TranslationsBuilder\TranslationsBuilder;
 use Wm\WmPackage\Nova\Flexible\ConfigHome\HorizontalScrollItemRepeatable;
 use Wm\WmPackage\Nova\Flexible\ConfigHome\HorizontalScrollPoiTrackItemRepeatable;
 use Wm\WmPackage\Nova\Flexible\ConfigHome\HorizontalScrollPoiTrackRepeaterJsonPreset;
@@ -491,16 +492,9 @@ class App extends Resource
     protected function translations_tab(): array
     {
         return [
-            Code::make(__('Italian Translations'), 'translations_it')
-                ->language('json')
-                ->rules('nullable', 'json')
-                ->hideFromIndex()
-                ->help(__('Enter the Italian translations in JSON format here')),
-            Code::make(__('English Translations'), 'translations_en')
-                ->language('json')
-                ->rules('nullable', 'json')
-                ->hideFromIndex()
-                ->help(__('Enter the English translations in JSON format here')),
+            TranslationsBuilder::make(__('Translations'), 'translations_builder')
+                ->langs(['it', 'en'])
+                ->hideFromIndex(),
         ];
     }
 

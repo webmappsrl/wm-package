@@ -180,10 +180,10 @@ class AppConfigService extends AppBaseService
         $data = [];
         $data['TRANSLATIONS'] = [];
         if (! is_null($this->app->translations_it)) {
-            $data['TRANSLATIONS']['it'] = json_decode($this->app->translations_it, true);
+            $data['TRANSLATIONS']['it'] = $this->app->translations_it;
         }
         if (! is_null($this->app->translations_en)) {
-            $data['TRANSLATIONS']['en'] = json_decode($this->app->translations_en, true);
+            $data['TRANSLATIONS']['en'] = $this->app->translations_en;
         }
 
         return $data;
