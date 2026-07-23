@@ -2,8 +2,10 @@
 
 namespace Wm\WmPackage\Nova\Fields\TranslationsBuilder;
 
+use Illuminate\Database\Eloquent\Model;
 use Laravel\Nova\Fields\Field;
 use Laravel\Nova\Http\Requests\NovaRequest;
+use Laravel\Nova\Support\Fluent;
 
 class TranslationsBuilder extends Field
 {
@@ -27,7 +29,7 @@ class TranslationsBuilder extends Field
     /**
      * Resolve the field's value.
      *
-     * @param  \Illuminate\Database\Eloquent\Model|object  $resource
+     * @param  Model|object  $resource
      */
     public function resolve($resource, ?string $attribute = null): void
     {
@@ -47,7 +49,7 @@ class TranslationsBuilder extends Field
     /**
      * Hydrate the given attribute on the model based on the incoming request.
      *
-     * @param  \Illuminate\Database\Eloquent\Model|\Laravel\Nova\Support\Fluent  $model
+     * @param  Model|Fluent  $model
      */
     protected function fillAttributeFromRequest(NovaRequest $request, string $requestAttribute, object $model, string $attribute): void
     {
