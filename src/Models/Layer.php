@@ -3,6 +3,7 @@
 namespace Wm\WmPackage\Models;
 
 use App\Models\User;
+use ChristianKuri\LaravelFavorite\Traits\Favoriteable;
 use Exception;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -22,7 +23,7 @@ use Wm\WmPackage\Traits\TaxonomyWhereAbleModel;
 
 class Layer extends Polygon
 {
-    use FeatureCollectionMapTrait, HasPackageFactory, HasTranslations, NormalizesHexColor, TaxonomyAbleModel, TaxonomyWhereAbleModel;
+    use Favoriteable, FeatureCollectionMapTrait, HasPackageFactory, HasTranslations, NormalizesHexColor, TaxonomyAbleModel, TaxonomyWhereAbleModel;
 
     public $timestamps = false;
 

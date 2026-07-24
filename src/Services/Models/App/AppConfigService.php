@@ -742,7 +742,7 @@ class AppConfigService extends AppBaseService
         $data['OPTIONS']['download_track_enable'] = $this->app->download_track_enable;
         $data['OPTIONS']['print_track_enable'] = $this->app->print_track_enable;
         $data['OPTIONS']['show_searchbar'] = $this->app->show_search;
-        $data['OPTIONS']['show_favorites'] = $this->app->show_favorites;
+        $data['OPTIONS']['showFavorites'] = (bool) ($this->app->properties['show_favorites'] ?? false);
         $data['OPTIONS']['show_scale'] = $this->app->table_details_show_scale;
         $data['OPTIONS']['showGpxDownload'] = $this->app->table_details_show_gpx_download;
         $data['OPTIONS']['showKmlDownload'] = $this->app->table_details_show_kml_download;
