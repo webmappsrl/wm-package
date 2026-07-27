@@ -266,6 +266,12 @@ git add database/migrations/ && git commit
 4. Gap sul DB → `publish-migration <stub>` o `publish-missing-migrations` + `migrate` + commit
 5. File identico committato ma non migrato → `php artisan migrate`
 
+### Debug: "perché esiste questo ruolo/permesso nel DB?"
+
+Se un ruolo o permesso Spatie (es. `access-nova`, aggiunto per oc:8231/oc:8161) risulta presente nel DB e non è chiaro da dove arrivi, **verificare prima la tabella `migrations`** (`select * from migrations where migration like '%<nome>%'`, con batch e timestamp) — è quasi sempre una migration stub di questo package (`database/migrations/zz_*` nel consumer), non un side-effect di job applicativi.
+
+`RolesAndPermissionsService::seedDatabase()` è chiamato da `GeohubImportService` **solo come fallback dentro un `if (! $role)`** — in un DB maturo con ruoli già presenti quel branch non scatta praticamente mai. Non presumere che un import GeoHub (anche periodico) sia la fonte di un ruolo/permesso nuovo senza aver letto il guard che lo circonda.
+
 ## Documentazione
 
 La documentazione delle feature va in `docs/resources/`.
