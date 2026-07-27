@@ -11,6 +11,7 @@ use Wm\WmPackage\Http\Controllers\Api\EcPoiController;
 use Wm\WmPackage\Http\Controllers\Api\EcTrackController;
 use Wm\WmPackage\Http\Controllers\Api\EditorialContentController;
 use Wm\WmPackage\Http\Controllers\Api\ElasticsearchController;
+use Wm\WmPackage\Http\Controllers\Api\LayerFavoriteController;
 use Wm\WmPackage\Http\Controllers\Api\MediaController;
 use Wm\WmPackage\Http\Controllers\Api\ShareStoryImageController;
 use Wm\WmPackage\Http\Controllers\Api\UgcPoiController;
@@ -147,6 +148,20 @@ Route::name('api.')->group(function () {
             Route::get('/{id}.kml', [EditorialContentController::class, 'viewEcKml'])->name('view.kml');
             Route::get('/{ecTrack}', [EcTrackController::class, 'getGeojson'])->name('json');
         });
+    });
+
+    /**
+     * Layer favorites (oc:8176) — no app_id scoping/ownership check, same as ec/track/favorite
+     * above: Layer<->App, not Layer<->User, per explicit developer decision.
+     */
+    Route::prefix('layer')->name('layer.')->group(function () {
+        Route::middleware('auth:api')
+            ->prefix('favorite')->name('favorite.')->group(function () {
+                Route::post('/add/{layer}', [LayerFavoriteController::class, 'addFavorite'])->name('add');
+                Route::post('/remove/{layer}', [LayerFavoriteController::class, 'removeFavorite'])->name('remove');
+                Route::post('/toggle/{layer}', [LayerFavoriteController::class, 'toggleFavorite'])->name('toggle');
+                Route::get('/list', [LayerFavoriteController::class, 'list'])->name('list');
+            });
     });
 
     Route::post('search', [WebmappAppController::class, 'search'])->name('search');
