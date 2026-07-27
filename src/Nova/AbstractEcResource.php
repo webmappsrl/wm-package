@@ -50,6 +50,35 @@ abstract class AbstractEcResource extends AbstractGeometryResource
     }
 
     /**
+     * Shared Tiptap toolbar configuration for EC resources (EcPoi, EcTrack).
+     *
+     * Same button set as PropertiesPanel::tiptapButtons() / App::tiptapButtons(),
+     * kept in sync manually (no shared base class between Nova\Fields\PropertiesPanel and Nova resources).
+     */
+    protected function tiptapButtons(): array
+    {
+        return [
+            'heading',
+            '|',
+            'bold',
+            'italic',
+            'underline',
+            '|',
+            'bulletList',
+            'orderedList',
+            '|',
+            'link',
+            'image',
+            '|',
+            'textAlign',
+            '|',
+            'horizontalRule',
+            '|',
+            'editHtml',
+        ];
+    }
+
+    /**
      * Shared Accessibility fields for EC resources (EcPoi, EcTrack).
      *
      * These fields are stored as flat keys under the JSONB `properties` column

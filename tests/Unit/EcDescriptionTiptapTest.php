@@ -7,12 +7,16 @@ use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
+use Kongulov\NovaTabTranslatable\NovaTabTranslatable;
+use Marshmallow\Tiptap\Tiptap;
 use ReflectionMethod;
 use Wm\WmPackage\Models\App as AppModel;
 use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Nova\App as NovaAppResource;
+use Wm\WmPackage\Nova\EcPoi as NovaEcPoi;
+use Wm\WmPackage\Nova\EcTrack as NovaEcTrack;
 use Wm\WmPackage\Nova\Fields\PropertiesPanel;
 use Wm\WmPackage\Tests\TestCase;
 
@@ -38,16 +42,14 @@ class EcDescriptionTiptapTest extends TestCase
         Queue::fake();
     }
 
-    public function test_wm_schemas_expose_description_as_translatable_tiptap_for_track_poi_and_layer(): void
+    public function test_wm_schemas_no_longer_expose_description_for_track_and_poi_but_still_for_layer(): void
     {
         $trackDesc = collect(config('wm-ec-track-schema.properties.fields'))->firstWhere('name', 'description');
         $poiDesc = collect(config('wm-ec-poi-schema.properties.fields'))->firstWhere('name', 'description');
         $layerDesc = collect(config('wm-layer-schema.properties.fields'))->firstWhere('name', 'description');
 
-        $this->assertSame('tiptap', $trackDesc['type']);
-        $this->assertTrue($trackDesc['translatable']);
-        $this->assertSame('tiptap', $poiDesc['type']);
-        $this->assertTrue($poiDesc['translatable']);
+        $this->assertNull($trackDesc);
+        $this->assertNull($poiDesc);
         $this->assertSame('tiptap', $layerDesc['type']);
         $this->assertTrue($layerDesc['translatable']);
     }
@@ -141,5 +143,57 @@ class EcDescriptionTiptapTest extends TestCase
         $layer->refresh();
 
         $this->assertSame($plain, $layer->getTranslation('properties->description', 'it'));
+    }
+
+    public function test_ec_poi_info_tab_exposes_translatable_tiptap_description_field(): void
+    {
+        $ecPoi = new NovaEcPoi(new EcPoi);
+
+        $translatable = collect($ecPoi->getInfoTabFields())
+            ->first(fn ($field) => $field instanceof NovaTabTranslatable);
+
+        $this->assertNotNull($translatable);
+
+        $tiptapField = $translatable->originalFields[0];
+        $this->assertInstanceOf(Tiptap::class, $tiptapField);
+        $this->assertSame('properties->description', $tiptapField->attribute);
+    }
+
+    public function test_ec_track_info_tab_exposes_translatable_tiptap_description_field(): void
+    {
+        $ecTrack = new NovaEcTrack(new EcTrack);
+
+        $translatable = collect($ecTrack->getInfoTabFields())
+            ->filter(fn ($field) => $field instanceof NovaTabTranslatable)
+            ->first(function ($field) {
+                return collect($field->originalFields)
+                    ->contains(fn ($inner) => $inner->attribute === 'properties->description');
+            });
+
+        $this->assertNotNull($translatable);
+
+        $tiptapField = collect($translatable->originalFields)
+            ->first(fn ($inner) => $inner->attribute === 'properties->description');
+        $this->assertInstanceOf(Tiptap::class, $tiptapField);
+    }
+
+    public function test_properties_panel_does_not_error_when_ec_poi_schema_has_no_fields(): void
+    {
+        $app = AppModel::factory()->createQuietly();
+        $geojson = json_encode([
+            'type' => 'Point',
+            'coordinates' => [9.0, 40.0, 10.0],
+        ]);
+
+        $poi = EcPoi::query()->createQuietly([
+            'app_id' => $app->id,
+            'name' => ['it' => 'POI test panel vuoto', 'en' => 'POI test empty panel'],
+            'geometry' => DB::raw("ST_GeomFromGeoJSON('{$geojson}')"),
+            'properties' => ['contact_email' => 'test@example.com'],
+        ]);
+
+        $panel = PropertiesPanel::makeWithModel(__('Properties'), 'properties', $poi, true);
+
+        $this->assertEmpty($panel->data);
     }
 }

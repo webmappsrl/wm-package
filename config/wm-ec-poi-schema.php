@@ -6,17 +6,6 @@ return [
             'it' => 'Proprietà POI',
             'en' => 'POI Properties',
         ],
-        'fields' => [
-            [
-                'name' => 'description',
-                'type' => 'tiptap',
-                'required' => false,
-                'translatable' => true,
-                'label' => [
-                    'it' => 'Descrizione',
-                    'en' => 'Description',
-                ],
-            ],
-        ],
+        'fields' => [],
     ],
 ];

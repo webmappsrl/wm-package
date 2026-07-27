@@ -8,16 +8,6 @@ return [
         ],
         'fields' => [
             [
-                'name' => 'description',
-                'type' => 'tiptap',
-                'required' => false,
-                'translatable' => true,
-                'label' => [
-                    'it' => 'Descrizione',
-                    'en' => 'Description',
-                ],
-            ],
-            [
                 'name' => 'excerpt',
                 'type' => 'textarea',
                 'required' => false,
