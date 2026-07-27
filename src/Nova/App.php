@@ -416,6 +416,10 @@ class App extends Resource
                 ->default(false)
                 ->hideFromIndex()
                 ->help(__('Shows the "Share" button on recorded UGC tracks (Instagram/Facebook Stories). Upload a Story frame image in the Release tab for branded compositing; falls back to an unbranded image otherwise.')),
+            Boolean::make(__('Show favorites'), 'properties->show_favorites')
+                ->default(false)
+                ->hideFromIndex()
+                ->help(__('Activate to show the favorite heart on layers and the "My favorites" section')),
 
             Tab::make('FEwebapp', $this->webapp_tab()),
             Tab::make('FE: mobile', $this->mobile_tab()),
