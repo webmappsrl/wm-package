@@ -9,6 +9,7 @@ use Laravel\Nova\Fields\MorphToMany;
 use Laravel\Nova\Fields\Textarea;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Tabs\Tab;
+use Marshmallow\Tiptap\Tiptap;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
 use Wm\WmPackage\Jobs\UpdateModelWithGeometryTaxonomyWhere;
 use Wm\WmPackage\Nova\Actions\DownloadEcTrackAction;
@@ -119,6 +120,11 @@ class EcTrack extends AbstractEcResource
     public function getInfoTabFields(): array
     {
         return [
+            NovaTabTranslatable::make([
+                Tiptap::make(__('Description'), 'properties->description')
+                    ->buttons($this->tiptapButtons())
+                    ->headingLevels([2, 3, 4]),
+            ]),
             Boolean::make('Not Accessible', 'properties->not_accessible')
                 ->help('Enable this option to indicate that the track is not accessible. The reason can be specified below.'),
             NovaTabTranslatable::make([

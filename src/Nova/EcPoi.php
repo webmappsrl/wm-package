@@ -2,6 +2,7 @@
 
 namespace Wm\WmPackage\Nova;
 
+use Kongulov\NovaTabTranslatable\NovaTabTranslatable;
 use Laravel\Nova\Actions\Action;
 use Laravel\Nova\Fields\BelongsToMany;
 use Laravel\Nova\Fields\Boolean;
@@ -10,6 +11,7 @@ use Laravel\Nova\Fields\MorphToMany;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Tabs\Tab;
+use Marshmallow\Tiptap\Tiptap;
 use Wm\WmPackage\Nova\Actions\DownloadEcPoiAction;
 use Wm\WmPackage\Nova\Actions\ExecuteEcPoiDataChainAction;
 use Wm\WmPackage\Nova\Actions\TranslateModelAction;
@@ -71,6 +73,11 @@ class EcPoi extends AbstractEcResource
     public function getInfoTabFields(): array
     {
         return [
+            NovaTabTranslatable::make([
+                Tiptap::make(__('Description'), 'properties->description')
+                    ->buttons($this->tiptapButtons())
+                    ->headingLevels([2, 3, 4]),
+            ]),
             Text::make(__('Contact email'), 'properties->contact_email'),
             Text::make(__('Contact phone'), 'properties->contact_phone'),
             Text::make(__('Opening hours'), 'properties->opening_hours'),
