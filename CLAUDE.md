@@ -187,8 +187,15 @@ protected static function newFactory(): Factory
 | Comandi migration stub wm-package | oc:8218 | `src/Commands/WmPackage{PublishMigration,PublishMissingMigrations}Command.php`, `src/Commands/Concerns/InteractsWithWmPackageMigrationStubs.php` | Stub obbligatori. CI: `publish-missing-migrations --dry-run`. Dev: `publish-missing-migrations` / `publish-migration`. Suffisso file non basta |
 | Toggle QR code deep link + well-known registry | oc:8251 | `src/Models/App.php`, `src/Nova/App.php`, `src/Nova/EcTrack.php`, `src/Nova/EcPoi.php`, `src/Services/WellKnownRegistryService.php`, `src/Observers/AppObserver.php`, `config/wm-package.php`, `config/wm-filesystems.php` | Toggle `native_app_deep_link_enabled` per app (rinominato da `qr_code_deep_link_enabled` in corso d'opera) + field QR/deep-link su Track/Poi (Nova Field, non Action) + sync automatico file well-known (apple-app-site-association/assetlinks.json) via SFTP |
 | Condivisione percorso su Instagram/Facebook Stories | oc:8183 | `src/Models/App.php`, `src/Nova/App.php`, `src/Services/Models/App/AppConfigService.php`, `src/Http/Controllers/Api/ShareStoryImageController.php`, `src/Services/Models/StoryShare/{StoryImageLayout,StoryShareImageService}.php`, `routes/api.php` | Media collection `story_frame` su App (Nova upload); endpoint stateless `POST /api/share-story-image` deriva l'app da `UgcTrack` (uuid) con ownership check, mai da parametro client; compositing 1080x1920 via intervention/image |
+| Preferiti layer (backend) | oc:8176 | `src/Models/Layer.php`, `src/Http/Controllers/Api/LayerFavoriteController.php` (nuovo), `routes/api.php`, `src/Services/Models/App/AppConfigService.php`, `src/Nova/App.php` | Trait `Favoriteable` mirror di EcTrack; endpoint `layer/favorite/{add,remove,toggle,list}`; flag `show_favorites` in `properties` (nessuna migration), esposto come `OPTIONS.showFavorites` (camelCase). Dettagli in `docs/features/8176-salva-cammino-nei-preferiti/notes.md` |
 
 ## Decisioni architetturali
+
+### Preferiti layer (oc:8176)
+- **Nessuno scoping `app_id` sugli endpoint `layer/favorite/*`**: decisione esplicita del developer, il legame è Layer↔App non Layer↔Utente, coerente con `EcTrackController` (comportamento preesistente, non introdotto qui)
+- **`show_favorites` vive in `properties` JSON dell'App, non in una colonna**: la chiave esposta in `OPTIONS` di config.json è `showFavorites` (camelCase), diversa dalla chiave di storage `properties->show_favorites` (snake_case, invariata) — scelta esplicita del developer per coerenza con lo stile prevalente di `OPTIONS`
+- **Campo Nova "Show favorites" vive nel tab "Frontend" (`app_tab()`), non "Home"**: spostato su richiesta esplicita del developer, subito sotto "Ugc Track Share Enabled"
+- **`LayerFavoriteController::list()` usa `MediaService::getThumbnailUrl()`** (conversione 400×200), non `getFirstMediaUrl()` diretto — pattern consolidato altrove nel codebase (`AppConfigService.php`, `EcTrack.php`) per risposte "leggere", mancante nella prima versione e corretto in review formale
 
 ### Condivisione percorso su Instagram/Facebook Stories (oc:8183)
 
