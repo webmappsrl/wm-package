@@ -24,6 +24,7 @@ use Wm\WmPackage\Commands\WmBuildAppPoisGeojsonCommand;
 use Wm\WmPackage\Commands\WmDownloadDbBackupCommand;
 use Wm\WmPackage\Commands\WmGenerateIconsCommand;
 use Wm\WmPackage\Commands\WmGeneratePBFCommand;
+use Wm\WmPackage\Commands\WmImportEcPoiFromOsmCommand;
 use Wm\WmPackage\Commands\WmImportFromGeohubCommand;
 use Wm\WmPackage\Commands\WmPackageCommand;
 use Wm\WmPackage\Commands\WmPackagePublishMigrationCommand;
@@ -188,6 +189,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
                 'wm-ec-from-ugc-schema',
                 'wm-app-languages',
                 'wm-logging',
+                'wm-osm-import',
             ])
             // ->hasRoutes(['api', 'web'])// Check the boot method, routes are registered there
             ->discoversMigrations()
@@ -203,6 +205,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
                 WmGenerateIconsCommand::class,
                 WmPackagePublishMigrationCommand::class,
                 WmPackagePublishMissingMigrationsCommand::class,
+                WmImportEcPoiFromOsmCommand::class,
             ])
             ->hasViews();
     }

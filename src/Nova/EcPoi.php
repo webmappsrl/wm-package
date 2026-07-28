@@ -14,12 +14,14 @@ use Laravel\Nova\Tabs\Tab;
 use Marshmallow\Tiptap\Tiptap;
 use Wm\WmPackage\Nova\Actions\DownloadEcPoiAction;
 use Wm\WmPackage\Nova\Actions\ExecuteEcPoiDataChainAction;
+use Wm\WmPackage\Nova\Actions\ImportEcPoiFromOsm;
 use Wm\WmPackage\Nova\Actions\TranslateModelAction;
 use Wm\WmPackage\Nova\Actions\UploadPoiFile;
 use Wm\WmPackage\Nova\Fields\PropertiesPanel;
 use Wm\WmPackage\Nova\Filters\EcPoiRegionFilter;
 use Wm\WmPackage\Nova\Filters\GlobalEcPoiFilter;
 use Wm\WmPackage\Nova\Traits\PointResourceTrait;
+use Wm\WmPackage\Services\RolesAndPermissionsService;
 
 class EcPoi extends AbstractEcResource
 {
@@ -95,11 +97,16 @@ class EcPoi extends AbstractEcResource
      */
     public function actions(NovaRequest $request): array
     {
+        $superAdminOnly = fn (NovaRequest $req) => RolesAndPermissionsService::allows($req);
+
         return [
             new ExecuteEcPoiDataChainAction,
             new DownloadEcPoiAction,
             (new UploadPoiFile)->standalone(),
             new TranslateModelAction,
+            (new ImportEcPoiFromOsm)
+                ->canSee($superAdminOnly)
+                ->canRun($superAdminOnly),
         ];
     }
 

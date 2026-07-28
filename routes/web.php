@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Wm\WmPackage\Http\Controllers\DownloadDbController;
 use Wm\WmPackage\Http\Controllers\ExportDownloadController;
 use Wm\WmPackage\Http\Controllers\ImportController;
+use Wm\WmPackage\Http\Controllers\OsmImportReportController;
 use Wm\WmPackage\Http\Controllers\RankingController;
 use Wm\WmPackage\Http\Controllers\RestoreDbController;
 
@@ -39,3 +40,8 @@ Route::post('import/confirm', [ImportController::class, 'saveImport'])->name('sa
 Route::get('/password/reset', function () {
     return redirect('/nova/password/reset');
 });
+
+Route::middleware(['web', 'auth', 'can:access-nova'])
+    ->get('/nova-vendor/osm-import-reports/{token}', [OsmImportReportController::class, 'show'])
+    ->where('token', '[A-Za-z0-9\-]{16,64}')
+    ->name('osm.import.report');
