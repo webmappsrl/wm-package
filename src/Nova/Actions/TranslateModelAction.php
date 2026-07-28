@@ -5,6 +5,7 @@ namespace Wm\WmPackage\Nova\Actions;
 use Illuminate\Bus\Queueable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Collection;
+use InvalidArgumentException;
 use Laravel\Nova\Actions\Action;
 use Laravel\Nova\Fields\ActionFields;
 use Laravel\Nova\Http\Requests\NovaRequest;
@@ -14,16 +15,40 @@ class TranslateModelAction extends Action
 {
     use InteractsWithQueue, Queueable;
 
+    protected string $resourceClass;
+
+    protected array $additionalFieldRules;
+
     protected array $targetLocales;
 
-    public function __construct(array $targetLocales = ['en', 'de', 'fr', 'es'])
-    {
+    public function __construct(
+        string $resourceClass,
+        array $additionalFieldRules = [],
+        array $targetLocales = ['en', 'de', 'fr', 'es']
+    ) {
+        foreach (array_keys($additionalFieldRules) as $key) {
+            if (in_array($key, ['name', 'description'], true)) {
+                throw new InvalidArgumentException(
+                    "additionalFieldRules non può contenere '{$key}': è già gestito come campo hardcoded."
+                );
+            }
+        }
+
+        $this->resourceClass = $resourceClass;
+        $this->additionalFieldRules = $additionalFieldRules;
         $this->targetLocales = $targetLocales;
+
+        $fieldNames = array_merge(['name', 'description'], array_keys($additionalFieldRules));
+        $this->confirmText = __('Missing translations will be updated for the following fields: :fields', [
+            'fields' => implode(', ', $fieldNames),
+        ]);
     }
 
     public function name(): string
     {
-        return __('Translate Descriptions & Names');
+        return __('Translate :label Contents', [
+            'label' => $this->resourceClass::singularLabel(),
+        ]);
     }
 
     /**
@@ -47,7 +72,7 @@ class TranslateModelAction extends Action
                 continue;
             }
 
-            TranslateModelJob::dispatch($model, $missingLocales);
+            TranslateModelJob::dispatch($model, $missingLocales, $this->additionalFieldRules);
             $dispatched++;
         }
 
@@ -62,14 +87,16 @@ class TranslateModelAction extends Action
     }
 
     /**
-     * Restituisce le lingue target che mancano in almeno uno dei campi traducibili.
+     * Restituisce le lingue target che mancano in almeno uno dei campi traducibili
+     * (i due hardcoded + gli eventuali campi extra abilitati per questa risorsa).
      * Il job verrà dispatched solo se c'è qualcosa da tradurre.
      */
     protected function getMissingLocales(array $properties): array
     {
         $missing = [];
+        $fieldNames = array_merge(['name', 'description'], array_keys($this->additionalFieldRules));
 
-        foreach (['description', 'name'] as $field) {
+        foreach ($fieldNames as $field) {
             $value = $properties[$field] ?? null;
 
             if (empty($value)) {
