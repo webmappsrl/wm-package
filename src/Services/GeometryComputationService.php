@@ -1134,34 +1134,38 @@ GROUP BY
         $table = $query->getModel()->getTable();
 
         try {
-            // Controlla se ci sono record nella query
-            $count = $query->count();
+            // Eseguita in una (sotto)transazione: se una query fallisce a livello Postgres,
+            // il catch sotto la riporta a un rollback esplicito (o rollback to savepoint se
+            // già dentro una transazione) invece di lasciare la connessione in stato aborted
+            // per le query successive del chiamante (SQLSTATE 25P02).
+            return DB::transaction(function () use ($query, $table, $useConvexHull) {
+                // Controlla se ci sono record nella query
+                $count = $query->count();
 
-            if ($count === 0) {
-                return null;
-            }
+                if ($count === 0) {
+                    return null;
+                }
 
-            // Controlla quante feature hanno geometria valida
-            $validGeometryCount = $query->whereNotNull('geometry')->count();
+                // Controlla quante feature hanno geometria valida
+                $validGeometryCount = $query->whereNotNull('geometry')->count();
 
-            if ($validGeometryCount === 0) {
-                return null;
-            }
+                if ($validGeometryCount === 0) {
+                    return null;
+                }
 
-            // Calcola il bounding box solo per le feature con geometria valida
-            if ($useConvexHull) {
-                // Usa ST_ConvexHull per un bounding box più aderente alle geometrie lineari
-                $bbox = $query->whereNotNull('geometry')
-                    ->selectRaw('ST_Envelope(ST_ConvexHull(ST_Collect('.$table.'.geometry::geometry))) AS bbox')
-                    ->value('bbox');
-            } else {
+                // Calcola il bounding box solo per le feature con geometria valida
+                if ($useConvexHull) {
+                    // Usa ST_ConvexHull per un bounding box più aderente alle geometrie lineari
+                    return $query->whereNotNull('geometry')
+                        ->selectRaw('ST_Envelope(ST_ConvexHull(ST_Collect('.$table.'.geometry::geometry))) AS bbox')
+                        ->value('bbox');
+                }
+
                 // Metodo tradizionale con ST_Envelope
-                $bbox = $query->whereNotNull('geometry')
+                return $query->whereNotNull('geometry')
                     ->selectRaw('ST_Envelope(ST_Collect('.$table.'.geometry::geometry)) AS bbox')
                     ->value('bbox');
-            }
-
-            return $bbox;
+            });
         } catch (Exception $e) {
             return null;
         }
