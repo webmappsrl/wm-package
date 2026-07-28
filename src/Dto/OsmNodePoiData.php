@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace Wm\WmPackage\Dto;
 
 use Wm\WmPackage\Http\Clients\OsmClient;
+use Wm\WmPackage\Models\EcPoi;
 
 /**
- * DTO: normalized representation of an OSM node ready to map onto {@see \Wm\WmPackage\Models\EcPoi}.
+ * DTO: normalized representation of an OSM node ready to map onto {@see EcPoi}.
  *
  * Same pattern as {@see EcPoiPropertiesData}: readonly immutable class with a factory that parses OSM data.
  *
@@ -170,7 +171,7 @@ readonly class OsmNodePoiData
     }
 
     /**
-     * Attributes ready for {@see \Wm\WmPackage\Models\EcPoi::create()}.
+     * Attributes ready for {@see EcPoi::create()}.
      * `name` stays translatable: set via setTranslation on the caller side.
      *
      * The `properties` block is produced by {@see OsmEcPoiPropertiesData} from OSM tags:

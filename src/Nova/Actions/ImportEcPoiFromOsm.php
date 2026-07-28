@@ -16,6 +16,7 @@ use Laravel\Nova\Fields\Select;
 use Laravel\Nova\Fields\Textarea;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Wm\WmPackage\Models\App;
+use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Models\User;
 use Wm\WmPackage\Services\Osm\OsmImportReportPresenter;
 use Wm\WmPackage\Services\Osm\OsmImportReportStore;
@@ -23,7 +24,7 @@ use Wm\WmPackage\Services\Osm\OsmPoiImporter;
 use Wm\WmPackage\Services\RolesAndPermissionsService;
 
 /**
- * Imports {@see \Wm\WmPackage\Models\EcPoi} records from comma-separated OSM node IDs.
+ * Imports {@see EcPoi} records from comma-separated OSM node IDs.
  *
  * UI: textarea + app select + global + dry-run. POI owner is not chosen manually; it comes from
  * {@see App::$user_id} on the selected app.
@@ -88,7 +89,7 @@ class ImportEcPoiFromOsm extends Action
         $fields = [
             Textarea::make(__('OSM node IDs (comma-separated)'), 'osm_ids')
                 ->rows(4)
-                ->help(__('Example: 12345, 67890, 11223. OSM nodes only (points).') . ' ' . __('If an OSM ID was already imported, its POI will be updated.'))
+                ->help(__('Example: 12345, 67890, 11223. OSM nodes only (points).').' '.__('If an OSM ID was already imported, its POI will be updated.'))
                 ->rules('required', 'string', 'max:10000'),
         ];
 

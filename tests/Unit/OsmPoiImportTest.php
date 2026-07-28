@@ -3,8 +3,10 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Http;
+use Wm\WmPackage\Dto\OsmNodePoiData;
 use Wm\WmPackage\Exceptions\OsmClientExceptionNoTags;
 use Wm\WmPackage\Http\Clients\OsmClient;
+use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Models\TaxonomyPoiType;
 use Wm\WmPackage\Services\Osm\OsmPoiImporter;
 use Wm\WmPackage\Services\Osm\OsmTaxonomyPoiTypeResolver;
@@ -13,7 +15,7 @@ use Wm\WmPackage\Tests\TestCase;
 uses(TestCase::class);
 
 afterEach(function () {
-    \Mockery::close();
+    Mockery::close();
 });
 
 describe('OsmClient with Http::fake (no real OSM calls)', function () {
@@ -58,7 +60,7 @@ describe('OsmPoiImporter dry-run (mocked OSM + taxonomy, no DB writes)', functio
         ];
         $geometry = ['type' => 'Point', 'coordinates' => [9.0, 45.0]];
 
-        $osmClient = \Mockery::mock(OsmClient::class);
+        $osmClient = Mockery::mock(OsmClient::class);
         $osmClient->shouldReceive('getPropertiesAndGeometry')
             ->once()
             ->with('node/1001')
@@ -70,13 +72,14 @@ describe('OsmPoiImporter dry-run (mocked OSM + taxonomy, no DB writes)', functio
             'identifier' => 'amenity-bench',
         ]);
 
-        $resolver = \Mockery::mock(OsmTaxonomyPoiTypeResolver::class);
+        $resolver = Mockery::mock(OsmTaxonomyPoiTypeResolver::class);
         $resolver->shouldReceive('resolve')
             ->once()
             ->andReturn(['taxonomy' => $taxonomy, 'created' => false]);
 
-        $importer = new class ($osmClient, $resolver) extends OsmPoiImporter {
-            protected function findExistingEcPoiByOsmid(int $osmid, int $appId): ?\Wm\WmPackage\Models\EcPoi
+        $importer = new class($osmClient, $resolver) extends OsmPoiImporter
+        {
+            protected function findExistingEcPoiByOsmid(int $osmid, int $appId): ?EcPoi
             {
                 return null;
             }
@@ -94,15 +97,16 @@ describe('OsmPoiImporter dry-run (mocked OSM + taxonomy, no DB writes)', functio
     });
 
     it('records failures when OSM client throws', function () {
-        $osmClient = \Mockery::mock(OsmClient::class);
+        $osmClient = Mockery::mock(OsmClient::class);
         $osmClient->shouldReceive('getPropertiesAndGeometry')
             ->andThrow(new OsmClientExceptionNoTags('no tags', 1));
 
-        $resolver = \Mockery::mock(OsmTaxonomyPoiTypeResolver::class);
+        $resolver = Mockery::mock(OsmTaxonomyPoiTypeResolver::class);
         $resolver->shouldReceive('resolve')->never();
 
-        $importer = new class ($osmClient, $resolver) extends OsmPoiImporter {
-            protected function findExistingEcPoiByOsmid(int $osmid, int $appId): ?\Wm\WmPackage\Models\EcPoi
+        $importer = new class($osmClient, $resolver) extends OsmPoiImporter
+        {
+            protected function findExistingEcPoiByOsmid(int $osmid, int $appId): ?EcPoi
             {
                 return null;
             }
@@ -140,7 +144,7 @@ describe('Simulated import pipeline (DTO only, no persistence)', function () {
 
         $client = new OsmClient;
         [$props, $geom] = $client->getPropertiesAndGeometry('node/88800001');
-        $dto = \Wm\WmPackage\Dto\OsmNodePoiData::fromOsmNode(88_800_001, $props, $geom);
+        $dto = OsmNodePoiData::fromOsmNode(88_800_001, $props, $geom);
         $attrs = $dto->toEcPoiAttributes(appId: 5, userId: null);
 
         expect($attrs['app_id'])->toBe(5)

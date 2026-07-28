@@ -8,8 +8,8 @@ use Laravel\Nova\Http\Requests\NovaRequest;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Models\User;
-use Wm\WmPackage\Nova\EcPoi as EcPoiResource;
 use Wm\WmPackage\Nova\Actions\ImportEcPoiFromOsm;
+use Wm\WmPackage\Nova\EcPoi as EcPoiResource;
 use Wm\WmPackage\Services\RolesAndPermissionsService;
 use Wm\WmPackage\Tests\TestCase;
 

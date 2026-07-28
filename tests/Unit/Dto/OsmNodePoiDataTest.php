@@ -34,7 +34,7 @@ it('rejects non-point geometry', function () {
         1,
         ['name' => 'X'],
         ['type' => 'LineString', 'coordinates' => [[0, 0], [1, 1]]],
-    ))->toThrow(\InvalidArgumentException::class);
+    ))->toThrow(InvalidArgumentException::class);
 });
 
 it('maps OSM tags to properties payload', function () {

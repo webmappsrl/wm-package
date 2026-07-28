@@ -11,6 +11,8 @@ use Wm\WmPackage\Dto\OsmNodePoiData;
 use Wm\WmPackage\Exceptions\OsmClientException;
 use Wm\WmPackage\Exceptions\OsmClientExceptionNoTags;
 use Wm\WmPackage\Http\Clients\OsmClient;
+use Wm\WmPackage\Http\Resources\EcPoiResource;
+use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Models\TaxonomyPoiType;
 
@@ -23,7 +25,7 @@ use Wm\WmPackage\Models\TaxonomyPoiType;
  *
  * TODO: Resolve OSM image tags (`image`, `wikimedia_commons`, …) into Spatie Media Library on
  * {@see EcPoi} (`default` collection: first file = feature image, following = gallery per
- * {@see \Wm\WmPackage\Http\Resources\EcPoiResource}), e.g. Wikimedia Commons API + `addMediaFromUrl`.
+ * {@see EcPoiResource}), e.g. Wikimedia Commons API + `addMediaFromUrl`.
  *
  * Dry-run mode: no persistence; returns the expected outcome for interactive validation (Nova/CLI).
  */
@@ -39,10 +41,10 @@ class OsmPoiImporter
      *
      * @param  list<int|string>  $osmIds  Numeric OSM node IDs (cast to int).
      * @param  int  $appId  Destination app ID (required on `ec_pois` schema; also used to scope
-     *                       existing-POI lookup so different apps never overwrite each other's data).
+     *                      existing-POI lookup so different apps never overwrite each other's data).
      * @param  int|null  $userId  Owning user ID (optional).
      * @param  bool  $dryRun  When true, nothing is persisted.
-     * @param  bool  $global  When `ec_pois.global` exists: value to set (true = included in {@see \Wm\WmPackage\Models\App::getAllPoisGeojson()} / pois.geojson).
+     * @param  bool  $global  When `ec_pois.global` exists: value to set (true = included in {@see App::getAllPoisGeojson()} / pois.geojson).
      */
     public function importNodes(array $osmIds, int $appId, ?int $userId = null, bool $dryRun = false, bool $global = true): ImportReport
     {

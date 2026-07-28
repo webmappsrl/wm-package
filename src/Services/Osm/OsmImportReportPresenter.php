@@ -45,8 +45,8 @@ final class OsmImportReportPresenter
         foreach ($samples as $f) {
             $osmid = (int) $f['osmid'];
             $failureSamples[] = [
-                'node' => 'node/' . $osmid,
-                'osm_url' => 'https://www.openstreetmap.org/node/' . $osmid,
+                'node' => 'node/'.$osmid,
+                'osm_url' => 'https://www.openstreetmap.org/node/'.$osmid,
                 'message' => $f['error'],
                 'category' => __(ImportReport::CATEGORY_LABELS[$f['category']] ?? $f['category']),
             ];

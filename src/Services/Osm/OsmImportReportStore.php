@@ -46,6 +46,6 @@ final class OsmImportReportStore
 
     private static function cacheKey(string $token): string
     {
-        return 'osm_import_report:' . $token;
+        return 'osm_import_report:'.$token;
     }
 }
