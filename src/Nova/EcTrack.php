@@ -10,6 +10,7 @@ use Laravel\Nova\Fields\Textarea;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Tabs\Tab;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
+use Wm\WmPackage\Jobs\TranslateModelJob;
 use Wm\WmPackage\Jobs\UpdateModelWithGeometryTaxonomyWhere;
 use Wm\WmPackage\Nova\Actions\DownloadEcTrackAction;
 use Wm\WmPackage\Nova\Actions\ExecuteEcTrackDataChainAction;
@@ -101,7 +102,9 @@ class EcTrack extends AbstractEcResource
             new ExecuteEcTrackDataChainAction,
             new DownloadEcTrackAction,
             (new UploadTrackFile)->standalone(),
-            new TranslateModelAction,
+            new TranslateModelAction(static::class, [
+                'not_accessible_message' => TranslateModelJob::DEFAULT_FIELD_RULE,
+            ]),
         ];
     }
 

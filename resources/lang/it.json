@@ -313,5 +313,9 @@
     "Where": "Luogo",
     "Wheres": "Luoghi",
     "Requires authentication at startup to be enabled": "Richiede che l'autenticazione all'avvio sia attiva",
-    "Map": "Mappa"
+    "Map": "Mappa",
+    "Translate :label Contents": "Traduci Contenuti :label",
+    "Missing translations will be updated for the following fields: :fields": "Verranno aggiornate le traduzioni mancanti per i seguenti campi: :fields",
+    "No fields to translate (already translated or missing Italian source).": "Nessun campo da tradurre (già tradotti o testo italiano mancante).",
+    ":dispatched translation jobs dispatched, :skipped models skipped.": ":dispatched job di traduzione avviati, :skipped modelli saltati."
 }

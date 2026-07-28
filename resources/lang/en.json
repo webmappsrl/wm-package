@@ -312,5 +312,9 @@
     "Link used over the attribution tag in the app (optional)": "Link used over the attribution tag in the app (optional)",
     "Where": "Where",
     "Wheres": "Wheres",
-    "Map": "Map"
+    "Map": "Map",
+    "Translate :label Contents": "Translate :label Contents",
+    "Missing translations will be updated for the following fields: :fields": "Missing translations will be updated for the following fields: :fields",
+    "No fields to translate (already translated or missing Italian source).": "No fields to translate (already translated or missing Italian source).",
+    ":dispatched translation jobs dispatched, :skipped models skipped.": ":dispatched translation jobs dispatched, :skipped models skipped."
 }

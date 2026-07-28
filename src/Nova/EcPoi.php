@@ -92,7 +92,7 @@ class EcPoi extends AbstractEcResource
             new ExecuteEcPoiDataChainAction,
             new DownloadEcPoiAction,
             (new UploadPoiFile)->standalone(),
-            new TranslateModelAction,
+            new TranslateModelAction(static::class),
         ];
     }
 
