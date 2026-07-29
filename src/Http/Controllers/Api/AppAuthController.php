@@ -8,8 +8,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Intervention\Image\Facades\Image;
 use Jenssegers\Agent\Facades\Agent;
 use Wm\WmPackage\Http\Controllers\Controller;
+use Wm\WmPackage\Jobs\FetchGravatarAvatarJob;
 use Wm\WmPackage\Models\User;
 
 class AppAuthController extends Controller
@@ -209,6 +211,8 @@ class AppAuthController extends Controller
             'properties' => 'sometimes|array',
             'properties.*' => 'sometimes',
             'app_id' => 'sometimes|integer',
+            'surname' => 'sometimes|nullable|string|max:255',
+            'avatar' => 'sometimes|file|image|max:5120',
         ], $this->getPrivacyRules()), array_merge([
             'name.string' => 'Il campo nome deve essere una stringa.',
             'name.max' => 'Il campo nome non può superare i 255 caratteri.',
@@ -216,6 +220,10 @@ class AppAuthController extends Controller
             'email.unique' => 'Un utente è già stato registrato con questa email.',
             'password.min' => 'La password deve essere di almeno 6 caratteri.',
             'properties.array' => 'Il campo properties deve essere un array.',
+            'surname.string' => 'Il campo cognome deve essere una stringa.',
+            'surname.max' => 'Il campo cognome non può superare i 255 caratteri.',
+            'avatar.image' => 'Il file caricato deve essere un\'immagine.',
+            'avatar.max' => 'L\'immagine non può superare i 5MB.',
         ], $this->getPrivacyMessages()));
 
         if ($validator->fails()) {
@@ -236,6 +244,7 @@ class AppAuthController extends Controller
             $password = $request->input('password');
             $properties = $request->input('properties');
             $privacy = $request->input('privacy');
+            $surname = $request->input('surname');
 
             if ($name) {
                 $updateData['name'] = $name;
@@ -245,6 +254,13 @@ class AppAuthController extends Controller
             }
             if ($password) {
                 $updateData['password'] = bcrypt($password);
+            }
+            // Laravel converte le stringhe vuote in null prima della validazione
+            // (ConvertEmptyStringsToNull, middleware di default) — usare has()
+            // invece del valore per distinguere "campo non inviato" da "utente ha
+            // svuotato il campo", altrimenti "cancella il cognome" è un no-op.
+            if ($request->has('surname')) {
+                $updateData['surname'] = (string) $surname;
             }
 
             // Handle properties update
@@ -265,8 +281,29 @@ class AppAuthController extends Controller
                 $user->update($updateData);
             }
 
+            // Handle avatar upload (must run after $user->update() above, since
+            // addMediaFromRequest/addMedia operates on the already-persisted model).
+            if ($request->hasFile('avatar')) {
+                $strippedPath = $this->stripExifFromUploadedImage($request->file('avatar'));
+                $mediaAdder = $user->addMedia($strippedPath)
+                    ->usingFileName($request->file('avatar')->hashName());
+
+                $appIdHeader = $request->header('app-id');
+                if ($appIdHeader) {
+                    // Pass app_id explicitly so MediaObserver doesn't fall back to the
+                    // hardcoded app_id = 1 default (FK violation / cross-tenant data).
+                    $mediaAdder = $mediaAdder->withAttributes(['app_id' => (int) $appIdHeader]);
+                }
+
+                $mediaAdder->toMediaCollection('avatar');
+            }
+
+            $user = $user->fresh();
+
             $appIdForResponse = $request->header('app-id');
-            $user = $this->filterUserPrivacyByAppId($user, $appIdForResponse);
+            $user = $appIdForResponse
+                ? $this->filterUserPrivacyByAppId($user, $appIdForResponse)
+                : $user->toArray();
 
             return response()->json($user);
         } catch (Exception $e) {
@@ -323,6 +360,16 @@ class AppAuthController extends Controller
             $user->save();
         } catch (Exception $e) {
             throw new Exception('Errore durante il salvataggio dell\'utente. Per favore, riprova.');
+        }
+
+        // A failed dispatch (e.g. queue connection down) must never fail signup: the
+        // user row is already committed above, so propagating this exception would
+        // make signup()'s outer catch return a 400 to the client while the account
+        // was actually created, leaving a client retry stuck on email.unique.
+        try {
+            FetchGravatarAvatarJob::dispatch($user->id, $appId ? (int) $appId : null);
+        } catch (Exception $e) {
+            \Log::error('Failed to dispatch Gravatar job: '.$e->getMessage());
         }
 
         return $user;
@@ -406,5 +453,30 @@ class AppAuthController extends Controller
             'privacy.date.required_with' => 'Il campo date è obbligatorio quando privacy è fornito.',
             'privacy.date.date' => 'Il campo date deve essere una data valida.',
         ];
+    }
+
+    /**
+     * Re-encode the uploaded image via GD (Intervention Image) to strip all EXIF
+     * metadata, including GPS coordinates. orientate() bakes the correct rotation
+     * in before the re-encode discards the EXIF orientation tag.
+     *
+     * @param  \Illuminate\Http\UploadedFile  $file
+     * @return string absolute path to a stripped temp copy
+     */
+    private function stripExifFromUploadedImage($file): string
+    {
+        // extension() guesses the extension from the actual file content/MIME type
+        // (via Symfony's MimeTypes guesser), unlike getClientOriginalExtension()
+        // which trusts the client-supplied filename and can be fooled by a
+        // mismatched or missing extension (e.g. a real JPEG uploaded as "photo.txt"
+        // passes Laravel's content-based `image` validation, but the encoder below
+        // would then crash trying to encode to the "txt" format).
+        $strippedPath = sys_get_temp_dir().'/'.Str::random(20).'.'.$file->extension();
+
+        Image::make($file->getRealPath())
+            ->orientate()
+            ->save($strippedPath);
+
+        return $strippedPath;
     }
 }

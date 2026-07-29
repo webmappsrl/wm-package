@@ -6,7 +6,6 @@ use App\Nova\UgcPoi;
 use App\Nova\UgcTrack;
 use Illuminate\Validation\Rules;
 use Laravel\Nova\Fields\FormData;
-use Laravel\Nova\Fields\Gravatar;
 use Laravel\Nova\Fields\HasMany;
 use Laravel\Nova\Fields\ID;
 use Laravel\Nova\Fields\Password;
@@ -18,6 +17,7 @@ use Spatie\Permission\Models\Permission;
 use Vyuldashev\NovaPermission\PermissionBooleanGroup;
 use Vyuldashev\NovaPermission\RoleBooleanGroup;
 use Wm\WmPackage\Models\App as AppModel;
+use Wm\WmPackage\Nova\Fields\UserAvatar;
 use Wm\WmPackage\Nova\Filters\AppFilter;
 use Wm\WmPackage\Services\RolesAndPermissionsService;
 
@@ -51,7 +51,7 @@ abstract class AbstractUserResource extends Resource
         return [
             ID::make()->sortable(),
 
-            Gravatar::make()->maxWidth(50),
+            UserAvatar::make()->maxWidth(50),
 
             Text::make(__('Name'), 'name')
                 ->sortable()

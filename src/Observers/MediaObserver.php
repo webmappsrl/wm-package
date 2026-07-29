@@ -62,7 +62,7 @@ class MediaObserver extends AbstractAuthorableObserver
                 } elseif ($model instanceof App) {
                     $media->app_id = $model->id;
                 } else {
-                    $this->validateModelHasAppId($model);
+                    $this->validateModelHasAppId($model, $media);
 
                     return;
                 }
@@ -96,19 +96,19 @@ class MediaObserver extends AbstractAuthorableObserver
      *
      * @return bool
      */
-    private function validateModelHasAppId(Model $model)
+    private function validateModelHasAppId(Model $model, Media $media)
     {
         try {
             if (! isset($model->app_id)) {
                 Log::warning('MediaObserver-creating: app_id missing in parent model');
-                $this->setDefaultValues($model);
+                $this->setDefaultValues($media);
 
                 return false;
             }
 
             return true;
         } catch (\Exception $e) {
-            $this->handleException($e, $model);
+            $this->handleException($e, $media);
 
             return false;
         }

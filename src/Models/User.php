@@ -13,6 +13,8 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
 use Laravel\Nova\Auth\Impersonatable;
 use Laravel\Sanctum\HasApiTokens;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\Permission\Traits\HasRoles;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 use Wm\WmPackage\Nova\Filters\AppFilter;
@@ -26,9 +28,9 @@ use Wm\WmPackage\Traits\HasPackageFactory;
  * @property array $sku
  * @property Carbon $last_login_at
  */
-class User extends Authenticatable implements JWTSubject
+class User extends Authenticatable implements JWTSubject, HasMedia
 {
-    use Favoriteability, HasApiTokens, HasPackageFactory, HasRoles, Impersonatable, Notifiable;
+    use Favoriteability, HasApiTokens, HasPackageFactory, HasRoles, Impersonatable, InteractsWithMedia, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -37,6 +39,7 @@ class User extends Authenticatable implements JWTSubject
      */
     protected $fillable = [
         'name',
+        'surname',
         'email',
         'password',
         'app_id',
@@ -70,7 +73,7 @@ class User extends Authenticatable implements JWTSubject
      *
      * @var array
      */
-    protected $appends = ['geopass'];
+    protected $appends = ['geopass', 'avatar_url'];
 
     public function apps(): HasMany
     {
@@ -267,6 +270,16 @@ class User extends Authenticatable implements JWTSubject
         $pass = $this->attributes['geopass'] = $this->password;
 
         return $pass;
+    }
+
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('avatar')->singleFile();
+    }
+
+    public function getAvatarUrlAttribute(): ?string
+    {
+        return $this->getFirstMediaUrl('avatar') ?: null;
     }
 
     public function getMorphClass()
