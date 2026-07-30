@@ -72,5 +72,7 @@ it('resolves a previously saved probe group back into the field value', function
     $field->resolve($layer);
 
     expect($field->value)->toHaveCount(1);
-    expect($field->value[0]['attributes']['label'])->toBe('Valore salvato');
+    $labelField = collect($field->value[0]['attributes'])->first(fn ($f) => $f['attribute'] === 'label');
+    expect($labelField)->not->toBeNull();
+    expect($labelField['value'])->toBe('Valore salvato');
 });
