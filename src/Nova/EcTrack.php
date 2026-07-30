@@ -22,10 +22,12 @@ use Wm\WmPackage\Nova\Fields\TrackColor\src\TrackColor;
 use Wm\WmPackage\Nova\Filters\FeaturesByLayerFilter;
 use Wm\WmPackage\Nova\Filters\FeaturesExcludeByIds;
 use Wm\WmPackage\Nova\Filters\FeaturesIncludeByIds;
+use Wm\WmPackage\Nova\Traits\HasConfigDetailPanel;
 use Wm\WmPackage\Nova\Traits\MultiLinestringResourceTrait;
 
 class EcTrack extends AbstractEcResource
 {
+    use HasConfigDetailPanel;
     use MultiLinestringResourceTrait {
         fields as protected fieldsTrait;
     }
@@ -53,6 +55,7 @@ class EcTrack extends AbstractEcResource
     {
         return [
             ...$this->fieldsTrait($request),
+            $this->configDetailPanel(),
             Tab::group(__('Details'), [
                 Tab::make(__('Info'), $this->getInfoTabFields()),
                 Tab::make(__('Style'), $this->getStyleTabFields()),
@@ -66,7 +69,6 @@ class EcTrack extends AbstractEcResource
             MorphToMany::make('Activities', 'taxonomyActivities', TaxonomyActivity::class)
                 ->display('name')
                 ->collapsedByDefault(),
-
         ];
     }
 

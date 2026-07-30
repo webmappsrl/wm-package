@@ -25,10 +25,12 @@ use Wm\WmPackage\Nova\Fields\FeatureCollectionMap\src\FeatureCollectionMap;
 use Wm\WmPackage\Nova\Fields\LayerFeatures\LayerFeatures;
 use Wm\WmPackage\Nova\Fields\PropertiesPanel;
 use Wm\WmPackage\Nova\Filters\AppFilter;
+use Wm\WmPackage\Nova\Traits\HasConfigDetailPanel;
 use Wm\WmPackage\Nova\Traits\MultiPolygonResourceTrait;
 
 class Layer extends AbstractGeometryResource
 {
+    use HasConfigDetailPanel;
     use MultiPolygonResourceTrait {
         fields as protected fieldsTrait;
     }
@@ -92,6 +94,7 @@ class Layer extends AbstractGeometryResource
             Images::make(__('Logo'), 'logo')
                 ->singleMediaRules(['mimes:png,webp', 'dimensions:ratio=1/1']),
             PropertiesPanel::makeWithModel(__('Properties'), 'properties', $this, true)->collapsible(),
+            $this->configDetailPanel(),
             MorphToMany::make(__('Activities'), 'taxonomyActivities', TaxonomyActivity::class),
             MorphToMany::make('Taxonomy Where', 'taxonomyWheres', TaxonomyWhere::class)
                 ->actions(fn () => []),
