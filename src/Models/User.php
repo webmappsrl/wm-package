@@ -13,8 +13,10 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
 use Laravel\Nova\Auth\Impersonatable;
 use Laravel\Sanctum\HasApiTokens;
+use Spatie\Image\Enums\Fit;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Spatie\Permission\Traits\HasRoles;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 use Wm\WmPackage\Nova\Filters\AppFilter;
@@ -28,7 +30,7 @@ use Wm\WmPackage\Traits\HasPackageFactory;
  * @property array $sku
  * @property Carbon $last_login_at
  */
-class User extends Authenticatable implements JWTSubject, HasMedia
+class User extends Authenticatable implements HasMedia, JWTSubject
 {
     use Favoriteability, HasApiTokens, HasPackageFactory, HasRoles, Impersonatable, InteractsWithMedia, Notifiable;
 
@@ -47,6 +49,13 @@ class User extends Authenticatable implements JWTSubject, HasMedia
     ];
 
     protected $guard_name = 'web';
+
+    public const AVATAR_CONVERSION_SIZE = 150;
+
+    // Naming coerente con MediaService::getMediaConversionNameByWidthAndHeight()
+    // (usato per le gallerie EcTrack/EcPoi: "thumbnail_{width}_{height}") — stessa
+    // convenzione, dimensione nel nome, senza però dipendere da quella classe.
+    public const AVATAR_CONVERSION_NAME = 'avatar_'.self::AVATAR_CONVERSION_SIZE.'_'.self::AVATAR_CONVERSION_SIZE;
 
     /**
      * The attributes that should be hidden for arrays.
@@ -277,9 +286,36 @@ class User extends Authenticatable implements JWTSubject, HasMedia
         $this->addMediaCollection('avatar')->singleFile();
     }
 
+    /**
+     * Crop quadrato per rendere l'avatar visivamente coerente (rotondo via CSS)
+     * indipendentemente dall'aspect ratio della foto originale. Sincrono
+     * (nonQueued): l'avatar deve essere corretto già nella risposta HTTP che
+     * segue l'upload, senza dipendere dal worker Horizon.
+     */
+    public function registerMediaConversions(?Media $media = null): void
+    {
+        $this
+            ->addMediaConversion(self::AVATAR_CONVERSION_NAME)
+            ->nonQueued()
+            ->fit(Fit::Crop, self::AVATAR_CONVERSION_SIZE, self::AVATAR_CONVERSION_SIZE);
+    }
+
     public function getAvatarUrlAttribute(): ?string
     {
-        return $this->getFirstMediaUrl('avatar') ?: null;
+        $media = $this->getFirstMedia('avatar');
+
+        if (! $media) {
+            return null;
+        }
+
+        if ($media->hasGeneratedConversion(self::AVATAR_CONVERSION_NAME)) {
+            return $media->getUrl(self::AVATAR_CONVERSION_NAME);
+        }
+
+        // Rete di sicurezza: se la conversion non è generabile (es. formato
+        // immagine non supportato dal motore GD/Imagick), il media resta
+        // comunque salvato e servito — non ritagliato, ma non un URL rotto.
+        return $media->getUrl();
     }
 
     public function getMorphClass()
