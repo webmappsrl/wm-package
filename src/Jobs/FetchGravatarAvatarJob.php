@@ -4,6 +4,7 @@ namespace Wm\WmPackage\Jobs;
 
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
+use Symfony\Component\Mime\MimeTypes;
 use Wm\WmPackage\Jobs\Abstract\BaseJob;
 use Wm\WmPackage\Models\User;
 
@@ -41,7 +42,12 @@ class FetchGravatarAvatarJob extends BaseJob
 
         try {
             $response = Http::timeout(self::REQUEST_TIMEOUT_SECONDS)
-                ->get("https://www.gravatar.com/avatar/{$hash}", ['d' => '404']);
+                ->get("https://www.gravatar.com/avatar/{$hash}", [
+                    'd' => '404',
+                    // 2x la dimensione della conversion avatar (User::AVATAR_CONVERSION_SIZE)
+                    // per avere una fonte sufficientemente grande da croppare senza sfocatura.
+                    's' => User::AVATAR_CONVERSION_SIZE * 2,
+                ]);
         } catch (ConnectionException $e) {
             $this->logError("Gravatar fetch failed for user {$this->userId} due to a connection/timeout error: {$e->getMessage()} (not treated as 'no avatar')");
 
@@ -69,7 +75,10 @@ class FetchGravatarAvatarJob extends BaseJob
             return;
         }
 
-        $tempPath = sys_get_temp_dir().'/gravatar_'.$this->userId.'_'.uniqid().'.jpg';
+        $contentType = strtok((string) $response->header('Content-Type'), ';');
+        $extension = (new MimeTypes)->getExtensions($contentType)[0] ?? 'jpg';
+
+        $tempPath = sys_get_temp_dir().'/gravatar_'.$this->userId.'_'.uniqid().'.'.$extension;
         file_put_contents($tempPath, $response->body());
 
         $mediaAdder = $user->addMedia($tempPath);
