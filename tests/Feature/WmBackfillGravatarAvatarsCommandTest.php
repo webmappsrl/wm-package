@@ -1,7 +1,9 @@
 <?php
 
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 use Wm\WmPackage\Jobs\FetchGravatarAvatarJob;
 use Wm\WmPackage\Models\App;
@@ -20,10 +22,10 @@ it('requires --app-id', function () {
 
 it('dispatches FetchGravatarAvatarJob only for users without an existing avatar', function () {
     Queue::fake();
+    Storage::fake('wmfe');
     $app = App::factory()->createQuietly();
     $withAvatar = User::factory()->create();
-    $withAvatar->addMediaFromString('fake-image-bytes')
-        ->usingFileName('avatar.jpg')
+    $withAvatar->addMedia(UploadedFile::fake()->image('avatar.jpg', 400, 400))
         ->toMediaCollection('avatar');
     $withoutAvatar = User::factory()->create();
 

@@ -149,3 +149,29 @@ it('does not overwrite an existing user-uploaded avatar with a Gravatar image', 
     expect($fresh->getMedia('avatar'))->toHaveCount(1)
         ->and($fresh->getFirstMedia('avatar')->id)->toBe($originalMediaId);
 });
+
+it('requests an image from Gravatar at 2x the avatar conversion size to avoid a blurry crop', function () {
+    Storage::fake('wmfe');
+    Http::fake([
+        'gravatar.com/*' => Http::response(file_get_contents(dirname(__DIR__).'/fixtures/avatar-with-gps-exif.jpg'), 200, ['Content-Type' => 'image/jpeg']),
+    ]);
+    $user = makeUserWithAppForGravatarJob();
+
+    (new FetchGravatarAvatarJob($user->id))->handle();
+
+    Http::assertSent(fn ($request) => str_contains($request->url(), 's='.(User::AVATAR_CONVERSION_SIZE * 2)));
+});
+
+it('stores the Gravatar image with the extension matching its real Content-Type instead of a hardcoded .jpg', function () {
+    Storage::fake('wmfe');
+    Http::fake([
+        'gravatar.com/*' => Http::response(file_get_contents(dirname(__DIR__).'/fixtures/avatar-with-gps-exif.jpg'), 200, ['Content-Type' => 'image/png']),
+    ]);
+    $user = makeUserWithAppForGravatarJob();
+
+    (new FetchGravatarAvatarJob($user->id))->handle();
+
+    $media = $user->fresh()->getFirstMedia('avatar');
+    expect($media)->not->toBeNull()
+        ->and($media->file_name)->toEndWith('.png');
+});

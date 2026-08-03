@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Tests\TestCase;
@@ -23,8 +24,7 @@ function resolveUserAvatarValue(User $user): string
 it('shows the real avatar_url when the user has an uploaded/Gravatar-fetched avatar', function () {
     Storage::fake('wmfe');
     $user = User::factory()->create(['email' => 'nova-avatar-test@example.com']);
-    $user->addMediaFromString('fake-image-bytes')
-        ->usingFileName('avatar.jpg')
+    $user->addMedia(UploadedFile::fake()->image('avatar.jpg', 400, 400))
         ->toMediaCollection('avatar');
 
     $value = resolveUserAvatarValue($user->fresh());
