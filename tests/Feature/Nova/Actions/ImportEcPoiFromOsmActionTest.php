@@ -20,6 +20,14 @@ beforeEach(function () {
     RolesAndPermissionsService::seedDatabase();
 });
 
+it('exposes the OSM import action on the EcPoi Nova resource by default', function () {
+    $request = NovaRequest::create('/');
+
+    $actions = (new EcPoiResource(new EcPoi))->actions($request);
+
+    expect(collect($actions)->contains(fn ($action) => $action instanceof ImportEcPoiFromOsm))->toBeTrue();
+});
+
 it('lets an Administrator not in the super-admin allowlist see every app', function () {
     $administrator = User::factory()->create(['email' => 'not-super-admin@example.com']);
     $administrator->assignRole('Administrator');
