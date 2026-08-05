@@ -98,11 +98,12 @@ class WmPackageServiceProvider extends PackageServiceProvider
 
         $packageDirPath = $this->package->basePath('/../');
 
-        // Register Nova CSS assets
+        // Register Nova CSS/JS assets
         Nova::serving(function () {
             Nova::style('wm-flexible-field', __DIR__.'/../resources/css/flexible-field.css');
             Nova::style('wm-nova-overrides', __DIR__.'/../resources/css/nova.css');
             Nova::style('wm-nova-dropzone', __DIR__.'/../resources/css/nova-dropzone.css');
+            Nova::script('wm-nova-overrides', __DIR__.'/../resources/js/nova.js');
             $this->addWmpackageToolsMenuItem();
         });
 

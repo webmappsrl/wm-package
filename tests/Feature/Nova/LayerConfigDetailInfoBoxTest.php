@@ -44,10 +44,22 @@ function infoBoxRepeaterBlock(string $titleIt, string $contentIt): array
 {
     return [
         'type' => 'info-box-item',
-        // KeyValue::fillAttributeFromRequest() expects the front-end's
-        // JSON.stringify-serialized value, not a raw PHP array — see
-        // Laravel\Nova\Fields\KeyValue::fillAttributeFromRequest().
-        'fields' => ['title' => json_encode(['it' => $titleIt]), 'content_it' => "<p>{$contentIt}</p>"],
+        'fields' => [
+            // FlexibleTranslatable::simple()'s actual Vue component
+            // (kongulov/nova-tab-translatable's FormField.vue) submits EACH locale
+            // sub-field independently under its OWN flat attribute
+            // ("translations_{attr}_{locale}") — not a single aggregated JSON-string
+            // key. This is the REAL wire format for a `title` field inside a Repeater
+            // row (see FlexibleTranslatable::fillInto()'s simple-mode branch).
+            'translations_title_it' => $titleIt,
+            // content_it is richText mode: it submits its own flat attribute
+            // ("content_it") directly — already the real wire format, verified by
+            // reading FlexibleTranslatable::wireRichTextField() (sub-field's ->attribute
+            // is set to "{originalAttribute}_{locale}" and fillUsing() reads
+            // $request->input($requestAttribute) where $requestAttribute IS that flat
+            // attribute — no aggregation, no JSON-encoding).
+            'content_it' => "<p>{$contentIt}</p>",
+        ],
     ];
 }
 
