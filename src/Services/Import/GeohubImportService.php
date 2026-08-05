@@ -34,6 +34,12 @@ class GeohubImportService
     /**
      * The order in which models should be imported to maintain dependencies
      */
+    // ugc_poi/ugc_track/ugc_media are intentionally NOT listed here: this constant drives
+    // importAll()/importAllByModel(), which dispatch without any app scoping (no app_id in
+    // job data) — for UGC that would violate the NOT NULL app_id FK, and would silently
+    // bypass the opt-in gate that keeps UGC out of every other consumer's default import.
+    // UGC is only ever queued from ImportAppJob::queueUgcDependencies(), which doesn't use
+    // this constant at all.
     protected const MODEL_IMPORT_ORDER = [
         'app',
         'taxonomy_activity',
@@ -226,6 +232,61 @@ class GeohubImportService
             $this->logger->error("Error importing {$modelName} with ID {$entityId}: ".$e->getMessage());
             throw $e;
         }
+    }
+
+    /**
+     * Import the transformed data into the database, but only if it doesn't exist yet.
+     * Unlike importData(), an existing record is left untouched (create-only): used for UGC,
+     * where GeoHub is only the source for the initial import and Maphub becomes the source of
+     * truth afterwards (e.g. moderation actions must survive a re-import of the same app).
+     *
+     * @param  array  $transformedData  The data to import
+     * @param  string  $modelKey  The model key
+     * @param  string  $modelName  The model class name
+     * @param  int  $entityId  The ID of the entity to import
+     * @return Model|null The created model, or null if a record for this geohub_id already exists
+     *
+     * @throws \Exception If import fails
+     */
+    public function importDataCreateOnly(array $transformedData, string $modelKey, string $modelName, int $entityId): ?Model
+    {
+        try {
+            if (! class_exists($modelName)) {
+                throw new \RuntimeException("App model class {$modelName} not found or not configured");
+            }
+
+            $identifier = $this->getIdentifier($modelKey, $entityId);
+
+            if ($modelName::where($identifier)->exists()) {
+                return null;
+            }
+
+            $model = new $modelName($transformedData);
+
+            // Temporarily disable observers during import to avoid triggering unwanted side effects
+            $model::unsetEventDispatcher();
+
+            $model->saveQuietly();
+
+            $model::setEventDispatcher(app('events'));
+
+            $this->logger->info("{$modelName} with ID {$entityId} imported successfully (create-only). Local ID: {$model->id}");
+
+            return $model;
+        } catch (\Exception $e) {
+            $this->logger->error("Error importing {$modelName} with ID {$entityId} (create-only): ".$e->getMessage());
+            throw $e;
+        }
+    }
+
+    /**
+     * Whether a record for this geohub_id already exists locally, for a create-only entity.
+     * Lets a job skip expensive side effects (e.g. downloading a file) before even attempting
+     * the create — checking only inside importDataCreateOnly() would do the side effect first.
+     */
+    public function existsForIdentifier(string $modelKey, string $modelName, int $entityId): bool
+    {
+        return $modelName::where($this->getIdentifier($modelKey, $entityId))->exists();
     }
 
     public function getModelInstance(string $tableName): Model
@@ -470,26 +531,69 @@ class GeohubImportService
     }
 
     /**
-     * Check if a user exists in the local database and create it if it doesn't
+     * Check if a user exists in the local database and create it if it doesn't.
+     * Assigns the Editor role — use for app owners, not UGC authors (see checkUgcUserExistence()).
      *
      * @param  int  $userId  The ID of the user to check
      * @return User The user object
      */
     public function checkUserExistence(int $userId): User
     {
-        $geohubUser = $this->dbConnection->table('users')->where('id', $userId)->first();
-        $shardUser = User::where('email', $geohubUser->email)->first();
-
-        if (! $shardUser) {
-            // make a diff between geohubUser and User model
-            $diff = array_diff(array_keys((array) $geohubUser), Schema::getColumnListing('users'));
-            $transformedData = array_diff_key((array) $geohubUser, array_flip($diff));
-            $shardUser = User::create($transformedData);
-        }
+        $shardUser = $this->resolveShardUser($userId);
 
         $this->assignEditorRole($shardUser);
 
         return $shardUser;
+    }
+
+    /**
+     * Check if a UGC author exists in the local database and create it if it doesn't.
+     * Assigns the Contributor role instead of Editor — for end-user content authors, not app owners.
+     *
+     * @param  int  $userId  The ID of the user to check
+     * @return User The user object
+     */
+    public function checkUgcUserExistence(int $userId): User
+    {
+        $shardUser = $this->resolveShardUser($userId);
+
+        $this->assignContributorRole($shardUser);
+
+        return $shardUser;
+    }
+
+    /**
+     * Find or create the local shard user for a given Geohub user ID, without assigning any role.
+     *
+     * @param  int  $userId  The Geohub user ID
+     * @return User The local user object
+     */
+    protected function resolveShardUser(int $userId): User
+    {
+        $geohubUser = $this->dbConnection->table('users')->where('id', $userId)->first();
+        $shardUser = User::where('email', $geohubUser->email)->first();
+
+        if ($shardUser) {
+            return $shardUser;
+        }
+
+        // make a diff between geohubUser and User model
+        $diff = array_diff(array_keys((array) $geohubUser), Schema::getColumnListing('users'));
+        $transformedData = array_diff_key((array) $geohubUser, array_flip($diff));
+
+        try {
+            return User::create($transformedData);
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Unique constraint on email: a concurrent import job (e.g. another UGC author
+            // shared across POI/Track jobs dispatched in the same batch) created the user
+            // first. Re-fetch instead of failing — both jobs converge on the same local user.
+            $shardUser = User::where('email', $geohubUser->email)->first();
+            if (! $shardUser) {
+                throw $e;
+            }
+
+            return $shardUser;
+        }
     }
 
     /**
@@ -507,6 +611,28 @@ class GeohubImportService
         if (! $role) {
             RolesAndPermissionsService::seedDatabase();
             $role = Role::where('name', 'Editor')->first();
+        }
+
+        $user->assignRole($role);
+    }
+
+    /**
+     * Assign the Contributor role to the user if they have no roles yet.
+     * The role is expected to already exist (created by its migration stub, not seeded lazily here)
+     * to avoid a unique-constraint race when many UGC authors are imported concurrently.
+     *
+     * @param  User  $user  The user to assign the role to
+     */
+    protected function assignContributorRole(User $user): void
+    {
+        if ($user->roles->isNotEmpty()) {
+            return;
+        }
+
+        $role = Role::where('name', 'Contributor')->first();
+        if (! $role) {
+            RolesAndPermissionsService::seedDatabase();
+            $role = Role::where('name', 'Contributor')->first();
         }
 
         $user->assignRole($role);

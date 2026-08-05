@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Wm\WmPackage\Jobs\UpdateAppConfigHomeLayerIdsJob;
+use Wm\WmPackage\Services\Import\GeohubImportService;
 
 class ImportAppJob extends BaseImportJob
 {
@@ -70,6 +71,86 @@ class ImportAppJob extends BaseImportJob
 
         if (in_array('ec_media', $allowedDependencies)) {
             $this->queueEntityImport('ec_media', $data['user_id'], 'user_id', $model->id);
+        }
+
+        $this->queueUgcDependencies($allowedDependencies, $model->id);
+    }
+
+    /**
+     * ugc_poi/ugc_track/ugc_media are opt-in (see wm-geohub-import.php) and filtered by
+     * Geohub app_id, not user_id — unlike EC content, UGC authors are end users, not the
+     * app owner. Media is dispatched only after the poi/track batch finishes, since syncing
+     * its pivots requires their local rows to already exist.
+     */
+    protected function queueUgcDependencies(array $allowedDependencies, int $localAppId): void
+    {
+        $wantsPoi = in_array('ugc_poi', $allowedDependencies);
+        $wantsTrack = in_array('ugc_track', $allowedDependencies);
+        $wantsMedia = in_array('ugc_media', $allowedDependencies);
+
+        if (! $wantsPoi && ! $wantsTrack && ! $wantsMedia) {
+            return;
+        }
+
+        $whereCondition = ['app_id' => (string) $this->entityId];
+        $data = ['app_id' => $localAppId];
+        $queue = config('wm-geohub-import.queue.queue', 'geohub-import');
+
+        $jobs = [];
+
+        if ($wantsPoi) {
+            foreach ($this->geohubImportService->getGeohubIdsToImport('ugc_poi', $whereCondition) as $id) {
+                $jobs[] = $this->geohubImportService->createJob('ugc_poi', $id, $data);
+            }
+        }
+
+        if ($wantsTrack) {
+            foreach ($this->geohubImportService->getGeohubIdsToImport('ugc_track', $whereCondition) as $id) {
+                $jobs[] = $this->geohubImportService->createJob('ugc_track', $id, $data);
+            }
+        }
+
+        if (count($jobs) > 0) {
+            // The `then()` callback is serialized into job_batches.options at dispatch time
+            // (batches always persist through a repository, even on the sync queue) — it must
+            // stay `static` and only close over plain arrays/scalars. Closing over $this would
+            // drag in $this->geohubImportService, which holds a live DB connection/PDO handle
+            // that PHP cannot serialize, crashing every dispatch that has poi/track jobs.
+            Bus::batch($jobs)
+                ->name('app-dependencies-ugc_poi_track-import-batch')
+                ->onQueue($queue)
+                ->allowFailures()
+                ->then(static function () use ($wantsMedia, $whereCondition, $data, $queue) {
+                    if ($wantsMedia) {
+                        self::dispatchUgcMediaBatch($whereCondition, $data, $queue);
+                    }
+                })
+                ->dispatch();
+        } elseif ($wantsMedia) {
+            // Nothing to wait for (poi/track not requested, or none found) — dispatch media right away.
+            self::dispatchUgcMediaBatch($whereCondition, $data, $queue);
+        }
+    }
+
+    /**
+     * Static so it never closes over a job instance — always resolves a fresh
+     * GeohubImportService, since this can run from inside a serialized batch callback.
+     */
+    protected static function dispatchUgcMediaBatch(array $whereCondition, array $data, string $queue): void
+    {
+        $geohubImportService = app(GeohubImportService::class);
+
+        $mediaJobs = [];
+        foreach ($geohubImportService->getGeohubIdsToImport('ugc_media', $whereCondition) as $id) {
+            $mediaJobs[] = $geohubImportService->createJob('ugc_media', $id, $data);
+        }
+
+        if (count($mediaJobs) > 0) {
+            Bus::batch($mediaJobs)
+                ->name('app-dependencies-ugc_media-import-batch')
+                ->onQueue($queue)
+                ->allowFailures()
+                ->dispatch();
         }
     }
 
