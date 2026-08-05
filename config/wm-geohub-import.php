@@ -8,6 +8,9 @@ use Wm\WmPackage\Jobs\Import\ImportLayerJob;
 use Wm\WmPackage\Jobs\Import\ImportTaxonomyActivityJob;
 use Wm\WmPackage\Jobs\Import\ImportTaxonomyPoiTypeJob;
 use Wm\WmPackage\Jobs\Import\ImportTaxonomyThemeJob;
+use Wm\WmPackage\Jobs\Import\ImportUgcMediaJob;
+use Wm\WmPackage\Jobs\Import\ImportUgcPoiJob;
+use Wm\WmPackage\Jobs\Import\ImportUgcTrackJob;
 use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Services\Import\DataTransformer;
 
@@ -145,6 +148,11 @@ return [
     | - 'taxonomy_activity': Import taxonomy activity data
     | - 'layer': Import layer data
     | - 'ec_media': Import media data
+    | - 'ugc_poi', 'ugc_track', 'ugc_media': Import end-user generated content (opt-in only,
+    |   intentionally NOT part of the default list below — wm-package is shared across
+    |   consumers and changing the default here would silently start importing UGC for
+    |   anyone running `wm:import-from-geohub` without flags. Request explicitly via
+    |   `--dependencies=...,ugc_poi,ugc_track,ugc_media`.
     |
     | Examples:
     | 'default_dependencies' => [
@@ -667,6 +675,99 @@ return [
                     'ec_track' => config('wm-package.ec_track_model', 'App\\Models\\EcTrack'),
                     'media' => 'Wm\\WmPackage\\Models\\Media',
                     'layer' => 'Wm\\WmPackage\\Models\\Layer',
+                ],
+            ],
+        ],
+
+        /*
+        |----------------------------------------------------------------------
+        | UGC POI Entity Mapping (opt-in, see default_dependencies note above)
+        |----------------------------------------------------------------------
+        */
+        'ugc_poi' => [
+            'namespace' => 'Wm\\WmPackage\\Models\\UgcPoi',
+            'job' => ImportUgcPoiJob::class,
+            'geohub_table' => 'ugc_pois',
+            'identifier' => 'properties->geohub_id',
+            'fields' => [
+                'name' => 'name',
+                'geometry' => 'geometry',
+                'created_at' => 'created_at',
+                'updated_at' => 'updated_at',
+            ],
+            'properties' => [
+                'column_name' => 'properties',
+                'mapping' => [
+                    'description' => 'description',
+                    'sku' => 'sku',
+                    'raw_data' => 'raw_data',
+                ],
+            ],
+        ],
+
+        /*
+        |----------------------------------------------------------------------
+        | UGC Track Entity Mapping (opt-in, see default_dependencies note above)
+        |----------------------------------------------------------------------
+        */
+        'ugc_track' => [
+            'namespace' => 'Wm\\WmPackage\\Models\\UgcTrack',
+            'job' => ImportUgcTrackJob::class,
+            'geohub_table' => 'ugc_tracks',
+            'identifier' => 'properties->geohub_id',
+            'fields' => [
+                'name' => 'name',
+                'geometry' => 'geometry',
+                'created_at' => 'created_at',
+                'updated_at' => 'updated_at',
+            ],
+            'properties' => [
+                'column_name' => 'properties',
+                'mapping' => [
+                    'description' => 'description',
+                    'metadata' => 'metadata',
+                    'sku' => 'sku',
+                    'raw_data' => 'raw_data',
+                ],
+            ],
+        ],
+
+        /*
+        |----------------------------------------------------------------------
+        | UGC Media Entity Mapping (opt-in, see default_dependencies note above)
+        |----------------------------------------------------------------------
+        */
+        'ugc_media' => [
+            'namespace' => 'Wm\\WmPackage\\Models\\UgcMedia',
+            'job' => ImportUgcMediaJob::class,
+            'geohub_table' => 'ugc_media',
+            'identifier' => 'properties->geohub_id',
+            'fields' => [
+                'name' => 'name',
+                'geometry' => 'geometry',
+                'created_at' => 'created_at',
+                'updated_at' => 'updated_at',
+            ],
+            'properties' => [
+                'column_name' => 'properties',
+                'mapping' => [
+                    'description' => 'description',
+                    'sku' => 'sku',
+                    'raw_data' => 'raw_data',
+                ],
+            ],
+            'relations' => [
+                'ugc_pois' => [
+                    'pivot_table' => 'ugc_media_ugc_poi',
+                    'foreign_key' => 'ugc_media_id',
+                    'key' => 'ugc_poi_id',
+                    'model' => 'Wm\\WmPackage\\Models\\UgcPoi',
+                ],
+                'ugc_tracks' => [
+                    'pivot_table' => 'ugc_media_ugc_track',
+                    'foreign_key' => 'ugc_media_id',
+                    'key' => 'ugc_track_id',
+                    'model' => 'Wm\\WmPackage\\Models\\UgcTrack',
                 ],
             ],
         ],

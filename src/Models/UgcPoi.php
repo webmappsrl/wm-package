@@ -3,6 +3,7 @@
 namespace Wm\WmPackage\Models;
 
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Wm\WmPackage\Models\Abstracts\Point;
 use Wm\WmPackage\Models\Interfaces\UserOwnedModelInterface;
 use Wm\WmPackage\Observers\UgcObserver;
@@ -51,5 +52,10 @@ class UgcPoi extends Point implements UserOwnedModelInterface
     public function author(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function ugcMedia(): BelongsToMany
+    {
+        return $this->belongsToMany(UgcMedia::class, 'ugc_media_ugc_poi');
     }
 }

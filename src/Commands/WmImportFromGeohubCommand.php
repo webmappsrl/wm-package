@@ -12,7 +12,7 @@ class WmImportFromGeohubCommand extends Command
                             {model? : The model to import (e.g. app, ec_media, ec_track, ec_poi). If not specified, imports all}
                             {id? : Specific ID to import. If not specified, imports all}
                             {--skip-dependencies : Skip importing all dependencies}
-                            {--dependencies=* : Comma-separated list of specific dependencies to import (e.g. ec_media,taxonomy_activity). If not specified, imports all dependencies unless --skip-dependencies is used}';
+                            {--dependencies=* : Comma-separated list of specific dependencies to import (e.g. ec_media,taxonomy_activity). If not specified, imports all standard dependencies unless --skip-dependencies is used. UGC content (ugc_poi,ugc_track,ugc_media) is opt-in only and must always be requested explicitly here — it is never imported by default}';
 
     protected $description = 'Import data from geohub to shard instance';
 
@@ -74,8 +74,14 @@ class WmImportFromGeohubCommand extends Command
      */
     protected function prepareJobData(bool $skipDependencies, array $dependencies): array
     {
-        // All available dependencies
+        // Default dependencies, imported automatically when --dependencies is omitted
         $allDependencies = ['taxonomy_activity', 'taxonomy_theme', 'taxonomy_poi_types', 'ec_poi', 'ec_track', 'layer', 'ec_media'];
+
+        // UGC content is opt-in only: wm-package is shared across consumers, and importing
+        // it by default would silently change behavior for anyone else running this command
+        // without flags. Must be requested explicitly via --dependencies=...,ugc_poi,ugc_track,ugc_media.
+        $optInDependencies = ['ugc_poi', 'ugc_track', 'ugc_media'];
+        $requestableDependencies = array_merge($allDependencies, $optInDependencies);
 
         if ($skipDependencies) {
             // Skip all dependencies
@@ -92,12 +98,12 @@ class WmImportFromGeohubCommand extends Command
             }
 
             // Validate dependencies
-            $validDependencies = array_intersect($parsedDependencies, $allDependencies);
-            $invalidDependencies = array_diff($parsedDependencies, $allDependencies);
+            $validDependencies = array_intersect($parsedDependencies, $requestableDependencies);
+            $invalidDependencies = array_diff($parsedDependencies, $requestableDependencies);
 
             if (! empty($invalidDependencies)) {
                 $this->warn('Invalid dependencies ignored: '.implode(', ', $invalidDependencies));
-                $this->info('Valid dependencies are: '.implode(', ', $allDependencies));
+                $this->info('Valid dependencies are: '.implode(', ', $requestableDependencies));
             }
 
             return [
@@ -105,7 +111,7 @@ class WmImportFromGeohubCommand extends Command
             ];
         }
 
-        // Default: import all dependencies
+        // Default: import all standard dependencies (UGC stays opt-in, see above)
         return [
             'allowed_dependencies' => $allDependencies,
         ];
