@@ -503,6 +503,13 @@ class Layer extends Polygon
                     'pointStrokeColor' => 'rgba(255, 255, 255, 1)',
                     'pointStrokeWidth' => 3,
                     'pointRadius' => 8,
+                    // Anelli concentrici (bullseye), non solo colore diverso: gli EcPoi sono un
+                    // cerchio pieno senza questa property — un utente daltonico o una stampa in
+                    // scala di grigi distingue comunque i due marker dal profilo (anelli vs pieno),
+                    // non solo dalla tinta. Nessuna modifica al componente Vue: checkpointRouteColors
+                    // è già supportato da FeatureCollectionMap.vue::getFeatureStyle() per un altro
+                    // caso d'uso (percorsi multi-tratta).
+                    'checkpointRouteColors' => ['rgba(255, 255, 255, 1)', 'rgba(34, 197, 94, 0.9)'],
                 ],
             ]]);
         }

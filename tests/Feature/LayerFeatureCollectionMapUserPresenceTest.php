@@ -63,6 +63,11 @@ class LayerFeatureCollectionMapUserPresenceTest extends TestCase
         $this->assertCount(1, $userPositionFeatures);
         $this->assertSame('Point', $userPositionFeatures[0]['geometry']['type']);
         $this->assertStringContainsString('34, 197, 94', $userPositionFeatures[0]['properties']['pointFillColor']);
+        // Profilo ad anelli concentrici, non solo colore: distinzione non-cromatica dagli EcPoi
+        // (cerchio pieno, nessuna checkpointRouteColors), richiesta esplicita di overview.md per
+        // l'accessibilità (colore da solo non sufficiente).
+        $this->assertArrayHasKey('checkpointRouteColors', $userPositionFeatures[0]['properties']);
+        $this->assertGreaterThan(1, count($userPositionFeatures[0]['properties']['checkpointRouteColors']));
     }
 
     public function test_no_point_features_added_when_no_recent_positions(): void
