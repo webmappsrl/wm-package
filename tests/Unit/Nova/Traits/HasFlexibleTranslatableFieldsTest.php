@@ -2,60 +2,57 @@
 
 namespace Wm\WmPackage\Tests\Unit\Nova\Traits;
 
-use Laravel\Nova\Http\Requests\NovaRequest;
 use Wm\WmPackage\Nova\Traits\HasFlexibleTranslatableFields;
 use Wm\WmPackage\Tests\TestCase;
 
+/**
+ * translatableFields() (the old KeyValue-based translatable field) was removed by
+ * oc:8349, superseded by Wm\WmPackage\Nova\Fields\FlexibleTranslatable — this test
+ * used to exercise that removed method (found stale in review). decodeTranslatableValue()
+ * is the only method left in the trait, still used in read by 3 Flexible resolvers.
+ */
 class HasFlexibleTranslatableFieldsTest extends TestCase
 {
-    private function makeField()
+    private function decode(mixed $value): array
     {
         $host = new class
         {
             use HasFlexibleTranslatableFields;
 
-            public function get()
+            public function decode(mixed $value): array
             {
-                return $this->translatableFields('Title', 'title', true);
+                return $this->decodeTranslatableValue($value);
             }
         };
 
-        return $host->get()[0];
+        return $host->decode($value);
     }
 
-    public function test_readonly_keys_is_enabled(): void
+    public function test_decodes_a_json_encoded_string_into_an_array(): void
     {
-        $field = $this->makeField();
+        $result = $this->decode(json_encode(['it' => 'Ciao', 'en' => 'Hello']));
 
-        $this->assertTrue($field->readonlyKeys(NovaRequest::create('/', 'GET')));
+        $this->assertSame(['it' => 'Ciao', 'en' => 'Hello'], $result);
     }
 
-    public function test_resolve_strips_invalid_keys_leaving_configured_locales_empty(): void
+    public function test_passes_through_an_already_decoded_array(): void
     {
-        $field = $this->makeField();
+        $result = $this->decode(['it' => 'Ciao', 'en' => 'Hello']);
 
-        $field->resolve(['title' => ['test poi track' => 'test poi track de']], 'title');
-
-        $this->assertSame(['it' => '', 'en' => '', 'fr' => '', 'es' => '', 'de' => ''], $field->value);
+        $this->assertSame(['it' => 'Ciao', 'en' => 'Hello'], $result);
     }
 
-    public function test_resolve_preserves_valid_locales_and_drops_stray_key(): void
+    public function test_filters_out_null_and_empty_string_values_but_keeps_every_other_key(): void
     {
-        $field = $this->makeField();
+        $result = $this->decode(['it' => 'Ciao', 'en' => '', 'fr' => null, 'stray key' => 'stray value']);
 
-        $field->resolve(['title' => ['it' => 'Titolo IT', 'en' => 'Title EN', 'stray key' => 'stray value']], 'title');
-
-        $this->assertSame('Titolo IT', $field->value['it']);
-        $this->assertSame('Title EN', $field->value['en']);
-        $this->assertArrayNotHasKey('stray key', $field->value);
+        $this->assertSame(['it' => 'Ciao', 'stray key' => 'stray value'], $result);
     }
 
-    public function test_resolve_falls_back_to_default_when_value_is_empty(): void
+    public function test_returns_an_empty_array_for_non_array_non_decodable_input(): void
     {
-        $field = $this->makeField();
-
-        $field->resolve(['title' => null], 'title');
-
-        $this->assertSame(['it' => '', 'en' => '', 'fr' => '', 'es' => '', 'de' => ''], $field->value);
+        $this->assertSame([], $this->decode(null));
+        $this->assertSame([], $this->decode('not valid json'));
+        $this->assertSame([], $this->decode(42));
     }
 }
