@@ -53,6 +53,10 @@
           <p style="font-size:2rem; font-weight:700; color:#10b981; margin:0;">{{ avgPerDay }}</p>
           <p style="font-size:0.75rem; color:#6b7280; margin:4px 0 0;">Media/giorno</p>
         </div>
+        <div v-if="card.mode !== 'global'" style="flex:1; background:#f9fafb; border-radius:8px; padding:16px; text-align:center;">
+          <p style="font-size:2rem; font-weight:700; margin:0;" :style="{ color: userPresenceDisplay === 'N/D' ? '#9ca3af' : '#16a34a' }">{{ userPresenceDisplay }}</p>
+          <p style="font-size:0.75rem; color:#6b7280; margin:4px 0 0;">Utenti sul cammino</p>
+        </div>
       </div>
 
       <!-- Stacked bar chart -->
@@ -104,7 +108,7 @@
       </div>
 
       <!-- Classifiche globali (solo modalità globale) -->
-      <div v-if="card.mode === 'global' && (data.ranking_layers?.length || data.ranking_tracks?.length || data.ranking_track_shares?.length || data.ranking_search_queries?.length)" style="margin-top:24px;">
+      <div v-if="card.mode === 'global' && (data.ranking_layers?.length || data.ranking_user_presence?.length || data.ranking_tracks?.length || data.ranking_track_shares?.length || data.ranking_search_queries?.length)" style="margin-top:24px;">
         <div v-if="data.ranking_layers?.length" style="margin-bottom:24px;">
           <p style="font-size:0.75rem; color:#6b7280; text-transform:uppercase; margin-bottom:8px;">Cammini più aperti</p>
           <div style="display:flex; align-items:center; justify-content:center; gap:16px; margin-bottom:16px;">
@@ -171,6 +175,47 @@
             @click="showAllLayers = !showAllLayers"
             style="margin-top:8px; font-size:0.75rem; padding:4px 12px; border-radius:6px; border:1px solid #d1d5db; background:#fff; color:#6b7280; cursor:pointer;"
           >{{ showAllLayers ? 'Mostra meno' : `Mostra tutti (${data.ranking_layers.length})` }}</button>
+        </div>
+
+        <div v-if="data.ranking_user_presence?.length" style="margin-bottom:24px;">
+          <p style="font-size:0.75rem; color:#6b7280; text-transform:uppercase; margin-bottom:8px;">Cammini più frequentati</p>
+          <div>
+            <div
+              v-for="row in visibleUserPresenceRanking"
+              :key="row.layer_id"
+              style="display:flex; align-items:center; gap:12px; margin-bottom:8px;"
+            >
+              <a
+                :href="layerDetailUrl(row.layer_id)"
+                target="_blank"
+                rel="noopener noreferrer"
+                @mouseenter="hoveredUserPresenceLinkId = row.layer_id"
+                @mouseleave="hoveredUserPresenceLinkId = null"
+                @focus="hoveredUserPresenceLinkId = row.layer_id"
+                @blur="hoveredUserPresenceLinkId = null"
+                :style="{
+                  width: '220px', flexShrink: 0, fontSize: '0.8125rem',
+                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                  color: hoveredUserPresenceLinkId === row.layer_id ? '#16a34a' : '#374151',
+                  textDecoration: hoveredUserPresenceLinkId === row.layer_id ? 'underline' : 'none',
+                  transition: 'color 150ms ease',
+                }"
+              >{{ row.name }}</a>
+              <div style="flex:1; display:flex; align-items:center; gap:8px; min-width:0;">
+                <div style="position:relative; flex:1; background:#f3f4f6; border-radius:0 4px 4px 0; height:20px; overflow:hidden;">
+                  <div
+                    :style="{ width: userPresenceBarWidthPercent(row) + '%', height:'20px', background:'#16a34a', borderRadius:'0 4px 4px 0' }"
+                  ></div>
+                </div>
+                <span style="width:44px; flex-shrink:0; font-size:0.8125rem; font-weight:600; color:#6b7280; text-align:right;">{{ row.total }}</span>
+              </div>
+            </div>
+          </div>
+          <button
+            v-if="data.ranking_user_presence.length > 10"
+            @click="showAllUserPresence = !showAllUserPresence"
+            style="margin-top:8px; font-size:0.75rem; padding:4px 12px; border-radius:6px; border:1px solid #d1d5db; background:#fff; color:#6b7280; cursor:pointer;"
+          >{{ showAllUserPresence ? 'Mostra meno' : `Mostra tutti (${data.ranking_user_presence.length})` }}</button>
         </div>
 
         <div
@@ -319,10 +364,12 @@ export default {
       data: null,
       chartInstance: null,
       showAllLayers: false,
+      showAllUserPresence: false,
       showAllTracks: false,
       showAllTrackShares: false,
       hoveredLayerId: null,
       hoveredLayerLinkId: null,
+      hoveredUserPresenceLinkId: null,
       showAllSearchQueries: false,
       showRestOfAnalytics: false,
     }
@@ -369,6 +416,11 @@ export default {
       return days ? Math.round(this.data.total / days) : 0
     },
 
+    userPresenceDisplay() {
+      const value = this.data?.user_presence
+      return value === null || value === undefined ? 'N/D' : value
+    },
+
     fetchUrl() {
       const base = this.card.endpoint
       if (this.selectedRange.startsWith('month:')) {
@@ -382,6 +434,11 @@ export default {
     visibleLayerRanking() {
       if (!this.data?.ranking_layers) return []
       return this.showAllLayers ? this.data.ranking_layers : this.data.ranking_layers.slice(0, 10)
+    },
+
+    visibleUserPresenceRanking() {
+      if (!this.data?.ranking_user_presence) return []
+      return this.showAllUserPresence ? this.data.ranking_user_presence : this.data.ranking_user_presence.slice(0, 10)
     },
 
     visibleTrackRanking() {
@@ -495,6 +552,11 @@ export default {
       }).filter((seg) => seg.widthPercent > 0)
 
       return segments.map((seg, i) => ({ ...seg, isLast: i === segments.length - 1 }))
+    },
+
+    userPresenceBarWidthPercent(row) {
+      const max = Math.max(...this.visibleUserPresenceRanking.map((r) => r.total), 1)
+      return (row.total / max) * 100
     },
 
     layerBarTooltipRows(row) {
