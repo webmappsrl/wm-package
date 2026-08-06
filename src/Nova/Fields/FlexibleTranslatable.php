@@ -46,7 +46,7 @@ class FlexibleTranslatable extends NovaTabTranslatable
      * an editor embed a page that can run script in the parent context, a real
      * XSS/clickjacking risk.
      */
-    public const DEFAULT_RICH_TEXT_ALLOWED_HTML = 'p,br,b,strong,i,em,u,ul,ol,li,h2,h3,h4,blockquote,a[href],iframe[src|width|height|frameborder|allow|allowfullscreen|referrerpolicy|title|loading]';
+    public const DEFAULT_RICH_TEXT_ALLOWED_HTML = 'p,br,b,strong,i,em,u,ul,ol,li,h2,h3,h4,blockquote,a[href],img[src|alt|width|height|title],iframe[src|width|height|frameborder|allow|allowfullscreen|referrerpolicy|title|loading]';
 
     /**
      * `src` allowlist for richText() mode's embedded iframes, passed to HTMLPurifier's
@@ -265,7 +265,7 @@ class FlexibleTranslatable extends NovaTabTranslatable
         // resurface a raw <iframe> if anything ever reads it directly instead of
         // drilling into the sub-fields, reintroducing the "Trix silently drops it on
         // reload" bug for that path.
-        return is_string($stored) ? $this->collapseEmbedIframes($stored) : $stored;
+        return is_string($stored) ? $this->collapseEmbedMedia($stored) : $stored;
     }
 
     public static function simple(string $label, array $fields, array $locales = []): static
@@ -377,9 +377,22 @@ class FlexibleTranslatable extends NovaTabTranslatable
         return is_array($value) ? $value : [];
     }
 
+    /**
+     * The wire-format attribute name a richText() field uses for one locale — a flat
+     * "{attribute}_{locale}" key inside the Repeater block's `fields`. Exposed as a public
+     * contract (not just an internal implementation detail of wireRichTextField()) so
+     * consumers that read/write this shape directly — e.g. ConfigDetailResolver, which
+     * reshapes it into a persisted {attribute: {locale: value}} object — don't have to
+     * hardcode and independently keep in sync the same naming convention.
+     */
+    public static function richTextAttributeFor(string $originalAttribute, string $locale): string
+    {
+        return "{$originalAttribute}_{$locale}";
+    }
+
     protected function wireRichTextField(Field $translatedField, string $originalAttribute, string $locale): void
     {
-        $flatAttribute = "{$originalAttribute}_{$locale}";
+        $flatAttribute = self::richTextAttributeFor($originalAttribute, $locale);
         $translatedField->attribute = $flatAttribute;
 
         // Marks the rendered <trix-editor> so resources/js/nova.js can scope the "Insert
@@ -404,7 +417,7 @@ class FlexibleTranslatable extends NovaTabTranslatable
         $translatedField->resolveUsing(function ($value, $model) use ($flatAttribute) {
             $stored = data_get($model, $flatAttribute, '');
 
-            return is_string($stored) ? $this->collapseEmbedIframes($stored) : $stored;
+            return is_string($stored) ? $this->collapseEmbedMedia($stored) : $stored;
         });
 
         $translatedField->fillUsing(function ($request, $model, $attribute, $requestAttribute) use ($flatAttribute) {

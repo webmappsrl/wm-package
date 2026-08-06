@@ -22,8 +22,8 @@ class InfoBoxItemRepeatable extends Repeatable
     public function fields(NovaRequest $request): array
     {
         return [
-            FlexibleTranslatable::simple(__('Title'), [Text::make(__('Title'), 'title')]),
-            FlexibleTranslatable::richText(__('Content'), [Trix::make(__('Content'), 'content')]),
+            FlexibleTranslatable::simple(__('Title'), [Text::make(__('Title'), 'title')])->fullWidth(),
+            FlexibleTranslatable::richText(__('Content'), [Trix::make(__('Content'), 'content')])->fullWidth(),
         ];
     }
 }

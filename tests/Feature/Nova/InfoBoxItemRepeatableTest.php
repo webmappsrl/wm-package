@@ -17,3 +17,13 @@ it('exposes one title field and one content field, both FlexibleTranslatable', f
     expect($fields[0])->toBeInstanceOf(FlexibleTranslatable::class);
     expect($fields[1])->toBeInstanceOf(FlexibleTranslatable::class);
 });
+
+it('offers Embed and Image toolbar tooling on the content field, same as config_home richText', function () {
+    $fields = InfoBoxItemRepeatable::make()->fields(NovaRequest::create('/'));
+
+    $contentField = $fields[1];
+    $extraAttributes = $contentField->data[0]->meta['extraAttributes'] ?? [];
+
+    expect($extraAttributes)->toHaveKey('data-wm-embed-support', 'true');
+    expect($extraAttributes)->toHaveKey('data-wm-image-support', 'true');
+});

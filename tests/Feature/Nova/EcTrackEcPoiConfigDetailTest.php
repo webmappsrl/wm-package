@@ -45,12 +45,10 @@ function fillOneInfoGroup(Flexible $field, string $uriKey, $model): void
         'layout' => 'info',
         'key' => 'new-group-1',
         'attributes' => ['items' => [
-            // KeyValue::fillAttributeFromRequest() expects the front-end's
-            // JSON.stringify-serialized value, not a raw PHP array (see
-            // Wm\WmPackage\Nova\Flexible\ConfigDetail\InfoBoxItemRepeatable's
-            // translatable `title` field, and LayerConfigDetailInfoBoxTest.php
-            // where the same correction was already established).
-            ['type' => 'info-box-item', 'fields' => ['title' => json_encode(['it' => 'Nota']), 'content_it' => '<p>Testo</p>']],
+            // FlexibleTranslatable::simple()'s real Vue component (kongulov/nova-tab-translatable's
+            // FormField.vue) submits each locale as its own flat attribute ("translations_{attr}_{locale}"),
+            // not an aggregated JSON string — see LayerConfigDetailInfoBoxTest.php's infoBoxRepeaterBlock().
+            ['type' => 'info-box-item', 'fields' => ['translations_title_it' => 'Nota', 'content_it' => '<p>Testo</p>']],
         ]],
     ]];
 
@@ -101,8 +99,8 @@ it('sanitizes malicious content through the full Flexible/Repeater/resolver/save
             [
                 'type' => 'info-box-item',
                 'fields' => [
-                    'title' => json_encode(['it' => 'Nota']),
-                    'content_it' => '<p onclick="alert(1)">Testo <script>alert(2)</script><b>sicuro</b></p>',
+                    'translations_title_it' => 'Nota',
+                    'content_it' => '<p onclick="alert(1)">Testo <script>alert(2)</script><b>sicuro</b></p><iframe width="560" height="315" src="https://www.youtube.com/embed/RBNY26gkdzM" title="YouTube video player" frameborder="0" allowfullscreen></iframe>',
                 ],
             ],
         ]],
@@ -122,4 +120,6 @@ it('sanitizes malicious content through the full Flexible/Repeater/resolver/save
     expect($content)->toContain('<b>sicuro</b>');
     expect($content)->not->toContain('<script>');
     expect($content)->not->toContain('onclick');
+    expect($content)->toContain('<iframe');
+    expect($content)->toContain('https://www.youtube.com/embed/');
 });

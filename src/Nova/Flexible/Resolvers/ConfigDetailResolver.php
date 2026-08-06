@@ -7,12 +7,21 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Config;
 use Whitecube\NovaFlexibleContent\Layouts\Layout;
 use Whitecube\NovaFlexibleContent\Value\ResolverInterface;
+use Wm\WmPackage\Nova\Fields\FlexibleTranslatable;
 use Wm\WmPackage\Nova\Flexible\ConfigDetail\InfoBoxItemRepeatable;
 use Wm\WmPackage\Nova\Traits\HasFlexibleTranslatableFields;
 
 class ConfigDetailResolver implements ResolverInterface
 {
     use HasFlexibleTranslatableFields;
+
+    /**
+     * The only box_type registered today (see docs/features/8181-box-informativi-cammino/overview.md).
+     * Referenced by name from HasConfigDetailPanel's detail-view preview too, so a future
+     * addLayout() for a new box_type can't silently fall through the 'info'-only preview
+     * branch without at least one shared place to update.
+     */
+    public const INFO_BOX_TYPE = 'info';
 
     public function get($resource, $attribute, $layouts): Collection
     {
@@ -66,7 +75,7 @@ class ConfigDetailResolver implements ResolverInterface
     protected function buildElement(Layout $layout): array
     {
         return match ($layout->name()) {
-            'info' => $this->buildInfoElement($layout),
+            self::INFO_BOX_TYPE => $this->buildInfoElement($layout),
             default => ['box_type' => $layout->name()] + $layout->getAttributes(),
         };
     }
@@ -88,7 +97,7 @@ class ConfigDetailResolver implements ResolverInterface
 
             $content = [];
             foreach ($locales as $locale) {
-                $value = $fields["content_{$locale}"] ?? null;
+                $value = $fields[FlexibleTranslatable::richTextAttributeFor('content', $locale)] ?? null;
                 if ($value !== null && $value !== '') {
                     $content[$locale] = $value;
                 }
@@ -97,12 +106,12 @@ class ConfigDetailResolver implements ResolverInterface
             return ['title' => $title, 'content' => $content];
         }, is_array($items) ? $items : []));
 
-        return ['box_type' => 'info', 'items' => $normalized];
+        return ['box_type' => self::INFO_BOX_TYPE, 'items' => $normalized];
     }
 
     protected function hydrateAttributesForGroup(array $group): array
     {
-        if (($group['box_type'] ?? null) === 'info') {
+        if (($group['box_type'] ?? null) === self::INFO_BOX_TYPE) {
             return $this->hydrateInfoAttributes($group);
         }
 
@@ -118,7 +127,7 @@ class ConfigDetailResolver implements ResolverInterface
             $fields = ['title' => is_array($item['title'] ?? null) ? $item['title'] : []];
 
             foreach ($locales as $locale) {
-                $fields["content_{$locale}"] = $item['content'][$locale] ?? null;
+                $fields[FlexibleTranslatable::richTextAttributeFor('content', $locale)] = $item['content'][$locale] ?? null;
             }
 
             return ['type' => InfoBoxItemRepeatable::key(), 'fields' => $fields];

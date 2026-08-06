@@ -14,7 +14,7 @@ use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Nova\Layer as LayerResource;
 
 /**
- * Regression coverage for HasConfigDetailPanel::renderConfigDetailItem() (found missing
+ * Regression coverage for ConfigDetailPreviewRenderer::renderItem() (found missing
  * in review: the language-switch-visible-before-opening-the-accordion behavior had no
  * automated test, only manual live verification) — asserts the actual generated HTML
  * shape (radio inputs + tab bar as SIBLINGS of, and BEFORE, the collapsible <details>,
@@ -116,4 +116,50 @@ it('shows the empty-state message when no info box is configured', function () {
 
     expect($html)->toContain('No blocks configured.');
     expect($html)->not->toContain('wm-cd-tabbar');
+});
+
+it('re-sanitizes malicious content in the detail preview while preserving http(s) iframe embeds', function () {
+    App::factory()->createQuietly();
+    $layer = Layer::factory()->createQuietly([
+        'properties' => [
+            'config_detail' => [
+                ['box_type' => 'info', 'items' => [[
+                    'title' => ['it' => 'Nota'],
+                    'content' => ['it' => '<p onclick="alert(1)">Testo <script>alert(2)</script><b>sicuro</b></p><iframe width="560" height="315" src="https://www.youtube.com/embed/RBNY26gkdzM" title="YouTube video player" frameborder="0" allowfullscreen></iframe>'],
+                ]]],
+            ],
+        ],
+    ]);
+
+    $html = layerConfigDetailPreviewHtml($layer);
+
+    expect($html)->toContain('<b>sicuro</b>');
+    expect($html)->not->toContain('<script>');
+    expect($html)->not->toContain('onclick');
+    expect($html)->toContain('<iframe');
+    expect($html)->toContain('https://www.youtube.com/embed/RBNY26gkdzM');
+});
+
+it('re-sanitizes malicious content in the detail preview while preserving http(s) images', function () {
+    App::factory()->createQuietly();
+    $layer = Layer::factory()->createQuietly([
+        'properties' => [
+            'config_detail' => [
+                ['box_type' => 'info', 'items' => [[
+                    'title' => ['it' => 'Nota'],
+                    'content' => ['it' => '<p onclick="alert(1)">Testo <script>alert(2)</script><b>sicuro</b></p><img src="https://example.com/photo.png" alt="Panorama"><img src="javascript:alert(1)">'],
+                ]]],
+            ],
+        ],
+    ]);
+
+    $html = layerConfigDetailPreviewHtml($layer);
+
+    expect($html)->toContain('<b>sicuro</b>');
+    expect($html)->not->toContain('<script>');
+    expect($html)->not->toContain('onclick');
+    expect($html)->not->toContain('javascript:');
+    expect($html)->toContain('<img');
+    expect($html)->toContain('https://example.com/photo.png');
+    expect($html)->toContain('alt="Panorama"');
 });

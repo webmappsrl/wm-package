@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
@@ -9,7 +10,6 @@ use Tests\TestCase;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Services\RolesAndPermissionsService;
-use App\Models\User;
 
 uses(TestCase::class, DatabaseTransactions::class);
 
@@ -38,10 +38,10 @@ it('blocks a Validator from persisting a config_detail box on EcPoi via the real
         'layout' => 'info',
         'key' => 'new-group-1',
         'attributes' => ['items' => [
-            // KeyValue::fillAttributeFromRequest() expects a JSON-encoded
-            // string, not a raw PHP array (known correction from Tasks 3/4,
-            // see EcTrackEcPoiConfigDetailTest.php / LayerConfigDetailInfoBoxTest.php).
-            ['type' => 'info-box-item', 'fields' => ['title' => json_encode(['it' => 'Non autorizzato']), 'content_it' => '<p>x</p>']],
+            // FlexibleTranslatable::simple()'s real Vue component submits each locale as its
+            // own flat attribute ("translations_{attr}_{locale}"), not an aggregated JSON
+            // string — see LayerConfigDetailInfoBoxTest.php's infoBoxRepeaterBlock().
+            ['type' => 'info-box-item', 'fields' => ['translations_title_it' => 'Non autorizzato', 'content_it' => '<p>x</p>']],
         ]],
     ]];
 
@@ -73,7 +73,7 @@ it('allows an Administrator to persist a config_detail box on EcPoi via the real
         'layout' => 'info',
         'key' => 'new-group-1',
         'attributes' => ['items' => [
-            ['type' => 'info-box-item', 'fields' => ['title' => json_encode(['it' => 'Autorizzato']), 'content_it' => '<p>x</p>']],
+            ['type' => 'info-box-item', 'fields' => ['translations_title_it' => 'Autorizzato', 'content_it' => '<p>x</p>']],
         ]],
     ]];
 

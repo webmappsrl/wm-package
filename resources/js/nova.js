@@ -42,16 +42,21 @@ Nova.booting(() => {
     });
     scheduleResize();
 
-    // "Insert embed" support (oc:8349 follow-up) is opt-in per field: FlexibleTranslatable
+    // Embed/Image toolbar support (oc:8349 follow-up) is opt-in per field: FlexibleTranslatable
     // ::wireRichTextField() tags its Trix field with `extraAttributes` so the rendered
-    // <trix-editor> carries this attribute — every OTHER Trix field in the package (and in
+    // <trix-editor> carries these attributes — every OTHER Trix field in the package (and in
     // any other consumer app using wm-package) is left untouched. Found in review: an
     // earlier version wired the button/paste handling globally on every <trix-editor> on
     // the page, but expandEmbedMarkers()/HTMLPurifier only exist inside
     // FlexibleTranslatable — a plain Trix field elsewhere would have shown the button and
     // intercepted paste, then saved the raw `[[embed:...]]` marker literally, un-expanded.
+    // Embed (`iframe`) and Image (`img`) are gated independently so a whitelist with only
+    // one of the two tags still gets the matching button (not both behind a single attr).
     const EMBED_SUPPORT_ATTR = 'data-wm-embed-support';
+    const IMAGE_SUPPORT_ATTR = 'data-wm-image-support';
     const supportsEmbed = (editorElement) => !!editorElement && editorElement.hasAttribute(EMBED_SUPPORT_ATTR);
+    const supportsImage = (editorElement) => !!editorElement && editorElement.hasAttribute(IMAGE_SUPPORT_ATTR);
+    const supportsAnyRichMedia = (editorElement) => supportsEmbed(editorElement) || supportsImage(editorElement);
 
     // btoa()/atob() operate on Latin-1 code units and THROW (InvalidCharacterError) on any
     // character outside U+0000-U+00FF — found in review, reproduced live with a realistic
@@ -118,6 +123,7 @@ Nova.booting(() => {
             const embedGroup =
                 '<span class="trix-button-group" data-trix-button-group="wm-embed-tools">' +
                 '<button type="button" class="trix-button" data-wm-embed-button title="Insert embed">Embed</button>' +
+                '<button type="button" class="trix-button" data-wm-image-button title="Insert image URL">Image</button>' +
                 '</span>';
 
             const dialogsIndex = original.indexOf('<div class="trix-dialogs"');
@@ -134,26 +140,87 @@ Nova.booting(() => {
         };
     });
 
-    // Strips the unconditionally-injected button back out for every editor that didn't opt
-    // in via EMBED_SUPPORT_ATTR — fires per editor, after Trix has built and linked its
-    // toolbar (unlike trix-before-initialize, which only fires once globally for the
-    // getDefaultHTML() override above).
+    // Strips / trims the unconditionally-injected button group per editor based on
+    // EMBED_SUPPORT_ATTR / IMAGE_SUPPORT_ATTR — fires per editor, after Trix has built
+    // and linked its toolbar (unlike trix-before-initialize, which only fires once
+    // globally for the getDefaultHTML() override above).
     document.addEventListener('trix-initialize', (event) => {
         const editorElement = event.target;
-        if (supportsEmbed(editorElement)) {
+        const toolbarId = editorElement.getAttribute('toolbar');
+        const toolbarElement = toolbarId && document.getElementById(toolbarId);
+        const embedGroup =
+            toolbarElement && toolbarElement.querySelector('[data-trix-button-group="wm-embed-tools"]');
+        const hasEmbed = supportsEmbed(editorElement);
+        const hasImage = supportsImage(editorElement);
+
+        if (!hasEmbed && !hasImage) {
+            if (embedGroup) {
+                embedGroup.remove();
+            }
+
             return;
         }
 
-        const toolbarId = editorElement.getAttribute('toolbar');
-        const toolbarElement = toolbarId && document.getElementById(toolbarId);
-        const embedGroup = toolbarElement && toolbarElement.querySelector('[data-trix-button-group="wm-embed-tools"]');
-
         if (embedGroup) {
-            embedGroup.remove();
+            if (!hasEmbed) {
+                const embedButton = embedGroup.querySelector('[data-wm-embed-button]');
+                if (embedButton) {
+                    embedButton.remove();
+                }
+            }
+
+            if (!hasImage) {
+                const imageButton = embedGroup.querySelector('[data-wm-image-button]');
+                if (imageButton) {
+                    imageButton.remove();
+                }
+            }
+        }
+
+        const fileTools =
+            toolbarElement && toolbarElement.querySelector('[data-trix-button-group="file-tools"]');
+
+        if (fileTools) {
+            fileTools.remove();
         }
     });
 
     document.addEventListener('click', (event) => {
+        const imageButton = event.target.closest('[data-wm-image-button]');
+        if (imageButton) {
+            event.preventDefault();
+
+            const toolbarElement = imageButton.closest('trix-toolbar');
+            const editorElement =
+                toolbarElement && document.querySelector('trix-editor[toolbar="' + toolbarElement.id + '"]');
+
+            if (!editorElement || !supportsImage(editorElement)) {
+                return;
+            }
+
+            const input = window.prompt(
+                'Insert image URL (http/https) or paste a full <img> snippet:\n\n' +
+                    'A placeholder like [[embed:...]] will appear in the text — the real image shows once saved and viewed.'
+            );
+
+            if (!input) {
+                return;
+            }
+
+            const trimmed = input.trim();
+
+            if (trimmed.startsWith('<')) {
+                editorElement.editor.insertString(buildEmbedMarker('html', trimmed));
+            } else if (/^https?:\/\//i.test(trimmed)) {
+                const escapedUrl = trimmed.replace(/"/g, '&quot;');
+                editorElement.editor.insertString(
+                    buildEmbedMarker('html', '<img src="' + escapedUrl + '" alt="">')
+                );
+            }
+
+            return;
+        }
+
         const button = event.target.closest('[data-wm-embed-button]');
         if (!button) {
             return;
@@ -207,7 +274,7 @@ Nova.booting(() => {
         'paste',
         (event) => {
             const editorElement = event.target.closest && event.target.closest('trix-editor');
-            if (!editorElement || !editorElement.editor || !supportsEmbed(editorElement)) {
+            if (!editorElement || !editorElement.editor || !supportsAnyRichMedia(editorElement)) {
                 return;
             }
 
@@ -218,26 +285,38 @@ Nova.booting(() => {
 
             const html = clipboardData.getData('text/html');
             const text = clipboardData.getData('text/plain');
+            const hasEmbed = supportsEmbed(editorElement);
+            const hasImage = supportsImage(editorElement);
 
-            if (html && /<iframe\b/i.test(html)) {
-                // Pasting a RENDERED embed from a real webpage (as opposed to copying its
-                // embed-code textarea) puts real HTML on the clipboard. Replace each
-                // <iframe> IN PLACE with a text node holding its marker — not remove-then-
-                // append-all-markers-at-the-end (found in review: that lost the original
-                // position relative to surrounding text, e.g. "Guarda: <iframe> (fonte: X)"
-                // came back out as "Guarda: (fonte: X)" followed by the embed at the very
-                // end) — then hand the WHOLE resulting HTML to Trix's own HTML-paste
-                // handling in a single insertHTML() call, so text and markers land exactly
-                // where the original text and iframes were.
+            if (html && ((hasEmbed && /<iframe\b/i.test(html)) || (hasImage && /<img\b/i.test(html)))) {
+                // Pasting a RENDERED embed/image from a real webpage (as opposed to copying
+                // its embed-code textarea) puts real HTML on the clipboard. Replace each
+                // supported <iframe>/<img> IN PLACE with a text node holding its marker —
+                // not remove-then-append-all-markers-at-the-end (found in review: that lost
+                // the original position relative to surrounding text) — then hand the WHOLE
+                // resulting HTML to Trix's own HTML-paste handling in a single insertHTML()
+                // call. Unsupported tags (e.g. iframe on an image-only field) are left alone
+                // for Trix's default sanitizer to drop.
                 const parsed = new DOMParser().parseFromString(html, 'text/html');
-                const iframes = parsed.body.querySelectorAll('iframe');
+                let replaced = 0;
 
-                if (iframes.length) {
-                    iframes.forEach((iframe) => {
+                if (hasEmbed) {
+                    parsed.body.querySelectorAll('iframe').forEach((iframe) => {
                         const marker = buildEmbedMarker('html', iframe.outerHTML);
                         iframe.replaceWith(document.createTextNode(marker));
+                        replaced++;
                     });
+                }
 
+                if (hasImage) {
+                    parsed.body.querySelectorAll('img').forEach((img) => {
+                        const marker = buildEmbedMarker('html', img.outerHTML);
+                        img.replaceWith(document.createTextNode(marker));
+                        replaced++;
+                    });
+                }
+
+                if (replaced > 0) {
                     event.preventDefault();
                     event.stopPropagation();
                     editorElement.editor.insertHTML(parsed.body.innerHTML.trim());
@@ -246,15 +325,18 @@ Nova.booting(() => {
                 return;
             }
 
-            if (text && /^<iframe\b[\s\S]*<\/iframe>$/i.test(text.trim())) {
+            const trimmedText = text ? text.trim() : '';
+            const isIframeSnippet = hasEmbed && /^<iframe\b[\s\S]*<\/iframe>$/i.test(trimmedText);
+            const isImgSnippet = hasImage && /^<img\b[\s\S]*\/?>$/i.test(trimmedText);
+
+            if (trimmedText && (isIframeSnippet || isImgSnippet)) {
                 // The realistic case: an embed-code textarea's clipboard content is nothing
-                // BUT the iframe snippet. Matching the ENTIRE trimmed paste (not just
-                // "contains an iframe somewhere") avoids hijacking a paste that merely
-                // mentions "<iframe>" inside unrelated prose/code — those still get Trix's
-                // normal (escaped-text) handling, unchanged from before this feature existed.
+                // BUT the iframe/img snippet. Matching the ENTIRE trimmed paste (not just
+                // "contains an iframe/img somewhere") avoids hijacking a paste that merely
+                // mentions "<iframe>" or "<img>" inside unrelated prose/code.
                 event.preventDefault();
                 event.stopPropagation();
-                editorElement.editor.insertString(buildEmbedMarker('html', text.trim()));
+                editorElement.editor.insertString(buildEmbedMarker('html', trimmedText));
             }
         },
         true

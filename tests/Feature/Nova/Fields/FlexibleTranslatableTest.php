@@ -256,6 +256,61 @@ it('still blocks dangerous iframe src schemes (javascript:/data:) despite the op
         ->toContain('<p>testo</p>');
 });
 
+it('keeps an http(s) image from an external URL, including common attributes', function () {
+    $field = FlexibleTranslatable::richText('Content', [Trix::make('Content', 'content')], ['it']);
+    $model = new Fluent;
+    $subField = $field->data[0];
+    $html = '<p>Foto</p><img src="https://example.com/path/photo.png" alt="Panorama" width="800" height="600">';
+    fillField($subField, flexibleTranslatableRequest($subField->attribute, $html), $model);
+
+    expect($model->content_it)->toContain('<img')
+        ->toContain('src="https://example.com/path/photo.png"')
+        ->toContain('alt="Panorama"');
+});
+
+it('expands an [[embed:html:...]] marker containing an img snippet verbatim', function () {
+    $field = FlexibleTranslatable::richText('Content', [Trix::make('Content', 'content')], ['it']);
+    $model = new Fluent;
+    $subField = $field->data[0];
+    $snippet = '<img src="https://cdn.example.com/logo.png" alt="Logo">';
+    $marker = '[[embed:html:'.base64_encode($snippet).']]';
+    fillField($subField, flexibleTranslatableRequest($subField->attribute, $marker), $model);
+
+    expect($model->content_it)->toContain('src="https://cdn.example.com/logo.png"')
+        ->not->toContain('[[embed:');
+});
+
+it('still blocks dangerous img src schemes (javascript:/data:)', function () {
+    $field = FlexibleTranslatable::richText('Content', [Trix::make('Content', 'content')], ['it']);
+    $model = new Fluent;
+    $subField = $field->data[0];
+    $html = '<img src="javascript:alert(1)"><img src="data:image/svg+xml;base64,PHN2Zy8+"><p>testo</p>';
+    fillField($subField, flexibleTranslatableRequest($subField->attribute, $html), $model);
+
+    expect($model->content_it)->not->toContain('javascript:')
+        ->not->toContain('data:image')
+        ->toContain('<p>testo</p>');
+});
+
+it('collapses a stored img back into an [[embed:html:...]] marker on resolve, so Trix can round-trip it without dropping it', function () {
+    $field = FlexibleTranslatable::richText('Content', [Trix::make('Content', 'content')], ['it']);
+    $subField = $field->data[0];
+    $storedImg = '<img src="https://example.com/photo.jpg" alt="Vista" width="640" height="480">';
+    $stored = ['content_it' => 'Foto: '.$storedImg];
+    $subField->resolve($stored);
+
+    expect($subField->value)->toBe('Foto: [[embed:html:'.base64_encode($storedImg).']]')
+        ->not->toContain('<img');
+
+    $model = new Fluent;
+    fillField($subField, flexibleTranslatableRequest($subField->attribute, $subField->value), $model);
+
+    expect($model->content_it)->toContain('Foto:')
+        ->toContain('src="https://example.com/photo.jpg"')
+        ->toContain('alt="Vista"')
+        ->not->toContain('[[embed:');
+});
+
 it('leaves an empty rich text value empty instead of purifying an empty string', function () {
     $field = FlexibleTranslatable::richText('Content', [Trix::make('Content', 'content')], ['it']);
 
@@ -273,17 +328,36 @@ it('rejects Image/File fields inside a Flexible-compatible translatable field', 
 });
 
 it('keeps the embed-tooling attribute in sync between PHP (embedToolingAttributes()) and resources/js/nova.js', function () {
-    // Found in review: the attribute name that scopes the "Insert embed" toolbar
-    // button/paste interception to this field is duplicated as a literal on both sides
-    // (PHP sets it via extraAttributes, nova.js checks for it via EMBED_SUPPORT_ATTR) —
-    // nothing previously caught a rename on one side drifting silently from the other.
+    // Found in review: the attribute names that scope Embed/Image toolbar
+    // buttons/paste interception to this field are duplicated as literals on both sides
+    // (PHP sets them via extraAttributes, nova.js checks via EMBED_SUPPORT_ATTR /
+    // IMAGE_SUPPORT_ATTR) — nothing previously caught a rename on one side drifting
+    // silently from the other.
     $field = FlexibleTranslatable::richText('Content', [Trix::make('Content', 'content')], ['it']);
     $phpAttributes = $field->data[0]->meta['extraAttributes'];
 
-    expect($phpAttributes)->toHaveCount(1);
-    $attributeName = array_key_first($phpAttributes);
+    expect($phpAttributes)->toHaveKey('data-wm-embed-support', 'true');
+    expect($phpAttributes)->toHaveKey('data-wm-image-support', 'true');
+    expect($phpAttributes)->toHaveCount(2);
 
     $novaJs = file_get_contents(__DIR__.'/../../../../resources/js/nova.js');
 
-    expect($novaJs)->toContain("EMBED_SUPPORT_ATTR = '{$attributeName}'");
+    expect($novaJs)->toContain("EMBED_SUPPORT_ATTR = 'data-wm-embed-support'");
+    expect($novaJs)->toContain("IMAGE_SUPPORT_ATTR = 'data-wm-image-support'");
+    expect($novaJs)->toContain('data-wm-image-button');
+    expect($novaJs)->toContain('data-trix-button-group="file-tools"');
+});
+
+it('enables only Image tooling when the whitelist has img but no iframe', function () {
+    $field = FlexibleTranslatable::richText(
+        'Content',
+        [Trix::make('Content', 'content')],
+        ['it'],
+        'p,br,img[src|alt]'
+    );
+    $phpAttributes = $field->data[0]->meta['extraAttributes'];
+
+    expect($phpAttributes)->toHaveKey('data-wm-image-support', 'true');
+    expect($phpAttributes)->not->toHaveKey('data-wm-embed-support');
+    expect($phpAttributes)->toHaveCount(1);
 });

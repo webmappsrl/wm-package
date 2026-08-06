@@ -34,7 +34,7 @@ use Illuminate\Support\Str;
  * second review pass — do not reintroduce trait constants here.
  *
  * The consumer also needs $this->purifier, set via initializeEmbeddableRichText() in
- * its constructor, and — ONLY if it wants the "Insert embed" toolbar button/paste
+ * its constructor, and — ONLY if it wants the Embed/Image toolbar buttons/paste
  * interception from resources/js/nova.js, which this trait does NOT provide on its own —
  * must merge embedToolingAttributes() into the Nova field's `extraAttributes` meta (see
  * FlexibleTranslatable::wireRichTextField() for the reference implementation).
@@ -43,30 +43,60 @@ trait HasEmbeddableRichText
 {
     protected ?HTMLPurifier $purifier = null;
 
+    protected string $richTextAllowedHtml = '';
+
     abstract protected function defaultRichTextAllowedHtml(): string;
 
     abstract protected function safeIframeSrcRegexp(): string;
 
     protected function initializeEmbeddableRichText(?string $allowedHtml = null): void
     {
-        $this->purifier = $this->makePurifier($allowedHtml ?? $this->defaultRichTextAllowedHtml());
+        $this->richTextAllowedHtml = $allowedHtml ?? $this->defaultRichTextAllowedHtml();
+        $this->purifier = $this->makePurifier($this->richTextAllowedHtml);
     }
 
     /**
      * HTML attributes to merge into a Nova field's `extraAttributes` meta so
-     * resources/js/nova.js's "Insert embed" toolbar button/paste interception apply to
-     * it — nova.js checks for this exact attribute on the rendered `<trix-editor>`
-     * (`EMBED_SUPPORT_ATTR`, kept in sync by tests/Feature/Nova/Fields/FlexibleTranslatableTest.php's
-     * assertion against the raw nova.js source). Without it, the field still gets
-     * sanitized rich text (makePurifier()/expandEmbedMarkers() work regardless), just no
-     * toolbar button.
+     * resources/js/nova.js can opt the rendered `<trix-editor>` into Embed and/or Image
+     * toolbar buttons + paste interception. Attribute names stay in sync with nova.js
+     * (`EMBED_SUPPORT_ATTR` / `IMAGE_SUPPORT_ATTR`, asserted by
+     * tests/Feature/Nova/Fields/FlexibleTranslatableTest.php against the raw nova.js
+     * source). Without them the field still gets sanitized rich text
+     * (makePurifier()/expandEmbedMarkers() work regardless), just no matching toolbar.
+     *
+     * Gating is per tag in this field's own whitelist: `iframe` → `data-wm-embed-support`,
+     * `img` → `data-wm-image-support`. They are independent — a whitelist with `img` but
+     * no `iframe` still gets the Image button (and vice versa). Offering a button whose
+     * expanded markup the purifier would then silently strip is worse than not offering it
+     * (found in review when tooling was gated only on `iframe` while Image also lived
+     * behind that single attribute).
      */
     protected function embedToolingAttributes(): array
     {
-        return ['data-wm-embed-support' => 'true'];
+        $attrs = [];
+
+        if (str_contains($this->richTextAllowedHtml, 'iframe')) {
+            $attrs['data-wm-embed-support'] = 'true';
+        }
+
+        if (str_contains($this->richTextAllowedHtml, 'img')) {
+            $attrs['data-wm-image-support'] = 'true';
+        }
+
+        return $attrs;
     }
 
     protected function makePurifier(string $allowedHtml): HTMLPurifier
+    {
+        return static::buildRichTextPurifier($allowedHtml, $this->safeIframeSrcRegexp());
+    }
+
+    /**
+     * Shared HTMLPurifier factory for rich-text save path and any read-side re-sanitize
+     * (e.g. ConfigDetailPreviewRenderer). Keep a single definition of SafeIframe /
+     * AllowedSchemes / iframe attribute registration so save and preview cannot drift.
+     */
+    public static function buildRichTextPurifier(string $allowedHtml, string $safeIframeRegexp): HTMLPurifier
     {
         $cachePath = storage_path('framework/cache/htmlpurifier');
 
@@ -77,12 +107,17 @@ trait HasEmbeddableRichText
         $config = HTMLPurifier_Config::createDefault();
         $config->set('HTML.Allowed', $allowedHtml);
         $config->set('Cache.SerializerPath', $cachePath);
+        $config->set('URI.AllowedSchemes', [
+            'http' => true,
+            'https' => true,
+            'mailto' => true,
+        ]);
 
         // Harmless to set even when $allowedHtml doesn't include `iframe` at all — the
         // SafeIframe URI filter only ever runs against tokens HTMLPurifier already
         // decided are `iframe` elements, so it's a no-op if that tag isn't whitelisted.
         $config->set('HTML.SafeIframe', true);
-        $config->set('URI.SafeIframeRegexp', $this->safeIframeSrcRegexp());
+        $config->set('URI.SafeIframeRegexp', $safeIframeRegexp);
 
         // HTMLPurifier's own Iframe module only ever defines src/width/height/name/
         // scrolling/frameborder/longdesc/margin{height,width} — `allowfullscreen` is
@@ -172,16 +207,29 @@ trait HasEmbeddableRichText
      * only the surrounding text, the iframe gone from the editor). Without this, the very
      * next save — even one triggered by editing an unrelated field on the same form — would
      * purify the now-iframe-less Trix content and overwrite the stored value, permanently
-     * deleting the embed. Collapsing every `<iframe>` back into its `[[embed:html:<base64>]]`
-     * marker means Trix only ever has to round-trip plain text, which it always preserves
-     * exactly; expandEmbedMarkers() re-expands it identically on the next save.
+     * deleting the embed. Collapsing every `<iframe>`/`<img>` back into its
+     * `[[embed:html:<base64>]]` marker means Trix only ever has to round-trip plain text,
+     * which it always preserves exactly; expandEmbedMarkers() re-expands it identically on
+     * the next save.
      */
-    protected function collapseEmbedIframes(string $html): string
+    protected function collapseEmbedMedia(string $html): string
     {
-        return preg_replace_callback(
+        $html = preg_replace_callback(
             '/<iframe\b[^>]*>.*?<\/iframe>/is',
             fn (array $matches) => '[[embed:html:'.base64_encode($matches[0]).']]',
             $html
         );
+
+        return preg_replace_callback(
+            '/<img\b[^>]*\/?>/is',
+            fn (array $matches) => '[[embed:html:'.base64_encode($matches[0]).']]',
+            $html
+        );
+    }
+
+    /** @deprecated Use collapseEmbedMedia() — kept as alias for callers/docs. */
+    protected function collapseEmbedIframes(string $html): string
+    {
+        return $this->collapseEmbedMedia($html);
     }
 }

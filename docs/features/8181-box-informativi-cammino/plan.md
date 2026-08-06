@@ -6,7 +6,7 @@
 
 **Goal:** Add a generic Nova `Flexible` builder field (`properties->config_detail`) to `Layer`, `EcTrack` and `EcPoi` in wm-package, with one registered layout today (`info`: a repeatable list of translated title+WYSIWYG rows), structurally aligned with `config_home` (same `box_type` discriminant key, same nested-translatable-object convention), designed so a future layout can be added with just one more `addLayout()` call.
 
-**Architecture:** Two-level Whitecube Flexible + Nova Repeater composition, mirroring the existing `config_home` → "Horizontal Scroll" pattern in `wm-package/src/Nova/App.php`. Level 1 (`ConfigDetailResolver`, a custom `ResolverInterface`) reads/writes `properties['config_detail']` (already array-cast, no manual JSON decode needed), dispatches per `box_type` (verified: `config_home`'s own wire format uses `box_type`, not `type` — `ConfigHomeResolver.php` reads/writes `$item['box_type']` throughout). Level 2 (`info` layout) contains only a `Repeater::make('Items', 'items')->repeatables([InfoBoxItemRepeatable::make()])` using Nova's **default** JSON preset (no custom preset class needed — verified against vendor source, see Task 3 notes). Each row has one `title` field (via `HasFlexibleTranslatableFields::translatableFields()`, same mechanism `config_home` already uses — produces a nested `{it, en, ...}` object natively) and one `content` field, edited in Nova as N `Trix` fields (one per locale, better UX for HTML than `KeyValue`) but **reshaped by `ConfigDetailResolver`** into a nested `{it, en, ...}` object on save (and back into N flat fields on read) so the persisted shape of `content` matches `title` and matches `config_home`'s own convention.
+**Architecture:** Two-level Whitecube Flexible + Nova Repeater composition, mirroring the existing `config_home` → "Horizontal Scroll" pattern in `wm-package/src/Nova/App.php`. Level 1 (`ConfigDetailResolver`, a custom `ResolverInterface`) reads/writes `properties['config_detail']` (already array-cast, no manual JSON decode needed), dispatches per `box_type` (verified: `config_home`'s own wire format uses `box_type`, not `type` — `ConfigHomeResolver.php` reads/writes `$item['box_type']` throughout). Level 2 (`info` layout) contains only a `Repeater::make('Items', 'items')->repeatables([InfoBoxItemRepeatable::make()])` using Nova's **default** JSON preset (no custom preset class needed — verified against vendor source, see Task 3 notes). Each row has one `title` field via `FlexibleTranslatable::simple()` (oc:8349 — N Text fields per locale, persisted as a nested `{it, en, ...}` object) and one `content` field via `FlexibleTranslatable::richText()` (N Trix fields per locale in the wire format `content_<locale>`), **reshaped by `ConfigDetailResolver`** into a nested `{it, en, ...}` object on save (and back into N flat fields on read) so the persisted shape of `content` matches `title` and matches `config_home`'s own convention.
 
 **Tech Stack:** Laravel Nova 5, `whitecube/nova-flexible-content` ^2.0.1 (already a dependency), `ezyang/htmlpurifier` (already present transitively in `camminiditalia/composer.lock`, to be declared as a direct wm-package dependency in Task 2), Pest tests via `Tests\TestCase` (camminiditalia's own, real Nova install — matches the existing pattern in `wm-package/tests/Feature/Nova/LayerLogoFieldValidationTest.php` and `AbstractUserResourceImpersonateTest.php`, both of which live physically in `wm-package/tests/` but run through camminiditalia's `php artisan test`).
 
@@ -216,14 +216,21 @@ git commit -m "feat(oc:8181): add generic ConfigDetailResolver with box_type dis
 
 ### Task 2: `InfoBoxItemRepeatable` — title/content row with HTML sanitization
 
+> **Superseded / stato attuale (post oc:8349):** l'implementazione reale non usa più `HasFlexibleTranslatableFields` + N `Trix` con HTMLPurifier locale in `fields()` come negli step sotto. `InfoBoxItemRepeatable::fields()` oggi ritorna:
+> ```php
+> FlexibleTranslatable::simple(__('Title'), [Text::make(__('Title'), 'title')])->fullWidth(),
+> FlexibleTranslatable::richText(__('Content'), [Trix::make(__('Content'), 'content')])->fullWidth(),
+> ```
+> Sanitizzazione, embed/img tooling e wire-format `content_<locale>` vivono in `FlexibleTranslatable` / `HasEmbeddableRichText` (oc:8349). Gli step 1–6 e le sezioni Interfaces/snippet sotto restano come storia del piano originale e **non vanno rieseguiti**.
+
 **Files:**
 - Modify: `wm-package/composer.json` (add `ezyang/htmlpurifier` to `require`)
 - Create: `wm-package/src/Nova/Flexible/ConfigDetail/InfoBoxItemRepeatable.php`
 - Test: `wm-package/tests/Feature/Nova/InfoBoxItemRepeatableTest.php`
 
-**Interfaces:**
-- Consumes: `config('wm-tab-translatable.locales')` (array of locale codes, e.g. `['it','en','fr','es','de']`), `HasFlexibleTranslatableFields::translatableFields()` (existing trait, same one used by `HorizontalScrollItemRepeatable`).
-- Produces: `Wm\WmPackage\Nova\Flexible\ConfigDetail\InfoBoxItemRepeatable extends Laravel\Nova\Fields\Repeater\Repeatable`, static `key(): string` returning `'info-box-item'`, `fields(NovaRequest $request): array` returning one `title` field (`KeyValue`, produced by `translatableFields()`, attribute `title`) and one `Trix::make(..., "content_{$locale}")` per configured locale. Task 3 registers this class via `->repeatables([InfoBoxItemRepeatable::make()])` and reshapes `content_<locale>` into a nested object.
+**Interfaces (storiche — superseded):**
+- Originariamente: `HasFlexibleTranslatableFields::translatableFields()` + N Trix per locale con HTMLPurifier in `fillUsing`.
+- **Stato attuale:** `FlexibleTranslatable::simple()` / `richText()`; `ConfigDetailResolver` continua a reshape-are `content_<locale>` ↔ `content: {...}`.
 
 - [ ] **Step 1: Add the HTMLPurifier dependency**
 
@@ -359,6 +366,8 @@ git commit -m "feat(oc:8181): add InfoBoxItemRepeatable with translatable title,
 ---
 
 ### Task 3: Wire `info` into `ConfigDetailResolver` (with content reshape) and register the field on `Layer`
+
+> **Nota stato attuale (post-esecuzione):** il wiring triplicato su Layer/EcTrack/EcPoi è stato estratto in `HasConfigDetailPanel`; le label UI sono `__('Detail Blocks')` / `__('Info Box')` (non più "Box Informativi"); esiste `ConfigDetailPreviewRenderer` per la detail view. Gli snippet sotto restano la storia del piano originale.
 
 **Files:**
 - Modify: `wm-package/src/Nova/Flexible/Resolvers/ConfigDetailResolver.php` (add the `info` case to `buildElement()` and `hydrateAttributesForGroup()`)
@@ -835,10 +844,10 @@ git commit -m "test(oc:8181): lock in that Box Informativi inherits existing res
 ## Self-Review
 
 **Spec coverage** (against `overview.md` Requisiti):
-- Flexible field + dedicated collapsible Panel on Layer/EcTrack/EcPoi → Tasks 3, 4
+- Flexible field + dedicated collapsible Panel on Layer/EcTrack/EcPoi → Tasks 3, 4 (oggi via `HasConfigDetailPanel`, label `Detail Blocks`)
 - Single `info` layout (`box_type` discriminant, matching `config_home`), generic dispatch for future layouts → Tasks 1, 3
-- `title` via `HasFlexibleTranslatableFields` (nested object natively), `content` via N per-locale Trix fields reshaped into a nested object by the resolver → Task 2 (fields), Task 3 (reshape)
-- No group-level field besides `items` → Task 3 (`info_layout()`/addLayout only registers the Repeater)
+- `title` via `FlexibleTranslatable::simple()` (nested object), `content` via `FlexibleTranslatable::richText()` (N per-locale Trix wire fields reshaped into a nested object by the resolver) → Task 2 (fields, superseded by oc:8349), Task 3 (reshape)
+- No group-level field besides `items` → Task 3 (`addLayout` only registers the Repeater; non esiste più un metodo `info_layout()` separato)
 - No per-locale required validation → not enforced anywhere in Tasks 1-5
 - `properties.config_detail` storage shape (`box_type`, nested `title`/`content`) → Tasks 1, 3 tests assert the exact shape, including the explicit check that Nova's transient `{type, fields}` block shape does NOT leak into storage
 - `ConfigDetailResolver` not a naive mirror, sibling-preserving, no role logic → Task 1, verified via native Eloquent `fillJsonAttribute()` rather than manual `Arr::set()`

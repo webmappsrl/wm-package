@@ -11,9 +11,9 @@ Il nuovo field sostituisce il metodo `translatableFields()` di `HasFlexibleTrans
 1. `App::config_home_title_layout()` → `translatableFields('Title', 'title', required: true)`, riusato da 5 layout del Flexible `config_home`: Titolo, Horizontal Scroll Activities, Horizontal Scroll POI Types, Slug, External URL
 2. `App::overlays_title_layout()` → `translatableFields('Label', 'label')`, layout "Titolo" di un secondo campo Flexible su App (`ConfigOverlaysResolver`, non ancora citato nella prima versione dell'overview)
 3. `HorizontalScrollItemRepeatable::fields()` → `title` a livello di riga del repeater `items` (dentro i layout Horizontal Scroll Activities/POI Types)
-4. `InfoBoxItemRepeatable::fields()` → `title` a livello di riga del repeater `items` (config_detail, Box Informativi)
+4. `InfoBoxItemRepeatable::fields()` → `title` a livello di riga del repeater `items` (config_detail, Detail Blocks / ex "Box Informativi")
 
-...più il meccanismo hand-coded con N campi `Trix` (uno per locale) e `fillUsing` che sanifica via `HTMLPurifier` — usato per il `content` in `InfoBoxItemRepeatable` (unico punto).
+...più il meccanismo hand-coded con N campi `Trix` (uno per locale) e `fillUsing` che sanifica via `HTMLPurifier` — usato storicamente per il `content` in `InfoBoxItemRepeatable` (unico punto). **Stato post-esecuzione:** sia `title` sia `content` usano `FlexibleTranslatable::simple()` / `richText()`; il reshape `content_<locale>` ↔ nested object resta in `ConfigDetailResolver`.
 
 `decodeTranslatableValue()` **(secondo metodo dello stesso trait) resta invariato, non viene rimosso**: è un helper di sola lettura usato da tre resolver Flexible (`ConfigHomeResolver`, `ConfigOverlaysResolver`, `ConfigDetailResolver`) per decodificare i valori tradotti già salvati — è già difensivo (accetta sia una stringa JSON, formato storico prodotto dal vecchio KeyValue, sia un array già decodificato, formato prodotto dal nuovo field), quindi resta compatibile con entrambi i formati senza modifiche. Solo `translatableFields()` viene rimosso dal trait; il file del trait resta, ridotto a questo solo metodo.
 
