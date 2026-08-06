@@ -80,7 +80,8 @@ Aggiunta durante l'implementazione, su richiesta esplicita del dev: un ranking d
 
 **wm-package** (feature interamente in questo submodule — nessun file del repo principale camminiditalia coinvolto):
 - `src/Services/PostHog/AnalyticsService.php`
-- `src/Nova/Cards/LayerAnalytics/src/LayerAnalyticsCard.php`
-- `src/Nova/Cards/LayerAnalytics/resources/js/components/LayerAnalyticsCard.vue` (+ rebuild dist)
+- `src/Http/Controllers/Nova/AnalyticsController.php`
+- `src/Nova/Cards/LayerAnalytics/resources/js/components/LayerAnalyticsCard.vue` (+ rebuild dist) — `LayerAnalyticsCard.php` non è stato toccato, la voce originale era imprecisa
 - `src/Models/Layer.php` (`getFeatureCollectionMap()`)
-- `config/wm-package.php` (nuova costante distanza, se esposta via config oltre a env)
+- `src/Nova/Fields/FeatureCollectionMap/resources/js/components/DetailField.vue` (+ rebuild dist)
+- `config/wm-package.php` (nuova costante distanza)
