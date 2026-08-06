@@ -11,6 +11,13 @@
                 @feature-click="handleFeatureClick" @map-ready="handleMapReady" @popup-open="handlePopupOpen"
                 @popup-close="handlePopupClose" />
 
+            <div style="display:flex; gap:16px; align-items:center; margin-top:8px; font-size:0.75rem; color:#6b7280; flex-wrap:wrap;">
+                <span style="display:flex; align-items:center; gap:6px;">
+                    <span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:rgba(34, 197, 94, 0.9); border:2px solid rgba(255,255,255,1); box-shadow:0 0 0 1px rgba(0,0,0,0.15);"></span>
+                    Posizione utente (ultimi 30 minuti)
+                </span>
+            </div>
+
             <!-- Custom popup component if specified -->
             <component v-if="field.popupComponent" :is="field.popupComponent" />
         </template>
