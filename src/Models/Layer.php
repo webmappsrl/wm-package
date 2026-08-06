@@ -489,6 +489,24 @@ class Layer extends Polygon
             }
         }
 
+        $recentPositions = app(\Wm\WmPackage\Services\PostHog\AnalyticsService::class)->getRecentUserPositions($this);
+        foreach ($recentPositions as $position) {
+            $this->addFeaturesForMap([[
+                'type' => 'Feature',
+                'geometry' => [
+                    'type' => 'Point',
+                    'coordinates' => [$position['lng'], $position['lat']],
+                ],
+                'properties' => [
+                    'tooltip' => 'Posizione utente (ultimi 30 minuti)',
+                    'pointFillColor' => 'rgba(34, 197, 94, 0.9)',
+                    'pointStrokeColor' => 'rgba(255, 255, 255, 1)',
+                    'pointStrokeWidth' => 3,
+                    'pointRadius' => 8,
+                ],
+            ]]);
+        }
+
         return [
             'type' => 'FeatureCollection',
             'features' => $this->getAdditionalFeaturesForMap(),
