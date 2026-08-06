@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Wm\WmPackage\Services\PostHog;
 
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -945,9 +946,10 @@ SQL;
      * ranking globale getAllLayersUserPresence(). Nessun filtro `id IN (...)` sulle tracce: ogni
      * punto viene confrontato con tutte le EcTrack con geometria, e il layer si risolve via la
      * pivot `layerables` (join, non subquery EXISTS — qui serve sapere *quale* layer, non solo
-     * se un match esiste). `layerable_type = 'App\Models\EcTrack'` è la stringa registrata nel
-     * morph map locale (WmPackageServiceProvider), non l'FQCN della classe del package — stesso
-     * valore già usato altrove nel codebase per le query raw su questa pivot.
+     * se un match esiste). Il morph-type per `layerables.layerable_type` va risolto dinamicamente
+     * (config + Relation::morphMap(), stesso pattern di EcPoiEcTrack::poiStillLinkedToLayerViaOtherTrack())
+     * — non hardcoded: `wm-package` è multi-consumer (maphub, osm2cai2, ecc.), un valore letterale
+     * funziona solo per progetti dove `ec_track_model` risolve esattamente a quella stringa.
      *
      * @param list<array{person_id: string, lat: float, lng: float}> $points
      * @return list<array{layer_id: int, total: int}>
@@ -960,6 +962,8 @@ SQL;
 
         $trackTable = config('wm-package.ec_track_table', 'ec_tracks');
         $distanceMeters = (int) config('wm-package.layer_user_presence_distance_meters', 50);
+        $ecTrackModelClass = config('wm-package.ec_track_model', EcTrack::class);
+        $ecTrackMorphType = array_search($ecTrackModelClass, Relation::morphMap()) ?: $ecTrackModelClass;
         $valuesSql = implode(', ', array_fill(0, count($points), '(?, ?::float8, ?::float8)'));
 
         $sql = <<<SQL
@@ -971,7 +975,7 @@ JOIN {$trackTable} et ON et.geometry IS NOT NULL
       ST_SetSRID(ST_MakePoint(v.lng, v.lat), 4326)::geography,
       ?
   )
-JOIN layerables lb ON lb.layerable_id = et.id AND lb.layerable_type = 'App\\Models\\EcTrack'
+JOIN layerables lb ON lb.layerable_id = et.id AND lb.layerable_type = ?
 GROUP BY lb.layer_id
 SQL;
 
@@ -982,6 +986,7 @@ SQL;
             $bindings[] = $point['lng'];
         }
         $bindings[] = $distanceMeters;
+        $bindings[] = $ecTrackMorphType;
 
         $rows = DB::select($sql, $bindings);
 
