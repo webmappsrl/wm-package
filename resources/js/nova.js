@@ -218,45 +218,44 @@ Nova.booting(() => {
 
             const html = clipboardData.getData('text/html');
             const text = clipboardData.getData('text/plain');
-            const markers = [];
-            let remainderHtml = null;
 
             if (html && /<iframe\b/i.test(html)) {
                 // Pasting a RENDERED embed from a real webpage (as opposed to copying its
-                // embed-code textarea) puts real HTML on the clipboard — extract every
-                // <iframe> from it into its own marker, keep whatever surrounding HTML
-                // (captions, headings, ...) for Trix's own normal HTML-paste handling.
+                // embed-code textarea) puts real HTML on the clipboard. Replace each
+                // <iframe> IN PLACE with a text node holding its marker — not remove-then-
+                // append-all-markers-at-the-end (found in review: that lost the original
+                // position relative to surrounding text, e.g. "Guarda: <iframe> (fonte: X)"
+                // came back out as "Guarda: (fonte: X)" followed by the embed at the very
+                // end) — then hand the WHOLE resulting HTML to Trix's own HTML-paste
+                // handling in a single insertHTML() call, so text and markers land exactly
+                // where the original text and iframes were.
                 const parsed = new DOMParser().parseFromString(html, 'text/html');
                 const iframes = parsed.body.querySelectorAll('iframe');
 
                 if (iframes.length) {
                     iframes.forEach((iframe) => {
-                        markers.push(buildEmbedMarker('html', iframe.outerHTML));
-                        iframe.remove();
+                        const marker = buildEmbedMarker('html', iframe.outerHTML);
+                        iframe.replaceWith(document.createTextNode(marker));
                     });
-                    remainderHtml = parsed.body.innerHTML.trim();
+
+                    event.preventDefault();
+                    event.stopPropagation();
+                    editorElement.editor.insertHTML(parsed.body.innerHTML.trim());
                 }
-            } else if (text && /^<iframe\b[\s\S]*<\/iframe>$/i.test(text.trim())) {
+
+                return;
+            }
+
+            if (text && /^<iframe\b[\s\S]*<\/iframe>$/i.test(text.trim())) {
                 // The realistic case: an embed-code textarea's clipboard content is nothing
                 // BUT the iframe snippet. Matching the ENTIRE trimmed paste (not just
                 // "contains an iframe somewhere") avoids hijacking a paste that merely
                 // mentions "<iframe>" inside unrelated prose/code — those still get Trix's
                 // normal (escaped-text) handling, unchanged from before this feature existed.
-                markers.push(buildEmbedMarker('html', text.trim()));
+                event.preventDefault();
+                event.stopPropagation();
+                editorElement.editor.insertString(buildEmbedMarker('html', text.trim()));
             }
-
-            if (!markers.length) {
-                return;
-            }
-
-            event.preventDefault();
-            event.stopPropagation();
-
-            if (remainderHtml) {
-                editorElement.editor.insertHTML(remainderHtml);
-            }
-
-            markers.forEach((marker) => editorElement.editor.insertString(marker));
         },
         true
     );
