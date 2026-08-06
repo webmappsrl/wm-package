@@ -6,6 +6,7 @@ namespace Wm\WmPackage\Services\PostHog;
 
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Wm\WmPackage\Exceptions\AnalyticsQueryException;
@@ -25,6 +26,15 @@ class AnalyticsService
     ];
 
     private const LOCK_RANGES = ['last_90_days', 'last_365_days'];
+
+    /** Cap punti GPS processati dal match PostGIS bulk per il KPI (rete di sicurezza — il volume è già contenuto dal pre-filtro per bounding box geografico del layer, non da un'aggregazione temporale). */
+    private const MAX_USER_PRESENCE_POINTS = 5000;
+
+    /** Cap analogo per il ranking globale "Cammini più frequentati" — più alto perché il bbox qui è l'unione di tutte le tracce, non di un solo layer, quindi il volume atteso è naturalmente più alto. */
+    private const MAX_GLOBAL_USER_PRESENCE_POINTS = 20000;
+
+    /** Timeout dedicato più aggressivo del default 10s: query bulk più pesante, non deve bloccare l'intera risposta della card se PostHog è lento. */
+    private const USER_PRESENCE_TIMEOUT_SECONDS = 5;
 
     /** Cap righe finali per le classifiche aggregate (dopo filtro orfani/troncamento). */
     private const RANKING_LIMIT = 20;
@@ -100,6 +110,62 @@ class AnalyticsService
         return $result;
     }
 
+    /**
+     * Ranking di tutti i layer per "utenti sul cammino" (stesso concetto di getUserMovedStats(),
+     * ma per tutti i layer in un colpo — mostrato nell'index Nova, non nel detail di un layer).
+     * A differenza di getAllLayersUsage() (che raggruppa `layerOpened` per `layer_id`, già presente
+     * come property flat sull'evento) qui non esiste una scorciatoia: `userMoved` non porta un
+     * layer_id affidabile, il match resta geografico. Bbox dell'unione di tutte le tracce (non per
+     * singolo layer) per contenere il volume, poi un'unica query PostGIS bulk che risale al layer
+     * di ogni traccia via la pivot `layerables` — una query, non un loop per layer (un loop su
+     * ~100+ layer sarebbe troppo lento per una risposta HTTP, anche con cache).
+     *
+     * @return list<array{layer_id: int, name: string, total: int}>
+     */
+    public function getAllLayersUserPresence(string $range = 'last_30_days'): array
+    {
+        $cacheKey = "posthog:userMoved:all:presence:ranking:{$range}";
+
+        $perLayer = $this->rememberWithLock($cacheKey, $range, function () use ($range) {
+            $points = $this->queryAllUserMovedPointsNearAnyTrack($range);
+
+            if (empty($points)) {
+                return [];
+            }
+
+            return $this->countPersonsPerLayerNearTracks($points);
+        });
+
+        if (empty($perLayer)) {
+            return [];
+        }
+
+        usort($perLayer, fn ($a, $b) => $b['total'] <=> $a['total']);
+
+        $layerIds = array_column($perLayer, 'layer_id');
+        $layers = Layer::whereIn('id', $layerIds)->get(['id', 'name'])->keyBy('id');
+
+        $result = [];
+        foreach ($perLayer as $entry) {
+            $layer = $layers->get($entry['layer_id']);
+            if (! $layer) {
+                continue;
+            }
+
+            $result[] = [
+                'layer_id' => $entry['layer_id'],
+                'name' => $this->resolveLocalizedName($layer, 'Layer', $entry['layer_id']),
+                'total' => $entry['total'],
+            ];
+
+            if (count($result) >= self::RANKING_LIMIT) {
+                break;
+            }
+        }
+
+        return $result;
+    }
+
     public function getLayerTrackDownloads(Layer $layer, string $range = 'last_30_days'): array
     {
         $trackIds = $layer->ecTracks()->pluck('ec_tracks.id')->toArray();
@@ -132,6 +198,96 @@ class AnalyticsService
                 'downloads' => $row['downloads'],
             ];
         }, $rows);
+    }
+
+    /**
+     * Conteggio utenti unici che hanno effettivamente percorso il layer (match GPS↔traccia via
+     * PostGIS, non semplice interesse in-app su properties.layer_id). Ritorna null su fallimento/
+     * timeout PostHog — mai un'eccezione: il chiamante (AnalyticsController) deve poter mostrare
+     * le altre metriche della card anche se questa singola query bulk più pesante fallisce.
+     */
+    public function getUserMovedStats(Layer $layer, string $range = 'last_30_days'): ?int
+    {
+        $cacheKey = "posthog:userMoved:{$layer->id}:presence:{$range}";
+
+        try {
+            return $this->rememberWithLock($cacheKey, $range, function () use ($layer, $range) {
+                $points = $this->queryUserMovedPointsNearLayer($layer, $range);
+
+                if (empty($points)) {
+                    return 0;
+                }
+
+                return $this->countPersonsNearLayerTracks($layer, $points);
+            });
+        } catch (AnalyticsQueryException|\Illuminate\Contracts\Cache\LockTimeoutException $e) {
+            Log::error('getUserMovedStats() failed', [
+                'layer_id' => $layer->id,
+                'range' => $range,
+                'error' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
+    }
+
+    /**
+     * Posizioni GPS recenti (finestra `$minutesWindow`, default 30 min — "dove è questa persona
+     * ADESSO", non uno storico) per la mappa live del layer. Per ogni persona prendo la sua
+     * posizione più recente nella finestra (`argMax(..., timestamp)`, un fix GPS realmente
+     * accaduto — non una media, che su un tornante potrebbe cadere fuori dal sentiero anche se
+     * ogni punto reale era sul sentiero). Pre-filtrata per bounding box del layer (stesso motivo
+     * di queryUserMovedPointsNearLayer()) e poi per prossimità reale alle EcTrack via
+     * filterPointsNearLayerTracks() — senza quest'ultimo passo i punti sarebbero solo "vicini
+     * all'area del layer", non "vicini al sentiero" (bbox è un rettangolo, non la traccia).
+     *
+     * @return list<array{lat: float, lng: float}>
+     */
+    public function getRecentUserPositions(Layer $layer, int $minutesWindow = 30): array
+    {
+        $cacheKey = "posthog:userMoved:{$layer->id}:recent_positions";
+
+        try {
+            return Cache::remember($cacheKey, now()->addSeconds(90), function () use ($layer, $minutesWindow) {
+                $bbox = $this->layerTracksBoundingBox($layer);
+
+                if ($bbox === null) {
+                    return [];
+                }
+
+                $shardName = (string) config('wm-package.shard_name');
+                $bboxClause = $this->bboxFilterClause($bbox);
+
+                $sql = <<<SQL
+SELECT
+    person_id,
+    argMax(toFloatOrDefault(properties.user_location.latitude, 0.0), timestamp) AS lat,
+    argMax(toFloatOrDefault(properties.user_location.longitude, 0.0), timestamp) AS lng
+FROM events
+WHERE event = 'userMoved'
+  AND properties.shard_name._value = '{$shardName}'
+  AND properties.user_location IS NOT NULL
+  AND {$bboxClause}
+  AND timestamp >= now() - INTERVAL {$minutesWindow} MINUTE
+GROUP BY person_id
+LIMIT 500
+SQL;
+
+                $rows = $this->runQuery($sql, true, self::USER_PRESENCE_TIMEOUT_SECONDS);
+
+                $points = array_map(fn ($row) => [
+                    'person_id' => (string) $row[0],
+                    'lat' => (float) $row[1],
+                    'lng' => (float) $row[2],
+                ], $rows);
+
+                return $this->filterPointsNearLayerTracks($layer, $points);
+            });
+        } catch (AnalyticsQueryException $e) {
+            Log::error('getRecentUserPositions() failed', ['layer_id' => $layer->id, 'error' => $e->getMessage()]);
+
+            return [];
+        }
     }
 
     public function getAllTracksDownloads(string $range = 'last_30_days'): array
@@ -523,6 +679,372 @@ SQL;
     }
 
     /**
+     * Bounding box (con margine) delle EcTrack del layer, in gradi — usato per restringere la
+     * query HogQL ai soli punti geograficamente plausibili, PRIMA di portarli via da PostHog.
+     * Senza questo pre-filtro, per rispondere correttamente a "questa persona ha mai toccato la
+     * traccia?" servirebbe testare ogni singolo punto GPS grezzo di *tutti* gli utenti del mondo
+     * (volume enorme) oppure aggregare nel tempo (media/ultimo punto per bucket) — ma qualunque
+     * aggregazione geometrica introduce punti "sintetici" che possono cadere fuori dal sentiero
+     * anche quando ogni punto reale era sul sentiero (tipicamente sui tornanti): scoperto in
+     * verifica manuale reale (oc:8159), non solo un rischio teorico. Filtrando per area PRIMA
+     * di interrogare PostHog, posso invece testare ogni punto individualmente senza esplodere il
+     * volume, perché il pre-filtro riduce il pool da "tutti gli utenti ovunque" a "chi si trovava
+     * fisicamente in quest'area".
+     *
+     * @return array{min_lat: float, max_lat: float, min_lng: float, max_lng: float}|null null se il layer non ha tracce con geometria
+     */
+    private function layerTracksBoundingBox(Layer $layer): ?array
+    {
+        $trackTable = config('wm-package.ec_track_table', 'ec_tracks');
+        $trackIds = $layer->ecTracks()->pluck("{$trackTable}.id")->toArray();
+
+        if (empty($trackIds)) {
+            return null;
+        }
+
+        return $this->tracksBoundingBox($trackIds);
+    }
+
+    /**
+     * Bounding box (con margine) dell'unione di *tutte* le EcTrack con geometria — usato dal
+     * ranking globale "Cammini più frequentati" per restringere la query HogQL all'area
+     * complessiva dove esistono cammini, non a un singolo layer. Stesso motivo di
+     * layerTracksBoundingBox(): senza pre-filtro geografico, "tutti i punti userMoved dello
+     * shard su 365gg" sarebbe un volume ingestibile in una singola query bulk.
+     *
+     * @return array{min_lat: float, max_lat: float, min_lng: float, max_lng: float}|null
+     */
+    private function allTracksBoundingBox(): ?array
+    {
+        return $this->tracksBoundingBox(null);
+    }
+
+    /**
+     * @param list<int>|null $trackIds null = tutte le tracce con geometria, senza filtro per ID
+     * @return array{min_lat: float, max_lat: float, min_lng: float, max_lng: float}|null
+     */
+    private function tracksBoundingBox(?array $trackIds): ?array
+    {
+        $trackTable = config('wm-package.ec_track_table', 'ec_tracks');
+        $distanceMeters = (int) config('wm-package.layer_user_presence_distance_meters', 50);
+        // Margine di sicurezza attorno al bbox: soglia di matching + 200m extra (1 grado di
+        // latitudine ~= 111km, approssimazione conservativa valida anche in longitudine alle
+        // latitudini italiane) — evita di scartare punti realmente vicini alla traccia ma appena
+        // fuori dal bounding box stretto delle sole coordinate della traccia.
+        $marginDegrees = ($distanceMeters + 200) / 111000;
+        $bindings = [$marginDegrees, $marginDegrees, $marginDegrees, $marginDegrees];
+
+        $idFilter = 'TRUE';
+        if ($trackIds !== null) {
+            if (empty($trackIds)) {
+                return null;
+            }
+            $placeholders = implode(', ', array_fill(0, count($trackIds), '?'));
+            $idFilter = "id IN ({$placeholders})";
+            $bindings = array_merge($bindings, $trackIds);
+        }
+
+        /** @var object{min_lat: ?float, max_lat: ?float, min_lng: ?float, max_lng: ?float}|null $row */
+        $row = DB::selectOne("
+            SELECT
+                ST_YMin(ST_Extent(geometry::geometry)) - ? AS min_lat,
+                ST_YMax(ST_Extent(geometry::geometry)) + ? AS max_lat,
+                ST_XMin(ST_Extent(geometry::geometry)) - ? AS min_lng,
+                ST_XMax(ST_Extent(geometry::geometry)) + ? AS max_lng
+            FROM {$trackTable}
+            WHERE {$idFilter} AND geometry IS NOT NULL
+        ", $bindings);
+
+        if (! $row || $row->min_lat === null) {
+            return null;
+        }
+
+        return [
+            'min_lat' => (float) $row->min_lat,
+            'max_lat' => (float) $row->max_lat,
+            'min_lng' => (float) $row->min_lng,
+            'max_lng' => (float) $row->max_lng,
+        ];
+    }
+
+    /**
+     * Clausola SQL per il filtro bbox in HogQL. Usa `>=`/`<=` incatenati, non `BETWEEN`: `BETWEEN`
+     * su un'espressione calcolata (`toFloatOrDefault(...)`, non una colonna semplice) fa fallire
+     * la query con un HTTP 500 lato PostHog — bug/limite del backend HogQL confermato empiricamente
+     * (oc:8159): stessa condizione logica, ma `BETWEEN` rompe, la catena di comparazioni no.
+     *
+     * @param array{min_lat: float, max_lat: float, min_lng: float, max_lng: float} $bbox
+     */
+    private function bboxFilterClause(array $bbox): string
+    {
+        return "toFloatOrDefault(properties.user_location.latitude, 0.0) >= {$bbox['min_lat']}
+  AND toFloatOrDefault(properties.user_location.latitude, 0.0) <= {$bbox['max_lat']}
+  AND toFloatOrDefault(properties.user_location.longitude, 0.0) >= {$bbox['min_lng']}
+  AND toFloatOrDefault(properties.user_location.longitude, 0.0) <= {$bbox['max_lng']}";
+    }
+
+    /**
+     * Punti GPS grezzi dell'evento userMoved, pre-filtrati per bounding box geografico del layer
+     * (nessuna aggregazione temporale/spaziale) — risponde a "questa persona ha mai avuto un punto
+     * vicino alla traccia nel range?", non "qual è la sua posizione media/più recente". Ogni punto
+     * ritornato è un fix GPS reale, mai un punto sintetico. `properties.shard_name._value` (non
+     * `properties.shard_name` piatto) e `toFloatOrDefault()` (non `toFloat64OrNull`, funzione
+     * inesistente in HogQL) verificati contro dati reali PostHog (oc:8159 Task 0).
+     *
+     * @return list<array{person_id: string, lat: float, lng: float}>
+     */
+    private function queryUserMovedPointsNearLayer(Layer $layer, string $range): array
+    {
+        $bbox = $this->layerTracksBoundingBox($layer);
+
+        if ($bbox === null) {
+            return [];
+        }
+
+        $whereClause = $this->whereClause($range);
+        $shardName = (string) config('wm-package.shard_name');
+        $limit = self::MAX_USER_PRESENCE_POINTS;
+        $bboxClause = $this->bboxFilterClause($bbox);
+
+        $sql = <<<SQL
+SELECT
+    person_id,
+    toFloatOrDefault(properties.user_location.latitude, 0.0) AS lat,
+    toFloatOrDefault(properties.user_location.longitude, 0.0) AS lng
+FROM events
+WHERE event = 'userMoved'
+  AND properties.shard_name._value = '{$shardName}'
+  AND properties.user_location IS NOT NULL
+  AND {$bboxClause}
+  AND {$whereClause}
+LIMIT {$limit}
+SQL;
+
+        $rows = $this->runQuery($sql, true, self::USER_PRESENCE_TIMEOUT_SECONDS);
+
+        if (count($rows) >= $limit) {
+            Log::warning('queryUserMovedPointsNearLayer() hit the safety cap — presence count may be underestimated', [
+                'layer_id' => $layer->id,
+                'range' => $range,
+                'limit' => $limit,
+            ]);
+        }
+
+        return array_map(fn ($row) => [
+            'person_id' => (string) $row[0],
+            'lat' => (float) $row[1],
+            'lng' => (float) $row[2],
+        ], $rows);
+    }
+
+    /**
+     * Come queryUserMovedPointsNearLayer(), ma con il bbox dell'unione di tutte le tracce (non di
+     * un singolo layer) — usato dal ranking globale getAllLayersUserPresence().
+     *
+     * @return list<array{person_id: string, lat: float, lng: float}>
+     */
+    private function queryAllUserMovedPointsNearAnyTrack(string $range): array
+    {
+        $bbox = $this->allTracksBoundingBox();
+
+        if ($bbox === null) {
+            return [];
+        }
+
+        $whereClause = $this->whereClause($range);
+        $shardName = (string) config('wm-package.shard_name');
+        $bboxClause = $this->bboxFilterClause($bbox);
+        $limit = self::MAX_GLOBAL_USER_PRESENCE_POINTS;
+
+        $sql = <<<SQL
+SELECT
+    person_id,
+    toFloatOrDefault(properties.user_location.latitude, 0.0) AS lat,
+    toFloatOrDefault(properties.user_location.longitude, 0.0) AS lng
+FROM events
+WHERE event = 'userMoved'
+  AND properties.shard_name._value = '{$shardName}'
+  AND properties.user_location IS NOT NULL
+  AND {$bboxClause}
+  AND {$whereClause}
+LIMIT {$limit}
+SQL;
+
+        $rows = $this->runQuery($sql, true, self::USER_PRESENCE_TIMEOUT_SECONDS);
+
+        if (count($rows) >= $limit) {
+            Log::warning('queryAllUserMovedPointsNearAnyTrack() hit the safety cap — global ranking may be underestimated', [
+                'range' => $range,
+                'limit' => $limit,
+            ]);
+        }
+
+        return array_map(fn ($row) => [
+            'person_id' => (string) $row[0],
+            'lat' => (float) $row[1],
+            'lng' => (float) $row[2],
+        ], $rows);
+    }
+
+    /**
+     * Conta le persone il cui punto GPS (da queryUserMovedPointsNearLayer()) cade entro
+     * layer_user_presence_distance_meters da almeno una EcTrack del layer. Match bulk in
+     * un'unica query (VALUES + EXISTS/ST_DWithin), non un round-trip per punto — stessa nozione
+     * geografica di UgcService::resolveLayerByProximity(), ma qui su un intero set di punti.
+     *
+     * @param list<array{person_id: string, lat: float, lng: float}> $points
+     */
+    private function countPersonsNearLayerTracks(Layer $layer, array $points): int
+    {
+        if (empty($points)) {
+            return 0;
+        }
+
+        $trackTable = config('wm-package.ec_track_table', 'ec_tracks');
+        $trackIds = $layer->ecTracks()->pluck("{$trackTable}.id")->toArray();
+
+        if (empty($trackIds)) {
+            return 0;
+        }
+
+        $valuesSql = implode(', ', array_fill(0, count($points), '(?, ?::float8, ?::float8)'));
+        $trackPlaceholders = implode(', ', array_fill(0, count($trackIds), '?'));
+        $distanceMeters = (int) config('wm-package.layer_user_presence_distance_meters', 50);
+
+        $sql = <<<SQL
+SELECT count(DISTINCT v.person_id) AS total
+FROM (VALUES {$valuesSql}) AS v(person_id, lat, lng)
+WHERE EXISTS (
+    SELECT 1 FROM {$trackTable}
+    WHERE id IN ({$trackPlaceholders})
+      AND geometry IS NOT NULL
+      AND ST_DWithin(
+          geometry::geography,
+          ST_SetSRID(ST_MakePoint(v.lng, v.lat), 4326)::geography,
+          ?
+      )
+)
+SQL;
+
+        $bindings = [];
+        foreach ($points as $point) {
+            $bindings[] = $point['person_id'];
+            $bindings[] = $point['lat'];
+            $bindings[] = $point['lng'];
+        }
+        $bindings = array_merge($bindings, $trackIds, [$distanceMeters]);
+
+        /** @var object{total: int}|null $row */
+        $row = DB::selectOne($sql, $bindings);
+
+        return (int) ($row->total ?? 0);
+    }
+
+    /**
+     * Come countPersonsNearLayerTracks(), ma per *tutti* i layer in un'unica query — usato dal
+     * ranking globale getAllLayersUserPresence(). Nessun filtro `id IN (...)` sulle tracce: ogni
+     * punto viene confrontato con tutte le EcTrack con geometria, e il layer si risolve via la
+     * pivot `layerables` (join, non subquery EXISTS — qui serve sapere *quale* layer, non solo
+     * se un match esiste). `layerable_type = 'App\Models\EcTrack'` è la stringa registrata nel
+     * morph map locale (WmPackageServiceProvider), non l'FQCN della classe del package — stesso
+     * valore già usato altrove nel codebase per le query raw su questa pivot.
+     *
+     * @param list<array{person_id: string, lat: float, lng: float}> $points
+     * @return list<array{layer_id: int, total: int}>
+     */
+    private function countPersonsPerLayerNearTracks(array $points): array
+    {
+        if (empty($points)) {
+            return [];
+        }
+
+        $trackTable = config('wm-package.ec_track_table', 'ec_tracks');
+        $distanceMeters = (int) config('wm-package.layer_user_presence_distance_meters', 50);
+        $valuesSql = implode(', ', array_fill(0, count($points), '(?, ?::float8, ?::float8)'));
+
+        $sql = <<<SQL
+SELECT lb.layer_id AS layer_id, count(DISTINCT v.person_id) AS total
+FROM (VALUES {$valuesSql}) AS v(person_id, lat, lng)
+JOIN {$trackTable} et ON et.geometry IS NOT NULL
+  AND ST_DWithin(
+      et.geometry::geography,
+      ST_SetSRID(ST_MakePoint(v.lng, v.lat), 4326)::geography,
+      ?
+  )
+JOIN layerables lb ON lb.layerable_id = et.id AND lb.layerable_type = 'App\\Models\\EcTrack'
+GROUP BY lb.layer_id
+SQL;
+
+        $bindings = [];
+        foreach ($points as $point) {
+            $bindings[] = $point['person_id'];
+            $bindings[] = $point['lat'];
+            $bindings[] = $point['lng'];
+        }
+        $bindings[] = $distanceMeters;
+
+        $rows = DB::select($sql, $bindings);
+
+        return array_map(fn ($row) => [
+            'layer_id' => (int) $row->layer_id,
+            'total' => (int) $row->total,
+        ], $rows);
+    }
+
+    /**
+     * Come countPersonsNearLayerTracks(), ma ritorna i punti che superano il match invece del
+     * solo conteggio — usato da getRecentUserPositions() per mostrare sulla mappa solo posizioni
+     * realmente vicine alle EcTrack del layer, non a livello di shard.
+     *
+     * @param list<array{person_id: string, lat: float, lng: float}> $points
+     * @return list<array{lat: float, lng: float}>
+     */
+    private function filterPointsNearLayerTracks(Layer $layer, array $points): array
+    {
+        if (empty($points)) {
+            return [];
+        }
+
+        $trackTable = config('wm-package.ec_track_table', 'ec_tracks');
+        $trackIds = $layer->ecTracks()->pluck("{$trackTable}.id")->toArray();
+
+        if (empty($trackIds)) {
+            return [];
+        }
+
+        $valuesSql = implode(', ', array_fill(0, count($points), '(?, ?::float8, ?::float8)'));
+        $trackPlaceholders = implode(', ', array_fill(0, count($trackIds), '?'));
+        $distanceMeters = (int) config('wm-package.layer_user_presence_distance_meters', 50);
+
+        $sql = <<<SQL
+SELECT DISTINCT v.person_id, v.lat, v.lng
+FROM (VALUES {$valuesSql}) AS v(person_id, lat, lng)
+WHERE EXISTS (
+    SELECT 1 FROM {$trackTable}
+    WHERE id IN ({$trackPlaceholders})
+      AND geometry IS NOT NULL
+      AND ST_DWithin(
+          geometry::geography,
+          ST_SetSRID(ST_MakePoint(v.lng, v.lat), 4326)::geography,
+          ?
+      )
+)
+SQL;
+
+        $bindings = [];
+        foreach ($points as $point) {
+            $bindings[] = $point['person_id'];
+            $bindings[] = $point['lat'];
+            $bindings[] = $point['lng'];
+        }
+        $bindings = array_merge($bindings, $trackIds, [$distanceMeters]);
+
+        $rows = DB::select($sql, $bindings);
+
+        return array_map(fn ($row) => ['lat' => (float) $row->lat, 'lng' => (float) $row->lng], $rows);
+    }
+
+    /**
      * Clausola WHERE che restringe il KPI aggregato ("Aperture totali") ai soli
      * layer ancora presenti nel DB locale — altrimenti eventi storici di layer
      * cancellati (fino a 365gg) gonfiano il totale senza comparire nella
@@ -658,12 +1180,12 @@ SQL;
     }
 
     /** @return list<list<mixed>> */
-    private function runQuery(string $sql, bool $strict = false): array
+    private function runQuery(string $sql, bool $strict = false, int $timeoutSeconds = 10): array
     {
         $url = "{$this->host}/api/projects/{$this->projectId}/query";
 
         $response = Http::withToken($this->apiKey)
-            ->timeout(10)
+            ->timeout($timeoutSeconds)
             ->post($url, [
                 'query' => [
                     'kind' => 'HogQLQuery',
