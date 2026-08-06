@@ -34,6 +34,9 @@ class AnalyticsService
     /** Cap analogo per il ranking globale "Cammini più frequentati" — più alto perché il bbox qui è l'unione di tutte le tracce, non di un solo layer, quindi il volume atteso è naturalmente più alto. */
     private const MAX_GLOBAL_USER_PRESENCE_POINTS = 20000;
 
+    /** Cap sulle persone distinte mostrate come marker live su un singolo layer (rete di sicurezza, coerente con gli altri cap di questa classe — con Log::warning se raggiunto). */
+    private const MAX_RECENT_POSITIONS = 500;
+
     /** Timeout dedicato più aggressivo del default 10s: query bulk più pesante, non deve bloccare l'intera risposta della card se PostHog è lento. */
     private const USER_PRESENCE_TIMEOUT_SECONDS = 5;
 
@@ -221,7 +224,14 @@ class AnalyticsService
 
                 return $this->countPersonsNearLayerTracks($layer, $points);
             });
-        } catch (AnalyticsQueryException|\Illuminate\Contracts\Cache\LockTimeoutException $e) {
+        } catch (\Throwable $e) {
+            // \Throwable, non solo AnalyticsQueryException|LockTimeoutException: la query bulk
+            // PostGIS (countPersonsNearLayerTracks(), DB::selectOne/DB::select raw) può lanciare
+            // \Illuminate\Database\QueryException su un errore Postgres transitorio — non
+            // catturato dalle due eccezioni originarie (AnalyticsQueryException estende Exception
+            // piatta, nessuna relazione con QueryException). Senza questo catch ampio, un errore DB
+            // qui farebbe fallire l'intera risposta di AnalyticsController::layer(), esattamente il
+            // comportamento che questo metodo promette di evitare (vedi docblock sopra).
             Log::error('getUserMovedStats() failed', [
                 'layer_id' => $layer->id,
                 'range' => $range,
@@ -246,7 +256,11 @@ class AnalyticsService
      */
     public function getRecentUserPositions(Layer $layer, int $minutesWindow = 30): array
     {
-        $cacheKey = "posthog:userMoved:{$layer->id}:recent_positions";
+        // $minutesWindow nella cache key: senza, una futura chiamata con finestra non-default per
+        // lo stesso layer dentro i 90s di TTL leggerebbe/scriverebbe la stessa entry di una chiamata
+        // a 30 minuti, restituendo posizioni calcolate per la finestra sbagliata (bug latente,
+        // oggi inerte perché l'unico chiamante usa sempre il default).
+        $cacheKey = "posthog:userMoved:{$layer->id}:recent_positions:{$minutesWindow}";
 
         try {
             return Cache::remember($cacheKey, now()->addSeconds(90), function () use ($layer, $minutesWindow) {
@@ -258,6 +272,7 @@ class AnalyticsService
 
                 $shardName = (string) config('wm-package.shard_name');
                 $bboxClause = $this->bboxFilterClause($bbox);
+                $limit = self::MAX_RECENT_POSITIONS;
 
                 $sql = <<<SQL
 SELECT
@@ -271,10 +286,17 @@ WHERE event = 'userMoved'
   AND {$bboxClause}
   AND timestamp >= now() - INTERVAL {$minutesWindow} MINUTE
 GROUP BY person_id
-LIMIT 500
+LIMIT {$limit}
 SQL;
 
                 $rows = $this->runQuery($sql, true, self::USER_PRESENCE_TIMEOUT_SECONDS);
+
+                if (count($rows) >= $limit) {
+                    Log::warning('getRecentUserPositions() hit the safety cap — some live positions may be missing from the map', [
+                        'layer_id' => $layer->id,
+                        'limit' => $limit,
+                    ]);
+                }
 
                 $points = array_map(fn ($row) => [
                     'person_id' => (string) $row[0],
@@ -284,7 +306,12 @@ SQL;
 
                 return $this->filterPointsNearLayerTracks($layer, $points);
             });
-        } catch (AnalyticsQueryException $e) {
+        } catch (\Throwable $e) {
+            // \Throwable, non solo AnalyticsQueryException: le query bulk PostGIS invocate qui
+            // (layerTracksBoundingBox(), filterPointsNearLayerTracks()) possono lanciare
+            // \Illuminate\Database\QueryException su un errore Postgres transitorio — senza questo
+            // catch ampio, un errore DB qui farebbe fallire l'intero getFeatureCollectionMap() del
+            // layer (tracce, POI e taxonomy_wheres compresi), non solo i marker live.
             Log::error('getRecentUserPositions() failed', ['layer_id' => $layer->id, 'error' => $e->getMessage()]);
 
             return [];
