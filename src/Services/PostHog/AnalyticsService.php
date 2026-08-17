@@ -830,6 +830,14 @@ SQL;
      * proprietà nuova sull'evento — assente su ogni dato storico e non garantita su ogni evento
      * futuro) come quarta colonna, usata solo dalla mappa live per rendere il marker cliccabile
      * verso la pagina Nova dello user. Le altre 2 query (KPI, ranking globale) non la richiedono.
+     * `toFloatOrDefault(..., 0.0)`, non `toInt64OrNull`/`toIntOrNull`/`toInt32OrNull` (nessuna
+     * funzione della famiglia toInt* esiste in questo dialetto HogQL — stesso tipo di gap già
+     * trovato per `toFloat64OrNull`, verificato ora con una query reale contro dati reali PostHog
+     * dopo il primo evento userMoved con user_id, oc:8159 follow-up): `properties.user_id` è piatto
+     * (non incapsulato in `{"_value": ...}` come `shard_name`), ma va sempre letto come float e
+     * castato a int in PHP. `0.0` di default (non NULL, la funzione non lo produce mai) non è un
+     * problema: un user_id reale parte da 1, quindi 0 viene già scartato da `array_filter()` nel
+     * chiamante (Layer::getFeatureCollectionMap()) esattamente come lo sarebbe stato un NULL.
      *
      * @return list<list<mixed>> righe raw da runQuery(), non ancora mappate a person_id/lat/lng
      */
@@ -844,8 +852,8 @@ SQL;
 
         if ($includeUserId) {
             $selectExpr .= $aggregatePerPerson
-                ? ",\n    argMax(toInt64OrNull(properties.user_id), timestamp) AS user_id"
-                : ",\n    toInt64OrNull(properties.user_id) AS user_id";
+                ? ",\n    argMax(toFloatOrDefault(properties.user_id, 0.0), timestamp) AS user_id"
+                : ",\n    toFloatOrDefault(properties.user_id, 0.0) AS user_id";
         }
 
         $groupBy = $aggregatePerPerson ? "\nGROUP BY person_id" : '';
