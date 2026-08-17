@@ -243,6 +243,31 @@ class AnalyticsService
     }
 
     /**
+     * Posizione più recente di ogni persona nella finestra `$minutesWindow` ("dove è questa
+     * persona ADESSO", non uno storico) — `argMax(..., timestamp)` è un fix GPS realmente
+     * accaduto, non una media che su un tornante potrebbe cadere fuori dal sentiero anche se ogni
+     * punto reale era sul sentiero. Pre-filtrata solo per bounding box: la prossimità reale alle
+     * EcTrack è responsabilità del chiamante (filterPointsNearLayerTracks()), non di questo metodo.
+     *
+     * @return list<array{person_id: string, lat: float, lng: float, user_id: ?int}>
+     */
+    private function queryRecentUserMovedPoints(Layer $layer, array $bbox, int $minutesWindow): array
+    {
+        $limit = self::MAX_RECENT_POSITIONS;
+        $temporalClause = "timestamp >= now() - INTERVAL {$minutesWindow} MINUTE";
+        $rows = $this->fetchUserMovedPointsRows($bbox, $temporalClause, $limit, aggregatePerPerson: true, includeUserId: true);
+
+        if (count($rows) >= $limit) {
+            Log::warning('getRecentUserPositions() hit the safety cap — some live positions may be missing from the map', [
+                'layer_id' => $layer->id,
+                'limit' => $limit,
+            ]);
+        }
+
+        return $this->mapUserMovedRowsWithUserId($rows);
+    }
+
+    /**
      * Posizioni GPS recenti (finestra `$minutesWindow`, default 30 min — "dove è questa persona
      * ADESSO", non uno storico) per la mappa live del layer. Per ogni persona prendo la sua
      * posizione più recente nella finestra (`argMax(..., timestamp)`, un fix GPS realmente
@@ -251,8 +276,12 @@ class AnalyticsService
      * di queryUserMovedPointsNearLayer()) e poi per prossimità reale alle EcTrack via
      * filterPointsNearLayerTracks() — senza quest'ultimo passo i punti sarebbero solo "vicini
      * all'area del layer", non "vicini al sentiero" (bbox è un rettangolo, non la traccia).
+     * `user_id` (nullable) è l'id applicativo dello user, non l'id anonimo PostHog `person_id`
+     * (quest'ultimo è solo una chiave di join interna, scartata prima del return) — usato dal
+     * chiamante (Layer::getFeatureCollectionMap()) per mostrare nominativo e link invece del
+     * marker anonimo di default, quando disponibile.
      *
-     * @return list<array{lat: float, lng: float}>
+     * @return list<array{lat: float, lng: float, user_id: ?int}>
      */
     public function getRecentUserPositions(Layer $layer, int $minutesWindow = 30): array
     {
@@ -270,41 +299,16 @@ class AnalyticsService
                     return [];
                 }
 
-                $shardName = (string) config('wm-package.shard_name');
-                $bboxClause = $this->bboxFilterClause($bbox);
-                $limit = self::MAX_RECENT_POSITIONS;
+                $points = $this->queryRecentUserMovedPoints($layer, $bbox, $minutesWindow);
+                $matched = $this->filterPointsNearLayerTracks($layer, $points);
 
-                $sql = <<<SQL
-SELECT
-    person_id,
-    argMax(toFloatOrDefault(properties.user_location.latitude, 0.0), timestamp) AS lat,
-    argMax(toFloatOrDefault(properties.user_location.longitude, 0.0), timestamp) AS lng
-FROM events
-WHERE event = 'userMoved'
-  AND properties.shard_name._value = '{$shardName}'
-  AND properties.user_location IS NOT NULL
-  AND {$bboxClause}
-  AND timestamp >= now() - INTERVAL {$minutesWindow} MINUTE
-GROUP BY person_id
-LIMIT {$limit}
-SQL;
+                $userIdByPersonId = array_column($points, 'user_id', 'person_id');
 
-                $rows = $this->runQuery($sql, true, self::USER_PRESENCE_TIMEOUT_SECONDS);
-
-                if (count($rows) >= $limit) {
-                    Log::warning('getRecentUserPositions() hit the safety cap — some live positions may be missing from the map', [
-                        'layer_id' => $layer->id,
-                        'limit' => $limit,
-                    ]);
-                }
-
-                $points = array_map(fn ($row) => [
-                    'person_id' => (string) $row[0],
-                    'lat' => (float) $row[1],
-                    'lng' => (float) $row[2],
-                ], $rows);
-
-                return $this->filterPointsNearLayerTracks($layer, $points);
+                return array_map(fn ($point) => [
+                    'lat' => $point['lat'],
+                    'lng' => $point['lng'],
+                    'user_id' => $userIdByPersonId[$point['person_id']] ?? null,
+                ], $matched);
             });
         } catch (\Throwable $e) {
             // \Throwable, non solo AnalyticsQueryException: le query bulk PostGIS invocate qui
@@ -401,10 +405,10 @@ SQL;
     // -------------------------------------------------------------------------
 
     /**
-     * @param \Closure(): ?string|null $extraFilter clausola WHERE aggiuntiva, valutata pigramente
-     *   solo su cache miss (evita di ricalcolarla se il risultato è già in cache) — usata da
-     *   getGlobalUsage() per escludere layer cancellati dal totale aggregato (vedi validLayerIdsClause).
-     *   null (default) per il path per-layer: nessuna clausola extra, SQL identica a prima.
+     * @param  \Closure(): ?string|null  $extraFilter  clausola WHERE aggiuntiva, valutata pigramente
+     *                                                 solo su cache miss (evita di ricalcolarla se il risultato è già in cache) — usata da
+     *                                                 getGlobalUsage() per escludere layer cancellati dal totale aggregato (vedi validLayerIdsClause).
+     *                                                 null (default) per il path per-layer: nessuna clausola extra, SQL identica a prima.
      */
     private function getUsage(string $event, string $idProperty, ?int $id, string $range, ?\Closure $extraFilter = null): array
     {
@@ -425,7 +429,8 @@ SQL;
      * lancino la stessa query PostHog in parallelo dopo la scadenza cache.
      *
      * @template T
-     * @param \Closure(): T $callback
+     *
+     * @param  \Closure(): T  $callback
      * @return T il tipo è quello ritornato da $callback (array per usage/ranking, int per i conteggi) — mixed qui è solo per il vincolo del linguaggio, i chiamanti hanno return type stretti che PHP verifica comunque a runtime
      */
     private function rememberWithLock(string $cacheKey, string $range, \Closure $callback): mixed
@@ -748,7 +753,7 @@ SQL;
     }
 
     /**
-     * @param list<int>|null $trackIds null = tutte le tracce con geometria, senza filtro per ID
+     * @param  list<int>|null  $trackIds  null = tutte le tracce con geometria, senza filtro per ID
      * @return array{min_lat: float, max_lat: float, min_lng: float, max_lng: float}|null
      */
     private function tracksBoundingBox(?array $trackIds): ?array
@@ -801,7 +806,7 @@ SQL;
      * la query con un HTTP 500 lato PostHog — bug/limite del backend HogQL confermato empiricamente
      * (oc:8159): stessa condizione logica, ma `BETWEEN` rompe, la catena di comparazioni no.
      *
-     * @param array{min_lat: float, max_lat: float, min_lng: float, max_lng: float} $bbox
+     * @param  array{min_lat: float, max_lat: float, min_lng: float, max_lng: float}  $bbox
      */
     private function bboxFilterClause(array $bbox): string
     {
@@ -812,12 +817,92 @@ SQL;
     }
 
     /**
+     * Esegue il fetch HogQL condiviso dai 3 varianti di query userMoved (KPI per-layer, ranking
+     * globale, mappa live): stesso FROM/WHERE su shard+bbox+user_location, differiscono solo per
+     * la clausola temporale, il limit e se aggregare per persona (argMax sull'ultimo fix GPS,
+     * per "dov'è ADESSO") o restituire ogni punto grezzo (per "è mai passato di qui"). Nessuna
+     * aggregazione qui significa niente media lat/lng — un punto sintetico su un tornante
+     * potrebbe cadere fuori dal sentiero anche se ogni fix reale era sul sentiero.
+     * `properties.shard_name._value` (non piatto) e `toFloatOrDefault()` (non `toFloat64OrNull`,
+     * inesistente in HogQL) verificati contro dati reali PostHog (oc:8159 Task 0).
+     *
+     * `$includeUserId` aggiunge `user_id` (id applicativo dello user che ha registrato il punto,
+     * proprietà nuova sull'evento — assente su ogni dato storico e non garantita su ogni evento
+     * futuro) come quarta colonna, usata solo dalla mappa live per rendere il marker cliccabile
+     * verso la pagina Nova dello user. Le altre 2 query (KPI, ranking globale) non la richiedono.
+     *
+     * @return list<list<mixed>> righe raw da runQuery(), non ancora mappate a person_id/lat/lng
+     */
+    private function fetchUserMovedPointsRows(array $bbox, string $temporalClause, int $limit, bool $aggregatePerPerson, bool $includeUserId = false): array
+    {
+        $shardName = (string) config('wm-package.shard_name');
+        $bboxClause = $this->bboxFilterClause($bbox);
+
+        $selectExpr = $aggregatePerPerson
+            ? "argMax(toFloatOrDefault(properties.user_location.latitude, 0.0), timestamp) AS lat,\n    argMax(toFloatOrDefault(properties.user_location.longitude, 0.0), timestamp) AS lng"
+            : "toFloatOrDefault(properties.user_location.latitude, 0.0) AS lat,\n    toFloatOrDefault(properties.user_location.longitude, 0.0) AS lng";
+
+        if ($includeUserId) {
+            $selectExpr .= $aggregatePerPerson
+                ? ",\n    argMax(toInt64OrNull(properties.user_id), timestamp) AS user_id"
+                : ",\n    toInt64OrNull(properties.user_id) AS user_id";
+        }
+
+        $groupBy = $aggregatePerPerson ? "\nGROUP BY person_id" : '';
+
+        $sql = <<<SQL
+SELECT
+    person_id,
+    {$selectExpr}
+FROM events
+WHERE event = 'userMoved'
+  AND properties.shard_name._value = '{$shardName}'
+  AND properties.user_location IS NOT NULL
+  AND {$bboxClause}
+  AND {$temporalClause}{$groupBy}
+LIMIT {$limit}
+SQL;
+
+        return $this->runQuery($sql, true, self::USER_PRESENCE_TIMEOUT_SECONDS);
+    }
+
+    /**
+     * Mappa le righe raw di fetchUserMovedPointsRows() nella shape person_id/lat/lng condivisa
+     * dai 3 varianti di query userMoved.
+     *
+     * @param  list<list<mixed>>  $rows
+     * @return list<array{person_id: string, lat: float, lng: float}>
+     */
+    private function mapUserMovedRows(array $rows): array
+    {
+        return array_map(fn ($row) => [
+            'person_id' => (string) $row[0],
+            'lat' => (float) $row[1],
+            'lng' => (float) $row[2],
+        ], $rows);
+    }
+
+    /**
+     * Come mapUserMovedRows(), con la quarta colonna `user_id` (nullable — assente se lo user non
+     * era autenticato o se l'evento non porta ancora questa property).
+     *
+     * @param  list<list<mixed>>  $rows
+     * @return list<array{person_id: string, lat: float, lng: float, user_id: ?int}>
+     */
+    private function mapUserMovedRowsWithUserId(array $rows): array
+    {
+        return array_map(fn ($row) => [
+            'person_id' => (string) $row[0],
+            'lat' => (float) $row[1],
+            'lng' => (float) $row[2],
+            'user_id' => isset($row[3]) ? (int) $row[3] : null,
+        ], $rows);
+    }
+
+    /**
      * Punti GPS grezzi dell'evento userMoved, pre-filtrati per bounding box geografico del layer
      * (nessuna aggregazione temporale/spaziale) — risponde a "questa persona ha mai avuto un punto
-     * vicino alla traccia nel range?", non "qual è la sua posizione media/più recente". Ogni punto
-     * ritornato è un fix GPS reale, mai un punto sintetico. `properties.shard_name._value` (non
-     * `properties.shard_name` piatto) e `toFloatOrDefault()` (non `toFloat64OrNull`, funzione
-     * inesistente in HogQL) verificati contro dati reali PostHog (oc:8159 Task 0).
+     * vicino alla traccia nel range?", non "qual è la sua posizione media/più recente".
      *
      * @return list<array{person_id: string, lat: float, lng: float}>
      */
@@ -829,26 +914,8 @@ SQL;
             return [];
         }
 
-        $whereClause = $this->whereClause($range);
-        $shardName = (string) config('wm-package.shard_name');
         $limit = self::MAX_USER_PRESENCE_POINTS;
-        $bboxClause = $this->bboxFilterClause($bbox);
-
-        $sql = <<<SQL
-SELECT
-    person_id,
-    toFloatOrDefault(properties.user_location.latitude, 0.0) AS lat,
-    toFloatOrDefault(properties.user_location.longitude, 0.0) AS lng
-FROM events
-WHERE event = 'userMoved'
-  AND properties.shard_name._value = '{$shardName}'
-  AND properties.user_location IS NOT NULL
-  AND {$bboxClause}
-  AND {$whereClause}
-LIMIT {$limit}
-SQL;
-
-        $rows = $this->runQuery($sql, true, self::USER_PRESENCE_TIMEOUT_SECONDS);
+        $rows = $this->fetchUserMovedPointsRows($bbox, $this->whereClause($range), $limit, aggregatePerPerson: false);
 
         if (count($rows) >= $limit) {
             Log::warning('queryUserMovedPointsNearLayer() hit the safety cap — presence count may be underestimated', [
@@ -858,11 +925,7 @@ SQL;
             ]);
         }
 
-        return array_map(fn ($row) => [
-            'person_id' => (string) $row[0],
-            'lat' => (float) $row[1],
-            'lng' => (float) $row[2],
-        ], $rows);
+        return $this->mapUserMovedRows($rows);
     }
 
     /**
@@ -879,26 +942,8 @@ SQL;
             return [];
         }
 
-        $whereClause = $this->whereClause($range);
-        $shardName = (string) config('wm-package.shard_name');
-        $bboxClause = $this->bboxFilterClause($bbox);
         $limit = self::MAX_GLOBAL_USER_PRESENCE_POINTS;
-
-        $sql = <<<SQL
-SELECT
-    person_id,
-    toFloatOrDefault(properties.user_location.latitude, 0.0) AS lat,
-    toFloatOrDefault(properties.user_location.longitude, 0.0) AS lng
-FROM events
-WHERE event = 'userMoved'
-  AND properties.shard_name._value = '{$shardName}'
-  AND properties.user_location IS NOT NULL
-  AND {$bboxClause}
-  AND {$whereClause}
-LIMIT {$limit}
-SQL;
-
-        $rows = $this->runQuery($sql, true, self::USER_PRESENCE_TIMEOUT_SECONDS);
+        $rows = $this->fetchUserMovedPointsRows($bbox, $this->whereClause($range), $limit, aggregatePerPerson: false);
 
         if (count($rows) >= $limit) {
             Log::warning('queryAllUserMovedPointsNearAnyTrack() hit the safety cap — global ranking may be underestimated', [
@@ -907,11 +952,29 @@ SQL;
             ]);
         }
 
-        return array_map(fn ($row) => [
-            'person_id' => (string) $row[0],
-            'lat' => (float) $row[1],
-            'lng' => (float) $row[2],
-        ], $rows);
+        return $this->mapUserMovedRows($rows);
+    }
+
+    /**
+     * Blocco `VALUES (...)` + bindings per il set di punti GPS person_id/lat/lng — condiviso dalle
+     * 3 query bulk PostGIS sottostanti (countPersonsNearLayerTracks(), countPersonsPerLayerNearTracks(),
+     * filterPointsNearLayerTracks()), identico nelle tre salvo il numero di punti.
+     *
+     * @param  list<array{person_id: string, lat: float, lng: float}>  $points
+     * @return array{0: string, 1: list<mixed>}
+     */
+    private function pointsValuesClause(array $points): array
+    {
+        $valuesSql = implode(', ', array_fill(0, count($points), '(?, ?::float8, ?::float8)'));
+
+        $bindings = [];
+        foreach ($points as $point) {
+            $bindings[] = $point['person_id'];
+            $bindings[] = $point['lat'];
+            $bindings[] = $point['lng'];
+        }
+
+        return [$valuesSql, $bindings];
     }
 
     /**
@@ -920,7 +983,7 @@ SQL;
      * un'unica query (VALUES + EXISTS/ST_DWithin), non un round-trip per punto — stessa nozione
      * geografica di UgcService::resolveLayerByProximity(), ma qui su un intero set di punti.
      *
-     * @param list<array{person_id: string, lat: float, lng: float}> $points
+     * @param  list<array{person_id: string, lat: float, lng: float}>  $points
      */
     private function countPersonsNearLayerTracks(Layer $layer, array $points): int
     {
@@ -935,7 +998,7 @@ SQL;
             return 0;
         }
 
-        $valuesSql = implode(', ', array_fill(0, count($points), '(?, ?::float8, ?::float8)'));
+        [$valuesSql, $bindings] = $this->pointsValuesClause($points);
         $trackPlaceholders = implode(', ', array_fill(0, count($trackIds), '?'));
         $distanceMeters = (int) config('wm-package.layer_user_presence_distance_meters', 50);
 
@@ -954,12 +1017,6 @@ WHERE EXISTS (
 )
 SQL;
 
-        $bindings = [];
-        foreach ($points as $point) {
-            $bindings[] = $point['person_id'];
-            $bindings[] = $point['lat'];
-            $bindings[] = $point['lng'];
-        }
         $bindings = array_merge($bindings, $trackIds, [$distanceMeters]);
 
         /** @var object{total: int}|null $row */
@@ -978,7 +1035,7 @@ SQL;
      * — non hardcoded: `wm-package` è multi-consumer (maphub, osm2cai2, ecc.), un valore letterale
      * funziona solo per progetti dove `ec_track_model` risolve esattamente a quella stringa.
      *
-     * @param list<array{person_id: string, lat: float, lng: float}> $points
+     * @param  list<array{person_id: string, lat: float, lng: float}>  $points
      * @return list<array{layer_id: int, total: int}>
      */
     private function countPersonsPerLayerNearTracks(array $points): array
@@ -991,7 +1048,7 @@ SQL;
         $distanceMeters = (int) config('wm-package.layer_user_presence_distance_meters', 50);
         $ecTrackModelClass = config('wm-package.ec_track_model', EcTrack::class);
         $ecTrackMorphType = array_search($ecTrackModelClass, Relation::morphMap()) ?: $ecTrackModelClass;
-        $valuesSql = implode(', ', array_fill(0, count($points), '(?, ?::float8, ?::float8)'));
+        [$valuesSql, $bindings] = $this->pointsValuesClause($points);
 
         $sql = <<<SQL
 SELECT lb.layer_id AS layer_id, count(DISTINCT v.person_id) AS total
@@ -1006,12 +1063,6 @@ JOIN layerables lb ON lb.layerable_id = et.id AND lb.layerable_type = ?
 GROUP BY lb.layer_id
 SQL;
 
-        $bindings = [];
-        foreach ($points as $point) {
-            $bindings[] = $point['person_id'];
-            $bindings[] = $point['lat'];
-            $bindings[] = $point['lng'];
-        }
         $bindings[] = $distanceMeters;
         $bindings[] = $ecTrackMorphType;
 
@@ -1028,8 +1079,8 @@ SQL;
      * solo conteggio — usato da getRecentUserPositions() per mostrare sulla mappa solo posizioni
      * realmente vicine alle EcTrack del layer, non a livello di shard.
      *
-     * @param list<array{person_id: string, lat: float, lng: float}> $points
-     * @return list<array{lat: float, lng: float}>
+     * @param  list<array{person_id: string, lat: float, lng: float}>  $points
+     * @return list<array{person_id: string, lat: float, lng: float}>
      */
     private function filterPointsNearLayerTracks(Layer $layer, array $points): array
     {
@@ -1044,7 +1095,7 @@ SQL;
             return [];
         }
 
-        $valuesSql = implode(', ', array_fill(0, count($points), '(?, ?::float8, ?::float8)'));
+        [$valuesSql, $bindings] = $this->pointsValuesClause($points);
         $trackPlaceholders = implode(', ', array_fill(0, count($trackIds), '?'));
         $distanceMeters = (int) config('wm-package.layer_user_presence_distance_meters', 50);
 
@@ -1063,17 +1114,15 @@ WHERE EXISTS (
 )
 SQL;
 
-        $bindings = [];
-        foreach ($points as $point) {
-            $bindings[] = $point['person_id'];
-            $bindings[] = $point['lat'];
-            $bindings[] = $point['lng'];
-        }
         $bindings = array_merge($bindings, $trackIds, [$distanceMeters]);
 
         $rows = DB::select($sql, $bindings);
 
-        return array_map(fn ($row) => ['lat' => (float) $row->lat, 'lng' => (float) $row->lng], $rows);
+        return array_map(fn ($row) => [
+            'person_id' => (string) $row->person_id,
+            'lat' => (float) $row->lat,
+            'lng' => (float) $row->lng,
+        ], $rows);
     }
 
     /**

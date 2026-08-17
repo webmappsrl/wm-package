@@ -490,27 +490,63 @@ class Layer extends Polygon
         }
 
         $recentPositions = app(\Wm\WmPackage\Services\PostHog\AnalyticsService::class)->getRecentUserPositions($this);
+
+        // user_id è una property nuova sull'evento userMoved (oc:8159 follow-up): non garantita su
+        // ogni punto (utente non autenticato, o evento registrato prima che l'app la iniziasse a
+        // inviare) — batch lookup, non una query per posizione, e nominativo/link sono un
+        // arricchimento facoltativo: senza user_id risolvibile il marker resta quello anonimo di
+        // sempre, nessun comportamento esistente cambia.
+        // \Wm\WmPackage\Models\User, non la classe App\Models\User importata sopra (usata solo da
+        // layerOwner()): stessa tabella, nessuna differenza di dati per id/name/surname, ma la
+        // classe del package è autoloadabile anche nella suite standalone di wm-package.
+        // try/catch dedicato: getRecentUserPositions() protegge già i propri errori DB/PostHog
+        // (vedi il \Throwable lì), ma questo lookup gira fuori da quella protezione — senza questo
+        // catch, un blip transitorio di Postgres qui romperebbe l'intero getFeatureCollectionMap()
+        // (tracce, EcPoi, taxonomy_wheres compresi) per un arricchimento puramente cosmetico.
+        try {
+            $userIds = array_values(array_unique(array_filter(array_column($recentPositions, 'user_id'))));
+            $usersById = $userIds === []
+                ? collect()
+                : \Wm\WmPackage\Models\User::whereIn('id', $userIds)->get(['id', 'name', 'surname'])->keyBy('id');
+        } catch (\Throwable $e) {
+            Log::error('getFeatureCollectionMap(): user_id lookup failed', ['layer_id' => $this->id, 'error' => $e->getMessage()]);
+            $usersById = collect();
+        }
+
         foreach ($recentPositions as $position) {
+            $user = isset($position['user_id']) ? $usersById->get($position['user_id']) : null;
+            $nominativo = $user ? trim("{$user->name} {$user->surname}") : '';
+
+            $properties = [
+                'tooltip' => $nominativo !== '' ? $nominativo : 'Posizione utente (ultimi 30 minuti)',
+                'pointFillColor' => 'rgba(34, 197, 94, 0.9)',
+                'pointStrokeColor' => 'rgba(255, 255, 255, 1)',
+                'pointStrokeWidth' => 3,
+                'pointRadius' => 8,
+                // Anelli concentrici (bullseye), non solo colore diverso: gli EcPoi sono un
+                // cerchio pieno senza questa property — un utente daltonico o una stampa in
+                // scala di grigi distingue comunque i due marker dal profilo (anelli vs pieno),
+                // non solo dalla tinta. Nessuna modifica al componente Vue: checkpointRouteColors
+                // è già supportato da FeatureCollectionMap.vue::getFeatureStyle() per un altro
+                // caso d'uso (percorsi multi-tratta).
+                'checkpointRouteColors' => ['rgba(255, 255, 255, 1)', 'rgba(34, 197, 94, 0.9)'],
+            ];
+
+            // Gated su $user (utente risolto), non su $nominativo: uno user con name/surname
+            // vuoti resta comunque un utente reale e cliccabile, solo senza un nome da mostrare
+            // nel tooltip — il link non deve dipendere dal fatto che la stringa risultante sia
+            // non vuota.
+            if ($user) {
+                $properties['link'] = url('nova/resources/users/'.$user->id);
+            }
+
             $this->addFeaturesForMap([[
                 'type' => 'Feature',
                 'geometry' => [
                     'type' => 'Point',
                     'coordinates' => [$position['lng'], $position['lat']],
                 ],
-                'properties' => [
-                    'tooltip' => 'Posizione utente (ultimi 30 minuti)',
-                    'pointFillColor' => 'rgba(34, 197, 94, 0.9)',
-                    'pointStrokeColor' => 'rgba(255, 255, 255, 1)',
-                    'pointStrokeWidth' => 3,
-                    'pointRadius' => 8,
-                    // Anelli concentrici (bullseye), non solo colore diverso: gli EcPoi sono un
-                    // cerchio pieno senza questa property — un utente daltonico o una stampa in
-                    // scala di grigi distingue comunque i due marker dal profilo (anelli vs pieno),
-                    // non solo dalla tinta. Nessuna modifica al componente Vue: checkpointRouteColors
-                    // è già supportato da FeatureCollectionMap.vue::getFeatureStyle() per un altro
-                    // caso d'uso (percorsi multi-tratta).
-                    'checkpointRouteColors' => ['rgba(255, 255, 255, 1)', 'rgba(34, 197, 94, 0.9)'],
-                ],
+                'properties' => $properties,
             ]]);
         }
 
