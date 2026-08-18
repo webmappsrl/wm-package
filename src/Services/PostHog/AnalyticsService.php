@@ -291,16 +291,42 @@ class AnalyticsService
             $start = $month.'-01';
             $end = Carbon::parse($start)->addMonth()->format('Y-m-d');
 
-            return "timestamp >= '{$start}' AND timestamp < '{$end}'";
+            $clause = "(timestamp >= '{$start}' AND timestamp < '{$end}')";
+        } else {
+            $days = match ($range) {
+                'last_90_days' => 90,
+                'last_365_days' => 365,
+                default => 30,
+            };
+
+            $clause = "(timestamp >= now() - INTERVAL {$days} DAY)";
         }
 
-        $days = match ($range) {
-            'last_90_days' => 90,
-            'last_365_days' => 365,
-            default => 30,
-        };
+        return $clause.$this->shardNameClause();
+    }
 
-        return "timestamp >= now() - INTERVAL {$days} DAY";
+    /**
+     * Filtra gli eventi per shard_name (config('wm-package.shard_name')) per evitare che eventi
+     * di altri consumer wm-package sullo stesso progetto PostHog condiviso si mescolino nelle
+     * metriche. La property ha due forme osservate empiricamente su dati reali di produzione:
+     * annidata (properties.shard_name._value, formato attuale eventi mobile camminiditalia) e
+     * flat (properties.shard_name, osservato su eventi storici di altri shard) — l'OR copre
+     * entrambe. Config vuoto disabilita il filtro (fail-open, comportamento pre-fix) invece di
+     * produrre una clausola che non fa mai match e azzererebbe silenziosamente ogni metrica.
+     */
+    private function shardNameClause(): string
+    {
+        $shardName = trim((string) config('wm-package.shard_name'));
+
+        if ($shardName === '') {
+            Log::warning('AnalyticsService: wm-package.shard_name non configurato, filtro shard disabilitato');
+
+            return '';
+        }
+
+        $escaped = str_replace(['\\', "'"], ['\\\\', "\\'"], $shardName);
+
+        return " AND (properties.shard_name._value = '{$escaped}' OR properties.shard_name = '{$escaped}')";
     }
 
     private function queryDailyBreakdown(string $event, string $idProperty, ?int $id, string $whereClause): array
@@ -531,6 +557,7 @@ SQL;
         $whereClause = $this->whereClause($range);
         $libs = $this->libList();
         $idFilter = $this->idFilterClause('layer_id', null);
+        $effectiveLayerId = $this->effectiveLayerIdExpression();
 
         // Nessun cap sensato a livello di riga qui: ogni riga è una coppia
         // (layer_id, lib), non un layer — il ranking vero (top RANKING_LIMIT
@@ -546,7 +573,7 @@ SQL;
         // tripwire per accorgersene prima che diventi un problema silenzioso.
         $sql = <<<SQL
 SELECT
-    properties.layer_id AS layer_id,
+    {$effectiveLayerId} AS layer_id,
     properties.\$lib AS lib,
     count() AS total
 FROM events
@@ -590,22 +617,39 @@ SQL;
 
     private function idFilterClause(string $idProperty, ?int $id): string
     {
+        $expr = $idProperty === 'layer_id' ? $this->effectiveLayerIdExpression() : "properties.{$idProperty}";
+
         if ($id === null) {
-            return "properties.{$idProperty} IS NOT NULL AND properties.{$idProperty} != ''";
+            return "{$expr} IS NOT NULL AND {$expr} != ''";
         }
 
-        return "properties.{$idProperty} = '{$id}'";
+        return "{$expr} = '{$id}'";
+    }
+
+    /**
+     * La maggior parte degli eventi layerOpened reali non porta più `layer_id` (verificato:
+     * solo 12%/2%/23% degli eventi Android/iOS/web negli ultimi 30 giorni) — porta invece
+     * `layer_label`, formato "{id} - {titolo}" (es. "56 - Cammino Minerario di Santa Barbara"),
+     * verificato 100% consistente su 90 giorni di dati reali e mai in contraddizione con
+     * layer_id quando entrambe le property sono presenti sullo stesso evento. Usa layer_id se
+     * presente, altrimenti estrae l'ID numerico da layer_label.
+     */
+    private function effectiveLayerIdExpression(): string
+    {
+        return "coalesce(nullIf(properties.layer_id, ''), nullIf(extract(properties.layer_label, '^([0-9]+)'), ''))";
     }
 
     private function idInFilterClause(string $idProperty, ?array $ids): string
     {
+        $expr = $idProperty === 'layer_id' ? $this->effectiveLayerIdExpression() : "properties.{$idProperty}";
+
         if ($ids === null) {
-            return "properties.{$idProperty} IS NOT NULL AND properties.{$idProperty} != ''";
+            return "{$expr} IS NOT NULL AND {$expr} != ''";
         }
 
         $inList = implode(', ', array_map(fn ($v) => "'{$v}'", $ids));
 
-        return "properties.{$idProperty} IN ({$inList})";
+        return "{$expr} IN ({$inList})";
     }
 
     private function libList(): string
