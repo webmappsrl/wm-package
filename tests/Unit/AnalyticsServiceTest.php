@@ -23,6 +23,9 @@ class AnalyticsServiceTest extends TestCase
             'services.posthog.project_id' => '1',
             'services.posthog.personal_api_key' => 'phx_test',
             'services.posthog.analytics_cache_ttl' => 900,
+            // valore non vuoto: evita che il guard fail-open in shardNameClause() chiami Log::warning()
+            // inaspettatamente, cosa che farebbe fallire i test che mockano Log in modo strict (Log::shouldReceive('error'))
+            'wm-package.shard_name' => 'default',
         ]);
     }
 
@@ -186,10 +189,14 @@ class AnalyticsServiceTest extends TestCase
 
         // Le 3 query successive alla ranking (daily breakdown, breakdown, unique users)
         // devono includere il filtro sul solo layer valido ed escludere l'orfano.
+        // Il filtro ora usa l'espressione di fallback per layer_id (coalesce + extract).
         for ($i = 1; $i < 4; $i++) {
             [$request] = $requests[$i];
             $sql = $request->data()['query']['query'];
-            $this->assertStringContainsString("properties.layer_id IN ('10')", $sql);
+            $this->assertStringContainsString(
+                "coalesce(nullIf(properties.layer_id, ''), nullIf(extract(properties.layer_label, '^([0-9]+)'), '')) IN ('10')",
+                $sql
+            );
             $this->assertStringNotContainsString('999', $sql);
         }
     }
@@ -230,7 +237,7 @@ class AnalyticsServiceTest extends TestCase
         foreach ($requests as [$request]) {
             $sql = $request->data()['query']['query'];
             $this->assertStringNotContainsString('1 = 0', $sql);
-            $this->assertStringNotContainsString('layer_id IN (', $sql);
+            $this->assertStringNotContainsString(')) IN (', $sql);
         }
     }
 
@@ -246,8 +253,12 @@ class AnalyticsServiceTest extends TestCase
         Http::assertSent(function (Request $request) {
             $sql = $request->data()['query']['query'];
 
-            return ! str_contains($sql, "properties.layer_id = '")
-                && str_contains($sql, 'properties.layer_id IS NOT NULL');
+            // Il filtro per layer_id con $id=null (ranking globale) usa l'espressione fallback coalesce.
+            // Non contiene un'uguaglianza per un ID specifico (come = '56'), ma contiene l'espressione
+            // fallback che usa IS NOT NULL e != '' (per il filtro nullo).
+            return ! str_contains($sql, "')) = '")
+                && str_contains($sql, 'coalesce(nullIf(properties.layer_id,')
+                && str_contains($sql, 'IS NOT NULL');
         });
     }
 
@@ -507,6 +518,252 @@ class AnalyticsServiceTest extends TestCase
         $result = (new AnalyticsService)->getLayerUsage(1, 'last_365_days');
 
         $this->assertSame('last_365_days', $result['range']);
+    }
+
+    // -------------------------------------------------------------------------
+    // Filtro shard_name (oc:8354)
+    // -------------------------------------------------------------------------
+
+    public function test_where_clause_filters_by_configured_shard_name(): void
+    {
+        config(['wm-package.shard_name' => 'camminiditalia']);
+        Cache::flush();
+        Http::fake(['*' => Http::response(['results' => []])]);
+
+        (new AnalyticsService)->getLayerUsage(1);
+
+        Http::assertSent(function (Request $request) {
+            $sql = $request->data()['query']['query'];
+
+            return str_contains($sql, "properties.shard_name._value = 'camminiditalia'")
+                && str_contains($sql, "properties.shard_name = 'camminiditalia'");
+        });
+    }
+
+    public function test_where_clause_disables_shard_filter_and_logs_warning_when_shard_name_not_configured(): void
+    {
+        config(['wm-package.shard_name' => '']);
+        Cache::flush();
+        Http::fake(['*' => Http::response(['results' => []])]);
+        Log::shouldReceive('warning')
+            ->atLeast()->once()
+            ->withArgs(fn ($msg) => str_contains($msg, 'shard_name non configurato'));
+
+        (new AnalyticsService)->getLayerUsage(1);
+
+        Http::assertSent(function (Request $request) {
+            $sql = $request->data()['query']['query'];
+
+            return ! str_contains($sql, 'shard_name');
+        });
+    }
+
+    public function test_get_global_usage_sql_includes_shard_name_filter(): void
+    {
+        config(['wm-package.shard_name' => 'camminiditalia']);
+        Cache::flush();
+        Http::fake(['*' => Http::response(['results' => []])]);
+
+        (new AnalyticsService)->getGlobalUsage();
+
+        Http::assertSent(fn (Request $request) => str_contains(
+            $request->data()['query']['query'],
+            "properties.shard_name._value = 'camminiditalia'"
+        ));
+    }
+
+    public function test_get_all_layers_usage_sql_includes_shard_name_filter(): void
+    {
+        config(['wm-package.shard_name' => 'camminiditalia']);
+        Cache::flush();
+        Http::fake(['*' => Http::response(['results' => []])]);
+
+        (new AnalyticsService)->getAllLayersUsage();
+
+        Http::assertSent(fn (Request $request) => str_contains(
+            $request->data()['query']['query'],
+            "properties.shard_name._value = 'camminiditalia'"
+        ));
+    }
+
+    public function test_get_layer_track_downloads_sql_includes_shard_name_filter(): void
+    {
+        config(['wm-package.shard_name' => 'camminiditalia']);
+        Cache::flush();
+        Http::fake(['*' => Http::response(['results' => []])]);
+        $layer = $this->createLayerMockWithTrackIds([1, 2]);
+
+        (new AnalyticsService)->getLayerTrackDownloads($layer);
+
+        Http::assertSent(fn (Request $request) => str_contains(
+            $request->data()['query']['query'],
+            "properties.shard_name._value = 'camminiditalia'"
+        ));
+    }
+
+    public function test_get_all_tracks_downloads_sql_includes_shard_name_filter(): void
+    {
+        config(['wm-package.shard_name' => 'camminiditalia']);
+        Cache::flush();
+        Http::fake(['*' => Http::response(['results' => []])]);
+
+        (new AnalyticsService)->getAllTracksDownloads();
+
+        Http::assertSent(fn (Request $request) => str_contains(
+            $request->data()['query']['query'],
+            "properties.shard_name._value = 'camminiditalia'"
+        ));
+    }
+
+    public function test_get_all_tracks_shares_sql_includes_shard_name_filter(): void
+    {
+        config(['wm-package.shard_name' => 'camminiditalia']);
+        Cache::flush();
+        Http::fake(['*' => Http::response(['results' => []])]);
+
+        (new AnalyticsService)->getAllTracksShares();
+
+        Http::assertSent(fn (Request $request) => str_contains(
+            $request->data()['query']['query'],
+            "properties.shard_name._value = 'camminiditalia'"
+        ));
+    }
+
+    public function test_get_total_searches_sql_includes_shard_name_filter(): void
+    {
+        config(['wm-package.shard_name' => 'camminiditalia']);
+        Cache::flush();
+        Http::fake(['*' => Http::response(['results' => []])]);
+
+        (new AnalyticsService)->getTotalSearches();
+
+        Http::assertSent(fn (Request $request) => str_contains(
+            $request->data()['query']['query'],
+            "properties.shard_name._value = 'camminiditalia'"
+        ));
+    }
+
+    public function test_get_top_search_queries_sql_includes_shard_name_filter(): void
+    {
+        config(['wm-package.shard_name' => 'camminiditalia']);
+        Cache::flush();
+        Http::fake(['*' => Http::response(['results' => []])]);
+
+        (new AnalyticsService)->getTopSearchQueries();
+
+        Http::assertSent(fn (Request $request) => str_contains(
+            $request->data()['query']['query'],
+            "properties.shard_name._value = 'camminiditalia'"
+        ));
+    }
+
+    public function test_where_clause_escapes_quotes_and_backslashes_in_shard_name(): void
+    {
+        $shardName = "cammini d'italia\\";
+        config(['wm-package.shard_name' => $shardName]);
+        Cache::flush();
+        Http::fake(['*' => Http::response(['results' => []])]);
+
+        (new AnalyticsService)->getLayerUsage(1);
+
+        // Valore atteso scritto a mano (non ricalcolato con l'algoritmo di produzione) per non
+        // mascherare un eventuale bug di escaping dietro un'asserzione tautologica: "cammini
+        // d'italia\" -> backslash escapato prima dell'apice -> "cammini d\'italia\\".
+        $escaped = 'cammini d\\\'italia\\\\';
+
+        Http::assertSent(function (Request $request) use ($escaped) {
+            $sql = $request->data()['query']['query'];
+
+            return str_contains($sql, "AND (properties.shard_name._value = '{$escaped}'")
+                && str_contains(
+                    $sql,
+                    "properties.shard_name._value = '{$escaped}' OR properties.shard_name = '{$escaped}'"
+                );
+        });
+    }
+
+    // -------------------------------------------------------------------------
+    // Fallback layer_id -> layer_label (oc:8354)
+    // -------------------------------------------------------------------------
+
+    public function test_get_layer_usage_filter_falls_back_to_layer_label_when_layer_id_missing(): void
+    {
+        Cache::flush();
+        Http::fake(['*' => Http::response(['results' => []])]);
+
+        (new AnalyticsService)->getLayerUsage(56);
+
+        Http::assertSent(function (Request $request) {
+            $sql = $request->data()['query']['query'];
+
+            return str_contains(
+                $sql,
+                "coalesce(nullIf(properties.layer_id, ''), nullIf(extract(properties.layer_label, '^([0-9]+)'), '')) = '56'"
+            );
+        });
+    }
+
+    public function test_query_all_layers_ranking_sql_uses_layer_label_fallback_in_select_and_group_by(): void
+    {
+        Cache::flush();
+        Http::fake(['*' => Http::response(['results' => []])]);
+
+        (new AnalyticsService)->getAllLayersUsage();
+
+        Http::assertSent(function (Request $request) {
+            $sql = $request->data()['query']['query'];
+
+            return str_contains(
+                $sql,
+                "coalesce(nullIf(properties.layer_id, ''), nullIf(extract(properties.layer_label, '^([0-9]+)'), '')) AS layer_id"
+            ) && str_contains($sql, 'GROUP BY layer_id, lib');
+        });
+    }
+
+    public function test_get_global_usage_sql_uses_layer_label_fallback_in_id_filter(): void
+    {
+        Cache::flush();
+        Http::fake(['*' => Http::response(['results' => []])]);
+
+        (new AnalyticsService)->getGlobalUsage();
+
+        Http::assertSent(function (Request $request) {
+            $sql = $request->data()['query']['query'];
+
+            return str_contains(
+                $sql,
+                "coalesce(nullIf(properties.layer_id, ''), nullIf(extract(properties.layer_label, '^([0-9]+)'), '')) IS NOT NULL AND coalesce(nullIf(properties.layer_id, ''), nullIf(extract(properties.layer_label, '^([0-9]+)'), '')) != ''"
+            );
+        });
+    }
+
+    public function test_get_global_usage_extra_filter_uses_layer_label_fallback_in_in_clause(): void
+    {
+        $this->seedLayersTable([
+            ['id' => 10, 'name' => 'Cammino di Santiago'],
+        ]);
+        Cache::flush();
+
+        Http::fake([
+            '*' => Http::sequence()
+                ->push(['results' => [['10', 'web', 5]]]) // ranking: un layer valido
+                ->push(['results' => []]) // daily breakdown
+                ->push(['results' => []]) // breakdown
+                ->push(['results' => [[0]]]), // unique users
+        ]);
+
+        (new AnalyticsService)->getGlobalUsage('last_30_days');
+
+        $requests = Http::recorded();
+        // le 3 richieste successive alla ranking (daily, breakdown, unique_users) devono contenere il filtro IN con l'espressione di fallback
+        for ($i = 1; $i < 4; $i++) {
+            [$request] = $requests[$i];
+            $sql = $request->data()['query']['query'];
+            $this->assertStringContainsString(
+                "coalesce(nullIf(properties.layer_id, ''), nullIf(extract(properties.layer_label, '^([0-9]+)'), '')) IN ('10')",
+                $sql
+            );
+        }
     }
 
     // -------------------------------------------------------------------------
