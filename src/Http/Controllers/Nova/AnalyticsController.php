@@ -31,8 +31,14 @@ class AnalyticsController extends Controller
             return response()->json(['error' => 'analytics_query_failed'], 502);
         }
 
+        // Non nel try/catch sopra: getUserMovedStats() gestisce già internamente ogni
+        // fallimento e ritorna null (mai un'eccezione) — le altre metriche della card
+        // devono restare visibili anche se questa query bulk più pesante fallisce.
+        $userPresence = $service->getUserMovedStats($layer, $range);
+
         return response()->json(array_merge($usage, [
             'track_downloads' => $trackDownloads,
+            'user_presence' => $userPresence,
         ]));
     }
 
@@ -46,6 +52,7 @@ class AnalyticsController extends Controller
         try {
             $usage = $service->getGlobalUsage($range);
             $rankingLayers = $service->getAllLayersUsage($range);
+            $rankingUserPresence = $service->getAllLayersUserPresence($range);
             $rankingTracks = $service->getAllTracksDownloads($range);
             $rankingTrackShares = $service->getAllTracksShares($range);
             $searchTotal = $service->getTotalSearches($range);
@@ -56,6 +63,7 @@ class AnalyticsController extends Controller
 
         return response()->json(array_merge($usage, [
             'ranking_layers' => $rankingLayers,
+            'ranking_user_presence' => $rankingUserPresence,
             'ranking_tracks' => $rankingTracks,
             'ranking_track_shares' => $rankingTrackShares,
             'search_total' => $searchTotal,
