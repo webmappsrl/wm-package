@@ -823,8 +823,18 @@ SQL;
      * per "dov'è ADESSO") o restituire ogni punto grezzo (per "è mai passato di qui"). Nessuna
      * aggregazione qui significa niente media lat/lng — un punto sintetico su un tornante
      * potrebbe cadere fuori dal sentiero anche se ogni fix reale era sul sentiero.
-     * `properties.shard_name._value` (non piatto) e `toFloatOrDefault()` (non `toFloat64OrNull`,
-     * inesistente in HogQL) verificati contro dati reali PostHog (oc:8159 Task 0).
+     * `toFloatOrDefault()` (non `toFloat64OrNull`, inesistente in HogQL) verificato contro dati
+     * reali PostHog (oc:8159 Task 0).
+     *
+     * Il filtro shard_name riusa `shardNameClause()` (oc:8354), non una propria riga raw: OR tra
+     * forma annidata `properties.shard_name._value` (eventi mobile camminiditalia) e forma flat
+     * `properties.shard_name` (osservata su eventi storici di altri shard/consumer sullo stesso
+     * progetto PostHog condiviso — stessa clausola già validata sulle 8 query "core generico").
+     * Config `wm-package.shard_name` vuoto disabilita il filtro (fail-open, con `Log::warning`)
+     * invece di produrre una comparazione che non avrebbe mai fatto match e avrebbe azzerato
+     * silenziosamente mappa live/KPI/ranking — prima di questo fix la clausola qui era una riga
+     * indipendente, solo forma annidata, senza guard su config vuoto (vedi CLAUDE.md, sezione
+     * oc:8354, "da riconciliare al merge").
      *
      * `$includeUserId` aggiunge `user_id` (id applicativo dello user che ha registrato il punto,
      * proprietà nuova sull'evento — assente su ogni dato storico e non garantita su ogni evento
@@ -843,7 +853,6 @@ SQL;
      */
     private function fetchUserMovedPointsRows(array $bbox, string $temporalClause, int $limit, bool $aggregatePerPerson, bool $includeUserId = false): array
     {
-        $shardName = (string) config('wm-package.shard_name');
         $bboxClause = $this->bboxFilterClause($bbox);
 
         $selectExpr = $aggregatePerPerson
@@ -864,10 +873,9 @@ SELECT
     {$selectExpr}
 FROM events
 WHERE event = 'userMoved'
-  AND properties.shard_name._value = '{$shardName}'
   AND properties.user_location IS NOT NULL
   AND {$bboxClause}
-  AND {$temporalClause}{$groupBy}
+  AND {$temporalClause}{$this->shardNameClause()}{$groupBy}
 LIMIT {$limit}
 SQL;
 

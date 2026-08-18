@@ -3,7 +3,10 @@
 namespace Wm\WmPackage\Tests\Feature;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\Layer;
@@ -295,6 +298,144 @@ class AnalyticsServiceUserPresenceGeoTest extends TestCase
 
         $this->assertSame([], $ranking);
         Http::assertNothingSent();
+    }
+
+    // -------------------------------------------------------------------------
+    // Filtro shard_name riconciliato con shardNameClause() (oc:8159/oc:8354)
+    // -------------------------------------------------------------------------
+
+    public function test_get_recent_user_positions_sql_ors_nested_and_flat_shard_name_forms(): void
+    {
+        config(['wm-package.shard_name' => 'cammini-test']);
+        Cache::flush();
+
+        [$layer] = Model::withoutEvents(function () {
+            App::factory()->create();
+            $track = EcTrack::factory()->create([
+                'geometry' => \DB::raw("ST_GeomFromText('LINESTRING(10.400 43.700, 10.410 43.700)', 4326)"),
+            ]);
+            $layer = Layer::factory()->create();
+            $layer->ecTracks()->attach($track->id);
+
+            return [$layer];
+        });
+
+        Http::fake(['*' => Http::response(['results' => []])]);
+
+        (new AnalyticsService)->getRecentUserPositions($layer);
+
+        // Valore atteso scritto a mano (non ricalcolato dall'algoritmo di produzione) per non
+        // mascherare un eventuale bug di costruzione dietro un'asserzione tautologica.
+        Http::assertSent(function (Request $request) {
+            $sql = $request->data()['query']['query'];
+
+            return str_contains(
+                $sql,
+                "properties.shard_name._value = 'cammini-test' OR properties.shard_name = 'cammini-test'"
+            );
+        });
+    }
+
+    public function test_get_recent_user_positions_disables_shard_filter_and_logs_warning_when_not_configured(): void
+    {
+        config(['wm-package.shard_name' => '']);
+        Cache::flush();
+
+        [$layer] = Model::withoutEvents(function () {
+            App::factory()->create();
+            $track = EcTrack::factory()->create([
+                'geometry' => \DB::raw("ST_GeomFromText('LINESTRING(10.400 43.700, 10.410 43.700)', 4326)"),
+            ]);
+            $layer = Layer::factory()->create();
+            $layer->ecTracks()->attach($track->id);
+
+            return [$layer];
+        });
+
+        Http::fake(['*' => Http::response(['results' => []])]);
+        Log::shouldReceive('warning')
+            ->atLeast()->once()
+            ->withArgs(fn ($msg) => str_contains($msg, 'shard_name non configurato'));
+
+        (new AnalyticsService)->getRecentUserPositions($layer);
+
+        Http::assertSent(fn (Request $request) => ! str_contains(
+            $request->data()['query']['query'],
+            'shard_name'
+        ));
+    }
+
+    public function test_get_user_moved_stats_sql_has_shard_name_filter_only_once_not_duplicated_raw(): void
+    {
+        config(['wm-package.shard_name' => 'cammini-test']);
+        Cache::flush();
+
+        [$layer] = Model::withoutEvents(function () {
+            App::factory()->create();
+            $track = EcTrack::factory()->create([
+                'geometry' => \DB::raw("ST_GeomFromText('LINESTRING(10.400 43.700, 10.410 43.700)', 4326)"),
+            ]);
+            $layer = Layer::factory()->create();
+            $layer->ecTracks()->attach($track->id);
+
+            return [$layer];
+        });
+
+        Http::fake(['*' => Http::response(['results' => []])]);
+
+        (new AnalyticsService)->getUserMovedStats($layer, 'last_30_days');
+
+        // Prima del fix, fetchUserMovedPointsRows() aggiungeva una propria riga raw
+        // "AND properties.shard_name._value = 'x'" (equality nuda, fuori dall'OR) OLTRE a
+        // quella già portata da whereClause($range) come $temporalClause. L'AND tra
+        // un'equality nuda e l'OR rende l'OR logicamente inefficace (A AND (A OR B) = A):
+        // ogni occorrenza della forma annidata deve quindi comparire SEMPRE come parte
+        // della coppia OR completa, mai da sola — indipendentemente da quante volte
+        // shardNameClause() viene invocato (qui 2 volte, duplicazione benigna accettata:
+        // vedi notes.md di questo ticket).
+        Http::assertSent(function (Request $request) {
+            $sql = $request->data()['query']['query'];
+            $nestedOccurrences = substr_count($sql, "properties.shard_name._value = 'cammini-test'");
+            $orPairOccurrences = substr_count(
+                $sql,
+                "properties.shard_name._value = 'cammini-test' OR properties.shard_name = 'cammini-test'"
+            );
+
+            return $nestedOccurrences > 0 && $nestedOccurrences === $orPairOccurrences;
+        });
+    }
+
+    public function test_get_all_layers_user_presence_sql_has_shard_name_filter_only_once_not_duplicated_raw(): void
+    {
+        config(['wm-package.shard_name' => 'cammini-test']);
+        Cache::flush();
+
+        Model::withoutEvents(function () {
+            App::factory()->create();
+            $track = EcTrack::factory()->create([
+                'geometry' => \DB::raw("ST_GeomFromText('LINESTRING(10.400 43.700, 10.410 43.700)', 4326)"),
+            ]);
+            $layer = Layer::factory()->create();
+            $layer->ecTracks()->attach($track->id);
+        });
+
+        Http::fake(['*' => Http::response(['results' => []])]);
+
+        (new AnalyticsService)->getAllLayersUserPresence('last_30_days');
+
+        // Stesso principio del test analogo su getUserMovedStats(): ogni occorrenza della forma
+        // annidata deve comparire sempre come parte della coppia OR completa, mai come equality
+        // nuda che neutralizzerebbe l'OR (A AND (A OR B) = A).
+        Http::assertSent(function (Request $request) {
+            $sql = $request->data()['query']['query'];
+            $nestedOccurrences = substr_count($sql, "properties.shard_name._value = 'cammini-test'");
+            $orPairOccurrences = substr_count(
+                $sql,
+                "properties.shard_name._value = 'cammini-test' OR properties.shard_name = 'cammini-test'"
+            );
+
+            return $nestedOccurrences > 0 && $nestedOccurrences === $orPairOccurrences;
+        });
     }
 
     protected function callPrivateMethod(object $object, string $method, array $args = []): mixed
