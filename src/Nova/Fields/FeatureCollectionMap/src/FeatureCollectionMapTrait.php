@@ -96,6 +96,7 @@ trait FeatureCollectionMapTrait
             'pointStrokeWidth',
             'pointFillColor',
             'pointRadius',
+            'checkpointRouteColors',
             // Properties per interattività
             'tooltip',
             'link',
