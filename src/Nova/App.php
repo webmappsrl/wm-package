@@ -38,6 +38,7 @@ use Wm\WmPackage\Nova\Actions\RegenerateAppPbfAction;
 use Wm\WmPackage\Nova\Actions\ReindexAppScoutAction;
 use Wm\WmPackage\Nova\Cards\ApiLinksCard\AppApiLinksCard;
 use Wm\WmPackage\Nova\Fields\BboxField\BboxField;
+use Wm\WmPackage\Nova\Fields\FlexibleTranslatable;
 use Wm\WmPackage\Nova\Fields\OrderList\src\OrderList;
 use Wm\WmPackage\Nova\Fields\StoreVersionField;
 use Wm\WmPackage\Nova\Fields\TranslationsBuilder\TranslationsBuilder;
@@ -47,13 +48,10 @@ use Wm\WmPackage\Nova\Flexible\ConfigHome\HorizontalScrollPoiTrackRepeaterJsonPr
 use Wm\WmPackage\Nova\Flexible\ConfigHome\HorizontalScrollRepeaterJsonPreset;
 use Wm\WmPackage\Nova\Flexible\Resolvers\ConfigHomeResolver;
 use Wm\WmPackage\Nova\Flexible\Resolvers\ConfigOverlaysResolver;
-use Wm\WmPackage\Nova\Traits\HasFlexibleTranslatableFields;
 use Wm\WmPackage\Services\RolesAndPermissionsService;
 
 class App extends Resource
 {
-    use HasFlexibleTranslatableFields;
-
     public static $model = ModelsApp::class;
 
     protected function tiptapButtons(): array
@@ -331,7 +329,7 @@ class App extends Resource
 
     protected function overlays_title_layout(): array
     {
-        return $this->translatableFields('Label', 'label');
+        return [FlexibleTranslatable::simple('Label', [Text::make('Label', 'label')])];
     }
 
     protected function feature_collection_layout(): array
@@ -1029,7 +1027,7 @@ class App extends Resource
 
     protected function config_home_title_layout(): array
     {
-        return $this->translatableFields('Title', 'title', required: true);
+        return [FlexibleTranslatable::simple('Title', [Text::make('Title', 'title')])];
     }
 
     protected function layer_layout(): array

@@ -21,6 +21,7 @@
         "christiankuri/laravel-favorite": "^1.4",
         "cweagans/composer-patches": "^1.7",
         "ebess/advanced-nova-media-library": "^5.0",
+        "ezyang/htmlpurifier": "^4.19",
         "illuminate/contracts": "^10.0 || ^11.0 || ^12.0 || ^13.0",
         "intervention/image": "^2.5",
         "jenssegers/agent": "^2.6",
