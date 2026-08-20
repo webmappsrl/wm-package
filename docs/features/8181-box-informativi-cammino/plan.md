@@ -1,5 +1,7 @@
 > Ticket: oc:8181
 
+> **Stato:** BACKEND COMPLETATO — branch `feature/oc-8181-box-informativi-cammino`, commit wm-package `3e5b9e9d`, consumer camminiditalia `4fe834e`. Frontend wm-core fuori scope. I checkbox `- [ ]` nei task restano log storico di esecuzione; copertura verificata in sezione Self-Review.
+
 # Box Informativi (Cammini Builder) — Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
