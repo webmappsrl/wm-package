@@ -2,40 +2,17 @@
 
 namespace Wm\WmPackage\Nova\Traits;
 
-use Illuminate\Support\Facades\Config;
-use Laravel\Nova\Fields\KeyValue;
-
+/**
+ * Decodes translated values already persisted in Flexible layout attributes.
+ *
+ * Historically also produced an ad-hoc KeyValue-based translatable field
+ * (translatableFields()) — superseded by Wm\WmPackage\Nova\Fields\FlexibleTranslatable
+ * (oc:8349). decodeTranslatableValue() survives because it is read-only and
+ * already handles both the legacy JSON-string format and the plain-array
+ * format the new field produces.
+ */
 trait HasFlexibleTranslatableFields
 {
-    protected function translatableFields(string $label, string $attribute, bool $required = false): array
-    {
-        $locales = Config::get('tab-translatable.locales', Config::get('wm-tab-translatable.locales', []));
-        $default = array_fill_keys($locales, '');
-
-        $field = KeyValue::make($label, $attribute)
-            ->keyLabel('')
-            ->valueLabel('Traduzione')
-            ->disableAddingRows()
-            ->disableDeletingRows()
-            ->disableEditingKeys()
-            ->default($default)
-            ->resolveUsing(function ($value) use ($default) {
-                if (empty($value)) {
-                    return $default;
-                }
-
-                $valid = is_array($value) ? array_intersect_key($value, $default) : [];
-
-                return array_merge($default, $valid);
-            });
-
-        if ($required) {
-            $field->rules('required');
-        }
-
-        return [$field];
-    }
-
     protected function decodeTranslatableValue(mixed $val): array
     {
         if (is_string($val)) {

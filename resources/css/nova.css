@@ -10,3 +10,60 @@
     }
 }
 
+/**
+ * kongulov/nova-tab-translatable ships its own dist CSS with `.tab-items`
+ * hardcoded to 24px horizontal padding. Nova core's field label column uses
+ * `px-6` (24px) below the `md` breakpoint but `md:px-8` (32px) at/above it
+ * (see any standard field row's label wrapper) — so the tab bar's IT/EN/FR/ES/DE
+ * labels sit 8px left of every sibling field's label text once the layout
+ * switches to the two-column form (both when this field is used directly on a
+ * resource, e.g. Layer::name, and when nested inside a Flexible/Repeater row,
+ * e.g. Box Informativi/Horizontal Scroll titles — oc:8349). Matching Nova's own
+ * breakpoint keeps mobile (single-column, both already 24px) untouched.
+ */
+@media (min-width: 768px) {
+    #nova-tab-translatable .tab-items {
+        padding-left: 32px;
+        padding-right: 32px;
+    }
+}
+
+/**
+ * kongulov/nova-tab-translatable's #nova-tab-translatable wrapper (and every
+ * ancestor up to Nova's own field-row grid cell) is `display:block`/`width:100%`
+ * with no `min-width`/`overflow` constraint of its own, so it simply mirrors
+ * whatever width its content computes. When this field is nested inside a
+ * Flexible/Repeater row (e.g. Box Informativi/Horizontal Scroll titles —
+ * oc:8349) that content resolves ~178px wider than the actual grid cell
+ * (verified live: cell clientWidth 591px vs content scrollWidth 769px on a
+ * real Info Box item), and — since nothing in the chain clips it — the grey
+ * tab bar visually spills out past the card's right edge instead of wrapping
+ * or shrinking. Nova's own field-row wrapper (`.grid-cols-full`, shared by
+ * every field type) isn't safe to clip globally — other fields may rely on
+ * visible overflow (dropdowns, tooltips) — so this only clips the one
+ * wrapper that actually contains our tab-translatable field.
+ */
+.grid-cols-full:has(#nova-tab-translatable) {
+    overflow: hidden;
+}
+
+/**
+ * kongulov/nova-tab-translatable's own CSS has a special-case rule,
+ * `.tab-group .tab-card .tab #nova-tab-translatable .tab-items{margin-top:-1rem!important}`,
+ * meant to pull the tab bar up to visually merge with Nova's OWN resource-level
+ * tab-panel header when the field sits directly inside a Nova "tab" (Nova 5's
+ * tabbed-resource layout: `.tab-group > .tab-card > .tab`). That selector is a plain
+ * descendant chain, so it ALSO matches when the field is nested much deeper — e.g.
+ * inside a Flexible layout block (App::config_home_title_layout(), oc:8349) that sits
+ * inside a Nova resource tab. There, the -1rem pulls the tab bar up into the Flexible
+ * layout's OWN header row (drag handle, "#1 Titolo", reorder/delete buttons) instead of
+ * Nova's tab-panel header, visually covering it. Reset back to the vendor's own default
+ * (non-tab-group) margin, `-1px`, everywhere — cosmetically this only gives up a ~15px
+ * tighter seam in the genuine top-level-tab case, in exchange for not covering unrelated
+ * UI several levels deeper. Doubled ID selector, not an extra class, to guarantee higher
+ * specificity than the vendor's 1-id+3-class rule regardless of stylesheet load order.
+ */
+#nova-tab-translatable#nova-tab-translatable .tab-items {
+    margin-top: -1px !important;
+}
+
