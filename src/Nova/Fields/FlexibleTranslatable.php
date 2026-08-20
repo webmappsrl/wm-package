@@ -38,10 +38,11 @@ class FlexibleTranslatable extends NovaTabTranslatable
     /**
      * Default HTMLPurifier whitelist for richText() mode. Includes `iframe` for generic
      * embeds (video, maps, social posts, ...) — safe only because HasEmbeddableRichText's
-     * makePurifier() also enables HTMLPurifier's `HTML.SafeIframe` + `URI.SafeIframeRegexp`
-     * (still requires http(s), see SAFE_IFRAME_SRC_REGEXP) and registers the extra
-     * attributes real embed snippets carry (allow, allowfullscreen, referrerpolicy, title,
-     * loading — see makePurifier()). HTMLPurifier has no safe default definition for
+     * buildRichTextPurifier() also enables HTMLPurifier's `HTML.SafeIframe` +
+     * `URI.SafeIframeRegexp` (still requires http(s), see SAFE_IFRAME_SRC_REGEXP) and
+     * registers the extra attributes real embed snippets carry (allow, allowfullscreen,
+     * referrerpolicy, title, loading — see buildRichTextPurifier()). HTMLPurifier has no
+     * safe default definition for
      * `iframe` at all otherwise — allowing the tag here without those safeguards would let
      * an editor embed a page that can run script in the parent context, a real
      * XSS/clickjacking risk.

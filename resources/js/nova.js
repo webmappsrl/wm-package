@@ -99,8 +99,17 @@ Nova.booting(() => {
     // marker into a real <iframe> *before* running it through the same HTMLPurifier
     // sanitization as any other pasted/typed content — this button only solves getting a
     // recognizable placeholder INTO Trix; it grants no extra trust, and the expanded
-    // iframe is still fully subject to makePurifier()'s whitelist/URI checks.
+    // iframe is still fully subject to buildRichTextPurifier()'s whitelist/URI checks.
     let embedToolingReady = false;
+
+    // Shared by both toolbar button click handlers below: a Trix button only knows its
+    // own <trix-toolbar> ancestor, not the <trix-editor> it controls — Trix links the two
+    // via a `toolbar` id attribute on the editor, not a DOM ancestor/descendant relationship.
+    const resolveEditorForButton = (button) => {
+        const toolbarElement = button.closest('trix-toolbar');
+
+        return toolbarElement && document.querySelector('trix-editor[toolbar="' + toolbarElement.id + '"]');
+    };
 
     document.addEventListener('trix-before-initialize', () => {
         if (embedToolingReady || !window.Trix) {
@@ -120,23 +129,23 @@ Nova.booting(() => {
         // puts it inside trix-button-row, alongside the other button groups.
         Trix.config.toolbar.getDefaultHTML = function () {
             const original = originalGetDefaultHTML.call(this);
-            const embedGroup =
-                '<span class="trix-button-group" data-trix-button-group="wm-embed-tools">' +
+            const mediaGroup =
+                '<span class="trix-button-group" data-trix-button-group="wm-rich-media-tools">' +
                 '<button type="button" class="trix-button" data-wm-embed-button title="Insert embed">Embed</button>' +
                 '<button type="button" class="trix-button" data-wm-image-button title="Insert image URL">Image</button>' +
                 '</span>';
 
             const dialogsIndex = original.indexOf('<div class="trix-dialogs"');
             if (dialogsIndex === -1) {
-                return original + embedGroup;
+                return original + mediaGroup;
             }
 
             const insertAt = original.lastIndexOf('</div>', dialogsIndex);
             if (insertAt === -1) {
-                return original + embedGroup;
+                return original + mediaGroup;
             }
 
-            return original.slice(0, insertAt) + embedGroup + original.slice(insertAt);
+            return original.slice(0, insertAt) + mediaGroup + original.slice(insertAt);
         };
     });
 
@@ -148,35 +157,42 @@ Nova.booting(() => {
         const editorElement = event.target;
         const toolbarId = editorElement.getAttribute('toolbar');
         const toolbarElement = toolbarId && document.getElementById(toolbarId);
-        const embedGroup =
-            toolbarElement && toolbarElement.querySelector('[data-trix-button-group="wm-embed-tools"]');
+        const mediaGroup =
+            toolbarElement && toolbarElement.querySelector('[data-trix-button-group="wm-rich-media-tools"]');
         const hasEmbed = supportsEmbed(editorElement);
         const hasImage = supportsImage(editorElement);
 
         if (!hasEmbed && !hasImage) {
-            if (embedGroup) {
-                embedGroup.remove();
+            if (mediaGroup) {
+                mediaGroup.remove();
             }
 
             return;
         }
 
-        if (embedGroup) {
+        if (mediaGroup) {
             if (!hasEmbed) {
-                const embedButton = embedGroup.querySelector('[data-wm-embed-button]');
+                const embedButton = mediaGroup.querySelector('[data-wm-embed-button]');
                 if (embedButton) {
                     embedButton.remove();
                 }
             }
 
             if (!hasImage) {
-                const imageButton = embedGroup.querySelector('[data-wm-image-button]');
+                const imageButton = mediaGroup.querySelector('[data-wm-image-button]');
                 if (imageButton) {
                     imageButton.remove();
                 }
             }
         }
 
+        // `file-tools` (Trix's built-in "Attach files" button group) is an internal
+        // implementation detail of Trix's own default toolbar markup — unlike
+        // getDefaultHTML() above, there is no documented public hook for removing a
+        // built-in button group, so this selector could stop matching on a future Trix
+        // version bump. The `if (fileTools)` guard makes that failure mode silent-safe:
+        // the button would simply reappear (no error), not break saving/sanitizing, since
+        // file uploads were never part of this feature's save path to begin with.
         const fileTools =
             toolbarElement && toolbarElement.querySelector('[data-trix-button-group="file-tools"]');
 
@@ -190,9 +206,7 @@ Nova.booting(() => {
         if (imageButton) {
             event.preventDefault();
 
-            const toolbarElement = imageButton.closest('trix-toolbar');
-            const editorElement =
-                toolbarElement && document.querySelector('trix-editor[toolbar="' + toolbarElement.id + '"]');
+            const editorElement = resolveEditorForButton(imageButton);
 
             if (!editorElement || !supportsImage(editorElement)) {
                 return;
@@ -228,9 +242,7 @@ Nova.booting(() => {
 
         event.preventDefault();
 
-        const toolbarElement = button.closest('trix-toolbar');
-        const editorElement =
-            toolbarElement && document.querySelector('trix-editor[toolbar="' + toolbarElement.id + '"]');
+        const editorElement = resolveEditorForButton(button);
 
         if (!editorElement || !supportsEmbed(editorElement)) {
             return;
@@ -327,7 +339,12 @@ Nova.booting(() => {
 
             const trimmedText = text ? text.trim() : '';
             const isIframeSnippet = hasEmbed && /^<iframe\b[\s\S]*<\/iframe>$/i.test(trimmedText);
-            const isImgSnippet = hasImage && /^<img\b[\s\S]*\/?>$/i.test(trimmedText);
+            // `<img>` is self-closing (no children/closing tag to anchor on like </iframe>
+            // above), so the match ends at the tag's OWN closing `>` — `[^>]*` (not the
+            // greedy `[\s\S]*` a first version used) cannot skip past it, so trailing
+            // prose/markup after the tag correctly fails the `$` anchor instead of being
+            // silently absorbed into the marker.
+            const isImgSnippet = hasImage && /^<img\b[^>]*>$/i.test(trimmedText);
 
             if (trimmedText && (isIframeSnippet || isImgSnippet)) {
                 // The realistic case: an embed-code textarea's clipboard content is nothing

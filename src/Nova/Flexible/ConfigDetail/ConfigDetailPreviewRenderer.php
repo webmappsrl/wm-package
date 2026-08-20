@@ -197,6 +197,15 @@ class ConfigDetailPreviewRenderer
         return self::contentPurifier()->purify($html);
     }
 
+    /**
+     * Hardcodes FlexibleTranslatable::DEFAULT_RICH_TEXT_ALLOWED_HTML rather than deriving
+     * the whitelist from the field that actually saved the value being previewed — correct
+     * today because InfoBoxItemRepeatable::content is the only config_detail field that
+     * uses richText(), and it never overrides $allowedHtml. If a future box_type's content
+     * field customizes the whitelist (like InfoBoxItemRepeatable briefly did in an earlier
+     * review round), this preview would silently re-sanitize with the wrong ruleset —
+     * revisit then, not before it's an actual need.
+     */
     private static function contentPurifier(): HTMLPurifier
     {
         if (self::$contentPurifier instanceof HTMLPurifier) {

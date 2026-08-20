@@ -10,11 +10,11 @@ use Illuminate\Support\Str;
 
 /**
  * Sanitizes a rich-text value with HTMLPurifier and lets it carry embeds (iframes:
- * video, maps, social posts, ...) via a `[[embed:TYPE:BASE64]]` text marker instead of
- * raw markup — extracted from FlexibleTranslatable (found in review: that class mixed
- * this whole embed sub-system with the unrelated "bind a Nova field to a Flexible
- * fake-model" responsibility, making the embed logic impossible to reuse without a
- * copy-paste).
+ * video, maps, social posts, ... — and images from an external http(s) URL) via a
+ * `[[embed:TYPE:BASE64]]` text marker instead of raw markup — extracted from
+ * FlexibleTranslatable (found in review: that class mixed this whole embed sub-system
+ * with the unrelated "bind a Nova field to a Flexible fake-model" responsibility,
+ * making the embed logic impossible to reuse without a copy-paste).
  *
  * Contract for the consuming class — enforced by PHP itself, not just this docblock
  * (found in review: an earlier version relied on `self::CONST` references resolving
@@ -52,7 +52,7 @@ trait HasEmbeddableRichText
     protected function initializeEmbeddableRichText(?string $allowedHtml = null): void
     {
         $this->richTextAllowedHtml = $allowedHtml ?? $this->defaultRichTextAllowedHtml();
-        $this->purifier = $this->makePurifier($this->richTextAllowedHtml);
+        $this->purifier = static::buildRichTextPurifier($this->richTextAllowedHtml, $this->safeIframeSrcRegexp());
     }
 
     /**
@@ -62,7 +62,8 @@ trait HasEmbeddableRichText
      * (`EMBED_SUPPORT_ATTR` / `IMAGE_SUPPORT_ATTR`, asserted by
      * tests/Feature/Nova/Fields/FlexibleTranslatableTest.php against the raw nova.js
      * source). Without them the field still gets sanitized rich text
-     * (makePurifier()/expandEmbedMarkers() work regardless), just no matching toolbar.
+     * (buildRichTextPurifier()/expandEmbedMarkers() work regardless), just no matching
+     * toolbar.
      *
      * Gating is per tag in this field's own whitelist: `iframe` → `data-wm-embed-support`,
      * `img` → `data-wm-image-support`. They are independent — a whitelist with `img` but
@@ -70,25 +71,24 @@ trait HasEmbeddableRichText
      * expanded markup the purifier would then silently strip is worse than not offering it
      * (found in review when tooling was gated only on `iframe` while Image also lived
      * behind that single attribute).
+     *
+     * Tag detection uses a word-boundary regex, not a plain substring check, so a future
+     * whitelist entry that merely contains "img"/"iframe" as part of an unrelated token
+     * (e.g. a hypothetical custom tag/attribute name) can't accidentally flip this on.
      */
     protected function embedToolingAttributes(): array
     {
         $attrs = [];
 
-        if (str_contains($this->richTextAllowedHtml, 'iframe')) {
+        if (preg_match('/\biframe\b/', $this->richTextAllowedHtml) === 1) {
             $attrs['data-wm-embed-support'] = 'true';
         }
 
-        if (str_contains($this->richTextAllowedHtml, 'img')) {
+        if (preg_match('/\bimg\b/', $this->richTextAllowedHtml) === 1) {
             $attrs['data-wm-image-support'] = 'true';
         }
 
         return $attrs;
-    }
-
-    protected function makePurifier(string $allowedHtml): HTMLPurifier
-    {
-        return static::buildRichTextPurifier($allowedHtml, $this->safeIframeSrcRegexp());
     }
 
     /**
@@ -154,8 +154,8 @@ trait HasEmbeddableRichText
      * Expands `[[embed:url:<base64>]]` / `[[embed:html:<base64>]]` markers — inserted by
      * the "Insert embed" Trix toolbar button or the paste interceptor (wm-package's
      * resources/js/nova.js) — into real markup, run BEFORE HTMLPurifier so the expanded
-     * result is still fully subject to makePurifier()'s whitelist/URI checks (the marker
-     * grants no extra trust).
+     * result is still fully subject to buildRichTextPurifier()'s whitelist/URI checks
+     * (the marker grants no extra trust).
      *
      * Plain text via Trix's `editor.insertString()`, not a Trix "attachment": verified
      * live that Trix's `Attachment` (contentType application/vnd.trix-instant-content)
@@ -225,11 +225,5 @@ trait HasEmbeddableRichText
             fn (array $matches) => '[[embed:html:'.base64_encode($matches[0]).']]',
             $html
         );
-    }
-
-    /** @deprecated Use collapseEmbedMedia() — kept as alias for callers/docs. */
-    protected function collapseEmbedIframes(string $html): string
-    {
-        return $this->collapseEmbedMedia($html);
     }
 }

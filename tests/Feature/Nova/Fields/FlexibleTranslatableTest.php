@@ -344,6 +344,16 @@ it('keeps the embed-tooling attribute in sync between PHP (embedToolingAttribute
 
     expect($novaJs)->toContain("EMBED_SUPPORT_ATTR = 'data-wm-embed-support'");
     expect($novaJs)->toContain("IMAGE_SUPPORT_ATTR = 'data-wm-image-support'");
+});
+
+it('wires the Image button and the file-tools removal target in resources/js/nova.js', function () {
+    // Split out of the PHP/JS attribute-sync test above (found in review: these two
+    // assertions have nothing to do with attribute-name drift, they were just grouped
+    // there by accident) — a failure here should point at "the Image button markup or
+    // the file-tools selector changed", not at "the embed-tooling attribute is out of
+    // sync", which is what the shared test name implied.
+    $novaJs = file_get_contents(__DIR__.'/../../../../resources/js/nova.js');
+
     expect($novaJs)->toContain('data-wm-image-button');
     expect($novaJs)->toContain('data-trix-button-group="file-tools"');
 });
@@ -359,5 +369,19 @@ it('enables only Image tooling when the whitelist has img but no iframe', functi
 
     expect($phpAttributes)->toHaveKey('data-wm-image-support', 'true');
     expect($phpAttributes)->not->toHaveKey('data-wm-embed-support');
+    expect($phpAttributes)->toHaveCount(1);
+});
+
+it('enables only Embed tooling when the whitelist has iframe but no img', function () {
+    $field = FlexibleTranslatable::richText(
+        'Content',
+        [Trix::make('Content', 'content')],
+        ['it'],
+        'p,br,iframe[src]'
+    );
+    $phpAttributes = $field->data[0]->meta['extraAttributes'];
+
+    expect($phpAttributes)->toHaveKey('data-wm-embed-support', 'true');
+    expect($phpAttributes)->not->toHaveKey('data-wm-image-support');
     expect($phpAttributes)->toHaveCount(1);
 });

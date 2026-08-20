@@ -102,3 +102,62 @@ it('allows an Administrator to persist a config_detail box on EcPoi via the real
     $response->assertOk();
     expect($poi->fresh()->properties['config_detail'][0]['items'][0]['title'])->toBe(['it' => 'Autorizzato']);
 });
+
+it('blocks a Validator from persisting a config_detail box on an EcTrack they do not own, via the real Nova update endpoint', function () {
+    // Regression test for the review-flagged blocker: EcTrack had no policy registered,
+    // so Nova granted update to ANY non-Guest user regardless of ownership — a Validator
+    // could inject a cross-origin iframe/img into config_detail on any EcTrack in the
+    // system, not just their own. Now that Wm\WmPackage\Policies\EcTrackPolicy is
+    // registered (App\Providers\AppServiceProvider), ownership is enforced.
+    App::factory()->createQuietly();
+
+    $owner = User::factory()->create();
+    $track = \App\Models\EcTrack::factory()->createQuietly(['user_id' => $owner->id]);
+
+    $validator = User::factory()->create();
+    $validator->assignRole('Validator');
+
+    $groups = [[
+        'layout' => 'info',
+        'key' => 'new-group-1',
+        'attributes' => ['items' => [
+            ['type' => 'info-box-item', 'fields' => ['translations_title_it' => 'Non autorizzato', 'content_it' => '<p>x</p>']],
+        ]],
+    ]];
+
+    // No 'app' key here (unlike the EcPoi tests above): App\Nova\EcTrack::fields()
+    // unconditionally filters out the App BelongsTo field for every role, so it's never
+    // part of updateRules() — sending it would be a dead no-op, not a required field.
+    $response = $this->actingAs($validator)
+        ->put("/nova-api/ec-tracks/{$track->id}", [
+            'properties->config_detail' => $groups,
+        ]);
+
+    expect($response->status())->toBe(403);
+    expect($track->fresh()->properties['config_detail'] ?? null)->toBeNull();
+});
+
+it('allows a Validator to persist a config_detail box on their own EcTrack, via the real Nova update endpoint', function () {
+    App::factory()->createQuietly();
+
+    $validator = User::factory()->create();
+    $validator->assignRole('Validator');
+
+    $track = \App\Models\EcTrack::factory()->createQuietly(['user_id' => $validator->id]);
+
+    $groups = [[
+        'layout' => 'info',
+        'key' => 'new-group-1',
+        'attributes' => ['items' => [
+            ['type' => 'info-box-item', 'fields' => ['translations_title_it' => 'Autorizzato', 'content_it' => '<p>x</p>']],
+        ]],
+    ]];
+
+    $response = $this->actingAs($validator)
+        ->put("/nova-api/ec-tracks/{$track->id}", [
+            'properties->config_detail' => $groups,
+        ]);
+
+    $response->assertOk();
+    expect($track->fresh()->properties['config_detail'][0]['items'][0]['title'])->toBe(['it' => 'Autorizzato']);
+});
