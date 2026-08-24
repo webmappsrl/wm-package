@@ -72,6 +72,7 @@ return [
     'ec_track_table' => env('EC_TRACK_TABLE', 'ec_tracks'),
     'ec_track_model' => env('EC_TRACK_MODEL', 'App\Models\EcTrack'),
     'ec_poi_track_pivot_table' => env('EC_POI_TRACK_PIVOT_TABLE', 'ec_poi_ec_track'),
+    'default_layer_mode' => env('DEFAULT_LAYER_MODE', 'auto'),
 
     /*
     | Email allowlist super-admin {@see \Wm\WmPackage\Services\RolesAndPermissionsService} (comma-separated).

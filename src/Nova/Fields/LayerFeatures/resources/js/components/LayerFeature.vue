@@ -327,14 +327,31 @@ export default defineComponent({
             } else {
                 isManual.value = !isManual.value;
                 if (isManual.value) {
-                    try {
-                        await fetchFeatures();
-                    } catch (error) {
-                        console.error("Error during toggle mode:", error);
-                    }
+                    await persistManualMode();
                 } else {
                     await handleModeChange();
                 }
+            }
+        };
+
+        const persistManualMode = async () => {
+            try {
+                isSaving.value = true;
+                const layerId = props.field.layerId;
+                await Nova.request().post(
+                    `/nova-vendor/layer-features/sync/${layerId}`,
+                    {
+                        model: props.field.model,
+                        manual: true,
+                    }
+                );
+                await fetchFeatures();
+            } catch (error) {
+                console.error("Error during toggle mode:", error);
+                Nova.error("Errore durante il cambio di modalità");
+                isManual.value = false;
+            } finally {
+                isSaving.value = false;
             }
         };
 
@@ -371,7 +388,8 @@ export default defineComponent({
                 }
             } catch (error) {
                 console.error("Errore durante il cambio di modalità:", error);
-                Nova.error("Errore durante il cambio di modalità");
+                const message = (error as any)?.response?.data?.error || "Errore durante il cambio di modalità";
+                Nova.error(message);
                 isManual.value = !isManual.value;
             } finally {
                 isSaving.value = false;
