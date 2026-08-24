@@ -217,7 +217,8 @@ class LayerFeatureController
         $validatedData = $request->validate([
             'features' => 'array',
             'model' => 'required|string',
-            'auto' => 'boolean',
+            'auto' => ['boolean', 'prohibits:manual'],
+            'manual' => ['boolean', 'prohibits:auto'],
         ]);
 
         // Creo un'istanza del modello per ottenere il nome della relazione
@@ -237,6 +238,8 @@ class LayerFeatureController
             ], 400);
         }
 
+        $this->persistMode($layer, $relationName, $request);
+
         $isAutoRequest = ! empty($validatedData['auto']) && in_array($relationName, ['ecTracks', 'ecPois']);
         if ($isAutoRequest) {
             // In modalità automatica il pivot ecTracks/ecPois viene ricalcolato da taxonomy
@@ -245,12 +248,16 @@ class LayerFeatureController
             } else {
                 $this->layerService->assignPoisByTaxonomy($layer);
             }
-        } else {
+        } elseif ($request->has('features')) {
             $layer->{$relationName}()->sync($validatedData['features'] ?? []);
         }
+        // Nessun 'auto', nessun 'features': richiesta mode-only, il pivot non viene toccato.
 
-        // I PBF non contengono mai contenuto POI: rigenerarli ha senso solo per ecTracks.
-        if ($relationName === 'ecTracks') {
+        $pivotSynced = $isAutoRequest || $request->has('features');
+
+        // I PBF non contengono mai contenuto POI: rigenerarli ha senso solo per ecTracks,
+        // e solo se il pivot è stato effettivamente modificato in questa richiesta.
+        if ($pivotSynced && $relationName === 'ecTracks') {
             $this->pbfGeneratorService->regeneratePbfsForLayer($layer);
         }
 
@@ -261,6 +268,34 @@ class LayerFeatureController
             'message' => 'Features sincronizzate con successo',
             'assigned_ids' => $assignedIds,
         ], 200);
+    }
+
+    /**
+     * Persiste la modalità (auto/manuale) sul layer per la relazione indicata.
+     * Non contiene logica di autorizzazione né di calcolo degli ID selezionati:
+     * resta utilizzabile da sottoclassi che riscrivono sync() con regole di
+     * ownership proprie senza delegare a parent::sync() (es. camminiditalia).
+     *
+     * Va chiamato PRIMA di qualunque assign/sync sul pivot: assignTracksByTaxonomy()/
+     * assignPoisByTaxonomy() leggono isAutoTrackMode()/isAutoPoiMode() e devono
+     * vedere il valore già aggiornato, altrimenti il ricalcolo da tassonomia
+     * viene bloccato dal guard sulla modalità precedente.
+     */
+    protected function persistMode(Layer $layer, string $relationName, Request $request): void
+    {
+        if ($request->boolean('manual')) {
+            $mode = 'manual';
+        } elseif ($request->boolean('auto')) {
+            $mode = 'auto';
+        } else {
+            return;
+        }
+
+        if ($relationName === 'ecTracks') {
+            $layer->setTrackMode($mode);
+        } elseif ($relationName === 'ecPois') {
+            $layer->setPoiMode($mode);
+        }
     }
 
     private function filterTracksBySearch($tracks, string $search)

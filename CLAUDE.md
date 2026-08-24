@@ -22,6 +22,25 @@ protected static function newFactory(): Factory
 
 ## Decisioni architetturali
 
+### Persistenza modalità auto/manuale layer (oc:8314)
+- setTrackMode()/setPoiMode() riscritti da read-modify-write Eloquent a
+  UPDATE...jsonb_set via DB::statement() + refresh(): il read-modify-write
+  perdeva scritture concorrenti quando i due pannelli Nova (Ec Tracks e Ec
+  Pois) scrivevano quasi in contemporanea sulla stessa colonna configuration
+- persistMode() va chiamato PRIMA di assignTracksByTaxonomy()/
+  assignPoisByTaxonomy() nel ramo auto di sync(): questi leggono
+  isAutoTrackMode()/isAutoPoiMode() e devono vedere il valore già aggiornato,
+  altrimenti bloccano il ricalcolo leggendo la modalità precedente
+- Contratto mode-only: una richiesta senza auto né features non tocca il
+  pivot né rigenera i PBF (variabile $pivotSynced come guardia)
+- Nuova chiave config default_layer_mode (env DEFAULT_LAYER_MODE, default
+  'auto'): permette a un consumer di cambiare il default senza impattare gli
+  altri progetti che non la impostano
+- setTrackMode()/setPoiMode() non passano più per Eloquent save(), quindi
+  LayerObserver::saved() non scatta più al cambio modalità — un side-effect
+  ipotizzato in fase di design (basato su save() Eloquent) risulta quindi
+  non applicabile all'implementazione finale
+
 ### Spostare test EcPoiOsmImportActionAvailableTest in wm-package (oc:8348)
 - Un test in Maphub referenziava direttamente `Wm\WmPackage\Nova\Actions\ImportEcPoiFromOsm` (classe interna del package) — root cause verificata via git archaeology di un errore PHPStan reale in CI (run #30, PR oc:8239 #14): il submodule pointer di Maphub puntava a un commit senza quella classe
 - Fix: test ricreato qui in `ImportEcPoiFromOsmActionTest.php`, come nuovo `it()` che risolve `actions()` da `Wm\WmPackage\Nova\EcPoi` senza `Auth::login()` (verifica solo il wiring azione↔resource, non l'autorizzazione) — il gemello in Maphub è stato eliminato senza sostituto
@@ -128,6 +147,7 @@ protected static function newFactory(): Factory
 
 | Feature | Ticket | Moduli toccati | Note |
 |---|---|---|---|
+| Persistenza modalità auto/manuale layer + default configurabile | oc:8314 | `src/Models/Layer.php`, `src/Nova/Fields/LayerFeatures/**`, `config/wm-package.php` | `setTrackMode()`/`setPoiMode()` ora scrivono con `jsonb_set` atomico; nuovo `persistMode()` protected riusabile da sottoclassi; nuova chiave `default_layer_mode` (default `'auto'`, invariato per retrocompatibilità) |
 | Spostare test EcPoiOsmImportActionAvailableTest in wm-package | oc:8348 | `tests/Feature/Nova/Actions/ImportEcPoiFromOsmActionTest.php` | Nuovo test che asserisce esplicitamente `ImportEcPoiFromOsm` esposta di default su `Wm\WmPackage\Nova\EcPoi` — sostituisce il test gemello eliminato in Maphub, che referenziava direttamente questa classe interna causando un errore PHPStan legato al disallineamento del puntatore submodule |
 | Campo descrizione sempre visibile in creazione EcPoi/EcTrack | oc:8303 | `src/Nova/AbstractEcResource.php`, `src/Nova/EcPoi.php`, `src/Nova/EcTrack.php`, `config/wm-ec-poi-schema.php`, `config/wm-ec-track-schema.php`, `tests/Unit/EcDescriptionTiptapTest.php` | Campo `description` spostato dal pannello dinamico "Proprietà" (nascosto quando vuoto, mai visibile in creazione) a campo statico traducibile in `getInfoTabFields()`; entry rimossa dagli schema dinamici per evitare doppio editor; `Layer` non toccato |
 | Horizontal Scroll: campo Poi/Traccia custom (Model + Search) | oc:8241 | `src/Nova/Fields/PoiTrackReferenceField/**`, `src/Nova/Flexible/ConfigHome/HorizontalScrollPoiTrackItemRepeatable.php`, `src/Nova/Flexible/ConfigHome/HorizontalScrollPoiTrackRepeaterJsonPreset.php`, `src/Nova/App.php`, `src/Nova/Traits/HasFlexibleTranslatableFields.php`, `resources/lang/{it,en}.json` | Campo Nova custom Model(Poi/Track)+Search al posto di due Select; titolo sempre readonly ereditato dal modello; fix bug perdita silenziosa item al cambio Model; cascade traduzioni `it→en→prima disponibile`; naming interno "Geo" rinominato in "PoiTrack" in revisione 7 (il `box_type` persistito resta `base`/legacy `horizontal_scroll_geo`, invariato); revisione 8: fix `showOnDetail()`/`extractRawItems()` mancanti (stesso bug preesistente nel box tassonomie, non corretto) + fix salvataggio Title (`disableEditingKeys`, chiavi lingua condivise da tutti i box) |
