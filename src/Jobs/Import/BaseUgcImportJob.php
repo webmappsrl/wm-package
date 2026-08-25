@@ -32,6 +32,12 @@ abstract class BaseUgcImportJob extends BaseImportJob
                 return;
             }
 
+            if ($this->getModelKey() === 'ugc_track' && ! $this->hasValidTrackGeometry($data['geometry'] ?? null)) {
+                $logger->warning("Skipped {$modelName} with geohub ID {$this->entityId}: degenerate geometry (fewer than 2 points) — found running the real e2e import (see notes.md).");
+
+                return;
+            }
+
             $transformedData = $this->transformData($data);
 
             $model = $this->geohubImportService->importUgcData(
@@ -70,5 +76,53 @@ abstract class BaseUgcImportJob extends BaseImportJob
     protected function processDependencies(array $data, Model $model): void
     {
         //
+    }
+
+    /**
+     * A LineString needs at least 2 points — a single-point track (user started and
+     * immediately stopped recording) makes even ST_GeomFromWKB itself reject the geometry
+     * ("LineString must have at least two points"), so this can't be checked with a PostGIS
+     * round-trip: any query on the malformed WKB fails the same way the real insert does,
+     * poisoning the connection for every later query in the same batched/sync run. Parsed
+     * directly from the (E)WKB bytes instead, without ever touching the DB.
+     */
+    private function hasValidTrackGeometry(mixed $geometry): bool
+    {
+        if (empty($geometry) || ! is_string($geometry)) {
+            return false;
+        }
+
+        $binary = @hex2bin($geometry);
+        if ($binary === false || strlen($binary) < 9) {
+            return false;
+        }
+
+        $littleEndian = ord($binary[0]) === 1;
+        $format = $littleEndian ? 'V' : 'N';
+
+        $typeAndFlags = unpack($format, substr($binary, 1, 4))[1];
+        $hasSrid = (bool) ($typeAndFlags & 0x20000000);
+        $geomType = $typeAndFlags & 0xFF;
+
+        // Only the plain LineString case is checked here — it's the one confirmed to occur on
+        // real Geohub data (see notes.md). Any other geometry type (e.g. MultiLineString) is
+        // passed through unchecked rather than risk a wrong byte-offset guess for a case never
+        // actually observed.
+        if ($geomType !== 2) {
+            return true;
+        }
+
+        $offset = $hasSrid ? 9 : 5;
+
+        return $this->readUInt32($binary, $offset, $format) >= 2;
+    }
+
+    private function readUInt32(string $binary, int $offset, string $format): int
+    {
+        if (strlen($binary) < $offset + 4) {
+            return 0;
+        }
+
+        return unpack($format, substr($binary, $offset, 4))[1];
     }
 }

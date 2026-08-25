@@ -593,12 +593,16 @@ class GeohubImportService
         $shardUser = User::where('email', $geohubUser->email)->first();
 
         if (! $shardUser) {
+            // Exclude app_id from the copy: on Geohub it's a per-user SKU string (which app
+            // they signed up on), on Maphub it's an integer FK — same column name, unrelated
+            // meaning. Copying it verbatim fails the insert with a type error (found running
+            // the real e2e import) and poisons the enclosing transaction for every later query.
             $diff = array_diff(array_keys((array) $geohubUser), Schema::getColumnListing('users'));
-            $transformedData = array_diff_key((array) $geohubUser, array_flip($diff));
+            $transformedData = array_diff_key((array) $geohubUser, array_flip($diff), array_flip(['app_id']));
 
             try {
                 $shardUser = User::create($transformedData);
-            } catch (UniqueConstraintViolationException $e) {
+            } catch (UniqueConstraintViolationException) {
                 // A concurrent UGC import job for the same author (different POI/track,
                 // same batch on Horizon) created this user between the lookup above and
                 // this create — reload it instead of failing this job.
