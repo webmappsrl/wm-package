@@ -4,6 +4,7 @@ namespace Wm\WmPackage\Services\Import;
 
 use Illuminate\Database\Connection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Log\Logger;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -226,6 +227,55 @@ class GeohubImportService
             $this->logger->error("Error importing {$modelName} with ID {$entityId}: ".$e->getMessage());
             throw $e;
         }
+    }
+
+    /**
+     * Import UGC data with update-if-newer semantics: create the record if it doesn't exist
+     * yet; if it does, update it only when Geohub's updated_at is more recent than the
+     * geohub_synced_at timestamp stored locally at the last import. Otherwise leave the
+     * local record untouched.
+     *
+     * Differs from importData() (used by EC/Layer/Taxonomy), which always overwrites the
+     * local record on every reimport, and from the discarded create-only approach previously
+     * considered for UGC content.
+     *
+     * @param  array  $transformedData  The data to persist, without geohub_synced_at (added here)
+     * @param  string|null  $geohubUpdatedAt  Raw updated_at value from Geohub for this record
+     */
+    public function importUgcData(array $transformedData, string $modelKey, string $modelName, int $entityId, ?string $geohubUpdatedAt): Model
+    {
+        if (! class_exists($modelName)) {
+            throw new \RuntimeException("Model class {$modelName} not found or not configured");
+        }
+
+        $identifier = $this->getIdentifier($modelKey, $entityId);
+        $model = $modelName::where($identifier)->first();
+
+        if ($model) {
+            $lastSyncedAt = $model->properties['geohub_synced_at'] ?? null;
+
+            if ($geohubUpdatedAt && $lastSyncedAt && ! Carbon::parse($geohubUpdatedAt)->gt(Carbon::parse($lastSyncedAt))) {
+                $this->logger->info("{$modelName} with geohub ID {$entityId} not updated: not modified on Geohub since last sync.");
+
+                return $model;
+            }
+        }
+
+        $transformedData['properties']['geohub_synced_at'] = now()->toIso8601String();
+
+        if ($model) {
+            $model->fill($transformedData);
+        } else {
+            $model = new $modelName($transformedData);
+        }
+
+        $model::unsetEventDispatcher();
+        $model->saveQuietly();
+        $model::setEventDispatcher(app('events'));
+
+        $this->logger->info("{$modelName} with geohub ID {$entityId} imported/updated successfully. Local ID: {$model->id}");
+
+        return $model;
     }
 
     public function getModelInstance(string $tableName): Model
@@ -523,6 +573,59 @@ class GeohubImportService
         if (! $role) {
             RolesAndPermissionsService::seedDatabase();
             $role = Role::where('name', 'Administrator')->first();
+        }
+
+        $user->assignRole($role);
+    }
+
+    /**
+     * Check if a UGC author exists in the local database and create it if it doesn't.
+     *
+     * Differs from checkUserExistence(): assigns the Contributor role instead of Editor,
+     * since UGC authors are end users, not app owners.
+     *
+     * @param  int  $userId  The ID of the GeoHub user to check
+     * @return User The user object
+     */
+    public function checkUgcUserExistence(int $userId): User
+    {
+        $geohubUser = $this->dbConnection->table('users')->where('id', $userId)->first();
+        $shardUser = User::where('email', $geohubUser->email)->first();
+
+        if (! $shardUser) {
+            $diff = array_diff(array_keys((array) $geohubUser), Schema::getColumnListing('users'));
+            $transformedData = array_diff_key((array) $geohubUser, array_flip($diff));
+
+            try {
+                $shardUser = User::create($transformedData);
+            } catch (UniqueConstraintViolationException $e) {
+                // A concurrent UGC import job for the same author (different POI/track,
+                // same batch on Horizon) created this user between the lookup above and
+                // this create — reload it instead of failing this job.
+                $shardUser = User::where('email', $geohubUser->email)->first();
+            }
+        }
+
+        $this->assignContributorRole($shardUser);
+
+        return $shardUser;
+    }
+
+    /**
+     * Assign the Contributor role to the user if they have no roles yet.
+     *
+     * @param  User  $user  The user to assign the role to
+     */
+    protected function assignContributorRole(User $user): void
+    {
+        if ($user->roles->isNotEmpty()) {
+            return;
+        }
+
+        $role = Role::where('name', 'Contributor')->first();
+        if (! $role) {
+            RolesAndPermissionsService::seedDatabase();
+            $role = Role::where('name', 'Contributor')->first();
         }
 
         $user->assignRole($role);

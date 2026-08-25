@@ -71,6 +71,21 @@ class ImportAppJob extends BaseImportJob
         if (in_array('ec_media', $allowedDependencies)) {
             $this->queueEntityImport('ec_media', $data['user_id'], 'user_id', $model->id);
         }
+
+        // ugc_poi/ugc_track dispatched before ugc_media: the media job resolves the local
+        // model to attach the photo to, so it needs poi/track to exist first (dispatch order
+        // is not a hard guarantee under Horizon — see ImportUgcMediaJob's retry).
+        if (in_array('ugc_poi', $allowedDependencies)) {
+            $this->queueEntityImport('ugc_poi', $data['user_id'], 'app_id', $model->id);
+        }
+
+        if (in_array('ugc_track', $allowedDependencies)) {
+            $this->queueEntityImport('ugc_track', $data['user_id'], 'app_id', $model->id);
+        }
+
+        if (in_array('ugc_media', $allowedDependencies)) {
+            $this->queueEntityImport('ugc_media', $data['user_id'], 'app_id', $model->id);
+        }
     }
 
     /**
@@ -78,8 +93,9 @@ class ImportAppJob extends BaseImportJob
      */
     protected function getAllowedDependencies(): array
     {
-        // All available dependencies
-        $allDependencies = ['taxonomy_activity', 'taxonomy_poi_types', 'taxonomy_theme', 'ec_poi', 'ec_track', 'layer', 'ec_media'];
+        // All available dependencies (ugc_poi/ugc_track/ugc_media are opt-in only: listed here
+        // so they are recognized when passed explicitly, but never in default_dependencies.app)
+        $allDependencies = ['taxonomy_activity', 'taxonomy_poi_types', 'taxonomy_theme', 'ec_poi', 'ec_track', 'layer', 'ec_media', 'ugc_poi', 'ugc_track', 'ugc_media'];
 
         // First check if allowed_dependencies is passed in job data
         if (isset($this->data['allowed_dependencies']) && is_array($this->data['allowed_dependencies'])) {
@@ -105,6 +121,11 @@ class ImportAppJob extends BaseImportJob
 
             switch ($entityModelKey) {
                 case 'layer':
+                case 'ugc_poi':
+                case 'ugc_track':
+                case 'ugc_media':
+                    // Filtered by the Geohub app itself (numeric app_id, not the owner's user_id):
+                    // UGC content is authored by many different end users, not just the app owner.
                     $whereCondition = [$entityForeignKey => $this->entityId];
                     $data = ['app_id' => $appId];
                     break;

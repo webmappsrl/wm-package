@@ -74,8 +74,15 @@ class WmImportFromGeohubCommand extends Command
      */
     protected function prepareJobData(bool $skipDependencies, array $dependencies): array
     {
-        // All available dependencies
-        $allDependencies = ['taxonomy_activity', 'taxonomy_theme', 'taxonomy_poi_types', 'ec_poi', 'ec_track', 'layer', 'ec_media'];
+        // Dependencies imported by default when --dependencies is not passed
+        $defaultDependencies = ['taxonomy_activity', 'taxonomy_theme', 'taxonomy_poi_types', 'ec_poi', 'ec_track', 'layer', 'ec_media'];
+
+        // UGC dependencies are opt-in only: valid to request explicitly via --dependencies=,
+        // but never imported by default (see config/wm-geohub-import.php default_dependencies)
+        $optInDependencies = ['ugc_poi', 'ugc_track', 'ugc_media'];
+
+        // All available dependencies (used only to validate an explicit --dependencies list)
+        $allDependencies = array_merge($defaultDependencies, $optInDependencies);
 
         if ($skipDependencies) {
             // Skip all dependencies
@@ -105,9 +112,9 @@ class WmImportFromGeohubCommand extends Command
             ];
         }
 
-        // Default: import all dependencies
+        // Default: import all dependencies except the opt-in-only ones
         return [
-            'allowed_dependencies' => $allDependencies,
+            'allowed_dependencies' => $defaultDependencies,
         ];
     }
 
