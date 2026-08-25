@@ -113,6 +113,83 @@ class ImportUgcTrackJobTest extends TestCase
         $this->assertSame('Updated on Geohub, newer', $existing->fresh()->name);
     }
 
+    /**
+     * Builds a raw (E)WKB hex string for a plain 2D LineString — the exact wire format
+     * fetchData() returns from Geohub's geometry column, and the only format
+     * hasValidTrackGeometry() actually parses (see BaseUgcImportJob).
+     */
+    private function lineStringWkbHex(array $points): string
+    {
+        $binary = pack('C', 1); // little-endian
+        $binary .= pack('V', 2); // WKB type 2 = LineString, no SRID/Z/M flags
+        $binary .= pack('V', count($points));
+
+        foreach ($points as [$x, $y]) {
+            $binary .= pack('d', $x).pack('d', $y);
+        }
+
+        return bin2hex($binary);
+    }
+
+    public function test_ugc_track_with_single_point_geometry_is_skipped_without_exception(): void
+    {
+        // Found running the real e2e import (see notes.md): a single-point LineString (user
+        // started and immediately stopped recording) makes even ST_GeomFromWKB itself reject
+        // the geometry, which is exactly why hasValidTrackGeometry() checks this in PHP before
+        // any insert is attempted — never exercised by lineStringGeometry() above, which
+        // builds a MultiLineString the check explicitly does not validate.
+        $author = User::factory()->create();
+
+        $service = \Mockery::mock(GeohubImportService::class)->makePartial();
+        $service->shouldReceive('fetchData')
+            ->once()
+            ->andReturn([
+                'id' => 99999,
+                'user_id' => $author->id,
+                'app_id' => 1,
+                'name' => 'Degenerate track',
+                'geometry' => $this->lineStringWkbHex([[11.0, 44.0]]),
+                'updated_at' => now()->toDateTimeString(),
+            ]);
+
+        (new ImportUgcTrackJob(99999, ['app_id' => 1]))->handle($service);
+
+        $this->assertNull(UgcTrack::where('properties->geohub_id', 99999)->first());
+    }
+
+    public function test_ugc_track_with_two_point_linestring_geometry_is_not_skipped(): void
+    {
+        // Counterpart to the test above: confirms hasValidTrackGeometry()'s point-count math
+        // (byte offsets, endianness) is correct for a genuinely valid LineString, not just
+        // that degenerate ones are rejected.
+        $author = User::factory()->create();
+        $app = App::factory()->create();
+
+        $service = \Mockery::mock(GeohubImportService::class)->makePartial();
+        $service->shouldReceive('fetchData')
+            ->once()
+            ->andReturn([
+                'id' => 88888,
+                'user_id' => $author->id,
+                'app_id' => $app->id,
+                'name' => 'Valid track',
+                'geometry' => $this->lineStringWkbHex([[11.0, 44.0], [11.1, 44.1]]),
+                'updated_at' => now()->toDateTimeString(),
+            ]);
+        $service->shouldReceive('transformFields')->once()->andReturn(['name' => 'Valid track']);
+        $service->shouldReceive('transformProperties')->once()->andReturn([]);
+        $service->shouldReceive('checkUgcUserExistence')->once()->with($author->id)->andReturn($author);
+        $service->shouldReceive('importUgcData')->once()->andReturnUsing(
+            fn ($data, $modelKey, $modelName, $entityId) => UgcTrack::create(array_merge($data, [
+                'properties' => array_merge($data['properties'] ?? [], ['geohub_id' => $entityId]),
+            ]))
+        );
+
+        (new ImportUgcTrackJob(88888, ['app_id' => $app->id]))->handle($service);
+
+        $this->assertNotNull(UgcTrack::where('properties->geohub_id', 88888)->first());
+    }
+
     public function test_ugc_track_with_null_author_is_skipped_without_exception(): void
     {
         // ugc_tracks.user_id is NOT NULL on the local schema, so a null-author row can't be
