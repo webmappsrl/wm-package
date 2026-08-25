@@ -12,7 +12,7 @@ class WmImportFromGeohubCommand extends Command
                             {model? : The model to import (e.g. app, ec_media, ec_track, ec_poi). If not specified, imports all}
                             {id? : Specific ID to import. If not specified, imports all}
                             {--skip-dependencies : Skip importing all dependencies}
-                            {--dependencies=* : Comma-separated list of specific dependencies to import (e.g. ec_media,taxonomy_activity). If not specified, imports all dependencies unless --skip-dependencies is used}';
+                            {--dependencies=* : Comma-separated list of specific dependencies to import (e.g. ec_media,taxonomy_activity). If not specified, imports all default dependencies unless --skip-dependencies is used. ugc_poi, ugc_track and ugc_media are opt-in only — they are never imported unless listed here explicitly}';
 
     protected $description = 'Import data from geohub to shard instance';
 

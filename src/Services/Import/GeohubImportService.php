@@ -4,7 +4,7 @@ namespace Wm\WmPackage\Services\Import;
 
 use Illuminate\Database\Connection;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Database\QueryException;
 use Illuminate\Log\Logger;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -532,8 +532,12 @@ class GeohubImportService
 
         if (! $shardUser) {
             // make a diff between geohubUser and User model
+            // Exclude app_id: same column name on both sides, incompatible meaning (Geohub:
+            // SKU string; Maphub: integer FK) — see checkUgcUserExistence() for the full
+            // explanation. Applies here too since this path also runs unconditionally for
+            // every app import, not just when UGC dependencies are requested.
             $diff = array_diff(array_keys((array) $geohubUser), Schema::getColumnListing('users'));
-            $transformedData = array_diff_key((array) $geohubUser, array_flip($diff));
+            $transformedData = array_diff_key((array) $geohubUser, array_flip($diff), array_flip(['app_id']));
             $shardUser = User::create($transformedData);
         }
 
@@ -590,6 +594,14 @@ class GeohubImportService
     public function checkUgcUserExistence(int $userId): User
     {
         $geohubUser = $this->dbConnection->table('users')->where('id', $userId)->first();
+
+        if (! $geohubUser || empty($geohubUser->email)) {
+            // Without a real email we can't reliably dedupe by it below: two different
+            // Geohub users who both happen to have a null/empty email would otherwise
+            // silently collapse into the same local account the second time this runs.
+            throw new \RuntimeException("Geohub user {$userId} not found or has no email — cannot map UGC author.");
+        }
+
         $shardUser = User::where('email', $geohubUser->email)->first();
 
         if (! $shardUser) {
@@ -602,11 +614,26 @@ class GeohubImportService
 
             try {
                 $shardUser = User::create($transformedData);
-            } catch (UniqueConstraintViolationException) {
+            } catch (QueryException $e) {
+                // SQLSTATE 23505 = unique_violation (Postgres) — portable across Laravel
+                // versions, unlike UniqueConstraintViolationException (11+ only), which
+                // wm-package's own composer.json range (^10 || ^11 || ^12 || ^13) doesn't
+                // guarantee for every consumer.
+                if ($e->getCode() !== '23505') {
+                    throw $e;
+                }
+
                 // A concurrent UGC import job for the same author (different POI/track,
-                // same batch on Horizon) created this user between the lookup above and
-                // this create — reload it instead of failing this job.
+                // same batch on Horizon) may have created this user between the lookup
+                // above and this create — reload it instead of failing this job. But the
+                // violation could also be on a different unique column (e.g. fiscal_code):
+                // only treat this as recovered if the email reload actually finds someone,
+                // otherwise this isn't the race we expect and the real error is rethrown.
                 $shardUser = User::where('email', $geohubUser->email)->first();
+
+                if (! $shardUser) {
+                    throw $e;
+                }
             }
         }
 
