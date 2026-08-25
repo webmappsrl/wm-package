@@ -204,6 +204,7 @@ export function useFeatures(props: LayerFeatureProps, isManual: Ref<boolean>) {
             await Nova.request().post(`/nova-vendor/layer-features/sync/${layerId}`, {
                 features: persistentSelectedIds.value,
                 model: props.field.model,
+                manual: true,
             });
 
             Nova.success('Features salvate con successo');

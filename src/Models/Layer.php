@@ -164,28 +164,32 @@ class Layer extends Polygon
 
     public function isAutoTrackMode(): bool
     {
-        return ($this->configuration['track_mode'] ?? 'auto') === 'auto';
+        return ($this->configuration['track_mode'] ?? config('wm-package.default_layer_mode', 'auto')) === 'auto';
     }
 
     public function setTrackMode(string $mode): void
     {
-        $configuration = $this->configuration ?? [];
-        $configuration['track_mode'] = $mode;
-        $this->configuration = $configuration;
-        $this->save();
+        DB::statement(
+            "UPDATE layers SET configuration = jsonb_set(coalesce(configuration, '{}'::jsonb), '{track_mode}', to_jsonb(?::text)) WHERE id = ?",
+            [$mode, $this->id]
+        );
+
+        $this->refresh();
     }
 
     public function isAutoPoiMode(): bool
     {
-        return ($this->configuration['poi_mode'] ?? 'auto') === 'auto';
+        return ($this->configuration['poi_mode'] ?? config('wm-package.default_layer_mode', 'auto')) === 'auto';
     }
 
     public function setPoiMode(string $mode): void
     {
-        $configuration = $this->configuration ?? [];
-        $configuration['poi_mode'] = $mode;
-        $this->configuration = $configuration;
-        $this->save();
+        DB::statement(
+            "UPDATE layers SET configuration = jsonb_set(coalesce(configuration, '{}'::jsonb), '{poi_mode}', to_jsonb(?::text)) WHERE id = ?",
+            [$mode, $this->id]
+        );
+
+        $this->refresh();
     }
 
     /**
