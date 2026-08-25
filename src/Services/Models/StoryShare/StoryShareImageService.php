@@ -103,7 +103,7 @@ class StoryShareImageService
     /**
      * Per-app accent color for the map card border + stats value text/gradient — reads the
      * SAME primary color the app's own UI theme uses (Nova `properties->theme->primary_color`,
-     * a native Color field also exposed to the frontend as `config.json` -> `THEME.primary_color`,
+     * a native Color field also exposed to the frontend as `config.json` -> `THEME.primary`,
      * see AppConfigService::config_section_theme()), so this feature automatically matches
      * whatever brand color each tenant has already configured instead of hardcoding one app's
      * color into shared package code. Falls back to white when unset/malformed, which reads

@@ -427,6 +427,8 @@ class App extends Resource
 
     protected function theme_tab(): array
     {
+        $hexColorRule = 'regex:/^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/';
+
         return [
             Text::make(__('Font Family Header'), 'properties->theme->font_family_header')
                 ->hideFromIndex()
@@ -435,9 +437,31 @@ class App extends Resource
                 ->hideFromIndex()
                 ->help(__('Font family used for body content in the app theme')),
             Color::make(__('Primary color'), 'properties->theme->primary_color')
+                ->rules('nullable', $hexColorRule)
                 ->hideFromIndex()
                 ->help(__('Primary color for the app theme (e.g. buttons, links)')),
+            Color::make(__('Secondary color'), 'properties->theme->secondary_color')
+                ->rules('nullable', $hexColorRule)
+                ->hideFromIndex()
+                ->help(__('Secondary color for the app theme')),
+            Color::make(__('Tertiary color'), 'properties->theme->tertiary_color')
+                ->rules('nullable', $hexColorRule)
+                ->hideFromIndex()
+                ->help(__('Tertiary color for the app theme')),
+            Color::make(__('Success color'), 'properties->theme->success_color')
+                ->rules('nullable', $hexColorRule)
+                ->hideFromIndex()
+                ->help(__('Color used for success states in the app theme')),
+            Color::make(__('Warning color'), 'properties->theme->warning_color')
+                ->rules('nullable', $hexColorRule)
+                ->hideFromIndex()
+                ->help(__('Color used for warning states in the app theme')),
+            Color::make(__('Danger color'), 'properties->theme->danger_color')
+                ->rules('nullable', $hexColorRule)
+                ->hideFromIndex()
+                ->help(__('Color used for danger/error states in the app theme')),
             Color::make(__('Default feature color'), 'properties->theme->default_feature_color')
+                ->rules('nullable', $hexColorRule)
                 ->hideFromIndex()
                 ->help(__('Default color used for map features when no specific style is set')),
         ];
