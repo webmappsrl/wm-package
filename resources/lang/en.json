@@ -368,5 +368,13 @@
     "Are you sure you want to delete this box?": "Are you sure you want to delete this box?",
     "Delete": "Delete",
     "No blocks configured.": "No blocks configured.",
-    "Content": "Content"
+    "Content": "Content",
+    "Local walking network": "Local",
+    "Regional walking network": "Regional",
+    "National walking network": "National",
+    "International walking network": "International",
+    "Spring": "Spring",
+    "Summer": "Summer",
+    "Autumn": "Autumn",
+    "Winter": "Winter"
 }
