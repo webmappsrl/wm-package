@@ -2,6 +2,11 @@
 
 namespace Wm\WmPackage\Tests\Feature\Import;
 
+// Wm\WmPackage\Tests\ isn't in the consumer's (maphub) autoload-dev map (only wm-package's
+// own composer.json declares it, for the package's standalone suite) — require it directly
+// so `use SharesGeohubConnectionWithLocal` below resolves regardless of which suite runs this.
+require_once __DIR__.'/../../Concerns/SharesGeohubConnectionWithLocal.php';
+
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -10,26 +15,17 @@ use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\UgcPoi;
 use Wm\WmPackage\Models\User;
 use Wm\WmPackage\Services\Import\GeohubImportService;
+use Wm\WmPackage\Tests\Concerns\SharesGeohubConnectionWithLocal;
 
 class ImportUgcPoiJobTest extends TestCase
 {
-    use DatabaseTransactions;
+    use DatabaseTransactions, SharesGeohubConnectionWithLocal;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        // Share the same PDO between the default and geohub connections, so inserting test
-        // data through the default connection is visible to GeohubImportService (which reads
-        // via the geohub connection) — same pattern as GeohubImportServiceAssociateLayerPoiTest.
-        $default = config('database.default');
-        config(['database.connections.geohub' => config("database.connections.{$default}")]);
-        DB::purge('geohub');
-
-        $defaultConn = DB::connection($default);
-        $geohubConn = DB::connection('geohub');
-        $geohubConn->setPdo($defaultConn->getPdo());
-        $geohubConn->setReadPdo($defaultConn->getReadPdo());
+        $this->shareGeohubConnectionWithLocal();
     }
 
     private function pointGeometry(): \Illuminate\Database\Query\Expression
@@ -111,6 +107,35 @@ class ImportUgcPoiJobTest extends TestCase
         (new ImportUgcPoiJob($geohubPoiId, ['app_id' => $app->id]))->handle(app(GeohubImportService::class));
 
         $this->assertSame('Updated on Geohub, newer', $existing->fresh()->name);
+    }
+
+    public function test_ugc_poi_properties_merge_geohub_properties_flat(): void
+    {
+        // Geohub's own `description` column is empty on most real records — the data a
+        // Nova admin actually expects (waypoint type, per-app custom form answers) lives
+        // in the `properties` jsonb column instead, which the mapping used to drop entirely.
+        // Merged flat (not nested) so it reads the same as on Geohub's own Nova detail page.
+        $author = User::factory()->create();
+        $app = App::factory()->create();
+
+        $geohubPoiId = DB::table('ugc_pois')->insertGetId([
+            'user_id' => $author->id,
+            'app_id' => $app->id,
+            'name' => 'Poi with rich properties',
+            'geometry' => $this->pointGeometry(),
+            'properties' => json_encode(['waypoint_type' => 'landslide', 'city' => 'Rome']),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        (new ImportUgcPoiJob($geohubPoiId, ['app_id' => $app->id]))->handle(app(GeohubImportService::class));
+
+        $imported = UgcPoi::where('properties->geohub_id', $geohubPoiId)->first();
+
+        $this->assertSame('landslide', $imported->properties['waypoint_type']);
+        $this->assertSame('Rome', $imported->properties['city']);
+        // Our own bookkeeping keys must survive the merge untouched.
+        $this->assertSame($geohubPoiId, $imported->properties['geohub_id']);
     }
 
     public function test_ugc_poi_with_null_author_is_skipped_without_exception(): void

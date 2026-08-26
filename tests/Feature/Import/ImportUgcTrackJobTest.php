@@ -2,6 +2,11 @@
 
 namespace Wm\WmPackage\Tests\Feature\Import;
 
+// Wm\WmPackage\Tests\ isn't in the consumer's (maphub) autoload-dev map (only wm-package's
+// own composer.json declares it, for the package's standalone suite) — require it directly
+// so `use SharesGeohubConnectionWithLocal` below resolves regardless of which suite runs this.
+require_once __DIR__.'/../../Concerns/SharesGeohubConnectionWithLocal.php';
+
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -10,26 +15,17 @@ use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\UgcTrack;
 use Wm\WmPackage\Models\User;
 use Wm\WmPackage\Services\Import\GeohubImportService;
+use Wm\WmPackage\Tests\Concerns\SharesGeohubConnectionWithLocal;
 
 class ImportUgcTrackJobTest extends TestCase
 {
-    use DatabaseTransactions;
+    use DatabaseTransactions, SharesGeohubConnectionWithLocal;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        // Share the same PDO between the default and geohub connections, so inserting test
-        // data through the default connection is visible to GeohubImportService (which reads
-        // via the geohub connection) — same pattern as ImportUgcPoiJobTest.
-        $default = config('database.default');
-        config(['database.connections.geohub' => config("database.connections.{$default}")]);
-        DB::purge('geohub');
-
-        $defaultConn = DB::connection($default);
-        $geohubConn = DB::connection('geohub');
-        $geohubConn->setPdo($defaultConn->getPdo());
-        $geohubConn->setReadPdo($defaultConn->getReadPdo());
+        $this->shareGeohubConnectionWithLocal();
     }
 
     private function lineStringGeometry(): \Illuminate\Database\Query\Expression
@@ -111,6 +107,35 @@ class ImportUgcTrackJobTest extends TestCase
         (new ImportUgcTrackJob($geohubTrackId, ['app_id' => $app->id]))->handle(app(GeohubImportService::class));
 
         $this->assertSame('Updated on Geohub, newer', $existing->fresh()->name);
+    }
+
+    public function test_ugc_track_properties_merge_geohub_properties_flat(): void
+    {
+        // Geohub's own `description` column is empty on most real records — the activity
+        // type and form answers the app user filled in live in `properties.form` instead,
+        // which the mapping used to drop entirely. Merged flat (not nested) so it reads the
+        // same as on Geohub's own Nova detail page.
+        $author = User::factory()->create();
+        $app = App::factory()->create();
+
+        $geohubTrackId = DB::table('ugc_tracks')->insertGetId([
+            'user_id' => $author->id,
+            'app_id' => $app->id,
+            'name' => 'Track with rich properties',
+            'geometry' => $this->lineStringGeometry(),
+            'properties' => json_encode(['form' => ['activity' => 'skitouring', 'description' => 'Bella gita']]),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        (new ImportUgcTrackJob($geohubTrackId, ['app_id' => $app->id]))->handle(app(GeohubImportService::class));
+
+        $imported = UgcTrack::where('properties->geohub_id', $geohubTrackId)->first();
+
+        $this->assertSame('skitouring', $imported->properties['form']['activity']);
+        $this->assertSame('Bella gita', $imported->properties['form']['description']);
+        // Our own bookkeeping keys must survive the merge untouched.
+        $this->assertSame($geohubTrackId, $imported->properties['geohub_id']);
     }
 
     /**

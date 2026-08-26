@@ -211,14 +211,7 @@ class GeohubImportService
                 $model = new $modelName($transformedData);
             }
 
-            // Temporarily disable observers during import to avoid triggering PBF jobs
-            $model::unsetEventDispatcher();
-
-            // Save quietly to avoid triggering observers during Geohub import
-            $model->saveQuietly();
-
-            // Re-enable observers after save
-            $model::setEventDispatcher(app('events'));
+            $this->persistQuietly($model);
 
             $this->logger->info("{$modelName} with ID {$entityId} imported successfully. Local ID: {$model->id} {$model->name}");
 
@@ -269,13 +262,23 @@ class GeohubImportService
             $model = new $modelName($transformedData);
         }
 
-        $model::unsetEventDispatcher();
-        $model->saveQuietly();
-        $model::setEventDispatcher(app('events'));
+        $this->persistQuietly($model);
 
         $this->logger->info("{$modelName} with geohub ID {$entityId} imported/updated successfully. Local ID: {$model->id}");
 
         return $model;
+    }
+
+    /**
+     * Save a model without dispatching Eloquent events (avoids triggering observers — e.g.
+     * PBF regeneration — during a Geohub import), temporarily disabling the event dispatcher
+     * around saveQuietly() so nothing else listening on the model's events fires either.
+     */
+    private function persistQuietly(Model $model): void
+    {
+        $model::unsetEventDispatcher();
+        $model->saveQuietly();
+        $model::setEventDispatcher(app('events'));
     }
 
     public function getModelInstance(string $tableName): Model
@@ -520,6 +523,23 @@ class GeohubImportService
     }
 
     /**
+     * Geohub's users.properties is jsonb, but arrives here as a raw JSON string — Laravel's
+     * query builder never decodes jsonb columns, it hands back exactly what PDO returns. If
+     * that raw string is passed straight to User::create(), the User model's own `array`
+     * cast re-encodes it on save (json_encode of an already-JSON string), producing a
+     * JSON-encoded string nested inside the column instead of the object itself — found
+     * running a real import and hitting it live in AppAuthController::filterUserPrivacyByAppId(),
+     * which expects an array and gets "Cannot access offset of type string on string".
+     * Decoding here (once, before Eloquent ever sees it) avoids the double-encoding.
+     */
+    private function decodeJsonbProperties(array &$transformedData): void
+    {
+        if (isset($transformedData['properties']) && is_string($transformedData['properties'])) {
+            $transformedData['properties'] = json_decode($transformedData['properties'], true) ?? [];
+        }
+    }
+
+    /**
      * Check if a user exists in the local database and create it if it doesn't
      *
      * @param  int  $userId  The ID of the user to check
@@ -538,6 +558,7 @@ class GeohubImportService
             // every app import, not just when UGC dependencies are requested.
             $diff = array_diff(array_keys((array) $geohubUser), Schema::getColumnListing('users'));
             $transformedData = array_diff_key((array) $geohubUser, array_flip($diff), array_flip(['app_id']));
+            $this->decodeJsonbProperties($transformedData);
             $shardUser = User::create($transformedData);
         }
 
@@ -611,6 +632,7 @@ class GeohubImportService
             // the real e2e import) and poisons the enclosing transaction for every later query.
             $diff = array_diff(array_keys((array) $geohubUser), Schema::getColumnListing('users'));
             $transformedData = array_diff_key((array) $geohubUser, array_flip($diff), array_flip(['app_id']));
+            $this->decodeJsonbProperties($transformedData);
 
             try {
                 $shardUser = User::create($transformedData);
@@ -659,7 +681,19 @@ class GeohubImportService
             $role = Role::where('name', 'Contributor')->first();
         }
 
-        $user->assignRole($role);
+        try {
+            $user->assignRole($role);
+        } catch (QueryException $e) {
+            // SQLSTATE 23505 = unique_violation (Postgres). A concurrent UGC import job for
+            // the same author (different POI/track, same batch on Horizon) may attach this
+            // role between the isNotEmpty() check above and this attach() — model_has_roles
+            // has a composite primary key on (role_id, model_id, model_type), so the second
+            // attach() violates it. Not an error if the role ended up assigned anyway;
+            // otherwise this isn't the race we expect and the real error is rethrown.
+            if ($e->getCode() !== '23505' || $user->fresh()->roles->isEmpty()) {
+                throw $e;
+            }
+        }
     }
 
     /**
@@ -711,14 +745,26 @@ class GeohubImportService
     {
         $transformedProperties = [];
 
+        // Opt-in (see ugc_poi/ugc_track): merge a whole Geohub jsonb column flat into the
+        // local properties, instead of (or in addition to) cherry-picking individual fields
+        // via 'mapping' below. Geohub shapes this column differently per app (custom UGC
+        // acquisition forms), so a fixed field-by-field mapping can't anticipate everything
+        // it might contain — merging it verbatim avoids silently dropping whatever a given
+        // app's form asks for.
+        if (isset($this->importMapping[$modelKey]['properties']['merge_raw_field'])) {
+            $rawField = $this->importMapping[$modelKey]['properties']['merge_raw_field'];
+            $transformedProperties = app(DataTransformer::class)->jsonToArray($data[$rawField] ?? null);
+        }
+
         if (isset($this->importMapping[$modelKey]['properties']['mapping'])) {
-            $transformedProperties = $this->transformMappedFields(
-                $data,
-                $this->importMapping[$modelKey]['properties']['mapping']
+            $transformedProperties = array_merge(
+                $transformedProperties,
+                $this->transformMappedFields($data, $this->importMapping[$modelKey]['properties']['mapping'])
             );
         }
 
-        // Add standard properties
+        // Add standard properties (always win over both the raw merge and 'mapping' above,
+        // so nothing Geohub's own payload happens to contain can shadow our own bookkeeping)
         $transformedProperties['geohub_id'] = $data['id'] ?? null;
         $transformedProperties['geohub_synced_at'] = Carbon::now()->toIso8601String();
 

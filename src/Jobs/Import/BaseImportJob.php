@@ -45,7 +45,7 @@ abstract class BaseImportJob implements ShouldQueue
     public function handle(GeohubImportService $importService): void
     {
         $this->geohubImportService = $importService;
-        $logger = Log::channel(config('wm-geohub-import.import_log_channel', 'wm-package-failed-jobs'));
+        $logger = $this->importLogger();
         $modelName = $this->getModelName();
 
         try {
@@ -59,11 +59,26 @@ abstract class BaseImportJob implements ShouldQueue
 
             $logger->info("Completed import of {$modelName} with ID {$this->entityId}");
         } catch (\Exception $e) {
-            $logger->error("Failed to import {$modelName} with ID {$this->entityId}: {$e->getMessage()}", [
-                'exception' => $e,
-            ]);
-            throw $e;
+            $this->logImportFailure($logger, "Failed to import {$modelName} with ID {$this->entityId}", $e);
         }
+    }
+
+    /**
+     * Log channel shared by every import job's success/failure messages.
+     */
+    protected function importLogger(): \Psr\Log\LoggerInterface
+    {
+        return Log::channel(config('wm-geohub-import.import_log_channel', 'wm-package-failed-jobs'));
+    }
+
+    /**
+     * Log a job failure with the standard format and rethrow, so Horizon still records the job
+     * as failed (with retry, if $tries allows it) instead of swallowing the exception.
+     */
+    protected function logImportFailure(\Psr\Log\LoggerInterface $logger, string $context, \Exception $e): never
+    {
+        $logger->error("{$context}: {$e->getMessage()}", ['exception' => $e]);
+        throw $e;
     }
 
     /**

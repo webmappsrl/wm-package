@@ -3,7 +3,6 @@
 namespace Wm\WmPackage\Jobs\Import;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Log;
 use Wm\WmPackage\Services\Import\GeohubImportService;
 
 /**
@@ -29,7 +28,7 @@ class ImportUgcMediaJob extends BaseImportJob
 
     public function handle(GeohubImportService $importService): void
     {
-        $logger = Log::channel(config('wm-geohub-import.import_log_channel', 'wm-package-failed-jobs'));
+        $logger = $this->importLogger();
 
         try {
             $data = $importService->fetchData($this->entityId, $this->getTableName());
@@ -53,10 +52,7 @@ class ImportUgcMediaJob extends BaseImportJob
 
             $logger->info("Completed import of UgcMedia with geohub ID {$this->entityId}");
         } catch (\Exception $e) {
-            $logger->error("Failed to import UgcMedia with geohub ID {$this->entityId}: {$e->getMessage()}", [
-                'exception' => $e,
-            ]);
-            throw $e;
+            $this->logImportFailure($logger, "Failed to import UgcMedia with geohub ID {$this->entityId}", $e);
         }
     }
 

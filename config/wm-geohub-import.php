@@ -152,7 +152,7 @@ return [
     |   pass explicitly via --dependencies=...,ugc_poi to include it)
     | - 'ugc_track': Import end-user track data (opt-in only, same as ugc_poi)
     | - 'ugc_media': Import end-user photos, attached as media on the matching ugc_poi/ugc_track
-    |   (opt-in only, same as ugc_poi; no dedicated model, see Wm\WmPackage\Services\Import\GeohubImportService)
+    |   (opt-in only, same as ugc_poi; no dedicated model, see Wm\WmPackage\Services\Import\UgcMediaImportService)
     |
     | Examples:
     | 'default_dependencies' => [
@@ -697,9 +697,15 @@ return [
             ],
             'properties' => [
                 'column_name' => 'properties',
-                'mapping' => [
-                    'description' => 'description',
-                ],
+                // Geohub's own `description` column is populated on only a minority of
+                // records (verified on real data) — most of what a Nova admin actually
+                // expects to see (waypoint type, form answers the app user filled in) lives
+                // in the `properties` jsonb column instead, shaped per-app by
+                // apps.poi_acquisition_form — merged flat into the local `properties` (not
+                // cherry-picked field by field) so nothing an app's custom form asks for
+                // gets silently dropped. geohub_id/geohub_synced_at below always win over
+                // this merge if Geohub's own payload happens to reuse either key name.
+                'merge_raw_field' => 'properties',
             ],
         ],
 
@@ -721,9 +727,8 @@ return [
             ],
             'properties' => [
                 'column_name' => 'properties',
-                'mapping' => [
-                    'description' => 'description',
-                ],
+                // Same rationale as ugc_poi above — see that comment.
+                'merge_raw_field' => 'properties',
             ],
         ],
 

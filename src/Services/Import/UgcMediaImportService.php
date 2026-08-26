@@ -12,11 +12,6 @@ use Illuminate\Database\Eloquent\Model;
  */
 class UgcMediaImportService extends GeohubImportService
 {
-    public function __construct()
-    {
-        parent::__construct();
-    }
-
     /**
      * Resolve the local UgcPoi/UgcTrack models a Geohub ugc_media row is attached to.
      *
