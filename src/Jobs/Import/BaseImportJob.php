@@ -10,6 +10,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use Psr\Log\LoggerInterface;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Services\Import\GeohubImportService;
 
@@ -66,7 +67,7 @@ abstract class BaseImportJob implements ShouldQueue
     /**
      * Log channel shared by every import job's success/failure messages.
      */
-    protected function importLogger(): \Psr\Log\LoggerInterface
+    protected function importLogger(): LoggerInterface
     {
         return Log::channel(config('wm-geohub-import.import_log_channel', 'wm-package-failed-jobs'));
     }
@@ -75,7 +76,7 @@ abstract class BaseImportJob implements ShouldQueue
      * Log a job failure with the standard format and rethrow, so Horizon still records the job
      * as failed (with retry, if $tries allows it) instead of swallowing the exception.
      */
-    protected function logImportFailure(\Psr\Log\LoggerInterface $logger, string $context, \Exception $e): never
+    protected function logImportFailure(LoggerInterface $logger, string $context, \Exception $e): never
     {
         $logger->error("{$context}: {$e->getMessage()}", ['exception' => $e]);
         throw $e;

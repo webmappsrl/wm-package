@@ -7,6 +7,7 @@ namespace Wm\WmPackage\Tests\Feature\Import;
 // so `use SharesGeohubConnectionWithLocal` below resolves regardless of which suite runs this.
 require_once __DIR__.'/../../Concerns/SharesGeohubConnectionWithLocal.php';
 
+use Illuminate\Database\Query\Expression;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -28,7 +29,7 @@ class ImportUgcPoiJobTest extends TestCase
         $this->shareGeohubConnectionWithLocal();
     }
 
-    private function pointGeometry(): \Illuminate\Database\Query\Expression
+    private function pointGeometry(): Expression
     {
         return DB::raw("ST_GeomFromGeoJSON('{\"type\":\"Point\",\"coordinates\":[11.0,44.0,100]}')");
     }

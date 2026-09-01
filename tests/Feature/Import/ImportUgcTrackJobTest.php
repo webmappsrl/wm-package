@@ -7,6 +7,7 @@ namespace Wm\WmPackage\Tests\Feature\Import;
 // so `use SharesGeohubConnectionWithLocal` below resolves regardless of which suite runs this.
 require_once __DIR__.'/../../Concerns/SharesGeohubConnectionWithLocal.php';
 
+use Illuminate\Database\Query\Expression;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -28,7 +29,7 @@ class ImportUgcTrackJobTest extends TestCase
         $this->shareGeohubConnectionWithLocal();
     }
 
-    private function lineStringGeometry(): \Illuminate\Database\Query\Expression
+    private function lineStringGeometry(): Expression
     {
         return DB::raw("ST_GeomFromGeoJSON('{\"type\":\"MultiLineString\",\"coordinates\":[[[11.0,44.0,100],[11.1,44.1,110]]]}')");
     }
