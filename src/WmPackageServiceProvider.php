@@ -34,6 +34,7 @@ use Wm\WmPackage\Commands\WmSyncUgcTaxonomyWhereCommand;
 use Wm\WmPackage\ElasticSearch\HitsIteratorAggregate as ElasticSearchHitsIteratorAggregate;
 use Wm\WmPackage\Http\Controllers\Nova\AnalyticsController;
 use Wm\WmPackage\Jobs\Import\ImportEcMediaJob;
+use Wm\WmPackage\Jobs\Import\ImportUgcMediaJob;
 use Wm\WmPackage\Models\App as AppModel;
 use Wm\WmPackage\Nova\Cards\ApiLinksCard\CardServiceProvider;
 use Wm\WmPackage\Nova\Cards\LayerAnalytics\CardServiceProvider as LayerAnalyticsCardServiceProvider;
@@ -43,6 +44,7 @@ use Wm\WmPackage\Providers\EventServiceProvider;
 use Wm\WmPackage\Providers\ScheduleServiceProvider;
 use Wm\WmPackage\Services\Import\EcMediaImportService;
 use Wm\WmPackage\Services\Import\GeohubImportService;
+use Wm\WmPackage\Services\Import\UgcMediaImportService;
 
 class WmPackageServiceProvider extends PackageServiceProvider
 {
@@ -233,6 +235,13 @@ class WmPackageServiceProvider extends PackageServiceProvider
             ->needs(GeohubImportService::class)
             ->give(function () {
                 return new EcMediaImportService;
+            });
+
+        // Register the correct import service for the ImportUgcMediaJob
+        $this->app->when(ImportUgcMediaJob::class)
+            ->needs(GeohubImportService::class)
+            ->give(function () {
+                return new UgcMediaImportService;
             });
 
         // Register the morphMap for polymorphic relationships

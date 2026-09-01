@@ -8,6 +8,9 @@ use Wm\WmPackage\Jobs\Import\ImportLayerJob;
 use Wm\WmPackage\Jobs\Import\ImportTaxonomyActivityJob;
 use Wm\WmPackage\Jobs\Import\ImportTaxonomyPoiTypeJob;
 use Wm\WmPackage\Jobs\Import\ImportTaxonomyThemeJob;
+use Wm\WmPackage\Jobs\Import\ImportUgcMediaJob;
+use Wm\WmPackage\Jobs\Import\ImportUgcPoiJob;
+use Wm\WmPackage\Jobs\Import\ImportUgcTrackJob;
 use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Services\Import\DataTransformer;
 
@@ -145,6 +148,11 @@ return [
     | - 'taxonomy_activity': Import taxonomy activity data
     | - 'layer': Import layer data
     | - 'ec_media': Import media data
+    | - 'ugc_poi': Import end-user POI data (opt-in only, NOT in default_dependencies below —
+    |   pass explicitly via --dependencies=...,ugc_poi to include it)
+    | - 'ugc_track': Import end-user track data (opt-in only, same as ugc_poi)
+    | - 'ugc_media': Import end-user photos, attached as media on the matching ugc_poi/ugc_track
+    |   (opt-in only, same as ugc_poi; no dedicated model, see Wm\WmPackage\Services\Import\UgcMediaImportService)
     |
     | Examples:
     | 'default_dependencies' => [
@@ -667,6 +675,87 @@ return [
                     'ec_track' => config('wm-package.ec_track_model', 'App\\Models\\EcTrack'),
                     'media' => 'Wm\\WmPackage\\Models\\Media',
                     'layer' => 'Wm\\WmPackage\\Models\\Layer',
+                ],
+            ],
+        ],
+
+        /*
+        |----------------------------------------------------------------------
+        | UGC POI Entity Mapping (opt-in — see default_dependencies above)
+        |----------------------------------------------------------------------
+        */
+        'ugc_poi' => [
+            'namespace' => 'Wm\\WmPackage\\Models\\UgcPoi',
+            'job' => ImportUgcPoiJob::class,
+            'geohub_table' => 'ugc_pois',
+            'identifier' => 'properties->geohub_id',
+            'fields' => [
+                'name' => 'name',
+                'geometry' => 'geometry',
+                'created_at' => 'created_at',
+                'updated_at' => 'updated_at',
+            ],
+            'properties' => [
+                'column_name' => 'properties',
+                // Geohub's own `description` column is populated on only a minority of
+                // records (verified on real data) — most of what a Nova admin actually
+                // expects to see (waypoint type, form answers the app user filled in) lives
+                // in the `properties` jsonb column instead, shaped per-app by
+                // apps.poi_acquisition_form — merged flat into the local `properties` (not
+                // cherry-picked field by field) so nothing an app's custom form asks for
+                // gets silently dropped. geohub_id/geohub_synced_at below always win over
+                // this merge if Geohub's own payload happens to reuse either key name.
+                'merge_raw_field' => 'properties',
+            ],
+        ],
+
+        /*
+        |----------------------------------------------------------------------
+        | UGC Track Entity Mapping (opt-in — see default_dependencies above)
+        |----------------------------------------------------------------------
+        */
+        'ugc_track' => [
+            'namespace' => 'Wm\\WmPackage\\Models\\UgcTrack',
+            'job' => ImportUgcTrackJob::class,
+            'geohub_table' => 'ugc_tracks',
+            'identifier' => 'properties->geohub_id',
+            'fields' => [
+                'name' => 'name',
+                'geometry' => 'geometry',
+                'created_at' => 'created_at',
+                'updated_at' => 'updated_at',
+            ],
+            'properties' => [
+                'column_name' => 'properties',
+                // Same rationale as ugc_poi above — see that comment.
+                'merge_raw_field' => 'properties',
+            ],
+        ],
+
+        /*
+        |----------------------------------------------------------------------
+        | UGC Media Entity Mapping (opt-in — see default_dependencies above)
+        |----------------------------------------------------------------------
+        | No dedicated local model: photos are attached as Spatie media directly
+        | on the matching ugc_poi/ugc_track, resolved via the relations below.
+        */
+        'ugc_media' => [
+            'namespace' => 'Wm\\WmPackage\\Models\\Media',
+            'job' => ImportUgcMediaJob::class,
+            'geohub_table' => 'ugc_media',
+            'identifier' => 'custom_properties->geohub_id',
+            'relations' => [
+                'ugc_pois' => [
+                    'pivot_table' => 'ugc_media_ugc_poi',
+                    'foreign_key' => 'ugc_media_id',
+                    'key' => 'ugc_poi_id',
+                    'model' => 'Wm\\WmPackage\\Models\\UgcPoi',
+                ],
+                'ugc_tracks' => [
+                    'pivot_table' => 'ugc_media_ugc_track',
+                    'foreign_key' => 'ugc_media_id',
+                    'key' => 'ugc_track_id',
+                    'model' => 'Wm\\WmPackage\\Models\\UgcTrack',
                 ],
             ],
         ],

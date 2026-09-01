@@ -2,6 +2,11 @@
 
 namespace Wm\WmPackage\Tests\Feature;
 
+// Wm\WmPackage\Tests\ isn't in the consumer's (maphub) autoload-dev map (only wm-package's
+// own composer.json declares it, for the package's standalone suite) — require it directly
+// so `use SharesGeohubConnectionWithLocal` below resolves regardless of which suite runs this.
+require_once __DIR__.'/../Concerns/SharesGeohubConnectionWithLocal.php';
+
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
@@ -9,10 +14,11 @@ use Tests\TestCase;
 use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Services\Import\GeohubImportService;
+use Wm\WmPackage\Tests\Concerns\SharesGeohubConnectionWithLocal;
 
 class GeohubImportServiceAssociateLayerPoiTest extends TestCase
 {
-    use DatabaseTransactions;
+    use DatabaseTransactions, SharesGeohubConnectionWithLocal;
 
     private GeohubImportService $service;
 
@@ -20,16 +26,7 @@ class GeohubImportServiceAssociateLayerPoiTest extends TestCase
     {
         parent::setUp();
 
-        $default = config('database.default');
-        config(['database.connections.geohub' => config("database.connections.{$default}")]);
-        DB::purge('geohub');
-
-        // DatabaseTransactions wraps only the default connection in a transaction;
-        // sharing the same PDO ensures the geohub connection sees uncommitted test data.
-        $defaultConn = DB::connection($default);
-        $geohubConn = DB::connection('geohub');
-        $geohubConn->setPdo($defaultConn->getPdo());
-        $geohubConn->setReadPdo($defaultConn->getReadPdo());
+        $this->shareGeohubConnectionWithLocal();
 
         // Prevent UpdateLayerGeometryJob from running synchronously inside the test
         // transaction. The sync queue's transaction management conflicts with

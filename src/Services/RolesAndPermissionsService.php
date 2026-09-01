@@ -50,6 +50,7 @@ class RolesAndPermissionsService
         Role::firstOrCreate(['name' => 'Editor']);
         Role::firstOrCreate(['name' => 'Validator']);
         Role::firstOrCreate(['name' => 'Guest']); // can login but no permissions
+        Role::firstOrCreate(['name' => 'Contributor']); // end-user role for imported UGC authors, no Nova access
 
         Permission::firstOrCreate(['name' => 'validate source surveys']);
         Permission::firstOrCreate(['name' => 'validate pois']);

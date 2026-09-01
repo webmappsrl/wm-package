@@ -4,6 +4,7 @@ namespace Wm\WmPackage\Services\Import;
 
 use Illuminate\Database\Connection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\QueryException;
 use Illuminate\Log\Logger;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -210,14 +211,7 @@ class GeohubImportService
                 $model = new $modelName($transformedData);
             }
 
-            // Temporarily disable observers during import to avoid triggering PBF jobs
-            $model::unsetEventDispatcher();
-
-            // Save quietly to avoid triggering observers during Geohub import
-            $model->saveQuietly();
-
-            // Re-enable observers after save
-            $model::setEventDispatcher(app('events'));
+            $this->persistQuietly($model);
 
             $this->logger->info("{$modelName} with ID {$entityId} imported successfully. Local ID: {$model->id} {$model->name}");
 
@@ -226,6 +220,65 @@ class GeohubImportService
             $this->logger->error("Error importing {$modelName} with ID {$entityId}: ".$e->getMessage());
             throw $e;
         }
+    }
+
+    /**
+     * Import UGC data with update-if-newer semantics: create the record if it doesn't exist
+     * yet; if it does, update it only when Geohub's updated_at is more recent than the
+     * geohub_synced_at timestamp stored locally at the last import. Otherwise leave the
+     * local record untouched.
+     *
+     * Differs from importData() (used by EC/Layer/Taxonomy), which always overwrites the
+     * local record on every reimport, and from the discarded create-only approach previously
+     * considered for UGC content.
+     *
+     * @param  array  $transformedData  The data to persist, without geohub_synced_at (added here)
+     * @param  string|null  $geohubUpdatedAt  Raw updated_at value from Geohub for this record
+     */
+    public function importUgcData(array $transformedData, string $modelKey, string $modelName, int $entityId, ?string $geohubUpdatedAt): Model
+    {
+        if (! class_exists($modelName)) {
+            throw new \RuntimeException("Model class {$modelName} not found or not configured");
+        }
+
+        $identifier = $this->getIdentifier($modelKey, $entityId);
+        $model = $modelName::where($identifier)->first();
+
+        if ($model) {
+            $lastSyncedAt = $model->properties['geohub_synced_at'] ?? null;
+
+            if ($geohubUpdatedAt && $lastSyncedAt && ! Carbon::parse($geohubUpdatedAt)->gt(Carbon::parse($lastSyncedAt))) {
+                $this->logger->info("{$modelName} with geohub ID {$entityId} not updated: not modified on Geohub since last sync.");
+
+                return $model;
+            }
+        }
+
+        $transformedData['properties']['geohub_synced_at'] = now()->toIso8601String();
+
+        if ($model) {
+            $model->fill($transformedData);
+        } else {
+            $model = new $modelName($transformedData);
+        }
+
+        $this->persistQuietly($model);
+
+        $this->logger->info("{$modelName} with geohub ID {$entityId} imported/updated successfully. Local ID: {$model->id}");
+
+        return $model;
+    }
+
+    /**
+     * Save a model without dispatching Eloquent events (avoids triggering observers — e.g.
+     * PBF regeneration — during a Geohub import), temporarily disabling the event dispatcher
+     * around saveQuietly() so nothing else listening on the model's events fires either.
+     */
+    private function persistQuietly(Model $model): void
+    {
+        $model::unsetEventDispatcher();
+        $model->saveQuietly();
+        $model::setEventDispatcher(app('events'));
     }
 
     public function getModelInstance(string $tableName): Model
@@ -470,6 +523,23 @@ class GeohubImportService
     }
 
     /**
+     * Geohub's users.properties is jsonb, but arrives here as a raw JSON string — Laravel's
+     * query builder never decodes jsonb columns, it hands back exactly what PDO returns. If
+     * that raw string is passed straight to User::create(), the User model's own `array`
+     * cast re-encodes it on save (json_encode of an already-JSON string), producing a
+     * JSON-encoded string nested inside the column instead of the object itself — found
+     * running a real import and hitting it live in AppAuthController::filterUserPrivacyByAppId(),
+     * which expects an array and gets "Cannot access offset of type string on string".
+     * Decoding here (once, before Eloquent ever sees it) avoids the double-encoding.
+     */
+    private function decodeJsonbProperties(array &$transformedData): void
+    {
+        if (isset($transformedData['properties']) && is_string($transformedData['properties'])) {
+            $transformedData['properties'] = json_decode($transformedData['properties'], true) ?? [];
+        }
+    }
+
+    /**
      * Check if a user exists in the local database and create it if it doesn't
      *
      * @param  int  $userId  The ID of the user to check
@@ -482,8 +552,13 @@ class GeohubImportService
 
         if (! $shardUser) {
             // make a diff between geohubUser and User model
+            // Exclude app_id: same column name on both sides, incompatible meaning (Geohub:
+            // SKU string; Maphub: integer FK) — see checkUgcUserExistence() for the full
+            // explanation. Applies here too since this path also runs unconditionally for
+            // every app import, not just when UGC dependencies are requested.
             $diff = array_diff(array_keys((array) $geohubUser), Schema::getColumnListing('users'));
-            $transformedData = array_diff_key((array) $geohubUser, array_flip($diff));
+            $transformedData = array_diff_key((array) $geohubUser, array_flip($diff), array_flip(['app_id']));
+            $this->decodeJsonbProperties($transformedData);
             $shardUser = User::create($transformedData);
         }
 
@@ -526,6 +601,99 @@ class GeohubImportService
         }
 
         $user->assignRole($role);
+    }
+
+    /**
+     * Check if a UGC author exists in the local database and create it if it doesn't.
+     *
+     * Differs from checkUserExistence(): assigns the Contributor role instead of Editor,
+     * since UGC authors are end users, not app owners.
+     *
+     * @param  int  $userId  The ID of the GeoHub user to check
+     * @return User The user object
+     */
+    public function checkUgcUserExistence(int $userId): User
+    {
+        $geohubUser = $this->dbConnection->table('users')->where('id', $userId)->first();
+
+        if (! $geohubUser || empty($geohubUser->email)) {
+            // Without a real email we can't reliably dedupe by it below: two different
+            // Geohub users who both happen to have a null/empty email would otherwise
+            // silently collapse into the same local account the second time this runs.
+            throw new \RuntimeException("Geohub user {$userId} not found or has no email — cannot map UGC author.");
+        }
+
+        $shardUser = User::where('email', $geohubUser->email)->first();
+
+        if (! $shardUser) {
+            // Exclude app_id from the copy: on Geohub it's a per-user SKU string (which app
+            // they signed up on), on Maphub it's an integer FK — same column name, unrelated
+            // meaning. Copying it verbatim fails the insert with a type error (found running
+            // the real e2e import) and poisons the enclosing transaction for every later query.
+            $diff = array_diff(array_keys((array) $geohubUser), Schema::getColumnListing('users'));
+            $transformedData = array_diff_key((array) $geohubUser, array_flip($diff), array_flip(['app_id']));
+            $this->decodeJsonbProperties($transformedData);
+
+            try {
+                $shardUser = User::create($transformedData);
+            } catch (QueryException $e) {
+                // SQLSTATE 23505 = unique_violation (Postgres) — portable across Laravel
+                // versions, unlike UniqueConstraintViolationException (11+ only), which
+                // wm-package's own composer.json range (^10 || ^11 || ^12 || ^13) doesn't
+                // guarantee for every consumer.
+                if ($e->getCode() !== '23505') {
+                    throw $e;
+                }
+
+                // A concurrent UGC import job for the same author (different POI/track,
+                // same batch on Horizon) may have created this user between the lookup
+                // above and this create — reload it instead of failing this job. But the
+                // violation could also be on a different unique column (e.g. fiscal_code):
+                // only treat this as recovered if the email reload actually finds someone,
+                // otherwise this isn't the race we expect and the real error is rethrown.
+                $shardUser = User::where('email', $geohubUser->email)->first();
+
+                if (! $shardUser) {
+                    throw $e;
+                }
+            }
+        }
+
+        $this->assignContributorRole($shardUser);
+
+        return $shardUser;
+    }
+
+    /**
+     * Assign the Contributor role to the user if they have no roles yet.
+     *
+     * @param  User  $user  The user to assign the role to
+     */
+    protected function assignContributorRole(User $user): void
+    {
+        if ($user->roles->isNotEmpty()) {
+            return;
+        }
+
+        $role = Role::where('name', 'Contributor')->first();
+        if (! $role) {
+            RolesAndPermissionsService::seedDatabase();
+            $role = Role::where('name', 'Contributor')->first();
+        }
+
+        try {
+            $user->assignRole($role);
+        } catch (QueryException $e) {
+            // SQLSTATE 23505 = unique_violation (Postgres). A concurrent UGC import job for
+            // the same author (different POI/track, same batch on Horizon) may attach this
+            // role between the isNotEmpty() check above and this attach() — model_has_roles
+            // has a composite primary key on (role_id, model_id, model_type), so the second
+            // attach() violates it. Not an error if the role ended up assigned anyway;
+            // otherwise this isn't the race we expect and the real error is rethrown.
+            if ($e->getCode() !== '23505' || $user->fresh()->roles->isEmpty()) {
+                throw $e;
+            }
+        }
     }
 
     /**
@@ -577,14 +745,26 @@ class GeohubImportService
     {
         $transformedProperties = [];
 
+        // Opt-in (see ugc_poi/ugc_track): merge a whole Geohub jsonb column flat into the
+        // local properties, instead of (or in addition to) cherry-picking individual fields
+        // via 'mapping' below. Geohub shapes this column differently per app (custom UGC
+        // acquisition forms), so a fixed field-by-field mapping can't anticipate everything
+        // it might contain — merging it verbatim avoids silently dropping whatever a given
+        // app's form asks for.
+        if (isset($this->importMapping[$modelKey]['properties']['merge_raw_field'])) {
+            $rawField = $this->importMapping[$modelKey]['properties']['merge_raw_field'];
+            $transformedProperties = app(DataTransformer::class)->jsonToArray($data[$rawField] ?? null);
+        }
+
         if (isset($this->importMapping[$modelKey]['properties']['mapping'])) {
-            $transformedProperties = $this->transformMappedFields(
-                $data,
-                $this->importMapping[$modelKey]['properties']['mapping']
+            $transformedProperties = array_merge(
+                $transformedProperties,
+                $this->transformMappedFields($data, $this->importMapping[$modelKey]['properties']['mapping'])
             );
         }
 
-        // Add standard properties
+        // Add standard properties (always win over both the raw merge and 'mapping' above,
+        // so nothing Geohub's own payload happens to contain can shadow our own bookkeeping)
         $transformedProperties['geohub_id'] = $data['id'] ?? null;
         $transformedProperties['geohub_synced_at'] = Carbon::now()->toIso8601String();
 
