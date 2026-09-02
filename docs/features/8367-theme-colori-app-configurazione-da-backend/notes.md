@@ -21,6 +21,19 @@
 - Ruoli `dark`/`medium`/`light`, `select` e le 7 chiavi font-size di `ITHEME` restano fuori scope — nessun campo Nova aggiunto, restano ai default del frontend.
 - Layout dei campi Nova resta flat nel tab "Theme" (nessun Panel di raggruppamento), su scelta esplicita del dev.
 
+## Decisione post-commit: rimozione di success/warning/danger
+
+`success_color`/`warning_color`/`danger_color` erano stati aggiunti a `theme_tab()` e `THEME_KEY_MAP` (commit `37c19cac`/`60a30cce`), poi **rimossi nello stesso ciclo** (dopo il secondo commit) su decisione esplicita del dev, in seguito a una verifica end-to-end eseguita da una sessione Claude parallela sul repo `webmapp-app` (frontend).
+
+**Nota**: su richiesta esplicita del dev, `plan.md` è stato riallineato a posteriori (Task 1-4 aggiornati con blocchi "Aggiornato post-commit") per riflettere lo stato finale del codice, invece di restare il piano originale immutato — deviazione dalla convenzione di default di questo progetto (piano originale intoccato, deviazioni solo in `notes.md`).
+
+- **Dato misurato, non dedotto**: conteggio dei consumatori reali `var(--wm-color-X)` in scss/css/html del frontend (esclusi `theme/variables.scss` e i `.md` di documentazione): `success` 0, `warning` 0, `danger` 4 (tutti usi semantici — bordi di errore validazione, indicatore filtri attivi). Impostare `success`/`warning` in Nova non produceva **nessun** effetto visibile nell'app oggi.
+- **Prova aggiuntiva**: i valori già presenti nel DB camminiditalia per questi ruoli (`success: #f5f5f5`, grigio chiarissimo; `tertiary: #f6eade`, crema — impostati per test da terzi, non da questa sessione) confermano che venivano usati come "slot brand di scorta", non come colori semantici — se in futuro si cablasse `success` a un vero indicatore di successo, sarebbe grigio su bianco.
+- **Raccomandazione della sessione frontend, non applicata in questo ciclo**: se il cliente ha bisogno di più slot per il brand, la scelta corretta sarebbe esporre `light`/`dark` (50/63 consumatori reali) — non riciclare ruoli semantici. Richiede la stessa cura UX già segnalata per `dark`/`medium`/`light` (vedi Decisioni sopra) — non affrontato in questo ciclo, resta fuori scope.
+- **`tertiary` mantenuto**: pur avendo solo 3 consumatori reali, non è un ruolo semantico (non ha un significato "riservato" come success/danger) — nessun rischio di collisione di significato segnalato dalla sessione frontend, quindi resta in scope.
+- **`default_feature_color` mantenuto pur risultando ignorato dal frontend**: la sessione frontend ha confermato che `map-core` non legge ancora `THEME.defaultFeatureColor` (usa una costante hardcoded `DEF_LINE_COLOR = 'red'`) — gap lato frontend, non di questo backend. Non rimosso dal ticket perché preesisteva già in `theme_tab()` prima di oc:8367 (non introdotto da questo ciclo) — la sua rimozione sarebbe una decisione più ampia, non richiesta esplicitamente.
+- File aggiornati per la rimozione: `src/Nova/App.php` (`theme_tab()`, da 9 a 6 campi), `src/Services/Models/App/AppConfigService.php` (`THEME_KEY_MAP`, da 9 a 6 voci), `resources/lang/{it,en}.json` (rimosse le 6 chiavi di traduzione per i 3 campi), `tests/Feature/AppConfigServiceThemeTest.php` (aggiornato il test esaustivo).
+
 - **Bypass PHPStan confermato dal dev** (2026-08-25T10:57:41+0000): `vendor/bin/phpstan` assente in questo ambiente (stessa causa root del blocco Pest — `composer install` bloccato da credenziali `laravel/nova` scadute, oc:7546). Motivazione: fallimento infrastrutturale, non errori di codice; la CI di wm-package (con credenziali valide) eseguirà PHPStan al push. Bypass confermato esplicitamente da Rubens Garofalo (dev) — responsabilità della verifica PHPStan post-push attribuita a lui.
 
 ## Review (`wm-review-ticket`, post-commit `37c19cac`)

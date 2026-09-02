@@ -34,17 +34,23 @@
 
 **Interfaces:**
 - Consumes: nessuna dipendenza da altri task.
-- Produces: attributi Nova `properties->theme->{primary_color,secondary_color,tertiary_color,success_color,warning_color,danger_color,default_feature_color}` (color picker) e `properties->theme->{font_family_header,font_family_content}` (già esistenti, invariati) — questi 9 nomi di sottochiave sono quelli che il Task 2 legge in `config_section_theme()`.
+- Produces: attributi Nova `properties->theme->{primary_color,secondary_color,tertiary_color,default_feature_color}` (color picker) e `properties->theme->{font_family_header,font_family_content}` (già esistenti, invariati) — questi 6 nomi di sottochiave sono quelli che il Task 2 legge in `config_section_theme()`.
+
+> **Aggiornato post-commit (round 2 review + verifica frontend)**: `success_color`/`warning_color`/`danger_color` erano nel piano originale ma sono stati rimossi nello stesso ciclo — 0/0/4 consumatori CSS reali nel frontend (vedi `notes.md`, sezione "Decisione post-commit"). Il codice sotto riflette la versione finale a 6 campi, con l'helper `themeColorField()` (estratto in un secondo momento per cleanup, non nella stesura originale del piano).
 
 - [ ] **Step 1: Sostituire `theme_tab()` con la versione estesa**
 
 Sostituire l'intero corpo del metodo in `src/Nova/App.php` (righe 428-441):
 
 ```php
+    /**
+     * Elenco duplicato di proposito in AppConfigService::THEME_KEY_MAP (chiave sorgente
+     * properties->theme->* -> chiave camelCase in config.json) — mantenere sincronizzati:
+     * un nuovo campo qui senza il corrispondente in THEME_KEY_MAP non produce mai errore,
+     * semplicemente non raggiunge mai il frontend.
+     */
     protected function theme_tab(): array
     {
-        $hexColorRule = 'regex:/^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/';
-
         return [
             Text::make(__('Font Family Header'), 'properties->theme->font_family_header')
                 ->hideFromIndex()
@@ -52,39 +58,23 @@ Sostituire l'intero corpo del metodo in `src/Nova/App.php` (righe 428-441):
             Text::make(__('Font Family Content'), 'properties->theme->font_family_content')
                 ->hideFromIndex()
                 ->help(__('Font family used for body content in the app theme')),
-            Color::make(__('Primary color'), 'properties->theme->primary_color')
-                ->rules('nullable', $hexColorRule)
-                ->hideFromIndex()
-                ->help(__('Primary color for the app theme (e.g. buttons, links)')),
-            Color::make(__('Secondary color'), 'properties->theme->secondary_color')
-                ->rules('nullable', $hexColorRule)
-                ->hideFromIndex()
-                ->help(__('Secondary color for the app theme')),
-            Color::make(__('Tertiary color'), 'properties->theme->tertiary_color')
-                ->rules('nullable', $hexColorRule)
-                ->hideFromIndex()
-                ->help(__('Tertiary color for the app theme')),
-            Color::make(__('Success color'), 'properties->theme->success_color')
-                ->rules('nullable', $hexColorRule)
-                ->hideFromIndex()
-                ->help(__('Color used for success states in the app theme')),
-            Color::make(__('Warning color'), 'properties->theme->warning_color')
-                ->rules('nullable', $hexColorRule)
-                ->hideFromIndex()
-                ->help(__('Color used for warning states in the app theme')),
-            Color::make(__('Danger color'), 'properties->theme->danger_color')
-                ->rules('nullable', $hexColorRule)
-                ->hideFromIndex()
-                ->help(__('Color used for danger/error states in the app theme')),
-            Color::make(__('Default feature color'), 'properties->theme->default_feature_color')
-                ->rules('nullable', $hexColorRule)
-                ->hideFromIndex()
-                ->help(__('Default color used for map features when no specific style is set')),
+            $this->themeColorField(__('Primary color'), 'primary_color', __('Primary color for the app theme (e.g. buttons, links)')),
+            $this->themeColorField(__('Secondary color'), 'secondary_color', __('Secondary color for the app theme')),
+            $this->themeColorField(__('Tertiary color'), 'tertiary_color', __('Tertiary color for the app theme')),
+            $this->themeColorField(__('Default feature color'), 'default_feature_color', __('Default color used for map features when no specific style is set')),
         ];
+    }
+
+    private function themeColorField(string $label, string $attribute, string $help): Color
+    {
+        return Color::make($label, "properties->theme->{$attribute}")
+            ->rules('nullable', 'regex:/^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/')
+            ->hideFromIndex()
+            ->help($help);
     }
 ```
 
-Nota: `->rules()` va applicato anche ai 2 color picker già esistenti (`primary_color`, `default_feature_color`) per coerenza — prima non avevano alcuna validazione di formato.
+Nota: la regex va applicata anche ai 2 color picker già esistenti (`primary_color`, `default_feature_color`) per coerenza — prima non avevano alcuna validazione di formato.
 
 - [ ] **Step 2: Aggiungere le nuove label a `resources/lang/en.json`**
 
@@ -95,12 +85,6 @@ Aggiungere queste coppie chiave/valore (identity mapping, come le altre voci in 
     "Secondary color for the app theme": "Secondary color for the app theme",
     "Tertiary color": "Tertiary color",
     "Tertiary color for the app theme": "Tertiary color for the app theme",
-    "Success color": "Success color",
-    "Color used for success states in the app theme": "Color used for success states in the app theme",
-    "Warning color": "Warning color",
-    "Color used for warning states in the app theme": "Color used for warning states in the app theme",
-    "Danger color": "Danger color",
-    "Color used for danger/error states in the app theme": "Color used for danger/error states in the app theme",
 ```
 
 - [ ] **Step 3: Aggiungere le traduzioni italiane a `resources/lang/it.json`**
@@ -110,12 +94,6 @@ Aggiungere queste coppie chiave/valore (identity mapping, come le altre voci in 
     "Secondary color for the app theme": "Colore secondario per il tema dell'app",
     "Tertiary color": "Colore terziario",
     "Tertiary color for the app theme": "Colore terziario per il tema dell'app",
-    "Success color": "Colore successo",
-    "Color used for success states in the app theme": "Colore usato per gli stati di successo nel tema dell'app",
-    "Warning color": "Colore avviso",
-    "Color used for warning states in the app theme": "Colore usato per gli stati di avviso nel tema dell'app",
-    "Danger color": "Colore pericolo",
-    "Color used for danger/error states in the app theme": "Colore usato per gli stati di pericolo/errore nel tema dell'app",
 ```
 
 - [ ] **Step 4: Verificare che il JSON resti valido**
@@ -128,7 +106,7 @@ Expected: entrambi stampano `OK ...json` senza errori di parsing.
 
 ```bash
 git add src/Nova/App.php resources/lang/it.json resources/lang/en.json
-git commit -m "feat(oc:8367): add secondary/tertiary/success/warning/danger color pickers to theme tab"
+git commit -m "feat(oc:8367): add secondary/tertiary color pickers to theme tab"
 ```
 
 ---
@@ -141,11 +119,13 @@ git commit -m "feat(oc:8367): add secondary/tertiary/success/warning/danger colo
 
 **Interfaces:**
 - Consumes: nessuna dipendenza diretta da Task 1 (i test di questo task impostano `properties->theme->*` direttamente via factory, non passano da Nova).
-- Produces: `config()['THEME']` con le chiavi camelCase `primary`, `secondary`, `tertiary`, `success`, `warning`, `danger`, `defaultFeatureColor`, `fontFamilyHeader`, `fontFamilyContent` — Task 4 (verifica manuale) e la sezione "Bug trovati" di `notes.md` fanno riferimento a questi nomi esatti.
+- Produces: `config()['THEME']` con le chiavi camelCase `primary`, `secondary`, `tertiary`, `defaultFeatureColor`, `fontFamilyHeader`, `fontFamilyContent` — Task 4 (verifica manuale) e la sezione "Bug trovati" di `notes.md` fanno riferimento a questi nomi esatti.
 
 - [ ] **Step 1: Scrivere il test che fallisce — mapping esaustivo con tutte le 9 chiavi popolate**
 
 Creare `tests/Feature/AppConfigServiceThemeTest.php`:
+
+> **Aggiornato post-commit**: rimossi success/warning/danger dal caso di test esaustivo (vedi Task 1); aggiunto un sesto test per il guard `is_string()` (cleanup round 2 review, protegge da valori non scalari scritti in `properties->theme->*`); il namespace di `TestCase` corretto in `Wm\WmPackage\Tests\TestCase` (`Tests\TestCase`, usato nella stesura originale del piano, è un pattern noto rotto — vedi `wm-package/CLAUDE.md` oc:8183 — non risolvibile in questo ambiente). Codice sotto = versione finale.
 
 ```php
 <?php
@@ -153,9 +133,9 @@ Creare `tests/Feature/AppConfigServiceThemeTest.php`:
 declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\DatabaseTransactions;
-use Tests\TestCase;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Services\Models\App\AppConfigService;
+use Wm\WmPackage\Tests\TestCase;
 
 uses(TestCase::class, DatabaseTransactions::class);
 
@@ -166,9 +146,6 @@ it('config.json THEME contains all camelCase keys mapped from properties->theme 
                 'primary_color' => '#111111',
                 'secondary_color' => '#222222',
                 'tertiary_color' => '#333333',
-                'success_color' => '#444444',
-                'warning_color' => '#555555',
-                'danger_color' => '#666666',
                 'default_feature_color' => '#777777',
                 'font_family_header' => 'Roboto Slab',
                 'font_family_content' => 'Roboto',
@@ -182,9 +159,6 @@ it('config.json THEME contains all camelCase keys mapped from properties->theme 
         'primary' => '#111111',
         'secondary' => '#222222',
         'tertiary' => '#333333',
-        'success' => '#444444',
-        'warning' => '#555555',
-        'danger' => '#666666',
         'defaultFeatureColor' => '#777777',
         'fontFamilyHeader' => 'Roboto Slab',
         'fontFamilyContent' => 'Roboto',
@@ -252,6 +226,23 @@ it('config.json THEME reproduces the real camminiditalia data shape (only primar
         'defaultFeatureColor' => '#ef7821',
     ]);
 });
+
+it('config.json THEME excludes non-string values instead of leaking them into the output', function () {
+    $app = App::factory()->createQuietly([
+        'properties' => [
+            'theme' => [
+                'primary_color' => ['#fff'],
+                'secondary_color' => '#222222',
+            ],
+        ],
+    ]);
+
+    $config = (new AppConfigService($app))->config();
+
+    expect($config['THEME'])->toBe([
+        'secondary' => '#222222',
+    ]);
+});
 ```
 
 - [ ] **Step 2: Eseguire i test per verificare che falliscano**
@@ -264,11 +255,28 @@ Run: `cd wm-package && vendor/bin/pest tests/Feature/AppConfigServiceThemeTest.p
 
 Expected: FAIL — `config_section_theme()` produce ancora le vecchie chiavi snake_case (`primary_color`, `font_family_header`, ecc.), non quelle camelCase attese dal test (`expect($config['THEME'])->toBe([...])` fallisce per mismatch di array).
 
+> **Nota post-commit sull'esecuzione reale**: in questo ambiente `vendor/bin/pest` non è mai stato eseguibile (`composer install` bloccato da credenziali `laravel/nova` scadute, oc:7546) — il ciclo TDD write-fail/pass è stato sostituito da verifica equivalente via `php artisan tinker` + reflection su istanze `App` non persistite. Dettaglio completo in `notes.md`, sezioni "Deviazioni dal piano" e "Follow-up".
+
 - [ ] **Step 3: Riscrivere `config_section_theme()`**
 
 Sostituire il metodo in `src/Services/Models/App/AppConfigService.php` (righe 656-665):
 
 ```php
+    /**
+     * Mappa properties->theme->* (snake_case, Nova App::theme_tab()) -> chiave camelCase
+     * attesa da ITHEME (wm-core) in config.json.THEME. Unica fonte di verità per questo
+     * elenco di chiavi lato AppConfigService — Nova App::theme_tab() mantiene la propria
+     * copia (label/help diversi per campo, non riducibile a questa sola mappa).
+     */
+    private const THEME_KEY_MAP = [
+        'primary_color' => 'primary',
+        'secondary_color' => 'secondary',
+        'tertiary_color' => 'tertiary',
+        'default_feature_color' => 'defaultFeatureColor',
+        'font_family_header' => 'fontFamilyHeader',
+        'font_family_content' => 'fontFamilyContent',
+    ];
+
     private function config_section_theme(): array
     {
         $theme = $this->app->properties['theme'] ?? [];
@@ -276,46 +284,28 @@ Sostituire il metodo in `src/Services/Models/App/AppConfigService.php` (righe 65
             $theme = [];
         }
 
+        $data = [];
         $data['THEME'] = [];
 
-        if (! empty($theme['primary_color'])) {
-            $data['THEME']['primary'] = $theme['primary_color'];
-        }
-        if (! empty($theme['secondary_color'])) {
-            $data['THEME']['secondary'] = $theme['secondary_color'];
-        }
-        if (! empty($theme['tertiary_color'])) {
-            $data['THEME']['tertiary'] = $theme['tertiary_color'];
-        }
-        if (! empty($theme['success_color'])) {
-            $data['THEME']['success'] = $theme['success_color'];
-        }
-        if (! empty($theme['warning_color'])) {
-            $data['THEME']['warning'] = $theme['warning_color'];
-        }
-        if (! empty($theme['danger_color'])) {
-            $data['THEME']['danger'] = $theme['danger_color'];
-        }
-        if (! empty($theme['default_feature_color'])) {
-            $data['THEME']['defaultFeatureColor'] = $theme['default_feature_color'];
-        }
-        if (! empty($theme['font_family_header'])) {
-            $data['THEME']['fontFamilyHeader'] = $theme['font_family_header'];
-        }
-        if (! empty($theme['font_family_content'])) {
-            $data['THEME']['fontFamilyContent'] = $theme['font_family_content'];
+        foreach (self::THEME_KEY_MAP as $sourceKey => $targetKey) {
+            $value = $theme[$sourceKey] ?? null;
+            if (is_string($value) && $value !== '') {
+                $data['THEME'][$targetKey] = $value;
+            }
         }
 
         return $data;
     }
 ```
 
-Nota sulla robustezza: `$this->app->properties['theme'] ?? []` non lancia mai eccezioni anche se `properties` è `null` (comportamento nativo dell'operatore `??` su catene di array in PHP, verificato — stesso pattern già usato altrove nel file, es. riga 429 `$properties = $this->app->properties ?? [];`). Il controllo `is_array($theme)` aggiuntivo gestisce il caso in cui `properties->theme` esista ma sia un valore scalare malformato (es. una stringa), che altrimenti farebbe fallire `! empty($theme['primary_color'])` con un errore di accesso su tipo non-array.
+> **Aggiornato post-commit (cleanup round 2 review)**: la stesura originale del piano usava 9 blocchi `if (! empty(...))` ripetuti invece della costante `THEME_KEY_MAP` iterata in loop — refactor per DRY, comportamento identico (verificato con gli stessi 6 scenari via reflection prima e dopo). Il guard è passato da `! empty()` a `is_string($value) && $value !== ''`, per escludere valori non scalari (es. un array scritto per errore in `properties->theme->*`) dall'output invece di lasciarli passare — vedi il sesto test sopra.
+
+Nota sulla robustezza: `$this->app->properties['theme'] ?? []` non lancia mai eccezioni anche se `properties` è `null` (comportamento nativo dell'operatore `??` su catene di array in PHP, verificato — stesso pattern già usato altrove nel file, es. riga 429 `$properties = $this->app->properties ?? [];`). Il controllo `is_array($theme)` aggiuntivo gestisce il caso in cui `properties->theme` esista ma sia un valore scalare malformato (es. una stringa), che altrimenti farebbe fallire l'accesso su tipo non-array.
 
 - [ ] **Step 4: Eseguire i test per verificare che passino**
 
 Run: `cd wm-package && vendor/bin/pest tests/Feature/AppConfigServiceThemeTest.php`
-Expected: PASS — tutti i 5 test verdi.
+Expected: PASS — tutti i 6 test verdi.
 
 - [ ] **Step 5: Eseguire l'intera suite Pest del package per verificare l'assenza di regressioni**
 
@@ -333,16 +323,19 @@ git commit -m "fix(oc:8367): produce config.json THEME with camelCase keys expec
 
 ## Task 3: Correggere il fallback colore in `config_section_map()` (bug collaterale) + aggiornare il docblock di `StoryShareImageService`
 
+> **Aggiornato post-commit (round 2 review)**: la stesura originale di questo task copriva solo `$primaryColor`, lasciando `$fc->fill_color`/`$fc->stroke_color` (campi Nova `FeatureCollection` di testo libero, zero validazione) sullo stesso `hexToRgba()` non guardato — stesso identico bug, corretto solo a metà. Aggravante: raggiungibile anche da un endpoint pubblico non autenticato (`/{app}/config.json`), non solo al salvataggio Nova. Corretto estraendo una funzione globale condivisa `sanitizeHexColor()` in `src/helpers.php` (usata anche da `StoryShareImageService::resolveAccentColor()`, che duplicava la stessa regex). Dettaglio completo in `notes.md`, sezione "Review — round 2".
+
 **Files:**
 - Create: `tests/Feature/AppConfigServiceMapFeatureCollectionColorTest.php`
+- Modify: `src/helpers.php` (nuova funzione globale `sanitizeHexColor()`)
 - Modify: `src/Services/Models/App/AppConfigService.php:500` (dentro `config_section_map()`)
-- Modify: `src/Services/Models/StoryShare/StoryShareImageService.php:106` (docblock di `resolveAccentColor()`)
+- Modify: `src/Services/Models/StoryShare/StoryShareImageService.php:106` (docblock + `resolveAccentColor()`)
 
 **Interfaces:**
 - Consumes: nessuna dipendenza diretta da Task 1/2 (il bug e il fix riguardano `properties->theme->primary_color`, stesso storage ma un consumer indipendente).
-- Produces: nessuna nuova interfaccia pubblica — corregge solo il valore di fallback usato internamente da `config_section_map()`.
+- Produces: `sanitizeHexColor($value, $fallback): string` (funzione globale, `src/helpers.php`) — usata da `config_section_map()` e da `StoryShareImageService::resolveAccentColor()`.
 
-- [ ] **Step 1: Scrivere il test che fallisce**
+- [ ] **Step 1: Scrivere i test che falliscono**
 
 Creare `tests/Feature/AppConfigServiceMapFeatureCollectionColorTest.php`:
 
@@ -352,10 +345,10 @@ Creare `tests/Feature/AppConfigServiceMapFeatureCollectionColorTest.php`:
 declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\DatabaseTransactions;
-use Tests\TestCase;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\FeatureCollection;
 use Wm\WmPackage\Services\Models\App\AppConfigService;
+use Wm\WmPackage\Tests\TestCase;
 
 uses(TestCase::class, DatabaseTransactions::class);
 
@@ -392,56 +385,205 @@ it('feature_collection overlay box without its own colors falls back to the app 
     expect($overlay['fillColor'])->toBe(hexToRgba('#abcdef'));
     expect($overlay['strokeColor'])->toBe(hexToRgba('#abcdef'));
 });
+
+it('feature_collection overlay box does not throw when the theme primary color is a non-6-digit hex value', function () {
+    $app = App::factory()->createQuietly([
+        'properties' => [
+            'theme' => [
+                'primary_color' => '#de1',
+            ],
+        ],
+    ]);
+
+    $fc = FeatureCollection::factory()->createQuietly([
+        'app_id' => $app->id,
+        'enabled' => true,
+        'fill_color' => null,
+        'stroke_color' => null,
+    ]);
+
+    $app->forceFill([
+        'config_overlays' => [
+            'OVERLAYS' => [
+                [
+                    'box_type' => 'feature_collection',
+                    'feature_collection' => $fc->id,
+                ],
+            ],
+        ],
+    ])->save();
+
+    $config = (new AppConfigService($app))->config();
+    $overlay = $config['MAP']['controls']['overlays'][0];
+
+    expect($overlay['fillColor'])->toBe(hexToRgba('#000000'));
+    expect($overlay['strokeColor'])->toBe(hexToRgba('#000000'));
+});
+
+it('feature_collection overlay box does not throw when its own fill/stroke color is a malformed hex value', function () {
+    $app = App::factory()->createQuietly([
+        'properties' => [
+            'theme' => [
+                'primary_color' => '#abcdef',
+            ],
+        ],
+    ]);
+
+    $fc = FeatureCollection::factory()->createQuietly([
+        'app_id' => $app->id,
+        'enabled' => true,
+        'fill_color' => '#fff',
+        'stroke_color' => 'red',
+    ]);
+
+    $app->forceFill([
+        'config_overlays' => [
+            'OVERLAYS' => [
+                [
+                    'box_type' => 'feature_collection',
+                    'feature_collection' => $fc->id,
+                ],
+            ],
+        ],
+    ])->save();
+
+    $config = (new AppConfigService($app))->config();
+    $overlay = $config['MAP']['controls']['overlays'][0];
+
+    expect($overlay['fillColor'])->toBe(hexToRgba('#abcdef'));
+    expect($overlay['strokeColor'])->toBe(hexToRgba('#abcdef'));
+});
+
+it('feature_collection overlay box uses its own valid fill/stroke color instead of the app primary color', function () {
+    $app = App::factory()->createQuietly([
+        'properties' => [
+            'theme' => [
+                'primary_color' => '#abcdef',
+            ],
+        ],
+    ]);
+
+    $fc = FeatureCollection::factory()->createQuietly([
+        'app_id' => $app->id,
+        'enabled' => true,
+        'fill_color' => '#123456',
+        'stroke_color' => '#654321',
+    ]);
+
+    $app->forceFill([
+        'config_overlays' => [
+            'OVERLAYS' => [
+                [
+                    'box_type' => 'feature_collection',
+                    'feature_collection' => $fc->id,
+                ],
+            ],
+        ],
+    ])->save();
+
+    $config = (new AppConfigService($app))->config();
+    $overlay = $config['MAP']['controls']['overlays'][0];
+
+    expect($overlay['fillColor'])->toBe(hexToRgba('#123456'));
+    expect($overlay['strokeColor'])->toBe(hexToRgba('#654321'));
+});
 ```
 
-- [ ] **Step 2: Eseguire il test per verificare che fallisca**
+- [ ] **Step 2: Eseguire i test per verificare che falliscano**
 
 Run: `cd wm-package && vendor/bin/pest tests/Feature/AppConfigServiceMapFeatureCollectionColorTest.php`
-Expected: FAIL — `fillColor`/`strokeColor` prodotti da `hexToRgba('#000000')` (il default hardcoded), non da `hexToRgba('#abcdef')`, perché il codice attuale legge la colonna DB morta `$this->app->primary_color` (sempre vuota/non impostata da Nova) invece di `properties->theme->primary_color`.
+Expected: FAIL — `fillColor`/`strokeColor` prodotti da `hexToRgba('#000000')` (il default hardcoded), non da `hexToRgba('#abcdef')`, perché il codice attuale legge la colonna DB morta `$this->app->primary_color` (sempre vuota/non impostata da Nova) invece di `properties->theme->primary_color`; sui test 2-4 (aggiunti in round 2) `hexToRgba()` lancia eccezione non guardata su `#de1`/`#fff`/`red`.
 
-- [ ] **Step 3: Correggere `config_section_map()`**
+> **Nota post-commit sull'esecuzione reale**: come per il Task 2, `vendor/bin/pest` non è mai stato eseguibile in questo ambiente — verificato via `php artisan tinker` con logica isolata riproducente esattamente `sanitizeHexColor()` contro l'implementazione reale di `hexToRgba()` (letta riga per riga). Dettaglio in `notes.md`.
 
-In `src/Services/Models/App/AppConfigService.php`, riga 500, sostituire:
+- [ ] **Step 3: Aggiungere `sanitizeHexColor()` a `src/helpers.php`**
+
+```php
+if (! function_exists('sanitizeHexColor')) {
+    /**
+     * Return $value if it's an exact 6-digit hex color (e.g. "#ff0000"), otherwise $fallback.
+     * Use before passing a color to hexToRgba(), which throws on any string containing "#"
+     * that isn't exactly 6 or 8 hex digits long (e.g. free-text Nova fields, 3-digit CSS
+     * shorthand, or any other unvalidated source).
+     *
+     * @param  mixed  $value
+     */
+    function sanitizeHexColor($value, string $fallback): string
+    {
+        if (is_string($value) && preg_match('/^#[0-9a-fA-F]{6}$/', $value)) {
+            return $value;
+        }
+
+        return $fallback;
+    }
+}
+```
+
+- [ ] **Step 4: Correggere `config_section_map()`**
+
+In `src/Services/Models/App/AppConfigService.php`, sostituire (riga ~471, prima del loop `foreach ($overlayItems as $item)`):
 
 ```php
                     $primaryColor = $this->app->primary_color ?? '#000000';
 ```
 
+con (fuori dal loop, calcolato una sola volta):
+
+```php
+            $primaryColor = sanitizeHexColor($this->app->properties['theme']['primary_color'] ?? null, '#000000');
+```
+
+e sostituire (dentro il loop, righe ~502-503):
+
+```php
+                    $array['fillColor'] = $fc->fill_color ? hexToRgba($fc->fill_color) : hexToRgba($primaryColor);
+                    $array['strokeColor'] = $fc->stroke_color ? hexToRgba($fc->stroke_color) : hexToRgba($primaryColor);
+```
+
 con:
 
 ```php
-                    $primaryColor = $this->app->properties['theme']['primary_color'] ?? '#000000';
+                    $array['fillColor'] = hexToRgba(sanitizeHexColor($fc->fill_color, $primaryColor));
+                    $array['strokeColor'] = hexToRgba(sanitizeHexColor($fc->stroke_color, $primaryColor));
 ```
 
-- [ ] **Step 4: Aggiornare il docblock di `StoryShareImageService::resolveAccentColor()`**
+- [ ] **Step 5: Aggiornare `StoryShareImageService::resolveAccentColor()`**
 
-In `src/Services/Models/StoryShare/StoryShareImageService.php`, riga 106, sostituire:
-
-```php
-     * a native Color field also exposed to the frontend as `config.json` -> `THEME.primary_color`,
-```
-
-con:
+In `src/Services/Models/StoryShare/StoryShareImageService.php`, sostituire il metodo e il suo docblock:
 
 ```php
+    /**
+     * Per-app accent color for the map card border + stats value text/gradient — reads the
+     * SAME primary color the app's own UI theme uses (Nova `properties->theme->primary_color`,
      * a native Color field also exposed to the frontend as `config.json` -> `THEME.primary`,
+     * see AppConfigService::config_section_theme()), so this feature automatically matches
+     * whatever brand color each tenant has already configured instead of hardcoding one app's
+     * color into shared package code. Falls back to white when unset/malformed (via the shared
+     * sanitizeHexColor() helper, src/helpers.php — same validation used by
+     * AppConfigService::config_section_map()'s overlay color fallback), which reads fine
+     * against both the dark FALLBACK_BACKGROUND_COLOR and most uploaded share_frame designs.
+     */
+    private function resolveAccentColor(App $app): string
+    {
+        return sanitizeHexColor($app->properties['theme']['primary_color'] ?? null, StoryImageLayout::DEFAULT_ACCENT_COLOR);
+    }
 ```
 
-- [ ] **Step 5: Eseguire il test per verificare che passi**
+- [ ] **Step 6: Eseguire i test per verificare che passino**
 
 Run: `cd wm-package && vendor/bin/pest tests/Feature/AppConfigServiceMapFeatureCollectionColorTest.php`
-Expected: PASS.
+Expected: PASS — tutti e 4 i test verdi.
 
-- [ ] **Step 6: Eseguire la suite completa del package per verificare l'assenza di regressioni**
+- [ ] **Step 7: Eseguire la suite completa del package per verificare l'assenza di regressioni**
 
 Run: `cd wm-package && vendor/bin/pest`
-Expected: PASS — nessuna regressione sull'intera suite (incluso `AppConfigServiceOverlaysTest.php`, che testa altri rami dello stesso metodo `config_section_map()`).
+Expected: PASS — nessuna regressione sull'intera suite (incluso `AppConfigServiceOverlaysTest.php`, che testa altri rami dello stesso metodo `config_section_map()`, e qualsiasi test che eserciti `StoryShareImageService`).
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
-git add tests/Feature/AppConfigServiceMapFeatureCollectionColorTest.php src/Services/Models/App/AppConfigService.php src/Services/Models/StoryShare/StoryShareImageService.php
-git commit -m "fix(oc:8367): read real theme primary color instead of dead app column in map overlay fallback"
+git add tests/Feature/AppConfigServiceMapFeatureCollectionColorTest.php src/helpers.php src/Services/Models/App/AppConfigService.php src/Services/Models/StoryShare/StoryShareImageService.php
+git commit -m "fix(oc:8367): guard hexToRgba() on all overlay colors, dedupe hex validation"
 ```
 
 ---
@@ -495,35 +637,7 @@ Expected: `ripristinato` — nessun dato di test residuo sull'App reale.
 
 - [ ] **Step 4: Scrivere `notes.md`**
 
-Creare `docs/features/8367-theme-colori-app-configurazione-da-backend/notes.md`:
-
-```markdown
-> Ticket: oc:8367
-
-# Notes — Theme colori app — configurazione da backend
-
-## Deviazioni dal piano
-
-Nessuna deviazione rispetto al piano approvato.
-
-## Bug trovati
-
-- **`config_section_map()` (`AppConfigService.php:500`)**: il fallback colore per i box "feature_collection" della home leggeva `$this->app->primary_color`, una colonna DB reale della tabella `apps` (definita in `create_apps_table.php.stub`, default `#de1b0d`) mai scritta da Nova — che scrive invece su `properties->theme->primary_color` (JSON). La colonna era quindi sempre al valore di default della migration, indipendentemente dal colore primario reale impostato dall'admin. Trovato durante la Fase: write-plan di questo ciclo (non nel ticket originale), corretto nello stesso ciclo su richiesta esplicita del dev — stessa causa radice del bug principale (storage reale disconnesso dal JSON `theme`).
-- Le colonne DB morte (`font_family_header`, `font_family_content`, `default_feature_color`, `primary_color` sulla tabella `apps`) non sono state rimosse — restano orfane ma inerti. Nessun altro consumer trovato oltre a quello corretto in questo ciclo (verificato con grep su tutto `wm-package`).
-
-## Decisioni
-
-- Nessuna migrazione dati: la traduzione snake_case → camelCase avviene solo nel layer di output (`config_section_theme()`), i dati già salvati sotto `properties->theme->*` restano intatti.
-- Regex di validazione color picker (`^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$`) accetta hex a 3 cifre solo per tolleranza verso valori scritti via API/tinker — il campo Nova `Color` (`<input type="color">` nativo) non produce mai un valore a 3 cifre dal picker stesso.
-- Ruoli `dark`/`medium`/`light`, `select` e le 7 chiavi font-size di `ITHEME` restano fuori scope — nessun campo Nova aggiunto, restano ai default del frontend.
-
-## Follow-up
-
-- **Nota operativa per il deploy**: qualsiasi App che ha già `primary_color`/`default_feature_color` impostati in Nova (mai avuto effetto finora) cambierà colore visivamente al primo save dopo il deploy di questo fix — comportamento corretto e voluto, ma da comunicare ai clienti con colori già configurati, non da lasciare scoprire da soli. Stesso discorso per il fallback colore dei box "feature_collection" della home (Task 3).
-- Nessun comando di backfill/resync batch di `config.json` per le app esistenti — un semplice re-save dell'App in Nova rigenera `config.json` con lo schema corretto. Basso volume (una sola App per istanza), non giustifica un command dedicato in questo ciclo.
-- Staleness cache/CDN sulla pipeline `writeAppConfigOnAws()` (Nova save → S3 → CDN/fetch client) non investigata in questo ciclo — comportamento preesistente condiviso da tutte le sezioni di `config()`, non introdotto da questa feature.
-- Nessuna verifica visiva end-to-end in `wm-core`/`webapp-app` in questa sessione (repo separati, non buildati/eseguiti qui) — verifica demandata al dev su un ambiente con il frontend in esecuzione.
-```
+> **Superato dagli eventi — vedi il file reale**: questo step prevedeva di creare `notes.md` con un contenuto iniziale minimale (deviazioni, bug trovati, decisioni, follow-up). Il file `docs/features/8367-theme-colori-app-configurazione-da-backend/notes.md` è stato effettivamente creato con quel contenuto e poi **ampliato più volte** nel corso dello stesso ciclo (round 2 di review, fix del bloccante `hexToRgba()`, decisione di rimozione di `success`/`warning`/`danger`) — riportare qui una copia statica del template originale lo renderebbe immediatamente disallineato. Il file reale è la fonte di verità, non questa sezione del piano.
 
 - [ ] **Step 5: Commit**
 
