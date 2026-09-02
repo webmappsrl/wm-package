@@ -443,7 +443,6 @@ class App extends Resource
             $this->themeColorField(__('Primary color'), 'primary_color', __('Primary color for the app theme (e.g. buttons, links)')),
             $this->themeColorField(__('Secondary color'), 'secondary_color', __('Secondary color for the app theme')),
             $this->themeColorField(__('Tertiary color'), 'tertiary_color', __('Tertiary color for the app theme')),
-            $this->themeColorField(__('Default feature color'), 'default_feature_color', __('Default color used for map features when no specific style is set')),
         ];
     }
 

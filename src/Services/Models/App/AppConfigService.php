@@ -664,7 +664,6 @@ class AppConfigService extends AppBaseService
         'primary_color' => 'primary',
         'secondary_color' => 'secondary',
         'tertiary_color' => 'tertiary',
-        'default_feature_color' => 'defaultFeatureColor',
         'font_family_header' => 'fontFamilyHeader',
         'font_family_content' => 'fontFamilyContent',
     ];
@@ -681,9 +680,13 @@ class AppConfigService extends AppBaseService
 
         foreach (self::THEME_KEY_MAP as $sourceKey => $targetKey) {
             $value = $theme[$sourceKey] ?? null;
-            if (is_string($value) && $value !== '') {
-                $data['THEME'][$targetKey] = $value;
+            if (! is_string($value) || $value === '') {
+                continue;
             }
+            if (str_ends_with($sourceKey, '_color') && ! preg_match('/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/', $value)) {
+                continue;
+            }
+            $data['THEME'][$targetKey] = $value;
         }
 
         return $data;

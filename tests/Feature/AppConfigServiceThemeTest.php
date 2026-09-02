@@ -16,7 +16,6 @@ it('config.json THEME contains all camelCase keys mapped from properties->theme 
                 'primary_color' => '#111111',
                 'secondary_color' => '#222222',
                 'tertiary_color' => '#333333',
-                'default_feature_color' => '#777777',
                 'font_family_header' => 'Roboto Slab',
                 'font_family_content' => 'Roboto',
             ],
@@ -29,7 +28,6 @@ it('config.json THEME contains all camelCase keys mapped from properties->theme 
         'primary' => '#111111',
         'secondary' => '#222222',
         'tertiary' => '#333333',
-        'defaultFeatureColor' => '#777777',
         'fontFamilyHeader' => 'Roboto Slab',
         'fontFamilyContent' => 'Roboto',
     ]);
@@ -77,7 +75,7 @@ it('config.json THEME is an empty array when properties->theme is a malformed no
     expect($config['THEME'])->toBe([]);
 });
 
-it('config.json THEME reproduces the real camminiditalia data shape (only primary and default feature color set)', function () {
+it('config.json THEME reproduces the real camminiditalia data shape (only primary color set, default_feature_color is orphaned data no longer mapped)', function () {
     $app = App::factory()->createQuietly([
         'properties' => [
             'theme' => [
@@ -93,7 +91,6 @@ it('config.json THEME reproduces the real camminiditalia data shape (only primar
 
     expect($config['THEME'])->toBe([
         'primary' => '#ef7821',
-        'defaultFeatureColor' => '#ef7821',
     ]);
 });
 
@@ -111,5 +108,25 @@ it('config.json THEME excludes non-string values instead of leaking them into th
 
     expect($config['THEME'])->toBe([
         'secondary' => '#222222',
+    ]);
+});
+
+it('config.json THEME excludes malformed color values while keeping valid 3-digit hex and font strings untouched', function () {
+    $app = App::factory()->createQuietly([
+        'properties' => [
+            'theme' => [
+                'primary_color' => 'banana',
+                'secondary_color' => '#12345',
+                'tertiary_color' => '#abc',
+                'font_family_header' => 'Roboto Slab',
+            ],
+        ],
+    ]);
+
+    $config = (new AppConfigService($app))->config();
+
+    expect($config['THEME'])->toBe([
+        'tertiary' => '#abc',
+        'fontFamilyHeader' => 'Roboto Slab',
     ]);
 });
