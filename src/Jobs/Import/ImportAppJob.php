@@ -110,6 +110,12 @@ class ImportAppJob extends BaseImportJob
 
     /**
      * Queue imports for entities associated with this app.
+     *
+     * NOTA: ciascuna dipendenza viene dispatchata come Bus::batch() indipendente (vedi sotto),
+     * senza alcun chaining .then() tra batch — nessuna garanzia d'ordine di completamento tra,
+     * ad esempio, il batch ec_poi/ec_track e il batch taxonomy. Vedi oc:8094: i job EcTrack/EcPoi
+     * sincronizzano le proprie taxonomy pivot autonomamente (child-side sync) proprio per non
+     * dipendere da questo ordine.
      */
     protected function queueEntityImport(string $entityModelKey, ?int $userId, string $entityForeignKey, int $appId): void
     {
@@ -134,8 +140,8 @@ class ImportAppJob extends BaseImportJob
                     $whereCondition = null; // Gestiremo i media tramite relazioni
                     $data = ['app_id' => $appId, 'app_user_id' => $userId];
                     break;
-                case strpos($entityModelKey, 'taxonomy') !== false: // import all taxonomy entities
-                    $whereCondition = null;
+                case strpos($entityModelKey, 'taxonomy') !== false: // import only taxonomies actually used by this app (oc:8094)
+                    $whereCondition = ['id' => $this->geohubImportService->getUsedTaxonomyGeohubIdsForApp($entityModelKey, $this->entityId, $userId)];
                     break;
                 default:
                     $whereCondition = [$entityForeignKey => $userId];
