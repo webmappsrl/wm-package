@@ -3,9 +3,9 @@
 declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\DatabaseTransactions;
-use Tests\TestCase;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Services\Models\App\AppConfigService;
+use Wm\WmPackage\Tests\TestCase;
 
 uses(TestCase::class, DatabaseTransactions::class);
 
@@ -100,5 +100,22 @@ it('config.json THEME reproduces the real camminiditalia data shape (only primar
     expect($config['THEME'])->toBe([
         'primary' => '#ef7821',
         'defaultFeatureColor' => '#ef7821',
+    ]);
+});
+
+it('config.json THEME excludes non-string values instead of leaking them into the output', function () {
+    $app = App::factory()->createQuietly([
+        'properties' => [
+            'theme' => [
+                'primary_color' => ['#fff'],
+                'secondary_color' => '#222222',
+            ],
+        ],
+    ]);
+
+    $config = (new AppConfigService($app))->config();
+
+    expect($config['THEME'])->toBe([
+        'secondary' => '#222222',
     ]);
 });

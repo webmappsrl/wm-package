@@ -468,6 +468,8 @@ class AppConfigService extends AppBaseService
                 ->get()
                 ->keyBy('id');
 
+            $primaryColor = sanitizeHexColor($this->app->properties['theme']['primary_color'] ?? null, '#000000');
+
             foreach ($overlayItems as $item) {
                 $boxType = $item['box_type'] ?? null;
 
@@ -497,9 +499,8 @@ class AppConfigService extends AppBaseService
                         $array['icon'] = $fc->icon;
                     }
 
-                    $primaryColor = $this->app->properties['theme']['primary_color'] ?? '#000000';
-                    $array['fillColor'] = $fc->fill_color ? hexToRgba($fc->fill_color) : hexToRgba($primaryColor);
-                    $array['strokeColor'] = $fc->stroke_color ? hexToRgba($fc->stroke_color) : hexToRgba($primaryColor);
+                    $array['fillColor'] = hexToRgba(sanitizeHexColor($fc->fill_color, $primaryColor));
+                    $array['strokeColor'] = hexToRgba(sanitizeHexColor($fc->stroke_color, $primaryColor));
 
                     if ($fc->stroke_width) {
                         $array['strokeWidth'] = $fc->stroke_width;
@@ -653,6 +654,24 @@ class AppConfigService extends AppBaseService
         return $data;
     }
 
+    /**
+     * Mappa properties->theme->* (snake_case, Nova App::theme_tab()) -> chiave camelCase
+     * attesa da ITHEME (wm-core) in config.json.THEME. Unica fonte di verità per questo
+     * elenco di chiavi lato AppConfigService — Nova App::theme_tab() mantiene la propria
+     * copia (label/help diversi per campo, non riducibile a questa sola mappa).
+     */
+    private const THEME_KEY_MAP = [
+        'primary_color' => 'primary',
+        'secondary_color' => 'secondary',
+        'tertiary_color' => 'tertiary',
+        'success_color' => 'success',
+        'warning_color' => 'warning',
+        'danger_color' => 'danger',
+        'default_feature_color' => 'defaultFeatureColor',
+        'font_family_header' => 'fontFamilyHeader',
+        'font_family_content' => 'fontFamilyContent',
+    ];
+
     private function config_section_theme(): array
     {
         $theme = $this->app->properties['theme'] ?? [];
@@ -660,34 +679,14 @@ class AppConfigService extends AppBaseService
             $theme = [];
         }
 
+        $data = [];
         $data['THEME'] = [];
 
-        if (! empty($theme['primary_color'])) {
-            $data['THEME']['primary'] = $theme['primary_color'];
-        }
-        if (! empty($theme['secondary_color'])) {
-            $data['THEME']['secondary'] = $theme['secondary_color'];
-        }
-        if (! empty($theme['tertiary_color'])) {
-            $data['THEME']['tertiary'] = $theme['tertiary_color'];
-        }
-        if (! empty($theme['success_color'])) {
-            $data['THEME']['success'] = $theme['success_color'];
-        }
-        if (! empty($theme['warning_color'])) {
-            $data['THEME']['warning'] = $theme['warning_color'];
-        }
-        if (! empty($theme['danger_color'])) {
-            $data['THEME']['danger'] = $theme['danger_color'];
-        }
-        if (! empty($theme['default_feature_color'])) {
-            $data['THEME']['defaultFeatureColor'] = $theme['default_feature_color'];
-        }
-        if (! empty($theme['font_family_header'])) {
-            $data['THEME']['fontFamilyHeader'] = $theme['font_family_header'];
-        }
-        if (! empty($theme['font_family_content'])) {
-            $data['THEME']['fontFamilyContent'] = $theme['font_family_content'];
+        foreach (self::THEME_KEY_MAP as $sourceKey => $targetKey) {
+            $value = $theme[$sourceKey] ?? null;
+            if (is_string($value) && $value !== '') {
+                $data['THEME'][$targetKey] = $value;
+            }
         }
 
         return $data;

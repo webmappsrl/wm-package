@@ -37,6 +37,25 @@ if (! function_exists('hexToRgba')) {
     }
 }
 
+if (! function_exists('sanitizeHexColor')) {
+    /**
+     * Return $value if it's an exact 6-digit hex color (e.g. "#ff0000"), otherwise $fallback.
+     * Use before passing a color to hexToRgba(), which throws on any string containing "#"
+     * that isn't exactly 6 or 8 hex digits long (e.g. free-text Nova fields, 3-digit CSS
+     * shorthand, or any other unvalidated source).
+     *
+     * @param  mixed  $value
+     */
+    function sanitizeHexColor($value, string $fallback): string
+    {
+        if (is_string($value) && preg_match('/^#[0-9a-fA-F]{6}$/', $value)) {
+            return $value;
+        }
+
+        return $fallback;
+    }
+}
+
 if (! function_exists('isReallyEmpty')) {
 
     function isReallyEmpty($val): bool

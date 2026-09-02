@@ -56,8 +56,11 @@ Il cliente vuole personalizzare i colori dell'app (primary, secondary, e altri r
 
 ## Moduli toccati
 
-- `wm-package/src/Nova/App.php` (`theme_tab()`)
-- `wm-package/src/Services/Models/App/AppConfigService.php` (`config_section_theme()`, `config_section_map()` riga ~500)
-- `wm-package/src/Services/Models/StoryShare/StoryShareImageService.php` (docblock riga ~106, riferimento a `THEME.primary_color` da aggiornare in `THEME.primary`)
+- `wm-package/src/Nova/App.php` (`theme_tab()`, nuovo helper privato `themeColorField()`)
+- `wm-package/src/Services/Models/App/AppConfigService.php` (`config_section_theme()` — riscritto con `THEME_KEY_MAP`; `config_section_map()` — fix fallback colore + validazione hex su `primary_color`, `fill_color`, `stroke_color`)
+- `wm-package/src/Services/Models/StoryShare/StoryShareImageService.php` (`resolveAccentColor()` — usa ora `sanitizeHexColor()` condivisa; docblock riga ~106, riferimento a `THEME.primary_color` aggiornato in `THEME.primary`)
+- `wm-package/src/helpers.php` (nuova funzione globale `sanitizeHexColor()`, condivisa tra `AppConfigService` e `StoryShareImageService`)
 - `wm-package/resources/lang/it.json`, `wm-package/resources/lang/en.json`
 - `wm-package/tests/Feature/AppConfigServiceThemeTest.php` (nuovo)
+- `wm-package/tests/Feature/AppConfigServiceMapFeatureCollectionColorTest.php` (nuovo)
+- `wm-package/CLAUDE.md`, `wm-package/docs/features/8367-theme-colori-app-configurazione-da-backend/{overview,plan,notes}.md` (artefatti di processo)
