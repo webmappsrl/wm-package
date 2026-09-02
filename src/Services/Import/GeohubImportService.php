@@ -33,6 +33,11 @@ use Wm\WmPackage\Services\StorageService;
 class GeohubImportService
 {
     /**
+     * NOTA: quest'ordine è rispettato solo da importAll() (comando CLI sequenziale). Il path di
+     * produzione reale, ImportAppJob::queueEntityImport(), dispatcha un Bus::batch() indipendente
+     * per ciascuna dipendenza senza alcun chaining .then() tra i batch — questa costante NON è
+     * una garanzia d'ordine per gli import triggerati da ImportAppJob (vedi oc:8094).
+     *
      * The order in which models should be imported to maintain dependencies
      */
     protected const MODEL_IMPORT_ORDER = [
@@ -44,6 +49,26 @@ class GeohubImportService
         'ec_track',
         'layer',
         'ec_media',
+    ];
+
+    /**
+     * The literal Geohub-side morphable_type strings for App/EcTrack/EcPoi/EcMedia/Layer, as
+     * used in the taxonomy_*ables pivot tables. Deliberately NOT derived from
+     * import_mapping.*.relations.morphable_models: that config maps a DIFFERENT concept (local
+     * class names, for resolving locally-imported records) and is itself inconsistent across
+     * taxonomy types for media (some use key 'media' => the generic Media model, others
+     * 'ec_media' => EcMedia — a pre-existing config quirk, out of scope to normalize here).
+     * These 5 constants are the actual literal strings Geohub writes into the pivot tables
+     * (verified directly against Geohub data) — the single source of truth reused by
+     * getUsedTaxonomyGeohubIdsForApp() below and by ImportEcPoiJob's child-side pivot sync
+     * (see oc:8094).
+     */
+    public const GEOHUB_MORPHABLE_TYPES = [
+        'app' => 'App\\Models\\App',
+        'ec_track' => 'App\\Models\\EcTrack',
+        'ec_poi' => 'App\\Models\\EcPoi',
+        'ec_media' => 'App\\Models\\EcMedia',
+        'layer' => 'App\\Models\\Layer',
     ];
 
     /**
@@ -373,7 +398,11 @@ class GeohubImportService
         }
 
         foreach ($wheres as $column => $value) {
-            $connection->where($column, $value);
+            if (is_array($value)) {
+                $connection->whereIn($column, $value);
+            } else {
+                $connection->where($column, $value);
+            }
         }
 
         return $connection->pluck('id')->toArray();
@@ -878,6 +907,136 @@ class GeohubImportService
         }
 
         return $results;
+    }
+
+    /**
+     * Get the taxonomy records (resolved locally) associated on Geohub with a single morphable
+     * record, given the morphable's own geohub_id. Symmetric to getTaxonomyMorphableRecords():
+     * that method starts from a local taxonomy and finds its morphable children (used by the
+     * dedicated taxonomy import jobs); this one starts from a single child already known to
+     * exist locally and finds its taxonomies — used to sync taxonomy pivots from inside the
+     * child's own import job (e.g. ImportEcPoiJob), right after the child model exists, for
+     * morphables whose Geohub row has no embedded taxonomy column (e.g. ec_pois).
+     *
+     * @param  string  $taxonomyModelKey  The taxonomy model key (e.g. 'taxonomy_theme')
+     * @param  string  $morphableType  The literal Geohub morphable type string (e.g. 'App\Models\EcPoi')
+     * @param  int  $morphableGeohubId  The Geohub id of the child record
+     * @return Collection The locally resolved taxonomy models, each with ->pivot_data set when
+     *                     the relation config declares pivot_columns
+     */
+    public function getTaxonomyRecordsForMorphable(string $taxonomyModelKey, string $morphableType, int $morphableGeohubId): Collection
+    {
+        [$morphableTable, $foreignKey, $morphableIdKey, $morphableTypeKey] = $this->getTaxonomyRelationsConfig($taxonomyModelKey);
+        $pivotColumns = $this->importMapping[$taxonomyModelKey]['relations']['pivot_columns'] ?? [];
+
+        $pivotRecords = $this->dbConnection->table($morphableTable)
+            ->where($morphableTypeKey, $morphableType)
+            ->where($morphableIdKey, $morphableGeohubId)
+            ->get();
+
+        if ($pivotRecords->isEmpty()) {
+            return collect();
+        }
+
+        $taxonomyModelClass = $this->importMapping[$taxonomyModelKey]['namespace'];
+        $taxonomyGeohubIds = $pivotRecords->pluck($foreignKey)->unique()->values();
+
+        $taxonomies = $taxonomyModelClass::whereIn('properties->geohub_id', $taxonomyGeohubIds)
+            ->get()
+            ->keyBy(fn ($taxonomy) => $taxonomy->properties['geohub_id'] ?? null);
+
+        $results = collect();
+
+        foreach ($pivotRecords as $pivotRecord) {
+            $taxonomy = $taxonomies->get($pivotRecord->{$foreignKey});
+
+            if (! $taxonomy) {
+                $this->logger->warning("[child_side_sync] Taxonomy not yet imported locally: {$taxonomyModelKey} geohub_id={$pivotRecord->{$foreignKey}} (morphable_type={$morphableType}, morphable_geohub_id={$morphableGeohubId})");
+
+                continue;
+            }
+
+            if (! empty($pivotColumns)) {
+                $taxonomy->pivot_data = $this->extractPivotData($pivotRecord, $pivotColumns);
+            }
+
+            $results->push($taxonomy);
+        }
+
+        return $results;
+    }
+
+    /**
+     * Extract the 4 relation-config keys shared by every "child-side" taxonomy pivot lookup
+     * (morphable_table, foreign_key, morphable_id, morphable_type) from import_mapping, in a
+     * fixed order for list() destructuring. Used by getTaxonomyRecordsForMorphable() and
+     * getUsedTaxonomyGeohubIdsForApp() (see oc:8094) — not by the pre-existing
+     * getTaxonomyMorphableRecords() above, left untouched.
+     *
+     * @return array{0: string, 1: string, 2: string, 3: string}
+     */
+    private function getTaxonomyRelationsConfig(string $taxonomyModelKey): array
+    {
+        $relations = $this->importMapping[$taxonomyModelKey]['relations'];
+
+        return [
+            $relations['morphable_table'],
+            $relations['foreign_key'],
+            $relations['morphable_id'],
+            $relations['morphable_type'],
+        ];
+    }
+
+    /**
+     * Get the Geohub taxonomy ids (of the given type) actually referenced by this app — by the
+     * App itself, or by any EcTrack/EcPoi/EcMedia/Layer belonging to it. Used to scope the
+     * dedicated taxonomy import job (see oc:8094) instead of importing every taxonomy row on
+     * Geohub regardless of whether this app uses it. Covers all 5 morphable types the taxonomy
+     * pivots support — not just EcTrack/EcPoi (the only two with a child-side sync channel) —
+     * so EcMedia/Layer/App (which have no such channel and rely solely on the dedicated job)
+     * are not starved of taxonomy master records they need.
+     *
+     * @param  string  $taxonomyModelKey  The taxonomy model key (e.g. 'taxonomy_theme')
+     * @param  int  $appGeohubId  The Geohub id of the app being imported
+     * @param  int|null  $appUserId  The Geohub user_id owning the app (null skips the
+     *                               EcTrack/EcPoi/EcMedia checks, App/Layer are still checked)
+     * @return array<int> The Geohub taxonomy ids actually used by this app
+     */
+    public function getUsedTaxonomyGeohubIdsForApp(string $taxonomyModelKey, int $appGeohubId, ?int $appUserId): array
+    {
+        [$morphableTable, $foreignKey, $morphableIdKey, $morphableTypeKey] = $this->getTaxonomyRelationsConfig($taxonomyModelKey);
+
+        $morphableIdsByType = [
+            self::GEOHUB_MORPHABLE_TYPES['app'] => [$appGeohubId],
+            self::GEOHUB_MORPHABLE_TYPES['ec_track'] => $appUserId !== null
+                ? $this->dbConnection->table('ec_tracks')->where('user_id', $appUserId)->pluck('id')->toArray()
+                : [],
+            self::GEOHUB_MORPHABLE_TYPES['ec_poi'] => $appUserId !== null
+                ? $this->dbConnection->table('ec_pois')->where('user_id', $appUserId)->pluck('id')->toArray()
+                : [],
+            self::GEOHUB_MORPHABLE_TYPES['ec_media'] => $appUserId !== null
+                ? $this->getEcMediaIdsForApp($appUserId)
+                : [],
+            self::GEOHUB_MORPHABLE_TYPES['layer'] => $this->dbConnection->table('layers')->where('app_id', $appGeohubId)->pluck('id')->toArray(),
+        ];
+
+        // Ogni tipo genera sempre la propria clausola OR, anche con un id-set vuoto:
+        // whereIn($col, []) valuta correttamente "nessuna corrispondenza" (comportamento Laravel
+        // verificato), quindi anche nel caso limite di tutti e 5 i set vuoti la query ritorna
+        // zero righe — non serve un array_filter()/empty() precedente per evitare una query
+        // inutile, e filtrare a monte rischierebbe una WHERE senza alcuna condizione (closure
+        // vuota) se TUTTI i tipi venissero rimossi, che restituirebbe ogni riga della pivot
+        // invece di zero.
+        $query = $this->dbConnection->table($morphableTable);
+        $query->where(function ($outer) use ($morphableIdsByType, $morphableTypeKey, $morphableIdKey) {
+            foreach ($morphableIdsByType as $type => $ids) {
+                $outer->orWhere(function ($inner) use ($type, $ids, $morphableTypeKey, $morphableIdKey) {
+                    $inner->where($morphableTypeKey, $type)->whereIn($morphableIdKey, $ids);
+                });
+            }
+        });
+
+        return $query->pluck($foreignKey)->unique()->values()->all();
     }
 
     /**

@@ -167,6 +167,23 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Child-side Taxonomy Sync
+    |--------------------------------------------------------------------------
+    |
+    | Quando true (default), ImportEcTrackJob e ImportEcPoiJob sincronizzano le proprie
+    | associazioni taxonomy (theme, poi_type, activity) subito dopo aver creato il modello
+    | locale, invece di dipendere esclusivamente dai job taxonomy dedicati (che girano in un
+    | batch parallelo indipendente, senza garanzia d'ordine rispetto ai batch ec_poi/ec_track —
+    | vedi oc:8094). Disattivare rapidamente questo flag (senza deploy) se il meccanismo scrive
+    | pivot errati durante un import massivo in produzione.
+    |
+    */
+    'child_side_taxonomy_sync' => [
+        'enabled' => env('WM_CHILD_SIDE_TAXONOMY_SYNC_ENABLED', true),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Import Mapping Configuration
     |--------------------------------------------------------------------------
     |
@@ -386,6 +403,7 @@ return [
                     'color' => 'color',
                     'difficulty_i18n' => 'difficulty_i18n',
                     'activities' => 'activities',
+                    'themes' => 'themes',
                     'searchable' => 'searchable',
                     'dem_data' => 'dem_data',
                     'osm_data' => 'osm_data',

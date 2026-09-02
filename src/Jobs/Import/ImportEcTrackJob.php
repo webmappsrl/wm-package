@@ -3,7 +3,9 @@
 namespace Wm\WmPackage\Jobs\Import;
 
 use Illuminate\Database\Eloquent\Model;
+use Wm\WmPackage\Models\Abstracts\Taxonomy;
 use Wm\WmPackage\Models\TaxonomyActivity;
+use Wm\WmPackage\Models\TaxonomyTheme;
 
 class ImportEcTrackJob extends BaseEcImportJob
 {
@@ -28,91 +30,106 @@ class ImportEcTrackJob extends BaseEcImportJob
 
         $model->ecPois()->sync($syncData);
 
-        // Sincronizza le tassonomie dalle proprietà JSON
-        $this->syncTaxonomiesFromProperties($model);
-    }
-
-    /**
-     * Sincronizza le tassonomie dalle proprietà JSON alle relazioni del database
-     */
-    private function syncTaxonomiesFromProperties(Model $model): void
-    {
-        \Log::info("🔄 SYNC TAXONOMIES - Starting sync for track ID: {$model->id}");
-
-        $activities = json_decode($model->properties['activities'] ?? '{}', true);
-
-        if (empty($activities)) {
-            \Log::info("🔄 SYNC TAXONOMIES - No activities found for track ID: {$model->id}");
-
+        if (! config('wm-geohub-import.child_side_taxonomy_sync.enabled', true)) {
             return;
         }
 
-        \Log::info("🔄 SYNC TAXONOMIES - Found activities for track ID: {$model->id}", ['activities' => $activities]);
+        $this->syncTaxonomyFromEmbeddedProperty($model, 'activities', 'taxonomyActivities', TaxonomyActivity::class, [
+            'duration_forward' => 0,
+            'duration_backward' => 0,
+        ]);
 
-        foreach ($activities as $geohubId => $activityTypes) {
-            if (! is_array($activityTypes)) {
-                continue;
-            }
-
-            foreach ($activityTypes as $activityType) {
-                \Log::info("🔄 SYNC TAXONOMIES - Processing activity type: {$activityType} for track ID: {$model->id}");
-
-                // Trova la tassonomia per tipo di attività in modo dinamico
-                $taxonomy = $this->findTaxonomyByActivityType($activityType);
-
-                if (! $taxonomy) {
-                    \Log::warning("🔄 SYNC TAXONOMIES - Taxonomy not found for activity type: {$activityType}");
-
-                    continue;
-                }
-
-                \Log::info("🔄 SYNC TAXONOMIES - Found taxonomy ID: {$taxonomy->id} for activity: {$activityType}");
-
-                // Verifica se la relazione esiste già
-                $existingRelation = $model->taxonomyActivities()
-                    ->where('taxonomy_activity_id', $taxonomy->id)
-                    ->exists();
-
-                if (! $existingRelation) {
-                    // Crea la relazione
-                    \Log::info("🔄 SYNC TAXONOMIES - Creating relation for track ID: {$model->id} with taxonomy ID: {$taxonomy->id}");
-                    $model->taxonomyActivities()->attach($taxonomy->id, [
-                        'duration_forward' => 0,
-                        'duration_backward' => 0,
-                    ]);
-                    \Log::info("🔄 SYNC TAXONOMIES - Relation created successfully for track ID: {$model->id}");
-                } else {
-                    \Log::info("🔄 SYNC TAXONOMIES - Relation already exists for track ID: {$model->id} with taxonomy ID: {$taxonomy->id}");
-                }
-            }
-        }
-
-        \Log::info("🔄 SYNC TAXONOMIES - Completed sync for track ID: {$model->id}");
+        $this->syncTaxonomyFromEmbeddedProperty($model, 'themes', 'taxonomyThemes', TaxonomyTheme::class);
     }
 
     /**
-     * Trova la tassonomia per tipo di attività in modo dinamico
+     * Sincronizza un tipo di taxonomy leggendo il campo JSON già presente nel payload Geohub
+     * del track stesso (properties[$propertyKey], formato {geohub_taxonomy_id: [identifier,...]})
+     * — evita la race condition coi job taxonomy dedicati, che dipendono invece dall'ordine dei
+     * batch (vedi oc:8094). Errori sono loggati e ingoiati: non devono far fallire l'import del
+     * track, già creato con successo.
      */
-    private function findTaxonomyByActivityType(string $activityType): ?TaxonomyActivity
-    {
+    private function syncTaxonomyFromEmbeddedProperty(
+        Model $model,
+        string $propertyKey,
+        string $relationName,
+        string $taxonomyClass,
+        array $pivotData = []
+    ): void {
+        $logger = $this->importLogger();
+
         try {
+            $decoded = json_decode($model->properties[$propertyKey] ?? '{}', true);
+            $entries = is_array($decoded) ? $decoded : [];
 
-            // Cerca la tassonomia per nome in modo dinamico
-            $taxonomy = TaxonomyActivity::where('identifier', 'like', '%'.$activityType.'%')
-                ->orWhere('identifier', 'like', '%'.ucfirst($activityType).'%')
-                ->orWhere('identifier', 'like', '%'.strtoupper($activityType).'%')
-                ->first();
-
-            if (! $taxonomy) {
-                // Se non trova per nome, cerca per geohub_id se disponibile
-                $taxonomy = TaxonomyActivity::where('properties->geohub_id', $activityType)->first();
+            if (empty($entries)) {
+                return;
             }
 
-            return $taxonomy;
-        } catch (\Exception $e) {
-            \Log::error("Error finding taxonomy by activity type: {$e->getMessage()}");
+            foreach ($entries as $identifiers) {
+                if (! is_array($identifiers)) {
+                    continue;
+                }
 
-            return null;
+                foreach ($identifiers as $identifier) {
+                    $taxonomy = $this->findTaxonomyByIdentifier($taxonomyClass, $identifier);
+
+                    if (! $taxonomy) {
+                        $logger->warning("[child_side_sync] Taxonomy not found for identifier '{$identifier}' ({$taxonomyClass}), track ID: {$model->id}");
+
+                        continue;
+                    }
+
+                    // Solo se non già presente: syncWithoutDetaching() con $pivotData non vuoto
+                    // (caso activities) chiamerebbe updateExistingPivot() anche su un pivot già
+                    // esistente, sovrascrivendo duration_forward/duration_backward reali
+                    // (scritti dal job taxonomy dedicato) con gli 0/0 hardcoded qui, ad ogni
+                    // re-import. Comportamento del codice originale pre-refactor (exists-check
+                    // prima di attach()), perso durante la generalizzazione — vedi oc:8094 review.
+                    $alreadyAttached = $model->{$relationName}()->where($taxonomy->getTable().'.'.$taxonomy->getKeyName(), $taxonomy->getKey())->exists();
+
+                    if ($alreadyAttached) {
+                        continue;
+                    }
+
+                    $model->{$relationName}()->attach($taxonomy->id, $pivotData);
+                    $logger->info("[child_side_sync] Attached {$taxonomyClass} ID {$taxonomy->id} to EcTrack ID {$model->id}");
+                }
+            }
+        } catch (\Throwable $e) {
+            $logger->error("[child_side_sync] Failed to sync {$taxonomyClass} for EcTrack ID {$model->id}: {$e->getMessage()}", [
+                'exception' => $e,
+            ]);
         }
+    }
+
+    /**
+     * Trova la taxonomy per identifier. Prova prima un match esatto: alcuni identifier reali
+     * sono sottostringa di altri (es. 'via-francigena' di 'via-francigena-toscana-sud') — senza
+     * questo tentativo, il fallback LIKE sotto (nessun ORDER BY, ->first() su match multipli)
+     * potrebbe attaccare silenziosamente la taxonomy sbagliata quando l'identifier esatto esiste
+     * già (verificato: 33 collisioni reali tra i 502 identifier taxonomy_themes su Geohub, oc:8094
+     * review). Il match parziale case-insensitive resta come fallback per gli identifier che non
+     * corrispondono esattamente (es. varianti di case non previste), con fallback finale su
+     * properties->geohub_id se il valore non è un identifier testuale.
+     */
+    private function findTaxonomyByIdentifier(string $taxonomyClass, string $identifier): ?Taxonomy
+    {
+        $taxonomy = $taxonomyClass::where('identifier', $identifier)->first();
+
+        if ($taxonomy) {
+            return $taxonomy;
+        }
+
+        $taxonomy = $taxonomyClass::where('identifier', 'like', '%'.$identifier.'%')
+            ->orWhere('identifier', 'like', '%'.ucfirst($identifier).'%')
+            ->orWhere('identifier', 'like', '%'.strtoupper($identifier).'%')
+            ->first();
+
+        if (! $taxonomy) {
+            $taxonomy = $taxonomyClass::where('properties->geohub_id', $identifier)->first();
+        }
+
+        return $taxonomy;
     }
 }
