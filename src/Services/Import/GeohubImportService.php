@@ -922,7 +922,7 @@ class GeohubImportService
      * @param  string  $morphableType  The literal Geohub morphable type string (e.g. 'App\Models\EcPoi')
      * @param  int  $morphableGeohubId  The Geohub id of the child record
      * @return Collection The locally resolved taxonomy models, each with ->pivot_data set when
-     *                     the relation config declares pivot_columns
+     *                    the relation config declares pivot_columns
      */
     public function getTaxonomyRecordsForMorphable(string $taxonomyModelKey, string $morphableType, int $morphableGeohubId): Collection
     {

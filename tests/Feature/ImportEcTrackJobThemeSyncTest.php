@@ -8,6 +8,7 @@ require_once __DIR__.'/../Concerns/InjectsGeohubImportService.php';
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
+use Wm\WmPackage\Jobs\Import\BaseImportJob;
 use Wm\WmPackage\Jobs\Import\ImportEcTrackJob;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Services\Import\GeohubImportService;
@@ -29,7 +30,7 @@ class ImportEcTrackJobThemeSyncTest extends TestCase
         $this->geohubImportService = app(GeohubImportService::class);
     }
 
-    private function makeJob(int $geohubTrackId): \Wm\WmPackage\Jobs\Import\BaseImportJob
+    private function makeJob(int $geohubTrackId): BaseImportJob
     {
         return $this->makeJobWithGeohubImportService(ImportEcTrackJob::class, $geohubTrackId, $this->geohubImportService);
     }

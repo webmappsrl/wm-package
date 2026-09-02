@@ -7,8 +7,10 @@ require_once __DIR__.'/../Concerns/InjectsGeohubImportService.php';
 require_once __DIR__.'/../Concerns/DisablesForeignKeyConstraints.php';
 
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Log\Logger;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
+use Wm\WmPackage\Jobs\Import\BaseImportJob;
 use Wm\WmPackage\Jobs\Import\ImportEcPoiJob;
 use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Services\Import\GeohubImportService;
@@ -38,7 +40,7 @@ class ImportEcPoiJobTaxonomySyncTest extends TestCase
         parent::tearDown();
     }
 
-    private function makeJob(int $geohubPoiId): \Wm\WmPackage\Jobs\Import\BaseImportJob
+    private function makeJob(int $geohubPoiId): BaseImportJob
     {
         return $this->makeJobWithGeohubImportService(ImportEcPoiJob::class, $geohubPoiId, $this->geohubImportService);
     }
@@ -144,7 +146,7 @@ class ImportEcPoiJobTaxonomySyncTest extends TestCase
         // (classe concreta, non un'interfaccia) — Log::spy() non soddisfa quel tipo attraverso
         // la risoluzione facade channel() nel costruttore del service. Mockiamo la classe
         // concreta e la iniettiamo via reflection nell'istanza già condivisa da setUp().
-        $loggerMock = \Mockery::mock(\Illuminate\Log\Logger::class);
+        $loggerMock = \Mockery::mock(Logger::class);
         $loggerMock->shouldReceive('warning')
             ->withArgs(fn ($message) => str_contains($message, '[child_side_sync]'))
             ->atLeast()->once();
