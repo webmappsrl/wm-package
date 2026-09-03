@@ -33,8 +33,8 @@ abstract class AbstractEcResource extends AbstractGeometryResource
 
         if ($user && ! $user->hasRole('Administrator')) {
             $table = $query->getModel()->getTable();
-            if (Schema::hasColumn($table, 'user_id')) {
-                return $query->where('user_id', $user->id);
+            if (Schema::hasColumn($table, 'app_id')) {
+                return $query->whereIn('app_id', $user->ownedAppIds());
             }
         }
 

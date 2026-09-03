@@ -41,8 +41,8 @@ class EcPoiPolicy
      */
     public function view(User $user, EcPoi $ecPoi)
     {
-        // Admins are handled by before(). Users can view their own POIs.
-        return $user->id === $ecPoi->user_id;
+        // Admins are handled by before(). Editor/Validator can view POIs of their own app(s).
+        return $user->ownedAppIds()->contains($ecPoi->app_id);
     }
 
     /**
@@ -62,8 +62,8 @@ class EcPoiPolicy
      */
     public function update(User $user, EcPoi $ecPoi)
     {
-        // Admins are handled by before(). Users can update their own POIs.
-        return $user->id === $ecPoi->user_id;
+        // Admins are handled by before(). Editor/Validator can update POIs of their own app(s).
+        return $user->ownedAppIds()->contains($ecPoi->app_id);
     }
 
     /**
@@ -73,8 +73,8 @@ class EcPoiPolicy
      */
     public function delete(User $user, EcPoi $ecPoi)
     {
-        // Admins are handled by before(). Users can delete their own POIs.
-        return $user->id === $ecPoi->user_id;
+        // Admins are handled by before(). Editor/Validator can delete POIs of their own app(s).
+        return $user->ownedAppIds()->contains($ecPoi->app_id);
     }
 
     /**
