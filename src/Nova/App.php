@@ -425,6 +425,12 @@ class App extends Resource
         ];
     }
 
+    /**
+     * Elenco duplicato di proposito in AppConfigService::THEME_KEY_MAP (chiave sorgente
+     * properties->theme->* -> chiave camelCase in config.json) — mantenere sincronizzati:
+     * un nuovo campo qui senza il corrispondente in THEME_KEY_MAP non produce mai errore,
+     * semplicemente non raggiunge mai il frontend.
+     */
     protected function theme_tab(): array
     {
         return [
@@ -434,13 +440,19 @@ class App extends Resource
             Text::make(__('Font Family Content'), 'properties->theme->font_family_content')
                 ->hideFromIndex()
                 ->help(__('Font family used for body content in the app theme')),
-            Color::make(__('Primary color'), 'properties->theme->primary_color')
-                ->hideFromIndex()
-                ->help(__('Primary color for the app theme (e.g. buttons, links)')),
-            Color::make(__('Default feature color'), 'properties->theme->default_feature_color')
-                ->hideFromIndex()
-                ->help(__('Default color used for map features when no specific style is set')),
+            $this->themeColorField(__('Primary color'), 'primary_color', __('Primary color for the app theme (e.g. buttons, links)')),
+            $this->themeColorField(__('Secondary color'), 'secondary_color', __('Secondary color for the app theme')),
+            $this->themeColorField(__('Tertiary color'), 'tertiary_color', __('Tertiary color for the app theme')),
+            $this->themeColorField(__('Default feature color'), 'default_feature_color', __('Default color used for map features when no specific style is set')),
         ];
+    }
+
+    private function themeColorField(string $label, string $attribute, string $help): Color
+    {
+        return Color::make($label, "properties->theme->{$attribute}")
+            ->rules('nullable', 'regex:'.THEME_HEX_COLOR_PATTERN)
+            ->hideFromIndex()
+            ->help($help);
     }
 
     protected function pois_tab(): array

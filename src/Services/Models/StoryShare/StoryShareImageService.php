@@ -103,21 +103,17 @@ class StoryShareImageService
     /**
      * Per-app accent color for the map card border + stats value text/gradient — reads the
      * SAME primary color the app's own UI theme uses (Nova `properties->theme->primary_color`,
-     * a native Color field also exposed to the frontend as `config.json` -> `THEME.primary_color`,
+     * a native Color field also exposed to the frontend as `config.json` -> `THEME.primary`,
      * see AppConfigService::config_section_theme()), so this feature automatically matches
      * whatever brand color each tenant has already configured instead of hardcoding one app's
-     * color into shared package code. Falls back to white when unset/malformed, which reads
-     * fine against both the dark FALLBACK_BACKGROUND_COLOR and most uploaded share_frame designs.
+     * color into shared package code. Falls back to white when unset/malformed (via the shared
+     * sanitizeHexColor() helper, src/helpers.php — same validation used by
+     * AppConfigService::config_section_map()'s overlay color fallback), which reads fine
+     * against both the dark FALLBACK_BACKGROUND_COLOR and most uploaded share_frame designs.
      */
     private function resolveAccentColor(App $app): string
     {
-        $color = $app->properties['theme']['primary_color'] ?? null;
-
-        if (is_string($color) && preg_match('/^#[0-9a-fA-F]{6}$/', $color)) {
-            return $color;
-        }
-
-        return StoryImageLayout::DEFAULT_ACCENT_COLOR;
+        return sanitizeHexColor($app->properties['theme']['primary_color'] ?? null, StoryImageLayout::DEFAULT_ACCENT_COLOR);
     }
 
     /**
