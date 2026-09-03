@@ -664,6 +664,7 @@ class AppConfigService extends AppBaseService
         'primary_color' => 'primary',
         'secondary_color' => 'secondary',
         'tertiary_color' => 'tertiary',
+        'default_feature_color' => 'defaultFeatureColor',
         'font_family_header' => 'fontFamilyHeader',
         'font_family_content' => 'fontFamilyContent',
     ];

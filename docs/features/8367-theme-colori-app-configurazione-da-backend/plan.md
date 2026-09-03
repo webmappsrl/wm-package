@@ -34,11 +34,13 @@
 
 **Interfaces:**
 - Consumes: nessuna dipendenza da altri task.
-- Produces: attributi Nova `properties->theme->{primary_color,secondary_color,tertiary_color}` (color picker) e `properties->theme->{font_family_header,font_family_content}` (già esistenti, invariati) — questi 5 nomi di sottochiave sono quelli che il Task 2 legge in `config_section_theme()`. (`default_feature_color`, mostrato nei blocchi di codice sotto, è stato rimosso in una decisione successiva — vedi nota "Aggiornato post-round-3" più sotto e `notes.md`.)
+- Produces: attributo Nova `properties->theme->primary_color` (color picker) e `properties->theme->{font_family_header,font_family_content}` (già esistenti, invariati) — questi 3 nomi di sottochiave sono quelli che il Task 2 legge in `config_section_theme()`. (`secondary_color`/`tertiary_color`/`default_feature_color`, mostrati nei blocchi di codice sotto come parte della cronologia, sono stati rimossi in decisioni successive — vedi note "Aggiornato post-round-3"/"post-round-4" più sotto e `notes.md`.)
 
 > **Aggiornato post-commit (round 2 review + verifica frontend)**: `success_color`/`warning_color`/`danger_color` erano nel piano originale ma sono stati rimossi nello stesso ciclo — 0/0/4 consumatori CSS reali nel frontend (vedi `notes.md`, sezione "Decisione post-commit").
 >
-> **Aggiornato post-round-3**: `default_feature_color` (campo pre-esistente a oc:8367, non introdotto da questo task) è stato rimosso a sua volta, stesso motivo — 0 consumatori reali confermati da `map-core` (usa una costante hardcoded, ignora `THEME.defaultFeatureColor`). Vedi `notes.md`, sezione "Decisione post-round-3". Il codice sotto riflette la versione finale a 5 campi, con l'helper `themeColorField()` (estratto in un secondo momento per cleanup, non nella stesura originale del piano).
+> **Aggiornato post-round-3**: `default_feature_color` (campo pre-esistente a oc:8367, non introdotto da questo task) è stato rimosso a sua volta, stesso motivo — 0 consumatori reali confermati da `map-core` (usa una costante hardcoded, ignora `THEME.defaultFeatureColor`). Vedi `notes.md`, sezione "Decisione post-round-3".
+>
+> **Aggiornato post-round-4**: la sessione frontend ha corretto (per la seconda volta) i propri conteggi di consumatori CSS reali — risultato finale: `tertiary` 0 usi reali (dato precedente, 3, era sbagliato), `secondary` solo 2 (bordo di focus su login/registrazione). Rimossi entrambi su richiesta esplicita del dev. Vedi `notes.md`, sezione "Decisione post-round-4". Il codice sotto riflette la versione finale: **un solo color picker** (`primary_color`) + 2 campi font, con l'helper `themeColorField()` (estratto in un secondo momento per cleanup, non nella stesura originale del piano, ora con una singola chiamata).
 
 - [ ] **Step 1: Sostituire `theme_tab()` con la versione estesa**
 
@@ -61,8 +63,6 @@ Sostituire l'intero corpo del metodo in `src/Nova/App.php` (righe 428-441):
                 ->hideFromIndex()
                 ->help(__('Font family used for body content in the app theme')),
             $this->themeColorField(__('Primary color'), 'primary_color', __('Primary color for the app theme (e.g. buttons, links)')),
-            $this->themeColorField(__('Secondary color'), 'secondary_color', __('Secondary color for the app theme')),
-            $this->themeColorField(__('Tertiary color'), 'tertiary_color', __('Tertiary color for the app theme')),
         ];
     }
 
@@ -77,24 +77,22 @@ Sostituire l'intero corpo del metodo in `src/Nova/App.php` (righe 428-441):
 
 Nota: la regex va applicata anche al color picker già esistente (`primary_color`) per coerenza — prima non aveva alcuna validazione di formato.
 
+> **Aggiornato post-round-4**: `secondary`/`tertiary` (e le relative 4 voci di traduzione degli step 2/3 sotto) sono stati rimossi. `primary_color` non aveva mai avuto una traduzione in `it.json`/`en.json` (gap pre-esistente, chiuso in round 4 — vedi `notes.md`): le uniche voci rimaste in scope per questo task sono "Primary color"/"Primary color for the app theme...".
+
 - [ ] **Step 2: Aggiungere le nuove label a `resources/lang/en.json`**
 
 Aggiungere queste coppie chiave/valore (identity mapping, come le altre voci in inglese del file — inserire in un punto qualsiasi dell'oggetto JSON, l'ordine non è significativo):
 
 ```json
-    "Secondary color": "Secondary color",
-    "Secondary color for the app theme": "Secondary color for the app theme",
-    "Tertiary color": "Tertiary color",
-    "Tertiary color for the app theme": "Tertiary color for the app theme",
+    "Primary color": "Primary color",
+    "Primary color for the app theme (e.g. buttons, links)": "Primary color for the app theme (e.g. buttons, links)",
 ```
 
 - [ ] **Step 3: Aggiungere le traduzioni italiane a `resources/lang/it.json`**
 
 ```json
-    "Secondary color": "Colore secondario",
-    "Secondary color for the app theme": "Colore secondario per il tema dell'app",
-    "Tertiary color": "Colore terziario",
-    "Tertiary color for the app theme": "Colore terziario per il tema dell'app",
+    "Primary color": "Colore primario",
+    "Primary color for the app theme (e.g. buttons, links)": "Colore primario per il tema dell'app (es. pulsanti, link)",
 ```
 
 - [ ] **Step 4: Verificare che il JSON resti valido**
@@ -120,7 +118,7 @@ git commit -m "feat(oc:8367): add secondary/tertiary color pickers to theme tab"
 
 **Interfaces:**
 - Consumes: nessuna dipendenza diretta da Task 1 (i test di questo task impostano `properties->theme->*` direttamente via factory, non passano da Nova).
-- Produces: `config()['THEME']` con le chiavi camelCase `primary`, `secondary`, `tertiary`, `fontFamilyHeader`, `fontFamilyContent` — Task 4 (verifica manuale) e la sezione "Bug trovati" di `notes.md` fanno riferimento a questi nomi esatti.
+- Produces: `config()['THEME']` con le chiavi camelCase `primary`, `fontFamilyHeader`, `fontFamilyContent` — Task 4 (verifica manuale) e la sezione "Bug trovati" di `notes.md` fanno riferimento a questi nomi esatti.
 
 - [ ] **Step 1: Scrivere il test che fallisce — mapping esaustivo con tutte le 9 chiavi popolate**
 
@@ -128,7 +126,9 @@ Creare `tests/Feature/AppConfigServiceThemeTest.php`:
 
 > **Aggiornato post-commit**: rimossi success/warning/danger dal caso di test esaustivo (vedi Task 1); aggiunto un sesto test per il guard `is_string()` (cleanup round 2 review, protegge da valori non scalari scritti in `properties->theme->*`); il namespace di `TestCase` corretto in `Wm\WmPackage\Tests\TestCase` (`Tests\TestCase`, usato nella stesura originale del piano, è un pattern noto rotto — vedi `wm-package/CLAUDE.md` oc:8183 — non risolvibile in questo ambiente).
 >
-> **Aggiornato post-round-3**: rimosso anche `default_feature_color` dal caso esaustivo e dal caso "dato reale camminiditalia" (ora asserisce solo `primary`); aggiunto un settimo test per la validazione di formato colore introdotta in round 3 (`config_section_theme()` ora esclude valori non hex sulle chiavi `*_color`). Codice sotto = versione finale, 7 test.
+> **Aggiornato post-round-3**: rimosso anche `default_feature_color` dal caso esaustivo e dal caso "dato reale camminiditalia" (ora asserisce solo `primary`); aggiunto un settimo test per la validazione di formato colore introdotta in round 3 (`config_section_theme()` ora esclude valori non hex sulle chiavi `*_color`).
+>
+> **Aggiornato post-round-4**: rimossi anche `secondary_color`/`tertiary_color` da tutti i casi di test (erano usati sia come chiavi "gemelle" di primary sia come i valori superstiti in alcune asserzioni — riscritti usando `font_family_header`/`font_family_content` per quel ruolo). Il test "excludes malformed color values" è stato spezzato in due (malformato escluso / 3-cifre valido incluso), dato che ora c'è un solo colore da testare. Codice sotto = versione finale, 8 test.
 
 ```php
 <?php
@@ -147,8 +147,6 @@ it('config.json THEME contains all camelCase keys mapped from properties->theme 
         'properties' => [
             'theme' => [
                 'primary_color' => '#111111',
-                'secondary_color' => '#222222',
-                'tertiary_color' => '#333333',
                 'font_family_header' => 'Roboto Slab',
                 'font_family_content' => 'Roboto',
             ],
@@ -159,8 +157,6 @@ it('config.json THEME contains all camelCase keys mapped from properties->theme 
 
     expect($config['THEME'])->toBe([
         'primary' => '#111111',
-        'secondary' => '#222222',
-        'tertiary' => '#333333',
         'fontFamilyHeader' => 'Roboto Slab',
         'fontFamilyContent' => 'Roboto',
     ]);
@@ -170,10 +166,9 @@ it('config.json THEME excludes keys with empty or null values', function () {
     $app = App::factory()->createQuietly([
         'properties' => [
             'theme' => [
-                'primary_color' => '#111111',
-                'secondary_color' => '',
-                'tertiary_color' => null,
+                'primary_color' => '',
                 'font_family_header' => 'Roboto Slab',
+                'font_family_content' => null,
             ],
         ],
     ]);
@@ -181,7 +176,6 @@ it('config.json THEME excludes keys with empty or null values', function () {
     $config = (new AppConfigService($app))->config();
 
     expect($config['THEME'])->toBe([
-        'primary' => '#111111',
         'fontFamilyHeader' => 'Roboto Slab',
     ]);
 });
@@ -232,25 +226,6 @@ it('config.json THEME excludes non-string values instead of leaking them into th
         'properties' => [
             'theme' => [
                 'primary_color' => ['#fff'],
-                'secondary_color' => '#222222',
-            ],
-        ],
-    ]);
-
-    $config = (new AppConfigService($app))->config();
-
-    expect($config['THEME'])->toBe([
-        'secondary' => '#222222',
-    ]);
-});
-
-it('config.json THEME excludes malformed color values while keeping valid 3-digit hex and font strings untouched', function () {
-    $app = App::factory()->createQuietly([
-        'properties' => [
-            'theme' => [
-                'primary_color' => 'banana',
-                'secondary_color' => '#12345',
-                'tertiary_color' => '#abc',
                 'font_family_header' => 'Roboto Slab',
             ],
         ],
@@ -259,8 +234,40 @@ it('config.json THEME excludes malformed color values while keeping valid 3-digi
     $config = (new AppConfigService($app))->config();
 
     expect($config['THEME'])->toBe([
-        'tertiary' => '#abc',
         'fontFamilyHeader' => 'Roboto Slab',
+    ]);
+});
+
+it('config.json THEME excludes a malformed primary color while keeping font strings untouched', function () {
+    $app = App::factory()->createQuietly([
+        'properties' => [
+            'theme' => [
+                'primary_color' => 'banana',
+                'font_family_header' => 'Roboto Slab',
+            ],
+        ],
+    ]);
+
+    $config = (new AppConfigService($app))->config();
+
+    expect($config['THEME'])->toBe([
+        'fontFamilyHeader' => 'Roboto Slab',
+    ]);
+});
+
+it('config.json THEME includes a valid 3-digit hex primary color', function () {
+    $app = App::factory()->createQuietly([
+        'properties' => [
+            'theme' => [
+                'primary_color' => '#abc',
+            ],
+        ],
+    ]);
+
+    $config = (new AppConfigService($app))->config();
+
+    expect($config['THEME'])->toBe([
+        'primary' => '#abc',
     ]);
 });
 ```
@@ -290,8 +297,6 @@ Sostituire il metodo in `src/Services/Models/App/AppConfigService.php` (righe 65
      */
     private const THEME_KEY_MAP = [
         'primary_color' => 'primary',
-        'secondary_color' => 'secondary',
-        'tertiary_color' => 'tertiary',
         'font_family_header' => 'fontFamilyHeader',
         'font_family_content' => 'fontFamilyContent',
     ];
@@ -324,6 +329,8 @@ Sostituire il metodo in `src/Services/Models/App/AppConfigService.php` (righe 65
 > **Aggiornato post-commit (cleanup round 2 review)**: la stesura originale del piano usava 9 blocchi `if (! empty(...))` ripetuti invece della costante `THEME_KEY_MAP` iterata in loop — refactor per DRY, comportamento identico (verificato con gli stessi 6 scenari via reflection prima e dopo). Il guard è passato da `! empty()` a `is_string($value) && $value !== ''`, per escludere valori non scalari (es. un array scritto per errore in `properties->theme->*`) dall'output invece di lasciarli passare — vedi il sesto test sopra.
 >
 > **Aggiornato post-round-3**: rimossa `default_feature_color` da `THEME_KEY_MAP` (vedi Task 1). Aggiunta una seconda condizione di esclusione: per le chiavi che finiscono in `_color`, il valore deve rispettare `^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$` (stessa regex tollerata da Nova) — un round di review aveva inizialmente liquidato l'assenza di questo controllo come "solo imprecisione di documentazione", poi riclassificato come gap di codice reale e corretto. I 2 campi font non sono soggetti a questo controllo (`str_ends_with($sourceKey, '_color')` li esclude). Vedi settimo test sopra e `notes.md`, sezione "Review — round 3".
+>
+> **Aggiornato post-round-4**: rimosse anche `secondary_color`/`tertiary_color` da `THEME_KEY_MAP` (vedi Task 1) — solo `primary_color` resta come chiave `*_color`. La logica del metodo (guard `is_string`/vuoto, poi guard formato hex per le chiavi `_color`) è invariata, si applica semplicemente a un `THEME_KEY_MAP` più corto. Vedi `notes.md`, sezione "Decisione post-round-4".
 
 Nota sulla robustezza: `$this->app->properties['theme'] ?? []` non lancia mai eccezioni anche se `properties` è `null` (comportamento nativo dell'operatore `??` su catene di array in PHP, verificato — stesso pattern già usato altrove nel file, es. riga 429 `$properties = $this->app->properties ?? [];`). Il controllo `is_array($theme)` aggiuntivo gestisce il caso in cui `properties->theme` esista ma sia un valore scalare malformato (es. una stringa), che altrimenti farebbe fallire l'accesso su tipo non-array.
 
@@ -626,7 +633,9 @@ git commit -m "fix(oc:8367): guard hexToRgba() on all overlay colors, dedupe hex
 
 Run: `docker exec php-camminiditalia php artisan tinker --execute="\$app = \Wm\WmPackage\Models\App::first(); echo json_encode((new \Wm\WmPackage\Services\Models\App\AppConfigService(\$app))->config()['THEME']);"`
 
-Expected output (dato reale osservato in questa sessione, `primary_color`/`default_feature_color` = `#ef7821`, font family entrambi null): `{"primary":"#ef7821","defaultFeatureColor":"#ef7821"}` — chiavi camelCase, nessuna chiave con valore null.
+Expected output al momento di questo step (dato reale osservato in sessione, `primary_color`/`default_feature_color` = `#ef7821`, font family entrambi null): `{"primary":"#ef7821","defaultFeatureColor":"#ef7821"}` — chiavi camelCase, nessuna chiave con valore null.
+
+> **Aggiornato post-round-3**: dopo la rimozione di `default_feature_color` da `THEME_KEY_MAP` (vedi Task 1/2), la chiave `defaultFeatureColor` non compare più nell'output di questo comando, qualunque sia lo stato reale dell'App al momento in cui lo si esegue (il valore resta come dato orfano in `properties->theme->*`, mai rimosso dal DB, semplicemente non più letto). Non fare affidamento sull'esatto output riportato sopra: verificato in sessione che l'App reale di camminiditalia ha nel frattempo anche `secondary`/`tertiary` impostati da fonte esterna a questo ciclo — l'unica garanzia stabile è l'assenza di `defaultFeatureColor`.
 
 - [ ] **Step 2: Verificare via tinker che salvare un nuovo colore da Nova (simulato) si propaghi correttamente**
 

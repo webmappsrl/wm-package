@@ -133,6 +133,8 @@
     "Process Track Data": "Process Track Data",
     "Primary Color": "Colore Primario",
     "Primary color for the WordPress theme (e.g. buttons, links)": "Colore primario per il tema WordPress (es. pulsanti, link)",
+    "Primary color": "Colore primario",
+    "Primary color for the app theme (e.g. buttons, links)": "Colore primario per il tema dell'app (es. pulsanti, link)",
     "Secondary color": "Colore secondario",
     "Secondary color for the app theme": "Colore secondario per il tema dell'app",
     "Tertiary color": "Colore terziario",
