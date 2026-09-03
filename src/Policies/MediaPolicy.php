@@ -19,14 +19,9 @@ class MediaPolicy
      */
     public function before(User $user, $ability)
     {
-        // if ($user->hasRole('Admin')) {
-        //     return true;
-        // }
-        // if ($user->hasRole('Author') || $user->hasRole('Contributor')) {
-        //     return false;
-        // }
-
-        return true;
+        if ($user->hasRole('Administrator')) {
+            return true;
+        }
     }
 
     /**
