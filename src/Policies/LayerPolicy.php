@@ -12,6 +12,18 @@ class LayerPolicy
     use HandlesAuthorization;
 
     /**
+     * Perform pre-authorization checks.
+     *
+     * @return void|bool
+     */
+    public function before(User $user, string $ability)
+    {
+        if ($user->hasRole('Administrator')) {
+            return true;
+        }
+    }
+
+    /**
      * Determine whether the user can view any models.
      *
      * @return Response|bool
@@ -28,7 +40,7 @@ class LayerPolicy
      */
     public function view(User $user, Layer $layer)
     {
-        return true;
+        return $user->ownedAppIds()->contains($layer->app_id);
     }
 
     /**
@@ -38,7 +50,6 @@ class LayerPolicy
      */
     public function create(User $user)
     {
-
         if ($user->hasRole('Editor')) {
             return false;
         }
@@ -53,7 +64,7 @@ class LayerPolicy
      */
     public function update(User $user, Layer $layer)
     {
-        return true;
+        return $user->ownedAppIds()->contains($layer->app_id);
     }
 
     /**
@@ -63,6 +74,10 @@ class LayerPolicy
      */
     public function delete(User $user, Layer $layer)
     {
+        if ($user->hasRole('Editor')) {
+            return false;
+        }
+
         return true;
     }
 
