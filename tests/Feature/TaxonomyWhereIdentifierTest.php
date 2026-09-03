@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Validation\ValidationException;
 use Wm\WmPackage\Models\TaxonomyWhere;
 
 it('derives the identifier from source and osmfeatures id', function () {
@@ -104,5 +105,5 @@ it('rejects a duplicate identifier with a validation error', function () {
     expect(fn () => TaxonomyWhere::create([
         'name' => ['it' => 'Altro nome'],
         'properties' => ['source' => 'osmfeatures', 'osmfeatures_id' => 'R276369'],
-    ]))->toThrow(Illuminate\Validation\ValidationException::class);
+    ]))->toThrow(ValidationException::class);
 });
