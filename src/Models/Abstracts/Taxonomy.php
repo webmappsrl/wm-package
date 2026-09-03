@@ -35,6 +35,30 @@ abstract class Taxonomy extends Polygon
 
     abstract protected function getRelationKey(): string;
 
+    /**
+     * Genera l'identifier del modello. Il default usa la prima traduzione
+     * disponibile del nome (preferenza: locale corrente, poi 'it', poi 'en').
+     * I modelli figli possono sovrascriverlo con una regola propria.
+     */
+    public function generateIdentifier(): ?string
+    {
+        $translations = $this->getTranslations('name');
+
+        foreach ([app()->getLocale(), 'it', 'en'] as $locale) {
+            if (! empty($translations[$locale])) {
+                return $translations[$locale];
+            }
+        }
+
+        foreach ($translations as $value) {
+            if (! empty($value)) {
+                return $value;
+            }
+        }
+
+        return null;
+    }
+
     protected static function boot()
     {
         parent::boot();

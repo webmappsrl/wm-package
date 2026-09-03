@@ -10,72 +10,57 @@ use Illuminate\Validation\ValidationException;
 class TaxonomyObserver extends AbstractObserver
 {
     /**
-     * Handle the TaxonomyWhere "creating" event.
+     * Handle the Taxonomy "creating" event.
      *
      * @return void
      */
     public function creating(Model $taxonomy)
     {
-        if (empty($taxonomy->identifier)) {
-            $taxonomy->identifier = self::generateIdentifierFromName($taxonomy);
+        $this->assignIdentifier($taxonomy);
+
+        if ($taxonomy->identifier === null) {
+            return;
         }
 
-        if ($taxonomy->identifier != null) {
-            $taxonomy->identifier = Str::slug($taxonomy->identifier, '-');
-
-            $existing = $taxonomy::where('identifier', $taxonomy->identifier)->first();
-            if ($existing !== null) {
-                self::validationError("The inserted 'identifier' field already exists.");
-            }
+        $existing = $taxonomy::where('identifier', $taxonomy->identifier)->first();
+        if ($existing !== null) {
+            self::validationError("The inserted 'identifier' field already exists.");
         }
     }
 
     /**
-     * Handle the TaxonomyWhere "deleted" event.
+     * Handle the Taxonomy "updating" event.
      *
      * @return void
      */
     public function updating(Model $taxonomy)
     {
-        if (empty($taxonomy->identifier)) {
-            $taxonomy->identifier = self::generateIdentifierFromName($taxonomy);
-        }
-
-        if ($taxonomy->identifier !== null) {
-            $taxonomy->identifier = Str::slug($taxonomy->identifier, '-');
-        }
+        $this->assignIdentifier($taxonomy);
     }
 
     /**
-     * Genera un identifier dallo slug del nome del modello, scegliendo la prima
-     * traduzione disponibile (preferenza: locale corrente, poi 'it', poi qualunque).
+     * Deriva (se assente) e normalizza l'identifier delegando la regola al
+     * modello, che puo' sovrascriverla.
+     *
+     * Uno slug che si riduce a stringa vuota diventa null: la colonna e'
+     * nullable e PostgreSQL ammette piu' NULL su un indice unique. Scriverlo
+     * come stringa vuota, oltre a essere semanticamente sbagliato, faceva
+     * saltare il check di unicita' (in PHP `'' != null` e' false).
      */
-    private static function generateIdentifierFromName(Model $taxonomy): ?string
+    private function assignIdentifier(Model $taxonomy): void
     {
-        if (! method_exists($taxonomy, 'getTranslations')) {
-            return null;
+        if (empty($taxonomy->identifier)) {
+            $taxonomy->identifier = method_exists($taxonomy, 'generateIdentifier')
+                ? $taxonomy->generateIdentifier()
+                : null;
         }
 
-        $translations = $taxonomy->getTranslations('name');
-        $candidates = [
-            app()->getLocale(),
-            'it',
-            'en',
-        ];
-
-        foreach ($candidates as $locale) {
-            if (! empty($translations[$locale])) {
-                return $translations[$locale];
-            }
+        if ($taxonomy->identifier === null) {
+            return;
         }
 
-        foreach ($translations as $value) {
-            if (! empty($value)) {
-                return $value;
-            }
-        }
-
-        return null;
+        $slug = Str::slug((string) $taxonomy->identifier, '-');
+        $taxonomy->identifier = $slug !== '' ? $slug : null;
     }
 
     /**
