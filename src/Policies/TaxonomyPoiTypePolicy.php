@@ -14,12 +14,13 @@ class TaxonomyPoiTypePolicy
     /**
      * Perform pre-authorization checks.
      *
-     * @param  string  $ability
      * @return void|bool
      */
-    public function before(User $user, $ability)
+    public function before(User $user, string $ability)
     {
-        return true;
+        if ($user->hasRole('Administrator')) {
+            return true;
+        }
     }
 
     /**
@@ -39,9 +40,7 @@ class TaxonomyPoiTypePolicy
      */
     public function view(User $user, TaxonomyPoiType $taxonomyPoiType)
     {
-        if ($user->hasRole('Editor')) {
-            return true;
-        }
+        return true;
     }
 
     /**
@@ -51,7 +50,7 @@ class TaxonomyPoiTypePolicy
      */
     public function create(User $user)
     {
-        //
+        return false;
     }
 
     /**
@@ -61,7 +60,7 @@ class TaxonomyPoiTypePolicy
      */
     public function update(User $user, TaxonomyPoiType $taxonomyPoiType)
     {
-        //
+        return false;
     }
 
     /**
@@ -71,7 +70,7 @@ class TaxonomyPoiTypePolicy
      */
     public function delete(User $user, TaxonomyPoiType $taxonomyPoiType)
     {
-        //
+        return false;
     }
 
     /**
@@ -81,7 +80,7 @@ class TaxonomyPoiTypePolicy
      */
     public function restore(User $user, TaxonomyPoiType $taxonomyPoiType)
     {
-        //
+        return false;
     }
 
     /**
@@ -91,6 +90,6 @@ class TaxonomyPoiTypePolicy
      */
     public function forceDelete(User $user, TaxonomyPoiType $taxonomyPoiType)
     {
-        //
+        return false;
     }
 }
