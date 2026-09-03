@@ -113,7 +113,16 @@ class OsmfeaturesClient extends JsonClient
             $data = $response->json('data', []);
             foreach ($data as $item) {
                 $nameObj = $item['name'] ?? [];
-                $name = $nameObj['it'] ?? $nameObj['en'] ?? (is_array($nameObj) ? (reset($nameObj) ?: $item['id']) : $item['id']);
+                // Solo 'it' e 'en' sono nomi affidabili. In assenza si lascia
+                // null invece di ripiegare sulla prima lingua disponibile
+                // (reset()): l'endpoint list restituisce le sole traduzioni
+                // name:<lang>, quindi un'area con la sola traduzione coreana
+                // finiva salvata in coreano sotto la chiave 'it'. Il tag 'name'
+                // base viene recuperato dal dettaglio in
+                // FetchTaxonomyWhereGeometryJob, che lo scarica comunque.
+                $name = is_array($nameObj)
+                    ? ($nameObj['it'] ?? $nameObj['en'] ?? null)
+                    : ($nameObj ?: null);
                 $items[] = [
                     'id' => $item['id'],
                     'name' => $name,
