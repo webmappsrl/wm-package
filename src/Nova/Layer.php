@@ -4,9 +4,12 @@ namespace Wm\WmPackage\Nova;
 
 use App\Nova\User;
 use Ebess\AdvancedNovaMediaLibrary\Fields\Images;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Kongulov\NovaTabTranslatable\NovaTabTranslatable;
 use Laravel\Nova\Fields\BelongsTo;
 use Laravel\Nova\Fields\Boolean;
@@ -34,6 +37,30 @@ class Layer extends AbstractGeometryResource
     }
 
     public static $with = ['ecTracks', 'ecPois', 'appOwner', 'associatedApps'];
+
+    /**
+     * Build an "index" query for the given resource.
+     *
+     * Scopes by app_id for any non-Administrator, same criterion as
+     * AbstractEcResource::indexQuery() (Editor and Validator both scoped —
+     * unlike UGC, which bypasses Validator entirely).
+     *
+     * @param  Builder  $query
+     * @return Builder
+     */
+    public static function indexQuery(NovaRequest $request, $query)
+    {
+        $user = Auth::user();
+
+        if ($user && ! $user->hasRole('Administrator')) {
+            $table = $query->getModel()->getTable();
+            if (Schema::hasColumn($table, 'app_id')) {
+                return $query->whereIn('app_id', $user->ownedAppIds());
+            }
+        }
+
+        return $query;
+    }
 
     public static $model = LayerModel::class;
 
