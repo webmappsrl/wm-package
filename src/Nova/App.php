@@ -450,7 +450,7 @@ class App extends Resource
     private function themeColorField(string $label, string $attribute, string $help): Color
     {
         return Color::make($label, "properties->theme->{$attribute}")
-            ->rules('nullable', 'regex:/^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/')
+            ->rules('nullable', 'regex:'.THEME_HEX_COLOR_PATTERN)
             ->hideFromIndex()
             ->help($help);
     }

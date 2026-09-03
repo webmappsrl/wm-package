@@ -1,5 +1,17 @@
 <?php
 
+if (! defined('THEME_HEX_COLOR_PATTERN')) {
+    /**
+     * Shared 3-or-6-digit hex color pattern (delimiters included) for App theme colors —
+     * single source of truth for Nova\App::themeColorField()'s validation rule and
+     * AppConfigService::config_section_theme()'s output filter, which must stay in sync
+     * (a value Nova accepts but config_section_theme() rejects, or vice versa, silently
+     * breaks the admin-facing color picker). Deliberately looser than sanitizeHexColor()
+     * below — see that function's docblock for why the two differ and must not be merged.
+     */
+    define('THEME_HEX_COLOR_PATTERN', '/^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/');
+}
+
 if (! function_exists('hexToRgba')) {
     /**
      * Convert hex color to rgba color.
@@ -40,18 +52,20 @@ if (! function_exists('hexToRgba')) {
 if (! function_exists('sanitizeHexColor')) {
     /**
      * Return $value if it's an exact 6-digit hex color (e.g. "#ff0000"), otherwise $fallback.
-     * Use before passing a color to hexToRgba(), which throws on any string containing "#"
-     * that isn't exactly 6 or 8 hex digits long (e.g. free-text Nova fields, 3-digit CSS
-     * shorthand, or any other unvalidated source).
      *
-     * Deliberately stricter than the Nova Color field regex and AppConfigService::
-     * config_section_theme()'s output filter, both of which tolerate 3-digit hex
-     * (^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$) — a valid 3-digit value like "#abc" reaches
-     * config.json as-is (CSS accepts 3-digit hex natively), but is treated as invalid
-     * here and replaced with $fallback. Do not loosen this to accept 3 digits: every
-     * caller of this function feeds its result straight into hexToRgba(), which only
-     * accepts exactly 6 or 8 hex digits and throws otherwise (see oc:8367 notes.md,
-     * "Review — round 2", for the incident this guards against).
+     * Deliberately stricter than THEME_HEX_COLOR_PATTERN above (used by the Nova Color
+     * field and AppConfigService::config_section_theme()'s output filter, both of which
+     * tolerate 3-digit hex) — a valid 3-digit value like "#abc" reaches config.json as-is
+     * (CSS accepts 3-digit hex natively), but is treated as invalid
+     * here and replaced with $fallback. Do not loosen this to accept 3 digits without
+     * checking every caller first: AppConfigService::config_section_map() feeds this
+     * function's result straight into hexToRgba() (this file), which throws on any
+     * string containing "#" that isn't exactly 6 or 8 hex digits long — a 3-digit value
+     * reaching it would break the whole App save (see config_section_map()'s own
+     * docblock/comments for that incident). StoryShareImageService::resolveAccentColor()
+     * is a different kind of caller: its result never reaches hexToRgba(), only a private
+     * substr()/hexdec()-based hex parser that never throws but would silently truncate a
+     * malformed value into a wrong RGB color instead.
      *
      * @param  mixed  $value
      */

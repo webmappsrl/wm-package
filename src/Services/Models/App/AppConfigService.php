@@ -684,7 +684,7 @@ class AppConfigService extends AppBaseService
             if (! is_string($value) || $value === '') {
                 continue;
             }
-            if (str_ends_with($sourceKey, '_color') && ! preg_match('/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/', $value)) {
+            if (str_ends_with($sourceKey, '_color') && ! preg_match(THEME_HEX_COLOR_PATTERN, $value)) {
                 continue;
             }
             $data['THEME'][$targetKey] = $value;
