@@ -4,6 +4,9 @@ namespace Wm\WmPackage\Nova;
 
 use App\Nova\User;
 use Ebess\AdvancedNovaMediaLibrary\Fields\Images;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 use Laravel\Nova\Card;
 use Laravel\Nova\Fields\BelongsTo;
 use Laravel\Nova\Fields\Field;
@@ -22,6 +25,26 @@ use Wm\WmPackage\Nova\Metrics\TopUgcCreators;
 
 abstract class AbstractUgcResource extends AbstractGeometryResource
 {
+    /**
+     * Build an "index" query for the given resource.
+     *
+     * @param  Builder  $query
+     * @return Builder
+     */
+    public static function indexQuery(NovaRequest $request, $query)
+    {
+        $user = Auth::user();
+
+        if ($user && ! $user->hasRole('Administrator') && ! $user->hasRole('Validator')) {
+            $table = $query->getModel()->getTable();
+            if (Schema::hasColumn($table, 'app_id')) {
+                return $query->whereIn('app_id', $user->ownedAppIds());
+            }
+        }
+
+        return $query;
+    }
+
     /**
      * Get the fields displayed by the resource.
      *

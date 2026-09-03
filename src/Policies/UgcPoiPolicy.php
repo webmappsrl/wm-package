@@ -14,19 +14,17 @@ class UgcPoiPolicy
     /**
      * Perform pre-authorization checks.
      *
-     * @param  string  $ability
+     * Administrator and Validator see/manage any UGC regardless of app (same
+     * treatment as the menu-visibility decision: a Validator's job is to
+     * validate UGC across apps, not just their own).
+     *
      * @return void|bool
      */
-    public function before(User $user, $ability)
+    public function before(User $user, string $ability)
     {
-        // if ($user->hasRole('Admin')) {
-        //     return true;
-        // }
-        // if ($user->hasRole('Author') || $user->hasRole('Contributor')) {
-        //     return false;
-        // }
-
-        return true;
+        if ($user->hasRole('Administrator') || $user->hasRole('Validator')) {
+            return true;
+        }
     }
 
     /**
@@ -44,12 +42,14 @@ class UgcPoiPolicy
     /**
      * Determine whether the user can view the model.
      *
+     * Editor: read-only, limited to UGC of their own app(s).
+     *
      * @return Response|bool
      */
     public function view(User $user, UgcPoi $ugcPoi)
     {
         if ($user->hasRole('Editor') && $user->hasDashboardShow()) {
-            return true;
+            return $user->ownedAppIds()->contains($ugcPoi->app_id);
         }
     }
 
@@ -60,7 +60,7 @@ class UgcPoiPolicy
      */
     public function create(User $user)
     {
-        //
+        return false;
     }
 
     /**
@@ -70,7 +70,7 @@ class UgcPoiPolicy
      */
     public function update(User $user, UgcPoi $ugcPoi)
     {
-        //
+        return false;
     }
 
     /**
@@ -80,7 +80,7 @@ class UgcPoiPolicy
      */
     public function delete(User $user, UgcPoi $ugcPoi)
     {
-        //
+        return false;
     }
 
     /**
@@ -90,7 +90,7 @@ class UgcPoiPolicy
      */
     public function restore(User $user, UgcPoi $ugcPoi)
     {
-        //
+        return false;
     }
 
     /**
@@ -100,6 +100,6 @@ class UgcPoiPolicy
      */
     public function forceDelete(User $user, UgcPoi $ugcPoi)
     {
-        //
+        return false;
     }
 }
