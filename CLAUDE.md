@@ -22,6 +22,31 @@ protected static function newFactory(): Factory
 
 ## Decisioni architetturali
 
+### Fix identifier TaxonomyWhere (oc:8469)
+- `TaxonomyObserver` non contiene piu' la regola di derivazione: chiama
+  `Taxonomy::generateIdentifier()`, sovrascrivibile dai modelli figli. Un ramo
+  `if ($model instanceof X)` nell'observer avrebbe fatto crescere una classe
+  condivisa da cinque modelli in tutti i progetti
+- **Il guard `if (empty($identifier))` non va rimosso**: rimuoverlo farebbe
+  ricalcolare l'identifier di `TaxonomyActivity` e `TaxonomyPoiType` a ogni
+  rename, rompendo i riferimenti persistiti nella config App
+  (`src/Nova/App.php:923-941`)
+- `TaxonomyWhere::generateIdentifier()` deriva da `properties['source']` + id
+  della sorgente, **mai dal nome** quando un id esiste: i nomi da OSMFeatures
+  sono assenti o in lingue arbitrarie, e `Str::slug()` su alfabeti non latini
+  restituisce stringa vuota. Cosi' la collisione e' impossibile per costruzione
+  (verificato: 427 record importati, 427 identifier distinti)
+- `identifier` **non** e' in `$fillable` di `TaxonomyWhere`: lo scrive
+  l'observer, non il mass-assignment
+- Backfill della migration in SQL puro: `TaxonomyWhere` estende `Polygon`, e
+  risalvare i modelli via Eloquent farebbe transitare la geometria PostGIS
+  attraverso l'ORM
+- `OsmfeaturesClient::getAdminAreasIds()` non deve ripiegare su `reset($nameObj)`:
+  l'endpoint `admin-areas/list` espone solo le traduzioni `name:<lang>`, mai il
+  tag `name` base, che va letto dal dettaglio (gia' scaricato da
+  `FetchTaxonomyWhereGeometryJob` per la geometria)
+
+
 ### Persistenza modalità auto/manuale layer (oc:8314)
 - setTrackMode()/setPoiMode() riscritti da read-modify-write Eloquent a
   UPDATE...jsonb_set via DB::statement() + refresh(): il read-modify-write
@@ -148,6 +173,7 @@ protected static function newFactory(): Factory
 | Feature | Ticket | Moduli toccati | Note |
 |---|---|---|---|
 | Persistenza modalità auto/manuale layer + default configurabile | oc:8314 | `src/Models/Layer.php`, `src/Nova/Fields/LayerFeatures/**`, `config/wm-package.php` | `setTrackMode()`/`setPoiMode()` ora scrivono con `jsonb_set` atomico; nuovo `persistMode()` protected riusabile da sottoclassi; nuova chiave `default_layer_mode` (default `'auto'`, invariato per retrocompatibilità) |
+| Fix identifier TaxonomyWhere | oc:8469 | `src/Observers/TaxonomyObserver.php`, `src/Models/Abstracts/Taxonomy.php`, `src/Models/TaxonomyWhere.php`, `src/Nova/Actions/ImportTaxonomyWhere.php`, `src/Http/Clients/OsmfeaturesClient.php`, `src/Jobs/TaxonomyWhere/FetchTaxonomyWhereGeometryJob.php`, migration stub | Colonna `identifier` su `taxonomy_wheres`; derivazione sovrascrivibile dal modello; per TaxonomyWhere deriva da `source` + id sorgente, mai dal nome. Include il fix dei nomi da OSMFeatures |
 | Spostare test EcPoiOsmImportActionAvailableTest in wm-package | oc:8348 | `tests/Feature/Nova/Actions/ImportEcPoiFromOsmActionTest.php` | Nuovo test che asserisce esplicitamente `ImportEcPoiFromOsm` esposta di default su `Wm\WmPackage\Nova\EcPoi` — sostituisce il test gemello eliminato in Maphub, che referenziava direttamente questa classe interna causando un errore PHPStan legato al disallineamento del puntatore submodule |
 | Campo descrizione sempre visibile in creazione EcPoi/EcTrack | oc:8303 | `src/Nova/AbstractEcResource.php`, `src/Nova/EcPoi.php`, `src/Nova/EcTrack.php`, `config/wm-ec-poi-schema.php`, `config/wm-ec-track-schema.php`, `tests/Unit/EcDescriptionTiptapTest.php` | Campo `description` spostato dal pannello dinamico "Proprietà" (nascosto quando vuoto, mai visibile in creazione) a campo statico traducibile in `getInfoTabFields()`; entry rimossa dagli schema dinamici per evitare doppio editor; `Layer` non toccato |
 | Horizontal Scroll: campo Poi/Traccia custom (Model + Search) | oc:8241 | `src/Nova/Fields/PoiTrackReferenceField/**`, `src/Nova/Flexible/ConfigHome/HorizontalScrollPoiTrackItemRepeatable.php`, `src/Nova/Flexible/ConfigHome/HorizontalScrollPoiTrackRepeaterJsonPreset.php`, `src/Nova/App.php`, `src/Nova/Traits/HasFlexibleTranslatableFields.php`, `resources/lang/{it,en}.json` | Campo Nova custom Model(Poi/Track)+Search al posto di due Select; titolo sempre readonly ereditato dal modello; fix bug perdita silenziosa item al cambio Model; cascade traduzioni `it→en→prima disponibile`; naming interno "Geo" rinominato in "PoiTrack" in revisione 7 (il `box_type` persistito resta `base`/legacy `horizontal_scroll_geo`, invariato); revisione 8: fix `showOnDetail()`/`extractRawItems()` mancanti (stesso bug preesistente nel box tassonomie, non corretto) + fix salvataggio Title (`disableEditingKeys`, chiavi lingua condivise da tutti i box) |

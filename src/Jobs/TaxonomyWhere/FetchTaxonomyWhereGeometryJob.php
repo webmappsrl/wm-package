@@ -38,6 +38,8 @@ class FetchTaxonomyWhereGeometryJob implements ShouldQueue
 
         $detail = $client->getAdminAreaDetail($osmfeaturesId);
 
+        $this->syncNameFromDetail($taxonomyWhere, $detail, $osmfeaturesId);
+
         if (empty($detail['geometry'])) {
             Log::warning('TaxonomyWhere geometry not available from OSMFeatures', [
                 'taxonomy_where_id' => $this->taxonomyWhereId,
@@ -51,6 +53,32 @@ class FetchTaxonomyWhereGeometryJob implements ShouldQueue
             'UPDATE taxonomy_wheres SET geometry = ST_GeomFromGeoJSON(?) WHERE id = ?',
             [$detail['geometry'], $taxonomyWhere->id]
         );
+    }
+
+    /**
+     * L'endpoint list di OSMFeatures espone solo le traduzioni name:<lang>, non
+     * il tag 'name' base. Quando mancano 'it' e 'en' l'import salva l'id come
+     * segnaposto: qui lo si sostituisce col nome reale, gia' presente nel
+     * dettaglio che questo job scarica comunque per la geometria.
+     */
+    protected function syncNameFromDetail(TaxonomyWhere $taxonomyWhere, array $detail, string $osmfeaturesId): void
+    {
+        $baseName = $detail['name'] ?? null;
+
+        if (empty($baseName) || $baseName === $osmfeaturesId) {
+            return;
+        }
+
+        $translations = $taxonomyWhere->getTranslations('name');
+        $hasReliableName = ! empty($translations['it']) || ! empty($translations['en']);
+        $isPlaceholder = in_array($osmfeaturesId, $translations, true);
+
+        if ($hasReliableName && ! $isPlaceholder) {
+            return;
+        }
+
+        $taxonomyWhere->setTranslation('name', 'it', $baseName);
+        $taxonomyWhere->save();
     }
 
     public function failed(\Throwable $e): void
