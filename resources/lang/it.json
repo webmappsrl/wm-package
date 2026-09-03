@@ -350,5 +350,6 @@
     "Updated": "Aggiornati",
     ":count OSM IDs were skipped because they exceeded the per-run limit (WM_OSM_IMPORT_MAX_IDS_PER_RUN). Import the remaining IDs in another run.": ":count OSMID non sono stati elaborati perché superano il limite per esecuzione (WM_OSM_IMPORT_MAX_IDS_PER_RUN). Importa i rimanenti in un'altra esecuzione.",
     "When enabled, POIs are included in the app’s pois.geojson file (global filter in getAllPoisGeojson). When disabled, they are imported but excluded from that file until global is set to true.": "Se abilitato, i POI sono inclusi nel file pois.geojson dell'app (filtro global in getAllPoisGeojson). Se disabilitato, vengono importati ma esclusi dal file finché global non viene impostato a true.",
-    "When enabled, data is fetched and the outcome is shown without persisting any changes.": "Se abilitato, i dati vengono scaricati e il risultato mostrato senza salvare alcuna modifica."
+    "When enabled, data is fetched and the outcome is shown without persisting any changes.": "Se abilitato, i dati vengono scaricati e il risultato mostrato senza salvare alcuna modifica.",
+    ":count records skipped: identifier already in use.": ":count record saltati: identifier già in uso."
 }

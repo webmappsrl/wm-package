@@ -5,9 +5,11 @@ namespace Wm\WmPackage\Nova\Actions;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Bus\Queueable;
+use Illuminate\Database\QueryException;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\ValidationException;
 use Laravel\Nova\Actions\Action;
 use Laravel\Nova\Fields\ActionFields;
 use Laravel\Nova\Fields\Select;
@@ -90,6 +92,7 @@ class ImportTaxonomyWhere extends Action
 
         $count = 0;
         $skipped = 0;
+        $skippedCollision = 0;
 
         foreach ($items as $item) {
             $apiUpdatedAt = isset($item['updated_at']) ? Carbon::parse($item['updated_at']) : null;
@@ -115,20 +118,28 @@ class ImportTaxonomyWhere extends Action
                 'source_updated_at' => $apiUpdatedAt?->toIso8601String(),
             ];
 
-            if ($existing) {
-                $existing->update([
-                    'name' => $item['name'],
-                    'properties' => array_merge($existing->properties ?? [], $properties),
-                ]);
-                $this->assignTaxonomyUserFromApp($existing, $app);
-                FetchTaxonomyWhereGeometryJob::dispatch($existing->id);
-            } else {
-                $taxonomyWhere = TaxonomyWhere::create([
-                    'name' => $item['name'],
-                    'properties' => $properties,
-                ]);
-                $this->assignTaxonomyUserFromApp($taxonomyWhere, $app);
-                FetchTaxonomyWhereGeometryJob::dispatch($taxonomyWhere->id);
+            try {
+                if ($existing) {
+                    $existing->update([
+                        'name' => $item['name'] ?? $item['id'],
+                        'properties' => array_merge($existing->properties ?? [], $properties),
+                    ]);
+                    $this->assignTaxonomyUserFromApp($existing, $app);
+                    FetchTaxonomyWhereGeometryJob::dispatch($existing->id);
+                } else {
+                    $taxonomyWhere = TaxonomyWhere::create([
+                        'name' => $item['name'] ?? $item['id'],
+                        'properties' => $properties,
+                    ]);
+                    $this->assignTaxonomyUserFromApp($taxonomyWhere, $app);
+                    FetchTaxonomyWhereGeometryJob::dispatch($taxonomyWhere->id);
+                }
+            } catch (ValidationException|QueryException $e) {
+                // Identifier gia' presente: si salta il singolo record invece di
+                // interrompere l'intero import.
+                $skippedCollision++;
+
+                continue;
             }
 
             $count++;
@@ -142,6 +153,12 @@ class ImportTaxonomyWhere extends Action
             config('wm-package.ec_track_model', EcTrack::class)
         );
         $msg .= " Sync taxonomy_where su {$tracksSynced} tracks avviata.";
+
+        if ($skippedCollision > 0) {
+            $msg .= ' '.__(':count records skipped: identifier already in use.', [
+                'count' => $skippedCollision,
+            ]);
+        }
 
         return Action::message($msg);
     }
@@ -188,6 +205,7 @@ class ImportTaxonomyWhere extends Action
 
         $count = 0;
         $skipped = 0;
+        $skippedCollision = 0;
 
         foreach ($sectors as $sector) {
             $apiUpdatedAt = isset($sector['updated_at']) ? Carbon::parse($sector['updated_at']) : null;
@@ -212,20 +230,28 @@ class ImportTaxonomyWhere extends Action
                 'source_updated_at' => $apiUpdatedAt?->toIso8601String(),
             ];
 
-            if ($existing) {
-                $existing->update([
-                    'name' => $sector['name'],
-                    'properties' => array_merge($existing->properties ?? [], $properties),
-                ]);
-                $this->assignTaxonomyUserFromApp($existing, $app);
-                FetchOsm2caiSectorGeometryJob::dispatch($existing->id);
-            } else {
-                $created = TaxonomyWhere::create([
-                    'name' => $sector['name'],
-                    'properties' => $properties,
-                ]);
-                $this->assignTaxonomyUserFromApp($created, $app);
-                FetchOsm2caiSectorGeometryJob::dispatch($created->id);
+            try {
+                if ($existing) {
+                    $existing->update([
+                        'name' => $sector['name'],
+                        'properties' => array_merge($existing->properties ?? [], $properties),
+                    ]);
+                    $this->assignTaxonomyUserFromApp($existing, $app);
+                    FetchOsm2caiSectorGeometryJob::dispatch($existing->id);
+                } else {
+                    $created = TaxonomyWhere::create([
+                        'name' => $sector['name'],
+                        'properties' => $properties,
+                    ]);
+                    $this->assignTaxonomyUserFromApp($created, $app);
+                    FetchOsm2caiSectorGeometryJob::dispatch($created->id);
+                }
+            } catch (ValidationException|QueryException $e) {
+                // Identifier gia' presente: si salta il singolo record invece di
+                // interrompere l'intero import.
+                $skippedCollision++;
+
+                continue;
             }
 
             $count++;
@@ -239,6 +265,12 @@ class ImportTaxonomyWhere extends Action
             config('wm-package.ec_track_model', EcTrack::class)
         );
         $msg .= " Sync taxonomy_where su {$tracksSynced} tracks avviata.";
+
+        if ($skippedCollision > 0) {
+            $msg .= ' '.__(':count records skipped: identifier already in use.', [
+                'count' => $skippedCollision,
+            ]);
+        }
 
         return Action::message($msg);
     }
