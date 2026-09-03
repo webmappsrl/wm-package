@@ -41,8 +41,8 @@ class EcTrackPolicy
      */
     public function view(User $user, EcTrack $ecTrack)
     {
-        // Admins are handled by before(). Users can view their own Tracks.
-        return $user->id === $ecTrack->user_id;
+        // Admins are handled by before(). Editor/Validator can view Tracks of their own app(s).
+        return $user->ownedAppIds()->contains($ecTrack->app_id);
     }
 
     /**
@@ -62,8 +62,8 @@ class EcTrackPolicy
      */
     public function update(User $user, EcTrack $ecTrack)
     {
-        // Admins are handled by before(). Users can update their own Tracks.
-        return $user->id === $ecTrack->user_id;
+        // Admins are handled by before(). Editor/Validator can update Tracks of their own app(s).
+        return $user->ownedAppIds()->contains($ecTrack->app_id);
     }
 
     /**
@@ -73,8 +73,8 @@ class EcTrackPolicy
      */
     public function delete(User $user, EcTrack $ecTrack)
     {
-        // Admins are handled by before(). Users can delete their own Tracks.
-        return $user->id === $ecTrack->user_id;
+        // Admins are handled by before(). Editor/Validator can delete Tracks of their own app(s).
+        return $user->ownedAppIds()->contains($ecTrack->app_id);
     }
 
     /**
