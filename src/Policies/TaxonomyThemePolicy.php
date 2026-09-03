@@ -5,9 +5,9 @@ namespace Wm\WmPackage\Policies;
 use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 use Illuminate\Auth\Access\Response;
-use Wm\WmPackage\Models\TaxonomyWhen;
+use Wm\WmPackage\Models\TaxonomyTheme;
 
-class TaxonomyWhenPolicy
+class TaxonomyThemePolicy
 {
     use HandlesAuthorization;
 
@@ -18,9 +18,7 @@ class TaxonomyWhenPolicy
      */
     public function viewAny(User $user)
     {
-        if ($user->hasRole('Editor')) {
-            return true;
-        }
+        return true;
     }
 
     /**
@@ -28,11 +26,9 @@ class TaxonomyWhenPolicy
      *
      * @return Response|bool
      */
-    public function view(User $user, TaxonomyWhen $taxonomyWhen)
+    public function view(User $user, TaxonomyTheme $taxonomyTheme)
     {
-        if ($user->hasRole('Editor')) {
-            return true;
-        }
+        return true;
     }
 
     /**
@@ -42,7 +38,7 @@ class TaxonomyWhenPolicy
      */
     public function create(User $user)
     {
-        //
+        return $user->hasRole('Administrator');
     }
 
     /**
@@ -50,9 +46,9 @@ class TaxonomyWhenPolicy
      *
      * @return Response|bool
      */
-    public function update(User $user, TaxonomyWhen $taxonomyWhen)
+    public function update(User $user, TaxonomyTheme $taxonomyTheme)
     {
-        //
+        return $user->hasRole('Administrator');
     }
 
     /**
@@ -60,9 +56,9 @@ class TaxonomyWhenPolicy
      *
      * @return Response|bool
      */
-    public function delete(User $user, TaxonomyWhen $taxonomyWhen)
+    public function delete(User $user, TaxonomyTheme $taxonomyTheme)
     {
-        //
+        return $user->hasRole('Administrator');
     }
 
     /**
@@ -70,9 +66,9 @@ class TaxonomyWhenPolicy
      *
      * @return Response|bool
      */
-    public function restore(User $user, TaxonomyWhen $taxonomyWhen)
+    public function restore(User $user, TaxonomyTheme $taxonomyTheme)
     {
-        //
+        return $user->hasRole('Administrator');
     }
 
     /**
@@ -80,8 +76,8 @@ class TaxonomyWhenPolicy
      *
      * @return Response|bool
      */
-    public function forceDelete(User $user, TaxonomyWhen $taxonomyWhen)
+    public function forceDelete(User $user, TaxonomyTheme $taxonomyTheme)
     {
-        //
+        return $user->hasRole('Administrator');
     }
 }

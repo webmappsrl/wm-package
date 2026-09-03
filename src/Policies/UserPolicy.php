@@ -16,22 +16,6 @@ class UserPolicy
      */
     public function __construct() {}
 
-    /**
-     * Perform pre-authorization checks.
-     *
-     * @param  string  $ability
-     * @return void|bool
-     */
-    public function before(User $user, $ability)
-    {
-        if ($user->hasRole('Admin')) {
-            return true;
-        }
-        if ($user->hasRole('Author') || $user->hasRole('Contributor')) {
-            return false;
-        }
-    }
-
     public function viewAny(User $user): bool
     {
 
