@@ -38,7 +38,7 @@ class TaxonomyActivityPolicy
      */
     public function create(User $user)
     {
-        return true;
+        return $user->hasRole('Administrator');
     }
 
     /**
@@ -48,7 +48,7 @@ class TaxonomyActivityPolicy
      */
     public function update(User $user, TaxonomyActivity $taxonomyActivity)
     {
-        return true;
+        return $user->hasRole('Administrator');
     }
 
     /**
@@ -58,7 +58,7 @@ class TaxonomyActivityPolicy
      */
     public function delete(User $user, TaxonomyActivity $taxonomyActivity)
     {
-        return true;
+        return $user->hasRole('Administrator');
     }
 
     /**
@@ -68,7 +68,7 @@ class TaxonomyActivityPolicy
      */
     public function restore(User $user, TaxonomyActivity $taxonomyActivity)
     {
-        //
+        return $user->hasRole('Administrator');
     }
 
     /**
@@ -78,6 +78,6 @@ class TaxonomyActivityPolicy
      */
     public function forceDelete(User $user, TaxonomyActivity $taxonomyActivity)
     {
-        //
+        return $user->hasRole('Administrator');
     }
 }

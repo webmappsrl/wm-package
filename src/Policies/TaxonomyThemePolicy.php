@@ -5,24 +5,11 @@ namespace Wm\WmPackage\Policies;
 use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 use Illuminate\Auth\Access\Response;
-use Wm\WmPackage\Models\Media;
+use Wm\WmPackage\Models\TaxonomyTheme;
 
-class MediaPolicy
+class TaxonomyThemePolicy
 {
     use HandlesAuthorization;
-
-    /**
-     * Perform pre-authorization checks.
-     *
-     * @param  string  $ability
-     * @return void|bool
-     */
-    public function before(User $user, $ability)
-    {
-        if ($user->hasRole('Administrator')) {
-            return true;
-        }
-    }
 
     /**
      * Determine whether the user can view any models.
@@ -31,9 +18,7 @@ class MediaPolicy
      */
     public function viewAny(User $user)
     {
-        if ($user->hasRole('Editor') && $user->hasDashboardShow()) {
-            return true;
-        }
+        return true;
     }
 
     /**
@@ -41,11 +26,9 @@ class MediaPolicy
      *
      * @return Response|bool
      */
-    public function view(User $user, Media $media)
+    public function view(User $user, TaxonomyTheme $taxonomyTheme)
     {
-        if ($user->hasRole('Editor') && $user->hasDashboardShow()) {
-            return true;
-        }
+        return true;
     }
 
     /**
@@ -55,7 +38,7 @@ class MediaPolicy
      */
     public function create(User $user)
     {
-        //
+        return $user->hasRole('Administrator');
     }
 
     /**
@@ -63,9 +46,9 @@ class MediaPolicy
      *
      * @return Response|bool
      */
-    public function update(User $user, Media $media)
+    public function update(User $user, TaxonomyTheme $taxonomyTheme)
     {
-        //
+        return $user->hasRole('Administrator');
     }
 
     /**
@@ -73,9 +56,9 @@ class MediaPolicy
      *
      * @return Response|bool
      */
-    public function delete(User $user, Media $media)
+    public function delete(User $user, TaxonomyTheme $taxonomyTheme)
     {
-        //
+        return $user->hasRole('Administrator');
     }
 
     /**
@@ -83,9 +66,9 @@ class MediaPolicy
      *
      * @return Response|bool
      */
-    public function restore(User $user, Media $media)
+    public function restore(User $user, TaxonomyTheme $taxonomyTheme)
     {
-        //
+        return $user->hasRole('Administrator');
     }
 
     /**
@@ -93,8 +76,8 @@ class MediaPolicy
      *
      * @return Response|bool
      */
-    public function forceDelete(User $user, Media $media)
+    public function forceDelete(User $user, TaxonomyTheme $taxonomyTheme)
     {
-        //
+        return $user->hasRole('Administrator');
     }
 }

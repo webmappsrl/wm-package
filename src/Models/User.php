@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
 use Laravel\Nova\Auth\Impersonatable;
 use Laravel\Sanctum\HasApiTokens;
@@ -231,6 +232,46 @@ class User extends Authenticatable implements JWTSubject
         }
 
         return $result;
+    }
+
+    /**
+     * defines whether at least one app owned by the user has UGC registration
+     * enabled (auth_show_at_startup AND geolocation_record_enable both true)
+     *
+     * @param  int|null  $app_id  limit the check to a single owned app
+     */
+    public function hasUgcEnabled(?int $app_id = null): bool
+    {
+        $apps = $this->apps;
+        $result = false;
+
+        if ($app_id) {
+            foreach ($apps as $app) {
+                if ($app->id == $app_id) {
+                    if ($app->auth_show_at_startup == true && $app->geolocation_record_enable == true) {
+                        $result = true;
+                    }
+                }
+            }
+
+            return $result;
+        }
+
+        foreach ($apps as $app) {
+            if ($app->auth_show_at_startup == true && $app->geolocation_record_enable == true) {
+                $result = true;
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * IDs of the apps owned by the user (via the `apps.user_id` "author" relation).
+     */
+    public function ownedAppIds(): Collection
+    {
+        return $this->apps->pluck('id');
     }
 
     /**
