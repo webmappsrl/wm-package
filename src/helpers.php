@@ -44,6 +44,15 @@ if (! function_exists('sanitizeHexColor')) {
      * that isn't exactly 6 or 8 hex digits long (e.g. free-text Nova fields, 3-digit CSS
      * shorthand, or any other unvalidated source).
      *
+     * Deliberately stricter than the Nova Color field regex and AppConfigService::
+     * config_section_theme()'s output filter, both of which tolerate 3-digit hex
+     * (^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$) — a valid 3-digit value like "#abc" reaches
+     * config.json as-is (CSS accepts 3-digit hex natively), but is treated as invalid
+     * here and replaced with $fallback. Do not loosen this to accept 3 digits: every
+     * caller of this function feeds its result straight into hexToRgba(), which only
+     * accepts exactly 6 or 8 hex digits and throws otherwise (see oc:8367 notes.md,
+     * "Review — round 2", for the incident this guards against).
+     *
      * @param  mixed  $value
      */
     function sanitizeHexColor($value, string $fallback): string

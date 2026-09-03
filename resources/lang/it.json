@@ -139,6 +139,8 @@
     "Secondary color for the app theme": "Colore secondario per il tema dell'app",
     "Tertiary color": "Colore terziario",
     "Tertiary color for the app theme": "Colore terziario per il tema dell'app",
+    "Default feature color": "Colore feature predefinito",
+    "Default color used for map features when no specific style is set": "Colore predefinito usato per gli elementi della mappa quando non è impostato uno stile specifico",
     "Properties": "Proprietà",
     "Radius for POI icons": "Raggio per le icone POI",
     "Rank": "Rank",
