@@ -495,17 +495,41 @@ class AnalyticsService
     }
 
     /**
-     * Filtra gli eventi per shard_name (config('wm-package.shard_name')) per evitare che eventi
-     * di altri consumer wm-package sullo stesso progetto PostHog condiviso si mescolino nelle
-     * metriche. La property ha due forme osservate empiricamente su dati reali di produzione:
-     * annidata (properties.shard_name._value, formato attuale eventi mobile camminiditalia) e
-     * flat (properties.shard_name, osservato su eventi storici di altri shard) — l'OR copre
-     * entrambe. Config vuoto disabilita il filtro (fail-open, comportamento pre-fix) invece di
-     * produrre una clausola che non fa mai match e azzererebbe silenziosamente ogni metrica.
+     * Filtra gli eventi per shard (config('wm-package.analytics_shard_name'), con fallback su
+     * config('wm-package.shard_name')) per evitare che eventi di altri consumer wm-package sullo
+     * stesso progetto PostHog condiviso si mescolino nelle metriche. La property ha due forme
+     * osservate empiricamente su dati reali di produzione: annidata (properties.shard_name._value,
+     * formato attuale eventi mobile camminiditalia) e flat (properties.shard_name, osservato su
+     * eventi storici di altri shard) — l'OR copre entrambe. Config vuoto disabilita il filtro
+     * (fail-open, comportamento pre-fix) invece di produrre una clausola che non fa mai match e
+     * azzererebbe silenziosamente ogni metrica.
+     *
+     * `analytics_shard_name` (env ANALYTICS_SHARD_NAME, oc:8464) esiste SOLO per disaccoppiare il
+     * filtro delle query PostHog dallo shard di storage/link (config('wm-package.shard_name'), usato
+     * da StorageService, Nova\Layer, EcTrackApiLinksCard — MAI da toccare qui). Caso d'uso: un
+     * ambiente non-prod (shard_name diverso da produzione, es. 'camminiditaliadev') che deve
+     * interrogare temporaneamente i dati reali di produzione su PostHog (es. 'camminiditalia').
+     *
+     * Limiti noti, accettati e NON mitigati con logica applicativa (solo documentati, decisione
+     * esplicita del dev in fase di challenge oc:8464):
+     * - NON impostare mai in produzione: se valorizzata con lo shard di un altro cliente Webmapp
+     *   sullo stesso progetto PostHog condiviso, la dashboard mostrerebbe dati cross-tenant (stesso
+     *   rischio chiuso da oc:8354, riaperto da questo canale di config se usato in modo improprio).
+     *   Nessuna guardia di codice (es. blocco su ambiente production) — solo questo avviso.
+     * - Nessun log quando l'override è attivo (a differenza del warning sotto per il caso "vuoto");
+     *   non c'è quindi segnale diagnostico su quale shard sia stato effettivamente usato in una query.
+     * - Il confronto è case-sensitive e senza validazione: un typo o un mismatch di maiuscole produce
+     *   silenziosamente zero risultati, non un errore.
+     * - Se mai impostata in un ambiente con `config:cache` attivo, richiede un `config:cache` esplicito
+     *   dopo la modifica del `.env` per avere effetto.
      */
     private function shardNameClause(): string
     {
-        $shardName = trim((string) config('wm-package.shard_name'));
+        $shardName = trim((string) config('wm-package.analytics_shard_name'));
+
+        if ($shardName === '') {
+            $shardName = trim((string) config('wm-package.shard_name'));
+        }
 
         if ($shardName === '') {
             Log::warning('AnalyticsService: wm-package.shard_name non configurato, filtro shard disabilitato');

@@ -540,6 +540,62 @@ class AnalyticsServiceTest extends TestCase
         });
     }
 
+    public function test_where_clause_uses_analytics_shard_name_when_configured(): void
+    {
+        config([
+            'wm-package.shard_name' => 'camminiditaliadev',
+            'wm-package.analytics_shard_name' => 'camminiditalia',
+        ]);
+        Cache::flush();
+        Http::fake(['*' => Http::response(['results' => []])]);
+
+        (new AnalyticsService)->getLayerUsage(1);
+
+        Http::assertSent(function (Request $request) {
+            $sql = $request->data()['query']['query'];
+
+            return str_contains($sql, "properties.shard_name._value = 'camminiditalia'")
+                && str_contains($sql, "properties.shard_name = 'camminiditalia'")
+                && ! str_contains($sql, 'camminiditaliadev');
+        });
+    }
+
+    public function test_where_clause_falls_back_to_shard_name_when_analytics_shard_name_not_configured(): void
+    {
+        config([
+            'wm-package.shard_name' => 'camminiditalia',
+            'wm-package.analytics_shard_name' => null,
+        ]);
+        Cache::flush();
+        Http::fake(['*' => Http::response(['results' => []])]);
+
+        (new AnalyticsService)->getLayerUsage(1);
+
+        Http::assertSent(function (Request $request) {
+            $sql = $request->data()['query']['query'];
+
+            return str_contains($sql, "properties.shard_name._value = 'camminiditalia'")
+                && str_contains($sql, "properties.shard_name = 'camminiditalia'");
+        });
+    }
+
+    public function test_where_clause_falls_back_to_shard_name_when_analytics_shard_name_is_whitespace(): void
+    {
+        config([
+            'wm-package.shard_name' => 'camminiditalia',
+            'wm-package.analytics_shard_name' => '   ',
+        ]);
+        Cache::flush();
+        Http::fake(['*' => Http::response(['results' => []])]);
+
+        (new AnalyticsService)->getLayerUsage(1);
+
+        Http::assertSent(fn (Request $request) => str_contains(
+            $request->data()['query']['query'],
+            "properties.shard_name._value = 'camminiditalia'"
+        ));
+    }
+
     public function test_where_clause_disables_shard_filter_and_logs_warning_when_shard_name_not_configured(): void
     {
         config(['wm-package.shard_name' => '']);
