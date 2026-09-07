@@ -24,6 +24,16 @@ trait HasConfigDetailPanel
         return Panel::make(__('Detail Blocks'), [
             Flexible::make(__('Detail Blocks'), 'properties->config_detail')
                 ->resolver(ConfigDetailResolver::class)
+                // Explicit false (not the default null) so Field::isRequired() short-circuits
+                // without ever calling getCreationRules()/getUpdateRules(): on Nova 5.7,
+                // FieldCollection::applyDependsOnWithDefaultValues() merges a normalize_value()'d
+                // default into the request for every field, and for an empty Flexible value that
+                // becomes the literal string "[]" (json_encode of the jsonSerialize()'d empty
+                // Collection) instead of a PHP array — which whitecube/nova-flexible-content's
+                // Flexible::extractValue() rejects with "data should be an array". These boxes
+                // are genuinely optional, so required(false) is also the correct semantics, not
+                // just a workaround.
+                ->required(false)
                 ->addLayout(__('Info Box'), ConfigDetailResolver::INFO_BOX_TYPE, [
                     Repeater::make(__('Items'), 'items')
                         ->repeatables([InfoBoxItemRepeatable::make()])
