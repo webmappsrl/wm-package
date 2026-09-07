@@ -139,6 +139,13 @@ class AppConfigService extends AppBaseService
         if ($this->app->getMedia('my_downloads')->isNotEmpty()) {
             $data['APP']['myDownloads'] = $this->app->getFirstMediaUrl('my_downloads');
         }
+        // share_frame is NOT for direct client-side use: it is only consumed indirectly by
+        // POST /api/share-story-image (oc:8183), which resolves it server-side from the
+        // authenticated user's app. Exposed here for parity with the other branding assets
+        // and in case a future client needs to preview/reference it.
+        if ($this->app->getMedia('share_frame')->isNotEmpty()) {
+            $data['APP']['shareFrame'] = $this->app->getFirstMediaUrl('share_frame');
+        }
 
         if (isset($properties['min_app_version']) && trim((string) $properties['min_app_version']) !== '') {
             $data['APP']['minAppVersion'] = $properties['min_app_version'];
@@ -461,6 +468,8 @@ class AppConfigService extends AppBaseService
                 ->get()
                 ->keyBy('id');
 
+            $primaryColor = sanitizeHexColor($this->app->properties['theme']['primary_color'] ?? null, '#000000');
+
             foreach ($overlayItems as $item) {
                 $boxType = $item['box_type'] ?? null;
 
@@ -490,9 +499,8 @@ class AppConfigService extends AppBaseService
                         $array['icon'] = $fc->icon;
                     }
 
-                    $primaryColor = $this->app->primary_color ?? '#000000';
-                    $array['fillColor'] = $fc->fill_color ? hexToRgba($fc->fill_color) : hexToRgba($primaryColor);
-                    $array['strokeColor'] = $fc->stroke_color ? hexToRgba($fc->stroke_color) : hexToRgba($primaryColor);
+                    $array['fillColor'] = hexToRgba(sanitizeHexColor($fc->fill_color, $primaryColor));
+                    $array['strokeColor'] = hexToRgba(sanitizeHexColor($fc->stroke_color, $primaryColor));
 
                     if ($fc->stroke_width) {
                         $array['strokeWidth'] = $fc->stroke_width;
@@ -646,12 +654,41 @@ class AppConfigService extends AppBaseService
         return $data;
     }
 
+    /**
+     * Mappa properties->theme->* (snake_case, Nova App::theme_tab()) -> chiave camelCase
+     * attesa da ITHEME (wm-core) in config.json.THEME. Unica fonte di verità per questo
+     * elenco di chiavi lato AppConfigService — Nova App::theme_tab() mantiene la propria
+     * copia (label/help diversi per campo, non riducibile a questa sola mappa).
+     */
+    private const THEME_KEY_MAP = [
+        'primary_color' => 'primary',
+        'secondary_color' => 'secondary',
+        'tertiary_color' => 'tertiary',
+        'default_feature_color' => 'defaultFeatureColor',
+        'font_family_header' => 'fontFamilyHeader',
+        'font_family_content' => 'fontFamilyContent',
+    ];
+
     private function config_section_theme(): array
     {
-        $data = [];
-        // THEME section
+        $theme = $this->app->properties['theme'] ?? [];
+        if (! is_array($theme)) {
+            $theme = [];
+        }
 
-        $data['THEME'] = $this->app->properties['theme'] ?? [];
+        $data = [];
+        $data['THEME'] = [];
+
+        foreach (self::THEME_KEY_MAP as $sourceKey => $targetKey) {
+            $value = $theme[$sourceKey] ?? null;
+            if (! is_string($value) || $value === '') {
+                continue;
+            }
+            if (str_ends_with($sourceKey, '_color') && ! preg_match(THEME_HEX_COLOR_PATTERN, $value)) {
+                continue;
+            }
+            $data['THEME'][$targetKey] = $value;
+        }
 
         return $data;
     }
@@ -735,7 +772,7 @@ class AppConfigService extends AppBaseService
         $data['OPTIONS']['download_track_enable'] = $this->app->download_track_enable;
         $data['OPTIONS']['print_track_enable'] = $this->app->print_track_enable;
         $data['OPTIONS']['show_searchbar'] = $this->app->show_search;
-        $data['OPTIONS']['show_favorites'] = $this->app->show_favorites;
+        $data['OPTIONS']['showFavorites'] = (bool) ($this->app->properties['show_favorites'] ?? false);
         $data['OPTIONS']['show_scale'] = $this->app->table_details_show_scale;
         $data['OPTIONS']['showGpxDownload'] = $this->app->table_details_show_gpx_download;
         $data['OPTIONS']['showKmlDownload'] = $this->app->table_details_show_kml_download;
@@ -764,6 +801,9 @@ class AppConfigService extends AppBaseService
         // Ensure "new" options come from properties and are never overwritten by track_technical_details.
         $properties = $this->app->properties ?? [];
         $data['OPTIONS']['showTravelMode'] = (bool) ($properties['show_travel_mode'] ?? false);
+        // oc:8183 — gates the "Share" button on recorded UGC tracks in the app; default false/absent
+        // means the button stays hidden, zero impact on shards that don't opt in.
+        $data['OPTIONS']['ugcTrackShareEnabled'] = (bool) ($properties['ugc_track_share_enabled'] ?? false);
         $data['OPTIONS']['showFeaturesInViewport'] = (bool) ($properties['show_features_in_viewport'] ?? false);
         $data['OPTIONS']['minZoomFeaturesInViewport'] = (int) ($properties['min_zoom_features_in_viewport'] ?? 10);
         $data['OPTIONS']['maxZoomFeaturesInViewport'] = (int) ($properties['max_zoom_features_in_viewport'] ?? 12);

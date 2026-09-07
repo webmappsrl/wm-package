@@ -101,6 +101,12 @@ class EcPoi extends Point implements LayerRelatedModel
         return $this->belongsTo(User::class);
     }
 
+    public function app(): BelongsTo
+    {
+        // Fully qualified to avoid clashing with the `Illuminate\Support\Facades\App` import above.
+        return $this->belongsTo(\Wm\WmPackage\Models\App::class);
+    }
+
     public function taxonomyActivities(): MorphToMany
     {
         return $this->morphToMany(TaxonomyActivity::class, 'taxonomy_activityable')

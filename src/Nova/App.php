@@ -38,6 +38,7 @@ use Wm\WmPackage\Nova\Actions\RegenerateAppPbfAction;
 use Wm\WmPackage\Nova\Actions\ReindexAppScoutAction;
 use Wm\WmPackage\Nova\Cards\ApiLinksCard\AppApiLinksCard;
 use Wm\WmPackage\Nova\Fields\BboxField\BboxField;
+use Wm\WmPackage\Nova\Fields\FlexibleTranslatable;
 use Wm\WmPackage\Nova\Fields\OrderList\src\OrderList;
 use Wm\WmPackage\Nova\Fields\StoreVersionField;
 use Wm\WmPackage\Nova\Fields\TranslationsBuilder\TranslationsBuilder;
@@ -47,13 +48,10 @@ use Wm\WmPackage\Nova\Flexible\ConfigHome\HorizontalScrollPoiTrackRepeaterJsonPr
 use Wm\WmPackage\Nova\Flexible\ConfigHome\HorizontalScrollRepeaterJsonPreset;
 use Wm\WmPackage\Nova\Flexible\Resolvers\ConfigHomeResolver;
 use Wm\WmPackage\Nova\Flexible\Resolvers\ConfigOverlaysResolver;
-use Wm\WmPackage\Nova\Traits\HasFlexibleTranslatableFields;
 use Wm\WmPackage\Services\RolesAndPermissionsService;
 
 class App extends Resource
 {
-    use HasFlexibleTranslatableFields;
-
     public static $model = ModelsApp::class;
 
     protected function tiptapButtons(): array
@@ -255,6 +253,10 @@ class App extends Resource
                 ->placeholder('0.0.0')
                 ->rules('nullable', 'regex:/^\\d+\\.\\d+\\.\\d+$/')
                 ->help(__('Minimum app version required. Versions below this value will be blocked and forced to update. Format: X.Y.Z (e.g. 3.1.10, 0.12.55, 12.55.32).')),
+            Boolean::make(__('Native App Deep Link'), 'properties->native_app_deep_link_enabled')
+                ->default(false)
+                ->hideFromIndex()
+                ->help(__('When enabled, this app is registered in the shared well-known file so links open the native app directly instead of the browser, and a QR code / direct link field becomes available on Track and Poi detail pages.')),
         ];
     }
 
@@ -327,7 +329,7 @@ class App extends Resource
 
     protected function overlays_title_layout(): array
     {
-        return $this->translatableFields('Label', 'label');
+        return [FlexibleTranslatable::simple('Label', [Text::make('Label', 'label')])];
     }
 
     protected function feature_collection_layout(): array
@@ -408,6 +410,14 @@ class App extends Resource
                 ->default(false)
                 ->hideFromIndex()
                 ->help(__('Enable the Travel Mode feature on the app')),
+            Boolean::make(__('Ugc Track Share Enabled'), 'properties->ugc_track_share_enabled')
+                ->default(false)
+                ->hideFromIndex()
+                ->help(__('Shows the "Share" button on recorded UGC tracks (Instagram/Facebook Stories). Upload a Story frame image in the Release tab for branded compositing; falls back to an unbranded image otherwise.')),
+            Boolean::make(__('Show favorites'), 'properties->show_favorites')
+                ->default(false)
+                ->hideFromIndex()
+                ->help(__('Activate to show the favorite heart on layers and the "My favorites" section')),
 
             Tab::make('FEwebapp', $this->webapp_tab()),
             Tab::make('FE: mobile', $this->mobile_tab()),
@@ -415,6 +425,12 @@ class App extends Resource
         ];
     }
 
+    /**
+     * Elenco duplicato di proposito in AppConfigService::THEME_KEY_MAP (chiave sorgente
+     * properties->theme->* -> chiave camelCase in config.json) — mantenere sincronizzati:
+     * un nuovo campo qui senza il corrispondente in THEME_KEY_MAP non produce mai errore,
+     * semplicemente non raggiunge mai il frontend.
+     */
     protected function theme_tab(): array
     {
         return [
@@ -424,13 +440,19 @@ class App extends Resource
             Text::make(__('Font Family Content'), 'properties->theme->font_family_content')
                 ->hideFromIndex()
                 ->help(__('Font family used for body content in the app theme')),
-            Color::make(__('Primary color'), 'properties->theme->primary_color')
-                ->hideFromIndex()
-                ->help(__('Primary color for the app theme (e.g. buttons, links)')),
-            Color::make(__('Default feature color'), 'properties->theme->default_feature_color')
-                ->hideFromIndex()
-                ->help(__('Default color used for map features when no specific style is set')),
+            $this->themeColorField(__('Primary color'), 'primary_color', __('Primary color for the app theme (e.g. buttons, links)')),
+            $this->themeColorField(__('Secondary color'), 'secondary_color', __('Secondary color for the app theme')),
+            $this->themeColorField(__('Tertiary color'), 'tertiary_color', __('Tertiary color for the app theme')),
+            $this->themeColorField(__('Default feature color'), 'default_feature_color', __('Default color used for map features when no specific style is set')),
         ];
+    }
+
+    private function themeColorField(string $label, string $attribute, string $help): Color
+    {
+        return Color::make($label, "properties->theme->{$attribute}")
+            ->rules('nullable', 'regex:'.THEME_HEX_COLOR_PATTERN)
+            ->hideFromIndex()
+            ->help($help);
     }
 
     protected function pois_tab(): array
@@ -655,10 +677,33 @@ class App extends Resource
             Images::make(__('My downloads image'), 'my_downloads')
                 ->help(__('Box image (ratio 2.2:1, object-fit cover). Minimum :minwx:minhpx, recommended :recwx:rechpx or larger for retina screens.', ['minw' => 800, 'minh' => 360, 'recw' => 2214, 'rech' => 1013]))
                 ->hideFromIndex(),
+            Images::make(__('Share frame image'), 'share_frame')
+                ->singleMediaRules(['image', 'mimes:png,jpg,jpeg', 'dimensions:min_width=1080,min_height=1920,ratio=9/16'])
+                ->help(__('Branded background frame used to compose the track-share image (9:16), shared via any channel (not Instagram Stories specifically). Required size is :widthx:heightpx or larger with the same 9:16 ratio.', ['width' => 1080, 'height' => 1920]))
+                ->hideFromIndex(),
             Boolean::make(__('Force to Release Update'), 'properties->force_to_release_update')
                 ->default(false)
                 ->hideFromIndex()
                 ->help(__('If enabled, the app will check for updates and show a popup when a new version is available.')),
+            Heading::make(
+                <<<'HTML'
+                <h2><strong>DEEP LINK WELL-KNOWN FILES</strong></h2>
+                HTML
+            )->asHtml()->hideFromIndex(),
+            Text::make(__('Android Certificate SHA-256'), 'properties->android_cert_sha256')
+                ->canSee(fn (NovaRequest $request) => optional($request->user())->hasRole('Administrator'))
+                ->rules('nullable', 'regex:/^([0-9A-Fa-f]{2}:){31}[0-9A-Fa-f]{2}(\s*,\s*([0-9A-Fa-f]{2}:){31}[0-9A-Fa-f]{2})*$/')
+                ->hideFromIndex()
+                ->help(__('SHA-256 signing certificate fingerprint(s) (format XX:XX:...), used to build the Android assetlinks.json entry for the QR code deep link feature. Separate multiple fingerprints with a comma (e.g. upload key + Play Store signing key).')),
+            Text::make(__('Apple Team ID'), 'properties->apple_team_id')
+                ->canSee(fn (NovaRequest $request) => optional($request->user())->hasRole('Administrator'))
+                ->rules('nullable', 'regex:/^[A-Z0-9]{10}$/')
+                ->hideFromIndex()
+                ->help(__("Apple Developer Team ID used to build the appID in apple-app-site-association for the QR code deep link feature. Leave empty to use Webmapp's default team.")),
+            Text::make(__('Website URL'), 'website_url')
+                ->nullable()
+                ->hideFromIndex()
+                ->help(__('Custom domain used to build QR code deep link URLs (Track/Poi). Leave empty to use the default {app_id}.{APP_NAME}.webmapp.it domain.')),
         ];
     }
 
@@ -994,7 +1039,7 @@ class App extends Resource
 
     protected function config_home_title_layout(): array
     {
-        return $this->translatableFields('Title', 'title', required: true);
+        return [FlexibleTranslatable::simple('Title', [Text::make('Title', 'title')])];
     }
 
     protected function layer_layout(): array

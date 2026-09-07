@@ -19,6 +19,7 @@ use Spatie\Backup\Config\Config as BackupConfig;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Tymon\JWTAuth\Providers\LaravelServiceProvider;
+use Wm\WmPackage\Commands\WmBackfillGravatarAvatarsCommand;
 use Wm\WmPackage\Commands\WmBackupCommand;
 use Wm\WmPackage\Commands\WmBuildAppPoisGeojsonCommand;
 use Wm\WmPackage\Commands\WmDownloadDbBackupCommand;
@@ -99,11 +100,12 @@ class WmPackageServiceProvider extends PackageServiceProvider
 
         $packageDirPath = $this->package->basePath('/../');
 
-        // Register Nova CSS assets
+        // Register Nova CSS/JS assets
         Nova::serving(function () {
             Nova::style('wm-flexible-field', __DIR__.'/../resources/css/flexible-field.css');
             Nova::style('wm-nova-overrides', __DIR__.'/../resources/css/nova.css');
             Nova::style('wm-nova-dropzone', __DIR__.'/../resources/css/nova-dropzone.css');
+            Nova::script('wm-nova-overrides', __DIR__.'/../resources/js/nova.js');
             $this->addWmpackageToolsMenuItem();
         });
 
@@ -126,6 +128,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
             Route::middleware(['nova'])
                 ->prefix('nova-vendor/layer-analytics')
                 ->group(function () {
+                    Route::get('/global', [AnalyticsController::class, 'global']);
                     Route::get('/{layer}', [AnalyticsController::class, 'layer']);
                 });
         });
@@ -203,6 +206,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
                 WmDownloadDbBackupCommand::class,
                 WmBuildAppPoisGeojsonCommand::class,
                 WmSyncUgcTaxonomyWhereCommand::class,
+                WmBackfillGravatarAvatarsCommand::class,
                 WmRestoreDbCommand::class,
                 WmGenerateIconsCommand::class,
                 WmPackagePublishMigrationCommand::class,

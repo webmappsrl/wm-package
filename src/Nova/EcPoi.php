@@ -20,11 +20,13 @@ use Wm\WmPackage\Nova\Actions\UploadPoiFile;
 use Wm\WmPackage\Nova\Fields\PropertiesPanel;
 use Wm\WmPackage\Nova\Filters\EcPoiRegionFilter;
 use Wm\WmPackage\Nova\Filters\GlobalEcPoiFilter;
+use Wm\WmPackage\Nova\Traits\HasConfigDetailPanel;
 use Wm\WmPackage\Nova\Traits\PointResourceTrait;
 use Wm\WmPackage\Services\RolesAndPermissionsService;
 
 class EcPoi extends AbstractEcResource
 {
+    use HasConfigDetailPanel;
     use PointResourceTrait {
         fields as protected fieldsTrait;
     }
@@ -57,6 +59,7 @@ class EcPoi extends AbstractEcResource
                 ->readonly(fn ($request) => $this->resource->getMedia()->isEmpty())
                 ->help(__('Show the feature image on the track map instead of the category icon. Only has effect if the POI has an image.'))
                 ->showOnIndex(),
+            $this->configDetailPanel(),
             MorphToMany::make(__('Taxonomy Poi Types'), 'taxonomyPoiTypes', TaxonomyPoiType::class)
                 ->display('name')
                 ->help(__('Tipologie di POI associate a questo punto di interesse')),
@@ -87,6 +90,12 @@ class EcPoi extends AbstractEcResource
             Text::make(__('House number'), 'properties->addr_housenumber'),
             KeyValue::make(__('Related URL'), 'properties->related_url'),
             Text::make(__('Complete address'), 'properties->addr_complete'),
+            Text::make(__('QR Code'), 'deep_link_qr_code', function () {
+                return $this->app?->renderDeepLinkQrCodeHtml('poi', $this->id);
+            })
+                ->asHtml()
+                ->onlyOnDetail()
+                ->canSee(fn () => optional($this->resource->app)->isNativeAppDeepLinkEnabled() ?? false),
         ];
     }
 

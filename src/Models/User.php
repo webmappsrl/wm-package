@@ -13,6 +13,10 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
 use Laravel\Nova\Auth\Impersonatable;
 use Laravel\Sanctum\HasApiTokens;
+use Spatie\Image\Enums\Fit;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Spatie\Permission\Traits\HasRoles;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 use Wm\WmPackage\Nova\Filters\AppFilter;
@@ -26,9 +30,9 @@ use Wm\WmPackage\Traits\HasPackageFactory;
  * @property array $sku
  * @property Carbon $last_login_at
  */
-class User extends Authenticatable implements JWTSubject
+class User extends Authenticatable implements HasMedia, JWTSubject
 {
-    use Favoriteability, HasApiTokens, HasPackageFactory, HasRoles, Impersonatable, Notifiable;
+    use Favoriteability, HasApiTokens, HasPackageFactory, HasRoles, Impersonatable, InteractsWithMedia, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -37,6 +41,7 @@ class User extends Authenticatable implements JWTSubject
      */
     protected $fillable = [
         'name',
+        'surname',
         'email',
         'password',
         'app_id',
@@ -44,6 +49,13 @@ class User extends Authenticatable implements JWTSubject
     ];
 
     protected $guard_name = 'web';
+
+    public const AVATAR_CONVERSION_SIZE = 150;
+
+    // Naming coerente con MediaService::getMediaConversionNameByWidthAndHeight()
+    // (usato per le gallerie EcTrack/EcPoi: "thumbnail_{width}_{height}") — stessa
+    // convenzione, dimensione nel nome, senza però dipendere da quella classe.
+    public const AVATAR_CONVERSION_NAME = 'avatar_'.self::AVATAR_CONVERSION_SIZE.'_'.self::AVATAR_CONVERSION_SIZE;
 
     /**
      * The attributes that should be hidden for arrays.
@@ -70,7 +82,7 @@ class User extends Authenticatable implements JWTSubject
      *
      * @var array
      */
-    protected $appends = ['geopass'];
+    protected $appends = ['geopass', 'avatar_url'];
 
     public function apps(): HasMany
     {
@@ -239,7 +251,7 @@ class User extends Authenticatable implements JWTSubject
      * Composes (does not replace) Nova's native `viewNova` check — defense in depth:
      * only Administrator, and only if the base Nova permission also holds.
      */
-    public function canImpersonate(): bool
+    public function canImpersonate()
     {
         return $this->hasRole('Administrator') && Gate::forUser($this)->check('viewNova');
     }
@@ -252,7 +264,7 @@ class User extends Authenticatable implements JWTSubject
      * `access-nova` (e.g. Guest) would leave the administrator stuck with a 403 on any
      * Nova action, including "Stop impersonating".
      */
-    public function canBeImpersonated(): bool
+    public function canBeImpersonated()
     {
         return $this->can('access-nova');
     }
@@ -267,6 +279,43 @@ class User extends Authenticatable implements JWTSubject
         $pass = $this->attributes['geopass'] = $this->password;
 
         return $pass;
+    }
+
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('avatar')->singleFile();
+    }
+
+    /**
+     * Crop quadrato per rendere l'avatar visivamente coerente (rotondo via CSS)
+     * indipendentemente dall'aspect ratio della foto originale. Sincrono
+     * (nonQueued): l'avatar deve essere corretto già nella risposta HTTP che
+     * segue l'upload, senza dipendere dal worker Horizon.
+     */
+    public function registerMediaConversions(?Media $media = null): void
+    {
+        $this
+            ->addMediaConversion(self::AVATAR_CONVERSION_NAME)
+            ->nonQueued()
+            ->fit(Fit::Crop, self::AVATAR_CONVERSION_SIZE, self::AVATAR_CONVERSION_SIZE);
+    }
+
+    public function getAvatarUrlAttribute(): ?string
+    {
+        $media = $this->getFirstMedia('avatar');
+
+        if (! $media) {
+            return null;
+        }
+
+        if ($media->hasGeneratedConversion(self::AVATAR_CONVERSION_NAME)) {
+            return $media->getUrl(self::AVATAR_CONVERSION_NAME);
+        }
+
+        // Rete di sicurezza: se la conversion non è generabile (es. formato
+        // immagine non supportato dal motore GD/Imagick), il media resta
+        // comunque salvato e servito — non ritagliato, ma non un URL rotto.
+        return $media->getUrl();
     }
 
     public function getMorphClass()

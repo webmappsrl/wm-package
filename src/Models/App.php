@@ -68,6 +68,11 @@ class App extends Model implements HasMedia
         return $this->properties['geohub_id'] ?? null;
     }
 
+    public function isNativeAppDeepLinkEnabled(): bool
+    {
+        return (bool) ($this->properties['native_app_deep_link_enabled'] ?? false);
+    }
+
     public function author(): BelongsTo
     {
         // FK esplicita: la colonna è user_id, non l'inferita author_id (oc:8242).
@@ -540,6 +545,151 @@ class App extends Model implements HasMedia
         return $svg;
     }
 
+    /**
+     * Resolves the domain used to build QR code deep link URLs: the custom `website_url`
+     * if set on this App, otherwise the default per-app subdomain `{app_id}.{APP_NAME}.webmapp.it`.
+     */
+    public function getDeepLinkDomain(): string
+    {
+        if (! empty($this->website_url)) {
+            return rtrim(preg_replace('#^https?://#', '', $this->website_url), '/');
+        }
+
+        return $this->id.'.'.config('app.name').'.webmapp.it';
+    }
+
+    /**
+     * Builds the deep link URL used to open the native app on a Track or Poi.
+     *
+     * @param  string  $type  'track' or 'poi'
+     */
+    public function getDeepLinkUrl(string $type, int $id): string
+    {
+        if (! in_array($type, ['track', 'poi'], true)) {
+            throw new \InvalidArgumentException("Invalid deep link type: {$type}. Expected 'track' or 'poi'.");
+        }
+
+        return 'https://'.$this->getDeepLinkDomain().'/map?'.$type.'='.$id;
+    }
+
+    /**
+     * Renders the QR code + copyable link markup for a Track/Poi deep link, shown
+     * directly on the Nova detail page (no download action needed). Returns null
+     * when the toggle is off, so the caller can hide the Nova field entirely.
+     *
+     * @param  string  $type  'track' or 'poi'
+     */
+    public function renderDeepLinkQrCodeHtml(string $type, int $id): ?string
+    {
+        if (! $this->isNativeAppDeepLinkEnabled()) {
+            return null;
+        }
+
+        $url = $this->getDeepLinkUrl($type, $id);
+
+        $options = new QROptions;
+        $options->outputBase64 = false;
+        $svg = (new QRCode($options))->render($url);
+        $base64 = base64_encode($svg);
+
+        $escapedUrl = e($url);
+        $downloadName = e("{$type}-{$id}-qrcode.svg");
+        $copyButtonHtml = $this->renderDeepLinkCopyButton($url);
+
+        return <<<HTML
+            <div class="wm-deep-link-qr" style="width:100%;box-sizing:border-box;padding:16px;border-radius:12px;border:1px solid #e5e7eb;background:#f9fafb;">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:12px;max-width:480px;width:100%;margin:0 auto;text-align:center;">
+                    <div style="border-radius:8px;border:1px solid #e5e7eb;background:#ffffff;padding:8px;box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+                        <img src="data:image/svg+xml;base64,{$base64}" width="140" height="140" alt="QR Code" style="display:block;" />
+                    </div>
+                    <a
+                        href="data:image/svg+xml;base64,{$base64}"
+                        download="{$downloadName}"
+                        style="display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:8px;background:#19b7a1;color:#ffffff;padding:8px 20px;font-size:14px;font-weight:600;text-decoration:none;"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3v9m0 0l-3.5-3.5M10 12l3.5-3.5M4 14.5v1a1.5 1.5 0 001.5 1.5h9a1.5 1.5 0 001.5-1.5v-1"/></svg>
+                        Download QR
+                    </a>
+                    <div style="display:flex;align-items:center;gap:8px;width:100%;">
+                        <input
+                            type="text"
+                            readonly
+                            value="{$escapedUrl}"
+                            onclick="this.select()"
+                            style="flex:1;min-width:0;box-sizing:border-box;border-radius:8px;border:1px solid #d1d5db;background:#ffffff;color:#374151;padding:8px 12px;font-size:13px;text-align:center;"
+                        />
+                        {$copyButtonHtml}
+                    </div>
+                </div>
+            </div>
+            HTML;
+    }
+
+    /**
+     * Renders a "Copy link" button (clipboard JS + execCommand fallback) for the
+     * deep link URL, matching the pattern already used for the Layer web component
+     * copy button (see Nova\Layer::renderLayerWebComponentCopyButton()).
+     */
+    private function renderDeepLinkCopyButton(string $url): string
+    {
+        $urlJson = json_encode($url, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT);
+        $defaultLabelJson = json_encode((string) __('Copy link'), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT);
+        $successLabelJson = json_encode((string) __('Link copied'), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT);
+        $errorLabelJson = json_encode((string) __('Copy error'), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT);
+
+        $onClick = <<<JS
+(async function(button) {
+  const text = {$urlJson};
+  const defaultLabel = {$defaultLabelJson};
+  const successLabel = {$successLabelJson};
+  const errorLabel = {$errorLabelJson};
+
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text);
+    } else {
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.setAttribute('readonly', '');
+      textArea.style.position = 'absolute';
+      textArea.style.left = '-9999px';
+      document.body.appendChild(textArea);
+      textArea.select();
+
+      const copied = document.execCommand('copy');
+
+      document.body.removeChild(textArea);
+
+      if (!copied) {
+        throw new Error('Clipboard copy failed');
+      }
+    }
+
+    button.textContent = successLabel;
+  } catch (error) {
+    button.textContent = errorLabel;
+  }
+
+  window.setTimeout(function() {
+    button.textContent = defaultLabel;
+  }, 2000);
+})(this); return false;
+JS;
+
+        $escapedOnClick = htmlspecialchars($onClick, ENT_QUOTES, 'UTF-8');
+        $buttonLabel = htmlspecialchars((string) __('Copy link'), ENT_QUOTES, 'UTF-8');
+
+        return <<<HTML
+            <button
+                type="button"
+                onclick="{$escapedOnClick}"
+                style="display:inline-flex;flex-shrink:0;white-space:nowrap;align-items:center;justify-content:center;gap:6px;border-radius:8px;border:1px solid #d1d5db;background:#ffffff;color:#374151;padding:8px 20px;font-size:14px;font-weight:600;cursor:pointer;"
+            >
+                {$buttonLabel}
+            </button>
+            HTML;
+    }
+
     public function unique_multidim_array($array, $key)
     {
         $temp_array = [];
@@ -573,6 +723,11 @@ class App extends Model implements HasMedia
         $this->addMediaCollection('splash')->singleFile();
         $this->addMediaCollection('my_paths');
         $this->addMediaCollection('my_downloads');
+        // Branded background frame for the generic track-share image (oc:8183) — shareable
+        // via any channel (Share.share()), not Instagram Stories specifically, hence
+        // `share_frame` rather than `story_frame`. Single file: uploading a new one replaces
+        // the previous frame for this app.
+        $this->addMediaCollection('share_frame')->singleFile();
     }
 
     // Le funzioni custom per config_home sono state spostate nel resolver layerBoxResolver

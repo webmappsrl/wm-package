@@ -6,6 +6,7 @@ use Kongulov\NovaTabTranslatable\NovaTabTranslatable;
 use Laravel\Nova\Fields\BelongsToMany;
 use Laravel\Nova\Fields\Boolean;
 use Laravel\Nova\Fields\MorphToMany;
+use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Fields\Textarea;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Tabs\Tab;
@@ -21,10 +22,12 @@ use Wm\WmPackage\Nova\Fields\TrackColor\src\TrackColor;
 use Wm\WmPackage\Nova\Filters\FeaturesByLayerFilter;
 use Wm\WmPackage\Nova\Filters\FeaturesExcludeByIds;
 use Wm\WmPackage\Nova\Filters\FeaturesIncludeByIds;
+use Wm\WmPackage\Nova\Traits\HasConfigDetailPanel;
 use Wm\WmPackage\Nova\Traits\MultiLinestringResourceTrait;
 
 class EcTrack extends AbstractEcResource
 {
+    use HasConfigDetailPanel;
     use MultiLinestringResourceTrait {
         fields as protected fieldsTrait;
     }
@@ -52,6 +55,7 @@ class EcTrack extends AbstractEcResource
     {
         return [
             ...$this->fieldsTrait($request),
+            $this->configDetailPanel(),
             Tab::group(__('Details'), [
                 Tab::make(__('Info'), $this->getInfoTabFields()),
                 Tab::make(__('Style'), $this->getStyleTabFields()),
@@ -65,7 +69,6 @@ class EcTrack extends AbstractEcResource
             MorphToMany::make('Activities', 'taxonomyActivities', TaxonomyActivity::class)
                 ->display('name')
                 ->collapsedByDefault(),
-
         ];
     }
 
@@ -130,6 +133,12 @@ class EcTrack extends AbstractEcResource
             NovaTabTranslatable::make([
                 Textarea::make(__('Not Accessible Message'), 'properties->not_accessible_message'),
             ]),
+            Text::make(__('QR Code'), 'deep_link_qr_code', function () {
+                return $this->app?->renderDeepLinkQrCodeHtml('track', $this->id);
+            })
+                ->asHtml()
+                ->onlyOnDetail()
+                ->canSee(fn () => optional($this->resource->app)->isNativeAppDeepLinkEnabled() ?? false),
 
         ];
     }

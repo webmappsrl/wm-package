@@ -10,7 +10,7 @@ use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Wm\WmPackage\Models\TaxonomyActivity as TaxonomyActivityModel;
 use Wm\WmPackage\Models\TaxonomyPoiType as TaxonomyPoiTypeModel;
-use Wm\WmPackage\Nova\Traits\HasFlexibleTranslatableFields;
+use Wm\WmPackage\Nova\Fields\FlexibleTranslatable;
 
 /**
  * Repeatable block for the `horizontal_scroll_activities` and `horizontal_scroll_poi_types` Flexible layouts
@@ -18,8 +18,6 @@ use Wm\WmPackage\Nova\Traits\HasFlexibleTranslatableFields;
  */
 class HorizontalScrollItemRepeatable extends Repeatable
 {
-    use HasFlexibleTranslatableFields;
-
     /**
      * Select options map (taxonomy identifier => label). Not the per-row field values.
      *
@@ -83,10 +81,9 @@ class HorizontalScrollItemRepeatable extends Repeatable
                 ->rules('required'),
         ];
 
-        foreach ($this->translatableFields(__('Title'), 'title') as $field) {
-            $fields[] = $field->nullable()
-                ->help(__('Overrides the default taxonomy label for this item in config JSON; leave empty to use the taxonomy name.'));
-        }
+        $fields[] = FlexibleTranslatable::simple(__('Title'), [Text::make(__('Title'), 'title')])
+            ->nullable()
+            ->help(__('Overrides the default taxonomy label for this item in config JSON; leave empty to use the taxonomy name.'));
 
         $fields[] = Text::make(__('Image URL'), 'image_url')
             ->nullable()
@@ -136,6 +133,6 @@ class HorizontalScrollItemRepeatable extends Repeatable
             return $name;
         }
 
-        return $fallback;
+        return (string) $fallback;
     }
 }
