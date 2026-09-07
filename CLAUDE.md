@@ -22,6 +22,24 @@ protected static function newFactory(): Factory
 
 ## Decisioni architetturali
 
+### Throttle sul login API (oc:8333)
+- `POST /auth/login` (`routes/api.php`) e' sotto `throttle:100,1` — 100
+  tentativi al minuto per IP, stessa soglia gia' in uso su `signup`. Prima non
+  aveva alcun limite, mentre `signup` sulla riga adiacente si': era una
+  dimenticanza, non una scelta
+- In Laravel 11/12 il gruppo di middleware `api` **non** porta piu'
+  `throttle:api` per default, e i consumer non compensano (in forestas
+  `bootstrap/app.php` ha `withMiddleware()` vuoto): senza questo throttle il
+  login resta esposto a tentativi illimitati in tutti i progetti
+- **Se un consumer inizia a ricevere 429 sul login dopo un bump del submodule,
+  la causa e' questa.** Il sintomo e' poco frequente e facile da attribuire
+  altrove. Il caso che morde non sono gli utenti veri (autenticano raramente)
+  ma gli script: test automatici o job che rifanno login a ogni iterazione
+- Le altre route del gruppo `auth:api` (`refresh`, `me`, `user`, `delete`) non
+  hanno throttle: richiedono gia' un token valido, quindi non sono un vettore
+  di brute-force sulle credenziali
+
+
 ### Fix identifier TaxonomyWhere (oc:8469)
 - `TaxonomyObserver` non contiene piu' la regola di derivazione: chiama
   `Taxonomy::generateIdentifier()`, sovrascrivibile dai modelli figli. Un ramo

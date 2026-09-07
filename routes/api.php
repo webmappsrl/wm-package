@@ -19,7 +19,7 @@ use Wm\WmPackage\Http\Controllers\Api\WalletController;
 use Wm\WmPackage\Http\Controllers\Api\WebmappAppController;
 use Wm\WmPackage\Http\Middleware\EnsureExportToken;
 
-Route::post('/auth/login', [AppAuthController::class, 'login'])->name('auth.login');
+Route::middleware('throttle:100,1')->post('/auth/login', [AppAuthController::class, 'login'])->name('auth.login');
 Route::middleware('throttle:100,1')->post('/auth/signup', [AppAuthController::class, 'signup'])->name('auth.signup');
 
 Route::prefix('auth')->middleware('auth:api')->group(function () {
