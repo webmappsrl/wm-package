@@ -2,10 +2,11 @@
 
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Queue;
+use Tests\TestCase;
 use Wm\WmPackage\Jobs\FetchGravatarAvatarJob;
 use Wm\WmPackage\Models\User;
 
-uses(Tests\TestCase::class, DatabaseTransactions::class);
+uses(TestCase::class, DatabaseTransactions::class);
 
 function validSignupPayload(array $overrides = []): array
 {

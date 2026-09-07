@@ -3,7 +3,6 @@
 namespace Wm\WmPackage\Tests\Unit;
 
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 use Orchestra\Testbench\TestCase;
 use Wm\WmPackage\Services\PostHog\AnalyticsService;
 

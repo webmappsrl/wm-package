@@ -22,7 +22,7 @@ class WmBackfillGravatarAvatarsCommand extends Command
     /**
      * @var string
      */
-    protected $description = "Accoda FetchGravatarAvatarJob per gli utenti esistenti che non hanno ancora un avatar (nessun effetto su chi ne ha già uno, caricato o da Gravatar). --app-id è obbligatorio ed è usato per attribuire correttamente il media (evita il fallback cross-tenant hardcoded app_id=1 in MediaObserver) — NON filtra quali utenti processare: la colonna users.app_id non è un indicatore affidabile di affiliazione app (quasi sempre NULL per gli utenti registrati via app, verificato su dati reali), quindi il comando elabora tutti gli utenti senza avatar. Pensato per shard con una singola App; su shard multi-app va valutato caso per caso.";
+    protected $description = 'Accoda FetchGravatarAvatarJob per gli utenti esistenti che non hanno ancora un avatar (nessun effetto su chi ne ha già uno, caricato o da Gravatar). --app-id è obbligatorio ed è usato per attribuire correttamente il media (evita il fallback cross-tenant hardcoded app_id=1 in MediaObserver) — NON filtra quali utenti processare: la colonna users.app_id non è un indicatore affidabile di affiliazione app (quasi sempre NULL per gli utenti registrati via app, verificato su dati reali), quindi il comando elabora tutti gli utenti senza avatar. Pensato per shard con una singola App; su shard multi-app va valutato caso per caso.';
 
     /**
      * Execute the console command.

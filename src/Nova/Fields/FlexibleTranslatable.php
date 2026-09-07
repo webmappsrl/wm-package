@@ -333,6 +333,7 @@ class FlexibleTranslatable extends NovaTabTranslatable
 
     /**
      * Get locales using Reflection (parent class has $locales as private).
+     *
      * @return array<string>
      */
     private function getLocales(): array

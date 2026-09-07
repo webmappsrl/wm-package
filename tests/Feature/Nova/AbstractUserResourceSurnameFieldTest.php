@@ -19,7 +19,7 @@ beforeEach(function () {
 
 function surnameField(User $user): Text
 {
-    $viewer = \App\Models\User::factory()->create();
+    $viewer = App\Models\User::factory()->create();
     Auth::login($viewer);
 
     $request = NovaRequest::create('/');

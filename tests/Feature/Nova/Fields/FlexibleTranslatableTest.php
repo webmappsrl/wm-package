@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Laravel\Nova\Fields\Image;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Fields\Trix;
+use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Support\Fluent;
 use Tests\TestCase;
 use Whitecube\NovaFlexibleContent\Layouts\Layout;
@@ -14,7 +15,7 @@ uses(TestCase::class);
 
 function flexibleTranslatableRequest(string $attribute, ?string $value)
 {
-    return \Laravel\Nova\Http\Requests\NovaRequest::create('/', 'PUT', [$attribute => $value]);
+    return NovaRequest::create('/', 'PUT', [$attribute => $value]);
 }
 
 /**
@@ -134,7 +135,7 @@ it('does not wipe already-saved rich text when a locale tab is absent from the r
     $model->content_it = '<p>Testo italiano già salvato</p>';
     $model->content_en = '<p>English text already saved</p>';
 
-    $emptyRequest = \Laravel\Nova\Http\Requests\NovaRequest::create('/', 'PUT', []);
+    $emptyRequest = NovaRequest::create('/', 'PUT', []);
 
     foreach ($field->data as $subField) {
         fillField($subField, $emptyRequest, $model);

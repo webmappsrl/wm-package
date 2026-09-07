@@ -16,6 +16,7 @@ use Wm\WmPackage\Models\Abstracts\Polygon;
 use Wm\WmPackage\Nova\Fields\FeatureCollectionMap\src\FeatureCollectionMapTrait;
 use Wm\WmPackage\Observers\LayerObserver;
 use Wm\WmPackage\Services\GeometryComputationService;
+use Wm\WmPackage\Services\PostHog\AnalyticsService;
 use Wm\WmPackage\Traits\HasPackageFactory;
 use Wm\WmPackage\Traits\NormalizesHexColor;
 use Wm\WmPackage\Traits\TaxonomyAbleModel;
@@ -493,7 +494,7 @@ class Layer extends Polygon
             }
         }
 
-        $recentPositions = app(\Wm\WmPackage\Services\PostHog\AnalyticsService::class)->getRecentUserPositions($this);
+        $recentPositions = app(AnalyticsService::class)->getRecentUserPositions($this);
 
         // user_id è una property nuova sull'evento userMoved (oc:8159 follow-up): non garantita su
         // ogni punto (utente non autenticato, o evento registrato prima che l'app la iniziasse a

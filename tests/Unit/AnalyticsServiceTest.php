@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Orchestra\Testbench\TestCase;
+use Wm\WmPackage\Exceptions\AnalyticsQueryException;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Services\PostHog\AnalyticsService;
@@ -367,7 +368,7 @@ class AnalyticsServiceTest extends TestCase
         Http::fake(['*' => Http::response('Internal Server Error', 500)]);
         Log::shouldReceive('error')->atLeast()->once();
 
-        $this->expectException(\Wm\WmPackage\Exceptions\AnalyticsQueryException::class);
+        $this->expectException(AnalyticsQueryException::class);
 
         $service = new AnalyticsService;
         $method = new \ReflectionMethod($service, 'runQuery');
@@ -397,7 +398,7 @@ class AnalyticsServiceTest extends TestCase
         Http::fake(['*' => Http::response('Internal Server Error', 500)]);
         Log::shouldReceive('error')->atLeast()->once();
 
-        $this->expectException(\Wm\WmPackage\Exceptions\AnalyticsQueryException::class);
+        $this->expectException(AnalyticsQueryException::class);
 
         (new AnalyticsService)->getGlobalUsage('last_30_days');
     }
@@ -411,7 +412,7 @@ class AnalyticsServiceTest extends TestCase
         Http::fake(['*' => Http::response('Internal Server Error', 500)]);
         Log::shouldReceive('error')->atLeast()->once();
 
-        $this->expectException(\Wm\WmPackage\Exceptions\AnalyticsQueryException::class);
+        $this->expectException(AnalyticsQueryException::class);
 
         (new AnalyticsService)->getAllLayersUsage('last_30_days');
     }
@@ -938,7 +939,7 @@ class AnalyticsServiceTest extends TestCase
         Http::fake(['*' => Http::response('Internal Server Error', 500)]);
         Log::shouldReceive('error')->atLeast()->once();
 
-        $this->expectException(\Wm\WmPackage\Exceptions\AnalyticsQueryException::class);
+        $this->expectException(AnalyticsQueryException::class);
 
         (new AnalyticsService)->getAllTracksDownloads('last_30_days');
     }
@@ -1020,7 +1021,7 @@ class AnalyticsServiceTest extends TestCase
         Http::fake(['*' => Http::response('Internal Server Error', 500)]);
         Log::shouldReceive('error')->atLeast()->once();
 
-        $this->expectException(\Wm\WmPackage\Exceptions\AnalyticsQueryException::class);
+        $this->expectException(AnalyticsQueryException::class);
 
         (new AnalyticsService)->getAllTracksShares('last_30_days');
     }

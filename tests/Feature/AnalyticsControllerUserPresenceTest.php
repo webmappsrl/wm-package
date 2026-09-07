@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Http;
 use Wm\WmPackage\Models\App;
+use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Tests\TestCase;
 
@@ -19,7 +20,7 @@ class AnalyticsControllerUserPresenceTest extends TestCase
             'services.posthog.host' => 'https://posthog.example.com',
             'services.posthog.project_id' => '1',
             'services.posthog.personal_api_key' => 'phx_test',
-            'wm-package.ec_track_model' => \Wm\WmPackage\Models\EcTrack::class,
+            'wm-package.ec_track_model' => EcTrack::class,
         ]);
     }
 

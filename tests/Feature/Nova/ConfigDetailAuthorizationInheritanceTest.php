@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Models\EcTrack;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Http;
@@ -112,7 +113,7 @@ it('blocks a Validator from persisting a config_detail box on an EcTrack they do
     App::factory()->createQuietly();
 
     $owner = User::factory()->create();
-    $track = \App\Models\EcTrack::factory()->createQuietly(['user_id' => $owner->id]);
+    $track = EcTrack::factory()->createQuietly(['user_id' => $owner->id]);
 
     $validator = User::factory()->create();
     $validator->assignRole('Validator');
@@ -143,7 +144,7 @@ it('allows a Validator to persist a config_detail box on their own EcTrack, via 
     $validator = User::factory()->create();
     $validator->assignRole('Validator');
 
-    $track = \App\Models\EcTrack::factory()->createQuietly(['user_id' => $validator->id]);
+    $track = EcTrack::factory()->createQuietly(['user_id' => $validator->id]);
 
     $groups = [[
         'layout' => 'info',

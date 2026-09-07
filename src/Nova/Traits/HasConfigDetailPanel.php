@@ -35,7 +35,7 @@ trait HasConfigDetailPanel
                 ->fullWidth()
                 ->onlyOnForms(),
             Text::make(__('Detail Blocks Preview'), function () {
-                return (new ConfigDetailPreviewRenderer())->render($this->resource);
+                return (new ConfigDetailPreviewRenderer)->render($this->resource);
             })->asHtml()->onlyOnDetail(),
         ])->collapsible();
     }

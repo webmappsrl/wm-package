@@ -2,6 +2,7 @@
 
 namespace Wm\WmPackage\Nova\Fields;
 
+use Illuminate\Database\Eloquent\Model;
 use Laravel\Nova\Fields\Avatar;
 use Laravel\Nova\Fields\Unfillable;
 use Laravel\Nova\Nova;
@@ -25,7 +26,7 @@ class UserAvatar extends Avatar implements Unfillable
      * live usato da `Laravel\Nova\Fields\Gravatar` (nessuna richiesta di rete qui,
      * solo la formula dell'URL — il browser scarica l'immagine, non il backend).
      *
-     * @param  \Laravel\Nova\Resource|\Illuminate\Database\Eloquent\Model|object  $resource
+     * @param  \Laravel\Nova\Resource|Model|object  $resource
      */
     protected function resolveAttribute($resource, string $attribute): string
     {

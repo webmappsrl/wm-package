@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Http;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\Layer;
+use Wm\WmPackage\Models\User;
 use Wm\WmPackage\Tests\TestCase;
 
 class LayerFeatureCollectionMapUserPresenceTest extends TestCase
@@ -129,7 +130,7 @@ class LayerFeatureCollectionMapUserPresenceTest extends TestCase
      */
     public function test_position_shows_user_nominativo_and_link_when_user_id_is_present(): void
     {
-        $user = \Wm\WmPackage\Models\User::factory()->create(['name' => 'Maria', 'surname' => 'Rossi']);
+        $user = User::factory()->create(['name' => 'Maria', 'surname' => 'Rossi']);
 
         Http::fake([
             '*' => Http::response(['results' => [
@@ -185,7 +186,7 @@ class LayerFeatureCollectionMapUserPresenceTest extends TestCase
      */
     public function test_position_keeps_link_when_user_is_found_but_nominativo_is_blank(): void
     {
-        $user = \Wm\WmPackage\Models\User::factory()->create(['name' => '', 'surname' => null]);
+        $user = User::factory()->create(['name' => '', 'surname' => null]);
 
         Http::fake([
             '*' => Http::response(['results' => [

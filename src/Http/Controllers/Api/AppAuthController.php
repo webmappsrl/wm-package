@@ -5,6 +5,7 @@ namespace Wm\WmPackage\Http\Controllers\Api;
 use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -466,7 +467,7 @@ class AppAuthController extends Controller
      * metadata, including GPS coordinates. orientate() bakes the correct rotation
      * in before the re-encode discards the EXIF orientation tag.
      *
-     * @param  \Illuminate\Http\UploadedFile  $file
+     * @param  UploadedFile  $file
      * @return string absolute path to a stripped temp copy
      */
     private function stripExifFromUploadedImage($file): string
