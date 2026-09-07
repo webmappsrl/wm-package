@@ -8,7 +8,9 @@ use Illuminate\Support\Collection;
 use Laravel\Nova\Actions\Action;
 use Laravel\Nova\Fields\ActionFields;
 use Laravel\Nova\Http\Requests\NovaRequest;
+use Wm\WmPackage\Jobs\TaxonomyWhere\FetchOsm2caiSectorGeometryJob;
 use Wm\WmPackage\Jobs\TaxonomyWhere\FetchTaxonomyWhereGeometryJob;
+use Wm\WmPackage\Models\TaxonomyWhere;
 
 class RetryTaxonomyWhereGeometryFetch extends Action
 {
@@ -26,11 +28,50 @@ class RetryTaxonomyWhereGeometryFetch extends Action
      */
     public function handle(ActionFields $fields, Collection $models)
     {
+        $dispatched = 0;
+        $skipped = 0;
+
         foreach ($models as $model) {
-            FetchTaxonomyWhereGeometryJob::dispatch($model->id);
+            if (! $this->dispatchGeometryJob($model)) {
+                $skipped++;
+
+                continue;
+            }
+
+            $dispatched++;
         }
 
-        return Action::message('Job di recupero geometry rilancati per '.$models->count().' record.');
+        $message = 'Job di recupero geometry rilanciati per '.$dispatched.' record.';
+
+        if ($skipped > 0) {
+            $message .= ' '.__(':count records skipped: unknown source.', ['count' => $skipped]);
+        }
+
+        return Action::message($message);
+    }
+
+    /**
+     * Il job da rilanciare dipende dalla sorgente del record: i settori OSM2CAI
+     * non hanno osmfeatures_id, quindi il job OSMFeatures uscirebbe senza
+     * scrivere nulla.
+     */
+    private function dispatchGeometryJob(TaxonomyWhere $taxonomyWhere): bool
+    {
+        $source = $taxonomyWhere->properties['source'] ?? null;
+
+        if ($source === 'osm2cai') {
+            FetchOsm2caiSectorGeometryJob::dispatch($taxonomyWhere->id);
+
+            return true;
+        }
+
+        if ($source === 'osmfeatures' || ! empty($taxonomyWhere->getOsmfeaturesId())) {
+            FetchTaxonomyWhereGeometryJob::dispatch($taxonomyWhere->id);
+
+            return true;
+        }
+
+        return false;
     }
 
     /**

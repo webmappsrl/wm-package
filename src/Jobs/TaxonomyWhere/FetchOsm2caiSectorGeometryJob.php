@@ -2,7 +2,6 @@
 
 namespace Wm\WmPackage\Jobs\TaxonomyWhere;
 
-use Exception;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -19,7 +18,16 @@ class FetchOsm2caiSectorGeometryJob implements ShouldQueue
 
     public int $tries = 3;
 
-    public int $backoff = 60;
+    /**
+     * Backoff progressivo: il rate limit di OSM2CAI (60 req/min) si libera in
+     * pochi secondi, ma i tentativi successivi vanno distanziati.
+     *
+     * @return array<int, int>
+     */
+    public function backoff(): array
+    {
+        return [10, 60, 120];
+    }
 
     public function __construct(public int $taxonomyWhereId) {}
 
@@ -36,17 +44,12 @@ class FetchOsm2caiSectorGeometryJob implements ShouldQueue
             return;
         }
 
-        try {
-            $detail = $client->getSectorDetail((int) $osm2caiId);
-        } catch (Exception $e) {
-            Log::warning('FetchOsm2caiSectorGeometryJob: detail non disponibile', [
-                'taxonomy_where_id' => $this->taxonomyWhereId,
-                'osm2cai_id' => $osm2caiId,
-                'error' => $e->getMessage(),
-            ]);
-
-            return;
-        }
+        // L'errore non viene inghiottito: propagandolo il job entra nel ciclo di
+        // retry ($tries/$backoff) e, se esaurito, finisce in failed_jobs. OSM2CAI
+        // limita a 60 richieste/minuto e risponde 429 quando l'import lancia i
+        // job in parallelo: trattare quel caso come successo lasciava record
+        // senza geometry ne' full_code, senza alcun segnale.
+        $detail = $client->getSectorDetail((int) $osm2caiId);
 
         if (empty($detail['geometry'])) {
             Log::warning('FetchOsm2caiSectorGeometryJob: geometry vuota', [
