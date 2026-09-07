@@ -374,8 +374,7 @@
     "When enabled, POIs are included in the app’s pois.geojson file (global filter in getAllPoisGeojson). When disabled, they are imported but excluded from that file until global is set to true.": "When enabled, POIs are included in the app’s pois.geojson file (global filter in getAllPoisGeojson). When disabled, they are imported but excluded from that file until global is set to true.",
     "When enabled, data is fetched and the outcome is shown without persisting any changes.": "When enabled, data is fetched and the outcome is shown without persisting any changes.",
     ":count records skipped: identifier already in use.": ":count records skipped: identifier already in use.",
-    ":count records skipped: unknown source.": ":count records skipped: unknown source."
-    "When enabled, data is fetched and the outcome is shown without persisting any changes.": "When enabled, data is fetched and the outcome is shown without persisting any changes.",
+    ":count records skipped: unknown source.": ":count records skipped: unknown source.",
     "Detail Blocks": "Detail Blocks",
     "Detail Blocks Preview": "Detail Blocks Preview",
     "Info Box": "Info Box",
