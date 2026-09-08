@@ -47,6 +47,7 @@ use Wm\WmPackage\Services\FeaturesService;
 use Wm\WmPackage\Services\Import\EcMediaImportService;
 use Wm\WmPackage\Services\Import\GeohubImportService;
 use Wm\WmPackage\Services\Import\UgcMediaImportService;
+use Wm\WmPackage\Tests\Feature\OptionalDomainRegistrationTest;
 
 class WmPackageServiceProvider extends PackageServiceProvider
 {
@@ -230,9 +231,9 @@ class WmPackageServiceProvider extends PackageServiceProvider
      * prescindere da questo metodo. Vanno dichiarate in
      * `config('wm-package.features.<dominio>.nova_resources')` e collocate
      * altrove. Il vincolo e' verificato da
-     * {@see \Wm\WmPackage\Tests\Feature\OptionalDomainRegistrationTest}.
+     * {@see OptionalDomainRegistrationTest}.
      *
-     * @see \Wm\WmPackage\Services\FeaturesService
+     * @see FeaturesService
      * @see docs/resources/OptionalDomains.md
      */
     protected function registerEnabledDomains(): void
