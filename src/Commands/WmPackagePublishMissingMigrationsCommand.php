@@ -4,21 +4,37 @@ namespace Wm\WmPackage\Commands;
 
 use Illuminate\Console\Command;
 use Wm\WmPackage\Commands\Concerns\InteractsWithWmPackageMigrationStubs;
+use Wm\WmPackage\Services\FeaturesService;
 
 class WmPackagePublishMissingMigrationsCommand extends Command
 {
     use InteractsWithWmPackageMigrationStubs;
 
     protected $signature = 'wm-package:publish-missing-migrations
-                            {--dry-run : Elenca stub non allineati; exit code non-zero se ce ne sono (gate CI)}';
+                            {--dry-run : Elenca stub non allineati; exit code non-zero se ce ne sono (gate CI)}
+                            {--with=* : Include anche gli stub di questi domini opzionali, oltre a quelli gia\' accesi in configurazione}';
 
     protected $description = 'Pubblica gli stub wm-package obbligatori il cui effetto non e\' ancora presente nel database.';
 
     public function handle(): int
     {
+        $extraDomains = array_values(array_filter((array) $this->option('with')));
+        $declared = FeaturesService::declaredDomains();
+        $unknown = array_diff($extraDomains, $declared);
+
+        if ($unknown !== []) {
+            $this->error(sprintf(
+                'Dominio non dichiarato in config wm-package.features: %s',
+                implode(', ', $unknown),
+            ));
+            $this->line('Domini disponibili: '.($declared === [] ? '(nessuno)' : implode(', ', $declared)));
+
+            return self::FAILURE;
+        }
+
         $dryRun = (bool) $this->option('dry-run');
-        $toPublish = $this->stubsNeedingPublishing();
-        $pendingMigrate = $this->stubsPendingMigration();
+        $toPublish = $this->stubsNeedingPublishing($extraDomains);
+        $pendingMigrate = $this->stubsPendingMigration($extraDomains);
 
         if ($pendingMigrate !== []) {
             $this->warn('Stub con migration gia\' pubblicata ma non ancora applicata sul database:');
