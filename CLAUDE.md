@@ -351,6 +351,7 @@ protected static function newFactory(): Factory
 
 | Feature | Ticket | Moduli toccati | Note |
 |---|---|---|---|
+| Domini opzionali: stub di migration e feature opt-in | oc:8492 | `src/Services/FeaturesService.php`, `src/Commands/Concerns/InteractsWithWmPackageMigrationStubs.php`, `src/Commands/WmPackagePublish{Migration,MissingMigrations}Command.php`, `src/WmPackageServiceProvider.php`, `config/wm-package.php`, `docs/resources/OptionalDomains.md` | Il package puo' ospitare feature che non tutti i consumer usano: stub in sottocartella con identificatore `<dominio>/<nome>`, interruttore `features.<dominio>.enabled` spento di default, opzione `--with` sul gate. Guida: `docs/resources/OptionalDomains.md` |
 | Persistenza modalità auto/manuale layer + default configurabile | oc:8314 | `src/Models/Layer.php`, `src/Nova/Fields/LayerFeatures/**`, `config/wm-package.php` | `setTrackMode()`/`setPoiMode()` ora scrivono con `jsonb_set` atomico; nuovo `persistMode()` protected riusabile da sottoclassi; nuova chiave `default_layer_mode` (default `'auto'`, invariato per retrocompatibilità) |
 | Fix identifier TaxonomyWhere | oc:8469 | `src/Observers/TaxonomyObserver.php`, `src/Models/Abstracts/Taxonomy.php`, `src/Models/TaxonomyWhere.php`, `src/Nova/Actions/ImportTaxonomyWhere.php`, `src/Http/Clients/OsmfeaturesClient.php`, `src/Jobs/TaxonomyWhere/FetchTaxonomyWhereGeometryJob.php`, migration stub | Colonna `identifier` su `taxonomy_wheres`; derivazione sovrascrivibile dal modello; per TaxonomyWhere deriva da `source` + id sorgente, mai dal nome. Include il fix dei nomi da OSMFeatures |
 | Spostare test EcPoiOsmImportActionAvailableTest in wm-package | oc:8348 | `tests/Feature/Nova/Actions/ImportEcPoiFromOsmActionTest.php` | Nuovo test che asserisce esplicitamente `ImportEcPoiFromOsm` esposta di default su `Wm\WmPackage\Nova\EcPoi` — sostituisce il test gemello eliminato in Maphub, che referenziava direttamente questa classe interna causando un errore PHPStan legato al disallineamento del puntatore submodule |
@@ -397,6 +398,41 @@ protected static function newFactory(): Factory
 | Condivisione percorso su Instagram/Facebook Stories | oc:8183 | `src/Models/App.php`, `src/Nova/App.php`, `src/Services/Models/App/AppConfigService.php`, `src/Http/Controllers/Api/ShareStoryImageController.php`, `src/Services/Models/StoryShare/{StoryImageLayout,StoryShareImageService}.php`, `routes/api.php` | Media collection `story_frame` su App (Nova upload); endpoint stateless `POST /api/share-story-image` deriva l'app da `UgcTrack` (uuid) con ownership check, mai da parametro client; compositing 1080x1920 via intervention/image |
 
 ## Decisioni architetturali
+
+### Domini opzionali: stub e feature opt-in (oc:8492)
+
+**Fonte di verita':** `docs/resources/OptionalDomains.md` (guida operativa) e
+`docs/features/8492-stub-opzionali-feature-opt-in/overview.md` (decisioni).
+
+- Un **dominio** e' un insieme di stub, comandi, route e risorse Nova che il
+  consumer riceve solo se lo attiva. Interruttore in
+  `config('wm-package.features.<dominio>.enabled')`, spento di default; le
+  impostazioni del dominio stanno nella **stessa sezione**, mai in un file di
+  configurazione proprio (altrimenti `configurePackage()` dovrebbe leggere la
+  configurazione per decidere quale configurazione registrare)
+- **Le risorse Nova di un dominio non possono stare in `src/Nova`.**
+  `Nova::resourcesIn()` scandisce quella cartella **ricorsivamente** e registra
+  tutto, a interruttore spento incluso. Vanno dichiarate in
+  `features.<dominio>.nova_resources`; i comandi in `features.<dominio>.commands`;
+  le route in `routes/domains/<dominio>.php`. Tutto viene registrato da
+  `WmPackageServiceProvider::registerEnabledDomains()`. Un test
+  (`OptionalDomainRegistrationTest`) fallisce se qualcuno crea `src/Nova/<Dominio>/`
+- **Nessuno stub di dominio puo' avere lo stesso nome-base di uno stub della root
+  o di un altro dominio.** L'identificatore qualificato risolve l'ambiguita' solo
+  dentro il package: il lato pubblicato cerca per suffisso del nome file, che il
+  dominio non lo contiene, e due omonimi renderebbero il gate verde su uno stub
+  mai pubblicato. `stubBaseNames()` lo rileva e fallisce
+- **`vendor:publish` non pubblica gli stub dei domini**: la scoperta delle
+  migration di `spatie/laravel-package-tools` usa `Filesystem::files()`, non
+  ricorsivo. E' cio' che protegge chi non ha aderito, ed e' il motivo per cui chi
+  ha aderito deve usare `publish-migration <dominio>/<stub>`
+- **`--with=<dominio>` puo' solo aggiungere** domini alla verifica del gate, mai
+  toglierne, ed e' validato contro le chiavi dichiarate in configurazione — non
+  contro l'esistenza della cartella, cosi' un dominio dichiarato ma ancora privo
+  di stub e' legittimo (e' il caso di forestas fra oc:8492 e oc:8489)
+- **Spegnere un dominio non rimuove la tabella.** L'ordine corretto e' bonifica
+  dei dati con i comandi del dominio, poi spegnimento, poi rimozione dello schema:
+  spegnere per primo toglie i comandi, cioe' lo strumento per i due passi successivi
 
 ### Fix cross-tenant data leak: AnalyticsService non filtra per shard_name (oc:8354)
 - Il filtro `shard_name` è centralizzato in `whereClause()` (non duplicato nelle 8 query private) — ogni query che passa per quel metodo lo eredita automaticamente
@@ -549,9 +585,14 @@ protected static function newFactory(): Factory
 - `SuperAdminService` è stata rimossa senza alias deprecato: breaking change da comunicare nel changelog prima di ogni rilascio
 - I metodi sono statici (non DI) per coerenza con il pattern preesistente; la logica legge solo `config('wm-package.super_admin_emails')` senza stato interno
 
-## Migration wm-package (stub obbligatori)
+## Migration wm-package (stub obbligatori e domini opzionali)
 
 Valido per ogni consumer (maphub, camminiditalia, osm2cai2, ...). Overview completa: `docs/features/8218-cicd-migration-wm-package-permission-cache/overview.md`.
+
+Gli stub della root sono obbligatori per ogni consumer. Gli stub in sottocartella
+appartengono a un **dominio opzionale** (oc:8492) e riguardano solo chi lo ha
+attivato: guida completa in `docs/resources/OptionalDomains.md`. `vendor:publish`
+non li pubblica — serve `publish-migration <dominio>/<stub>`.
 
 ### Workflow
 
