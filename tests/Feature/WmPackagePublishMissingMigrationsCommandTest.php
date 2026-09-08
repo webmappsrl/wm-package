@@ -17,9 +17,14 @@ class WmPackagePublishMissingMigrationsCommandTest extends TestCase
 
     private string $conflictingPath;
 
+    /** @var array<int, string> Migration create_users_table gia' presenti prima del test. */
+    private array $preExistingUsersMigrations = [];
+
     protected function setUp(): void
     {
         parent::setUp();
+
+        $this->preExistingUsersMigrations = glob(database_path('migrations/*_create_users_table.php')) ?: [];
 
         $this->fakeStubPath = base_path("wm-package/database/migrations/{$this->baseName}.php.stub");
         $this->conflictingPath = database_path('migrations/0001_01_01_000000_'.$this->baseName.'.php');
@@ -81,8 +86,12 @@ PHP);
             }
         }
 
+        // Cancella solo i file che ha creato questo test. Una glob su
+        // *_create_users_table.php cancellerebbe anche una migration pubblicata
+        // dal developer poco prima di lanciare la suite: e' successo davvero
+        // durante oc:8492, e il file e' sparito prima del commit.
         foreach (glob(database_path('migrations/*_create_users_table.php')) ?: [] as $published) {
-            if (! str_ends_with($published, '0001_01_01_000000_create_users_table.php')) {
+            if (! in_array($published, $this->preExistingUsersMigrations, true)) {
                 File::delete($published);
             }
         }
@@ -125,6 +134,32 @@ PHP);
     {
         $this->assertFalse(Schema::hasColumn('users', 'balance'));
 
+        // Il consumer puo' avere gia' una migration del package per questo stub
+        // (forestas la ha da oc:8492): il comando la considererebbe equivalente
+        // e non pubblicherebbe. Va spostata di lato, altrimenti il test misura
+        // lo stato del progetto invece del comportamento del comando.
+        $parked = [];
+
+        foreach ($this->preExistingUsersMigrations as $path) {
+            if (str_ends_with($path, '0001_01_01_000000_create_users_table.php')) {
+                continue;
+            }
+
+            $parked[$path] = file_get_contents($path);
+            File::delete($path);
+        }
+
+        try {
+            $this->runPublishCreateUsersTableAssertions();
+        } finally {
+            foreach ($parked as $path => $contents) {
+                File::put($path, $contents);
+            }
+        }
+    }
+
+    private function runPublishCreateUsersTableAssertions(): void
+    {
         $this->artisan('wm-package:publish-migration', ['stub' => 'create_users_table'])
             ->assertExitCode(0)
             ->expectsOutputToContain('contenuto diverso')
