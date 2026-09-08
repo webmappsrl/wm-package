@@ -43,6 +43,7 @@ use Wm\WmPackage\Nova\Fields\IconSelect\FieldServiceProvider;
 use Wm\WmPackage\Policies\AppPolicy;
 use Wm\WmPackage\Providers\EventServiceProvider;
 use Wm\WmPackage\Providers\ScheduleServiceProvider;
+use Wm\WmPackage\Services\FeaturesService;
 use Wm\WmPackage\Services\Import\EcMediaImportService;
 use Wm\WmPackage\Services\Import\GeohubImportService;
 use Wm\WmPackage\Services\Import\UgcMediaImportService;
@@ -216,8 +217,51 @@ class WmPackageServiceProvider extends PackageServiceProvider
             ->hasViews();
     }
 
+    /**
+     * Registra cio' che appartiene ai domini opzionali accesi.
+     *
+     * Copre le quattro superfici che un dominio puo' toccare — comandi, route,
+     * risorse Nova, voci di menu — perche' la promessa del meccanismo e' che a
+     * dominio spento il package si comporti come se il dominio non esistesse.
+     *
+     * **Vincolo strutturale, non convenzione:** le risorse Nova di un dominio
+     * NON possono vivere in `src/Nova`. `Nova::resourcesIn()` scandisce quella
+     * cartella in modo ricorsivo e registra tutto cio' che ci trova, a
+     * prescindere da questo metodo. Vanno dichiarate in
+     * `config('wm-package.features.<dominio>.nova_resources')` e collocate
+     * altrove. Il vincolo e' verificato da
+     * {@see \Wm\WmPackage\Tests\Feature\OptionalDomainRegistrationTest}.
+     *
+     * @see \Wm\WmPackage\Services\FeaturesService
+     * @see docs/resources/OptionalDomains.md
+     */
+    protected function registerEnabledDomains(): void
+    {
+        foreach (FeaturesService::enabledDomains() as $domain) {
+            $commands = (array) config("wm-package.features.{$domain}.commands", []);
+
+            if ($commands !== []) {
+                $this->commands($commands);
+            }
+
+            $novaResources = (array) config("wm-package.features.{$domain}.nova_resources", []);
+
+            if ($novaResources !== [] && class_exists(Nova::class)) {
+                Nova::resources($novaResources);
+            }
+
+            $routes = $this->getPackageBaseDir()."/../routes/domains/{$domain}.php";
+
+            if (file_exists($routes)) {
+                $this->loadRoutesFrom($routes);
+            }
+        }
+    }
+
     public function packageRegistered()
     {
+        $this->registerEnabledDomains();
+
         // #######
         // ####### REGISTER PROVIDERS
         // #######

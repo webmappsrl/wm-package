@@ -77,6 +77,25 @@ return [
     'default_layer_mode' => env('DEFAULT_LAYER_MODE', 'auto'),
 
     /*
+    | Domini opzionali del package {@see \Wm\WmPackage\Services\FeaturesService}.
+    | A dominio spento il package si comporta come se il dominio non esistesse:
+    | i suoi stub di migration non sono considerati dai comandi, i suoi comandi
+    | e le sue risorse Nova non vengono registrati.
+    | Guida: docs/resources/OptionalDomains.md
+    */
+    'features' => [
+        'trail_registry' => [
+            'enabled' => env('WM_TRAIL_REGISTRY_ENABLED', false),
+
+            // Comandi artisan e risorse Nova del dominio: registrati solo a
+            // dominio acceso. Le risorse Nova NON possono stare in src/Nova,
+            // che viene scandita integralmente da Nova::resourcesIn().
+            'commands' => [],
+            'nova_resources' => [],
+        ],
+    ],
+
+    /*
     | Configurazione per la feature QR code deep link (oc:8251).
     | - apple_team_id: Apple Developer Team ID di default, usato per comporre l'appID
     |   (TEAMID.bundle_id) nell'entry apple-app-site-association quando la singola App non

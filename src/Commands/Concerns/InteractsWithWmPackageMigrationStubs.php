@@ -5,27 +5,107 @@ namespace Wm\WmPackage\Commands\Concerns;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+use Wm\WmPackage\Services\FeaturesService;
 
 trait InteractsWithWmPackageMigrationStubs
 {
     /**
+     * Identificatori degli stub da considerare.
+     *
+     * Gli stub della root sono obbligatori per ogni consumer e vengono sempre
+     * restituiti con il solo nome-base. Quelli di un dominio opzionale sono
+     * inclusi solo se il dominio e' acceso in configurazione o passato in
+     * $extraDomains, e sono qualificati come "<dominio>/<nome-base>".
+     *
+     * @param  array<int, string>  $extraDomains
      * @return array<int, string>
      */
-    public function stubBaseNames(): array
+    public function stubBaseNames(array $extraDomains = []): array
     {
         $paths = glob($this->stubsDirectory().'/*.stub') ?: [];
 
-        return array_map(
+        $names = array_map(
             fn (string $path) => $this->baseNameFromStubPath($path),
             $paths,
         );
+
+        foreach ($this->domainsInScope($extraDomains) as $domain) {
+            // Una chiave vuota o con metacaratteri glob produrrebbe un pattern
+            // arbitrario: con '' il pattern diventa ".../migrations//*.stub" e
+            // ogni stub della root verrebbe riaggiunto duplicato.
+            if (! preg_match('/^[a-z0-9_]+$/', $domain)) {
+                continue;
+            }
+
+            $domainPaths = glob($this->stubsDirectory()."/{$domain}/*.stub") ?: [];
+
+            foreach ($domainPaths as $path) {
+                $names[] = $domain.'/'.$this->baseNameFromStubPath($path);
+            }
+        }
+
+        $this->guardAgainstDuplicateBaseNames($names);
+
+        return $names;
     }
 
-    public function findStubPath(string $baseName): ?string
+    /**
+     * Il lato pubblicato cerca per suffisso del nome file, che non contiene il
+     * dominio: due stub con lo stesso nome-base — fra due domini o fra un
+     * dominio e la root — sarebbero indistinguibili una volta pubblicati, e il
+     * gate potrebbe risultare verde su uno stub mai pubblicato.
+     *
+     * Il vincolo non e' imponibile dal filesystem, quindi si fallisce presto e
+     * con un messaggio esplicito invece di sbagliare in silenzio.
+     *
+     * @param  array<int, string>  $identifiers
+     */
+    protected function guardAgainstDuplicateBaseNames(array $identifiers): void
     {
-        $path = $this->stubsDirectory()."/{$baseName}.php.stub";
+        $baseNames = array_map(fn (string $i) => $this->baseNameFromIdentifier($i), $identifiers);
+        $duplicates = array_unique(array_diff_assoc($baseNames, array_unique($baseNames)));
+
+        if ($duplicates !== []) {
+            throw new \RuntimeException(sprintf(
+                'Stub con lo stesso nome-base in domini diversi: %s. '
+                .'Una volta pubblicati sarebbero indistinguibili nel consumer, '
+                .'dove le migration stanno in una cartella piatta.',
+                implode(', ', $duplicates),
+            ));
+        }
+    }
+
+    /**
+     * @param  array<int, string>  $extraDomains
+     * @return array<int, string>
+     */
+    protected function domainsInScope(array $extraDomains = []): array
+    {
+        return array_values(array_unique(array_merge(
+            FeaturesService::enabledDomains(),
+            $extraDomains,
+        )));
+    }
+
+    /**
+     * @param  string  $identifier  Nome-base per gli stub della root,
+     *                              "<dominio>/<nome-base>" per quelli di un dominio.
+     */
+    public function findStubPath(string $identifier): ?string
+    {
+        $path = $this->stubsDirectory()."/{$identifier}.php.stub";
 
         return file_exists($path) ? $path : null;
+    }
+
+    /**
+     * Nome-base di uno stub, senza il dominio: e' il nome con cui la migration
+     * viene pubblicata nel consumer, dove tutte le migration stanno in una
+     * cartella piatta.
+     */
+    public function baseNameFromIdentifier(string $identifier): string
+    {
+        return Str::afterLast($identifier, '/');
     }
 
     /**
@@ -33,16 +113,16 @@ trait InteractsWithWmPackageMigrationStubs
      * Spatie\LaravelPackageTools\Concerns\PackageServiceProvider\ProcessMigrations::generateMigrationName()
      * so a file already published by `vendor:publish` is always recognised here.
      */
-    public function findPublishedFilenameForStub(string $baseName): ?string
+    public function findPublishedFilenameForStub(string $identifier): ?string
     {
-        $path = $this->findPublishedPathForStub($baseName);
+        $path = $this->findPublishedPathForStub($identifier);
 
         return $path !== null ? basename($path, '.php') : null;
     }
 
-    public function findPublishedPathForStub(string $baseName): ?string
+    public function findPublishedPathForStub(string $identifier): ?string
     {
-        $needle = "{$baseName}.php";
+        $needle = $this->baseNameFromIdentifier($identifier).'.php';
         $needleLength = strlen($needle);
 
         foreach (glob(database_path('migrations/*.php')) ?: [] as $path) {
@@ -61,9 +141,9 @@ trait InteractsWithWmPackageMigrationStubs
     /**
      * @return array<int, string>
      */
-    public function findPublishedPathsMatchingStubContent(string $baseName): array
+    public function findPublishedPathsMatchingStubContent(string $identifier): array
     {
-        $stubPath = $this->findStubPath($baseName);
+        $stubPath = $this->findStubPath($identifier);
 
         if ($stubPath === null) {
             return [];
@@ -85,9 +165,9 @@ trait InteractsWithWmPackageMigrationStubs
         return $matches;
     }
 
-    public function publishedFileMatchesStubContent(string $baseName): bool
+    public function publishedFileMatchesStubContent(string $identifier): bool
     {
-        return $this->findPublishedPathsMatchingStubContent($baseName) !== [];
+        return $this->findPublishedPathsMatchingStubContent($identifier) !== [];
     }
 
     public function normalizeMigrationPhp(string $content): string
@@ -111,12 +191,12 @@ trait InteractsWithWmPackageMigrationStubs
     /**
      * @return array<int, string>
      */
-    public function schemaGapsForStub(string $baseName): array
+    public function schemaGapsForStub(string $identifier): array
     {
-        $stubPath = $this->findStubPath($baseName);
+        $stubPath = $this->findStubPath($identifier);
 
         if ($stubPath === null) {
-            return ["stub \"{$baseName}\" non trovato"];
+            return ["stub \"{$identifier}\" non trovato"];
         }
 
         $gaps = [];
@@ -145,70 +225,76 @@ trait InteractsWithWmPackageMigrationStubs
         return $gaps;
     }
 
-    public function isAppliedToDatabase(string $baseName): bool
+    public function isAppliedToDatabase(string $identifier): bool
     {
-        if ($this->findStubPath($baseName) === null) {
+        if ($this->findStubPath($identifier) === null) {
             return false;
         }
 
-        $gaps = $this->schemaGapsForStub($baseName);
+        $gaps = $this->schemaGapsForStub($identifier);
 
         if ($gaps !== []) {
             return false;
         }
 
-        if ($this->hasVerifiableSchemaExpectations($baseName)) {
+        if ($this->hasVerifiableSchemaExpectations($identifier)) {
             return true;
         }
 
-        return $this->hasRunPublishedMigrationForStub($baseName);
+        return $this->hasRunPublishedMigrationForStub($identifier);
     }
 
-    public function needsPublishing(string $baseName): bool
+    public function needsPublishing(string $identifier): bool
     {
-        if ($this->findStubPath($baseName) === null) {
+        if ($this->findStubPath($identifier) === null) {
             return false;
         }
 
-        if ($this->isAppliedToDatabase($baseName)) {
+        if ($this->isAppliedToDatabase($identifier)) {
             return false;
         }
 
-        return ! $this->publishedFileMatchesStubContent($baseName);
+        return ! $this->publishedFileMatchesStubContent($identifier);
     }
 
     /**
+     * @param  array<int, string>  $extraDomains
      * @return array<int, string>
      */
-    public function stubsNeedingPublishing(): array
+    public function stubsNeedingPublishing(array $extraDomains = []): array
     {
         return array_values(array_filter(
-            $this->stubBaseNames(),
-            fn (string $baseName) => $this->needsPublishing($baseName),
+            $this->stubBaseNames($extraDomains),
+            fn (string $identifier) => $this->needsPublishing($identifier),
         ));
     }
 
     /**
+     * @param  array<int, string>  $extraDomains
      * @return array<int, string>
      */
-    public function stubsPendingMigration(): array
+    public function stubsPendingMigration(array $extraDomains = []): array
     {
         return array_values(array_filter(
-            $this->stubBaseNames(),
-            fn (string $baseName) => $this->publishedFileMatchesStubContent($baseName)
-                && ! $this->hasRunPublishedMigrationForStub($baseName),
+            $this->stubBaseNames($extraDomains),
+            fn (string $identifier) => $this->publishedFileMatchesStubContent($identifier)
+                && ! $this->hasRunPublishedMigrationForStub($identifier),
         ));
     }
 
-    public function publishStubToProject(string $baseName): string
+    public function publishStubToProject(string $identifier): string
     {
-        $stubPath = $this->findStubPath($baseName);
+        $stubPath = $this->findStubPath($identifier);
 
         if ($stubPath === null) {
-            throw new \InvalidArgumentException("Nessuno stub trovato per \"{$baseName}\".");
+            throw new \InvalidArgumentException("Nessuno stub trovato per \"{$identifier}\".");
         }
 
         $timestamp = now()->format('Y_m_d_His');
+        // Il dominio non entra nel nome del file: nel consumer le migration
+        // stanno tutte in una cartella piatta, e una barra qui farebbe fallire
+        // la copy() con un errore poco leggibile.
+        $baseName = $this->baseNameFromIdentifier($identifier);
         $destination = database_path("migrations/{$timestamp}_{$baseName}.php");
 
         if (! copy($stubPath, $destination)) {
@@ -283,9 +369,9 @@ trait InteractsWithWmPackageMigrationStubs
         return array_values(array_unique($matches[1]));
     }
 
-    protected function hasVerifiableSchemaExpectations(string $baseName): bool
+    protected function hasVerifiableSchemaExpectations(string $identifier): bool
     {
-        $stubPath = $this->findStubPath($baseName);
+        $stubPath = $this->findStubPath($identifier);
 
         if ($stubPath === null) {
             return false;
@@ -314,13 +400,13 @@ trait InteractsWithWmPackageMigrationStubs
         return false;
     }
 
-    protected function hasRunPublishedMigrationForStub(string $baseName): bool
+    protected function hasRunPublishedMigrationForStub(string $identifier): bool
     {
-        if ($this->hasRunPublishedMigrationMatchingStubContent($baseName)) {
+        if ($this->hasRunPublishedMigrationMatchingStubContent($identifier)) {
             return true;
         }
 
-        $path = $this->findPublishedPathForStub($baseName);
+        $path = $this->findPublishedPathForStub($identifier);
 
         if ($path === null) {
             return false;
