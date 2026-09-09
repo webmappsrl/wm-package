@@ -436,30 +436,18 @@ class App extends Resource
             $this->importedPropertyField('show_get_directions'),
             $this->importedPropertyField('show_media_name'),
 
-            // --- Tabella dettagli traccia: le 10 chiavi senza equivalente su Geohub (oc:8488) ---
-            Heading::make(
-                <<<'HTML'
-                <p><strong>Table details</strong>: opzioni di visualizzazione della tabella dettagli traccia (solo app elbrus, sezione <code>TABLES.details</code>).</p>
-                HTML
-            )->asHtml()->hideFromIndex(),
+            // Tabella dettagli traccia: le 10 chiavi senza equivalente su Geohub (oc:8488).
+            // Nessuna label in UI: TABLES.details non ha consumer in wm-core/webmapp-app
+            // (verificato), niente sezione Frontend esistente a cui agganciarle — restano
+            // qui, prima dei sotto-tab FEwebapp/FE: mobile/FE: widget.
             ...array_map(fn (string $key) => $this->importedPropertyField($key), self::TABLE_DETAILS_KEYS_WITHOUT_GEOHUB_UI),
 
-            // --- Le altre 9 chiavi table_details_show_*, con equivalente su Geohub (oc:8488) ---
-            Heading::make(
-                <<<'HTML'
-                <p><strong>Table details</strong>: le stesse chiavi qui sotto sono editabili anche su Geohub, ma lì scrivono su un'altra colonna (vedi il gruppo "Technical details" più sotto).</p>
-                HTML
-            )->asHtml()->hideFromIndex(),
+            // Le altre 9 chiavi table_details_show_*, con un equivalente su Geohub che però
+            // scrive su un'altra colonna (vedi technicalDetailsFields() sotto).
             ...array_map(fn (string $key) => $this->importedPropertyField($key), self::TABLE_DETAILS_KEYS_WITH_TECHNICAL_DETAILS_TWIN),
 
-            // --- Technical details (track_technical_details->*, colonna preesistente mai
-            // esposta in Nova prima di oc:8488 — stesse chiavi/label di Geohub, alimentano
-            // OPTIONS generico invece di TABLES.details) ---
-            Heading::make(
-                <<<'HTML'
-                <p><strong>Technical details</strong>: alimentano <code>OPTIONS</code> (generico, non solo elbrus). Stesso nome del gruppo sopra ma colonna diversa: vedi il docblock di technicalDetailsFields().</p>
-                HTML
-            )->asHtml()->hideFromIndex(),
+            // track_technical_details->*: stesse chiavi/label di Geohub, colonna diversa dal
+            // gruppo sopra (oc:8488, mai esposta in Nova prima).
             ...$this->technicalDetailsFields(),
 
             Tab::make('FEwebapp', $this->webapp_tab()),
