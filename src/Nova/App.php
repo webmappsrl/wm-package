@@ -261,11 +261,6 @@ class App extends Resource
                 ->default(false)
                 ->hideFromIndex()
                 ->help(__('When enabled, this app is registered in the shared well-known file so links open the native app directly instead of the browser, and a QR code / direct link field becomes available on Track and Poi detail pages.')),
-
-            // --- OFFLINE, importate da Geohub (oc:8488), nessun campo Nova prima ---
-            $this->importedPropertyField('offline_enable'),
-            $this->importedPropertyField('offline_force_auth'),
-            $this->importedPropertyField('tracks_on_payment'),
         ];
     }
 
@@ -429,17 +424,20 @@ class App extends Resource
                 ->help(__('Activate to show the favorite heart on layers and the "My favorites" section')),
 
             // --- OPTIONS importate da Geohub (oc:8488), nessuna colonna dedicata prima ---
-            $this->importedPropertyField('start_url'),
-            $this->importedPropertyField('show_edit_link'),
-            $this->importedPropertyField('skip_route_index_download'),
+            // start_url/show_edit_link/skip_route_index_download rimossi (post-review): né
+            // wm-core/webmapp-app né Geohub stesso le espongono come editabili — vedi
+            // ImportedAppProperties::MAP per il dettaglio, il dato resta comunque importato.
             $this->importedPropertyField('show_embedded_html'),
             $this->importedPropertyField('show_get_directions'),
             $this->importedPropertyField('show_media_name'),
 
-            // Tabella dettagli traccia: le 10 chiavi senza equivalente su Geohub (oc:8488).
-            // Nessuna label in UI: TABLES.details non ha consumer in wm-core/webmapp-app
-            // (verificato), niente sezione Frontend esistente a cui agganciarle — restano
-            // qui, prima dei sotto-tab FEwebapp/FE: mobile/FE: widget.
+            // Tabella dettagli traccia: le 5 chiavi senza equivalente su Geohub e senza
+            // consumer confermato né in wm-core/webmapp-app né nell'admin di Geohub stesso
+            // (related_poi, cai_scale, mtb_scale, ref, surface — TABLES.details, solo app
+            // elbrus, non verificabile: nessun frontend elbrus disponibile qui) restano
+            // editabili. Le altre 5 (gpx/kml/geojson/shapefile download, scale — con doppia
+            // lettura anche in OPTIONS) sono state rimosse (post-review): confermato nessun
+            // uso né in OPTIONS lato wm-core/webmapp-app né nell'admin Geohub.
             ...array_map(fn (string $key) => $this->importedPropertyField($key), self::TABLE_DETAILS_KEYS_WITHOUT_GEOHUB_UI),
 
             // Le altre 9 chiavi table_details_show_*, con un equivalente su Geohub che però
@@ -531,17 +529,18 @@ class App extends Resource
     ];
 
     /**
-     * Le altre 10 chiavi properties->table_details_show_* (oc:8488): nessun equivalente su
-     * Geohub in nessuna forma, mai state editabili in nessuna UI prima di questo ticket.
+     * Le chiavi properties->table_details_show_* senza equivalente su Geohub in nessuna forma
+     * (oc:8488) E senza un secondo punto di lettura in OPTIONS: restano editabili perché
+     * alimentano solo TABLES.details (app elbrus), non verificabile — nessun frontend elbrus
+     * disponibile qui. gpx_download/kml_download/geojson_download/shapefile_download/scale
+     * sono state rimosse da questo elenco (post-review): avevano anche un secondo punto di
+     * lettura in OPTIONS, confermato senza consumer né in wm-core/webmapp-app né nell'admin
+     * di Geohub stesso — restano comunque importate in properties (ImportedAppProperties),
+     * solo senza campo Nova.
      *
      * @return array<int, string>
      */
     private const TABLE_DETAILS_KEYS_WITHOUT_GEOHUB_UI = [
-        'table_details_show_gpx_download',
-        'table_details_show_kml_download',
-        'table_details_show_geojson_download',
-        'table_details_show_shapefile_download',
-        'table_details_show_scale',
         'table_details_show_related_poi',
         'table_details_show_cai_scale',
         'table_details_show_mtb_scale',

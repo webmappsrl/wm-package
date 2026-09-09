@@ -62,6 +62,30 @@ class ImportAppJob extends BaseImportJob
         // Le colonne theme non vanno più scritte come colonne: oc:8367 le legge da properties.
         $transformedData = array_diff_key($transformedData, array_flip(self::THEME_COLUMNS));
 
+        // Geohub restituisce le colonne array/json-cast (track_technical_details, keywords, ...)
+        // già come stringa JSON: fetchData() legge via query grezza, non tramite un modello
+        // Eloquent con cast. Il copy-through schema-driven sopra le passa così come sono —
+        // fill() + il cast locale 'array' le ri-codificano con json_encode() su un valore che
+        // è GIÀ una stringa JSON, producendo una doppia codifica
+        // ('"{\"show_ascent\":...}"' invece di '{"show_ascent":...}'), che poi fa esplodere
+        // qualunque scrittura successiva in stile Nova arrow-notation (track_technical_details->*)
+        // con un TypeError su Arr::set(). Bug preesistente in questo copy-through, scoperto
+        // scrivendo il primo campo Nova su track_technical_details (oc:8488) — non specifico a
+        // quella colonna, quindi corretto qui per ogni colonna array/json-cast del modello, non
+        // solo per quella.
+        $arrayCastKeys = array_keys(array_filter(
+            (new App)->getCasts(),
+            static fn (string $cast) => in_array($cast, ['array', 'json', 'collection'], true)
+        ));
+        foreach ($arrayCastKeys as $castKey) {
+            if (isset($transformedData[$castKey]) && is_string($transformedData[$castKey])) {
+                $decoded = json_decode($transformedData[$castKey], true);
+                if (json_last_error() === JSON_ERROR_NONE) {
+                    $transformedData[$castKey] = $decoded;
+                }
+            }
+        }
+
         // merge (not replace) the incoming properties with what's already stored locally, so a
         // re-import never wipes out Nova-configured properties keys (theme, analytics, min_app_version, wp_*)
         $existing = $this->findExistingApp($data['id']);

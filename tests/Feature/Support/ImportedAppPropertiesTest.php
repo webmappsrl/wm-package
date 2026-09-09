@@ -32,10 +32,15 @@ it('gives every key a supported type', function () {
 });
 
 it('excludes the group A keys from Nova generation, because those fields already exist', function () {
-    expect(ImportedAppProperties::novaKeys())->toHaveCount(30)
+    // 30 originarie - 11 rimosse post-review (nessun consumer né in wm-core/webmapp-app né
+    // nell'admin di Geohub stesso: start_url, show_edit_link, skip_route_index_download,
+    // offline_enable/force_auth, tracks_on_payment, table_details_show_{gpx,kml,geojson,
+    // shapefile}_download/scale) = 19.
+    expect(ImportedAppProperties::novaKeys())->toHaveCount(19)
         ->and(ImportedAppProperties::novaKeys())->not->toContain('show_travel_mode')
         ->and(ImportedAppProperties::novaKeys())->not->toContain('show_favorites')
-        ->and(ImportedAppProperties::novaKeys())->toContain('start_url');
+        ->and(ImportedAppProperties::novaKeys())->not->toContain('start_url')
+        ->and(ImportedAppProperties::novaKeys())->toContain('show_get_directions');
 });
 
 it('does not declare any key that is already a real apps column', function () {

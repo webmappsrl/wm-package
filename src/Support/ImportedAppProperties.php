@@ -35,19 +35,23 @@ final class ImportedAppProperties
         'show_download_tiles' => ['type' => 'bool', 'nova' => false, 'geohub' => 'show_download_tiles_button'],
 
         // --- Gruppo B: lette da AppConfigService come attributo inesistente, nessun campo Nova.
-        'start_url' => ['type' => 'text'],
-        'show_edit_link' => ['type' => 'bool'],
-        'skip_route_index_download' => ['type' => 'bool'],
+        // 'nova' => false (oc:8488, post-review): né wm-core/webmapp-app né Geohub stesso
+        // (il suo app/Nova/App.php non le espone) trattano queste chiavi come editabili — il
+        // dato resta comunque scritto in properties dall'import e letto da AppConfigService,
+        // solo senza un campo Nova per modificarlo a mano.
+        'start_url' => ['type' => 'text', 'nova' => false],
+        'show_edit_link' => ['type' => 'bool', 'nova' => false],
+        'skip_route_index_download' => ['type' => 'bool', 'nova' => false],
         'show_favorites' => ['type' => 'bool', 'nova' => false], // campo Nova già esistente da oc:8176 (tab Frontend) — non generarne un secondo
         'enable_routing' => ['type' => 'bool'],
-        'offline_enable' => ['type' => 'bool'],
-        'offline_force_auth' => ['type' => 'bool'],
-        'tracks_on_payment' => ['type' => 'bool'],
-        'table_details_show_gpx_download' => ['type' => 'bool'],
-        'table_details_show_kml_download' => ['type' => 'bool'],
-        'table_details_show_geojson_download' => ['type' => 'bool'],
-        'table_details_show_shapefile_download' => ['type' => 'bool'],
-        'table_details_show_scale' => ['type' => 'bool'],
+        'offline_enable' => ['type' => 'bool', 'nova' => false],
+        'offline_force_auth' => ['type' => 'bool', 'nova' => false],
+        'tracks_on_payment' => ['type' => 'bool', 'nova' => false],
+        'table_details_show_gpx_download' => ['type' => 'bool', 'nova' => false],
+        'table_details_show_kml_download' => ['type' => 'bool', 'nova' => false],
+        'table_details_show_geojson_download' => ['type' => 'bool', 'nova' => false],
+        'table_details_show_shapefile_download' => ['type' => 'bool', 'nova' => false],
+        'table_details_show_scale' => ['type' => 'bool', 'nova' => false],
         'table_details_show_related_poi' => ['type' => 'bool'],
         'table_details_show_duration_forward' => ['type' => 'bool'],
         'table_details_show_duration_backward' => ['type' => 'bool'],
