@@ -5,8 +5,8 @@ namespace Wm\WmPackage\Tests\Feature\Nova\Actions;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Bus;
 use Laravel\Nova\Fields\ActionFields;
-use Laravel\Nova\Http\Requests\NovaRequest;
 use Tests\TestCase;
+use Wm\WmPackage\Http\Clients\Osm2caiClient;
 use Wm\WmPackage\Http\Clients\OsmfeaturesClient;
 use Wm\WmPackage\Jobs\TaxonomyWhere\FetchTaxonomyWhereGeometryJob;
 use Wm\WmPackage\Models\App;
@@ -57,9 +57,9 @@ class ImportTaxonomyWhereTest extends TestCase
     {
         $app = App::factory()->create(['map_bbox' => json_encode([10, 40, 11, 41])]);
 
-        $client = \Mockery::mock(\Wm\WmPackage\Http\Clients\Osm2caiClient::class);
+        $client = \Mockery::mock(Osm2caiClient::class);
         $client->shouldReceive('getSectorsList')->once()->andReturn([]);
-        $this->app->instance(\Wm\WmPackage\Http\Clients\Osm2caiClient::class, $client);
+        $this->app->instance(Osm2caiClient::class, $client);
 
         $action = new ImportTaxonomyWhere;
         $fields = new ActionFields(collect(['source_type' => 'osm2cai', 'app_id' => $app->id]), collect());

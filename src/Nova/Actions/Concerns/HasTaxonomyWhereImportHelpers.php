@@ -3,6 +3,7 @@
 namespace Wm\WmPackage\Nova\Actions\Concerns;
 
 use Illuminate\Support\Facades\Schema;
+use Laravel\Nova\Fields\ActionFields;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\TaxonomyWhere;
@@ -15,9 +16,9 @@ trait HasTaxonomyWhereImportHelpers
      * selezione esplicita, altrimenti richiede `app_id` dal campo Select.
      *
      * @return App|string L'App risolta, oppure il messaggio di errore da
-     *                     passare ad Action::danger() se la risoluzione fallisce.
+     *                    passare ad Action::danger() se la risoluzione fallisce.
      */
-    protected function resolveApp(\Laravel\Nova\Fields\ActionFields $fields): App|string
+    protected function resolveApp(ActionFields $fields): App|string
     {
         $apps = App::all();
         if ($apps->count() === 1) {
