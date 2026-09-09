@@ -20,6 +20,7 @@ use Wm\WmPackage\Jobs\Import\BaseImportJob;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Models\TaxonomyActivity;
+use Wm\WmPackage\Models\Tile;
 use Wm\WmPackage\Models\User;
 use Wm\WmPackage\Services\RolesAndPermissionsService;
 use Wm\WmPackage\Services\StorageService;
@@ -594,6 +595,41 @@ class GeohubImportService
         $this->assignEditorRole($shardUser);
 
         return $shardUser;
+    }
+
+    /**
+     * Trova il Tile per attribution, o lo crea se manca.
+     *
+     * MAI aggiornare un Tile esistente: `tiles` è globale, e TileObserver::saved() dispatcha
+     * UpdateAppConfigJob per OGNI app collegata al tile. Un update durante l'import di una
+     * app riscriverebbe il config di app non correlate. La creazione è sicura (apps() vuota).
+     *
+     * `label` è json NOT NULL con HasTranslations: va scritta come array di traduzioni, mai
+     * come stringa nuda.
+     *
+     * Il match ignora server_xyz: se un Tile locale omonimo punta altrove, l'app viene
+     * agganciata a quel basemap. Limite noto, vedi overview → Rischi.
+     */
+    public function resolveTile(string $attribution, string $serverXyz): Tile
+    {
+        $tile = Tile::where('attribution', $attribution)->first();
+
+        if ($tile) {
+            return $tile;
+        }
+
+        $this->logger->info("Tile '{$attribution}' assente in locale: creato dall'import Geohub con label grezza e senza icona", [
+            'attribution' => $attribution,
+            'server_xyz' => $serverXyz,
+        ]);
+
+        return Tile::create([
+            'attribution' => $attribution,
+            'label' => ['it' => $attribution, 'en' => $attribution],
+            'server_xyz' => $serverXyz,
+            'icon' => null,
+            'link' => null,
+        ]);
     }
 
     /**

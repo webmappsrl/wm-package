@@ -21,7 +21,8 @@
 - **Nessun import eseguito da Claude.** `php artisan wm:import-from-geohub` è un'azione del dev, su un'app che sceglie il dev. Le query in **sola lettura** sulla connessione `geohub` sono ammesse.
 - **Nessun `git clean` / `checkout -f` / `stash -u`** nel working tree di maphub: contiene due migration non tracciate già applicate al DB.
 - **Nessun commit eseguito da Claude.** I blocchi `git commit` di questo piano sono **istruzioni testuali per l'utente**. Non eseguirli.
-- **Test:** namespace `Wm\WmPackage\Tests\TestCase` (mai `Tests\TestCase`, pattern rotto documentato in `CLAUDE.md`). Ogni file apre con `declare(strict_types=1);` e `uses(TestCase::class, DatabaseTransactions::class);`. Factory: `App::factory()->createQuietly([...])`.
+- **Test:** namespace `Wm\WmPackage\Tests\TestCase` (mai `Tests\TestCase`, pattern rotto documentato in `CLAUDE.md`). Ogni file apre con `declare(strict_types=1);` e `uses(DatabaseTransactions::class);` — **mai** `uses(TestCase::class, DatabaseTransactions::class);`: `tests/Pest.php` applica già `uses(TestCase::class)->in(__DIR__)` a tutta la cartella, e ridichiarare la stessa classe nel file fa lanciare `TestCaseAlreadyInUse` (verificato: il file preesistente `AppConfigServiceThemeTest.php`, di oc:8367, usa il pattern vecchio e infatti non è eseguibile con questa versione di Pest — non è nel perimetro di questo ticket, non toccarlo). Factory: `App::factory()->createQuietly([...])`.
+- **Ambiente Docker:** eseguire `vendor/bin/pest`/`composer` con `docker exec -w /var/www/html/maphub/wm-package php-maphub <comando>` — **non** `docker compose -f local.compose.yml exec ... laravel`, il cui mount di `/var/www/html/wm-package` punta a una directory host vuota e obsoleta (verificato coi bind mount reali del container). `php-maphub` monta l'intero repo `maphub` (sottomodulo incluso) sul path corretto.
 - **`vendor/bin/pest` senza filtro FALLISCE** su 19 file preesistenti (debito noto). Eseguire sempre per singolo file.
 - **Convenzione commit:** `fix(oc:8488): ...`, `test(oc:8488): ...`, `refactor(oc:8488): ...`, `docs(oc:8488): ...`.
 - **Formattazione:** `vendor/bin/pint` prima di ogni commit.
@@ -65,7 +66,7 @@ docker compose -f local.compose.yml exec -T db psql -U maphub -d wm_package -c "
 - [ ] **Step 2: Installare le dipendenze di sviluppo del package**
 
 ```bash
-docker compose -f local.compose.yml exec -T -w /var/www/html/wm-package laravel composer install
+docker exec -w /var/www/html/maphub/wm-package php-maphub composer install
 ```
 
 Se `post-install-cmd` (`npm install`) fallisce per `npm` non disponibile nel container: `composer install --no-scripts` poi `composer run prepare` (il solo script necessario ai test, invoca `testbench package:discover`).
@@ -73,7 +74,7 @@ Se `post-install-cmd` (`npm install`) fallisce per `npm` non disponibile nel con
 - [ ] **Step 3: Verificare l'ambiente con un test esistente**
 
 ```bash
-docker compose -f local.compose.yml exec -T -w /var/www/html/wm-package laravel \
+docker exec -w /var/www/html/maphub/wm-package php-maphub \
   vendor/bin/pest tests/Feature/AppConfigServiceThemeTest.php
 ```
 
@@ -108,9 +109,8 @@ declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Wm\WmPackage\Models\App;
-use Wm\WmPackage\Tests\TestCase;
 
-uses(TestCase::class, DatabaseTransactions::class);
+uses(DatabaseTransactions::class);
 
 it('preserves Nova-configured properties keys across a re-import', function () {
     $app = App::factory()->createQuietly([
@@ -172,7 +172,7 @@ function mergePropertiesForTest(App $app, array $incoming): array
 - [ ] **Step 2: Eseguire il test e verificare che falla**
 
 ```bash
-docker compose -f local.compose.yml exec -T -w /var/www/html/wm-package laravel \
+docker exec -w /var/www/html/maphub/wm-package php-maphub \
   vendor/bin/pest tests/Feature/Import/ImportAppJobPropertiesMergeTest.php
 ```
 
@@ -251,7 +251,7 @@ grep -n "function getIdentifier" -A 12 src/Services/Import/GeohubImportService.p
 - [ ] **Step 4: Eseguire il test e verificare che passa**
 
 ```bash
-docker compose -f local.compose.yml exec -T -w /var/www/html/wm-package laravel \
+docker exec -w /var/www/html/maphub/wm-package php-maphub \
   vendor/bin/pest tests/Feature/Import/ImportAppJobPropertiesMergeTest.php
 ```
 
@@ -293,9 +293,8 @@ declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Wm\WmPackage\Support\ImportedAppProperties;
-use Wm\WmPackage\Tests\TestCase;
 
-uses(TestCase::class, DatabaseTransactions::class);
+uses(DatabaseTransactions::class);
 
 it('declares exactly the 37 properties keys imported from Geohub', function () {
     expect(ImportedAppProperties::keys())->toHaveCount(37);
@@ -338,7 +337,7 @@ it('does not declare any key that is already a real apps column', function () {
 - [ ] **Step 2: Eseguire il test e verificare che falla**
 
 ```bash
-docker compose -f local.compose.yml exec -T -w /var/www/html/wm-package laravel \
+docker exec -w /var/www/html/maphub/wm-package php-maphub \
   vendor/bin/pest tests/Feature/Support/ImportedAppPropertiesTest.php
 ```
 
@@ -468,7 +467,7 @@ Contare le voci: 6 (A) + 27 (B) + 4 (C) = **37**. `novaKeys()` ne restituisce **
 - [ ] **Step 4: Eseguire il test e verificare che passa**
 
 ```bash
-docker compose -f local.compose.yml exec -T -w /var/www/html/wm-package laravel \
+docker exec -w /var/www/html/maphub/wm-package php-maphub \
   vendor/bin/pest tests/Feature/Support/ImportedAppPropertiesTest.php
 ```
 
@@ -504,9 +503,8 @@ I valori sono scelti per **non poter coincidere con i default della migration** 
 declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\DatabaseTransactions;
-use Wm\WmPackage\Tests\TestCase;
 
-uses(TestCase::class, DatabaseTransactions::class);
+uses(DatabaseTransactions::class);
 
 function geohubAppRow(array $overrides = []): array
 {
@@ -600,7 +598,7 @@ grep -n "geohubImportService" src/Jobs/Import/BaseImportJob.php | head -3
 - [ ] **Step 2: Eseguire il test e verificare che falla**
 
 ```bash
-docker compose -f local.compose.yml exec -T -w /var/www/html/wm-package laravel \
+docker exec -w /var/www/html/maphub/wm-package php-maphub \
   vendor/bin/pest tests/Feature/Import/ImportAppJobWritesPropertiesTest.php
 ```
 
@@ -668,7 +666,7 @@ $transformedData['properties'] = $this->mergeProperties($existing, array_merge(
 - [ ] **Step 4: Eseguire il test e verificare che passa**
 
 ```bash
-docker compose -f local.compose.yml exec -T -w /var/www/html/wm-package laravel \
+docker exec -w /var/www/html/maphub/wm-package php-maphub \
   vendor/bin/pest tests/Feature/Import/ImportAppJobWritesPropertiesTest.php
 ```
 
@@ -706,9 +704,8 @@ declare(strict_types=1);
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Services\Models\App\AppConfigService;
-use Wm\WmPackage\Tests\TestCase;
 
-uses(TestCase::class, DatabaseTransactions::class);
+uses(DatabaseTransactions::class);
 
 it('emits OPTIONS keys from properties instead of non-existent columns', function () {
     $app = App::factory()->createQuietly([
@@ -823,7 +820,7 @@ it('emits OFFLINE from properties', function () {
 - [ ] **Step 2: Eseguire il test e verificare che falla**
 
 ```bash
-docker compose -f local.compose.yml exec -T -w /var/www/html/wm-package laravel \
+docker exec -w /var/www/html/maphub/wm-package php-maphub \
   vendor/bin/pest tests/Feature/AppConfigServiceImportedPropertiesTest.php
 ```
 
@@ -961,9 +958,9 @@ it('only reads properties keys that ImportedAppProperties declares', function ()
 ```
 
 ```bash
-docker compose -f local.compose.yml exec -T -w /var/www/html/wm-package laravel \
+docker exec -w /var/www/html/maphub/wm-package php-maphub \
   vendor/bin/pest tests/Feature/AppConfigServiceImportedPropertiesTest.php
-docker compose -f local.compose.yml exec -T -w /var/www/html/wm-package laravel \
+docker exec -w /var/www/html/maphub/wm-package php-maphub \
   vendor/bin/pest tests/Feature/AppConfigServiceThemeTest.php
 ```
 
@@ -1001,9 +998,8 @@ declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Wm\WmPackage\Support\ImportedAppProperties;
-use Wm\WmPackage\Tests\TestCase;
 
-uses(TestCase::class, DatabaseTransactions::class);
+uses(DatabaseTransactions::class);
 
 it('exposes a Nova field for every key that needs one', function () {
     $attributes = novaAppFieldAttributes();
@@ -1061,7 +1057,7 @@ grep -rln "fields(" tests/Feature/Nova/ | head -3
 - [ ] **Step 2: Eseguire il test e verificare che falla**
 
 ```bash
-docker compose -f local.compose.yml exec -T -w /var/www/html/wm-package laravel \
+docker exec -w /var/www/html/maphub/wm-package php-maphub \
   vendor/bin/pest tests/Feature/Nova/AppImportedPropertiesFieldsTest.php
 ```
 
@@ -1102,6 +1098,8 @@ protected function imported_properties_tab(): array
 
 Registrare `Tab::make(__('Imported config'), $this->imported_properties_tab())` accanto agli altri Tab. Aggiungere `use Laravel\Nova\Fields\Number;` se assente.
 
+**NOTA POST-REVIEW: questa tab dedicata è stata rimossa su richiesta esplicita del dev, dopo l'esecuzione di questo task.** "L'import trasferisce un'app su Maphub, l'app deve comparire nelle tab esistenti come qualsiasi altra, non in una tab dedicata ai campi importati." `imported_properties_tab()` è stato sostituito da un helper per-chiave (`importedPropertyField(string $key)`), riusato dalle tab esistenti in base alla sezione di config che ogni chiave alimenta davvero (`app_tab`/Frontend per OPTIONS + le 19 `TABLES.details`, `mobile_tab` per OFFLINE, `map_settings_tab` per ROUTING, `webapp_tab` per WEBAPP). Le 19 chiavi `TABLES.details` sono state verificate contro l'admin reale di GeoHub: 9 hanno un equivalente lì ma su una colonna diversa (`track_technical_details->show_*`, mai esposta prima in Nova) — aggiunta anche questa, tenuta volutamente separata (stesso nome, output di config diverso). Dettaglio completo in `notes.md` → "Redesign UI Nova".
+
 - [ ] **Step 4: Aggiungere le stringhe di lingua**
 
 62 chiavi per file. Esempio della forma esatta, da replicare per le 31 chiavi di `novaKeys()`:
@@ -1122,7 +1120,7 @@ Per i 19 `table_details_show_*` la label naturale è il nome del dato; l'help de
 - [ ] **Step 5: Eseguire il test e verificare che passa**
 
 ```bash
-docker compose -f local.compose.yml exec -T -w /var/www/html/wm-package laravel \
+docker exec -w /var/www/html/maphub/wm-package php-maphub \
   vendor/bin/pest tests/Feature/Nova/AppImportedPropertiesFieldsTest.php
 ```
 
@@ -1166,9 +1164,8 @@ declare(strict_types=1);
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\Tile;
-use Wm\WmPackage\Tests\TestCase;
 
-uses(TestCase::class, DatabaseTransactions::class);
+uses(DatabaseTransactions::class);
 
 it('parses the real double-encoded Geohub tiles column', function () {
     $raw = '["{\"webmapp\":\"https:\/\/api.webmapp.it\/tiles\/{z}\/{x}\/{y}.png\"}"]';
@@ -1283,7 +1280,7 @@ function syncTilesForTest(App $app, array $parsed): void
 - [ ] **Step 2: Eseguire il test e verificare che falla**
 
 ```bash
-docker compose -f local.compose.yml exec -T -w /var/www/html/wm-package laravel \
+docker exec -w /var/www/html/maphub/wm-package php-maphub \
   vendor/bin/pest tests/Feature/Import/ImportAppJobTilesTest.php
 ```
 
@@ -1420,7 +1417,7 @@ protected function processDependencies(array $data, Model $model): void
 - [ ] **Step 6: Eseguire i test e verificare che passano**
 
 ```bash
-docker compose -f local.compose.yml exec -T -w /var/www/html/wm-package laravel \
+docker exec -w /var/www/html/maphub/wm-package php-maphub \
   vendor/bin/pest tests/Feature/Import/ImportAppJobTilesTest.php
 ```
 
@@ -1477,7 +1474,7 @@ grep -n "ShouldBeUnique\|uniqueId\|uniqueFor" src/Jobs/BuildAppPoisGeojsonJob.ph
 - [ ] **Step 2: Eseguire il test e verificare che falla**
 
 ```bash
-docker compose -f local.compose.yml exec -T -w /var/www/html/wm-package laravel \
+docker exec -w /var/www/html/maphub/wm-package php-maphub \
   vendor/bin/pest tests/Unit/Jobs/UpdateAppConfigJobUniquenessTest.php
 ```
 
@@ -1507,7 +1504,7 @@ class UpdateAppConfigJob implements ShouldBeUnique, ShouldQueue
 - [ ] **Step 4: Eseguire il test e verificare che passa**
 
 ```bash
-docker compose -f local.compose.yml exec -T -w /var/www/html/wm-package laravel \
+docker exec -w /var/www/html/maphub/wm-package php-maphub \
   vendor/bin/pest tests/Unit/Jobs/UpdateAppConfigJobUniquenessTest.php
 ```
 
@@ -1547,9 +1544,8 @@ use Illuminate\Support\Facades\DB;
 use Wm\WmPackage\Jobs\UpdateAppConfigHomeLayerIdsJob;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\Layer;
-use Wm\WmPackage\Tests\TestCase;
 
-uses(TestCase::class, DatabaseTransactions::class);
+uses(DatabaseTransactions::class);
 
 it('remaps Geohub layer ids to local ids preserving order', function () {
     $app = App::factory()->createQuietly();
@@ -1626,7 +1622,7 @@ ls database/factories/ | grep -i layer
 - [ ] **Step 2: Eseguire il test e verificare che falla**
 
 ```bash
-docker compose -f local.compose.yml exec -T -w /var/www/html/wm-package laravel \
+docker exec -w /var/www/html/maphub/wm-package php-maphub \
   vendor/bin/pest tests/Feature/Jobs/UpdateAppConfigHomeLayerIdsJobTest.php
 ```
 
@@ -1713,7 +1709,7 @@ Rimuovere `$maxAttempts` e gli import non più usati (`GeohubImportService`, `Re
 - [ ] **Step 4: Eseguire il test e verificare che passa**
 
 ```bash
-docker compose -f local.compose.yml exec -T -w /var/www/html/wm-package laravel \
+docker exec -w /var/www/html/maphub/wm-package php-maphub \
   vendor/bin/pest tests/Feature/Jobs/UpdateAppConfigHomeLayerIdsJobTest.php
 ```
 
@@ -1752,9 +1748,8 @@ declare(strict_types=1);
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\Layer;
-use Wm\WmPackage\Tests\TestCase;
 
-uses(TestCase::class, DatabaseTransactions::class);
+uses(DatabaseTransactions::class);
 
 it('preserves a layer id that is not among the options instead of reassigning it', function () {
     $app = App::factory()->createQuietly();
@@ -1788,7 +1783,7 @@ grep -n "function buildLayerElement" -A 25 src/Nova/Flexible/Resolvers/ConfigHom
 - [ ] **Step 2: Eseguire il test e verificare che falla**
 
 ```bash
-docker compose -f local.compose.yml exec -T -w /var/www/html/wm-package laravel \
+docker exec -w /var/www/html/maphub/wm-package php-maphub \
   vendor/bin/pest tests/Feature/Nova/ConfigHomeLayerSelectGuardTest.php
 ```
 
@@ -1860,7 +1855,7 @@ Se il test mostra che il browser sostituisce comunque l'id con uno valido (cioè
 - [ ] **Step 5: Eseguire il test e verificare che passa**
 
 ```bash
-docker compose -f local.compose.yml exec -T -w /var/www/html/wm-package laravel \
+docker exec -w /var/www/html/maphub/wm-package php-maphub \
   vendor/bin/pest tests/Feature/Nova/ConfigHomeLayerSelectGuardTest.php
 ```
 
@@ -1914,9 +1909,8 @@ use Wm\WmPackage\Jobs\Import\ImportAppJob;
 use Wm\WmPackage\Jobs\UpdateAppConfigJob;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\Layer;
-use Wm\WmPackage\Tests\TestCase;
 
-uses(TestCase::class, DatabaseTransactions::class);
+uses(DatabaseTransactions::class);
 
 it('remaps HOME and writes the config when there is no batch (--skip-dependencies path)', function () {
     $app = App::factory()->createQuietly();
@@ -1924,7 +1918,7 @@ it('remaps HOME and writes the config when there is no batch (--skip-dependencie
     DB_setConfigHome($app, [133]);
 
     $job = new ImportAppJob('app', 999, []);
-    $job->finalizeAppImport($app->id, null);
+    ImportAppJob::finalizeAppImport($app->id, null);
 
     expect(DB_homeLayerIds($app))->toBe([$layer->id]);
 });
@@ -1935,32 +1929,37 @@ it('remaps HOME and writes the config when the layer batch completed without fai
     DB_setConfigHome($app, [133]);
 
     $job = new ImportAppJob('app', 999, []);
-    $job->finalizeAppImport($app->id, fakeBatch(hasFailures: false, cancelled: false));
+    ImportAppJob::finalizeAppImport($app->id, fakeBatch(hasFailures: false, cancelled: false));
 
     expect(DB_homeLayerIds($app))->toBe([$layer->id]);
 });
 
-it('skips remap and config write when the layer batch has failures, and logs a warning', function () {
+it('still remaps HOME but skips the config write when the layer batch has failures, and logs a warning', function () {
+    // Fix post-review (Finding 2, vedi notes.md "Fix post-review finale"): il batch con
+    // failures NON blocca più il remap HOME, solo la scrittura del config — un Layer con
+    // geohub_id=133 esiste quindi il remap trova un match reale.
     Log::spy();
 
     $app = App::factory()->createQuietly();
+    $layer = Layer::factory()->createQuietly(['app_id' => $app->id, 'properties' => ['geohub_id' => 133]]);
     DB_setConfigHome($app, [133]);
 
     $job = new ImportAppJob('app', 999, []);
-    $job->finalizeAppImport($app->id, fakeBatch(hasFailures: true, cancelled: false));
+    ImportAppJob::finalizeAppImport($app->id, fakeBatch(hasFailures: true, cancelled: false));
 
-    expect(DB_homeLayerIds($app))->toBe([133]); // invariato: nessun remap è avvenuto
+    expect(DB_homeLayerIds($app))->toBe([$layer->id]); // rimappato, non più invariato
     Log::shouldHaveReceived('warning')->once();
 });
 
-it('skips remap and config write when the layer batch was cancelled', function () {
+it('still remaps HOME but skips the config write when the layer batch was cancelled', function () {
     $app = App::factory()->createQuietly();
+    $layer = Layer::factory()->createQuietly(['app_id' => $app->id, 'properties' => ['geohub_id' => 133]]);
     DB_setConfigHome($app, [133]);
 
     $job = new ImportAppJob('app', 999, []);
-    $job->finalizeAppImport($app->id, fakeBatch(hasFailures: false, cancelled: true));
+    ImportAppJob::finalizeAppImport($app->id, fakeBatch(hasFailures: false, cancelled: true));
 
-    expect(DB_homeLayerIds($app))->toBe([133]);
+    expect(DB_homeLayerIds($app))->toBe([$layer->id]);
 });
 
 function fakeBatch(bool $hasFailures, bool $cancelled): Batch
@@ -1999,7 +1998,7 @@ grep -n "public function hasFailures\|public function cancelled\|public \$failed
 - [ ] **Step 2: Eseguire il test e verificare che falla**
 
 ```bash
-docker compose -f local.compose.yml exec -T -w /var/www/html/wm-package laravel \
+docker exec -w /var/www/html/maphub/wm-package php-maphub \
   vendor/bin/pest tests/Feature/Import/ImportAppJobFinalizeTest.php
 ```
 
@@ -2014,21 +2013,26 @@ use Wm\WmPackage\Jobs\UpdateAppConfigJob;
 /**
  * Punto di completamento del pezzo di import da cui dipende la HOME e il config.
  *
- * Scrive il config SOLO se il batch layer (quando esiste) è integro: `hasFailures()`/
- * `cancelled()` restano true se un job è fallito, e finally() gira comunque per
- * contratto. Scrivere in quel caso pubblicherebbe MAP.layers incompleto — un config
- * sbagliato E appena riscritto, peggio dello stale attuale. Il file resta quello
- * precedente e il dev può forzare la riscrittura con GET .../base-config.json.
+ * NOTA POST-REVIEW (Finding 2, vedi notes.md "Fix post-review finale"): la stesura sotto
+ * era la prima versione, che gatava ENTRAMBI i passi (remap + scrittura config) sulla
+ * stessa condizione — contraddiceva il commento al punto di chiamata (poco più sotto in
+ * questo stesso file) che già descriveva un "remap parziale, non un danno" su failure.
+ * La versione shippata rimappa SEMPRE la HOME (un remap parziale non è un danno, solo
+ * incompleto — comunque meglio di id GeoHub mai rimappati) e gate solo la scrittura del
+ * config sull'integrità del batch. `static`, non un metodo d'istanza: vedi Finding 1
+ * (bug critico di serializzazione, separato da questo finding).
  *
  * $batch è null sul percorso senza dipendenze (--skip-dependencies, o layer non tra le
  * allowed_dependencies): in quel caso le entità arrivano dal DB, non da un batch appena
- * dispatchato, quindi si procede sempre.
+ * dispatchato, quindi si procede sempre (remap + config).
  */
-public function finalizeAppImport(int $appId, ?Batch $batch): void
+public static function finalizeAppImport(int $appId, ?Batch $batch): void
 {
+    UpdateAppConfigHomeLayerIdsJob::dispatchSync($appId);
+
     if ($batch && ($batch->hasFailures() || $batch->cancelled())) {
         Log::channel('wm-package-failed-jobs')->warning(
-            'Import layer incompleto: HOME non rimappata, config non riscritto',
+            'Import layer incompleto: HOME rimappata, config non riscritto',
             [
                 'app_id' => $appId,
                 'failed_jobs' => $batch->failedJobs,
@@ -2040,7 +2044,6 @@ public function finalizeAppImport(int $appId, ?Batch $batch): void
         return;
     }
 
-    UpdateAppConfigHomeLayerIdsJob::dispatchSync($appId);
     (new UpdateAppConfigJob($appId))->handle();
 }
 ```
@@ -2057,13 +2060,19 @@ $batch = Bus::batch($jobs)
     ->onQueue(config('wm-geohub-import.queue.queue', 'geohub-import'));
 
 if ($entityModelKey === 'layer') {
-    $batch->allowFailures()->finally(fn (Batch $batch) => $this->finalizeAppImport($appId, $batch));
+    $batch->allowFailures()->finally(
+        static fn (Batch $batch) => \Wm\WmPackage\Jobs\Import\ImportAppJob::finalizeAppImport($appId, $batch)
+    );
 }
 
 $batch->dispatch();
 ```
 
-`allowFailures()` **solo su questo batch**: se un layer fallisce, gli altri completano e `finally()` scatta con un remap parziale — non un danno, solo incompleto.
+**NOTA POST-REVIEW (Finding 1, critico):** la prima stesura sopra usava `fn (Batch $batch) => $this->finalizeAppImport($appId, $batch)` — un closure non-static che cattura implicitamente `$this` (l'istanza `ImportAppJob`, che porta dietro `GeohubImportService` con una `Connection` PDO e un `Logger`, entrambi non serializzabili). Il closure passato a `finally()` viene serializzato da `BatchRepository::store()` quando `$batch->dispatch()` gira: sul percorso reale (layer tra le dipendenze e almeno un id da importare — cioè ogni import GeoHub normale) questo faceva fallire `serialize()` con `Exception: Serialization of 'Pdo\Pgsql' is not allowed`, e l'intero `ImportAppJob` falliva — **nessun batch layer veniva mai dispatchato**. Bug trovato in review, non durante l'esecuzione originale di questo task (i test con `Bus::fake()` non attraversano mai `BatchRepository::store()`, quindi non lo intercettavano). Fix: closure `static`, che chiama il metodo (ora anch'esso `static`, vedi sopra) per nome di classe qualificato. Vedi `notes.md` → "Fix post-review finale" per il dettaglio e il test di regressione aggiunto.
+
+`allowFailures()`: se un layer fallisce, gli altri completano e `finally()` scatta comunque — il remap HOME gira sempre (un remap parziale non è un danno, solo incompleto), solo la scrittura del config viene saltata se il batch non è integro (Finding 2, vedi sopra).
+
+**NOTA POST-REVIEW (Finding 4/5/6, non pianificate in questo task — emerse tutte dalla review finale whole-branch, vedi `notes.md` → "Re-review scoped della fix wave" e "Risoluzione dei 2 Important residui").** Questa stesura del task copriva solo il batch `layer`. `config_section_map()` legge anche dati alimentati da altri batch indipendenti (`ec_poi`/`ec_media`/`ec_track`/`taxonomy_activity`/`taxonomy_poi_types`, tutti in `ImportAppJob::CONFIG_DEPENDENT_BATCHES`), senza garanzia di completamento relativa al batch layer — un config scritto al completamento dei soli layer poteva restare temporaneamente privo di quelle sezioni, senza che nulla lo correggesse più tardi (`persistQuietly()` silenzia gli observer per tutto l'import). Anche questi 5 batch usano `allowFailures()->finally()` — non più "solo su questo batch" — per accodare (in coda, non sincrono) un refresh best-effort di `UpdateAppConfigJob`, con lo stesso vincolo di serializzazione (closure `static`, nessun `$this` catturato) e **gated** su `ImportAppJob::layerBatchIsPublishReady()`: senza questo gate, il refresh scriveva incondizionatamente, ignorando lo stato del batch layer e annullando il gate di `finalizeAppImport()` sopra in quasi ogni import normale. Dettaglio completo (meccanismo del sentinel in cache, test) in `notes.md`.
 
 E, per il caso in cui `layer` non è tra le `allowed_dependencies` (incluso `--skip-dependencies`), in `processDependencies()`, dopo il blocco che gestisce le dipendenze:
 
@@ -2071,7 +2080,7 @@ E, per il caso in cui `layer` non è tra le `allowed_dependencies` (incluso `--s
 if (! in_array('layer', $allowedDependencies, true)) {
     // Nessun batch layer dispatchato in questo import: se ci sono già layer sul DB
     // (es. da un import precedente), rimappa e scrivi comunque, sincrono.
-    $this->finalizeAppImport($model->id, null);
+    self::finalizeAppImport($model->id, null);
 }
 ```
 
@@ -2080,14 +2089,14 @@ Verificare che questo branch non duplichi la chiamata quando `layer` **è** tra 
 ```php
 // dentro queueEntityImport(), per l'entità 'layer', se non ci sono job da importare
 if ($entityModelKey === 'layer' && $jobs === []) {
-    $this->finalizeAppImport($appId, null);
+    self::finalizeAppImport($appId, null);
 }
 ```
 
 - [ ] **Step 5: Eseguire i test e verificare che passano**
 
 ```bash
-docker compose -f local.compose.yml exec -T -w /var/www/html/wm-package laravel \
+docker exec -w /var/www/html/maphub/wm-package php-maphub \
   vendor/bin/pest tests/Feature/Import/ImportAppJobFinalizeTest.php
 ```
 
@@ -2148,9 +2157,8 @@ declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Wm\WmPackage\Models\App;
-use Wm\WmPackage\Tests\TestCase;
 
-uses(TestCase::class, DatabaseTransactions::class);
+uses(DatabaseTransactions::class);
 
 it('responds with a JSON object, not a JSON string', function () {
     $app = App::factory()->createQuietly(['api' => 'webmapp']);
@@ -2191,7 +2199,7 @@ grep -rn "Storage::fake\|storeAppConfig" tests/ | head -5
 - [ ] **Step 2: Eseguire il test e verificare che falla**
 
 ```bash
-docker compose -f local.compose.yml exec -T -w /var/www/html/wm-package laravel \
+docker exec -w /var/www/html/maphub/wm-package php-maphub \
   vendor/bin/pest tests/Feature/Api/AppConfigEndpointTest.php
 ```
 
@@ -2233,7 +2241,7 @@ Aggiungere `use Illuminate\Support\Facades\Log;` e `use Wm\WmPackage\Services\Mo
 - [ ] **Step 4: Eseguire il test e verificare che passa**
 
 ```bash
-docker compose -f local.compose.yml exec -T -w /var/www/html/wm-package laravel \
+docker exec -w /var/www/html/maphub/wm-package php-maphub \
   vendor/bin/pest tests/Feature/Api/AppConfigEndpointTest.php
 ```
 
@@ -2266,7 +2274,7 @@ git commit -m "fix(oc:8488): serve app config as a JSON object and replace the d
 - [ ] **Step 1: Eseguire PHPStan**
 
 ```bash
-docker compose -f local.compose.yml exec -T -w /var/www/html/wm-package laravel vendor/bin/phpstan analyse
+docker exec -w /var/www/html/maphub/wm-package php-maphub vendor/bin/phpstan analyse
 ```
 
 Expected: nessun errore nuovo sui file toccati.
@@ -2290,7 +2298,7 @@ for f in \
   tests/Feature/AppConfigServiceThemeTest.php \
   tests/Feature/AppConfigServiceMapFeatureCollectionColorTest.php ; do
   echo "=== $f"
-  docker compose -f local.compose.yml exec -T -w /var/www/html/wm-package laravel vendor/bin/pest "$f" || echo "FAIL: $f"
+  docker exec -w /var/www/html/maphub/wm-package php-maphub vendor/bin/pest "$f" || echo "FAIL: $f"
 done
 ```
 

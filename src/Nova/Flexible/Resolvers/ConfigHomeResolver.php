@@ -167,12 +167,21 @@ class ConfigHomeResolver implements ResolverInterface
             }
         }
 
-        if (isset($element['layer'])) {
-            $layer = Layer::find($element['layer']);
-            if ($layer) {
-                $element['title'] = $layer->getStringName() ?: 'Layer #'.$layer->id;
-            }
+        if (! isset($element['layer'])) {
+            return $element;
         }
+
+        $layer = Layer::find($element['layer']);
+
+        if (! $layer) {
+            // Id non risolvibile: PRESERVARLO invece di riassegnarlo. Le options() della
+            // Select contengono solo id locali: un id Geohub residuo in config_home (finestra
+            // tra import e remap) non ha corrispondenza, e riscrivere anche il title
+            // renderebbe la corruzione indistinguibile da una configurazione voluta. oc:8488.
+            return $element;
+        }
+
+        $element['title'] = $layer->getStringName() ?: 'Layer #'.$layer->id;
 
         return $element;
     }

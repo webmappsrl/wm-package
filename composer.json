@@ -38,6 +38,7 @@
         "marshmallow/nova-tiptap": "^5.1 || ^6.0",
         "matchish/laravel-scout-elasticsearch": "^7.10",
         "ndamiens/gisconverter": "^1.0",
+        "outl1ne/nova-multiselect-field": "^5.0.1",
         "predis/predis": "^2.3",
         "sentry/sentry-laravel": "^4.13",
         "spatie/laravel-backup": "^9.2",

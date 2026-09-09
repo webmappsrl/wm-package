@@ -10,6 +10,7 @@ use Laravel\Nova\Fields\BelongsTo;
 use Laravel\Nova\Fields\Boolean;
 use Laravel\Nova\Fields\Code;
 use Laravel\Nova\Fields\Color;
+use Laravel\Nova\Fields\Field;
 use Laravel\Nova\Fields\FormData;
 use Laravel\Nova\Fields\Heading;
 use Laravel\Nova\Fields\ID;
@@ -49,6 +50,7 @@ use Wm\WmPackage\Nova\Flexible\ConfigHome\HorizontalScrollRepeaterJsonPreset;
 use Wm\WmPackage\Nova\Flexible\Resolvers\ConfigHomeResolver;
 use Wm\WmPackage\Nova\Flexible\Resolvers\ConfigOverlaysResolver;
 use Wm\WmPackage\Services\RolesAndPermissionsService;
+use Wm\WmPackage\Support\ImportedAppProperties;
 
 class App extends Resource
 {
@@ -205,6 +207,8 @@ class App extends Resource
                 ->default(false)
                 ->hideFromIndex()
                 ->help(__('Shows the authentication and registration page for users')),
+            // Importata da Geohub (oc:8488), nessun campo Nova prima. Alimenta WEBAPP.draw_poi_show.
+            $this->importedPropertyField('draw_poi_show'),
         ];
     }
 
@@ -257,6 +261,11 @@ class App extends Resource
                 ->default(false)
                 ->hideFromIndex()
                 ->help(__('When enabled, this app is registered in the shared well-known file so links open the native app directly instead of the browser, and a QR code / direct link field becomes available on Track and Poi detail pages.')),
+
+            // --- OFFLINE, importate da Geohub (oc:8488), nessun campo Nova prima ---
+            $this->importedPropertyField('offline_enable'),
+            $this->importedPropertyField('offline_force_auth'),
+            $this->importedPropertyField('tracks_on_payment'),
         ];
     }
 
@@ -419,6 +428,40 @@ class App extends Resource
                 ->hideFromIndex()
                 ->help(__('Activate to show the favorite heart on layers and the "My favorites" section')),
 
+            // --- OPTIONS importate da Geohub (oc:8488), nessuna colonna dedicata prima ---
+            $this->importedPropertyField('start_url'),
+            $this->importedPropertyField('show_edit_link'),
+            $this->importedPropertyField('skip_route_index_download'),
+            $this->importedPropertyField('show_embedded_html'),
+            $this->importedPropertyField('show_get_directions'),
+            $this->importedPropertyField('show_media_name'),
+
+            // --- Tabella dettagli traccia: le 10 chiavi senza equivalente su Geohub (oc:8488) ---
+            Heading::make(
+                <<<'HTML'
+                <p><strong>Table details</strong>: opzioni di visualizzazione della tabella dettagli traccia (solo app elbrus, sezione <code>TABLES.details</code>).</p>
+                HTML
+            )->asHtml()->hideFromIndex(),
+            ...array_map(fn (string $key) => $this->importedPropertyField($key), self::TABLE_DETAILS_KEYS_WITHOUT_GEOHUB_UI),
+
+            // --- Le altre 9 chiavi table_details_show_*, con equivalente su Geohub (oc:8488) ---
+            Heading::make(
+                <<<'HTML'
+                <p><strong>Table details</strong>: le stesse chiavi qui sotto sono editabili anche su Geohub, ma lì scrivono su un'altra colonna (vedi il gruppo "Technical details" più sotto).</p>
+                HTML
+            )->asHtml()->hideFromIndex(),
+            ...array_map(fn (string $key) => $this->importedPropertyField($key), self::TABLE_DETAILS_KEYS_WITH_TECHNICAL_DETAILS_TWIN),
+
+            // --- Technical details (track_technical_details->*, colonna preesistente mai
+            // esposta in Nova prima di oc:8488 — stesse chiavi/label di Geohub, alimentano
+            // OPTIONS generico invece di TABLES.details) ---
+            Heading::make(
+                <<<'HTML'
+                <p><strong>Technical details</strong>: alimentano <code>OPTIONS</code> (generico, non solo elbrus). Stesso nome del gruppo sopra ma colonna diversa: vedi il docblock di technicalDetailsFields().</p>
+                HTML
+            )->asHtml()->hideFromIndex(),
+            ...$this->technicalDetailsFields(),
+
             Tab::make('FEwebapp', $this->webapp_tab()),
             Tab::make('FE: mobile', $this->mobile_tab()),
             Tab::make('FE: widget', $this->widget_tab()),
@@ -453,6 +496,104 @@ class App extends Resource
             ->rules('nullable', 'regex:'.THEME_HEX_COLOR_PATTERN)
             ->hideFromIndex()
             ->help($help);
+    }
+
+    /**
+     * Campo Nova per UNA chiave di ImportedAppProperties (oc:8488).
+     *
+     * Estratto da un unico generatore per-chiave (invece che una tab piatta con tutte le 30
+     * chiavi): ogni tab di destinazione richiama questo helper solo per le chiavi che le
+     * appartengono concettualmente — niente "Imported config" come discarica. Vedi
+     * app_tab()/mobile_tab()/map_settings_tab() per la distribuzione. I 4 campi theme di
+     * oc:8367 restano scritti a mano in theme_tab(): NON uniformare, la divergenza è
+     * deliberata.
+     */
+    private function importedPropertyField(string $key)
+    {
+        $label = __("app.prop.{$key}");
+        $help = __("app.prop.{$key}.help");
+        $attribute = "properties->{$key}";
+
+        return match (ImportedAppProperties::type($key)) {
+            'bool' => Boolean::make($label, $attribute)->hideFromIndex()->help($help),
+            'int' => Number::make($label, $attribute)->nullable()->hideFromIndex()->help($help),
+            default => Text::make($label, $attribute)->nullable()->hideFromIndex()->help($help),
+        };
+    }
+
+    /**
+     * Le 9 chiavi properties->table_details_show_* (oc:8488) che alimentano TABLES.details
+     * (solo app `elbrus`, vedi AppConfigService::config_section_tables()) E hanno un
+     * equivalente già editabile su Geohub — lì però la UI scrive su track_technical_details->*
+     * (OPTIONS, generico), non sulla colonna che l'import di Maphub legge davvero. Le due
+     * cose restano volutamente separate: stesso nome concettuale, output di config diversi.
+     *
+     * @return array<int, string>
+     */
+    private const TABLE_DETAILS_KEYS_WITH_TECHNICAL_DETAILS_TWIN = [
+        'table_details_show_duration_forward',
+        'table_details_show_duration_backward',
+        'table_details_show_distance',
+        'table_details_show_ascent',
+        'table_details_show_descent',
+        'table_details_show_ele_max',
+        'table_details_show_ele_min',
+        'table_details_show_ele_from',
+        'table_details_show_ele_to',
+    ];
+
+    /**
+     * Le altre 10 chiavi properties->table_details_show_* (oc:8488): nessun equivalente su
+     * Geohub in nessuna forma, mai state editabili in nessuna UI prima di questo ticket.
+     *
+     * @return array<int, string>
+     */
+    private const TABLE_DETAILS_KEYS_WITHOUT_GEOHUB_UI = [
+        'table_details_show_gpx_download',
+        'table_details_show_kml_download',
+        'table_details_show_geojson_download',
+        'table_details_show_shapefile_download',
+        'table_details_show_scale',
+        'table_details_show_related_poi',
+        'table_details_show_cai_scale',
+        'table_details_show_mtb_scale',
+        'table_details_show_ref',
+        'table_details_show_surface',
+    ];
+
+    /**
+     * track_technical_details->show_* (colonna jsonb preesistente, letta da
+     * AppConfigService::config_section_options() ma MAI esposta in Nova prima di oc:8488):
+     * stesso set di 9 chiavi di TABLE_DETAILS_KEYS_WITH_TECHNICAL_DETAILS_TWIN, stessa label
+     * di Geohub (app/Nova/App.php::options_tab()), ma qui alimentano OPTIONS.show* generico
+     * invece di TABLES.details (solo elbrus). Campi nuovi, non generati da ImportedAppProperties
+     * (colonna diversa, fuori mappa).
+     *
+     * @return array<int, Field>
+     */
+    private function technicalDetailsFields(): array
+    {
+        $fields = [
+            'show_duration_forward' => [__('Show Duration Forward'), __('Enable to display the duration forward.')],
+            'show_duration_backward' => [__('Show Duration Backward'), __('Enable to display the duration backward.')],
+            'show_distance' => [__('Show Distance'), __('Enable to display the distance.')],
+            'show_ascent' => [__('Show Ascent'), __('Enable to display the ascent.')],
+            'show_descent' => [__('Show Descent'), __('Enable to display the descent.')],
+            'show_ele_max' => [__('Show Ele Max'), __('Enable to display the maximum elevation.')],
+            'show_ele_min' => [__('Show Ele Min'), __('Enable to display the minimum elevation.')],
+            'show_ele_from' => [__('Show Ele From'), __('Enable to display the starting elevation.')],
+            'show_ele_to' => [__('Show Ele To'), __('Enable to display the ending elevation.')],
+        ];
+
+        $out = [];
+        foreach ($fields as $key => [$label, $help]) {
+            $out[] = Boolean::make($label, "track_technical_details->{$key}")
+                ->default(true)
+                ->hideFromIndex()
+                ->help($help);
+        }
+
+        return $out;
     }
 
     protected function pois_tab(): array
@@ -1047,23 +1188,29 @@ class App extends Resource
         return [
             Select::make('Layer', 'layer')
                 ->options(function () {
-                    $layers = Layer::where('app_id', $this->model()->id)
-                        ->get()
-                        ->map(function ($layer) {
-                            // Accesso al titolo translatable in modo più pulito
-                            $title = $layer->getStringName();
-                            if (is_array($title)) {
-                                // Se è un array, prendi prima la versione italiana, poi quella inglese, altrimenti usa l'ID
-                                $title = $title['it'] ?? $title['en'] ?? ('Layer #'.$layer->id);
-                            } elseif (is_null($title)) {
-                                $title = 'Layer #'.$layer->id;
-                            }
+                    $app = $this->model();
 
-                            return [
-                                'id' => $layer->id,
-                                'title' => $title,
-                            ];
-                        });
+                    // Allineato a UpdateAppConfigHomeLayerIdsJob, che risolve su layers +
+                    // associatedLayers: se le options coprissero solo i layer diretti, un remap
+                    // corretto potrebbe produrre un id valido ma non offerto, e il guard lo
+                    // renderebbe non editabile in silenzio. oc:8488.
+                    $layers = $app->layers()->get()->concat($app->associatedLayers()->get())->unique('id');
+
+                    $layers = $layers->map(function ($layer) {
+                        // Accesso al titolo translatable in modo più pulito
+                        $title = $layer->getStringName();
+                        if (is_array($title)) {
+                            // Se è un array, prendi prima la versione italiana, poi quella inglese, altrimenti usa l'ID
+                            $title = $title['it'] ?? $title['en'] ?? ('Layer #'.$layer->id);
+                        } elseif (is_null($title)) {
+                            $title = 'Layer #'.$layer->id;
+                        }
+
+                        return [
+                            'id' => $layer->id,
+                            'title' => $title,
+                        ];
+                    });
                     $layers = $layers->sortBy('title');
 
                     return $layers->pluck('title', 'id')->all();
@@ -1292,6 +1439,9 @@ class App extends Resource
                 ->default(false)
                 ->hideFromIndex()
                 ->help(__('Enables the track direction arrow in the map.')),
+            // Importata da Geohub (oc:8488), nessun campo Nova prima. Alimenta ROUTING.enable
+            // (solo app elbrus, vedi AppConfigService::config_section_routing()).
+            $this->importedPropertyField('enable_routing'),
             Number::make(__('alert_poi_radius'))
                 ->default(100)
                 ->hideFromIndex()

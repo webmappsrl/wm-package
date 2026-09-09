@@ -283,7 +283,13 @@ Terzo effetto: il remap **non è idempotente**. `firstWhere('properties.geohub_i
 
 > **Un'ipotesi scartata dopo verifica empirica.** `persistQuietly()` ha anche un difetto in sé — l'`unset` è statico sulla classe base `Model`, spegne gli observer di *tutti* i modelli del worker, e se il salvataggio lancia un'eccezione il dispatcher resta spento oltre il previsto. Sembrava quindi necessario correggerlo per chiudere questa causa. **Non lo è**: sui 35 job falliti del test di import reale, **zero** sono falliti dentro `saveQuietly()` (14 errori di rete e 15 media 404 avvengono prima del salvataggio, 5 timeout AWS sono un job separato, 1 query con troppi parametri è una `SELECT`). Il fix scelto sotto non dipende comunque da questo comportamento — quindi resta fuori da oc:8488: non causa nessuna divergenza e non ha manifestazioni note.
 
-**Il fix per entrambe: agganciare il lavoro al completamento del solo batch che serve.** Non un batch padre che aggrega tutte le entità — la scrittura del config dipende solo dai dati già presenti sulla riga `apps` (già corretti dalla causa 1, indipendentemente da ec_poi/ec_track/ugc) e dai layer, non dal resto dell'import.
+**Il fix per entrambe: agganciare il lavoro al completamento del solo batch che serve.** Non un batch padre che aggrega tutte le entità — la scrittura del config al `finally()` del batch layer dipende solo dai dati già presenti sulla riga `apps` (già corretti dalla causa 1, indipendentemente da ec_poi/ec_track/ugc) e dai layer, non dal resto dell'import.
+
+> **Aggiornamento post-review (fix Finding 4/5/6, vedi `notes.md`).** La frase sopra descrive correttamente il *trigger* (quando si scrive), non l'intero *contenuto* del config: `config_section_map()` legge anche `getAllPoiTaxonomies()` (ec_poi + taxonomy_activity/poi_types), il `feature_image` per-layer (ec_media) e `MAP.bbox`/`MAP.filters.activities` (ec_track) — tutti popolati da batch indipendenti dal batch layer, senza garanzia di completamento relativa (oc:8094). Il batch layer può quindi completare — e `finalizeAppImport()` scrivere un config fresco rispetto ai layer — mentre quei batch sono ancora in corso, producendo un config temporaneamente privo di quelle sezioni. Poiché l'import usa `persistQuietly()`, nessun observer rimedierebbe più tardi.
+>
+> Fix: i batch di `ec_media`, `ec_poi`, `ec_track`, `taxonomy_activity`, `taxonomy_poi_types` (`ImportAppJob::CONFIG_DEPENDENT_BATCHES` — non `taxonomy_theme`, che non alimenta nessuna chiave di `config_section_map()`) agganciano anch'essi un `finally()` che accoda (non sincrono) un `UpdateAppConfigJob` di refresh best-effort per lo stesso app id — le chiamate ridondanti da batch che finiscono quasi in contemporanea collassano sull'`uniqueFor(): 600` già esistente su `UpdateAppConfigJob` (Task 7).
+>
+> **Secondo giro di review (Finding 5, risolto su richiesta esplicita del dev):** questo refresh, nella prima stesura, scriveva **incondizionatamente** — ignorando se il batch layer della stessa import era ancora in corso o era fallito, annullando di fatto il gate descritto sopra ("mai un config con `MAP.layers` incompleto") in quasi ogni import normale. Fix: `ImportAppJob::layerBatchIsPublishReady(int $appId): bool`, un gate basato su un sentinel in cache (`wm-package:import-layer-batch:{appId}`, scritto come prima istruzione di `processDependencies()` — prima di dispatchare qualunque batch, per chiudere la corsa in cui un batch di `CONFIG_DEPENDENT_BATCHES` finisce prima che il batch layer sia anche solo dispatchato) che tutti i `finally()` di `CONFIG_DEPENDENT_BATCHES` controllano prima di accodare `UpdateAppConfigJob::dispatch()`. Scrive SOLO se il batch layer (quando esiste per questo import) risulta confermato integro (`Bus::findBatch()` → finito, nessun fallimento, non cancellato).
 
 ```php
 // oggi: dispatch indipendente, subito dopo il batch, senza aspettarlo
@@ -293,18 +299,25 @@ if ($entityModelKey === 'layer') {
     dispatch(new UpdateAppConfigHomeLayerIdsJob($appId));
 }
 
-// fix: agganciato al completamento del batch layer
+// fix: agganciato al completamento del batch layer. static, FQCN, nessun $this catturato
+// (Finding 1: una closure non-static qui cattura implicitamente $this -> GeohubImportService
+// -> Connection PDO/Logger, non serializzabili -> ogni dispatch reale del batch fallisce)
 $batch = Bus::batch($jobs)->name("...")->onQueue(...)->allowFailures();
 if ($entityModelKey === 'layer') {
-    $batch->finally(function () use ($appId) {
-        // 1. rimappa gli id HOME (idempotente, nessuna attesa sulla coda)
-        // 2. scrive il config (writeAppConfigOnAws), esplicitamente — non passa dagli observer
-    });
+    $batch->finally(
+        static fn (Batch $batch) => ImportAppJob::finalizeAppImport($appId, $batch)
+        // 1. rimappa SEMPRE gli id HOME (idempotente, nessuna attesa sulla coda) —
+        //    anche se il batch ha avuto failures: un remap parziale non è un danno,
+        //    solo incompleto, comunque meglio di una HOME mai rimappata
+        // 2. scrive il config (writeAppConfigOnAws) SOLO se il batch è integro (nessuna
+        //    failure/cancellazione) — un config appena riscritto ma con MAP.layers
+        //    incompleto sarebbe peggio dello stale attuale
+    );
 }
 $batch->dispatch();
 ```
 
-`allowFailures()` sul solo batch layer: se un layer fallisce, gli altri completano comunque e il `finally()` scatta con un remap parziale — non un danno, solo incompleto.
+`allowFailures()` sul solo batch layer: se un layer fallisce, gli altri completano comunque e il `finally()` scatta comunque — ma il remap HOME e la scrittura del config non condividono più lo stesso gate (fix post-review, vedi `notes.md`): il remap gira sempre (un remap parziale — non un danno, solo incompleto), solo la scrittura del config viene saltata quando il batch non è integro.
 
 Con questo fix, il config viene scritto **una volta**, subito dopo che i layer esistono, senza bisogno di un salvataggio manuale da Nova — anche se il dev può comunque farlo, in sicurezza, perché a quel punto la HOME contiene già solo id locali.
 
@@ -378,7 +391,7 @@ Lo storage-first **resta**: era stata valutata l'ipotesi di far ricalcolare semp
 ### CAUSA 2 — agganciare remap e scrittura al completamento del batch layer, e sbarrare la corruzione da Nova
 
 - [ ] `queueEntityImport()` per l'entità `layer` usa `->allowFailures()` sul proprio batch — precedente già nel package, `GeohubImportService::importAllByModel()`. Senza, un singolo layer fallito cancella il batch e scarta i pendenti, perché `BaseImportJob::logImportFailure()` rilancia
-- [ ] Il job di remap + scrittura config è agganciato al `->finally()` **del solo batch layer**, non a un batch padre che aggrega tutte le entità: la scrittura del config dipende dai dati già sulla riga `apps` (già corretti dalla causa 1) e dai layer, non dal resto dell'import (ec_poi, ec_track, ugc, taxonomy)
+- [ ] Il job di remap + scrittura config è agganciato al `->finally()` **del solo batch layer**, non a un batch padre che aggrega tutte le entità: il *trigger* della prima scrittura dipende dai dati già sulla riga `apps` (già corretti dalla causa 1) e dai layer, non dal resto dell'import. **Aggiornamento post-review (Finding 4/5)**: il *contenuto* del config dipende anche da `ec_poi`/`ec_media`/`ec_track`/`taxonomy_activity`/`taxonomy_poi_types` (non `ugc`/`taxonomy_theme`) — questi batch agganciano anch'essi un refresh best-effort, gated su `ImportAppJob::layerBatchIsPublishReady()` per non pubblicare mai un config con `MAP.layers` incompleto. Vedi il callout sopra e `notes.md`
 - [ ] Il `finally()` esegue, in ordine: 1) remap degli id HOME, 2) `writeAppConfigOnAws()` — la scrittura è **esplicita**, non passa dagli observer, quindi non dipende da `persistQuietly()`
 - [ ] `isQueueEmpty()`, `maxAttempts` e `release(120)` vengono rimossi da `UpdateAppConfigHomeLayerIdsJob`: nessuna attesa a finestra fissa, il job scatta al completamento reale del batch
 - [ ] Il remap è **idempotente**: un valore che è già un id locale di questa app non viene rimappato
@@ -455,14 +468,15 @@ Tutto in **wm-package**. Nel repo maphub: solo bump del submodule + documenti di
 | File | Causa | Intervento |
 |---|---|---|
 | `src/Support/ImportedAppProperties.php` *(nuovo)* | 1 | Mappa dichiarativa: sorgente unica delle chiavi `properties` importate |
-| `src/Jobs/Import/ImportAppJob.php` | 1, 2, 4 | `transformData()`: merge `properties`, esclusione colonne theme, scrittura 37 chiavi, parser tiles. `queueEntityImport()`: `allowFailures()` + `finally()` sul solo batch layer |
+| `src/Jobs/Import/ImportAppJob.php` | 1, 2, 4 | `transformData()`: merge `properties`, esclusione colonne theme, scrittura 37 chiavi, parser tiles. `queueEntityImport()`: `allowFailures()` + `finally()` sul batch layer **e** sui 5 `CONFIG_DEPENDENT_BATCHES` (post-review, refresh best-effort gated su `layerBatchIsPublishReady()`) |
 | `src/Services/Import/GeohubImportService.php` | 1e | Nuovo `resolveTile()`. `persistQuietly()` **non toccato** — verificato che il fix non ne dipende |
-| `src/Services/Models/App/AppConfigService.php` | 1c, 1d | Helper con criterio `! is_null()`; 36 siti di lettura migrati; 4 nuove esposizioni |
-| `src/Nova/App.php` | 1, 2 | Generazione dei campi dalla mappa; `options()` e guard della Select layer |
+| `src/Services/Models/App/AppConfigService.php` | 1c, 1d | Helper con criterio `! is_null()`; 36 siti di lettura migrati (37 dopo il fix post-review su `MAP.pois.skipRouteIndexDownload`); 4 nuove esposizioni |
+| `src/Nova/App.php` | 1, 2 | Campi generati dalla mappa, **distribuiti nelle tab esistenti** per sezione di config (post-review, non più una tab dedicata); 9 nuovi campi `track_technical_details->*`; `options()` e guard della Select layer |
 | `src/Jobs/UpdateAppConfigJob.php` | 2 | `ShouldBeUnique` |
 | `src/Jobs/UpdateAppConfigHomeLayerIdsJob.php` | 2 | Rimozione della finestra fissa; remap idempotente |
 | `src/Nova/Flexible/Resolvers/ConfigHomeResolver.php` | 2 | Guard contro la riassegnazione silenziosa |
 | `src/Http/Controllers/Api/AppController.php` | Parte 4 | `config()`: response object, fallback funzionante |
+| `composer.json` | — | Aggiunta `outl1ne/nova-multiselect-field` (dipendenza mancante preesistente, non causata da oc:8488, scoperta durante il Task 5 — vedi `notes.md`) |
 | `resources/lang/{it,en}.json` | 1 | Stringhe dei campi generati |
 
 ---
@@ -486,7 +500,7 @@ $row = [
 ];
 ```
 
-Copertura per causa: **1a** theme in `properties` e sovrascrittura dei `null` locali; **1b** le 6 chiavi scritte senza toccare config né Nova; **1c** i 36 siti, il criterio `! is_null()` con casi `false`/`0`, le negazioni `TABLES` con default, il guard elbrus preservato; **1d** le 4 nuove esposizioni; **1e** parser doppio-decode, pivot con `sort_order`, `Tile` creato con `label` come traduzioni, `Tile` esistente mai modificato, idempotenza; **2** `allowFailures()` sul batch layer, `finally()` che rimappa e scrive senza attesa a finestra fissa, remap idempotente, guard Nova, `ShouldBeUnique`; **4** merge che preserva le chiavi Nova.
+Copertura per causa: **1a** theme in `properties` e sovrascrittura dei `null` locali; **1b** le 6 chiavi scritte senza toccare config né Nova; **1c** i 36 siti, il criterio `! is_null()` con casi `false`/`0`, le negazioni `TABLES` con default, il guard elbrus preservato; **1d** le 4 nuove esposizioni; **1e** parser doppio-decode, pivot con `sort_order`, `Tile` creato con `label` come traduzioni, `Tile` esistente mai modificato, idempotenza; **2** `allowFailures()` sul batch layer, `finally()` che rimappa e scrive senza attesa a finestra fissa, remap idempotente, guard Nova, `ShouldBeUnique`, refresh best-effort dei `CONFIG_DEPENDENT_BATCHES` gated su `layerBatchIsPublishReady()` (post-review); **4** merge che preserva le chiavi Nova.
 
 ### L'end-to-end è uno step del dev
 
