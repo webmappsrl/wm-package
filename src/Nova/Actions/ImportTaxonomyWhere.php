@@ -8,7 +8,8 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Database\QueryException;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Laravel\Nova\Actions\Action;
 use Laravel\Nova\Fields\ActionFields;
@@ -16,16 +17,19 @@ use Laravel\Nova\Fields\Select;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Wm\WmPackage\Http\Clients\Osm2caiClient;
 use Wm\WmPackage\Http\Clients\OsmfeaturesClient;
+use Wm\WmPackage\Jobs\TaxonomyWhere\CopyTaxonomyWhereGeometryFromGeohubJob;
 use Wm\WmPackage\Jobs\TaxonomyWhere\FetchOsm2caiSectorGeometryJob;
 use Wm\WmPackage\Jobs\TaxonomyWhere\FetchTaxonomyWhereGeometryJob;
+use Wm\WmPackage\Jobs\TaxonomyWhere\SyncTaxonomyWhereTracksJob;
 use Wm\WmPackage\Models\App;
-use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\TaxonomyWhere;
+use Wm\WmPackage\Nova\Actions\Concerns\HasTaxonomyWhereImportHelpers;
 use Wm\WmPackage\Services\GeometryComputationService;
+use Wm\WmPackage\Services\RolesAndPermissionsService;
 
 class ImportTaxonomyWhere extends Action
 {
-    use InteractsWithQueue, Queueable;
+    use HasTaxonomyWhereImportHelpers, InteractsWithQueue, Queueable;
 
     public $standalone = true;
 
@@ -46,6 +50,10 @@ class ImportTaxonomyWhere extends Action
             return $this->handleOsm2cai($fields);
         }
 
+        if ($sourceType === 'geohub') {
+            return $this->handleGeohub($fields);
+        }
+
         return Action::danger('Sorgente non valida.');
     }
 
@@ -53,18 +61,9 @@ class ImportTaxonomyWhere extends Action
     {
         $adminLevel = (int) str_replace('osmfeatures_', '', $sourceType);
 
-        $apps = App::all();
-        if ($apps->count() === 1) {
-            $app = $apps->first();
-        } else {
-            $appId = $fields->get('app_id');
-            if (! $appId) {
-                return Action::danger("Seleziona un'App.");
-            }
-            $app = App::find($appId);
-            if (! $app) {
-                return Action::danger('App non trovata.');
-            }
+        $app = $this->resolveApp($fields);
+        if (is_string($app)) {
+            return Action::danger($app);
         }
 
         $bbox = $app->map_bbox;
@@ -149,10 +148,7 @@ class ImportTaxonomyWhere extends Action
         if ($skipped > 0) {
             $msg .= " ({$skipped} già aggiornati, saltati)";
         }
-        $tracksSynced = GeometryComputationService::make()->syncTracksTaxonomyWhere(
-            config('wm-package.ec_track_model', EcTrack::class)
-        );
-        $msg .= " Sync taxonomy_where su {$tracksSynced} tracks avviata.";
+        $msg = $this->finalizeWithTracksSync($msg);
 
         if ($skippedCollision > 0) {
             $msg .= ' '.__(':count records skipped: identifier already in use.', [
@@ -165,18 +161,9 @@ class ImportTaxonomyWhere extends Action
 
     private function handleOsm2cai(ActionFields $fields): mixed
     {
-        $apps = App::all();
-        if ($apps->count() === 1) {
-            $app = $apps->first();
-        } else {
-            $appId = $fields->get('app_id');
-            if (! $appId) {
-                return Action::danger("Seleziona un'App.");
-            }
-            $app = App::find($appId);
-            if (! $app) {
-                return Action::danger('App non trovata.');
-            }
+        $app = $this->resolveApp($fields);
+        if (is_string($app)) {
+            return Action::danger($app);
         }
 
         $bbox = $app->map_bbox;
@@ -261,16 +248,110 @@ class ImportTaxonomyWhere extends Action
         if ($skipped > 0) {
             $msg .= " ({$skipped} già aggiornati, saltati)";
         }
-        $tracksSynced = GeometryComputationService::make()->syncTracksTaxonomyWhere(
-            config('wm-package.ec_track_model', EcTrack::class)
-        );
-        $msg .= " Sync taxonomy_where su {$tracksSynced} tracks avviata.";
+        $msg = $this->finalizeWithTracksSync($msg);
 
         if ($skippedCollision > 0) {
             $msg .= ' '.__(':count records skipped: identifier already in use.', [
                 'count' => $skippedCollision,
             ]);
         }
+
+        return Action::message($msg);
+    }
+
+    private function handleGeohub(ActionFields $fields): mixed
+    {
+        if (! RolesAndPermissionsService::allowsUser(auth()->user())) {
+            return Action::danger('Sorgente GeoHub riservata ai super-admin.');
+        }
+
+        $app = $this->resolveApp($fields);
+        if (is_string($app)) {
+            return Action::danger($app);
+        }
+
+        if (empty($app->geohub_id)) {
+            return Action::danger('App non collegata a GeoHub (geohub_id assente).');
+        }
+
+        $geohubApp = DB::connection('geohub')->table('apps')->where('id', $app->geohub_id)->first();
+        if (! $geohubApp || empty($geohubApp->user_id)) {
+            return Action::danger('Impossibile risolvere lo user GeoHub per questa App.');
+        }
+
+        $rows = DB::connection('geohub')->select(<<<'SQL'
+            select distinct tw.id, tw.name, tw.identifier
+            from taxonomy_wheres tw
+            join taxonomy_whereables twa on tw.id = twa.taxonomy_where_id
+            where tw.admin_level is null
+              and (
+                (twa.taxonomy_whereable_type like '%EcPoi%' and twa.taxonomy_whereable_id in (select id from ec_pois where user_id = ?))
+                or (twa.taxonomy_whereable_type like '%EcTrack%' and twa.taxonomy_whereable_id in (select id from ec_tracks where user_id = ?))
+                or (twa.taxonomy_whereable_type like '%Layer%' and twa.taxonomy_whereable_id in (select id from layers where app_id = ?))
+              )
+            SQL, [$geohubApp->user_id, $geohubApp->user_id, $app->geohub_id]);
+
+        if (count($rows) === 0) {
+            return Action::danger('GeoHub non ha restituito where senza admin_level per questa App.');
+        }
+
+        $created = 0;
+        $updated = 0;
+        $geometryJobs = [];
+
+        foreach ($rows as $row) {
+            $name = is_string($row->name) ? (json_decode($row->name, true) ?? $row->name) : $row->name;
+
+            $existing = TaxonomyWhere::whereRaw("properties->>'geohub_id' = ?", [(string) $row->id])->first();
+
+            if (! $existing && $row->identifier) {
+                $existing = TaxonomyWhere::where('identifier', $row->identifier)->first();
+            }
+
+            $properties = [
+                'geohub_id' => $row->id,
+                'source' => 'geohub',
+                'admin_level' => null,
+            ];
+
+            if ($existing) {
+                $existing->update([
+                    'name' => $name,
+                    'properties' => array_merge($existing->properties ?? [], $properties),
+                ]);
+                $this->assignTaxonomyUserFromApp($existing, $app);
+                $geometryJobs[] = new CopyTaxonomyWhereGeometryFromGeohubJob($existing->id, $row->id);
+                $updated++;
+
+                continue;
+            }
+
+            $taxonomyWhere = new TaxonomyWhere([
+                'name' => $name,
+                'properties' => $properties,
+            ]);
+            $taxonomyWhere->identifier = $row->identifier
+                ? $taxonomyWhere->withCollisionCounter($row->identifier)
+                : null;
+            $taxonomyWhere->save();
+
+            $this->assignTaxonomyUserFromApp($taxonomyWhere, $app);
+            $geometryJobs[] = new CopyTaxonomyWhereGeometryFromGeohubJob($taxonomyWhere->id, $row->id);
+            $created++;
+        }
+
+        // syncTracksTaxonomyWhere() calcola le intersezioni via ST_Intersects
+        // sulle geometrie locali: se girasse subito dopo il dispatch (come per
+        // le altre due sorgenti), troverebbe le geometrie ancora vuote, perche'
+        // CopyTaxonomyWhereGeometryFromGeohubJob e' asincrono. Va accodato come
+        // callback di un batch, cosi' parte solo a copia geometrie completata.
+        Bus::batch($geometryJobs)
+            ->then(function () {
+                SyncTaxonomyWhereTracksJob::dispatch();
+            })
+            ->dispatch();
+
+        $msg = "Creati {$created} record, aggiornati {$updated} record TaxonomyWhere da GeoHub. Geometrie in copia in background; la sincronizzazione delle track partira' automaticamente al termine.";
 
         return Action::message($msg);
     }
@@ -287,6 +368,7 @@ class ImportTaxonomyWhere extends Action
                 'osmfeatures_9' => 'OSMFeatures — Municipio (L9)',
                 'osmfeatures_10' => 'OSMFeatures — Quartiere (L10)',
                 'osm2cai' => 'OSM2CAI — Settori CAI',
+                'geohub' => __('GeoHub — Where senza admin_level'),
             ])
             ->rules('required');
 
@@ -300,18 +382,5 @@ class ImportTaxonomyWhere extends Action
         }
 
         return $fields;
-    }
-
-    private function assignTaxonomyUserFromApp(TaxonomyWhere $taxonomyWhere, App $app): void
-    {
-        if (! Schema::hasColumn($taxonomyWhere->getTable(), 'user_id')) {
-            return;
-        }
-
-        if (empty($app->user_id)) {
-            return;
-        }
-
-        $taxonomyWhere->forceFill(['user_id' => $app->user_id])->saveQuietly();
     }
 }

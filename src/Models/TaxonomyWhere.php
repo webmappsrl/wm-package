@@ -70,6 +70,7 @@ class TaxonomyWhere extends Taxonomy
     {
         $sourceId = $this->properties['osmfeatures_id']
             ?? $this->properties['osm2cai_id']
+            ?? $this->properties['geohub_id']
             ?? null;
 
         return $sourceId !== null ? (string) $sourceId : null;
@@ -87,7 +88,7 @@ class TaxonomyWhere extends Taxonomy
      * Restituisce l'identifier libero piu' vicino alla base: "base" se non e'
      * gia' in uso, altrimenti "base-2", "base-3", e cosi' via.
      */
-    protected function withCollisionCounter(string $base): string
+    public function withCollisionCounter(string $base): string
     {
         $query = static::query()->where('identifier', 'like', $base.'%');
 
