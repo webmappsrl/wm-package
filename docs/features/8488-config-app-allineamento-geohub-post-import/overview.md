@@ -321,6 +321,8 @@ $batch->dispatch();
 
 Con questo fix, il config viene scritto **una volta**, subito dopo che i layer esistono, senza bisogno di un salvataggio manuale da Nova — anche se il dev può comunque farlo, in sicurezza, perché a quel punto la HOME contiene già solo id locali.
 
+> **Secondo caso dello stesso pattern, trovato dopo (post-review): il box "title" della HOME.** "Ogni salvataggio dell'app corrompe dati" non è specifico al box layer — GeoHub salva il titolo di quel box come testo semplice, mentre il campo Nova (`FlexibleTranslatable`, oc:8349) si aspetta il formato traducibile; senza normalizzazione, un salvataggio Nova (anche su un campo non collegato) lo svuota silenziosamente, con lo stesso identico meccanismo del box layer ma senza la protezione che `buildLayerElement()` ha da questo ticket. Corretto in `ConfigHomeResolver::getAttributesForItem()`. Non è stata fatta una verifica sistematica sugli altri box_type per lo stesso pattern (dato legacy in un formato, campo Nova che ne aspetta un altro) — fuori scope di questo fix puntuale. Dettaglio in `notes.md`.
+
 ---
 
 ### CAUSA 4 — `fill()` sostituisce `properties`: la causa che distruggerebbe il fix

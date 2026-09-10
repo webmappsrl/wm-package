@@ -105,6 +105,42 @@ class ConfigHomeResolver implements ResolverInterface
     {
         $attributes = array_filter($item, fn ($key) => $key !== 'box_type', ARRAY_FILTER_USE_KEY);
 
+        if (
+            ($item['box_type'] ?? null) !== 'layer'
+            && isset($attributes['title'])
+            && is_string($attributes['title'])
+            && $attributes['title'] !== ''
+        ) {
+            // Titolo legacy in testo semplice (Geohub lo salva così in config_home, non nel
+            // formato traducibile atteso da FlexibleTranslatable). Questo blocco gira per
+            // POSIZIONE nel codice prima di qualunque branch specifico per box_type, quindi
+            // normalizza il title di QUALSIASI box che ce l'ha (non solo il box "title" che
+            // ha originato il fix) — l'unica eccezione è il box "layer", escluso esplicitamente
+            // dalla condizione sopra. Senza questa normalizzazione, il campo Nova non riesce a
+            // popolarsi e al primo salvataggio dell'app — anche non toccando questo box —
+            // buildGenericElement() lo scarta: decodeTranslatableValue() fa json_decode() su
+            // un testo semplice, che non è JSON valido, torna null, quindi []. Stesso difetto
+            // che buildLayerElement() chiude per il box layer con logica propria — per questo
+            // va escluso qui sotto (review: applicare questa normalizzazione anche al box
+            // layer avrebbe rotto la sua garanzia "preserva l'id/title originali esatti quando
+            // il layer non risolve", introdotta da questo stesso ticket).
+            //
+            // decodeTranslatableValue() prima di tutto: un titolo legacy può essere ANCHE una
+            // stringa JSON che codifica già la forma traducibile corretta (formato
+            // esplicitamente supportato dal trait, non un'ipotesi) — va decodificato, non
+            // avvolto di nuovo come testo grezzo, altrimenti il JSON letterale finirebbe
+            // scritto come testo visibile in ogni lingua.
+            $decoded = $this->decodeTranslatableValue($attributes['title']);
+
+            // Precompilare tutte le lingue configurate con lo stesso testo, non solo la
+            // prima: un salvataggio senza toccare questo campo deve restituire un valore non
+            // vuoto in ogni lingua, altrimenti il filtro per-lingua di
+            // decodeTranslatableValue() lo scarterebbe comunque per le lingue rimaste vuote.
+            $attributes['title'] = $decoded !== []
+                ? $decoded
+                : array_fill_keys(config('wm-tab-translatable.locales', ['it', 'en']), $attributes['title']);
+        }
+
         if (($item['box_type'] ?? null) === 'horizontal_scroll') {
             $attributes['items'] = $this->toRepeaterItems(
                 $this->normalizeHorizontalScrollItemsInput($item),
