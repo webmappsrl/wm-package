@@ -48,6 +48,9 @@ use Wm\WmPackage\Services\Import\EcMediaImportService;
 use Wm\WmPackage\Services\Import\GeohubImportService;
 use Wm\WmPackage\Services\Import\UgcMediaImportService;
 use Wm\WmPackage\Tests\Feature\OptionalDomainRegistrationTest;
+use Wm\WmPackage\TrailRegistry\Nova\TrailApplication;
+use Wm\WmPackage\TrailRegistry\Nova\TrailRegistryAnomaly;
+use Wm\WmPackage\TrailRegistry\Nova\TrailRegistryCode;
 
 class WmPackageServiceProvider extends PackageServiceProvider
 {
@@ -256,7 +259,113 @@ class WmPackageServiceProvider extends PackageServiceProvider
             if (file_exists($routes)) {
                 $this->loadRoutesFrom($routes);
             }
+
+            // Un dominio puo' portarsi dietro un po' di JavaScript — per ora
+            // solo la registrazione dei componenti delle sue card. Si carica
+            // qui, non fra gli script di base, cosi' chi non ha acceso il
+            // dominio non se lo ritrova nel proprio pannello.
+            $script = $this->getPackageBaseDir()."/../resources/js/domains/{$domain}.js";
+
+            if (file_exists($script) && class_exists(Nova::class)) {
+                Nova::script("wm-domain-{$domain}", $script);
+            }
         }
+    }
+
+    /**
+     * Accoda $items a una MenuSection esistente chiamata $sectionName, o la
+     * crea con quegli item se il consumer non ne ha una con quel nome.
+     *
+     * Stesso meccanismo gia' in uso per la sezione "Tools" (via reflection,
+     * perche' MenuSection non espone un modo pubblico per leggere i propri
+     * item/icon/collapsable e ricostruirla accodando) — estratto qui perche'
+     * anche la sezione "Catasto" del dominio trail_registry lo riusa,
+     * evitando un secondo meccanismo parallelo.
+     *
+     * @param  array<int, mixed>  $menuItems
+     * @param  array<int, MenuItem>  $items
+     * @return array<int, mixed>
+     */
+    protected function injectMenuSectionItems(array $menuItems, string $sectionName, array $items, string $icon): array
+    {
+        foreach ($menuItems as $index => $sectionOrGroup) {
+            if (! $sectionOrGroup instanceof MenuSection || $sectionOrGroup->name !== $sectionName) {
+                continue;
+            }
+
+            // La sezione va ricostruita, non modificata: `items` e' protetta e
+            // MenuSection non espone un modo per accodare. Tutto il resto —
+            // icona, richiudibilita', stato iniziale — sono proprieta'
+            // pubbliche del trait Collapsable, quindi si leggono e si
+            // riportano senza reflection.
+            $rebuilt = MenuSection::make(
+                $sectionOrGroup->name,
+                array_merge($this->menuSectionItems($sectionOrGroup), $items),
+            )->icon($sectionOrGroup->icon ?? $icon);
+
+            // `collapsedByDefault()` chiama gia' `collapsable()`: chiamarli
+            // entrambi renderebbe richiudibile anche una sezione che non lo
+            // era. Si riporta lo stato piu' specifico dei due.
+            if ($sectionOrGroup->collapsedByDefault) {
+                $rebuilt->collapsedByDefault();
+            } elseif ($sectionOrGroup->collapsable) {
+                $rebuilt->collapsable();
+            }
+
+            $menuItems[$index] = $rebuilt;
+
+            return $menuItems;
+        }
+
+        // Il consumer non ha dichiarato la sezione: la si crea in fondo, con
+        // le voci del package. Chi la vuole altrove — o chiusa di default —
+        // la dichiara nel proprio menu, anche vuota, e questo metodo la
+        // riempie lasciandola dov'e'.
+        $menuItems[] = MenuSection::make($sectionName, $items)->icon($icon)->collapsedByDefault();
+
+        return $menuItems;
+    }
+
+    /**
+     * Le voci gia' presenti in una sezione. `items` e' protetta: e' l'unica
+     * cosa per cui serve ancora la reflection, e se un giorno Nova la
+     * rendesse pubblica questo metodo sparirebbe.
+     *
+     * @return array<int, mixed>
+     */
+    protected function menuSectionItems(MenuSection $section): array
+    {
+        try {
+            $property = new \ReflectionProperty($section, 'items');
+            $property->setAccessible(true);
+
+            $items = $property->getValue($section);
+
+            return is_array($items) ? $items : [];
+        } catch (\ReflectionException $e) {
+            logger()->error(
+                'WM-Package: impossibile leggere le voci della sezione di menu '
+                ."«{$section->name}»: ".$e->getMessage()
+            );
+
+            return [];
+        }
+    }
+
+    /**
+     * Voci di menu del dominio trail_registry ("Catasto"), iniettate solo a
+     * dominio acceso — a interruttore spento nessuna sezione Catasto deve
+     * comparire.
+     *
+     * @return array<int, MenuItem>
+     */
+    protected function trailRegistryMenuItems(): array
+    {
+        return [
+            MenuItem::resource(TrailApplication::class)->name(__('Istanze')),
+            MenuItem::resource(TrailRegistryCode::class)->name(__('Registro dei codici')),
+            MenuItem::resource(TrailRegistryAnomaly::class)->name(__('Anomalie')),
+        ];
     }
 
     public function packageRegistered()
@@ -565,69 +674,23 @@ class WmPackageServiceProvider extends PackageServiceProvider
                 $horizonMenuItem = $createHorizonMenuItem();
                 $kibanaMenuItem = $createKibanaMenuItem();
 
-                $toolsSectionFound = false;
-                foreach ($menuItems as $index => &$sectionOrGroup) {
-                    if (
-                        $sectionOrGroup instanceof MenuSection &&
-                        $sectionOrGroup->name === __('Tools')
-                    ) {
-                        $toolsSectionFound = true;
-                        try {
-                            $reflection = new \ReflectionObject($sectionOrGroup);
-
-                            $itemsProperty = $reflection->getProperty('items');
-                            $itemsProperty->setAccessible(true);
-                            $currentItems = $itemsProperty->getValue($sectionOrGroup);
-                            if ($horizonMenuItem !== null) {
-                                $currentItems[] = $horizonMenuItem;
-                            }
-                            if ($minioMenuItem !== null) {
-                                $currentItems[] = $minioMenuItem;
-                            }
-                            if ($kibanaMenuItem !== null) {
-                                $currentItems[] = $kibanaMenuItem;
-                            }
-                            $currentItems[] = $downloadDbMenuItem;
-                            $currentItems[] = $restoreDbMenuItem;
-
-                            $icon = $reflection->getProperty('icon');
-                            $icon->setAccessible(true);
-                            $iconValue = $icon->getValue($sectionOrGroup);
-
-                            $collapsable = $reflection->getProperty('collapsable');
-                            $collapsable->setAccessible(true);
-                            $collapsableValue = $collapsable->getValue($sectionOrGroup);
-
-                            $menuItems[$index] = MenuSection::make($sectionOrGroup->name, $currentItems)
-                                ->icon($iconValue)
-                                ->collapsable($collapsableValue);
-                        } catch (\ReflectionException $e) {
-                            logger()->error(
-                                'WM-Package: Failed to modify Nova Tools menu section via reflection. Exception: '.$e->getMessage()
-                            );
-                        }
-                        break;
-                    }
+                $toolsItems = [];
+                if ($horizonMenuItem !== null) {
+                    $toolsItems[] = $horizonMenuItem;
                 }
-                unset($sectionOrGroup);
+                if ($minioMenuItem !== null) {
+                    $toolsItems[] = $minioMenuItem;
+                }
+                if ($kibanaMenuItem !== null) {
+                    $toolsItems[] = $kibanaMenuItem;
+                }
+                $toolsItems[] = $downloadDbMenuItem;
+                $toolsItems[] = $restoreDbMenuItem;
 
-                // Se la sezione Tools non esiste, la creiamo
-                if (! $toolsSectionFound) {
-                    $toolsItems = [];
-                    if ($horizonMenuItem !== null) {
-                        $toolsItems[] = $horizonMenuItem;
-                    }
-                    if ($minioMenuItem !== null) {
-                        $toolsItems[] = $minioMenuItem;
-                    }
-                    if ($kibanaMenuItem !== null) {
-                        $toolsItems[] = $kibanaMenuItem;
-                    }
-                    $toolsItems[] = $downloadDbMenuItem;
-                    $toolsItems[] = $createRestoreDbMenuItem();
+                $menuItems = $this->injectMenuSectionItems($menuItems, __('Tools'), $toolsItems, 'briefcase');
 
-                    $menuItems[] = MenuSection::make(__('Tools'), $toolsItems)->icon('briefcase')
-                        ->collapsable();
+                if (FeaturesService::isEnabled('trail_registry')) {
+                    $menuItems = $this->injectMenuSectionItems($menuItems, __('Catasto'), $this->trailRegistryMenuItems(), 'map');
                 }
 
                 return $menuItems;
@@ -649,11 +712,22 @@ class WmPackageServiceProvider extends PackageServiceProvider
                 }
                 $toolsItems[] = $createRestoreDbMenuItem();
 
-                return [
+                // Chiuse di default: e' il menu di un pannello che ha gia'
+                // parecchie sezioni, e aprirle tutte all'ingresso costringe a
+                // scorrere per trovare quella che serve.
+                $menuItems = [
                     MenuSection::make(__('Tools'), $toolsItems)
                         ->icon('color-swatch')
-                        ->collapsable(),
+                        ->collapsedByDefault(),
                 ];
+
+                if (FeaturesService::isEnabled('trail_registry')) {
+                    $menuItems[] = MenuSection::make(__('Catasto'), $this->trailRegistryMenuItems())
+                        ->icon('map')
+                        ->collapsedByDefault();
+                }
+
+                return $menuItems;
             });
         }
     }

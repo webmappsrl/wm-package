@@ -1,5 +1,10 @@
 <?php
 
+use Wm\WmPackage\TrailRegistry\Commands\TrailRegistryNormalizeCommand;
+use Wm\WmPackage\TrailRegistry\Nova\TrailApplication;
+use Wm\WmPackage\TrailRegistry\Nova\TrailRegistryAnomaly;
+use Wm\WmPackage\TrailRegistry\Nova\TrailRegistryCode;
+
 // config for Wm/WmPackage
 return [
     'version' => '1.5.0', // x-release-please-version
@@ -90,8 +95,84 @@ return [
             // Comandi artisan e risorse Nova del dominio: registrati solo a
             // dominio acceso. Le risorse Nova NON possono stare in src/Nova,
             // che viene scandita integralmente da Nova::resourcesIn().
-            'commands' => [],
-            'nova_resources' => [],
+            'commands' => [
+                TrailRegistryNormalizeCommand::class,
+            ],
+            'nova_resources' => [
+                TrailRegistryCode::class,
+                TrailApplication::class,
+                TrailRegistryAnomaly::class,
+            ],
+
+            // In quale proprieta' del tracciato vive il codice storico.
+            // Su forestas e' `ref`, ereditato dall'import da Sardegna
+            // Sentieri; un altro catasto la chiamera' altrimenti. Il service
+            // non la usa — riceve il codice come parametro — ma la usano i
+            // suoi chiamanti: il comando di normalizzazione e l'import.
+            'legacy_code_property' => env('WM_TRAIL_LEGACY_CODE_PROPERTY', 'ref'),
+
+            // Dove sta, nelle proprieta' del tracciato, l'indirizzo della sua
+            // scheda sulla piattaforma di origine. Notazione con il punto per
+            // i valori annidati (su forestas: `forestas.url`). Serve alla
+            // lista delle anomalie: le correzioni si fanno alla fonte, e un
+            // collegamento diretto evita al gestore di cercare la scheda a
+            // mano.
+            //
+            // **Vuota di default**, e non `forestas.url`: il package non puo'
+            // dare per scontato ne' il nome dello shard ne' che una scheda di
+            // origine esista. Chi ha una fonte esterna la imposta; chi non ce
+            // l'ha non vede il collegamento, che e' il comportamento giusto.
+            'source_url_property' => env('WM_TRAIL_SOURCE_URL_PROPERTY'),
+
+            // Come si chiama la piattaforma di origine, per chi ci deve
+            // andare a lavorare: finisce nel titolo del collegamento («Apri
+            // su Drupal»). Vuota: si ripiega su una formula generica.
+            'source_label' => env('WM_TRAIL_SOURCE_LABEL'),
+
+            // Da quale sorgente arrivano i settori del catasto, in
+            // `taxonomy_wheres.properties->source`. Il default vale per i
+            // catasti che importano i settori CAI da osm2cai; uno shard che
+            // li carica da un'altra parte cambia questa chiave, altrimenti
+            // nessun settore viene mai trovato e ogni sentiero risulta
+            // «fuori da ogni settore».
+            'sector_source' => env('WM_TRAIL_SECTOR_SOURCE', 'osm2cai'),
+
+            // Le chiavi con cui Nova indirizza le Resource collegate dalle
+            // mappe e dalle anomalie. Sono quelle che Nova ricava dal nome
+            // della classe, ma un consumer puo' sovrascrivere `uriKey()`: se
+            // lo fa, senza queste chiavi i collegamenti porterebbero a pagine
+            // inesistenti.
+            'nova_uri_keys' => [
+                'ec_track' => env('WM_TRAIL_URI_KEY_EC_TRACK', 'ec-tracks'),
+                'taxonomy_where' => env('WM_TRAIL_URI_KEY_TAXONOMY_WHERE', 'taxonomy-wheres'),
+                'trail_application' => env('WM_TRAIL_URI_KEY_TRAIL_APPLICATION', 'trail-applications'),
+            ],
+
+            // Come si riconosce un codice scritto dentro il nome del
+            // sentiero. Il default sono le PARENTESI FINALI — `(G 106)`,
+            // `(D 180 A)` — la convenzione osservata sui dati di Sardegna
+            // Sentieri; il primo gruppo di cattura e' il codice. Una fonte
+            // con un'altra convenzione cambia l'espressione; una che non ne
+            // ha nessuna la svuota, e i codici si leggono solo dal campo
+            // dedicato.
+            'name_code_pattern' => env('WM_TRAIL_NAME_CODE_PATTERN', '/\(([^()]*)\)\s*$/'),
+
+            // Formato del codice: impostabile, non scritto nel codice. Se il
+            // formato reale confermato da Forestas divergesse, questo e' il
+            // punto da cambiare.
+            'code_format' => [
+                'number_digits' => 2,
+                'number_max' => 99,
+                // `0` significa «senza variante» e in uscita si omette.
+                'variant_none' => '0',
+                'variant_letters' => true,
+            ],
+
+            // Identificatore della tassonomia che marca un tracciato come
+            // sentiero: e' un dato del consumer, non del package. Se non e'
+            // configurato (o la tassonomia non esiste) l'approvazione di
+            // un'istanza prosegue comunque, registrando un avviso nel log.
+            'trail_type_identifier' => env('WM_TRAIL_REGISTRY_TRAIL_TYPE_IDENTIFIER'),
         ],
     ],
 

@@ -19,7 +19,7 @@ Domini oggi dichiarati:
 
 | Dominio | Cosa contiene |
 |---|---|
-| `trail_registry` | Catasto Sentieri: codice REI (oc:8489), prevalidazione (oc:8490), validazione istanze (oc:8491) |
+| `trail_registry` | Catasto Sentieri: codice REI (oc:8489), prevalidazione (oc:8490), validazione istanze (oc:8491). Documentazione del dominio: [`TrailRegistry.md`](TrailRegistry.md) |
 
 Ogni dominio ha una sezione in `config/wm-package.php`:
 

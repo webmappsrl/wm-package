@@ -351,6 +351,7 @@ protected static function newFactory(): Factory
 
 | Feature | Ticket | Moduli toccati | Note |
 |---|---|---|---|
+| Catasto Sentieri: codice REI | oc:8489 | `src/TrailRegistry/**`, `database/migrations/trail_registry/**`, `resources/js/domains/trail_registry.js`, `config/wm-package.php`, `src/WmPackageServiceProvider.php` | Dominio opzionale `trail_registry`: registro dei codici, istanze, anomalie. Guida: `docs/resources/TrailRegistry.md` |
 | Domini opzionali: stub di migration e feature opt-in | oc:8492 | `src/Services/FeaturesService.php`, `src/Commands/Concerns/InteractsWithWmPackageMigrationStubs.php`, `src/Commands/WmPackagePublish{Migration,MissingMigrations}Command.php`, `src/WmPackageServiceProvider.php`, `config/wm-package.php`, `docs/resources/OptionalDomains.md` | Il package puo' ospitare feature che non tutti i consumer usano: stub in sottocartella con identificatore `<dominio>/<nome>`, interruttore `features.<dominio>.enabled` spento di default, opzione `--with` sul gate. Guida: `docs/resources/OptionalDomains.md` |
 | Persistenza modalità auto/manuale layer + default configurabile | oc:8314 | `src/Models/Layer.php`, `src/Nova/Fields/LayerFeatures/**`, `config/wm-package.php` | `setTrackMode()`/`setPoiMode()` ora scrivono con `jsonb_set` atomico; nuovo `persistMode()` protected riusabile da sottoclassi; nuova chiave `default_layer_mode` (default `'auto'`, invariato per retrocompatibilità) |
 | Fix identifier TaxonomyWhere | oc:8469 | `src/Observers/TaxonomyObserver.php`, `src/Models/Abstracts/Taxonomy.php`, `src/Models/TaxonomyWhere.php`, `src/Nova/Actions/ImportTaxonomyWhere.php`, `src/Http/Clients/OsmfeaturesClient.php`, `src/Jobs/TaxonomyWhere/FetchTaxonomyWhereGeometryJob.php`, migration stub | Colonna `identifier` su `taxonomy_wheres`; derivazione sovrascrivibile dal modello; per TaxonomyWhere deriva da `source` + id sorgente, mai dal nome. Include il fix dei nomi da OSMFeatures |
@@ -398,6 +399,56 @@ protected static function newFactory(): Factory
 | Condivisione percorso su Instagram/Facebook Stories | oc:8183 | `src/Models/App.php`, `src/Nova/App.php`, `src/Services/Models/App/AppConfigService.php`, `src/Http/Controllers/Api/ShareStoryImageController.php`, `src/Services/Models/StoryShare/{StoryImageLayout,StoryShareImageService}.php`, `routes/api.php` | Media collection `story_frame` su App (Nova upload); endpoint stateless `POST /api/share-story-image` deriva l'app da `UgcTrack` (uuid) con ownership check, mai da parametro client; compositing 1080x1920 via intervention/image |
 
 ## Decisioni architetturali
+
+### Catasto Sentieri: codice REI (oc:8489)
+
+**Fonte di verita':** `docs/resources/TrailRegistry.md`.
+
+- **Nel registro entrano solo codici senza dubbi.** Un sentiero che ha un'anomalia non ha
+  una riga: il registro e' l'elenco di cio' che e' deciso, `trail_registry_anomalies` e'
+  cio' che resta da decidere. La verifica e' una join fra le due tabelle su
+  `ec_track_id`, e deve tornare zero
+- **Non esiste uno stato «in conflitto».** `TrailCodeStatus` ha tre casi
+  (`reserved`/`assigned`/`released`). Una posizione gia' occupata non produce una riga di
+  scarto: `registerExistingCode()` torna l'esito `conflict` portando `holder`, la riga
+  altrui, e chi chiama ne fa un'anomalia. Conseguenza voluta: quel sentiero non ha
+  registrazione, quindi a ogni esecuzione **ritenta** — se il conflitto si e' sciolto, il
+  numero gli spetta senza intervento
+- **`TrailCodeStatus::active()` e la clausola WHERE dell'indice unico parziale si cambiano
+  insieme**, come il CHECK sullo stato: sono la stessa regola scritta in tre posti
+- **Il cast a `::geometry` disattiva l'indice GiST.** In `resolveSector()` il filtro
+  `ST_Intersects` lavora su `geography` senza cast (Index Scan); il cast sta solo dentro
+  `ST_Length(ST_Intersection(...))`, cioe' nell'ordinamento, dove le righe sono gia'
+  poche. Misurato sui dati reali: 652 ms contro oltre 2 minuti
+- **I cicli di `propose()` non sono invertibili**: esterno la variante, interno il numero.
+  Invertirli proporrebbe `ZNUB500A` invece di `ZNUB501`, trattando la variante come
+  diramazione del numero
+- **Le anomalie conservano i dati, non la frase.** La colonna e' `context` (jsonb); la
+  descrizione si compone in lettura con `AnomalyDetailRenderer`, un modello per tipo. Cosi'
+  correggere una parola non richiede di rigenerare le righe. La lista si riscrive da zero a
+  ogni esecuzione: e' cio' che fa sparire una riga quando la scheda e' stata sistemata alla
+  fonte
+- **Un codice scritto nel nome non e' un'anomalia**: si legge, si registra, e la colonna
+  `origin` dice da dove viene (`campo_dedicato` / `nome` / `assegnato`)
+- **Due trappole di Nova, entrambe verificate dal vivo con un 500 in pagina:** il titolo di
+  una Resource non puo' essere una colonna enum (`public static $title = 'type'` fa
+  convertire l'enum in stringa, `vendor/laravel/nova/src/Resource.php:416` — serve un
+  metodo `title()`); e i modelli devono dichiarare **nullable** anche le colonne
+  obbligatorie, perche' Nova costruisce i campi su un'istanza vuota per ricavare le colonne
+  dell'elenco — un `match` sull'enum senza ramo `null` esplode li'
+- **Cio' che varia fra shard sta in configurazione, con default prudenti.** Dove sta il
+  codice storico (`legacy_code_property`), se esiste una scheda di origine e come si
+  chiama la piattaforma (`source_url_property`, `source_label` — **vuote** di default: il
+  package non presume ne' il nome dello shard ne' l'esistenza di una fonte esterna), da
+  quale sorgente arrivano i settori (`sector_source`), come si riconosce un codice scritto
+  nel nome (`name_code_pattern`), le chiavi Nova delle Resource collegate
+  (`nova_uri_keys`). La lingua del nome viene da `app.locale`, non da un elenco fisso.
+  `TrailRegistryShardNeutralityTest` fallisce se una presunzione rientra di nascosto
+- **Il JavaScript di un dominio non richiede un bundle.** `resources/js/domains/<dominio>.js`
+  viene caricato da `registerEnabledDomains()` solo a dominio acceso, e registra i
+  componenti con una **render function**: il Vue di Nova e' la build runtime-only e non
+  compilerebbe un template scritto come stringa, mentre la globale `Vue` e' garantita
+  (le card gia' compilate del package ci fanno `externals`)
 
 ### Domini opzionali: stub e feature opt-in (oc:8492)
 
@@ -624,3 +675,4 @@ La documentazione delle feature va in `docs/resources/`.
 Esempi:
 - `docs/resources/Analytics.md` — sistema PostHog analytics in Nova
 - `docs/resources/TaxonomyWhere.md` — resource TaxonomyWhere
+- `docs/resources/TrailRegistry.md` — dominio opzionale Catasto Sentieri (codice REI)
