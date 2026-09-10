@@ -398,9 +398,13 @@ Da cui due conseguenze:
 
 **Filtri: stato istruttoria e provenienza**, e nient'altro. Provincia e settore sono stati valutati e scartati: si leggerebbero dal codice riservato, quindi con un join sul registro, e l'unica alternativa — duplicare il prefisso sull'istanza — reintrodurrebbe il dato in due posti. Chi cerca per territorio parte dal registro, che quei filtri li ha.
 
-**Edit delle istanze: rinviato.** Cosa sia modificabile dopo la presentazione dipende da una risposta di Forestas che non c'è ancora — vedi «Da chiarire con Forestas». In questo ciclo la Resource nasce senza form di modifica.
+**Un'istanza presentata non si modifica: si respinge con una motivazione e se ne presenta una nuova.** Decisione del dev del 10/09/2026 — non una domanda lasciata aperta con il cliente, come era in una prima stesura. La Resource dell'istanza resta quindi **senza form di modifica**, ed è la forma definitiva, non un rinvio.
 
-Il nodo è la geometria: se la traccia si può cambiare, il settore in cui ricade può cambiare, e il settore sono i primi cinque caratteri del codice **già riservato e già comunicato**. Si otterrebbe un'istanza con un numero di un settore in cui il sentiero non passa.
+Il motivo non è la comodità di realizzazione: ogni versione presentata **resta distinta e leggibile** invece di essere sovrascritta dalla successiva, e su una pratica amministrativa poter ricostruire cosa è stato chiesto e cosa risposto vale più della comodità di correggere sul posto. Il rigetto motivato è un atto che resta agli atti, la modifica in corsa no.
+
+Evita inoltre alla radice il nodo della geometria: se la traccia si potesse cambiare, il settore in cui ricade potrebbe cambiare, e il settore sono i primi cinque caratteri del codice **già riservato e già comunicato**. Si otterrebbe un'istanza con un numero di un settore in cui il sentiero non passa.
+
+Ricadute sull'API del SUS (dettaglio in `forestas/docs/features/8333-.../overview.md`): nessun endpoint di aggiornamento, il rigetto libera il numero, la motivazione va restituita al richiedente.
 
 ### Avanzamento dell'istruttoria: due Action sull'istanza
 
@@ -463,16 +467,28 @@ Il registro legge la provenienza dall'istanza, non ne conserva copia. Anche il c
 
 Non esiste il caso «riservato senza istanza»: chi ha riservato un numero si sa sempre, ed è `user_id` dell'istanza.
 
+## Deciso da noi, non da chiedere al cliente
+
+- **Ogni sentiero nasce da un'istanza.** Decisione del dev del 10/09/2026: non esiste un sentiero
+  creato direttamente, senza una domanda alle spalle. Vale per entrambi i canali — l'istanza
+  arrivata dal SUS e quella aperta in backoffice sono la stessa cosa con provenienza diversa.
+  **Conseguenza sul codice: la creazione diretta va disabilitata** ovunque sia ereditata dalla
+  Resource `EcTrack`. Senza quel divieto nascerebbe un sentiero a cui nessuno ha riservato un
+  numero: resterebbe fuori dal registro, e il suo codice risulterebbe libero e proponibile a
+  un'altra domanda.
+- **Un'istanza presentata non si modifica**: si respinge con una motivazione e se ne presenta una
+  nuova (vedi il modello dell'istanza, piu' sopra).
+- **La riserva di un numero dura finche' l'istanza e' in attesa di istruttoria, e Forestas puo'
+  liberarla** respingendola. Nessuna scadenza automatica.
+- **Il formato del codice e' confermato**: `full_code` del settore + numero + variante.
+- **La bonifica di doppioni e codici fuori forma la fa Forestas**: i casi concreti sono elencati
+  in `forestas/docs/features/8489-.../analisi-anomalie.md`.
+
 ## Da chiarire con Forestas
 
 Domande aperte, da porre prima di completare le parti che ne dipendono.
 
-- **Cosa si può modificare in un'istanza dopo la presentazione, e in particolare la traccia.** Se la geometria cambia, può cambiare il settore e quindi il prefisso di un codice già riservato e già comunicato al richiedente. Tre risposte possibili, tutte legittime: la traccia non si tocca e si corregge presentando una nuova istanza; si tocca e il numero viene riemesso; si tocca solo restando nello stesso settore. **Decisione del dev: si aspettano le direttive del cliente**, e fino ad allora la Resource dell'istanza non ha form di modifica.
-- **Ogni sentiero nasce da un'istanza, o d'ufficio si può creare un sentiero direttamente?** In `Catasto → Sentieri` la creazione esiste per eredità dalla Resource `EcTrack`: se Forestas la usa, nasce un sentiero che non è passato da nessuna istanza e a cui nessuno ha riservato un numero — quindi fuori dal registro, con il suo codice che risulta libero e proponibile a un'altra domanda. Le due risposte portano a due sistemi diversi: se ogni sentiero deve passare da un'istanza, la creazione diretta va disabilitata su quella Resource; se la creazione d'ufficio è legittima, serve un percorso che riservi il numero contestualmente, come già fa la creazione dell'istanza. **In questo ciclo non si decide**: si aspetta la risposta.
-- **Criterio di prossimità**: cosa significa proporre un numero «vicino». In questo ciclo contiguità numerica dentro il settore; se intendessero vicinanza geografica del tracciato, va sostituito.
-- **Durata della riserva** di un codice non confermato, e chi può liberarlo prima della scadenza.
-- **Conferma formale del formato** del codice.
-- **Come bonificare** doppioni e codici fuori forma.
+- **Chi attiva una variante.** La lettera finale dice che il sentiero e' una diramazione di un altro, quindi non e' un dato che un automatismo possa dedurre: oggi la piattaforma non ne assegna mai una di propria iniziativa. Resta da sapere chi la stabilisce — il richiedente nella domanda, o Forestas in istruttoria — e come la dichiara.
 - **Cosa significa, lato Drupal, un sentiero senza `ref`**: 40 sentieri portano il codice scritto nel nome invece che in `ref`, e 35 di questi sono in `in_revisione_validazione`. Non si sa se il `ref` sia stato rimosso deliberatamente, non sia mai stato compilato, o non venga importato in quello stato: sono tre cose diverse con tre trattamenti diversi. In questo ciclo si segnalano e non si toccano.
 
 ## Rischi
@@ -480,12 +496,12 @@ Domande aperte, da porre prima di completare le parti che ne dipendono.
 Rivisti dopo la challenge adversariale.
 
 - **I doppioni in stato `conflitto` restano nel registro.** Non violano il vincolo di unicità perché è parziale, ma chi legge il registro deve sapere che sono dati storici in attesa di bonifica, non codici validi. Vanno inclusi nel rapporto della prova a vuoto, e il loro stato non va confuso con `liberato`: un codice liberato è riassegnabile, uno in conflitto è un problema da risolvere.
-- **Il formato del codice resta da confermare formalmente con Forestas**, benché ora regga sui conti e sia confermato da Piccioli in scrum: `ZNUB535A`, otto caratteri con variante e sette senza, spiega l'apparente contraddizione del tag, e la coda numerica è di tre cifre in 576 casi su 576 — la prima è il settore, le altre due il numero. Rischio residuo: se il formato reale avesse una struttura diversa da «`full_code` del settore + numero + variante», la scomposizione in colonne andrebbe rifatta.
+- **Il formato del codice e' confermato dal dev** (10/09/2026), oltre che da Piccioli in scrum, e regge sui conti: `ZNUB535A`, otto caratteri con variante e sette senza, spiega l'apparente contraddizione del tag, e la coda numerica è di tre cifre in 576 casi su 576 — la prima è il settore, le altre due il numero. Rischio residuo: se il formato reale avesse una struttura diversa da «`full_code` del settore + numero + variante», la scomposizione in colonne andrebbe rifatta.
 - **La base di partenza è sporca**, ma meno di quanto sembrasse: tre codici su 576 hanno una coda fuori forma, e i duplicati sono al massimo sette — conteggio testuale, da rifare dopo aver ricavato il settore dalla geometria. Mitigazione: i doppioni vanno in una regione fittizia, il resto entra come occupato, e la prova a vuoto misura quanto resta ambiguo.
 - **Il prefisso si ricava sempre dalla geometria.** Se una traccia non ricade in alcun settore CAI, o ne attraversa più d'uno, l'attribuzione è incerta — e vale per tutti e 576 i numeri storici, non solo per quelli in forma breve. Da misurare con la prova a vuoto, che può incrociare il settore dedotto dal codice con quello dedotto dalla geometria.
 - **Il criterio di prossimità non è definito.** In questo ciclo: contiguità numerica dentro il settore. Se Forestas intendesse vicinanza geografica del tracciato, il criterio va sostituito.
 - **`ref` resta scrivibile finché non lo si toglie dall'interfaccia.** Il registro è l'unica fonte e `ref` è deprecato, ma finché il campo è visibile e modificabile qualcuno può scriverci un numero che il registro non conosce. Il rischio non è la divergenza dei dati — `ref` non viene più letto — ma la confusione di chi lo vede ancora. Va nascosto nello stesso ciclo in cui il registro entra in uso.
-- **Riserve che non scadono mai.** Un'istanza che entra in prevalidazione e poi si arena non viene né respinta né approvata: il suo numero resta bloccato per sempre. Con la contiguità numerica come criterio, poche istanze abbandonate frammentano lo spazio dei numeri di un settore. La durata della riserva è uno dei punti aperti con Forestas.
+- **Riserve che non scadono mai — risolto per decisione, non per meccanismo.** Un'istanza che si arena tiene bloccato il suo numero. Decisione del dev del 10/09/2026: **la riserva dura finché l'istanza è in attesa di istruttoria, e Forestas può liberarla** — non serve una scadenza automatica. Il rilascio passa dal rigetto dell'istanza, che è già ciò che libera il numero. Resta il caso di pratiche lasciate indefinitamente in attesa, che nessuno respinge: lì il numero resta bloccato, ed è una conseguenza voluta della scelta di non far scadere nulla da sé.
 - **Riuso immediato di un numero liberato.** Un sentiero deaccatastato può essere riaccatastato; se nel frattempo il numero è andato a un altro, la segnaletica sul terreno e le mappe cartacee puntano al sentiero sbagliato. Nessun periodo di quarantena previsto in questo ciclo.
 - **Esaurimento di un settore.** Con la contiguità che riempie dal basso, un settore piccolo si satura: va definito cosa risponde il servizio quando non ci sono più numeri liberi.
 - **Il perdente della concorrenza riceve un errore, non un numero.** Il vincolo del database garantisce che due richieste non ottengano lo stesso numero, non che la seconda ne ottenga uno: serve un secondo tentativo automatico, altrimenti sotto carico il SUS riceve errori invece di numeri.
