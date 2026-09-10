@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Support\Facades\DB;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Wm\WmPackage\TrailRegistry\Enums\TrailCodeStatus;
 use Wm\WmPackage\TrailRegistry\Models\TrailRegistryCode;
@@ -67,7 +68,7 @@ it('con una ricerca vuota non filtra nulla', function () {
     expect(searchCodes('   '))->toHaveCount(1);
 });
 
-it('elenca i codici in ordine, col 9 prima del 10', function () {
+it('cercando, elenca i codici in ordine, col 9 prima del 10', function () {
     // Il numero e' un intero: ordinando la stringa senza lo zero davanti, il
     // 10 verrebbe prima del 9.
     makeCode(['number' => 10, 'status' => TrailCodeStatus::Assigned]);
@@ -76,9 +77,38 @@ it('elenca i codici in ordine, col 9 prima del 10', function () {
     makeCode(['sector' => '1', 'number' => 99, 'status' => TrailCodeStatus::Assigned]);
 
     $ordered = TrailRegistryCodeResource::indexQuery(
-        NovaRequest::create('/'),
+        NovaRequest::create('/?search=Z'),
         TrailRegistryCode::query(),
     )->get()->map(fn (TrailRegistryCode $c) => $c->code)->all();
 
     expect($ordered)->toBe(['ZNUB199', 'ZNUB509', 'ZNUB509A', 'ZNUB510']);
+});
+
+it('senza ricerca elenca prima i piu recenti', function () {
+    // Chi apre il registro vuole vedere cosa e' stato assegnato di nuovo, non
+    // l'inizio dell'alfabeto — che a codici in ordine fisso resta lo stesso
+    // per sempre.
+    $vecchio = makeCode(['number' => 1, 'status' => TrailCodeStatus::Assigned]);
+    $nuovo = makeCode(['number' => 2, 'status' => TrailCodeStatus::Assigned]);
+
+    DB::table('trail_registry_codes')->where('id', $vecchio)
+        ->update(['created_at' => now()->subDay()]);
+
+    $ordered = TrailRegistryCodeResource::indexQuery(
+        NovaRequest::create('/'),
+        TrailRegistryCode::query(),
+    )->get()->map(fn (TrailRegistryCode $c) => $c->id)->all();
+
+    expect($ordered)->toBe([$nuovo, $vecchio]);
+});
+
+it('lascia stare l ordine quando l utente clicca su una colonna', function () {
+    makeCode(['number' => 5, 'status' => TrailCodeStatus::Assigned]);
+
+    $query = TrailRegistryCodeResource::indexQuery(
+        NovaRequest::create('/?orderBy=number&orderByDirection=asc'),
+        TrailRegistryCode::query(),
+    );
+
+    expect($query->getQuery()->orders)->toBeNull();
 });

@@ -43,24 +43,40 @@ class TrailRegistryCode extends Resource
     public static $search = [];
 
     /**
-     * L'elenco esce ordinato per codice.
+     * L'ordine di partenza dipende da cosa si sta facendo.
      *
-     * L'ordinamento e' sulle sei colonne e non sulla stringa ricomposta: da'
-     * lo stesso ordine — sono le parti del codice, in ordine di lettura — ma
-     * passa dall'indice, mentre un ORDER BY su un'espressione costringerebbe
-     * a ordinare l'intera tabella a ogni pagina. `number` e' un intero, quindi
-     * il 9 viene prima del 10 invece che dopo, come accadrebbe ordinando la
-     * stringa senza lo zero davanti.
+     * **Sfogliando l'elenco: i piu' recenti in cima.** Chi apre il registro
+     * senza cercare nulla vuole vedere cosa e' successo di nuovo — quali
+     * codici sono stati assegnati dall'ultima importazione — non l'inizio
+     * dell'alfabeto, che a codici in ordine fisso resta identico per sempre.
+     *
+     * **Cercando un codice: in ordine di codice.** Una ricerca per prefisso
+     * restituisce le posizioni vicine fra loro — `ZORT5` elenca l'intero
+     * settore — e lette in ordine numerico si scorrono; mescolate per data di
+     * inserimento diventano un elenco casuale in cui trovare un buco o una
+     * posizione contesa e' un lavoro a mano.
+     *
+     * L'ordinamento per codice e' sulle sei colonne e non sulla stringa
+     * ricomposta: da' lo stesso ordine — sono le parti del codice, in ordine
+     * di lettura — ma passa dall'indice, mentre un ORDER BY su
+     * un'espressione costringerebbe a ordinare l'intera tabella a ogni
+     * pagina. `number` e' un intero, quindi il 9 viene prima del 10 invece
+     * che dopo, come accadrebbe ordinando la stringa senza lo zero davanti.
      *
      * Nova applica il proprio ordinamento quando l'utente clicca su una
-     * colonna: questo e' solo il criterio di partenza.
+     * colonna: questo e' solo il criterio di partenza, e in quel caso non si
+     * tocca nulla.
      */
     public static function indexQuery(NovaRequest $request, $query)
     {
-        if (empty($request->query('orderBy'))) {
-            $query->getQuery()->orders = [];
+        if (! empty($request->query('orderBy'))) {
+            return $query;
+        }
 
-            $query->orderBy('region')
+        $query->getQuery()->orders = [];
+
+        if (trim((string) $request->query('search', '')) !== '') {
+            return $query->orderBy('region')
                 ->orderBy('province')
                 ->orderBy('area')
                 ->orderBy('sector')
@@ -68,7 +84,10 @@ class TrailRegistryCode extends Resource
                 ->orderBy('variant');
         }
 
-        return $query;
+        // `id` come spareggio: una normalizzazione scrive centinaia di righe
+        // nello stesso secondo, e senza un secondo criterio l'ordine fra
+        // quelle sarebbe quello che capita, diverso a ogni pagina.
+        return $query->orderByDesc('created_at')->orderByDesc('id');
     }
 
     /**
