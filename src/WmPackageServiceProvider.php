@@ -5,6 +5,7 @@ namespace Wm\WmPackage;
 use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
@@ -298,9 +299,15 @@ class WmPackageServiceProvider extends PackageServiceProvider
             // icona, richiudibilita', stato iniziale — sono proprieta'
             // pubbliche del trait Collapsable, quindi si leggono e si
             // riportano senza reflection.
+            //
+            // Le voci del package vanno PRIMA di quelle gia' dichiarate dal
+            // consumer: sono il contenuto della sezione — i dati su cui si
+            // lavora — mentre quelle del consumer sono aggiunte, tipicamente
+            // collegamenti a documentazione o strumenti esterni, che stanno
+            // meglio in coda.
             $rebuilt = MenuSection::make(
                 $sectionOrGroup->name,
-                array_merge($this->menuSectionItems($sectionOrGroup), $items),
+                array_merge($items, $this->menuSectionItems($sectionOrGroup)),
             )->icon($sectionOrGroup->icon ?? $icon);
 
             // `collapsedByDefault()` chiama gia' `collapsable()`: chiamarli
@@ -331,6 +338,12 @@ class WmPackageServiceProvider extends PackageServiceProvider
      * cosa per cui serve ancora la reflection, e se un giorno Nova la
      * rendesse pubblica questo metodo sparirebbe.
      *
+     * **Non e' un array**: Nova ci mette una `MenuCollection`. Un controllo
+     * `is_array()` la scarterebbe in silenzio, e le voci che il consumer ha
+     * dichiarato nella sezione sparirebbero nel momento in cui il package ci
+     * appende le proprie — e' successo davvero, con la voce della
+     * documentazione API dichiarata in «Catasto».
+     *
      * @return array<int, mixed>
      */
     protected function menuSectionItems(MenuSection $section): array
@@ -340,6 +353,10 @@ class WmPackageServiceProvider extends PackageServiceProvider
             $property->setAccessible(true);
 
             $items = $property->getValue($section);
+
+            if ($items instanceof Collection) {
+                return $items->all();
+            }
 
             return is_array($items) ? $items : [];
         } catch (\ReflectionException $e) {

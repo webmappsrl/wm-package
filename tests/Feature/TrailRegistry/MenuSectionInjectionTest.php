@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Support\Collection;
 use Laravel\Nova\Menu\MenuItem;
 use Laravel\Nova\Menu\MenuSection;
 use Wm\WmPackage\WmPackageServiceProvider;
@@ -31,6 +32,38 @@ it('accoda le voci alla sezione dichiarata dal consumer, lasciandola dov e', fun
     expect($result)->toHaveCount(3)
         ->and($result[1]->name)->toBe('Catasto');
 });
+
+it('non butta via le voci che il consumer aveva gia messo nella sezione', function () {
+    // Regressione: le voci di una MenuSection non sono un array ma una
+    // MenuCollection. Un controllo `is_array()` le scartava in silenzio, e la
+    // voce dichiarata dal consumer spariva nel momento in cui il package ci
+    // appendeva le proprie — successo davvero con la documentazione API in
+    // «Catasto», che dal menu era semplicemente sparita.
+    $menu = [
+        MenuSection::make('Catasto', [MenuItem::link('Documentazione API', '/docs')])->icon('map'),
+    ];
+
+    $result = inject($menu, 'Catasto', [MenuItem::link('Codici', '/codici')]);
+
+    $labels = collect(itemsOf($result[0]))->map(fn ($i) => $i->name)->all();
+
+    // Le voci del package prima, quelle del consumer in coda: le prime sono
+    // il contenuto della sezione, le seconde aggiunte come i collegamenti
+    // alla documentazione.
+    expect($labels)->toBe(['Codici', 'Documentazione API']);
+});
+
+/**
+ * Le voci di una sezione: `items` e' protetta e non e' un array.
+ */
+function itemsOf(MenuSection $section): array
+{
+    $p = new ReflectionProperty($section, 'items');
+    $p->setAccessible(true);
+    $v = $p->getValue($section);
+
+    return $v instanceof Collection ? $v->all() : (array) $v;
+}
 
 it('conserva lo stato chiuso della sezione dichiarata', function () {
     // Regressione: la versione precedente riportava solo icona e
