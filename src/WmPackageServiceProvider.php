@@ -35,6 +35,7 @@ use Wm\WmPackage\Commands\WmRestoreDbCommand;
 use Wm\WmPackage\Commands\WmSyncUgcTaxonomyWhereCommand;
 use Wm\WmPackage\ElasticSearch\HitsIteratorAggregate as ElasticSearchHitsIteratorAggregate;
 use Wm\WmPackage\Http\Controllers\Nova\AnalyticsController;
+use Wm\WmPackage\Http\Controllers\Nova\GeohubWhereSelectionController;
 use Wm\WmPackage\Jobs\Import\ImportEcMediaJob;
 use Wm\WmPackage\Jobs\Import\ImportUgcMediaJob;
 use Wm\WmPackage\Models\App as AppModel;
@@ -112,6 +113,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
             Nova::style('wm-nova-overrides', __DIR__.'/../resources/css/nova.css');
             Nova::style('wm-nova-dropzone', __DIR__.'/../resources/css/nova-dropzone.css');
             Nova::script('wm-nova-overrides', __DIR__.'/../resources/js/nova.js');
+            Nova::script('wm-geohub-where-selection', __DIR__.'/../resources/js/geohub-where-selection.js');
             $this->addWmpackageToolsMenuItem();
         });
 
@@ -136,6 +138,12 @@ class WmPackageServiceProvider extends PackageServiceProvider
                 ->group(function () {
                     Route::get('/global', [AnalyticsController::class, 'global']);
                     Route::get('/{layer}', [AnalyticsController::class, 'layer']);
+                });
+
+            Route::middleware(['nova'])
+                ->prefix('nova-vendor/geohub-where-selection')
+                ->group(function () {
+                    Route::post('/import', [GeohubWhereSelectionController::class, 'import']);
                 });
         });
 

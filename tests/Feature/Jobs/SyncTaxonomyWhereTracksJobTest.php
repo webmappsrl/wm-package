@@ -4,6 +4,7 @@ namespace Wm\WmPackage\Tests\Feature\Jobs;
 
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 use Wm\WmPackage\Jobs\TaxonomyWhere\SyncTaxonomyWhereTracksJob;
 use Wm\WmPackage\Models\App;
@@ -16,11 +17,17 @@ class SyncTaxonomyWhereTracksJobTest extends TestCase
 
     public function test_populates_taxonomy_where_on_intersecting_tracks(): void
     {
+        // Identifier dinamico: il DB di sviluppo condiviso contiene dati QA
+        // reali con identifier fissi ('corsica' incluso) — un valore letterale
+        // collide con l'indice unique. Stesso pattern usato altrove nel piano
+        // oc:8486 (Task 1/2 e Task 3).
+        $identifier = 'corsica-'.Str::lower(Str::random(8));
+
         $taxonomyWhere = new TaxonomyWhere([
             'name' => 'Corsica',
             'properties' => ['source' => 'geohub'],
         ]);
-        $taxonomyWhere->identifier = 'corsica';
+        $taxonomyWhere->identifier = $identifier;
         $taxonomyWhere->save();
 
         DB::statement(

@@ -25,9 +25,15 @@ class CopyTaxonomyWhereGeometryFromGeohubJobTest extends TestCase
 
     public function test_copies_geometry_from_geohub_to_local_taxonomy_where(): void
     {
+        // Identifier dinamico: il DB di sviluppo condiviso contiene dati QA
+        // reali con identifier fissi ('corsica' incluso) — un valore letterale
+        // collide con l'indice unique. Stesso pattern usato altrove nel piano
+        // oc:8486 (Task 1/2 e Task 3).
+        $identifier = 'corsica-'.\Illuminate\Support\Str::lower(\Illuminate\Support\Str::random(8));
+
         $geohubRowId = DB::connection('geohub')->table('taxonomy_wheres')->insertGetId([
             'name' => json_encode(['it' => 'Corsica', 'en' => 'Corsica']),
-            'identifier' => 'corsica',
+            'identifier' => $identifier,
             'properties' => json_encode(['source' => 'geohub']),
             'geometry' => DB::raw("ST_GeomFromGeoJSON('{\"type\":\"Polygon\",\"coordinates\":[[[8.53,41.33],[9.56,41.33],[9.56,43.03],[8.53,43.03],[8.53,41.33]]]}')"),
             'created_at' => now(),
