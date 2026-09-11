@@ -884,8 +884,16 @@ class AppConfigService extends AppBaseService
     {
         $data = [];
         if (in_array($this->app->api, ['elbrus'])) {
-            // ROUTING section
-            $data['ROUTING']['enable'] = $this->prop('enable_routing');
+            // ROUTING section — via setProp(), non un assegnamento diretto: senza,
+            // un'app senza properties->enable_routing (es. mai toccata dal nuovo campo Nova)
+            // emette "enable": null invece di omettere la chiave, esattamente la
+            // manifestazione che questo ticket elimina per ogni altro campo (vedi criterio
+            // ! is_null() nel docblock di setProp()).
+            $routing = [];
+            $this->setProp($routing, 'enable_routing', 'enable');
+            if ($routing !== []) {
+                $data['ROUTING'] = $routing;
+            }
         }
 
         return $data;

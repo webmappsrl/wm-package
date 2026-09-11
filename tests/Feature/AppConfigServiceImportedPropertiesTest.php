@@ -136,6 +136,19 @@ it('does not hide a table detail that has no value configured', function () {
     expect((new AppConfigService($app))->config()['TABLES']['details']['hide_ascent'])->toBeFalse();
 });
 
+it('omits ROUTING.enable instead of emitting null when enable_routing is not configured', function () {
+    // Trovato in review (wm-review-ticket): config_section_routing() assegnava
+    // direttamente da prop() invece di passare da setProp(), quindi violava lo stesso
+    // criterio "! is_null()" applicato a ogni altro campo di questo ticket — un'app elbrus
+    // senza properties->enable_routing emetteva "ROUTING":{"enable":null} invece di
+    // omettere la chiave (o l'intera sezione ROUTING, dato che era l'unica chiave).
+    $withoutValue = App::factory()->createQuietly(['api' => 'elbrus', 'properties' => []]);
+    $withValue = App::factory()->createQuietly(['api' => 'elbrus', 'properties' => ['enable_routing' => true]]);
+
+    expect((new AppConfigService($withoutValue))->config())->not->toHaveKey('ROUTING')
+        ->and((new AppConfigService($withValue))->config()['ROUTING']['enable'])->toBeTrue();
+});
+
 it('emits OFFLINE from properties', function () {
     $app = App::factory()->createQuietly([
         'api' => 'webmapp',
