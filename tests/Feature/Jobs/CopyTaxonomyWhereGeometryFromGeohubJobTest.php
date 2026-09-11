@@ -7,6 +7,7 @@ require_once __DIR__.'/../../Concerns/SharesGeohubConnectionWithLocal.php';
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 use Wm\WmPackage\Jobs\TaxonomyWhere\CopyTaxonomyWhereGeometryFromGeohubJob;
 use Wm\WmPackage\Models\TaxonomyWhere;
@@ -29,7 +30,7 @@ class CopyTaxonomyWhereGeometryFromGeohubJobTest extends TestCase
         // reali con identifier fissi ('corsica' incluso) — un valore letterale
         // collide con l'indice unique. Stesso pattern usato altrove nel piano
         // oc:8486 (Task 1/2 e Task 3).
-        $identifier = 'corsica-'.\Illuminate\Support\Str::lower(\Illuminate\Support\Str::random(8));
+        $identifier = 'corsica-'.Str::lower(Str::random(8));
 
         $geohubRowId = DB::connection('geohub')->table('taxonomy_wheres')->insertGetId([
             'name' => json_encode(['it' => 'Corsica', 'en' => 'Corsica']),

@@ -158,7 +158,7 @@ trait HasTaxonomyWhereImportHelpers
      *
      * @param  array<int, string|int>  $selectedIds
      * @return array{created: int, updated: int}|null Null se l'intersezione
-     *                                                 con il set candidato è vuota.
+     *                                                con il set candidato è vuota.
      */
     protected function executeGeohubImport(App $app, object $geohubApp, array $selectedIds): ?array
     {
