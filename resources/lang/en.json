@@ -391,5 +391,14 @@
     "Summer": "Summer",
     "Autumn": "Autumn",
     "Winter": "Winter",
-    "GeoHub — Where senza admin_level": "GeoHub — Territories without admin_level"
+    "GeoHub — Where senza admin_level": "GeoHub — Territories without admin_level",
+    "già importata": "already imported",
+    "Territori da importare": "Territories to import",
+    "Seleziona tutte": "Select all",
+    "Deseleziona tutte": "Deselect all",
+    "Annulla": "Cancel",
+    "Importa": "Import",
+    "Chiudi": "Close",
+    "Import in corso...": "Importing...",
+    "Errore imprevisto durante l'import.": "Unexpected error during import."
 }

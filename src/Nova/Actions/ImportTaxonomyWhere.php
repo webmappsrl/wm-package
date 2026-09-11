@@ -8,8 +8,6 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Database\QueryException;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Bus;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Laravel\Nova\Actions\Action;
 use Laravel\Nova\Fields\ActionFields;
@@ -17,21 +15,26 @@ use Laravel\Nova\Fields\Select;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Wm\WmPackage\Http\Clients\Osm2caiClient;
 use Wm\WmPackage\Http\Clients\OsmfeaturesClient;
-use Wm\WmPackage\Jobs\TaxonomyWhere\CopyTaxonomyWhereGeometryFromGeohubJob;
 use Wm\WmPackage\Jobs\TaxonomyWhere\FetchOsm2caiSectorGeometryJob;
 use Wm\WmPackage\Jobs\TaxonomyWhere\FetchTaxonomyWhereGeometryJob;
-use Wm\WmPackage\Jobs\TaxonomyWhere\SyncTaxonomyWhereTracksJob;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\TaxonomyWhere;
 use Wm\WmPackage\Nova\Actions\Concerns\HasTaxonomyWhereImportHelpers;
 use Wm\WmPackage\Services\GeometryComputationService;
-use Wm\WmPackage\Services\RolesAndPermissionsService;
 
 class ImportTaxonomyWhere extends Action
 {
     use HasTaxonomyWhereImportHelpers, InteractsWithQueue, Queueable;
 
     public $standalone = true;
+
+    /**
+     * Nome del componente Vue registrato per la seconda modale (Nova.booting,
+     * vedi resources/js/geohub-where-selection.js, Task 3) — deve combaciare
+     * ESATTAMENTE con la stringa passata ad Action::modal() qui sotto e con
+     * app.component(...) lato JS.
+     */
+    public const GEOHUB_WHERE_SELECTION_MODAL_COMPONENT = 'geohub-where-selection-modal';
 
     public function name(): string
     {
@@ -261,7 +264,7 @@ class ImportTaxonomyWhere extends Action
 
     private function handleGeohub(ActionFields $fields): mixed
     {
-        if (! RolesAndPermissionsService::allowsUser(auth()->user())) {
+        if (! $this->isGeohubSourceAllowed(auth()->user())) {
             return Action::danger('Sorgente GeoHub riservata ai super-admin.');
         }
 
@@ -270,90 +273,41 @@ class ImportTaxonomyWhere extends Action
             return Action::danger($app);
         }
 
-        if (empty($app->geohub_id)) {
-            return Action::danger('App non collegata a GeoHub (geohub_id assente).');
+        $geohubApp = $this->resolveGeohubApp($app);
+        if (is_string($geohubApp)) {
+            return Action::danger($geohubApp);
         }
 
-        $geohubApp = DB::connection('geohub')->table('apps')->where('id', $app->geohub_id)->first();
-        if (! $geohubApp || empty($geohubApp->user_id)) {
-            return Action::danger('Impossibile risolvere lo user GeoHub per questa App.');
-        }
-
-        $rows = DB::connection('geohub')->select(<<<'SQL'
-            select distinct tw.id, tw.name, tw.identifier
-            from taxonomy_wheres tw
-            join taxonomy_whereables twa on tw.id = twa.taxonomy_where_id
-            where tw.admin_level is null
-              and (
-                (twa.taxonomy_whereable_type like '%EcPoi%' and twa.taxonomy_whereable_id in (select id from ec_pois where user_id = ?))
-                or (twa.taxonomy_whereable_type like '%EcTrack%' and twa.taxonomy_whereable_id in (select id from ec_tracks where user_id = ?))
-                or (twa.taxonomy_whereable_type like '%Layer%' and twa.taxonomy_whereable_id in (select id from layers where app_id = ?))
-              )
-            SQL, [$geohubApp->user_id, $geohubApp->user_id, $app->geohub_id]);
+        $rows = $this->buildGeohubWhereSelectionPayload($app, $geohubApp);
 
         if (count($rows) === 0) {
             return Action::danger('GeoHub non ha restituito where senza admin_level per questa App.');
         }
 
-        $created = 0;
-        $updated = 0;
-        $geometryJobs = [];
-
-        foreach ($rows as $row) {
-            $name = is_string($row->name) ? (json_decode($row->name, true) ?? $row->name) : $row->name;
-
-            $existing = TaxonomyWhere::whereRaw("properties->>'geohub_id' = ?", [(string) $row->id])->first();
-
-            if (! $existing && $row->identifier) {
-                $existing = TaxonomyWhere::where('identifier', $row->identifier)->first();
-            }
-
-            $properties = [
-                'geohub_id' => $row->id,
-                'source' => 'geohub',
-                'admin_level' => null,
-            ];
-
-            if ($existing) {
-                $existing->update([
-                    'name' => $name,
-                    'properties' => array_merge($existing->properties ?? [], $properties),
-                ]);
-                $this->assignTaxonomyUserFromApp($existing, $app);
-                $geometryJobs[] = new CopyTaxonomyWhereGeometryFromGeohubJob($existing->id, $row->id);
-                $updated++;
-
-                continue;
-            }
-
-            $taxonomyWhere = new TaxonomyWhere([
-                'name' => $name,
-                'properties' => $properties,
-            ]);
-            $taxonomyWhere->identifier = $row->identifier
-                ? $taxonomyWhere->withCollisionCounter($row->identifier)
-                : null;
-            $taxonomyWhere->save();
-
-            $this->assignTaxonomyUserFromApp($taxonomyWhere, $app);
-            $geometryJobs[] = new CopyTaxonomyWhereGeometryFromGeohubJob($taxonomyWhere->id, $row->id);
-            $created++;
-        }
-
-        // syncTracksTaxonomyWhere() calcola le intersezioni via ST_Intersects
-        // sulle geometrie locali: se girasse subito dopo il dispatch (come per
-        // le altre due sorgenti), troverebbe le geometrie ancora vuote, perche'
-        // CopyTaxonomyWhereGeometryFromGeohubJob e' asincrono. Va accodato come
-        // callback di un batch, cosi' parte solo a copia geometrie completata.
-        Bus::batch($geometryJobs)
-            ->then(function () {
-                SyncTaxonomyWhereTracksJob::dispatch();
-            })
-            ->dispatch();
-
-        $msg = "Creati {$created} record, aggiornati {$updated} record TaxonomyWhere da GeoHub. Geometrie in copia in background; la sincronizzazione delle track partira' automaticamente al termine.";
-
-        return Action::message($msg);
+        // Action::modal() con ESATTAMENTE 2 argomenti ritorna subito un
+        // ActionResponse::modal(...) che apre la seconda modale. Con 3
+        // argomenti ritornerebbe invece una nuova istanza Action no-op,
+        // pensata per essere registrata in actions() — mai eseguita qui.
+        // Verificato in vendor/laravel/nova/src/Actions/Action.php:453 e
+        // ActionResponse.php:263 (non per analogia).
+        return Action::modal(self::GEOHUB_WHERE_SELECTION_MODAL_COMPONENT, [
+            'app_id' => $app->id,
+            'rows' => $rows,
+            // Il componente Vue della seconda modale non ha accesso al
+            // traduttore Laravel (nessun meccanismo di i18n lato JS per i
+            // campi/azioni custom di questo package) — le label vengono
+            // quindi già tradotte qui, lato server, e passate nel payload.
+            'labels' => [
+                'title' => __('Territori da importare'),
+                'select_all' => __('Seleziona tutte'),
+                'deselect_all' => __('Deseleziona tutte'),
+                'cancel' => __('Annulla'),
+                'import' => __('Importa'),
+                'close' => __('Chiudi'),
+                'importing' => __('Import in corso...'),
+                'unexpected_error' => __("Errore imprevisto durante l'import."),
+            ],
+        ]);
     }
 
     public function fields(NovaRequest $request): array

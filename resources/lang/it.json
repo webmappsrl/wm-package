@@ -392,5 +392,14 @@
     "Summer": "Estate",
     "Autumn": "Autunno",
     "Winter": "Inverno",
-    "GeoHub — Where senza admin_level": "GeoHub — Where senza admin_level"
+    "GeoHub — Where senza admin_level": "GeoHub — Where senza admin_level",
+    "già importata": "già importata",
+    "Territori da importare": "Territori da importare",
+    "Seleziona tutte": "Seleziona tutte",
+    "Deseleziona tutte": "Deseleziona tutte",
+    "Annulla": "Annulla",
+    "Importa": "Importa",
+    "Chiudi": "Chiudi",
+    "Import in corso...": "Import in corso...",
+    "Errore imprevisto durante l'import.": "Errore imprevisto durante l'import."
 }
