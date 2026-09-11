@@ -910,16 +910,18 @@ class GeohubImportService
 
             $modelClass = $morphableModels[$modelName];
             $morphableIds = $records->pluck($morphableIdKey)->toArray();
+            $geohubIdColumn = str_contains($modelName, 'media') ? 'custom_properties->geohub_id' : 'properties->geohub_id';
 
-            // Batch query: get all models at once
-            $whereCondition = str_contains($modelName, 'media')
-                ? ['custom_properties->geohub_id' => $morphableIds]
-                : ['properties->geohub_id' => $morphableIds];
-
-            $models = $modelClass::whereIn(
-                str_contains($modelName, 'media') ? 'custom_properties->geohub_id' : 'properties->geohub_id',
-                $morphableIds
-            )->get();
+            // Una tassonomia diffusa su Geohub (es. un'attività comune) puo' essere associata a
+            // decine di migliaia di entita' in TUTTO Geohub, non solo nell'app che si sta
+            // importando: $morphableIds arriva da una query globale sulla pivot table Geohub,
+            // senza alcun filtro per app. Un whereIn() unico su tutti quegli id supera il
+            // limite di bind parameter di PDO/PostgreSQL (65535) e fa fallire l'intero job. Si
+            // suddivide in blocchi da 5000 id, ben sotto il limite, e si uniscono i risultati.
+            $models = collect();
+            foreach (array_chunk($morphableIds, 5000) as $morphableIdsChunk) {
+                $models = $models->merge($modelClass::whereIn($geohubIdColumn, $morphableIdsChunk)->get());
+            }
 
             // Map records to their corresponding models
             foreach ($records as $record) {
