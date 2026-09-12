@@ -119,3 +119,9 @@ Ripetuta la code review sullo stato committato: nessun bloccante nuovo, solo oss
 - **`URI.AllowedSchemes` = http/https/mailto** in `HasEmbeddableRichText::buildRichTextPurifier()` (e quindi anche save path + `ConfigDetailPreviewRenderer`) — blocca `javascript:`/`data:` su `img[src]` (SVG data-URI XSS).
 - **Tooling Embed/Image gated indipendentemente**: `data-wm-embed-support` se la whitelist include `iframe`, `data-wm-image-support` se include `img` (non più un solo attr che abilitava entrambi).
 - **`nova.js`**: bottone Image accanto a Embed; paste `<img>` (plain o HTML); **Attach files** (`file-tools`) rimosso dalla toolbar sui campi con `data-wm-embed-support`. `config_home` oggi non ha Trix/richText — il hide vale per ogni futuro consumer `richText()`.
+
+> **Errata (2026-09-12)** — questo documento nomina il metodo `collapseEmbedIframes()`.
+> Verificato: `src/Nova/Fields/Concerns/HasEmbeddableRichText.php:215` — il metodo si chiama
+> `collapseEmbedMedia()`, ed è quello invocato da `FlexibleTranslatable.php:269,422`.
+> Lo stato attuale è in
+> [docs/knowledge/campi-flexible-e-translatable.md](../../knowledge/campi-flexible-e-translatable.md).

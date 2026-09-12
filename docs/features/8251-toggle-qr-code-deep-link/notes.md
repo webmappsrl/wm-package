@@ -77,3 +77,10 @@ Richiesta emersa in call (Davide Nanna, riportata il 21-07-2026): mostrare anche
 - Valutare in futuro il passaggio da password a chiave SSH dedicata per l'accesso al server well-known (più sicuro).
 - Valutare se spostare la sync well-known su un job in coda invece che sincrona nell'observer (vedi Rischi architetturali sopra).
 - Documentare/validare esplicitamente `WMPACKAGE_APPLE_TEAM_ID` per consumer di wm-package diversi da Webmapp.
+
+> **Errata (2026-09-12)** — questo documento nomina il file di test
+> `tests/Feature/DeepLinkQrFieldVisibilityTest.php`.
+> Verificato: quel file non esiste; il test di questa feature è
+> `tests/Feature/QrCodeDeepLinkToggleIntegrationTest.php`.
+> Lo stato attuale è in
+> [docs/knowledge/configurazione-app-e-config-json.md](../../knowledge/configurazione-app-e-config-json.md).
