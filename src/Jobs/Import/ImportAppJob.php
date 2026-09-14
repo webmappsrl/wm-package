@@ -3,6 +3,7 @@
 namespace Wm\WmPackage\Jobs\Import;
 
 use Illuminate\Bus\Batch;
+use Illuminate\Bus\PendingBatch;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Cache;
@@ -24,6 +25,13 @@ class ImportAppJob extends BaseImportJob
         'font_family_header',
         'font_family_content',
     ];
+
+    /**
+     * TTL del sentinel di cache che traccia lo stato del batch layer (vedi
+     * layerBatchCacheKey()) — durata generosa rispetto a un import reale (~30 minuti),
+     * per non far scadere il sentinel mentre il batch è ancora in corso.
+     */
+    private const LAYER_BATCH_CACHE_TTL_HOURS = 6;
 
     /**
      * Dipendenze i cui batch alimentano `config_section_map()` per una via diversa dal
@@ -260,7 +268,7 @@ class ImportAppJob extends BaseImportJob
         // marcatore chiude. Scritto SEMPRE synchronously qui, prima del loop, quindi nessuna
         // corsa è possibile: nessun job in coda può ancora essere partito a questo punto.
         if (in_array('layer', $allowedDependencies, true)) {
-            Cache::put(self::layerBatchCacheKey($model->id), 'pending', now()->addHours(6));
+            Cache::put(self::layerBatchCacheKey($model->id), 'pending', now()->addHours(self::LAYER_BATCH_CACHE_TTL_HOURS));
         }
 
         // foreach ($this->getRelations() as $modelKey => $relationData) {
@@ -352,90 +360,11 @@ class ImportAppJob extends BaseImportJob
         $logger = Log::channel('wm-package-failed-jobs');
 
         try {
-            $whereCondition = null;
-            $data = [];
-
-            switch ($entityModelKey) {
-                case 'layer':
-                case 'ugc_poi':
-                case 'ugc_track':
-                case 'ugc_media':
-                    // Filtered by the Geohub app itself (numeric app_id, not the owner's user_id):
-                    // UGC content is authored by many different end users, not just the app owner.
-                    $whereCondition = [$entityForeignKey => $this->entityId];
-                    $data = ['app_id' => $appId];
-                    break;
-                case 'ec_media':
-                    // Per ec_media, importiamo i media associati ai track dell'app, non solo quelli dell'utente
-                    $whereCondition = null; // Gestiremo i media tramite relazioni
-                    $data = ['app_id' => $appId, 'app_user_id' => $userId];
-                    break;
-                case strpos($entityModelKey, 'taxonomy') !== false: // import only taxonomies actually used by this app (oc:8094)
-                    $whereCondition = ['id' => $this->geohubImportService->getUsedTaxonomyGeohubIdsForApp($entityModelKey, $this->entityId, $userId)];
-                    break;
-                default:
-                    $whereCondition = [$entityForeignKey => $userId];
-                    $data = ['app_id' => $appId];
-                    break;
-            }
+            [$whereCondition, $data] = $this->resolveEntityImportQuery($entityModelKey, $userId, $entityForeignKey, $appId);
             $ids = $this->geohubImportService->getGeohubIdsToImport($entityModelKey, $whereCondition, $data);
 
             if (count($ids) > 0) {
-                $jobs = [];
-                foreach ($ids as $id) {
-                    $jobs[] = $this->geohubImportService->createJob($entityModelKey, $id, $data);
-                }
-                // create a batch and add the jobs to it
-                $batch = Bus::batch($jobs)->name("app-dependencies-{$entityModelKey}-import-batch")->onQueue(config('wm-geohub-import.queue.queue', 'geohub-import'));
-
-                // La HOME e il config dipendono dai layer: aggancia il remap/scrittura al solo
-                // completamento di QUESTO batch, non a un dispatch indipendente non sincronizzato.
-                // allowFailures(): se un layer fallisce, gli altri completano comunque e finally()
-                // scatta con un remap parziale — non un danno, solo incompleto (vedi finalizeAppImport()).
-                //
-                // Il closure passato a finally() viene serializzato da BatchRepository::store()
-                // quando $batch->dispatch() gira: DEVE restare `static` e referenziare il metodo
-                // per nome di classe qualificato (non self::/static::, per tenere minimo lo scope
-                // catturato), altrimenti cattura implicitamente $this (ImportAppJob), che porta
-                // dietro GeohubImportService (Connection PDO + Logger non serializzabili) e fa
-                // fallire l'intero batch layer con "Serialization of 'Pdo\Pgsql' is not allowed"
-                // (bug reale, vedi review post-oc:8488 — verificato con un test di serializzazione
-                // reale in ImportAppJobFinalizeTest.php).
-                if ($entityModelKey === 'layer') {
-                    $batch->allowFailures()->finally(
-                        static fn (Batch $batch) => ImportAppJob::finalizeAppImport($appId, $batch)
-                    );
-                } elseif (in_array($entityModelKey, self::CONFIG_DEPENDENT_BATCHES, true)) {
-                    // config_section_map() legge $this->app->getAllPoiTaxonomies() (ec_poi +
-                    // taxonomy_activity/poi_types), il feature_image per-layer (ec_media) e
-                    // MAP.bbox/MAP.filters.activities (ec_track) — batch indipendenti dal batch
-                    // layer, senza garanzia di completamento relativa tra loro (vedi docblock
-                    // di questo metodo, oc:8094). Refresh best-effort, IN CODA (non
-                    // dispatchSync: qui non c'è un motivo per bloccare il worker che chiude
-                    // questo batch) — dispatch() ridondanti da batch che finiscono quasi in
-                    // contemporanea collassano su uniqueFor():600 di UpdateAppConfigJob.
-                    //
-                    // Gate su layerBatchIsPublishReady() (review post-oc:8488, punto 5): senza
-                    // di esso, questo refresh scriveva il config INCONDIZIONATAMENTE, ignorando
-                    // se il batch layer stesso era ancora in corso o fallito — annullando di
-                    // fatto il gate di finalizeAppImport() ("mai un config con MAP.layers
-                    // incompleto") in quasi ogni import normale, perché è raro che nessuno di
-                    // questi altri batch sia tra le dipendenze. Ora si scrive SOLO se il batch
-                    // layer (quando esiste) è già confermato integro.
-                    $batch->allowFailures()->finally(
-                        static function (Batch $batch) use ($appId): void {
-                            if (ImportAppJob::layerBatchIsPublishReady($appId)) {
-                                UpdateAppConfigJob::dispatch($appId);
-                            }
-                        }
-                    );
-                }
-
-                $dispatchedBatch = $batch->dispatch();
-
-                if ($entityModelKey === 'layer') {
-                    Cache::put(self::layerBatchCacheKey($appId), $dispatchedBatch->id, now()->addHours(6));
-                }
+                $this->dispatchEntityImportBatch($entityModelKey, $ids, $data, $appId);
             } elseif ($entityModelKey === 'layer') {
                 // layer è tra le allowed_dependencies ma non ci sono id da importare: nessun
                 // batch dispatchato, quindi nessun finally() che scatterà. Se ci sono già layer
@@ -448,6 +377,109 @@ class ImportAppJob extends BaseImportJob
         } catch (\Exception $e) {
             $logger->error("Error queuing {$entityModelKey} imports for app {$this->entityId}: ".$e->getMessage());
             throw $e;
+        }
+    }
+
+    /**
+     * Costruisce whereCondition/data per getGeohubIdsToImport(), specifici per tipo di entità.
+     *
+     * @return array{0: array|null, 1: array}
+     */
+    private function resolveEntityImportQuery(string $entityModelKey, ?int $userId, string $entityForeignKey, int $appId): array
+    {
+        switch ($entityModelKey) {
+            case 'layer':
+            case 'ugc_poi':
+            case 'ugc_track':
+            case 'ugc_media':
+                // Filtered by the Geohub app itself (numeric app_id, not the owner's user_id):
+                // UGC content is authored by many different end users, not just the app owner.
+                return [[$entityForeignKey => $this->entityId], ['app_id' => $appId]];
+            case 'ec_media':
+                // Per ec_media, importiamo i media associati ai track dell'app, non solo quelli dell'utente
+                return [null, ['app_id' => $appId, 'app_user_id' => $userId]]; // Gestiremo i media tramite relazioni
+            case strpos($entityModelKey, 'taxonomy') !== false: // import only taxonomies actually used by this app (oc:8094)
+                return [['id' => $this->geohubImportService->getUsedTaxonomyGeohubIdsForApp($entityModelKey, $this->entityId, $userId)], []];
+            default:
+                return [[$entityForeignKey => $userId], ['app_id' => $appId]];
+        }
+    }
+
+    /**
+     * Crea i job per gli id da importare, li accoda in un batch e aggancia il completamento
+     * (vedi attachBatchCompletionCallback()).
+     *
+     * @param  array<int, int>  $ids
+     */
+    private function dispatchEntityImportBatch(string $entityModelKey, array $ids, array $data, int $appId): void
+    {
+        $jobs = [];
+        foreach ($ids as $id) {
+            $jobs[] = $this->geohubImportService->createJob($entityModelKey, $id, $data);
+        }
+
+        $batch = Bus::batch($jobs)->name("app-dependencies-{$entityModelKey}-import-batch")->onQueue(config('wm-geohub-import.queue.queue', 'geohub-import'));
+
+        $this->attachBatchCompletionCallback($batch, $entityModelKey, $appId);
+
+        $dispatchedBatch = $batch->dispatch();
+
+        if ($entityModelKey === 'layer') {
+            Cache::put(self::layerBatchCacheKey($appId), $dispatchedBatch->id, now()->addHours(self::LAYER_BATCH_CACHE_TTL_HOURS));
+        }
+    }
+
+    /**
+     * Aggancia il `finally()` di completamento batch giusto per questo tipo di entità — solo
+     * `layer` e `CONFIG_DEPENDENT_BATCHES` ne hanno uno, gli altri non toccano il config.
+     */
+    private function attachBatchCompletionCallback(PendingBatch $batch, string $entityModelKey, int $appId): void
+    {
+        // La HOME e il config dipendono dai layer: aggancia il remap/scrittura al solo
+        // completamento di QUESTO batch, non a un dispatch indipendente non sincronizzato.
+        // allowFailures(): se un layer fallisce, gli altri completano comunque e finally()
+        // scatta con un remap parziale — non un danno, solo incompleto (vedi finalizeAppImport()).
+        //
+        // Il closure passato a finally() viene serializzato da BatchRepository::store()
+        // quando $batch->dispatch() gira: DEVE restare `static` e referenziare il metodo
+        // per nome di classe qualificato (non self::/static::, per tenere minimo lo scope
+        // catturato), altrimenti cattura implicitamente $this (ImportAppJob), che porta
+        // dietro GeohubImportService (Connection PDO + Logger non serializzabili) e fa
+        // fallire l'intero batch layer con "Serialization of 'Pdo\Pgsql' is not allowed"
+        // (bug reale, vedi review post-oc:8488 — verificato con un test di serializzazione
+        // reale in ImportAppJobFinalizeTest.php).
+        if ($entityModelKey === 'layer') {
+            $batch->allowFailures()->finally(
+                static fn (Batch $batch) => ImportAppJob::finalizeAppImport($appId, $batch)
+            );
+
+            return;
+        }
+
+        if (in_array($entityModelKey, self::CONFIG_DEPENDENT_BATCHES, true)) {
+            // config_section_map() legge $this->app->getAllPoiTaxonomies() (ec_poi +
+            // taxonomy_activity/poi_types), il feature_image per-layer (ec_media) e
+            // MAP.bbox/MAP.filters.activities (ec_track) — batch indipendenti dal batch
+            // layer, senza garanzia di completamento relativa tra loro (vedi docblock
+            // di questo metodo, oc:8094). Refresh best-effort, IN CODA (non
+            // dispatchSync: qui non c'è un motivo per bloccare il worker che chiude
+            // questo batch) — dispatch() ridondanti da batch che finiscono quasi in
+            // contemporanea collassano su uniqueFor():600 di UpdateAppConfigJob.
+            //
+            // Gate su layerBatchIsPublishReady() (review post-oc:8488, punto 5): senza
+            // di esso, questo refresh scriveva il config INCONDIZIONATAMENTE, ignorando
+            // se il batch layer stesso era ancora in corso o fallito — annullando di
+            // fatto il gate di finalizeAppImport() ("mai un config con MAP.layers
+            // incompleto") in quasi ogni import normale, perché è raro che nessuno di
+            // questi altri batch sia tra le dipendenze. Ora si scrive SOLO se il batch
+            // layer (quando esiste) è già confermato integro.
+            $batch->allowFailures()->finally(
+                static function (Batch $batch) use ($appId): void {
+                    if (ImportAppJob::layerBatchIsPublishReady($appId)) {
+                        UpdateAppConfigJob::dispatch($appId);
+                    }
+                }
+            );
         }
     }
 

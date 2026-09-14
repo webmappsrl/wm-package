@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Facades\DB;
 use Wm\WmPackage\Jobs\Import\ImportAppJob;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\Tile;
@@ -77,6 +78,39 @@ it('never modifies an existing Tile, even when Geohub disagrees on the url', fun
     // di app non correlate. La creazione è sicura (apps() vuota -> early return).
     expect($existing->server_xyz)->toBe($originalUrl)
         ->and($existing->updated_at->eq($originalUpdatedAt))->toBeTrue();
+});
+
+it('recovers from a concurrent Tile creation on the same missing attribution instead of failing the import', function () {
+    // Trovato in review (cleanup, non bloccante): GeohubImportService::resolveTile() faceva
+    // where()->first() poi create() senza atomicità — due import concorrenti sullo stesso
+    // basemap mancante (attribution è unique a DB) potevano entrambi superare il check "non
+    // esiste" e collidere sull'INSERT. Simulato iniettando la creazione concorrente esattamente
+    // nella finestra a rischio (subito dopo la query di check, prima della create() di questo
+    // processo), tramite un listener DB — non tramite mock, per esercitare davvero il vincolo
+    // unique reale e la QueryException che ne segue.
+    $service = app(GeohubImportService::class);
+    $intercepted = false;
+
+    DB::listen(function ($query) use (&$intercepted) {
+        if ($intercepted || ! str_contains($query->sql, 'from "tiles"') || ! str_contains($query->sql, 'attribution')) {
+            return;
+        }
+        $intercepted = true;
+        Tile::create([
+            'attribution' => 'concurrent-basemap',
+            'label' => ['it' => 'concurrent-basemap', 'en' => 'concurrent-basemap'],
+            'server_xyz' => 'https://concurrent-writer.test/{z}/{x}/{y}.png',
+            'icon' => null,
+            'link' => null,
+        ]);
+    });
+
+    $tile = $service->resolveTile('concurrent-basemap', 'https://this-process.test/{z}/{x}/{y}.png');
+
+    // Recupera la riga scritta dall'altro processo, non tenta un secondo INSERT.
+    expect($tile->attribution)->toBe('concurrent-basemap')
+        ->and($tile->server_xyz)->toBe('https://concurrent-writer.test/{z}/{x}/{y}.png')
+        ->and(Tile::where('attribution', 'concurrent-basemap')->count())->toBe(1);
 });
 
 it('is idempotent across a re-import', function () {

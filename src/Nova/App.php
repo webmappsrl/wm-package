@@ -441,8 +441,13 @@ class App extends Resource
             ...array_map(fn (string $key) => $this->importedPropertyField($key), self::TABLE_DETAILS_KEYS_WITHOUT_GEOHUB_UI),
 
             // Le altre 9 chiavi table_details_show_*, con un equivalente su Geohub che però
-            // scrive su un'altra colonna (vedi technicalDetailsFields() sotto).
-            ...array_map(fn (string $key) => $this->importedPropertyField($key), self::TABLE_DETAILS_KEYS_WITH_TECHNICAL_DETAILS_TWIN),
+            // scrive su un'altra colonna (vedi technicalDetailsFields() sotto). Suffisso label
+            // esplicito (review: le due liste avevano label quasi identiche nello stesso tab,
+            // senza nessun indizio visivo per distinguerle).
+            ...array_map(
+                fn (string $suffix) => $this->importedPropertyField('table_details_show_'.$suffix, __('(Elbrus table)')),
+                self::TABLE_DETAILS_TECHNICAL_DETAILS_TWIN_SUFFIXES
+            ),
 
             // track_technical_details->*: stesse chiavi/label di Geohub, colonna diversa dal
             // gruppo sopra (oc:8488, mai esposta in Nova prima).
@@ -494,9 +499,9 @@ class App extends Resource
      * oc:8367 restano scritti a mano in theme_tab(): NON uniformare, la divergenza è
      * deliberata.
      */
-    private function importedPropertyField(string $key)
+    private function importedPropertyField(string $key, ?string $labelSuffix = null)
     {
-        $label = __("app.prop.{$key}");
+        $label = __("app.prop.{$key}").($labelSuffix !== null ? ' '.$labelSuffix : '');
         $help = __("app.prop.{$key}.help");
         $attribute = "properties->{$key}";
 
@@ -514,20 +519,25 @@ class App extends Resource
      * (OPTIONS, generico), non sulla colonna che l'import di Maphub legge davvero. Le due
      * cose restano volutamente separate: stesso nome concettuale, output di config diversi.
      *
+     * Suffissi condivisi con `technicalDetailsFields()` sotto (stesso set di 9 concetti, due
+     * colonne/sezioni di config diverse) — dichiarati una sola volta qui per evitare che le
+     * due liste divergano in un futuro edit.
+     *
      * @return array<int, string>
      */
-    private const TABLE_DETAILS_KEYS_WITH_TECHNICAL_DETAILS_TWIN = [
-        'table_details_show_duration_forward',
-        'table_details_show_duration_backward',
-        'table_details_show_distance',
-        'table_details_show_ascent',
-        'table_details_show_descent',
-        'table_details_show_ele_max',
-        'table_details_show_ele_min',
-        'table_details_show_ele_from',
-        'table_details_show_ele_to',
+    private const TABLE_DETAILS_TECHNICAL_DETAILS_TWIN_SUFFIXES = [
+        'duration_forward',
+        'duration_backward',
+        'distance',
+        'ascent',
+        'descent',
+        'ele_max',
+        'ele_min',
+        'ele_from',
+        'ele_to',
     ];
 
+    /**
     /**
      * Le chiavi properties->table_details_show_* senza equivalente su Geohub in nessuna forma
      * (oc:8488) E senza un secondo punto di lettura in OPTIONS: restano editabili perché
@@ -551,7 +561,7 @@ class App extends Resource
     /**
      * track_technical_details->show_* (colonna jsonb preesistente, letta da
      * AppConfigService::config_section_options() ma MAI esposta in Nova prima di oc:8488):
-     * stesso set di 9 chiavi di TABLE_DETAILS_KEYS_WITH_TECHNICAL_DETAILS_TWIN, stessa label
+     * stesso set di 9 concetti di TABLE_DETAILS_TECHNICAL_DETAILS_TWIN_SUFFIXES, stessa label
      * di Geohub (app/Nova/App.php::options_tab()), ma qui alimentano OPTIONS.show* generico
      * invece di TABLES.details (solo elbrus). Campi nuovi, non generati da ImportedAppProperties
      * (colonna diversa, fuori mappa).
@@ -560,21 +570,27 @@ class App extends Resource
      */
     private function technicalDetailsFields(): array
     {
-        $fields = [
-            'show_duration_forward' => [__('Show Duration Forward'), __('Enable to display the duration forward.')],
-            'show_duration_backward' => [__('Show Duration Backward'), __('Enable to display the duration backward.')],
-            'show_distance' => [__('Show Distance'), __('Enable to display the distance.')],
-            'show_ascent' => [__('Show Ascent'), __('Enable to display the ascent.')],
-            'show_descent' => [__('Show Descent'), __('Enable to display the descent.')],
-            'show_ele_max' => [__('Show Ele Max'), __('Enable to display the maximum elevation.')],
-            'show_ele_min' => [__('Show Ele Min'), __('Enable to display the minimum elevation.')],
-            'show_ele_from' => [__('Show Ele From'), __('Enable to display the starting elevation.')],
-            'show_ele_to' => [__('Show Ele To'), __('Enable to display the ending elevation.')],
+        // Chiave = suffisso condiviso con TABLE_DETAILS_TECHNICAL_DETAILS_TWIN_SUFFIXES (unica
+        // fonte per il SET di 9 concetti); label/help restano qui perché diversi dal lato
+        // TABLES.details. Suffisso "(General options)" per distinguerle nello stesso tab
+        // (review: label quasi identiche, nessun indizio visivo prima di questo fix).
+        $labels = [
+            'duration_forward' => [__('Show Duration Forward'), __('Enable to display the duration forward.')],
+            'duration_backward' => [__('Show Duration Backward'), __('Enable to display the duration backward.')],
+            'distance' => [__('Show Distance'), __('Enable to display the distance.')],
+            'ascent' => [__('Show Ascent'), __('Enable to display the ascent.')],
+            'descent' => [__('Show Descent'), __('Enable to display the descent.')],
+            'ele_max' => [__('Show Ele Max'), __('Enable to display the maximum elevation.')],
+            'ele_min' => [__('Show Ele Min'), __('Enable to display the minimum elevation.')],
+            'ele_from' => [__('Show Ele From'), __('Enable to display the starting elevation.')],
+            'ele_to' => [__('Show Ele To'), __('Enable to display the ending elevation.')],
         ];
 
         $out = [];
-        foreach ($fields as $key => [$label, $help]) {
-            $out[] = Boolean::make($label, "track_technical_details->{$key}")
+        foreach (self::TABLE_DETAILS_TECHNICAL_DETAILS_TWIN_SUFFIXES as $suffix) {
+            [$label, $help] = $labels[$suffix];
+
+            $out[] = Boolean::make($label.' '.__('(General options)'), "track_technical_details->show_{$suffix}")
                 ->default(true)
                 ->hideFromIndex()
                 ->help($help);

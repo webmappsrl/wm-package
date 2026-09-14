@@ -623,13 +623,36 @@ class GeohubImportService
             'server_xyz' => $serverXyz,
         ]);
 
-        return Tile::create([
-            'attribution' => $attribution,
-            'label' => ['it' => $attribution, 'en' => $attribution],
-            'server_xyz' => $serverXyz,
-            'icon' => null,
-            'link' => null,
-        ]);
+        try {
+            // DB::transaction(), non un create() nudo: su Postgres, una violazione di
+            // constraint dentro una transazione già aperta (es. il job gira dentro una
+            // transazione, o nei test con DatabaseTransactions) manda l'INTERA transazione in
+            // stato "aborted" — ogni query successiva fallisce finché non c'è un ROLLBACK,
+            // compresa la rilettura di recupero nel catch sotto. Wrappare qui crea una
+            // SAVEPOINT (Laravel la usa automaticamente per una transazione annidata): un
+            // fallimento la rilascia da sola, lasciando la transazione esterna utilizzabile.
+            // Verificato dal vivo: senza questo, il test di regressione falliva con "current
+            // transaction is aborted" proprio sulla query di recupero, non sulla create().
+            return DB::transaction(fn () => Tile::create([
+                'attribution' => $attribution,
+                'label' => ['it' => $attribution, 'en' => $attribution],
+                'server_xyz' => $serverXyz,
+                'icon' => null,
+                'link' => null,
+            ]));
+        } catch (QueryException $e) {
+            // 'attribution' è unique a DB: due import concorrenti (app diverse, stesso basemap
+            // mancante) possono superare entrambi il check "non esiste" sopra e collidere qui.
+            // Non è una vera race applicativa da risolvere con un lock — basta rileggere la
+            // riga che l'altro processo ha appena creato, invece di far fallire l'intero job.
+            $tile = Tile::where('attribution', $attribution)->first();
+
+            if (! $tile) {
+                throw $e;
+            }
+
+            return $tile;
+        }
     }
 
     /**

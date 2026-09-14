@@ -32,12 +32,13 @@ class UpdateAppConfigHomeLayerIdsJob implements ShouldQueue
             return;
         }
 
-        $configHome = $app->getRawOriginal('config_home');
+        $rawConfigHome = $app->getRawOriginal('config_home');
 
-        if (empty($configHome)) {
+        if (empty($rawConfigHome)) {
             return;
         }
 
+        $configHome = $rawConfigHome;
         if (is_string($configHome)) {
             $configHome = json_decode($configHome, true);
         } elseif (is_object($configHome) && method_exists($configHome, 'toArray')) {
@@ -90,7 +91,26 @@ class UpdateAppConfigHomeLayerIdsJob implements ShouldQueue
 
         $configHome['HOME'] = array_values($homeElements);
 
-        DB::table('apps')->where('id', $app->id)->update(['config_home' => json_encode($configHome)]);
+        // Compare-and-swap sul valore letto a inizio metodo: senza, un salvataggio Nova
+        // concorrente (che ha il proprio ciclo read-modify-write su config_home) potrebbe
+        // scrivere DOPO la lettura di questo job ma PRIMA di questa UPDATE — l'update qui
+        // sovrascriverebbe silenziosamente quel salvataggio più recente. L'uguaglianza jsonb
+        // di Postgres è per valore (forma canonica), non per testo grezzo, quindi il confronto
+        // regge anche se la formattazione JSON originale differisce. Applicato solo quando il
+        // valore raw letto è una stringa (il caso reale per una colonna jsonb): se il driver
+        // avesse restituito un'altra forma, si mantiene il comportamento precedente.
+        $query = DB::table('apps')->where('id', $app->id);
+        if (is_string($rawConfigHome)) {
+            $query->where('config_home', $rawConfigHome);
+        }
+
+        $affected = $query->update(['config_home' => json_encode($configHome)]);
+
+        if ($affected === 0) {
+            Log::warning("Config home: remap layer id saltato per App ID {$app->id} — config_home modificato concorrentemente (es. salvataggio Nova nel frattempo), nessuna scrittura per non sovrascrivere il valore più recente");
+
+            return;
+        }
 
         Log::info("Config home: id layer rimappati per App ID {$app->id}");
     }

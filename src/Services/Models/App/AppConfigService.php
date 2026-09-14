@@ -22,7 +22,7 @@ class AppConfigService extends AppBaseService
     /**
      * Legge una chiave importata da apps.properties (oc:8488).
      */
-    protected function prop(string $key, mixed $default = null): mixed
+    private function prop(string $key, mixed $default = null): mixed
     {
         $properties = $this->app->properties ?? [];
 
@@ -807,6 +807,10 @@ class AppConfigService extends AppBaseService
         $data['OPTIONS']['download_track_enable'] = $this->app->download_track_enable;
         $data['OPTIONS']['print_track_enable'] = $this->app->print_track_enable;
         $data['OPTIONS']['show_searchbar'] = $this->app->show_search;
+        // showFavorites NON passa da setProp() apposta: oc:8176 (precedente a questo ticket)
+        // ha già un contratto diverso — sempre presente, default false — non "omesso se null"
+        // come il resto di questo metodo. Non un'incoerenza da correggere, un campo con una
+        // storia distinta. Per un nuovo campo, il pattern da seguire è setProp(), non questo.
         $data['OPTIONS']['showFavorites'] = (bool) ($this->app->properties['show_favorites'] ?? false);
         $this->setProp($data['OPTIONS'], 'table_details_show_scale', 'show_scale');
         $this->setProp($data['OPTIONS'], 'table_details_show_gpx_download', 'showGpxDownload');
@@ -819,8 +823,11 @@ class AppConfigService extends AppBaseService
         $this->setProp($data['OPTIONS'], 'show_get_directions', 'showGetDirections');
         $this->setProp($data['OPTIONS'], 'show_media_name', 'showMediaName');
 
+        // Accesso diretto, non setProp(): scrive DUE chiavi di output dallo stesso valore
+        // sorgente (showDownloadTilesButton legacy 3.1.6 + showDownloadTiles corrente), cosa
+        // che setProp() (un solo $configKey per chiamata) non fa in una riga sola. TODO:
+        // opzione usata solo dalla 3.1.6, rimuovere showDownloadTilesButton al prossimo rilascio.
         if (isset($this->app->properties['show_download_tiles'])) {
-            // TODO: opzione usata solo dalla 3.1.6, rimuovere showDownloadTilesButton al prossimo rilascio
             $data['OPTIONS']['showDownloadTilesButton'] = $this->app->properties['show_download_tiles'];
             $data['OPTIONS']['showDownloadTiles'] = $this->app->properties['show_download_tiles'];
         }
