@@ -538,7 +538,6 @@ class App extends Resource
     ];
 
     /**
-    /**
      * Le chiavi properties->table_details_show_* senza equivalente su Geohub in nessuna forma
      * (oc:8488) E senza un secondo punto di lettura in OPTIONS: restano editabili perché
      * alimentano solo TABLES.details (app elbrus), non verificabile — nessun frontend elbrus
