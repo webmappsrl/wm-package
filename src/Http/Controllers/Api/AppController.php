@@ -3,6 +3,7 @@
 namespace Wm\WmPackage\Http\Controllers\Api;
 
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Log;
 use Wm\WmPackage\Http\Controllers\Controller;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcPoi;
@@ -371,11 +372,31 @@ EOF;
         return response()->json($data);
     }
 
+    /**
+     * Serve il config.json già scritto su storage.
+     *
+     * Storage-first deliberato: il frontend legge il file direttamente da S3/CDN, non
+     * questa rotta, quindi ricalcolare a ogni richiesta non porterebbe alcun beneficio.
+     *
+     * Il fallback sostituisce il ramo morto `?? $app->BuildConfJson($app->id)`, metodo
+     * inesistente: 500 su storage vuoto, mai osservato perché MinIO locale sopravvive ai
+     * ripristini del DB. Ricalcola UNA volta e scrive.
+     */
     public function config(App $app)
     {
-        $json = StorageService::make()->getAppConfigJson($app->id) ?? $app->BuildConfJson($app->id);
+        $raw = StorageService::make()->getAppConfigJson($app->id);
 
-        return response()->json($json);
+        if (is_string($raw) && $raw !== '') {
+            $decoded = json_decode($raw, true);
+
+            if (is_array($decoded)) {
+                return response()->json($decoded);
+            }
+
+            Log::warning('Config su storage non decodificabile, ricalcolo', ['app_id' => $app->id]);
+        }
+
+        return response()->json((new AppConfigService($app))->writeAppConfigOnAws());
     }
 
     public function baseConfig(App $app)

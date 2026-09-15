@@ -20,6 +20,7 @@ use Wm\WmPackage\Jobs\Import\BaseImportJob;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Models\TaxonomyActivity;
+use Wm\WmPackage\Models\Tile;
 use Wm\WmPackage\Models\User;
 use Wm\WmPackage\Services\RolesAndPermissionsService;
 use Wm\WmPackage\Services\StorageService;
@@ -597,6 +598,64 @@ class GeohubImportService
     }
 
     /**
+     * Trova il Tile per attribution, o lo crea se manca.
+     *
+     * MAI aggiornare un Tile esistente: `tiles` è globale, e TileObserver::saved() dispatcha
+     * UpdateAppConfigJob per OGNI app collegata al tile. Un update durante l'import di una
+     * app riscriverebbe il config di app non correlate. La creazione è sicura (apps() vuota).
+     *
+     * `label` è json NOT NULL con HasTranslations: va scritta come array di traduzioni, mai
+     * come stringa nuda.
+     *
+     * Il match ignora server_xyz: se un Tile locale omonimo punta altrove, l'app viene
+     * agganciata a quel basemap. Limite noto, vedi overview → Rischi.
+     */
+    public function resolveTile(string $attribution, string $serverXyz): Tile
+    {
+        $tile = Tile::where('attribution', $attribution)->first();
+
+        if ($tile) {
+            return $tile;
+        }
+
+        $this->logger->info("Tile '{$attribution}' assente in locale: creato dall'import Geohub con label grezza e senza icona", [
+            'attribution' => $attribution,
+            'server_xyz' => $serverXyz,
+        ]);
+
+        try {
+            // DB::transaction(), non un create() nudo: su Postgres, una violazione di
+            // constraint dentro una transazione già aperta (es. il job gira dentro una
+            // transazione, o nei test con DatabaseTransactions) manda l'INTERA transazione in
+            // stato "aborted" — ogni query successiva fallisce finché non c'è un ROLLBACK,
+            // compresa la rilettura di recupero nel catch sotto. Wrappare qui crea una
+            // SAVEPOINT (Laravel la usa automaticamente per una transazione annidata): un
+            // fallimento la rilascia da sola, lasciando la transazione esterna utilizzabile.
+            // Verificato dal vivo: senza questo, il test di regressione falliva con "current
+            // transaction is aborted" proprio sulla query di recupero, non sulla create().
+            return DB::transaction(fn () => Tile::create([
+                'attribution' => $attribution,
+                'label' => ['it' => $attribution, 'en' => $attribution],
+                'server_xyz' => $serverXyz,
+                'icon' => null,
+                'link' => null,
+            ]));
+        } catch (QueryException $e) {
+            // 'attribution' è unique a DB: due import concorrenti (app diverse, stesso basemap
+            // mancante) possono superare entrambi il check "non esiste" sopra e collidere qui.
+            // Non è una vera race applicativa da risolvere con un lock — basta rileggere la
+            // riga che l'altro processo ha appena creato, invece di far fallire l'intero job.
+            $tile = Tile::where('attribution', $attribution)->first();
+
+            if (! $tile) {
+                throw $e;
+            }
+
+            return $tile;
+        }
+    }
+
+    /**
      * Assign the Editor role to the user if they have no roles yet.
      *
      * @param  User  $user  The user to assign the role to
@@ -874,16 +933,18 @@ class GeohubImportService
 
             $modelClass = $morphableModels[$modelName];
             $morphableIds = $records->pluck($morphableIdKey)->toArray();
+            $geohubIdColumn = str_contains($modelName, 'media') ? 'custom_properties->geohub_id' : 'properties->geohub_id';
 
-            // Batch query: get all models at once
-            $whereCondition = str_contains($modelName, 'media')
-                ? ['custom_properties->geohub_id' => $morphableIds]
-                : ['properties->geohub_id' => $morphableIds];
-
-            $models = $modelClass::whereIn(
-                str_contains($modelName, 'media') ? 'custom_properties->geohub_id' : 'properties->geohub_id',
-                $morphableIds
-            )->get();
+            // Una tassonomia diffusa su Geohub (es. un'attività comune) può essere associata a
+            // decine di migliaia di entità in tutto Geohub, non solo nell'app che si sta
+            // importando: $morphableIds arriva da una query globale sulla pivot table Geohub,
+            // senza alcun filtro per app. Un whereIn() unico su tutti quegli id supera il
+            // limite di bind parameter di PDO/PostgreSQL (65535) e fa fallire l'intero job. Si
+            // suddivide in blocchi da 5000 id, ben sotto il limite, e si uniscono i risultati.
+            $models = collect();
+            foreach (array_chunk($morphableIds, 5000) as $morphableIdsChunk) {
+                $models = $models->merge($modelClass::whereIn($geohubIdColumn, $morphableIdsChunk)->get());
+            }
 
             // Map records to their corresponding models
             foreach ($records as $record) {

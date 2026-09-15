@@ -103,6 +103,33 @@ function makeCode(array $attributes = []): int
 }
 
 /**
+ * Scrive direttamente su apps.config_home (colonna text) una HOME con un box "layer" per
+ * ciascun id passato, bypassando Nova/il resolver — usata dai test di oc:8488 sul remap
+ * degli id layer (ImportAppJobFinalizeTest, UpdateAppConfigHomeLayerIdsJobTest) per
+ * costruire lo stato "prima" senza passare dal form.
+ */
+function setConfigHome(App $app, array $layerIds): void
+{
+    $home = array_map(
+        static fn (int $id) => ['box_type' => 'layer', 'layer' => $id, 'title' => ['it' => 'x']],
+        $layerIds
+    );
+
+    DB::table('apps')->where('id', $app->id)->update(['config_home' => json_encode(['HOME' => $home])]);
+}
+
+/**
+ * Simmetrico a setConfigHome(): legge gli id layer scritti in HOME per verificare l'esito
+ * del remap.
+ */
+function homeLayerIds(App $app): array
+{
+    $raw = DB::table('apps')->where('id', $app->id)->value('config_home');
+
+    return array_column(json_decode($raw, true)['HOME'], 'layer');
+}
+
+/**
  * Applica tutti e quattro gli stub del dominio trail_registry: hanno
  * estensione .php.stub e non sono raccolti da `migrate`, quindi vanno
  * inclusi ed eseguiti esplicitamente. Condivisa fra tutti i test del

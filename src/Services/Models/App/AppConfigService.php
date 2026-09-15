@@ -19,6 +19,39 @@ use Wm\WmPackage\Services\StorageService;
 
 class AppConfigService extends AppBaseService
 {
+    /**
+     * Legge una chiave importata da apps.properties (oc:8488).
+     */
+    private function prop(string $key, mixed $default = null): mixed
+    {
+        $properties = $this->app->properties ?? [];
+
+        if (! is_array($properties)) {
+            return $default;
+        }
+
+        return $properties[$key] ?? $default;
+    }
+
+    /**
+     * Scrive $configKey in $target solo se il valore sorgente non è null.
+     *
+     * Criterio `! is_null()`, NON `empty()` né `is_string()`: `false` e `0` sono valori
+     * legittimi. Il frontend fa `OPTIONS: {...state.OPTIONS, ...conf.OPTIONS}` (wm-core,
+     * conf.reducer.ts): una chiave assente lascia vincere il default, una chiave a null lo
+     * sovrascrive. Omettere è giusto solo per null.
+     */
+    private function setProp(array &$target, string $key, string $configKey): void
+    {
+        $value = $this->prop($key);
+
+        if (is_null($value)) {
+            return;
+        }
+
+        $target[$configKey] = $value;
+    }
+
     public function writeAppConfigOnAws()
     {
         $json = $this->config();
@@ -161,6 +194,7 @@ class AppConfigService extends AppBaseService
         $data['WEBAPP']['draw_track_show'] = $this->app->draw_track_show;
         $data['WEBAPP']['editing_inline_show'] = $this->app->editing_inline_show;
         $data['WEBAPP']['splash_screen_show'] = $this->app->splash_screen_show;
+        $this->setProp($data['WEBAPP'], 'draw_poi_show', 'draw_poi_show');
 
         $properties = $this->app->properties ?? [];
 
@@ -405,7 +439,7 @@ class AppConfigService extends AppBaseService
 
         // POIS section
         $data['MAP']['pois']['apppoisApiLayer'] = $this->app->app_pois_api_layer;
-        $data['MAP']['pois']['skipRouteIndexDownload'] = $this->app->skip_route_index_download;
+        $this->setProp($data['MAP']['pois'], 'skip_route_index_download', 'skipRouteIndexDownload');
         $data['MAP']['pois']['poiMinRadius'] = $this->app->poi_min_radius;
         $data['MAP']['pois']['poiMaxRadius'] = $this->app->poi_max_radius;
         $data['MAP']['pois']['poiIconZoom'] = $this->app->poi_icon_zoom;
@@ -764,23 +798,36 @@ class AppConfigService extends AppBaseService
     private function config_section_options(): array
     {
         $data = [];
+        $data['OPTIONS'] = [];
 
-        $data['OPTIONS']['startUrl'] = $this->app->start_url;
-        $data['OPTIONS']['showEditLink'] = $this->app->show_edit_link;
-        $data['OPTIONS']['skipRouteIndexDownload'] = $this->app->skip_route_index_download;
+        $this->setProp($data['OPTIONS'], 'start_url', 'startUrl');
+        $this->setProp($data['OPTIONS'], 'show_edit_link', 'showEditLink');
+        $this->setProp($data['OPTIONS'], 'skip_route_index_download', 'skipRouteIndexDownload');
         $data['OPTIONS']['showTrackRefLabel'] = $this->app->show_track_ref_label;
         $data['OPTIONS']['download_track_enable'] = $this->app->download_track_enable;
         $data['OPTIONS']['print_track_enable'] = $this->app->print_track_enable;
         $data['OPTIONS']['show_searchbar'] = $this->app->show_search;
+        // showFavorites NON passa da setProp() apposta: oc:8176 (precedente a questo ticket)
+        // ha già un contratto diverso — sempre presente, default false — non "omesso se null"
+        // come il resto di questo metodo. Non un'incoerenza da correggere, un campo con una
+        // storia distinta. Per un nuovo campo, il pattern da seguire è setProp(), non questo.
         $data['OPTIONS']['showFavorites'] = (bool) ($this->app->properties['show_favorites'] ?? false);
-        $data['OPTIONS']['show_scale'] = $this->app->table_details_show_scale;
-        $data['OPTIONS']['showGpxDownload'] = $this->app->table_details_show_gpx_download;
-        $data['OPTIONS']['showKmlDownload'] = $this->app->table_details_show_kml_download;
-        $data['OPTIONS']['showGeojsonDownload'] = (bool) $this->app->table_details_show_geojson_download;
-        $data['OPTIONS']['showShapefileDownload'] = (bool) $this->app->table_details_show_shapefile_download;
+        $this->setProp($data['OPTIONS'], 'table_details_show_scale', 'show_scale');
+        $this->setProp($data['OPTIONS'], 'table_details_show_gpx_download', 'showGpxDownload');
+        $this->setProp($data['OPTIONS'], 'table_details_show_kml_download', 'showKmlDownload');
+        $this->setProp($data['OPTIONS'], 'table_details_show_geojson_download', 'showGeojsonDownload');
+        $this->setProp($data['OPTIONS'], 'table_details_show_shapefile_download', 'showShapefileDownload');
 
+        // Gruppo C-attivi: nuova esposizione, chiavi identiche a Geohub
+        $this->setProp($data['OPTIONS'], 'show_embedded_html', 'showEmbeddedHtml');
+        $this->setProp($data['OPTIONS'], 'show_get_directions', 'showGetDirections');
+        $this->setProp($data['OPTIONS'], 'show_media_name', 'showMediaName');
+
+        // Accesso diretto, non setProp(): scrive DUE chiavi di output dallo stesso valore
+        // sorgente (showDownloadTilesButton legacy 3.1.6 + showDownloadTiles corrente), cosa
+        // che setProp() (un solo $configKey per chiamata) non fa in una riga sola. TODO:
+        // opzione usata solo dalla 3.1.6, rimuovere showDownloadTilesButton al prossimo rilascio.
         if (isset($this->app->properties['show_download_tiles'])) {
-            // TODO: opzione usata solo dalla 3.1.6, rimuovere showDownloadTilesButton al prossimo rilascio
             $data['OPTIONS']['showDownloadTilesButton'] = $this->app->properties['show_download_tiles'];
             $data['OPTIONS']['showDownloadTiles'] = $this->app->properties['show_download_tiles'];
         }
@@ -816,25 +863,25 @@ class AppConfigService extends AppBaseService
         $data = [];
         if (in_array($this->app->api, ['elbrus'])) {
             // TABLES section
-            $data['TABLES']['details']['showGpxDownload'] = (bool) $this->app->table_details_show_gpx_download;
-            $data['TABLES']['details']['showKmlDownload'] = (bool) $this->app->table_details_show_kml_download;
-            $data['TABLES']['details']['showRelatedPoi'] = (bool) $this->app->table_details_show_related_poi;
-            $data['TABLES']['details']['hide_duration:forward'] = ! $this->app->table_details_show_duration_forward;
-            $data['TABLES']['details']['hide_duration:backward'] = ! $this->app->table_details_show_duration_backward;
-            $data['TABLES']['details']['hide_distance'] = ! $this->app->table_details_show_distance;
-            $data['TABLES']['details']['hide_ascent'] = ! $this->app->table_details_show_ascent;
-            $data['TABLES']['details']['hide_descent'] = ! $this->app->table_details_show_descent;
-            $data['TABLES']['details']['hide_ele:max'] = ! $this->app->table_details_show_ele_max;
-            $data['TABLES']['details']['hide_ele:min'] = ! $this->app->table_details_show_ele_min;
-            $data['TABLES']['details']['hide_ele:from'] = ! $this->app->table_details_show_ele_from;
-            $data['TABLES']['details']['hide_ele:to'] = ! $this->app->table_details_show_ele_to;
-            $data['TABLES']['details']['hide_scale'] = ! $this->app->table_details_show_scale;
-            $data['TABLES']['details']['hide_cai_scale'] = ! $this->app->table_details_show_cai_scale;
-            $data['TABLES']['details']['hide_mtb_scale'] = ! $this->app->table_details_show_mtb_scale;
-            $data['TABLES']['details']['hide_ref'] = ! $this->app->table_details_show_ref;
-            $data['TABLES']['details']['hide_surface'] = ! $this->app->table_details_show_surface;
-            $data['TABLES']['details']['showGeojsonDownload'] = (bool) $this->app->table_details_show_geojson_download;
-            $data['TABLES']['details']['showShapefileDownload'] = (bool) $this->app->table_details_show_shapefile_download;
+            $data['TABLES']['details']['showGpxDownload'] = (bool) $this->prop('table_details_show_gpx_download');
+            $data['TABLES']['details']['showKmlDownload'] = (bool) $this->prop('table_details_show_kml_download');
+            $data['TABLES']['details']['showRelatedPoi'] = (bool) $this->prop('table_details_show_related_poi');
+            $data['TABLES']['details']['hide_duration:forward'] = ! $this->prop('table_details_show_duration_forward', true);
+            $data['TABLES']['details']['hide_duration:backward'] = ! $this->prop('table_details_show_duration_backward', true);
+            $data['TABLES']['details']['hide_distance'] = ! $this->prop('table_details_show_distance', true);
+            $data['TABLES']['details']['hide_ascent'] = ! $this->prop('table_details_show_ascent', true);
+            $data['TABLES']['details']['hide_descent'] = ! $this->prop('table_details_show_descent', true);
+            $data['TABLES']['details']['hide_ele:max'] = ! $this->prop('table_details_show_ele_max', true);
+            $data['TABLES']['details']['hide_ele:min'] = ! $this->prop('table_details_show_ele_min', true);
+            $data['TABLES']['details']['hide_ele:from'] = ! $this->prop('table_details_show_ele_from', true);
+            $data['TABLES']['details']['hide_ele:to'] = ! $this->prop('table_details_show_ele_to', true);
+            $data['TABLES']['details']['hide_scale'] = ! $this->prop('table_details_show_scale', true);
+            $data['TABLES']['details']['hide_cai_scale'] = ! $this->prop('table_details_show_cai_scale', true);
+            $data['TABLES']['details']['hide_mtb_scale'] = ! $this->prop('table_details_show_mtb_scale', true);
+            $data['TABLES']['details']['hide_ref'] = ! $this->prop('table_details_show_ref', true);
+            $data['TABLES']['details']['hide_surface'] = ! $this->prop('table_details_show_surface', true);
+            $data['TABLES']['details']['showGeojsonDownload'] = (bool) $this->prop('table_details_show_geojson_download');
+            $data['TABLES']['details']['showShapefileDownload'] = (bool) $this->prop('table_details_show_shapefile_download');
         }
 
         return $data;
@@ -844,8 +891,16 @@ class AppConfigService extends AppBaseService
     {
         $data = [];
         if (in_array($this->app->api, ['elbrus'])) {
-            // ROUTING section
-            $data['ROUTING']['enable'] = $this->app->enable_routing;
+            // ROUTING section — via setProp(), non un assegnamento diretto: senza,
+            // un'app senza properties->enable_routing (es. mai toccata dal nuovo campo Nova)
+            // emette "enable": null invece di omettere la chiave, esattamente la
+            // manifestazione che questo ticket elimina per ogni altro campo (vedi criterio
+            // ! is_null() nel docblock di setProp()).
+            $routing = [];
+            $this->setProp($routing, 'enable_routing', 'enable');
+            if ($routing !== []) {
+                $data['ROUTING'] = $routing;
+            }
         }
 
         return $data;
@@ -902,19 +957,14 @@ class AppConfigService extends AppBaseService
     private function config_section_offline(): array
     {
         $data = [];
-        // OFFLINE section
-        $data['OFFLINE']['enable'] = false;
-        if ($this->app->offline_enable) {
-            $data['OFFLINE']['enable'] = true;
-        }
-        $data['OFFLINE']['forceAuth'] = false;
-        if ($this->app->offline_force_auth) {
-            $data['OFFLINE']['forceAuth'] = true;
-        }
-        $data['OFFLINE']['tracksOnPayment'] = false;
-        if ($this->app->tracks_on_payment) {
-            $data['OFFLINE']['tracksOnPayment'] = true;
-        }
+        // OFFLINE section. Eccezione deliberata al criterio trasversale ! is_null(): questi 3
+        // campi sono sempre emessi via cast (bool), mai omessi via setProp(). Nessun consumer
+        // frontend noto in wm-core per l'intera sezione OFFLINE (oc:8488), quindi "chiave
+        // assente" vs "false esplicito" non fa differenza a valle — non convertire senza
+        // aggiornare anche il test che si aspetta forceAuth => false quando non configurato.
+        $data['OFFLINE']['enable'] = (bool) $this->prop('offline_enable');
+        $data['OFFLINE']['forceAuth'] = (bool) $this->prop('offline_force_auth');
+        $data['OFFLINE']['tracksOnPayment'] = (bool) $this->prop('tracks_on_payment');
 
         return $data;
     }

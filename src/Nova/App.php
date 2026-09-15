@@ -10,6 +10,7 @@ use Laravel\Nova\Fields\BelongsTo;
 use Laravel\Nova\Fields\Boolean;
 use Laravel\Nova\Fields\Code;
 use Laravel\Nova\Fields\Color;
+use Laravel\Nova\Fields\Field;
 use Laravel\Nova\Fields\FormData;
 use Laravel\Nova\Fields\Heading;
 use Laravel\Nova\Fields\ID;
@@ -49,6 +50,7 @@ use Wm\WmPackage\Nova\Flexible\ConfigHome\HorizontalScrollRepeaterJsonPreset;
 use Wm\WmPackage\Nova\Flexible\Resolvers\ConfigHomeResolver;
 use Wm\WmPackage\Nova\Flexible\Resolvers\ConfigOverlaysResolver;
 use Wm\WmPackage\Services\RolesAndPermissionsService;
+use Wm\WmPackage\Support\ImportedAppProperties;
 
 class App extends Resource
 {
@@ -205,6 +207,8 @@ class App extends Resource
                 ->default(false)
                 ->hideFromIndex()
                 ->help(__('Shows the authentication and registration page for users')),
+            // Importata da Geohub (oc:8488), nessun campo Nova prima. Alimenta WEBAPP.draw_poi_show.
+            $this->importedPropertyField('draw_poi_show'),
         ];
     }
 
@@ -419,6 +423,36 @@ class App extends Resource
                 ->hideFromIndex()
                 ->help(__('Activate to show the favorite heart on layers and the "My favorites" section')),
 
+            // --- OPTIONS importate da Geohub (oc:8488), nessuna colonna dedicata prima ---
+            // start_url/show_edit_link/skip_route_index_download rimossi (post-review): né
+            // wm-core/webmapp-app né Geohub stesso le espongono come editabili — vedi
+            // ImportedAppProperties::MAP per il dettaglio, il dato resta comunque importato.
+            $this->importedPropertyField('show_embedded_html'),
+            $this->importedPropertyField('show_get_directions'),
+            $this->importedPropertyField('show_media_name'),
+
+            // Tabella dettagli traccia: le 5 chiavi senza equivalente su Geohub e senza
+            // consumer confermato né in wm-core/webmapp-app né nell'admin di Geohub stesso
+            // (related_poi, cai_scale, mtb_scale, ref, surface — TABLES.details, solo app
+            // elbrus, non verificabile: nessun frontend elbrus disponibile qui) restano
+            // editabili. Le altre 5 (gpx/kml/geojson/shapefile download, scale — con doppia
+            // lettura anche in OPTIONS) sono state rimosse (post-review): confermato nessun
+            // uso né in OPTIONS lato wm-core/webmapp-app né nell'admin Geohub.
+            ...array_map(fn (string $key) => $this->importedPropertyField($key), self::TABLE_DETAILS_KEYS_WITHOUT_GEOHUB_UI),
+
+            // Le altre 9 chiavi table_details_show_*, con un equivalente su Geohub che però
+            // scrive su un'altra colonna (vedi technicalDetailsFields() sotto). Suffisso label
+            // esplicito (review: le due liste avevano label quasi identiche nello stesso tab,
+            // senza nessun indizio visivo per distinguerle).
+            ...array_map(
+                fn (string $suffix) => $this->importedPropertyField('table_details_show_'.$suffix, __('(Elbrus table)')),
+                self::TABLE_DETAILS_TECHNICAL_DETAILS_TWIN_SUFFIXES
+            ),
+
+            // track_technical_details->*: stesse chiavi/label di Geohub, colonna diversa dal
+            // gruppo sopra (oc:8488, mai esposta in Nova prima).
+            ...$this->technicalDetailsFields(),
+
             Tab::make('FEwebapp', $this->webapp_tab()),
             Tab::make('FE: mobile', $this->mobile_tab()),
             Tab::make('FE: widget', $this->widget_tab()),
@@ -453,6 +487,121 @@ class App extends Resource
             ->rules('nullable', 'regex:'.THEME_HEX_COLOR_PATTERN)
             ->hideFromIndex()
             ->help($help);
+    }
+
+    /**
+     * Campo Nova per UNA chiave di ImportedAppProperties (oc:8488).
+     *
+     * Estratto da un unico generatore per-chiave (invece che una tab piatta con tutte le 30
+     * chiavi): ogni tab di destinazione richiama questo helper solo per le chiavi che le
+     * appartengono concettualmente — niente "Imported config" come discarica. Vedi
+     * app_tab()/mobile_tab()/map_settings_tab() per la distribuzione. I 4 campi theme di
+     * oc:8367 restano scritti a mano in theme_tab(): NON uniformare, la divergenza è
+     * deliberata.
+     *
+     * Chiavi di traduzione `app.prop.{$key}`/`app.prop.{$key}.help`, non una frase inglese
+     * come nel resto del file: 31 campi generati da un loop su ImportedAppProperties hanno
+     * bisogno di una chiave stabile derivabile dal nome della property, non di una frase che
+     * cambierebbe ogni volta che si tocca il label. Convenzione locale a questo helper, non da
+     * riusare per campi Nova "normali" scritti a mano altrove nel file.
+     */
+    private function importedPropertyField(string $key, ?string $labelSuffix = null)
+    {
+        $label = __("app.prop.{$key}").($labelSuffix !== null ? ' '.$labelSuffix : '');
+        $help = __("app.prop.{$key}.help");
+        $attribute = "properties->{$key}";
+
+        return match (ImportedAppProperties::type($key)) {
+            'bool' => Boolean::make($label, $attribute)->hideFromIndex()->help($help),
+            'int' => Number::make($label, $attribute)->nullable()->hideFromIndex()->help($help),
+            default => Text::make($label, $attribute)->nullable()->hideFromIndex()->help($help),
+        };
+    }
+
+    /**
+     * Le 9 chiavi properties->table_details_show_* (oc:8488) che alimentano TABLES.details
+     * (solo app `elbrus`, vedi AppConfigService::config_section_tables()) E hanno un
+     * equivalente già editabile su Geohub — lì però la UI scrive su track_technical_details->*
+     * (OPTIONS, generico), non sulla colonna che l'import di Maphub legge davvero. Le due
+     * cose restano volutamente separate: stesso nome concettuale, output di config diversi.
+     *
+     * Suffissi condivisi con `technicalDetailsFields()` sotto (stesso set di 9 concetti, due
+     * colonne/sezioni di config diverse) — dichiarati una sola volta qui per evitare che le
+     * due liste divergano in un futuro edit.
+     *
+     * @return array<int, string>
+     */
+    private const TABLE_DETAILS_TECHNICAL_DETAILS_TWIN_SUFFIXES = [
+        'duration_forward',
+        'duration_backward',
+        'distance',
+        'ascent',
+        'descent',
+        'ele_max',
+        'ele_min',
+        'ele_from',
+        'ele_to',
+    ];
+
+    /**
+     * Le chiavi properties->table_details_show_* senza equivalente su Geohub in nessuna forma
+     * (oc:8488) E senza un secondo punto di lettura in OPTIONS: restano editabili perché
+     * alimentano solo TABLES.details (app elbrus), non verificabile — nessun frontend elbrus
+     * disponibile qui. gpx_download/kml_download/geojson_download/shapefile_download/scale
+     * sono state rimosse da questo elenco (post-review): avevano anche un secondo punto di
+     * lettura in OPTIONS, confermato senza consumer né in wm-core/webmapp-app né nell'admin
+     * di Geohub stesso — restano comunque importate in properties (ImportedAppProperties),
+     * solo senza campo Nova.
+     *
+     * @return array<int, string>
+     */
+    private const TABLE_DETAILS_KEYS_WITHOUT_GEOHUB_UI = [
+        'table_details_show_related_poi',
+        'table_details_show_cai_scale',
+        'table_details_show_mtb_scale',
+        'table_details_show_ref',
+        'table_details_show_surface',
+    ];
+
+    /**
+     * track_technical_details->show_* (colonna jsonb preesistente, letta da
+     * AppConfigService::config_section_options() ma MAI esposta in Nova prima di oc:8488):
+     * stesso set di 9 concetti di TABLE_DETAILS_TECHNICAL_DETAILS_TWIN_SUFFIXES, stessa label
+     * di Geohub (app/Nova/App.php::options_tab()), ma qui alimentano OPTIONS.show* generico
+     * invece di TABLES.details (solo elbrus). Campi nuovi, non generati da ImportedAppProperties
+     * (colonna diversa, fuori mappa).
+     *
+     * @return array<int, Field>
+     */
+    private function technicalDetailsFields(): array
+    {
+        // Chiave = suffisso condiviso con TABLE_DETAILS_TECHNICAL_DETAILS_TWIN_SUFFIXES (unica
+        // fonte per il SET di 9 concetti); label/help restano qui perché diversi dal lato
+        // TABLES.details. Suffisso "(General options)" per distinguerle nello stesso tab
+        // (review: label quasi identiche, nessun indizio visivo prima di questo fix).
+        $labels = [
+            'duration_forward' => [__('Show Duration Forward'), __('Enable to display the duration forward.')],
+            'duration_backward' => [__('Show Duration Backward'), __('Enable to display the duration backward.')],
+            'distance' => [__('Show Distance'), __('Enable to display the distance.')],
+            'ascent' => [__('Show Ascent'), __('Enable to display the ascent.')],
+            'descent' => [__('Show Descent'), __('Enable to display the descent.')],
+            'ele_max' => [__('Show Ele Max'), __('Enable to display the maximum elevation.')],
+            'ele_min' => [__('Show Ele Min'), __('Enable to display the minimum elevation.')],
+            'ele_from' => [__('Show Ele From'), __('Enable to display the starting elevation.')],
+            'ele_to' => [__('Show Ele To'), __('Enable to display the ending elevation.')],
+        ];
+
+        $out = [];
+        foreach (self::TABLE_DETAILS_TECHNICAL_DETAILS_TWIN_SUFFIXES as $suffix) {
+            [$label, $help] = $labels[$suffix];
+
+            $out[] = Boolean::make($label.' '.__('(General options)'), "track_technical_details->show_{$suffix}")
+                ->default(true)
+                ->hideFromIndex()
+                ->help($help);
+        }
+
+        return $out;
     }
 
     protected function pois_tab(): array
@@ -1047,23 +1196,29 @@ class App extends Resource
         return [
             Select::make('Layer', 'layer')
                 ->options(function () {
-                    $layers = Layer::where('app_id', $this->model()->id)
-                        ->get()
-                        ->map(function ($layer) {
-                            // Accesso al titolo translatable in modo più pulito
-                            $title = $layer->getStringName();
-                            if (is_array($title)) {
-                                // Se è un array, prendi prima la versione italiana, poi quella inglese, altrimenti usa l'ID
-                                $title = $title['it'] ?? $title['en'] ?? ('Layer #'.$layer->id);
-                            } elseif (is_null($title)) {
-                                $title = 'Layer #'.$layer->id;
-                            }
+                    $app = $this->model();
 
-                            return [
-                                'id' => $layer->id,
-                                'title' => $title,
-                            ];
-                        });
+                    // Allineato a UpdateAppConfigHomeLayerIdsJob, che risolve su layers +
+                    // associatedLayers: se le options coprissero solo i layer diretti, un remap
+                    // corretto potrebbe produrre un id valido ma non offerto, e il guard lo
+                    // renderebbe non editabile in silenzio. oc:8488.
+                    $layers = $app->layers()->get()->concat($app->associatedLayers()->get())->unique('id');
+
+                    $layers = $layers->map(function ($layer) {
+                        // Accesso al titolo translatable in modo più pulito
+                        $title = $layer->getStringName();
+                        if (is_array($title)) {
+                            // Se è un array, prendi prima la versione italiana, poi quella inglese, altrimenti usa l'ID
+                            $title = $title['it'] ?? $title['en'] ?? ('Layer #'.$layer->id);
+                        } elseif (is_null($title)) {
+                            $title = 'Layer #'.$layer->id;
+                        }
+
+                        return [
+                            'id' => $layer->id,
+                            'title' => $title,
+                        ];
+                    });
                     $layers = $layers->sortBy('title');
 
                     return $layers->pluck('title', 'id')->all();
@@ -1292,6 +1447,9 @@ class App extends Resource
                 ->default(false)
                 ->hideFromIndex()
                 ->help(__('Enables the track direction arrow in the map.')),
+            // Importata da Geohub (oc:8488), nessun campo Nova prima. Alimenta ROUTING.enable
+            // (solo app elbrus, vedi AppConfigService::config_section_routing()).
+            $this->importedPropertyField('enable_routing'),
             Number::make(__('alert_poi_radius'))
                 ->default(100)
                 ->hideFromIndex()

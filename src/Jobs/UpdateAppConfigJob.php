@@ -3,6 +3,7 @@
 namespace Wm\WmPackage\Jobs;
 
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
@@ -11,7 +12,13 @@ use Illuminate\Support\Facades\Log;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Services\Models\App\AppConfigService;
 
-class UpdateAppConfigJob implements ShouldQueue
+/**
+ * ShouldBeUnique necessario perché uniqueId() sia effettivo: Laravel lo consulta solo
+ * con questa interfaccia. Senza, il dispatch dal finally() del batch layer si sommava a
+ * quelli di TileObserver/LayerObserver/FeatureCollection*, N ricalcoli concorrenti che
+ * scrivono la stessa chiave S3 senza lock. Vedi oc:8488.
+ */
+class UpdateAppConfigJob implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
@@ -25,6 +32,11 @@ class UpdateAppConfigJob implements ShouldQueue
     public function uniqueId(): string
     {
         return "update-app-config-{$this->appId}";
+    }
+
+    public function uniqueFor(): int
+    {
+        return 600;
     }
 
     public function handle(): void
