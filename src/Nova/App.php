@@ -498,6 +498,12 @@ class App extends Resource
      * app_tab()/mobile_tab()/map_settings_tab() per la distribuzione. I 4 campi theme di
      * oc:8367 restano scritti a mano in theme_tab(): NON uniformare, la divergenza è
      * deliberata.
+     *
+     * Chiavi di traduzione `app.prop.{$key}`/`app.prop.{$key}.help`, non una frase inglese
+     * come nel resto del file: 31 campi generati da un loop su ImportedAppProperties hanno
+     * bisogno di una chiave stabile derivabile dal nome della property, non di una frase che
+     * cambierebbe ogni volta che si tocca il label. Convenzione locale a questo helper, non da
+     * riusare per campi Nova "normali" scritti a mano altrove nel file.
      */
     private function importedPropertyField(string $key, ?string $labelSuffix = null)
     {

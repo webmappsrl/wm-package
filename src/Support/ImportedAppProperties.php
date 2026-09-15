@@ -106,6 +106,13 @@ final class ImportedAppProperties
     /**
      * Chiavi per cui Nova deve generare un campo. Il gruppo A è escluso: il campo esiste già.
      *
+     * NOTA: `Nova\App` non itera questo metodo in produzione — ogni chiave è richiamata per
+     * nome esplicito (una call site per tab di destinazione, vedi `importedPropertyField()`).
+     * La sincronia mappa↔Nova è garantita solo da `AppImportedPropertiesFieldsTest` (che
+     * fallisce se una chiave con `nova=>true` qui non ha un campo Nova corrispondente), non
+     * dalla struttura del codice: se quel test viene rimosso o skippato, un disallineamento
+     * futuro torna silenzioso.
+     *
      * @return array<int, string>
      */
     public static function novaKeys(): array

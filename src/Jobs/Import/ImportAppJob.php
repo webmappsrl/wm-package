@@ -271,6 +271,14 @@ class ImportAppJob extends BaseImportJob
             Cache::put(self::layerBatchCacheKey($model->id), 'pending', now()->addHours(self::LAYER_BATCH_CACHE_TTL_HOURS));
         }
 
+        // LIMITE NOTO: se una dipendenza elencata prima di 'layer' nel loop sotto (es.
+        // ec_track) lancia un'eccezione, il codice non raggiunge mai il branch 'layer' e
+        // questo sentinel resta 'pending' per l'intera TTL sopra — un CONFIG_DEPENDENT_BATCHES
+        // già dispatchato con successo (es. taxonomy_activity) resta quindi bloccato dal
+        // proprio finally() fino allo scadere del TTL, anche se l'intero import ha già
+        // fallito visibilmente (Horizon + log wm-package-failed-jobs). Nessuna corruzione,
+        // solo staleness silenziosa fino a 6h se nessuno rilancia l'import nel frattempo.
+
         // foreach ($this->getRelations() as $modelKey => $relationData) {
         //     $this->queueEntityImport($modelKey, $userId, $relationData['foreign_key']);
         // }
@@ -448,6 +456,13 @@ class ImportAppJob extends BaseImportJob
         // fallire l'intero batch layer con "Serialization of 'Pdo\Pgsql' is not allowed"
         // (bug reale, vedi review post-oc:8488 — verificato con un test di serializzazione
         // reale in ImportAppJobFinalizeTest.php).
+        //
+        // ATTENZIONE per un futuro refactor: il FQCN `ImportAppJob::finalizeAppImport`/
+        // `ImportAppJob::layerBatchIsPublishReady` (vedi sotto) è serializzato dentro il
+        // batch persistito. Spostare questi due metodi statici in un'altra classe (mossa
+        // naturale se questo file continua a crescere) romperebbe silenziosamente qualunque
+        // batch layer già in volo al momento del deploy — il closure prova a richiamare una
+        // classe/metodo che non c'è più, senza un errore visibile prima dell'esecuzione.
         if ($entityModelKey === 'layer') {
             $batch->allowFailures()->finally(
                 static fn (Batch $batch) => ImportAppJob::finalizeAppImport($appId, $batch)

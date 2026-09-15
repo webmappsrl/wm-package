@@ -957,7 +957,11 @@ class AppConfigService extends AppBaseService
     private function config_section_offline(): array
     {
         $data = [];
-        // OFFLINE section
+        // OFFLINE section. Eccezione deliberata al criterio trasversale ! is_null(): questi 3
+        // campi sono sempre emessi via cast (bool), mai omessi via setProp(). Nessun consumer
+        // frontend noto in wm-core per l'intera sezione OFFLINE (oc:8488), quindi "chiave
+        // assente" vs "false esplicito" non fa differenza a valle — non convertire senza
+        // aggiornare anche il test che si aspetta forceAuth => false quando non configurato.
         $data['OFFLINE']['enable'] = (bool) $this->prop('offline_enable');
         $data['OFFLINE']['forceAuth'] = (bool) $this->prop('offline_force_auth');
         $data['OFFLINE']['tracksOnPayment'] = (bool) $this->prop('tracks_on_payment');

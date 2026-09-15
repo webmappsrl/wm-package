@@ -21,11 +21,11 @@ it('remaps HOME and writes the config when there is no batch (--skip-dependencie
 
     $app = App::factory()->createQuietly();
     $layer = Layer::factory()->createQuietly(['app_id' => $app->id, 'properties' => ['geohub_id' => 133]]);
-    DB_setConfigHome($app, [133]);
+    setConfigHome($app, [133]);
 
     ImportAppJob::finalizeAppImport($app->id, null);
 
-    expect(DB_homeLayerIds($app))->toBe([$layer->id]);
+    expect(homeLayerIds($app))->toBe([$layer->id]);
 });
 
 it('remaps HOME and writes the config when the layer batch completed without failures', function () {
@@ -33,11 +33,11 @@ it('remaps HOME and writes the config when the layer batch completed without fai
 
     $app = App::factory()->createQuietly();
     $layer = Layer::factory()->createQuietly(['app_id' => $app->id, 'properties' => ['geohub_id' => 133]]);
-    DB_setConfigHome($app, [133]);
+    setConfigHome($app, [133]);
 
     ImportAppJob::finalizeAppImport($app->id, fakeBatch(hasFailures: false, cancelled: false));
 
-    expect(DB_homeLayerIds($app))->toBe([$layer->id]);
+    expect(homeLayerIds($app))->toBe([$layer->id]);
 });
 
 it('still remaps HOME but skips the config write when the layer batch has failures, and logs a warning', function () {
@@ -53,7 +53,7 @@ it('still remaps HOME but skips the config write when the layer batch has failur
 
     $app = App::factory()->createQuietly();
     $layer = Layer::factory()->createQuietly(['app_id' => $app->id, 'properties' => ['geohub_id' => 133]]);
-    DB_setConfigHome($app, [133]);
+    setConfigHome($app, [133]);
 
     // Nessun fakeAppConfigStorage(): se il fix regredisse e la scrittura config girasse
     // comunque, UpdateAppConfigJob::handle() tenterebbe I/O reale verso StorageService e
@@ -63,7 +63,7 @@ it('still remaps HOME but skips the config write when the layer batch has failur
 
     // Causa 2 (fix post-review): un batch con failures NON deve più bloccare il remap HOME,
     // solo la scrittura del config. Prima del fix questo asseriva l'opposto ([133] invariato).
-    expect(DB_homeLayerIds($app))->toBe([$layer->id]);
+    expect(homeLayerIds($app))->toBe([$layer->id]);
 });
 
 it('still remaps HOME but skips the config write when the layer batch was cancelled', function () {
@@ -73,11 +73,11 @@ it('still remaps HOME but skips the config write when the layer batch was cancel
 
     $app = App::factory()->createQuietly();
     $layer = Layer::factory()->createQuietly(['app_id' => $app->id, 'properties' => ['geohub_id' => 133]]);
-    DB_setConfigHome($app, [133]);
+    setConfigHome($app, [133]);
 
     ImportAppJob::finalizeAppImport($app->id, fakeBatch(hasFailures: false, cancelled: true));
 
-    expect(DB_homeLayerIds($app))->toBe([$layer->id]);
+    expect(homeLayerIds($app))->toBe([$layer->id]);
 });
 
 /**
@@ -193,22 +193,6 @@ function fakeBatch(bool $hasFailures, bool $cancelled): Batch
         'cancelled' => $cancelled,
         'failedJobs' => $hasFailures ? 3 : 0,
     ]);
-}
-
-function DB_setConfigHome(App $app, array $layerIds): void
-{
-    $home = array_map(
-        static fn (int $id) => ['box_type' => 'layer', 'layer' => $id, 'title' => ['it' => 'x']],
-        $layerIds
-    );
-    DB::table('apps')->where('id', $app->id)->update(['config_home' => json_encode(['HOME' => $home])]);
-}
-
-function DB_homeLayerIds(App $app): array
-{
-    $raw = DB::table('apps')->where('id', $app->id)->value('config_home');
-
-    return array_column(json_decode($raw, true)['HOME'], 'layer');
 }
 
 /**

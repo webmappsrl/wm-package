@@ -935,8 +935,8 @@ class GeohubImportService
             $morphableIds = $records->pluck($morphableIdKey)->toArray();
             $geohubIdColumn = str_contains($modelName, 'media') ? 'custom_properties->geohub_id' : 'properties->geohub_id';
 
-            // Una tassonomia diffusa su Geohub (es. un'attività comune) puo' essere associata a
-            // decine di migliaia di entita' in TUTTO Geohub, non solo nell'app che si sta
+            // Una tassonomia diffusa su Geohub (es. un'attività comune) può essere associata a
+            // decine di migliaia di entità in tutto Geohub, non solo nell'app che si sta
             // importando: $morphableIds arriva da una query globale sulla pivot table Geohub,
             // senza alcun filtro per app. Un whereIn() unico su tutti quegli id supera il
             // limite di bind parameter di PDO/PostgreSQL (65535) e fa fallire l'intero job. Si

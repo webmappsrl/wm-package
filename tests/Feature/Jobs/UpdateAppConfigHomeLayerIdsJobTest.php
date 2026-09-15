@@ -87,19 +87,5 @@ it('does not consult the queue nor release itself', function () {
         ->and($source)->not->toContain('maxAttempts');
 });
 
-function setConfigHome(App $app, array $layerIds): void
-{
-    $home = array_map(
-        static fn (int $id) => ['box_type' => 'layer', 'layer' => $id, 'title' => ['it' => 'x']],
-        $layerIds
-    );
-
-    DB::table('apps')->where('id', $app->id)->update(['config_home' => json_encode(['HOME' => $home])]);
-}
-
-function homeLayerIds(App $app): array
-{
-    $raw = DB::table('apps')->where('id', $app->id)->value('config_home');
-
-    return array_column(json_decode($raw, true)['HOME'], 'layer');
-}
+// setConfigHome()/homeLayerIds(): definite in tests/Pest.php, condivise con
+// ImportAppJobFinalizeTest.php.

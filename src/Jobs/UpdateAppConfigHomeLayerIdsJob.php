@@ -94,11 +94,13 @@ class UpdateAppConfigHomeLayerIdsJob implements ShouldQueue
         // Compare-and-swap sul valore letto a inizio metodo: senza, un salvataggio Nova
         // concorrente (che ha il proprio ciclo read-modify-write su config_home) potrebbe
         // scrivere DOPO la lettura di questo job ma PRIMA di questa UPDATE — l'update qui
-        // sovrascriverebbe silenziosamente quel salvataggio più recente. L'uguaglianza jsonb
-        // di Postgres è per valore (forma canonica), non per testo grezzo, quindi il confronto
-        // regge anche se la formattazione JSON originale differisce. Applicato solo quando il
-        // valore raw letto è una stringa (il caso reale per una colonna jsonb): se il driver
-        // avesse restituito un'altra forma, si mantiene il comportamento precedente.
+        // sovrascriverebbe silenziosamente quel salvataggio più recente. `config_home` è una
+        // colonna `text` (non jsonb): il confronto è quindi per testo grezzo esatto, non per
+        // valore JSON canonico — una differenza di sola formattazione (spazi, ordine chiavi)
+        // tra la stringa letta e quella già persistita fa fallire il CAS anche a contenuto
+        // logicamente identico (fail-safe: nessuna scrittura, non una corruzione). Applicato
+        // solo quando il valore raw letto è una stringa: se il driver avesse restituito
+        // un'altra forma, si mantiene il comportamento precedente.
         $query = DB::table('apps')->where('id', $app->id);
         if (is_string($rawConfigHome)) {
             $query->where('config_home', $rawConfigHome);

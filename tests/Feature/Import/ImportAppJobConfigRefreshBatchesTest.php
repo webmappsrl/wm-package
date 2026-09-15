@@ -20,6 +20,27 @@ use Wm\WmPackage\Services\Import\GeohubImportService;
 uses(DatabaseTransactions::class);
 
 /**
+ * Inietta un GeohubImportService mockato in un ImportAppJob (proprietà protected, non
+ * esposta da nessun setter) e invoca un metodo protected/private su di esso.
+ *
+ * Estratto per evitare di ripetere lo stesso blocco reflection in ogni test di questo file.
+ */
+function withMockedGeohubService(ImportAppJob $job, GeohubImportService $service): void
+{
+    $prop = new ReflectionProperty($job, 'geohubImportService');
+    $prop->setAccessible(true);
+    $prop->setValue($job, $service);
+}
+
+function invokeProtected(object $object, string $method, mixed ...$arguments): mixed
+{
+    $reflection = new ReflectionMethod($object, $method);
+    $reflection->setAccessible(true);
+
+    return $reflection->invoke($object, ...$arguments);
+}
+
+/**
  * Finding 4 (review post-oc:8488): config_section_map() legge getAllPoiTaxonomies() (ec_poi +
  * taxonomy_activity/poi_types), il feature_image per-layer (ec_media) e MAP.bbox/
  * MAP.filters.activities (ec_track) — batch indipendenti dal batch layer, senza garanzia di
@@ -59,13 +80,9 @@ it('queues a fresh UpdateAppConfigJob when the ec_media batch finishes', functio
 
     $job = new ImportAppJob($app->id, []);
 
-    $serviceProp = new ReflectionProperty($job, 'geohubImportService');
-    $serviceProp->setAccessible(true);
-    $serviceProp->setValue($job, $service);
+    withMockedGeohubService($job, $service);
 
-    $queueEntityImport = new ReflectionMethod($job, 'queueEntityImport');
-    $queueEntityImport->setAccessible(true);
-    $queueEntityImport->invoke($job, 'ec_media', $app->user_id, 'user_id', $app->id);
+    invokeProtected($job, 'queueEntityImport', 'ec_media', $app->user_id, 'user_id', $app->id);
 
     $batches = Bus::batched(fn ($batch) => true);
     expect($batches)->toHaveCount(1);
@@ -105,13 +122,9 @@ it('queues a fresh UpdateAppConfigJob when a taxonomy batch finishes', function 
 
     $job = new ImportAppJob($app->id, []);
 
-    $serviceProp = new ReflectionProperty($job, 'geohubImportService');
-    $serviceProp->setAccessible(true);
-    $serviceProp->setValue($job, $service);
+    withMockedGeohubService($job, $service);
 
-    $queueEntityImport = new ReflectionMethod($job, 'queueEntityImport');
-    $queueEntityImport->setAccessible(true);
-    $queueEntityImport->invoke($job, 'taxonomy_activity', $app->user_id, 'user_id', $app->id);
+    invokeProtected($job, 'queueEntityImport', 'taxonomy_activity', $app->user_id, 'user_id', $app->id);
 
     $batches = Bus::batched(fn ($batch) => true);
     expect($batches)->toHaveCount(1);
@@ -146,13 +159,9 @@ it('queues a fresh UpdateAppConfigJob when the ec_track batch finishes', functio
 
     $job = new ImportAppJob($app->id, []);
 
-    $serviceProp = new ReflectionProperty($job, 'geohubImportService');
-    $serviceProp->setAccessible(true);
-    $serviceProp->setValue($job, $service);
+    withMockedGeohubService($job, $service);
 
-    $queueEntityImport = new ReflectionMethod($job, 'queueEntityImport');
-    $queueEntityImport->setAccessible(true);
-    $queueEntityImport->invoke($job, 'ec_track', $app->user_id, 'user_id', $app->id);
+    invokeProtected($job, 'queueEntityImport', 'ec_track', $app->user_id, 'user_id', $app->id);
 
     $batches = Bus::batched(fn ($batch) => true);
     expect($batches)->toHaveCount(1);
@@ -191,13 +200,9 @@ it('does not queue an UpdateAppConfigJob while the layer batch of the same impor
 
     $job = new ImportAppJob($app->id, []);
 
-    $serviceProp = new ReflectionProperty($job, 'geohubImportService');
-    $serviceProp->setAccessible(true);
-    $serviceProp->setValue($job, $service);
+    withMockedGeohubService($job, $service);
 
-    $queueEntityImport = new ReflectionMethod($job, 'queueEntityImport');
-    $queueEntityImport->setAccessible(true);
-    $queueEntityImport->invoke($job, 'ec_media', $app->user_id, 'user_id', $app->id);
+    invokeProtected($job, 'queueEntityImport', 'ec_media', $app->user_id, 'user_id', $app->id);
 
     $batches = Bus::batched(fn ($batch) => true);
     ($batches->first()->finallyCallbacks()[0])(Mockery::mock(Batch::class));
@@ -307,13 +312,9 @@ it('leaves the gate unsafe right after processDependencies() dispatches a real l
 
     $job = new ImportAppJob($app->id, ['allowed_dependencies' => ['layer']]);
 
-    $serviceProp = new ReflectionProperty($job, 'geohubImportService');
-    $serviceProp->setAccessible(true);
-    $serviceProp->setValue($job, $service);
+    withMockedGeohubService($job, $service);
 
-    $processDependencies = new ReflectionMethod($job, 'processDependencies');
-    $processDependencies->setAccessible(true);
-    $processDependencies->invoke($job, ['user_id' => $app->user_id, 'tiles' => null], $app);
+    invokeProtected($job, 'processDependencies', ['user_id' => $app->user_id, 'tiles' => null], $app);
 
     expect(ImportAppJob::layerBatchIsPublishReady($app->id))->toBeFalse();
 });
@@ -341,13 +342,9 @@ it('leaves the gate safe right after processDependencies() when layer has no ids
 
     $job = new ImportAppJob($app->id, ['allowed_dependencies' => ['layer']]);
 
-    $serviceProp = new ReflectionProperty($job, 'geohubImportService');
-    $serviceProp->setAccessible(true);
-    $serviceProp->setValue($job, $service);
+    withMockedGeohubService($job, $service);
 
-    $processDependencies = new ReflectionMethod($job, 'processDependencies');
-    $processDependencies->setAccessible(true);
-    $processDependencies->invoke($job, ['user_id' => $app->user_id, 'tiles' => null], $app);
+    invokeProtected($job, 'processDependencies', ['user_id' => $app->user_id, 'tiles' => null], $app);
 
     expect(ImportAppJob::layerBatchIsPublishReady($app->id))->toBeTrue();
 });
@@ -375,13 +372,9 @@ it('does not double-register a finally() callback for the layer batch itself', f
 
     $job = new ImportAppJob($app->id, []);
 
-    $serviceProp = new ReflectionProperty($job, 'geohubImportService');
-    $serviceProp->setAccessible(true);
-    $serviceProp->setValue($job, $service);
+    withMockedGeohubService($job, $service);
 
-    $queueEntityImport = new ReflectionMethod($job, 'queueEntityImport');
-    $queueEntityImport->setAccessible(true);
-    $queueEntityImport->invoke($job, 'layer', $app->user_id, 'app_id', $app->id);
+    invokeProtected($job, 'queueEntityImport', 'layer', $app->user_id, 'app_id', $app->id);
 
     $batches = Bus::batched(fn ($batch) => true);
     expect($batches)->toHaveCount(1)
