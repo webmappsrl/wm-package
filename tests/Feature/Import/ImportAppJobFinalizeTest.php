@@ -7,6 +7,7 @@ use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Wm\WmPackage\Jobs\Import\BaseImportJob;
 use Wm\WmPackage\Jobs\Import\ImportAppJob;
 use Wm\WmPackage\Jobs\Import\ImportLayerJob;
 use Wm\WmPackage\Jobs\UpdateAppConfigJob;
@@ -160,7 +161,7 @@ it('does not throw a serialization error when the layer batch is actually dispat
 
     try {
         $queueEntityImport->invoke($job, 'layer', $app->user_id, 'app_id', $app->id);
-    } catch (\Throwable $e) {
+    } catch (Throwable $e) {
         // La forma esatta di questa asserzione non è cosmetica: expect(fn () => ...)
         // ->not->toThrow() qui NON intercetta l'eccezione in modo affidabile (verificato
         // dal vivo — con la stessa identica riproduzione del bug il test con quella forma
@@ -206,7 +207,7 @@ class FakeLayerImportServiceForFinalizeTest extends GeohubImportService
         return [555];
     }
 
-    public function createJob(string $modelKey, int $geohubModelId, array $data = []): \Wm\WmPackage\Jobs\Import\BaseImportJob
+    public function createJob(string $modelKey, int $geohubModelId, array $data = []): BaseImportJob
     {
         return new ImportLayerJob($geohubModelId, $data);
     }
