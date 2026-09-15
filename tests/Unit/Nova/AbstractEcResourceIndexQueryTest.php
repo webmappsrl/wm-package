@@ -38,6 +38,26 @@ it('scopes the EcPoi index by app_id for a non-Administrator', function () {
         ->and($ids)->not->toContain($otherPoi->id);
 });
 
+it('also scopes the EcPoi index by app_id for a Validator (EC scoping applies to any non-Administrator, unlike UGC)', function () {
+    $validator = User::factory()->create();
+    $validator->assignRole('Validator');
+    $ownApp = App::factory()->createQuietly(['user_id' => $validator->id]);
+    $otherApp = App::factory()->createQuietly();
+
+    $ownPoi = EcPoi::factory()->createQuietly(['app_id' => $ownApp->id]);
+    $otherPoi = EcPoi::factory()->createQuietly(['app_id' => $otherApp->id]);
+
+    $this->actingAs($validator);
+
+    $request = NovaRequest::create('/');
+    $request->setUserResolver(fn () => $validator);
+
+    $ids = Wm\WmPackage\Nova\EcPoi::indexQuery($request, EcPoi::query())->pluck('id');
+
+    expect($ids)->toContain($ownPoi->id)
+        ->and($ids)->not->toContain($otherPoi->id);
+});
+
 it('does not scope the EcPoi index for an Administrator', function () {
     $admin = User::factory()->create();
     $admin->assignRole('Administrator');

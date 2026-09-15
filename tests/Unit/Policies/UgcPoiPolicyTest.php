@@ -40,10 +40,14 @@ it('always allows Validator on any UGC ability, regardless of app (mirrors menu 
         ->and(Gate::forUser($validator)->allows('delete', $ugcPoi))->toBeTrue();
 });
 
-it('allows Editor with hasDashboardShow to view a UGC of their own app, but not create/update/delete', function () {
+it('allows Editor with hasUgcEnabled to view a UGC of their own app, but not create/update/delete', function () {
     $editor = User::factory()->create();
     $editor->assignRole('Editor');
-    $ownApp = App::factory()->createQuietly(['user_id' => $editor->id, 'dashboard_show' => true]);
+    $ownApp = App::factory()->createQuietly([
+        'user_id' => $editor->id,
+        'auth_show_at_startup' => true,
+        'geolocation_record_enable' => true,
+    ]);
     $ugcPoi = UgcPoi::factory()->createQuietly(['app_id' => $ownApp->id]);
 
     expect(Gate::forUser($editor)->allows('viewAny', UgcPoi::class))->toBeTrue()
@@ -53,22 +57,45 @@ it('allows Editor with hasDashboardShow to view a UGC of their own app, but not 
         ->and(Gate::forUser($editor)->allows('delete', $ugcPoi))->toBeFalse();
 });
 
-it('denies Editor with hasDashboardShow from viewing a UGC of another app', function () {
+it('denies Editor with hasUgcEnabled from viewing a UGC of another app', function () {
     $editor = User::factory()->create();
     $editor->assignRole('Editor');
-    App::factory()->createQuietly(['user_id' => $editor->id, 'dashboard_show' => true]);
+    App::factory()->createQuietly([
+        'user_id' => $editor->id,
+        'auth_show_at_startup' => true,
+        'geolocation_record_enable' => true,
+    ]);
     $otherApp = App::factory()->createQuietly();
     $ugcPoi = UgcPoi::factory()->createQuietly(['app_id' => $otherApp->id]);
 
     expect(Gate::forUser($editor)->allows('view', $ugcPoi))->toBeFalse();
 });
 
-it('denies Editor without hasDashboardShow from viewing any UGC (existing gate, unchanged)', function () {
+it('denies Editor without hasUgcEnabled from viewing any UGC (aligned with the menu canSee() criterion)', function () {
     $editor = User::factory()->create();
     $editor->assignRole('Editor');
-    $ownApp = App::factory()->createQuietly(['user_id' => $editor->id, 'dashboard_show' => false]);
+    $ownApp = App::factory()->createQuietly([
+        'user_id' => $editor->id,
+        'auth_show_at_startup' => false,
+        'geolocation_record_enable' => false,
+    ]);
     $ugcPoi = UgcPoi::factory()->createQuietly(['app_id' => $ownApp->id]);
 
     expect(Gate::forUser($editor)->allows('viewAny', UgcPoi::class))->toBeFalse()
         ->and(Gate::forUser($editor)->allows('view', $ugcPoi))->toBeFalse();
+});
+
+it('allows Editor to view UGC when hasUgcEnabled is true even if dashboard_show is false (regression: menu vs policy criterion mismatch, oc:8162 review)', function () {
+    $editor = User::factory()->create();
+    $editor->assignRole('Editor');
+    $ownApp = App::factory()->createQuietly([
+        'user_id' => $editor->id,
+        'auth_show_at_startup' => true,
+        'geolocation_record_enable' => true,
+        'dashboard_show' => false,
+    ]);
+    $ugcPoi = UgcPoi::factory()->createQuietly(['app_id' => $ownApp->id]);
+
+    expect(Gate::forUser($editor)->allows('viewAny', UgcPoi::class))->toBeTrue()
+        ->and(Gate::forUser($editor)->allows('view', $ugcPoi))->toBeTrue();
 });

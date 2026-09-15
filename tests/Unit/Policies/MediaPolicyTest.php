@@ -57,3 +57,20 @@ it('keeps Editor viewAny/view allowed only when hasDashboardShow is true (unchan
     expect(Gate::forUser($editorWithDashboard)->allows('viewAny', Media::class))->toBeTrue()
         ->and(Gate::forUser($editorWithoutDashboard)->allows('viewAny', Media::class))->toBeFalse();
 });
+
+it('allows Validator to create, update and delete Media (regression: before() restricted to Administrator only had silently dropped Validator access, oc:8162 review)', function () {
+    $validator = User::factory()->create();
+    $validator->assignRole('Validator');
+    // 'geometry' esplicito: la colonna è geography(PointZ,4326) (richiede 3 coordinate),
+    // il default della factory genera solo un Point 2D e fallisce con
+    // "Column has Z dimension but geometry does not" (verificato).
+    $media = Media::factory()->createQuietly([
+        'geometry' => DB::raw("ST_GeomFromGeoJSON('{\"type\":\"Point\",\"coordinates\":[10.4,43.7,0]}')"),
+    ]);
+
+    expect(Gate::forUser($validator)->allows('viewAny', Media::class))->toBeTrue()
+        ->and(Gate::forUser($validator)->allows('view', $media))->toBeTrue()
+        ->and(Gate::forUser($validator)->allows('create', Media::class))->toBeTrue()
+        ->and(Gate::forUser($validator)->allows('update', $media))->toBeTrue()
+        ->and(Gate::forUser($validator)->allows('delete', $media))->toBeTrue();
+});

@@ -55,3 +55,16 @@ it('still denies Editor from deleting any Layer, regardless of app (unchanged fr
 
     expect(Gate::forUser($editor)->allows('delete', $layer))->toBeFalse();
 });
+
+it('allows Validator to delete a Layer of their own app, but not of another app (regression: delete() was unscoped for non-Editor roles, oc:8162 review)', function () {
+    $validator = User::factory()->create();
+    $validator->assignRole('Validator');
+    $ownApp = App::factory()->createQuietly(['user_id' => $validator->id]);
+    $ownLayer = Layer::factory()->createQuietly(['app_id' => $ownApp->id]);
+
+    $otherApp = App::factory()->createQuietly();
+    $otherLayer = Layer::factory()->createQuietly(['app_id' => $otherApp->id]);
+
+    expect(Gate::forUser($validator)->allows('delete', $ownLayer))->toBeTrue()
+        ->and(Gate::forUser($validator)->allows('delete', $otherLayer))->toBeFalse();
+});

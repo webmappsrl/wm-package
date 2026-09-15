@@ -6,23 +6,12 @@ use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 use Illuminate\Auth\Access\Response;
 use Wm\WmPackage\Models\EcTrack;
+use Wm\WmPackage\Policies\Concerns\AuthorizesViaBypassRoles;
 
 class EcTrackPolicy
 {
+    use AuthorizesViaBypassRoles;
     use HandlesAuthorization;
-
-    /**
-     * Perform pre-authorization checks.
-     *
-     * @param  string  $ability
-     * @return void|bool
-     */
-    public function before(User $user, $ability)
-    {
-        if ($user->hasRole('Administrator')) {
-            return true;
-        }
-    }
 
     /**
      * Determine whether the user can view any models.
@@ -42,7 +31,7 @@ class EcTrackPolicy
     public function view(User $user, EcTrack $ecTrack)
     {
         // Admins are handled by before(). Editor/Validator can view Tracks of their own app(s).
-        return $user->ownedAppIds()->contains($ecTrack->app_id);
+        return $user->ownsApp($ecTrack->app_id);
     }
 
     /**
@@ -63,7 +52,7 @@ class EcTrackPolicy
     public function update(User $user, EcTrack $ecTrack)
     {
         // Admins are handled by before(). Editor/Validator can update Tracks of their own app(s).
-        return $user->ownedAppIds()->contains($ecTrack->app_id);
+        return $user->ownsApp($ecTrack->app_id);
     }
 
     /**
@@ -74,7 +63,7 @@ class EcTrackPolicy
     public function delete(User $user, EcTrack $ecTrack)
     {
         // Admins are handled by before(). Editor/Validator can delete Tracks of their own app(s).
-        return $user->ownedAppIds()->contains($ecTrack->app_id);
+        return $user->ownsApp($ecTrack->app_id);
     }
 
     /**

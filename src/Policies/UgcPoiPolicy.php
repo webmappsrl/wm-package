@@ -6,35 +6,37 @@ use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 use Illuminate\Auth\Access\Response;
 use Wm\WmPackage\Models\UgcPoi;
+use Wm\WmPackage\Policies\Concerns\AuthorizesViaBypassRoles;
 
 class UgcPoiPolicy
 {
+    use AuthorizesViaBypassRoles;
     use HandlesAuthorization;
 
     /**
-     * Perform pre-authorization checks.
-     *
      * Administrator and Validator see/manage any UGC regardless of app (same
      * treatment as the menu-visibility decision: a Validator's job is to
      * validate UGC across apps, not just their own).
      *
-     * @return void|bool
+     * @return array<int, string>
      */
-    public function before(User $user, string $ability)
+    protected function bypassRoles(): array
     {
-        if ($user->hasRole('Administrator') || $user->hasRole('Validator')) {
-            return true;
-        }
+        return ['Administrator', 'Validator'];
     }
 
     /**
      * Determine whether the user can view any models.
      *
+     * `hasUgcEnabled()` (not `hasDashboardShow()`) so this matches the same
+     * criterion the Nova menu's canSee() uses for the UGC section — otherwise
+     * an Editor could see the menu entry and still be denied access to it.
+     *
      * @return Response|bool
      */
     public function viewAny(User $user)
     {
-        if ($user->hasRole('Editor') && $user->hasDashboardShow()) {
+        if ($user->hasRole('Editor') && $user->hasUgcEnabled()) {
             return true;
         }
     }
@@ -48,8 +50,8 @@ class UgcPoiPolicy
      */
     public function view(User $user, UgcPoi $ugcPoi)
     {
-        if ($user->hasRole('Editor') && $user->hasDashboardShow()) {
-            return $user->ownedAppIds()->contains($ugcPoi->app_id);
+        if ($user->hasRole('Editor') && $user->hasUgcEnabled()) {
+            return $user->ownsApp($ugcPoi->app_id);
         }
     }
 

@@ -6,22 +6,12 @@ use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 use Illuminate\Auth\Access\Response;
 use Wm\WmPackage\Models\TaxonomyPoiType;
+use Wm\WmPackage\Policies\Concerns\AuthorizesViaBypassRoles;
 
 class TaxonomyPoiTypePolicy
 {
+    use AuthorizesViaBypassRoles;
     use HandlesAuthorization;
-
-    /**
-     * Perform pre-authorization checks.
-     *
-     * @return void|bool
-     */
-    public function before(User $user, string $ability)
-    {
-        if ($user->hasRole('Administrator')) {
-            return true;
-        }
-    }
 
     /**
      * Determine whether the user can view any models.

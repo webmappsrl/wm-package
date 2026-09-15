@@ -6,22 +6,23 @@ use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 use Illuminate\Auth\Access\Response;
 use Wm\WmPackage\Models\Media;
+use Wm\WmPackage\Policies\Concerns\AuthorizesViaBypassRoles;
 
 class MediaPolicy
 {
+    use AuthorizesViaBypassRoles;
     use HandlesAuthorization;
 
     /**
-     * Perform pre-authorization checks.
+     * Administrator and Validator have full access to Media, regardless of app
+     * (Validator previously relied on the old before() total bypass — restored
+     * explicitly here now that the bypass is Administrator-only by default).
      *
-     * @param  string  $ability
-     * @return void|bool
+     * @return array<int, string>
      */
-    public function before(User $user, $ability)
+    protected function bypassRoles(): array
     {
-        if ($user->hasRole('Administrator')) {
-            return true;
-        }
+        return ['Administrator', 'Validator'];
     }
 
     /**

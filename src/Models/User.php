@@ -287,6 +287,14 @@ class User extends Authenticatable implements HasMedia, JWTSubject
     }
 
     /**
+     * Whether the user owns the app with the given id (via the `apps.user_id` "author" relation).
+     */
+    public function ownsApp(?int $appId): bool
+    {
+        return $this->ownedAppIds()->contains($appId);
+    }
+
+    /**
      * Determine if the user can impersonate another user.
      *
      * Composes (does not replace) Nova's native `viewNova` check — defense in depth:

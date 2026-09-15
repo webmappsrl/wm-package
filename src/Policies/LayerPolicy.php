@@ -6,22 +6,12 @@ use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 use Illuminate\Auth\Access\Response;
 use Wm\WmPackage\Models\Layer;
+use Wm\WmPackage\Policies\Concerns\AuthorizesViaBypassRoles;
 
 class LayerPolicy
 {
+    use AuthorizesViaBypassRoles;
     use HandlesAuthorization;
-
-    /**
-     * Perform pre-authorization checks.
-     *
-     * @return void|bool
-     */
-    public function before(User $user, string $ability)
-    {
-        if ($user->hasRole('Administrator')) {
-            return true;
-        }
-    }
 
     /**
      * Determine whether the user can view any models.
@@ -40,7 +30,7 @@ class LayerPolicy
      */
     public function view(User $user, Layer $layer)
     {
-        return $user->ownedAppIds()->contains($layer->app_id);
+        return $user->ownsApp($layer->app_id);
     }
 
     /**
@@ -64,7 +54,7 @@ class LayerPolicy
      */
     public function update(User $user, Layer $layer)
     {
-        return $user->ownedAppIds()->contains($layer->app_id);
+        return $user->ownsApp($layer->app_id);
     }
 
     /**
@@ -78,7 +68,9 @@ class LayerPolicy
             return false;
         }
 
-        return true;
+        // Admins are handled by before(). Any other non-Editor role (e.g. Validator)
+        // can only delete Layers of their own app(s), mirroring view()/update().
+        return $user->ownsApp($layer->app_id);
     }
 
     /**
