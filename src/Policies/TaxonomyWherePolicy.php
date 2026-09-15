@@ -5,12 +5,10 @@ namespace Wm\WmPackage\Policies;
 use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 use Illuminate\Auth\Access\Response;
-use Wm\WmPackage\Models\EcTrack;
-use Wm\WmPackage\Policies\Concerns\AuthorizesViaBypassRoles;
+use Wm\WmPackage\Models\TaxonomyWhere;
 
-class EcTrackPolicy
+class TaxonomyWherePolicy
 {
-    use AuthorizesViaBypassRoles;
     use HandlesAuthorization;
 
     /**
@@ -28,10 +26,9 @@ class EcTrackPolicy
      *
      * @return Response|bool
      */
-    public function view(User $user, EcTrack $ecTrack)
+    public function view(User $user, TaxonomyWhere $taxonomyWhere)
     {
-        // Admins are handled by before(). Editor/Validator can view Tracks of their own app(s).
-        return $user->ownsApp($ecTrack->app_id);
+        return true;
     }
 
     /**
@@ -41,7 +38,7 @@ class EcTrackPolicy
      */
     public function create(User $user)
     {
-        return ! $user->hasRole('Guest');
+        return $user->hasRole('Administrator');
     }
 
     /**
@@ -49,10 +46,9 @@ class EcTrackPolicy
      *
      * @return Response|bool
      */
-    public function update(User $user, EcTrack $ecTrack)
+    public function update(User $user, TaxonomyWhere $taxonomyWhere)
     {
-        // Admins are handled by before(). Editor/Validator can update Tracks of their own app(s).
-        return $user->ownsApp($ecTrack->app_id);
+        return $user->hasRole('Administrator');
     }
 
     /**
@@ -60,10 +56,9 @@ class EcTrackPolicy
      *
      * @return Response|bool
      */
-    public function delete(User $user, EcTrack $ecTrack)
+    public function delete(User $user, TaxonomyWhere $taxonomyWhere)
     {
-        // Admins are handled by before(). Editor/Validator can delete Tracks of their own app(s).
-        return $user->ownsApp($ecTrack->app_id);
+        return $user->hasRole('Administrator');
     }
 
     /**
@@ -71,9 +66,9 @@ class EcTrackPolicy
      *
      * @return Response|bool
      */
-    public function restore(User $user, EcTrack $ecTrack)
+    public function restore(User $user, TaxonomyWhere $taxonomyWhere)
     {
-        return false;
+        return $user->hasRole('Administrator');
     }
 
     /**
@@ -81,8 +76,8 @@ class EcTrackPolicy
      *
      * @return Response|bool
      */
-    public function forceDelete(User $user, EcTrack $ecTrack)
+    public function forceDelete(User $user, TaxonomyWhere $taxonomyWhere)
     {
-        return false;
+        return $user->hasRole('Administrator');
     }
 }

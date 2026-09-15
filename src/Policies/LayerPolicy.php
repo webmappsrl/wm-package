@@ -6,9 +6,11 @@ use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 use Illuminate\Auth\Access\Response;
 use Wm\WmPackage\Models\Layer;
+use Wm\WmPackage\Policies\Concerns\AuthorizesViaBypassRoles;
 
 class LayerPolicy
 {
+    use AuthorizesViaBypassRoles;
     use HandlesAuthorization;
 
     /**
@@ -28,7 +30,7 @@ class LayerPolicy
      */
     public function view(User $user, Layer $layer)
     {
-        return true;
+        return $user->ownsApp($layer->app_id);
     }
 
     /**
@@ -38,7 +40,6 @@ class LayerPolicy
      */
     public function create(User $user)
     {
-
         if ($user->hasRole('Editor')) {
             return false;
         }
@@ -53,7 +54,7 @@ class LayerPolicy
      */
     public function update(User $user, Layer $layer)
     {
-        return true;
+        return $user->ownsApp($layer->app_id);
     }
 
     /**
@@ -63,7 +64,13 @@ class LayerPolicy
      */
     public function delete(User $user, Layer $layer)
     {
-        return true;
+        if ($user->hasRole('Editor')) {
+            return false;
+        }
+
+        // Admins are handled by before(). Any other non-Editor role (e.g. Validator)
+        // can only delete Layers of their own app(s), mirroring view()/update().
+        return $user->ownsApp($layer->app_id);
     }
 
     /**

@@ -6,21 +6,12 @@ use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 use Illuminate\Auth\Access\Response;
 use Wm\WmPackage\Models\TaxonomyPoiType;
+use Wm\WmPackage\Policies\Concerns\AuthorizesViaBypassRoles;
 
 class TaxonomyPoiTypePolicy
 {
+    use AuthorizesViaBypassRoles;
     use HandlesAuthorization;
-
-    /**
-     * Perform pre-authorization checks.
-     *
-     * @param  string  $ability
-     * @return void|bool
-     */
-    public function before(User $user, $ability)
-    {
-        return true;
-    }
 
     /**
      * Determine whether the user can view any models.
@@ -39,9 +30,7 @@ class TaxonomyPoiTypePolicy
      */
     public function view(User $user, TaxonomyPoiType $taxonomyPoiType)
     {
-        if ($user->hasRole('Editor')) {
-            return true;
-        }
+        return true;
     }
 
     /**
@@ -51,7 +40,7 @@ class TaxonomyPoiTypePolicy
      */
     public function create(User $user)
     {
-        //
+        return false;
     }
 
     /**
@@ -61,7 +50,7 @@ class TaxonomyPoiTypePolicy
      */
     public function update(User $user, TaxonomyPoiType $taxonomyPoiType)
     {
-        //
+        return false;
     }
 
     /**
@@ -71,7 +60,7 @@ class TaxonomyPoiTypePolicy
      */
     public function delete(User $user, TaxonomyPoiType $taxonomyPoiType)
     {
-        //
+        return false;
     }
 
     /**
@@ -81,7 +70,7 @@ class TaxonomyPoiTypePolicy
      */
     public function restore(User $user, TaxonomyPoiType $taxonomyPoiType)
     {
-        //
+        return false;
     }
 
     /**
@@ -91,6 +80,6 @@ class TaxonomyPoiTypePolicy
      */
     public function forceDelete(User $user, TaxonomyPoiType $taxonomyPoiType)
     {
-        //
+        return false;
     }
 }

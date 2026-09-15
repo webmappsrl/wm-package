@@ -6,37 +6,37 @@ use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 use Illuminate\Auth\Access\Response;
 use Wm\WmPackage\Models\UgcPoi;
+use Wm\WmPackage\Policies\Concerns\AuthorizesViaBypassRoles;
 
 class UgcPoiPolicy
 {
+    use AuthorizesViaBypassRoles;
     use HandlesAuthorization;
 
     /**
-     * Perform pre-authorization checks.
+     * Administrator and Validator see/manage any UGC regardless of app (same
+     * treatment as the menu-visibility decision: a Validator's job is to
+     * validate UGC across apps, not just their own).
      *
-     * @param  string  $ability
-     * @return void|bool
+     * @return array<int, string>
      */
-    public function before(User $user, $ability)
+    protected function bypassRoles(): array
     {
-        // if ($user->hasRole('Admin')) {
-        //     return true;
-        // }
-        // if ($user->hasRole('Author') || $user->hasRole('Contributor')) {
-        //     return false;
-        // }
-
-        return true;
+        return ['Administrator', 'Validator'];
     }
 
     /**
      * Determine whether the user can view any models.
      *
+     * `hasUgcEnabled()` (not `hasDashboardShow()`) so this matches the same
+     * criterion the Nova menu's canSee() uses for the UGC section — otherwise
+     * an Editor could see the menu entry and still be denied access to it.
+     *
      * @return Response|bool
      */
     public function viewAny(User $user)
     {
-        if ($user->hasRole('Editor') && $user->hasDashboardShow()) {
+        if ($user->hasRole('Editor') && $user->hasUgcEnabled()) {
             return true;
         }
     }
@@ -44,12 +44,14 @@ class UgcPoiPolicy
     /**
      * Determine whether the user can view the model.
      *
+     * Editor: read-only, limited to UGC of their own app(s).
+     *
      * @return Response|bool
      */
     public function view(User $user, UgcPoi $ugcPoi)
     {
-        if ($user->hasRole('Editor') && $user->hasDashboardShow()) {
-            return true;
+        if ($user->hasRole('Editor') && $user->hasUgcEnabled()) {
+            return $user->ownsApp($ugcPoi->app_id);
         }
     }
 
@@ -60,7 +62,7 @@ class UgcPoiPolicy
      */
     public function create(User $user)
     {
-        //
+        return false;
     }
 
     /**
@@ -70,7 +72,7 @@ class UgcPoiPolicy
      */
     public function update(User $user, UgcPoi $ugcPoi)
     {
-        //
+        return false;
     }
 
     /**
@@ -80,7 +82,7 @@ class UgcPoiPolicy
      */
     public function delete(User $user, UgcPoi $ugcPoi)
     {
-        //
+        return false;
     }
 
     /**
@@ -90,7 +92,7 @@ class UgcPoiPolicy
      */
     public function restore(User $user, UgcPoi $ugcPoi)
     {
-        //
+        return false;
     }
 
     /**
@@ -100,6 +102,6 @@ class UgcPoiPolicy
      */
     public function forceDelete(User $user, UgcPoi $ugcPoi)
     {
-        //
+        return false;
     }
 }

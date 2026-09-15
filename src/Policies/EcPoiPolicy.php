@@ -6,23 +6,12 @@ use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 use Illuminate\Auth\Access\Response;
 use Wm\WmPackage\Models\EcPoi;
+use Wm\WmPackage\Policies\Concerns\AuthorizesViaBypassRoles;
 
 class EcPoiPolicy
 {
+    use AuthorizesViaBypassRoles;
     use HandlesAuthorization;
-
-    /**
-     * Perform pre-authorization checks.
-     *
-     * @param  string  $ability
-     * @return void|bool
-     */
-    public function before(User $user, $ability)
-    {
-        if ($user->hasRole('Administrator')) {
-            return true;
-        }
-    }
 
     /**
      * Determine whether the user can view any models.
@@ -41,8 +30,8 @@ class EcPoiPolicy
      */
     public function view(User $user, EcPoi $ecPoi)
     {
-        // Admins are handled by before(). Users can view their own POIs.
-        return $user->id === $ecPoi->user_id;
+        // Admins are handled by before(). Editor/Validator can view POIs of their own app(s).
+        return $user->ownsApp($ecPoi->app_id);
     }
 
     /**
@@ -62,8 +51,8 @@ class EcPoiPolicy
      */
     public function update(User $user, EcPoi $ecPoi)
     {
-        // Admins are handled by before(). Users can update their own POIs.
-        return $user->id === $ecPoi->user_id;
+        // Admins are handled by before(). Editor/Validator can update POIs of their own app(s).
+        return $user->ownsApp($ecPoi->app_id);
     }
 
     /**
@@ -73,8 +62,8 @@ class EcPoiPolicy
      */
     public function delete(User $user, EcPoi $ecPoi)
     {
-        // Admins are handled by before(). Users can delete their own POIs.
-        return $user->id === $ecPoi->user_id;
+        // Admins are handled by before(). Editor/Validator can delete POIs of their own app(s).
+        return $user->ownsApp($ecPoi->app_id);
     }
 
     /**

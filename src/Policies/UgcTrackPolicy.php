@@ -6,47 +6,53 @@ use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 use Illuminate\Auth\Access\Response;
 use Wm\WmPackage\Models\UgcTrack;
+use Wm\WmPackage\Policies\Concerns\AuthorizesViaBypassRoles;
 
 class UgcTrackPolicy
 {
+    use AuthorizesViaBypassRoles;
     use HandlesAuthorization;
 
     /**
-     * Perform pre-authorization checks.
+     * Administrator and Validator see/manage any UGC regardless of app (same
+     * treatment as the menu-visibility decision: a Validator's job is to
+     * validate UGC across apps, not just their own).
      *
-     * @param  string  $ability
-     * @return void|bool
+     * @return array<int, string>
      */
-    public function before(User $user, $ability)
+    protected function bypassRoles(): array
     {
-        // if ($user->hasRole('Admin')) {
-        //     return true;
-        // }
-        // if ($user->hasRole('Author') || $user->hasRole('Contributor')) {
-        //     return false;
-        // }
-
-        return true;
+        return ['Administrator', 'Validator'];
     }
 
     /**
      * Determine whether the user can view any models.
      *
+     * `hasUgcEnabled()` (not `hasDashboardShow()`) so this matches the same
+     * criterion the Nova menu's canSee() uses for the UGC section — otherwise
+     * an Editor could see the menu entry and still be denied access to it.
+     *
      * @return Response|bool
      */
     public function viewAny(User $user)
     {
-        return true;
+        if ($user->hasRole('Editor') && $user->hasUgcEnabled()) {
+            return true;
+        }
     }
 
     /**
      * Determine whether the user can view the model.
      *
+     * Editor: read-only, limited to UGC of their own app(s).
+     *
      * @return Response|bool
      */
     public function view(User $user, UgcTrack $ugcTrack)
     {
-        return true;
+        if ($user->hasRole('Editor') && $user->hasUgcEnabled()) {
+            return $user->ownsApp($ugcTrack->app_id);
+        }
     }
 
     /**
@@ -56,7 +62,7 @@ class UgcTrackPolicy
      */
     public function create(User $user)
     {
-        //
+        return false;
     }
 
     /**
@@ -66,7 +72,7 @@ class UgcTrackPolicy
      */
     public function update(User $user, UgcTrack $ugcTrack)
     {
-        //
+        return false;
     }
 
     /**
@@ -76,7 +82,7 @@ class UgcTrackPolicy
      */
     public function delete(User $user, UgcTrack $ugcTrack)
     {
-        //
+        return false;
     }
 
     /**
@@ -86,7 +92,7 @@ class UgcTrackPolicy
      */
     public function restore(User $user, UgcTrack $ugcTrack)
     {
-        //
+        return false;
     }
 
     /**
@@ -96,6 +102,6 @@ class UgcTrackPolicy
      */
     public function forceDelete(User $user, UgcTrack $ugcTrack)
     {
-        //
+        return false;
     }
 }
