@@ -80,3 +80,18 @@ diretto: verificato via Activity Explorer (oc:8182).
   nuda in AND rendeva l'OR logicamente inefficace (`A ∧ (A ∨ C) = A`). Debito accettato:
   `shardNameClause()` è ora invocato due volte per quelle query — SQL più verboso, stessi
   risultati (oc:8354).
+
+## Utenti che percorrono davvero un cammino (oc:8159)
+
+Alla `LayerAnalyticsCard` si affianca alle «Aperture» una metrica «Utenti sul cammino», sugli stessi
+range a 30, 90 e 365 giorni e sempre visibile come testo, non solo al passaggio del mouse.
+
+Il conteggio non è un'aggregazione temporale o spaziale dei punti: `AnalyticsService` interroga
+PostHog via HogQL per i punti GPS dell'evento `userMoved`, filtrati per shard, **pre-filtrati per il
+bounding box delle EcTrack del layer** calcolato in Postgres con un margine, e poi li porta in bulk
+in Postgres per un match `ST_DWithin` contro le singole tracce. Il risultato è un
+`COUNT(DISTINCT person_id)`.
+
+È la stessa logica geografica che `UgcService::resolveLayerByProximity()` usa per attribuire una
+segnalazione a un layer, ma qui in un'unica query su un intero insieme di punti invece che punto per
+punto.

@@ -70,3 +70,14 @@ del task. È già capitato due volte in un solo ciclo. Controllare sempre `git s
   dal lato del consumer, e oggi è coperta dalla voce sui due `TestCase` qui sopra. Resta vera
   l'indicazione di eseguire un file alla volta quando si lavora da un consumer che non registra
   l'autoload del package.
+
+## Un test su una classe del package sta nel package (oc:8348)
+
+`tests/Feature/Nova/Actions/ImportEcPoiFromOsmActionTest.php` verifica che l'azione
+`ImportEcPoiFromOsm` sia esposta di default sulla resource `Wm\WmPackage\Nova\EcPoi`. La stessa
+asserzione viveva in Maphub, puntata allo stub applicativo, ed era fragile per costruzione: un
+puntatore di submodule a un commit senza quella classe faceva fallire PHPStan in CI del consumer,
+con un errore che non c'entrava nulla con il codice appena scritto.
+
+**L'ordine è vincolante**: prima si scrive e si merge il test qui, poi nel consumer si bumpa il
+puntatore e si elimina il gemello. Invertirlo apre una finestra con copertura persa o duplicata.

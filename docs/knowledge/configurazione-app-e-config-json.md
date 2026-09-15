@@ -158,3 +158,19 @@ risposte leggere (oc:8176).
   completo `\Wm\WmPackage\Models\App::class` — non è stile: un "optimize imports" automatico l'ha
   già semplificata una volta in `App::class`, che risolve silenziosamente alla Facade e rompe la
   relazione a runtime. Guardato da un test dedicato (oc:8251).
+
+## Il `config.json` dopo un import da GeoHub (oc:8488)
+
+Dopo l'import one-off di un'app da GeoHub, il `config.json` prodotto coincide con quello di GeoHub
+su tutte le sezioni che devono coincidere, **senza passaggi manuali**.
+
+Il cantiere è organizzato per causa e non per sintomo, ed è la cosa da sapere prima di riaprirlo: il
+ticket elencava sei sintomi, l'analisi ne ha trovate **tre cause** — 18 delle 20 divergenze
+osservate condividono la stessa causa radice, le altre due un'altra — più una quarta che non produce
+ancora divergenze ma distruggerebbe il fix delle prime tre al primo re-import. Chi interviene lavora
+sulle cause: `docs/features/8488-config-app-allineamento-geohub-post-import/`.
+
+## Il campo bounding box (oc:7756)
+
+`map_bbox` nella resource Nova `App`, tab «map», è un campo testo editabile con `copyable()` e un
+help text che rimanda a boundingbox.klokantech.com per generarlo.

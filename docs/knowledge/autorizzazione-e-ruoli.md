@@ -112,3 +112,13 @@ dentro una transazione PostgreSQL (oc:8042).
   questo, ed è stato rimosso. Il bypass non è stato corretto (oc:8231).
 - `visibleAppsFor()` in `ImportEcPoiFromOsm` conserva un ramo `hasRole('Administrator')` ormai
   irraggiungibile: scelta deliberata per minimizzare il diff, non dead code da pulire (oc:8239).
+
+## Cosa può fare l'Editor (oc:8162)
+
+**Le tassonomie sono di sola lettura per chiunque non sia Administrator.** `TaxonomyTheme`,
+`TaxonomyWhere`, `TaxonomyPoiType` e `TaxonomyActivity` si creano, modificano ed eliminano solo da
+Administrator; Editor e Validator le vedono e basta.
+
+`TaxonomyThemePolicy` e `TaxonomyWherePolicy` **non esistevano**: sono state create in quel ciclo. È
+il punto da ricordare, perché in Nova l'assenza di una policy non significa «nessun accesso» ma il
+suo contrario — nessuna restrizione, default-allow. Una risorsa senza policy è aperta, non chiusa.
