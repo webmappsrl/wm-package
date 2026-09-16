@@ -983,6 +983,8 @@ git commit -m "refactor(oc:8487): remove unreachable RegenerateEcPoiTaxonomyWher
 
 ### Task 7: Migration difensiva — indice GIST su `taxonomy_wheres.geometry`
 
+> ⚠️ L'implementazione ha deviato da questo task: [notes.md](notes.md#task-7-migration-gist-rimossa-dopo-verifica-sui-numeri-reali-post-merge-prima-del-deploy)
+
 **Files:**
 - Create: `database/migrations/zz_2026_09_15_000001_add_gist_index_to_taxonomy_wheres_table.php.stub`
 

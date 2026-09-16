@@ -33,6 +33,30 @@ specifica del piano con la dichiarazione `uses()` corretta e l'accesso al messag
 `ArrayAccess` — un piccolo refuso nel codice di esempio del piano stesso, non
 dell'implementazione).
 
+### Task 7: migration GIST rimossa dopo verifica sui numeri reali (post-merge, prima del deploy)
+
+Il Task 7 (indice GIST difensivo su `taxonomy_wheres.geometry`) è stato implementato come da
+piano e committato, ma **rimosso** subito dopo con un commit dedicato, prima dell'apertura
+della PR, a seguito di una verifica esplicita richiesta dal developer sui numeri reali di scala:
+
+- `taxonomy_wheres` su GeoHub: **8.101 righe totali**, ma solo **71** con `admin_level IS NULL`
+  — l'unico sottoinsieme che `handleGeohub()` importa davvero (i territori non coperti da
+  OSMFeatures, collegati ai contenuti di un'App). Le altre 8.030 non entrano mai in questa
+  installazione con il meccanismo di import attuale.
+- `ec_tracks`/`ec_pois` locali: 86 / 302, invariati anche escludendo le app 26/11/32 (non
+  presenti in questo DB di sviluppo — solo le app 1, 2, 3 hanno contenuti EC).
+- Anche al tetto realistico (71 `taxonomy_wheres` × 388 contenuti EC ≈ 27.500 confronti
+  `ST_Intersects`), il volume resta ordini di grandezza sotto la soglia a cui un indice GIST
+  inizia a incidere sulle performance (tipicamente quando il lato indicizzato è nell'ordine
+  delle migliaia di righe). Confermata quindi, con dati più solidi del solo DB locale (4 righe),
+  la conclusione già emersa in fase di challenge: **l'indice non è necessario**.
+
+Rimossa la migration stub (`database/migrations/zz_2026_09_15_000001_add_gist_index_to_taxonomy_wheres_table.php.stub`)
+con un commit `refactor(oc:8487)` dedicato. Requisito rimosso da questo ciclo — se in futuro la
+copertura `taxonomy_wheres` dovesse crescere di ordini di grandezza (es. import a livello di
+comune invece che regione/provincia), andrà rivalutato da capo con i numeri di quel momento, non
+riproposto automaticamente da questa nota.
+
 ## Decisioni prese in corso di pianificazione (non divergenze di esecuzione)
 
 - **Task 4, scope ampliato durante `write-plan`**: in fase di scrittura del piano è emerso che
