@@ -1,0 +1,30 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        if (! Schema::hasTable('taxonomy_wheres')) {
+            return;
+        }
+
+        // Difensiva, non richiesta dai numeri attuali (verificato: 4 righe in
+        // taxonomy_wheres sul DB di sviluppo Maphub) — protezione a costo
+        // trascurabile se la copertura geografica dovesse crescere molto in
+        // futuro (oc:8487).
+        DB::statement('
+            CREATE INDEX IF NOT EXISTS taxonomy_wheres_geometry_gist
+            ON taxonomy_wheres USING GIST (geometry)
+        ');
+    }
+
+    public function down(): void
+    {
+        DB::statement('DROP INDEX IF EXISTS taxonomy_wheres_geometry_gist');
+    }
+};
+
