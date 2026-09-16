@@ -23,3 +23,9 @@ Si applica quando tocchi job, comandi artisan, import o servizi del package.
   l'exists-check prima dell'`attach()` (oc:8094).
 - Non chiamare una sync sincrona subito dopo il dispatch asincrono di job che ne producono
   l'input: è una race condition che riporta zero risultati senza errori (oc:8486).
+- Un job `ShouldBeUnique` con lock su `CACHE_STORE=database`, dispatchato dentro una transazione
+  (es. un salvataggio Nova), fa fallire con `25P02` su PostgreSQL se la riga di lock esiste già —
+  `DatabaseLock::acquire()` (Laravel) prova un `INSERT` e ripiega su `UPDATE` nello stesso
+  try/catch, e Postgres blocca tutte le query dopo la prima fallita nella stessa transazione. Usa
+  `uniqueVia() { return Cache::store('redis'); }` (oc:8564, pattern preesistente in
+  `BuildAppPoisGeojsonJob`).

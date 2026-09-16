@@ -18,3 +18,8 @@ Si applica quando scrivi o modifichi un test del package.
   [docs/knowledge/testare-il-package.md](docs/knowledge/testare-il-package.md).
 - Nelle Action invocate direttamente nei test `request()->user()` è **sempre `null`** (si bypassa
   il kernel HTTP): si usa `auth()->user()`, identico in produzione (oc:8486).
+- `Bus::fake()` non impedisce l'acquisizione del lock di un job `ShouldBeUnique`: gira in
+  `PendingDispatch::shouldDispatch()`, prima che il Dispatcher fake sostituisca quello vero. Se il
+  job ha `uniqueVia()` su Redis (es. `UpdateAppConfigJob`, `BuildAppPoisGeojsonJob`), un test sotto
+  `Bus::fake()` dipende comunque da Redis reale — isola con
+  `config(['cache.stores.redis.driver' => 'array'])` (oc:8564).
