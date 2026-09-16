@@ -171,6 +171,14 @@ l'urgenza inizialmente attribuita dalla review.
 piano ("Non toccare... restano invariati"). Segnalato come cleanup residuo, non risolto per
 rispettare quel vincolo.
 
+### Task 7: verifica E2E manuale su Nova (2026-09-16)
+
+Il dev ha confermato: "ho testato ed è funzionante" — il salvataggio del Layer da Nova non
+crasha più (fix Redis) e il fix di oc:8564 funziona. Non specificato se ogni singolo
+sotto-passo della checklist (delay esatto in Horizon, contenuto puntuale del `config.json`,
+caso di sostituzione con doppio dispatch) sia stato verificato singolarmente o solo il
+comportamento complessivo — riportato qui così com'è stato confermato, senza sovra-interpretare.
+
 ## Follow-up
 
 - **Verificato**: il pattern `uniqueVia() { return Cache::store('redis'); }` non è

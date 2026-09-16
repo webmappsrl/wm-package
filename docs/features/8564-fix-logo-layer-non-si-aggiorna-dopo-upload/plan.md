@@ -584,7 +584,7 @@ git -C wm-package commit -m "fix(oc:8564): use redis lock for UpdateAppConfigJob
 
 **Interfaces:** nessuna — checklist operativa per il dev.
 
-- [ ] **Step 1: Avvia l'ambiente e apri un Layer esistente in Nova**
+- [x] **Step 1: Avvia l'ambiente e apri un Layer esistente in Nova**
 
 ```bash
 docker exec laravel-camminiditalia php artisan horizon:status
@@ -594,31 +594,31 @@ Se Horizon non è attivo: `composer run dev` (vedi CLAUDE.md del repo principale
 
 Apri `/nova/resources/layers/{id}` (edit) per un Layer di test.
 
-- [ ] **Step 2: Carica un logo**
+- [x] **Step 2: Carica un logo**
 
 Carica un'immagine nel campo "Logo" e premi il pulsante di salvataggio del form.
 
-- [ ] **Step 3: Verifica in Horizon che UpdateAppConfigJob sia stato dispatchato con delay**
+- [x] **Step 3: Verifica in Horizon che UpdateAppConfigJob sia stato dispatchato con delay**
 
 Apri la dashboard Horizon (`/horizon`), cerca `Wm\WmPackage\Jobs\UpdateAppConfigJob` nei job recenti — deve comparire circa **10 secondi dopo** il salvataggio (delay applicato al Task 5), non immediatamente.
 
-- [ ] **Step 4: Verifica il config.json pubblicato**
+- [x] **Step 4: Verifica il config.json pubblicato**
 
 Recupera l'URL del `config.json` dell'app (vedi `AppConfigService::writeAppConfigOnAws()` per il path S3/CDN usato in questo ambiente) e verifica che `MAP.layers[].logo_image` per il layer di test punti al file appena caricato.
 
-- [ ] **Step 5: Ripeti per la rimozione del logo**
+- [x] **Step 5: Ripeti per la rimozione del logo**
 
 Rimuovi il logo dal campo "Logo" e salva. Verifica di nuovo in Horizon che `UpdateAppConfigJob` scatti (con delay), e che il `config.json` aggiornato non contenga più `logo_image` per quel layer (o lo mostri `null`, coerente con l'accessor `getLogoImageAttribute()` che ritorna `null` senza media).
 
-- [ ] **Step 6: Ripeti per il campo Immagine**
+- [x] **Step 6: Ripeti per il campo Immagine**
 
 Carica un'immagine nel campo "Image" (collection `'default'`) e salva. Verifica in Horizon il dispatch con delay, e verifica che `MAP.layers[].feature_image` nel `config.json` rifletta la nuova thumbnail (non solo che l'URL cambi, ma che la thumbnail sia effettivamente generata — apri l'URL e conferma che l'immagine è quella corretta, ritagliata). Ripeti poi la rimozione, come al Step 5.
 
-- [ ] **Step 7: Verifica il caso di sostituzione (doppio dispatch atteso, innocuo)**
+- [x] **Step 7: Verifica il caso di sostituzione (doppio dispatch atteso, innocuo)**
 
 Sostituisci un logo già presente con uno nuovo (upload diretto su un campo già valorizzato). Verifica in Horizon che compaiano **due** dispatch di `UpdateAppConfigJob` (delete del vecchio + create del nuovo) — comportamento accettato per design (vedi Rischi in `overview.md`), non un bug: conferma solo che entrambi completino senza errori.
 
-- [ ] **Step 8: Documenta l'esito**
+- [x] **Step 8: Documenta l'esito**
 
 Se tutti i passaggi precedenti sono verdi, annota in `wm-package/docs/features/8564-fix-logo-layer-non-si-aggiorna-dopo-upload/notes.md` (sezione "Decisioni" o "Follow-up") che la verifica E2E manuale è stata eseguita con esito positivo, con data, specificando che copre sia Logo sia Immagine.
 
