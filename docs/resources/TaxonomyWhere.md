@@ -164,7 +164,7 @@ Wm\WmPackage\Nova\TaxonomyWhere
 | Import TaxonomyWhere | `ImportTaxonomyWhere` | Si | Importa aree da OSMFeatures (vari admin level) o settori da OSM2CAI; dispatch job geometria in background; sincronizza track al termine |
 | Crea Layer | `CreateLayerFromTaxonomyWhere` | No | Crea un `Layer` per ogni `TaxonomyWhere` selezionata, copia `feature_image` via Spatie Media |
 | Ricarica Geometry | `RetryTaxonomyWhereGeometryFetch` | No | Ri-dispatcha `FetchTaxonomyWhereGeometryJob` sui record selezionati |
-| Sincronizza Tracks | `SyncTracksTaxonomyWhereAction` | Si | Chiama `GeometryComputationService::syncTracksTaxonomyWhere()` su tutte le track |
+| Sincronizza Taxonomy Where su EC Features | `SyncEcTaxonomyWhereAction` | Si | Chiama `GeometryComputationService::syncTaxonomyWhere()` su tutte le `EcTrack` e gli `EcPoi` (dispatch in coda, oc:8487) |
 
 ### Lenses
 
@@ -201,7 +201,7 @@ I record esistenti sono identificati via `properties->>'osmfeatures_id'` o `prop
 
 ### Sincronizzazione tracks
 
-Ogni import termina con `GeometryComputationService::syncTracksTaxonomyWhere()`, che assegna la taxonomy_where corretta a ogni `EcTrack` in base alla geometria.
+Ogni import termina con `GeometryComputationService::syncTaxonomyWhere()`, che assegna la taxonomy_where corretta sia a ogni `EcTrack` sia a ogni `EcPoi` in base alla geometria (oc:8487).
 
 ### Assegnazione user_id
 
@@ -226,7 +226,7 @@ Se la tabella `taxonomy_wheres` ha la colonna `user_id` (verificata via `Schema:
 
 | Service | Utilizzo |
 |---------|---------|
-| `GeometryComputationService` | `syncTracksTaxonomyWhere()` post-import |
+| `GeometryComputationService` | `syncTaxonomyWhere()` post-import (EcTrack + EcPoi) |
 | `OsmfeaturesClient` | API OSMFeatures |
 | `Osm2caiClient` | API OSM2CAI |
 
