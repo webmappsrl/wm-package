@@ -3,11 +3,13 @@
 namespace Wm\WmPackage\Jobs;
 
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Services\Models\App\AppConfigService;
@@ -17,6 +19,17 @@ use Wm\WmPackage\Services\Models\App\AppConfigService;
  * con questa interfaccia. Senza, il dispatch dal finally() del batch layer si sommava a
  * quelli di TileObserver/LayerObserver/FeatureCollection*, N ricalcoli concorrenti che
  * scrivono la stessa chiave S3 senza lock. Vedi oc:8488.
+ *
+ * uniqueVia() forza il lock su Redis invece dello store di default
+ * (CACHE_STORE=database): DatabaseLock::acquire() prova un INSERT e, se fallisce
+ * per chiave duplicata, ripiega su un UPDATE nello stesso try/catch — su
+ * PostgreSQL una query fallita "avvelena" l'intera transazione, quindi anche
+ * l'UPDATE di fallback fallisce con un generico 25P02 (transazione abortita).
+ * Ogni dispatch di questo job avviene dentro la transazione che Nova apre per
+ * ogni salvataggio di risorsa (ResourceUpdateController), quindi senza questo
+ * fix qualunque save di un Layer con la riga di lock già presente in
+ * `cache_locks` va in 500. Redis non ha questo problema (SET NX è atomico, non
+ * partecipa a transazioni SQL) — vedi oc:8564, scoperto testando dal vivo.
  */
 class UpdateAppConfigJob implements ShouldBeUnique, ShouldQueue
 {
@@ -37,6 +50,11 @@ class UpdateAppConfigJob implements ShouldBeUnique, ShouldQueue
     public function uniqueFor(): int
     {
         return 600;
+    }
+
+    public function uniqueVia(): Repository
+    {
+        return Cache::store('redis');
     }
 
     public function handle(): void
