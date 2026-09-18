@@ -8,14 +8,13 @@ use Illuminate\Support\Collection;
 use Laravel\Nova\Actions\Action;
 use Laravel\Nova\Fields\ActionFields;
 use Laravel\Nova\Http\Requests\NovaRequest;
-use Wm\WmPackage\Models\EcTrack;
-use Wm\WmPackage\Services\GeometryComputationService;
+use Wm\WmPackage\Jobs\TaxonomyWhere\SyncTaxonomyWhereJob;
 
-class SyncTracksTaxonomyWhereAction extends Action
+class SyncEcTaxonomyWhereAction extends Action
 {
     use InteractsWithQueue, Queueable;
 
-    public $name = 'Sincronizza Taxonomy Where su Tracks';
+    public $name = 'Sincronizza Taxonomy Where su EC Features';
 
     public $onlyOnIndex = false;
 
@@ -23,11 +22,9 @@ class SyncTracksTaxonomyWhereAction extends Action
 
     public function handle(ActionFields $fields, Collection $models): mixed
     {
-        $count = GeometryComputationService::make()->syncTracksTaxonomyWhere(
-            config('wm-package.ec_track_model', EcTrack::class)
-        );
+        SyncTaxonomyWhereJob::dispatch();
 
-        return Action::message("taxonomy_where aggiornata su {$count} tracks.");
+        return Action::message('Sincronizzazione taxonomy_where su EcTrack ed EcPoi avviata.');
     }
 
     public function fields(NovaRequest $request): array
@@ -35,3 +32,4 @@ class SyncTracksTaxonomyWhereAction extends Action
         return [];
     }
 }
+

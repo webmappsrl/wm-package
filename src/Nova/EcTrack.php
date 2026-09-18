@@ -11,8 +11,8 @@ use Laravel\Nova\Fields\Textarea;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Tabs\Tab;
 use Marshmallow\Tiptap\Tiptap;
+use Wm\WmPackage\Jobs\TaxonomyWhere\SyncModelTaxonomyWhereJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
-use Wm\WmPackage\Jobs\UpdateModelWithGeometryTaxonomyWhere;
 use Wm\WmPackage\Nova\Actions\DownloadEcTrackAction;
 use Wm\WmPackage\Nova\Actions\ExecuteEcTrackDataChainAction;
 use Wm\WmPackage\Nova\Actions\TranslateModelAction;
@@ -99,7 +99,7 @@ class EcTrack extends AbstractEcResource
                 fn ($ecTrack) => new UpdateEcTrackAwsJob($ecTrack),
             ], __('Update Tracks on AWS')),
             new ExecuteEcTrackDataChainAction([
-                fn ($ecTrack) => new UpdateModelWithGeometryTaxonomyWhere($ecTrack),
+                fn ($ecTrack) => new SyncModelTaxonomyWhereJob($ecTrack),
                 fn ($ecTrack) => new UpdateEcTrackAwsJob($ecTrack),
             ], __('Regenerate Taxonomy Where')),
             new ExecuteEcTrackDataChainAction,

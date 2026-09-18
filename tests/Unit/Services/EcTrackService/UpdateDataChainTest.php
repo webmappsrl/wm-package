@@ -5,6 +5,7 @@ namespace Tests\Unit\Services\EcTrackService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
 use Wm\WmPackage\Jobs\Pbf\GenerateEcTrackPBFBatch;
+use Wm\WmPackage\Jobs\TaxonomyWhere\SyncModelTaxonomyWhereJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrack3DDemJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackCurrentDataJob;
@@ -14,7 +15,6 @@ use Wm\WmPackage\Jobs\Track\UpdateEcTrackGenerateElevationChartImage;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackManualDataJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackOrderRelatedPoi;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackSlopeValues;
-use Wm\WmPackage\Jobs\UpdateModelWithGeometryTaxonomyWhere;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcTrack;
 
@@ -47,7 +47,7 @@ class UpdateDataChainTest extends AbstractEcTrackServiceTest
             UpdateEcTrackCurrentDataJob::class,
             UpdateEcTrack3DDemJob::class,
             UpdateEcTrackSlopeValues::class,
-            UpdateModelWithGeometryTaxonomyWhere::class,
+            SyncModelTaxonomyWhereJob::class,
             UpdateEcTrackGenerateElevationChartImage::class,
             UpdateEcTrackAwsJob::class,
             UpdateEcTrackOrderRelatedPoi::class,

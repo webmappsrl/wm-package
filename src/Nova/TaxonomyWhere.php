@@ -9,7 +9,7 @@ use Laravel\Nova\Http\Requests\NovaRequest;
 use Wm\WmPackage\Nova\Actions\CreateLayerFromTaxonomyWhere;
 use Wm\WmPackage\Nova\Actions\ImportTaxonomyWhere;
 use Wm\WmPackage\Nova\Actions\RetryTaxonomyWhereGeometryFetch;
-use Wm\WmPackage\Nova\Actions\SyncTracksTaxonomyWhereAction;
+use Wm\WmPackage\Nova\Actions\SyncEcTaxonomyWhereAction;
 use Wm\WmPackage\Nova\Fields\FeatureCollectionMap\src\FeatureCollectionMap;
 use Wm\WmPackage\Nova\Fields\PropertiesPanel;
 use Wm\WmPackage\Nova\Filters\TaxonomyWhereAdminLevelFilter;
@@ -70,7 +70,7 @@ class TaxonomyWhere extends AbstractTaxonomyResource
             new ImportTaxonomyWhere,
             new CreateLayerFromTaxonomyWhere,
             new RetryTaxonomyWhereGeometryFetch,
-            new SyncTracksTaxonomyWhereAction,
+            new SyncEcTaxonomyWhereAction,
         ];
     }
 }

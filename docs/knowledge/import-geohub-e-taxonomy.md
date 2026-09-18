@@ -11,6 +11,11 @@ L'Action `ImportTaxonomyWhere` ha tre handler — `handleOsmfeatures()`, `handle
 `handleGeohub()` — che condividono `HasTaxonomyWhereImportHelpers` (risoluzione dell'App dal
 Select, `assignTaxonomyUserFromApp()`, sync finale delle tracce).
 
+**Generalizzato a EcPoi (oc:8487)**: `finalizeWithTracksSync()` è stato rinominato
+`finalizeWithEcSync()` e ora sincronizza sia `EcTrack` sia `EcPoi` (prima solo track); stesso
+discorso per il job dispatchato da `handleGeohub()` dopo la copia geometrie, rinominato da
+`SyncTaxonomyWhereTracksJob` a `SyncTaxonomyWhereJob` (nessun alias di compatibilità).
+
 `handleGeohub()` importa solo le where GeoHub con `admin_level IS NULL` — i territori non
 coperti da OSMFeatures — collegate ai contenuti di un'App, via query raw sulla connessione
 `geohub` di `config/wm-geohub-import.php`. È l'unico handler dietro un gate super-admin
@@ -67,6 +72,34 @@ mano con lo stesso identifier (oc:8486).
 - Nessun `User-Agent` custom su `OsmClient`: rischio noto di rate-limit condiviso fra consumer
   che importano in parallelo, non risolto (oc:8239).
 
+### Sincronizzazione taxonomy_where: generalizzata a EcPoi (oc:8487)
+
+`GeometryComputationService::syncTracksTaxonomyWhere()` (solo `EcTrack`, tipo `MultiLineString`) è
+stato generalizzato in `syncTaxonomyWhere(string|GeometryModel $model, ?int $modelId = null)`, che
+copre anche `EcPoi` (`Point`) e accetta uno scoping opzionale a un singolo id. Rename senza alias
+di compatibilità — decisione esplicita, nessun consumer esterno noto lo chiamava direttamente.
+
+Il meccanismo è agganciato in più punti, tutti generalizzati a entrambi i modelli:
+- Path automatico al salvataggio (`EcPoiService`/`EcTrackService::updateDataChain()`/`createDataChain()`),
+  via un nuovo job scoped-per-record (`SyncModelTaxonomyWhereJob`) che sostituisce il vecchio
+  `UpdateModelWithGeometryTaxonomyWhere` (via API OSMFeatures, solo Italia) su tutti i call site EC —
+  UGC resta sul vecchio meccanismo.
+- Azione Nova unica bulk `SyncEcTaxonomyWhereAction` (sostituisce `SyncTracksTaxonomyWhereAction`),
+  dispatch in coda.
+- L'hook automatico su `ImportAppJob::attachBatchCompletionCallback()` per i batch `ec_poi`/`ec_track`
+  — risolve la causa per cui i contenuti importati restavano senza `taxonomy_where`
+  (`persistQuietly()` disabilita gli observer durante l'import).
+
+**Rischio noto, gestito operativamente non da codice**: `syncTaxonomyWhere()` fa un `UPDATE`
+incondizionato — se la copertura locale di `taxonomy_wheres` è insufficiente per l'area geografica
+di un contenuto, il sync azzera (non solo "non aggiorna") qualsiasi `taxonomy_where` già presente su
+quel contenuto. Misurato (2026-09-16, DB di sviluppo Maphub): con sola copertura locale
+Corsica/Francia/2x Sardegna (4 poligoni, nessuno sull'Italia continentale), un lancio del sync
+avrebbe azzerato 93 `EcPoi` su 93 con `taxonomy_where` allora popolato (dati region+comune da
+OSMFeatures). Per questo l'ordine è vincolante: importare where sufficienti (sezione sopra) prima
+di lanciare/lasciare scattare il sync bulk su un'app, sia al deploy iniziale sia per ogni nuovo
+import futuro.
+
 ### Import Excel
 
 `EcPoiRowProcessor::apply()` deve sincronizzare `properties['name']` da `getTranslations('name')`
@@ -79,8 +112,9 @@ minimale. `EcTrackRowProcessor` non è affetto, non usa `setTranslation` per il 
 - `handleGeohub()` chiamava `syncTracksTaxonomyWhere()` in modo sincrono subito dopo il dispatch
   asincrono dei job di geometria, come fanno ancora gli altri due handler: è una race condition —
   la sync trova sempre geometrie vuote e riporta "0 tracks". Corretto solo per GeoHub con
-  `Bus::batch($jobs)->then(fn () => SyncTaxonomyWhereTracksJob::dispatch())`. **Lo stesso difetto
-  esiste ancora in `handleOsmfeatures()`/`handleOsm2cai()`**, mai osservato in pratica (oc:8486).
+  `Bus::batch($jobs)->then(fn () => SyncTaxonomyWhereTracksJob::dispatch())` (rinominato in
+  `SyncTaxonomyWhereJob` da oc:8487, generalizzato a EcPoi). **Lo stesso difetto esiste ancora in
+  `handleOsmfeatures()`/`handleOsm2cai()`**, mai osservato in pratica (oc:8486).
 - Prima di oc:8486 l'Action non aveva alcuna copertura di test, su nessuna delle tre sorgenti.
 
 ## Trappole dell'import, raccolte dai cantieri

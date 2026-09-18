@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Wm\WmPackage\Jobs\TaxonomyWhere\SyncTaxonomyWhereJob;
 use Wm\WmPackage\Jobs\UpdateAppConfigHomeLayerIdsJob;
 use Wm\WmPackage\Jobs\UpdateAppConfigJob;
 use Wm\WmPackage\Models\App;
@@ -493,6 +494,20 @@ class ImportAppJob extends BaseImportJob
                     if (ImportAppJob::layerBatchIsPublishReady($appId)) {
                         UpdateAppConfigJob::dispatch($appId);
                     }
+                }
+            );
+        }
+
+        // Causa radice #1 di oc:8487: GeohubImportService::persistQuietly() disabilita gli
+        // observer durante l'import, quindi EcPoiService::updateDataChain()/
+        // EcTrackService::createDataChain() non scattano mai e il contenuto importato resta
+        // senza taxonomy_where finché non viene ricalcolato manualmente. Aggancia il ricalcolo
+        // bulk (SyncTaxonomyWhereJob copre sia EcTrack sia EcPoi) al completamento del batch
+        // di import EC dedicato, non al singolo save.
+        if (in_array($entityModelKey, ['ec_poi', 'ec_track'], true)) {
+            $batch->allowFailures()->finally(
+                static function (Batch $batch): void {
+                    SyncTaxonomyWhereJob::dispatch();
                 }
             );
         }

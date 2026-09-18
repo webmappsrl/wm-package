@@ -23,21 +23,25 @@ use Wm\WmPackage\Services\Models\MediaService;
 class GeometryComputationService extends BaseService
 {
     /**
-     * Synchronize taxonomy_where properties for a track model table.
+     * Synchronize taxonomy_where properties for a geometry model table (EcTrack o EcPoi).
      *
-     * @param  class-string<MultiLineString>|MultiLineString  $trackModel
+     * @param  class-string<GeometryModel>|GeometryModel  $model
+     * @param  int|null  $modelId  Se valorizzato, scopa l'update alla sola riga con questo id.
      */
-    public function syncTracksTaxonomyWhere(string|MultiLineString $trackModel): int
+    public function syncTaxonomyWhere(string|GeometryModel $model, ?int $modelId = null): int
     {
-        $modelInstance = is_string($trackModel) ? new $trackModel : $trackModel;
-        if (! $modelInstance instanceof MultiLineString) {
-            throw new \InvalidArgumentException('The track model must extend MultiLineString.');
+        $modelInstance = is_string($model) ? new $model : $model;
+        if (! $modelInstance instanceof GeometryModel) {
+            throw new \InvalidArgumentException('The model must extend GeometryModel.');
         }
 
         $tableName = $modelInstance->getTable();
         if (! preg_match('/^[a-zA-Z0-9_]+$/', $tableName)) {
-            throw new \InvalidArgumentException('Invalid track table name.');
+            throw new \InvalidArgumentException('Invalid table name.');
         }
+
+        $idCondition = $modelId !== null ? 'AND id = ?' : '';
+        $bindings = $modelId !== null ? [$modelId] : [];
 
         DB::statement("
             UPDATE {$tableName}
@@ -69,14 +73,16 @@ class GeometryComputationService extends BaseService
                 )
             )
             WHERE geometry IS NOT NULL
-        ");
+            {$idCondition}
+        ", $bindings);
 
         return (int) (DB::selectOne("
             SELECT COUNT(*) as c
             FROM {$tableName}
             WHERE geometry IS NOT NULL
               AND properties->'taxonomy_where' != '{}'::jsonb
-        ")->c ?? 0);
+              {$idCondition}
+        ", $bindings)->c ?? 0);
     }
 
     public function get3dLineMergeWktFromGeojson(string $geojson): string

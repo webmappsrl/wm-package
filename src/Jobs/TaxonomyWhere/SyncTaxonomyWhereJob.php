@@ -8,10 +8,11 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Services\GeometryComputationService;
 
-class SyncTaxonomyWhereTracksJob implements ShouldQueue
+class SyncTaxonomyWhereJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
@@ -21,16 +22,24 @@ class SyncTaxonomyWhereTracksJob implements ShouldQueue
 
     public function handle(): void
     {
-        $tracksSynced = GeometryComputationService::make()->syncTracksTaxonomyWhere(
+        $service = GeometryComputationService::make();
+
+        $tracksSynced = $service->syncTaxonomyWhere(
             config('wm-package.ec_track_model', EcTrack::class)
         );
+        $poisSynced = $service->syncTaxonomyWhere(
+            config('wm-package.ec_poi_model', EcPoi::class)
+        );
 
-        Log::info('SyncTaxonomyWhereTracksJob completed', ['tracks_synced' => $tracksSynced]);
+        Log::info('SyncTaxonomyWhereJob completed', [
+            'tracks_synced' => $tracksSynced,
+            'pois_synced' => $poisSynced,
+        ]);
     }
 
     public function failed(\Throwable $e): void
     {
-        Log::error('SyncTaxonomyWhereTracksJob failed after all retries', [
+        Log::error('SyncTaxonomyWhereJob failed after all retries', [
             'error' => $e->getMessage(),
         ]);
     }
