@@ -79,6 +79,30 @@ if (! function_exists('sanitizeHexColor')) {
     }
 }
 
+if (! function_exists('withoutInternalConfigKeys')) {
+    /**
+     * Rimuove da un array le chiavi che un consumer ha dichiarato riservate a
+     * un uso interno (mai esposte pubblicamente), via
+     * config('wm-package.internal_attribute_keys'). Il package non conosce
+     * quei concetti: è il consumer a popolare l'elenco (oc:8463). Generico
+     * per costruzione: qualunque punto del package che serializza un
+     * sotto-array pubblicamente esposto (oggi properties->attributes di un
+     * Layer, in futuro eventualmente altro) può richiamarlo, senza bisogno
+     * di un metodo dedicato per ogni modello.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    function withoutInternalConfigKeys(array $data): array
+    {
+        foreach (config('wm-package.internal_attribute_keys', []) as $key) {
+            unset($data[$key]);
+        }
+
+        return $data;
+    }
+}
+
 if (! function_exists('isReallyEmpty')) {
 
     function isReallyEmpty($val): bool
