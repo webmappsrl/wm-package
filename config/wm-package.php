@@ -82,6 +82,24 @@ return [
     'default_layer_mode' => env('DEFAULT_LAYER_MODE', 'auto'),
 
     /*
+    | Chiavi di un array di attributi (es. properties->attributes di un Layer,
+    | o di un altro modello in futuro) che un consumer considera riservate a
+    | un uso interno e mai da esporre pubblicamente (config.json, endpoint
+    | layer()). Vuoto di default: il package non sa e non deve sapere quali
+    | concetti "interni" esistano per un consumer specifico. Generico per
+    | costruzione: non è legato a Layer né a nessun modello specifico — vedi
+    | withoutInternalConfigKeys() in src/helpers.php.
+    |
+    | Un consumer la popola con un proprio config/wm-package.php (il
+    | pacchetto fa mergeConfigFrom(): quel file vince sulla stessa chiave,
+    | le altre chiavi restano quelle di qui) — versionato, a differenza di
+    | un .env di produzione che nessun test legge (es. camminiditalia,
+    | 'shape_discontinuous', oc:8463). Nessuna env var qui: sarebbe
+    | un secondo modo di fare la stessa cosa, mai usato da nessun consumer.
+    */
+    'internal_attribute_keys' => [],
+
+    /*
     | Domini opzionali del package {@see \Wm\WmPackage\Services\FeaturesService}.
     | A dominio spento il package si comporta come se il dominio non esistesse:
     | i suoi stub di migration non sono considerati dai comandi, i suoi comandi
