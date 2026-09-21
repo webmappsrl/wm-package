@@ -69,6 +69,14 @@ Da qui la regola: su questa mappa l'ordine dei layer non decide solo cosa si ved
 anche **cosa è raggiungibile col mouse**. Un poligono pieno in cima rende muto tutto ciò che sta
 sotto.
 
+Un quarto caso della stessa famiglia, trovato dopo i primi commit: il refit del wrapper riceveva
+tutte le feature non-vicine, **poligono del settore compreso**, e allargava l'inquadratura
+all'intero settore — cioè produceva esattamente il difetto che doveva correggere. Il componente
+condiviso filtra le sole LineString; nel wrapper quel filtro mancava.
+
+Quattro difetti su quattro, in questo componente, si sono visti solo aprendo la pagina: nessuno
+sarebbe stato colto da un test, e nessuno era prevedibile leggendo il piano.
+
 ### Percorso del package nel container
 
 Il piano dava per buono `/var/www/html/wm-package`. In quel punto il container monta **un altro
