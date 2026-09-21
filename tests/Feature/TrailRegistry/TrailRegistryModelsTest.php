@@ -41,6 +41,19 @@ it('espone il full code del settore', function () {
     expect($code->fullCode)->toBe('ZNUB5');
 });
 
+it('espone numero e variante come etichetta, omettendo la variante zero', function () {
+    expect(TrailRegistryCode::find(makeCode())->label)->toBe('35')
+        ->and(TrailRegistryCode::find(makeCode(['variant' => 'A']))->label)->toBe('35A')
+        ->and(TrailRegistryCode::find(makeCode(['number' => 7]))->label)->toBe('07');
+});
+
+it('il codice completo finisce con l etichetta', function () {
+    $code = TrailRegistryCode::find(makeCode(['variant' => 'A']));
+
+    expect($code->code)->toBe('ZNUB535A')
+        ->and($code->code)->toEndWith($code->label);
+});
+
 it('non conserva codice e full code come colonne', function () {
     $columns = Schema::getColumnListing('trail_registry_codes');
 
