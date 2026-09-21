@@ -226,6 +226,13 @@ Le tre Resource stanno nella sezione di menu **Catasto**.
   Ricerca **per codice**, che Nova non saprebbe fare da sé (il codice non è una colonna, si compone
   da sei) — vedi `applySearch()`. Nella scheda: mappa con settore, sentiero ed eventuale istanza,
   legenda e storia dei cambi di stato.
+  Sulla mappa ci sono anche **gli altri sentieri dello stesso settore**, con numero e variante
+  scritti sul tracciato: servono a giudicare un numero, perché la numerazione segue una logica di
+  zona e un numero si sceglie guardando i vicini, non il primo libero. Entrano i codici che
+  occupano una posizione — `Reserved` e `Assigned`, gli stessi della select del «sostituisci
+  numero» — con la geometria del sentiero o, se il codice è solo riservato, quella dell'istanza.
+  I numeri compaiono scritti da un certo zoom in poi (`labelMinZoom` sul campo, 12 di default);
+  più lontano si leggono passando il mouse sul tracciato (oc:8568).
 - **Istanze** — il ciclo di accatastamento, con le azioni che ne fanno avanzare lo stato. Da qui
   si sostituisce anche il numero prenotato, scegliendo in due tendine — il numero, poi la
   variante, con «nessuna variante» fra le opzioni della seconda: il gesto avviene mentre si
