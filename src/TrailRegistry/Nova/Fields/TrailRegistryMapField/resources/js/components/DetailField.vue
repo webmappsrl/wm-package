@@ -210,11 +210,27 @@ export default {
         },
 
         refitOn(map, features) {
-            if (features.length === 0) {
+            // Solo le linee, come fa il componente condiviso: il settore e' un
+            // poligono che copre tutta l'area, e includerlo qui vanifica il
+            // senso stesso di questo refit — la mappa si riaprirebbe sul
+            // settore intero invece che sulla traccia in esame.
+            const lines = features.filter((feature) => {
+                const geometry = feature.getGeometry();
+
+                if (!geometry) {
+                    return false;
+                }
+
+                const type = geometry.getType();
+
+                return type === 'LineString' || type === 'MultiLineString';
+            });
+
+            if (lines.length === 0) {
                 return;
             }
 
-            const source = new VectorSource({ features: features.map((f) => f.clone()) });
+            const source = new VectorSource({ features: lines.map((f) => f.clone()) });
             const extent = source.getExtent();
 
             if (!extent || extent[0] === Infinity) {
