@@ -1,6 +1,7 @@
 ---
 paths:
   - "src/Nova/**"
+  - "src/TrailRegistry/Nova/**"
 ---
 
 # Trappole: Nova
@@ -31,3 +32,9 @@ Si applica quando tocchi Resource, campi, action o card Nova del package.
 - **Il package registra una sola policy** (`App`). Un consumer che monta la Resource `EcTrack`
   senza registrare `EcTrackPolicy` lascia Nova autorizzare chiunque — verificalo quando aggiungi
   una Resource EC a un consumer (oc:8181).
+- Nei campi di un'Action, `$request->resourceId` è vuoto nella richiesta che risolve un
+  `dependsOn()`: la tendina dipendente resta vuota — Nova manda `resources`, una lista di id,
+  nella `PATCH` gestita da `ActionRequest`, quindi vanno letti entrambi (oc:8569).
+- Un'Action istanziata a mano in un test ha `runCallback` nullo e risulta **sempre**
+  autorizzata: il `canRun()` va preso dall'istanza che la Resource restituisce, altrimenti il
+  test non verifica nulla (oc:8569).

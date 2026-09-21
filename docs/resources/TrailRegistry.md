@@ -90,9 +90,16 @@ porta un sentiero. Non duplicarne la logica nei consumer.
 |---|---|
 | `resolveSector($wkt)` | il settore che contiene il sentiero, o quello con cui condivide il tratto più lungo |
 | `propose($wkt)` | il primo codice libero in quel settore |
-| `availableNumbers($fullCode)` | i numeri liberi, per la sostituzione manuale |
+| `availableNumbers($fullCode)` | i numeri **puri** ancora liberi: è la domanda che serve a `propose()` |
+| `availableVariants($fullCode, $number)` | le varianti libere di un numero, `'0'` compreso quando il numero puro è libero |
+| `numbersWithAvailableVariants($fullCode)` | i numeri con almeno una variante libera: l'elenco da cui si sceglie nella sostituzione manuale |
 | `reserve()` / `confirm()` / `release()` / `replaceNumber()` | il ciclo di vita di un'istanza |
 | `registerExistingCode()` | registra un codice storico già esistente |
+
+I tre metodi di lettura rispondono a domande diverse e non sono intercambiabili:
+`availableNumbers()` esclude un numero appena il numero puro è occupato,
+`numbersWithAvailableVariants()` lo tiene finché gli avanza una lettera. È ciò che rende
+raggiungibile la variante di un sentiero esistente (oc:8569).
 
 ### `registerExistingCode()` — gli esiti
 
@@ -214,12 +221,15 @@ Il gate di CI va invocato con `--with=trail_registry`.
 
 Le tre Resource stanno nella sezione di menu **Catasto**.
 
-- **Registro dei codici** — sola lettura: un codice non si crea e non si modifica da un form,
-  cambiarne il numero significherebbe cambiare un numero già comunicato e forse già stampato.
+- **Registro dei codici** — sola lettura: un codice non si crea, non si modifica e non si
+  sostituisce da qui.
   Ricerca **per codice**, che Nova non saprebbe fare da sé (il codice non è una colonna, si compone
   da sei) — vedi `applySearch()`. Nella scheda: mappa con settore, sentiero ed eventuale istanza,
   legenda e storia dei cambi di stato.
-- **Istanze** — il ciclo di accatastamento, con le azioni che ne fanno avanzare lo stato.
+- **Istanze** — il ciclo di accatastamento, con le azioni che ne fanno avanzare lo stato. Da qui
+  si sostituisce anche il numero prenotato, scegliendo in due tendine — il numero, poi la
+  variante, con «nessuna variante» fra le opzioni della seconda: il gesto avviene mentre si
+  guarda la mappa dell'istanza, che è il contesto su cui si decide (oc:8569).
 - **Anomalie** — sola lettura, con in testa una card che spiega la schermata
   (`TrailRegistryNoticeCard`).
 

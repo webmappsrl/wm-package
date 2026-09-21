@@ -11,8 +11,6 @@ use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Resource;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\TaxonomyWhere;
-use Wm\WmPackage\TrailRegistry\Enums\TrailCodeStatus;
-use Wm\WmPackage\TrailRegistry\Nova\Actions\ReplaceTrailCodeNumber;
 use Wm\WmPackage\TrailRegistry\Nova\Fields\TrailRegistryMap;
 use Wm\WmPackage\TrailRegistry\Nova\Filters\TrailCodeAreaFilter;
 use Wm\WmPackage\TrailRegistry\Nova\Filters\TrailCodeOriginFilter;
@@ -243,10 +241,8 @@ class TrailRegistryCode extends Resource
      */
     public function actions(NovaRequest $request): array
     {
-        return [
-            (new ReplaceTrailCodeNumber)->canRun(
-                fn ($request, $code) => $code->status === TrailCodeStatus::Reserved,
-            ),
-        ];
+        // La sostituzione del numero si fa dal dettaglio dell'istanza
+        // (oc:8569): il registro mostra lo stato dei codici, non li cambia.
+        return [];
     }
 }

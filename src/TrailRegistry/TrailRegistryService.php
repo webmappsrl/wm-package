@@ -172,6 +172,69 @@ class TrailRegistryService
     }
 
     /**
+     * Le varianti ancora libere per un numero, nell'ordine in cui vanno
+     * offerte: '0' («nessuna variante») per prima, poi A-Z.
+     *
+     * Le righe occupate si contano tutte, comprese eventuali varianti
+     * numeriche entrate dall'import: sono le varianti *offerte* a essere
+     * limitate alle lettere, non quelle che occupano una posizione.
+     *
+     * @return array<int, string>
+     */
+    public function availableVariants(string $fullCode, int $number): array
+    {
+        $taken = TrailRegistryCode::query()
+            ->where('region', substr($fullCode, 0, 1))
+            ->where('province', substr($fullCode, 1, 2))
+            ->where('area', substr($fullCode, 3, 1))
+            ->where('sector', substr($fullCode, 4, 1))
+            ->where('number', $number)
+            ->whereIn('status', $this->activeStatusValues())
+            ->pluck('variant')
+            ->all();
+
+        return array_values(array_diff($this->variantSearchOrder(), $taken));
+    }
+
+    /**
+     * I numeri del settore che hanno almeno una variante libera: e' l'elenco
+     * da cui il gestore sceglie quando sostituisce a mano.
+     *
+     * Non coincide con availableNumbers(), che risponde a un'altra domanda —
+     * quali numeri *puri* sono liberi — e serve a propose(). Qui un numero
+     * gia' occupato resta in elenco finche' gli avanza una lettera: e' cio'
+     * che rende raggiungibile la variante di un sentiero esistente.
+     *
+     * Una query sola sul settore: cento chiamate a availableVariants()
+     * sarebbero cento query a ogni apertura del modale.
+     *
+     * @return array<int, int>
+     */
+    public function numbersWithAvailableVariants(string $fullCode): array
+    {
+        $rows = TrailRegistryCode::query()
+            ->where('region', substr($fullCode, 0, 1))
+            ->where('province', substr($fullCode, 1, 2))
+            ->where('area', substr($fullCode, 3, 1))
+            ->where('sector', substr($fullCode, 4, 1))
+            ->whereIn('status', $this->activeStatusValues())
+            ->get(['number', 'variant']);
+
+        $offered = count($this->variantSearchOrder());
+
+        $saturated = $rows
+            ->groupBy('number')
+            ->filter(fn ($group) => count(
+                array_intersect($this->variantSearchOrder(), $group->pluck('variant')->all())
+            ) === $offered)
+            ->keys()
+            ->map(fn ($number) => (int) $number)
+            ->all();
+
+        return array_values(array_diff(range(0, 99), $saturated));
+    }
+
+    /**
      * L'ordine di ricerca nello spazio della variante: prima la posizione
      * senza variante, poi le lettere.
      *
@@ -327,13 +390,26 @@ class TrailRegistryService
      * separati, nel mezzo il numero appena liberato potrebbe essere preso da
      * un'altra richiesta.
      */
-    public function replaceNumber(TrailRegistryCode $code, int $number, ?int $userId = null): TrailRegistryCode
-    {
-        $this->guardTransition($code, [TrailCodeStatus::Reserved], 'sostituire');
-
+    public function replaceNumber(
+        TrailRegistryCode $code,
+        int $number,
+        string $variant = '0',
+        ?int $userId = null,
+    ): TrailRegistryCode {
         $fullCode = $code->fullCode;
 
-        return DB::transaction(function () use ($code, $number, $userId, $fullCode) {
+        return DB::transaction(function () use ($code, $number, $variant, $userId, $fullCode) {
+            // Il guard va qui, non prima della transazione: fra il render del
+            // modale e il salvataggio un'altra approvazione puo' aver portato
+            // il codice ad Assigned, e sostituirlo significherebbe liberare un
+            // numero gia' comunicato al richiedente.
+            $code = TrailRegistryCode::query()
+                ->whereKey($code->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $this->guardTransition($code, [TrailCodeStatus::Reserved], 'sostituire');
+
             $application = $code->application;
 
             $this->release($code, 'number_replaced', $userId);
@@ -343,11 +419,6 @@ class TrailRegistryService
                 // dal gestore e' deliberato, se e' occupato la sostituzione
                 // deve fallire subito, non essere silenziosamente dirottata
                 // su un numero diverso.
-                // Variante sempre '0': la sostituzione a mano lavora
-                // sull'elenco di availableNumbers(), che e' per costruzione
-                // solo sui numeri senza variante (vedi il suo docblock) — non
-                // esiste un percorso per sostituire con un numero in
-                // variante lettera.
                 return $this->insertReservation([
                     'taxonomy_where_id' => $code->taxonomy_where_id,
                     'region' => $code->region,
@@ -355,11 +426,11 @@ class TrailRegistryService
                     'area' => $code->area,
                     'sector' => $code->sector,
                     'number' => $number,
-                    'variant' => '0',
+                    'variant' => $variant,
                 ], $application, 'number_replaced');
             } catch (QueryException $e) {
                 if ($this->isUniqueViolation($e)) {
-                    throw NumberOccupiedException::forNumber($fullCode, $number, '0');
+                    throw NumberOccupiedException::forNumber($fullCode, $number, $variant);
                 }
 
                 throw $e;

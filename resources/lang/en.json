@@ -451,5 +451,11 @@
     "app.prop.show_get_directions": "Show get directions",
     "app.prop.show_get_directions.help": "Shows the get directions button",
     "app.prop.show_media_name": "Show media name",
-    "app.prop.show_media_name.help": "Shows the media file name"
+    "app.prop.show_media_name.help": "Shows the media file name",
+    "Sostituisci numero": "Replace number",
+    "Numero": "Number",
+    "Variante": "Variant",
+    "nessuna variante": "no variant",
+    "Numero sostituito.": "Number replaced.",
+    "Questa istanza non ha un codice attivo da sostituire.": "This application has no active code to replace."
 }
