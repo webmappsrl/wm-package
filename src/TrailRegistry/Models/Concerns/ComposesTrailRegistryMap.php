@@ -3,6 +3,7 @@
 namespace Wm\WmPackage\TrailRegistry\Models\Concerns;
 
 use Illuminate\Support\Facades\DB;
+use Wm\WmPackage\TrailRegistry\Enums\TrailCodeStatus;
 
 /**
  * I mattoni comuni alle mappe del catasto: i settori attraversati da una
@@ -130,6 +131,72 @@ trait ComposesTrailRegistryMap
         return json_decode($row->geojson, true) ?: null;
     }
 
+    /**
+     * Gli altri codici attivi dello stesso settore, con la loro geometria: i
+     * «vicini» che la mappa disegna perche' chi sceglie un numero possa vedere
+     * quelli gia' presi li' intorno (oc:8568).
+     *
+     * **Una query sola**, con le geometrie gia' dentro: `geojsonFrom()` ne
+     * farebbe una per riga, e in un settore popolato sono decine di giri al
+     * database prima che la mappa compaia.
+     *
+     * Il settore si legge dalle colonne e non si ricalcola per intersezione:
+     * il `full_code` scritto nel codice **e'** il risultato di quel calcolo,
+     * fatto quando il codice e' nato.
+     *
+     * La geometria viene dal sentiero quando c'e', altrimenti dall'istanza:
+     * `ec_track_id` e' nullable, e un codice riservato da un'istanza non
+     * ancora approvata non ha sentiero. Senza il ripiego sparirebbe dalla
+     * mappa proprio il vicino piu' recente, cioe' il piu' rilevante per chi
+     * deve scegliere un numero.
+     *
+     * Gli stati sono quelli che **occupano** una posizione
+     * ({@see TrailCodeStatus::active()}): gli stessi che popolano la select
+     * del «sostituisci numero», e vanno tenuti allineati a quella.
+     *
+     * @return array<int, object>
+     */
+    protected function neighbourCodes(
+        string $region,
+        string $province,
+        string $area,
+        string $sector,
+        int $excludeId,
+    ): array {
+        $ecTracks = (string) config('wm-package.ec_track_table', 'ec_tracks');
+
+        $active = array_map(
+            fn (TrailCodeStatus $status) => $status->value,
+            TrailCodeStatus::active(),
+        );
+
+        $placeholders = implode(',', array_fill(0, count($active), '?'));
+
+        return DB::select(
+            <<<SQL
+            SELECT
+                c.id,
+                c.number,
+                c.variant,
+                c.ec_track_id,
+                c.trail_application_id,
+                ST_AsGeoJSON(COALESCE(t.geometry, a.geometry)) AS geojson
+            FROM trail_registry_codes c
+            LEFT JOIN {$ecTracks} t ON t.id = c.ec_track_id
+            LEFT JOIN trail_applications a ON a.id = c.trail_application_id
+            WHERE c.region = ?
+              AND c.province = ?
+              AND c.area = ?
+              AND c.sector = ?
+              AND c.status IN ({$placeholders})
+              AND c.id <> ?
+              AND COALESCE(t.geometry, a.geometry) IS NOT NULL
+            ORDER BY c.number, c.variant
+            SQL,
+            array_merge([$region, $province, $area, $sector], $active, [$excludeId]),
+        );
+    }
+
     protected function novaPath(): string
     {
         return '/'.trim(config('nova.path', '/nova'), '/');
@@ -148,6 +215,7 @@ trait ComposesTrailRegistryMap
             'ec_track' => 'ec-tracks',
             'taxonomy_where' => 'taxonomy-wheres',
             'trail_application' => 'trail-applications',
+            'trail_registry_code' => 'trail-registry-codes',
         ];
 
         return (string) config(

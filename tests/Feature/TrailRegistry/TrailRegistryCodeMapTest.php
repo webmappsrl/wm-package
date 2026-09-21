@@ -206,3 +206,84 @@ it('mostra il settore scelto anche se il tracciato non lo attraversa piu', funct
 
     expect($tooltips)->toContain('ZNUB5')->toContain('ZNUB9');
 });
+
+it('trova i vicini attivi del settore, con la geometria del sentiero o dell istanza', function () {
+    $sectorId = makeSector('ZNUB5', 'POLYGON((0 0, 0 10, 10 10, 10 0, 0 0))');
+
+    $inEsame = makeCode(['status' => TrailCodeStatus::Assigned, 'taxonomy_where_id' => $sectorId, 'number' => 62]);
+    $vicinoAssegnato = makeCode(['status' => TrailCodeStatus::Assigned, 'taxonomy_where_id' => $sectorId, 'number' => 63]);
+    $vicinoRiservato = makeCode(['status' => TrailCodeStatus::Reserved, 'taxonomy_where_id' => $sectorId, 'number' => 64]);
+    $rilasciato = makeCode(['status' => TrailCodeStatus::Released, 'taxonomy_where_id' => $sectorId, 'number' => 65]);
+
+    // L'helper crea le righe, non le geometrie.
+    foreach (TrailRegistryCode::query()->whereIn('id', [$inEsame, $vicinoAssegnato, $vicinoRiservato, $rilasciato])->get() as $c) {
+        if ($c->ec_track_id !== null) {
+            DB::statement('UPDATE ec_tracks SET geometry = ST_GeomFromText(?, 4326) WHERE id = ?', ['MULTILINESTRING Z((1 1 0, 2 2 0))', $c->ec_track_id]);
+        }
+        if ($c->trail_application_id !== null) {
+            DB::statement('UPDATE trail_applications SET geometry = ST_GeomFromText(?, 4326) WHERE id = ?', ['MULTILINESTRING Z((3 3 0, 4 4 0))', $c->trail_application_id]);
+        }
+    }
+
+    $vicini = TrailRegistryCode::findOrFail($inEsame)->neighboursForTest();
+
+    $numeri = array_map(fn ($r) => (int) $r->number, $vicini);
+    sort($numeri);
+
+    expect($numeri)->toBe([63, 64])
+        ->and(array_filter($vicini, fn ($r) => $r->geojson === null))->toBe([]);
+});
+
+it('disegna i vicini del settore con numero e variante, sotto la traccia in esame', function () {
+    $sectorId = makeSector('ZNUB5', 'POLYGON((0 0, 0 10, 10 10, 10 0, 0 0))');
+
+    $inEsame = makeCode(['status' => TrailCodeStatus::Assigned, 'taxonomy_where_id' => $sectorId, 'number' => 62]);
+    $vicino = makeCode(['status' => TrailCodeStatus::Assigned, 'taxonomy_where_id' => $sectorId, 'number' => 63, 'variant' => 'A']);
+
+    foreach (TrailRegistryCode::query()->whereIn('id', [$inEsame, $vicino])->get() as $c) {
+        DB::statement('UPDATE ec_tracks SET geometry = ST_GeomFromText(?, 4326) WHERE id = ?', ['MULTILINESTRING Z((1 1 0, 2 2 0))', $c->ec_track_id]);
+    }
+
+    $collection = TrailRegistryCode::findOrFail($inEsame)->getFeatureCollectionMap();
+
+    $vicini = array_values(array_filter(
+        $collection['features'],
+        fn (array $f) => ($f['properties']['neighbour'] ?? false) === true,
+    ));
+
+    expect($vicini)->toHaveCount(1)
+        ->and($vicini[0]['properties']['label'])->toBe('63A')
+        ->and($vicini[0]['properties']['tooltip'])->toContain('63A');
+
+    // I vicini stanno sotto: il sentiero in esame e' disegnato dopo.
+    $indiceVicino = array_search($vicini[0], $collection['features'], true);
+    $indiceSentiero = null;
+
+    foreach ($collection['features'] as $i => $f) {
+        if (str_contains($f['properties']['tooltip'] ?? '', 'Sentiero ZNUB562')) {
+            $indiceSentiero = $i;
+        }
+    }
+
+    expect($indiceSentiero)->not->toBeNull()
+        ->and($indiceVicino)->toBeLessThan($indiceSentiero);
+});
+
+it('non disegna il codice in esame fra i suoi vicini', function () {
+    $sectorId = makeSector('ZNUB5', 'POLYGON((0 0, 0 10, 10 10, 10 0, 0 0))');
+
+    $code = TrailRegistryCode::findOrFail(makeCode([
+        'status' => TrailCodeStatus::Assigned,
+        'taxonomy_where_id' => $sectorId,
+        'number' => 62,
+    ]));
+
+    DB::statement('UPDATE ec_tracks SET geometry = ST_GeomFromText(?, 4326) WHERE id = ?', ['MULTILINESTRING Z((1 1 0, 2 2 0))', $code->ec_track_id]);
+
+    $vicini = array_filter(
+        $code->fresh()->getFeatureCollectionMap()['features'],
+        fn (array $f) => ($f['properties']['neighbour'] ?? false) === true,
+    );
+
+    expect($vicini)->toBe([]);
+});

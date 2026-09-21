@@ -9,7 +9,7 @@ use Wm\WmPackage\TrailRegistry\Models\TrailRegistryCode as TrailRegistryCodeMode
  *
  * E' HTML statico e non un componente della mappa: osm2cai la disegna dentro
  * il proprio campo `SignageMap`, che per questo ha un bundle JavaScript suo.
- * Qui le voci sono tre, fisse e di colore fisso, quindi un bundle da
+ * Qui le voci sono poche, fisse e di colore fisso, quindi un bundle da
  * mantenere allineato darebbe la stessa informazione a un costo molto piu'
  * alto — e il package ha gia' avuto problemi con le compilazioni dei campi
  * Nova (conflitti PostCSS, versioni di webpack da bloccare).
@@ -30,6 +30,7 @@ class MapLegendRenderer
     protected const ENTRIES = [
         'sector' => ['rgba(37, 99, 235, 1)', 'rgba(37, 99, 235, 0.20)', 'Settore da cui viene il prefisso'],
         'other_sectors' => ['rgba(100, 116, 139, 1)', 'rgba(100, 116, 139, 0.15)', 'Altri settori attraversati, con la percentuale di percorso'],
+        'neighbours' => ['rgba(100, 116, 139, 0.9)', '', 'Altri sentieri del settore, con numero e variante'],
         'track' => ['rgba(22, 163, 74, 1)', '', 'Sentiero a cui il codice e\' assegnato'],
         'application' => ['rgba(234, 88, 12, 1)', '', 'Traccia dell\'istanza da cui il codice e\' nato'],
     ];
@@ -38,15 +39,23 @@ class MapLegendRenderer
     {
         $rows = [];
 
-        // Quanti settori la mappa disegna davvero: serve a sapere se la voce
-        // «altri settori» ha senso. La collection si compone una volta sola.
+        // La collection si compone una volta sola: da qui si contano sia i
+        // settori — per sapere se la voce «altri settori» ha senso — sia i
+        // vicini, che nelle colonne non si vedono affatto.
+        $features = $code->getFeatureCollectionMap()['features'];
+
         $sectorCount = count(array_filter(
-            $code->getFeatureCollectionMap()['features'],
+            $features,
             fn (array $f) => isset($f['properties']['taxonomy_where_id']),
         ));
 
+        $neighbourCount = count(array_filter(
+            $features,
+            fn (array $f) => ($f['properties']['neighbour'] ?? false) === true,
+        ));
+
         foreach (self::ENTRIES as $key => [$stroke, $fill, $label]) {
-            if (! self::isPresent($code, $key, $sectorCount)) {
+            if (! self::isPresent($code, $key, $sectorCount, $neighbourCount)) {
                 continue;
             }
 
@@ -79,15 +88,21 @@ class MapLegendRenderer
      * Le voci si mostrano solo se sulla mappa ci sono davvero: una legenda che
      * nomina un elemento assente fa cercare all'operatore qualcosa che non c'e'.
      *
-     * Per gli altri settori la risposta non e' deducibile dalle colonne — un
-     * tracciato puo' attraversarne uno solo — quindi si conta quanti settori la
-     * mappa ha davvero composto.
+     * Per gli altri settori e per i vicini la risposta non e' deducibile dalle
+     * colonne — un tracciato puo' attraversare un solo settore, e un settore
+     * puo' non avere altri sentieri — quindi si contano le feature che la mappa
+     * ha davvero composto.
      */
-    protected static function isPresent(TrailRegistryCodeModel $code, string $key, int $sectorCount): bool
-    {
+    protected static function isPresent(
+        TrailRegistryCodeModel $code,
+        string $key,
+        int $sectorCount,
+        int $neighbourCount,
+    ): bool {
         return match ($key) {
             'sector' => $code->taxonomy_where_id !== null,
             'other_sectors' => $sectorCount > 1,
+            'neighbours' => $neighbourCount > 0,
             'track' => $code->ec_track_id !== null,
             'application' => $code->trail_application_id !== null,
             default => false,

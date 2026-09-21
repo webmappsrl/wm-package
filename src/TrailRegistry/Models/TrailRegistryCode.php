@@ -32,6 +32,7 @@ use Wm\WmPackage\TrailRegistry\Enums\TrailCodeStatus;
  * @property int|null $trail_application_id
  * @property int|null $ec_track_id
  * @property-read string $fullCode
+ * @property-read string $label
  * @property-read string $code
  * @property-read string|null $denomination
  * @property-read TrailApplication|null $application
@@ -74,17 +75,29 @@ class TrailRegistryCode extends Model
     }
 
     /**
-     * Il codice in uscita. La variante `0` significa «senza variante» e non
-     * compare mai: e' implicita.
+     * Numero e variante, come si scrivono su una mappa: il numero a due cifre
+     * e la variante quando c'e' — `62`, `62A`, `05`.
+     *
+     * E' l'unico posto che sa che la variante `0` significa «senza variante»:
+     * l'etichetta dei sentieri vicini sulla mappa (oc:8568) ne ha bisogno, e
+     * riscrivere quella regola altrove vorrebbe dire cambiarne una sola il
+     * giorno in cui cambiera'.
      */
-    protected function code(): Attribute
+    protected function label(): Attribute
     {
         return Attribute::get(fn () => sprintf(
-            '%s%02d%s',
-            $this->fullCode,
+            '%02d%s',
             $this->number,
             $this->variant === '0' ? '' : $this->variant,
         ));
+    }
+
+    /**
+     * Il codice in uscita: il settore piu' l'etichetta.
+     */
+    protected function code(): Attribute
+    {
+        return Attribute::get(fn () => $this->fullCode.$this->label);
     }
 
     /**
@@ -148,6 +161,7 @@ class TrailRegistryCode extends Model
 
         $features = array_values(array_filter(array_merge(
             $this->sectorFeatures($novaPath),
+            $this->neighbourFeatures($novaPath),
             [
                 $this->trackFeature($novaPath),
                 $this->applicationFeature($novaPath),
@@ -267,6 +281,68 @@ class TrailRegistryCode extends Model
     }
 
     /**
+     * Gli altri sentieri del settore: tratto sottile e tenue, perche' sono
+     * contesto e non devono competere con la traccia in esame.
+     *
+     * L'etichetta e' numero e variante, non il codice intero: regione,
+     * provincia e area sono costanti nel contesto, e il settore e' gia'
+     * leggibile sulla mappa, dove i suoi confini sono disegnati. Ripeterlo in
+     * ogni etichetta sarebbe informazione doppia.
+     *
+     * `neighbour` nelle properties e' il contratto con il componente Vue del
+     * campo: da li' riconosce quali feature portare sul layer delle etichette
+     * e quali escludere dall'inquadratura iniziale.
+     *
+     * Le righe arrivano da `DB::select` e non sono modelli, quindi l'etichetta
+     * si compone qui con la stessa formula dell'accessor `label`. E' l'unica
+     * ripetizione di quella regola, e sta a due metodi di distanza: istanziare
+     * un modello per riga costerebbe piu' di quanto valga toglierla.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    protected function neighbourFeatures(string $novaPath): array
+    {
+        $rows = $this->neighbourCodes(
+            $this->region,
+            $this->province,
+            $this->area,
+            $this->sector,
+            (int) $this->id,
+        );
+
+        $features = [];
+
+        foreach ($rows as $row) {
+            $geometry = json_decode((string) $row->geojson, true);
+
+            if (! $geometry) {
+                continue;
+            }
+
+            $label = sprintf(
+                '%02d%s',
+                (int) $row->number,
+                $row->variant === '0' ? '' : $row->variant,
+            );
+
+            $features[] = [
+                'type' => 'Feature',
+                'geometry' => $geometry,
+                'properties' => [
+                    'neighbour' => true,
+                    'label' => $label,
+                    'tooltip' => __('Sentiero').' '.$this->fullCode.$label,
+                    'strokeColor' => 'rgba(100, 116, 139, 0.9)',
+                    'strokeWidth' => 2,
+                    'link' => url($novaPath.'/resources/'.static::novaUriKey('trail_registry_code').'/'.$row->id),
+                ],
+            ];
+        }
+
+        return $features;
+    }
+
+    /**
      * Il sentiero accatastato: verde e spesso, e' il detentore del codice.
      *
      * @return array<string, mixed>|null
@@ -324,5 +400,23 @@ class TrailRegistryCode extends Model
                 'link' => url($novaPath.'/resources/'.static::novaUriKey('trail_application').'/'.$this->trail_application_id),
             ],
         ];
+    }
+
+    /**
+     * I vicini di questo codice. Esiste per i test: `neighbourCodes()` e'
+     * protected e vive nel trait, e una closure legata renderebbe il test
+     * meno leggibile di quanto questo metodo costi.
+     *
+     * @return array<int, object>
+     */
+    public function neighboursForTest(): array
+    {
+        return $this->neighbourCodes(
+            $this->region,
+            $this->province,
+            $this->area,
+            $this->sector,
+            (int) $this->id,
+        );
     }
 }
