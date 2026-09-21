@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Support\Facades\DB;
 use Wm\WmPackage\TrailRegistry\Enums\TrailCodeStatus;
 use Wm\WmPackage\TrailRegistry\TrailRegistryService;
 
@@ -45,10 +46,10 @@ it('non guarda gli altri settori', function () {
 it('non fa una query per numero', function () {
     makeCode(['number' => 13, 'variant' => '0', 'status' => TrailCodeStatus::Assigned]);
 
-    \Illuminate\Support\Facades\DB::enableQueryLog();
+    DB::enableQueryLog();
     app(TrailRegistryService::class)->numbersWithAvailableVariants('ZNUB5');
-    $queries = \Illuminate\Support\Facades\DB::getQueryLog();
-    \Illuminate\Support\Facades\DB::disableQueryLog();
+    $queries = DB::getQueryLog();
+    DB::disableQueryLog();
 
     expect(count($queries))->toBeLessThanOrEqual(2);
 });
