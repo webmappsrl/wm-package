@@ -82,7 +82,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
         $this->app->register(\Wm\WmPackage\Nova\Fields\TrackColor\FieldServiceProvider::class);
         $this->app->register(\Wm\WmPackage\Nova\Fields\TranslationsBuilder\FieldServiceProvider::class);
         $this->app->register(\Wm\WmPackage\Nova\Fields\PoiTrackReferenceField\FieldServiceProvider::class);
-        $this->app->register(\Wm\WmPackage\TrailRegistry\Nova\Fields\TrailRegistryMapField\FieldServiceProvider::class);
+        $this->app->register(TrailRegistry\Nova\Fields\TrailRegistryMapField\FieldServiceProvider::class);
         $this->app->register(CardServiceProvider::class);
         $this->app->register(LayerAnalyticsCardServiceProvider::class);
     }
