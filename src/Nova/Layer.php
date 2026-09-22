@@ -6,9 +6,6 @@ use App\Nova\User;
 use Ebess\AdvancedNovaMediaLibrary\Fields\Images;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Kongulov\NovaTabTranslatable\NovaTabTranslatable;
 use Laravel\Nova\Fields\BelongsTo;
@@ -39,6 +36,18 @@ class Layer extends AbstractGeometryResource
     }
 
     public static $with = ['ecTracks', 'ecPois', 'appOwner', 'associatedApps'];
+
+    /**
+     * URL statico del bootstrap del web component wm-layer-map, pubblicato da
+     * webmappsrl/wm-elements (branch `dist`). Unica fonte di verità per il
+     * default: `config/wm-package.php` NON duplica questa stringa — se un
+     * consumer non sovrascrive `web_components.layer_map.fallback.script_url`,
+     * questa costante viene usata automaticamente da
+     * `resolveLayerMapComponentConfig()`. Deliberatamente privata: un config
+     * non deve dipendere da una Nova Resource solo per leggere un URL (oc:8590,
+     * review).
+     */
+    private const DEFAULT_LAYER_MAP_SCRIPT_URL = 'https://cdn.jsdelivr.net/gh/webmappsrl/wm-elements@dist/wm-layer-map/wm-layer-map.js';
 
     /**
      * Build an "index" query for the given resource.
@@ -348,78 +357,12 @@ HTML;
      */
     private function resolveLayerMapComponentConfig(): array
     {
-        $config = config('wm-package.web_components.layer_map', []);
-        $fallback = $this->getFallbackLayerMapComponentConfig($config);
-        $exampleUrl = (string) ($config['example_url'] ?? '');
-        $timeout = (int) ($config['timeout'] ?? 10);
-        $cacheTtl = (int) ($config['cache_ttl'] ?? 1800);
-
-        if ($exampleUrl === '') {
-            return $fallback;
-        }
-
-        $cacheKey = 'wm_layer_map_component_config_'.md5($exampleUrl);
-
-        return Cache::remember($cacheKey, $cacheTtl, function () use ($exampleUrl, $timeout, $fallback) {
-            $exampleConfig = $this->fetchLayerMapExampleConfig($exampleUrl, $timeout, $fallback);
-            if ($exampleConfig !== null) {
-                return $exampleConfig;
-            }
-
-            return $fallback;
-        });
-    }
-
-    /**
-     * @param  array<string, mixed>  $config
-     * @return array{tag_name: string, script_url: string, default_style: string}
-     */
-    private function getFallbackLayerMapComponentConfig(array $config): array
-    {
-        $fallback = $config['fallback'] ?? [];
+        $fallback = config('wm-package.web_components.layer_map.fallback', []);
 
         return [
             'tag_name' => (string) ($fallback['tag_name'] ?? 'wm-layer-map'),
-            'script_url' => (string) ($fallback['script_url'] ?? 'https://cdn.jsdelivr.net/gh/webmappsrl/wm-layer-map@refs/heads/main/src/wm-layer-map.js'),
+            'script_url' => (string) ($fallback['script_url'] ?? self::DEFAULT_LAYER_MAP_SCRIPT_URL),
             'default_style' => (string) ($fallback['default_style'] ?? 'display:block;width:100%;height:600px'),
         ];
-    }
-
-    /**
-     * @param  array{tag_name: string, script_url: string, default_style: string}  $fallback
-     * @return array{tag_name: string, script_url: string, default_style: string}|null
-     */
-    private function fetchLayerMapExampleConfig(string $exampleUrl, int $timeout, array $fallback): ?array
-    {
-        if ($exampleUrl === '') {
-            return null;
-        }
-
-        try {
-            $response = Http::timeout($timeout)->get($exampleUrl);
-            if (! $response->successful()) {
-                return null;
-            }
-
-            $html = $response->body();
-            if (! preg_match('/<script\b[^>]*\bsrc=["\']([^"\']+)["\'][^>]*>\s*<\/script>/i', $html, $matches)) {
-                return null;
-            }
-
-            $scriptUrl = trim((string) ($matches[1] ?? ''));
-            if ($scriptUrl === '') {
-                return null;
-            }
-
-            return [
-                'tag_name' => $fallback['tag_name'],
-                'script_url' => $scriptUrl,
-                'default_style' => $fallback['default_style'],
-            ];
-        } catch (\Throwable $exception) {
-            Log::warning('Layer resource: unable to fetch wm-layer-map example: '.$exception->getMessage());
-
-            return null;
-        }
     }
 }
