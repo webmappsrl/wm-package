@@ -124,11 +124,12 @@ class LayerFeatureCollectionMapUserPresenceTest extends TestCase
     }
 
     /**
-     * user_id è una property nuova sull'evento userMoved (oc:8159 follow-up): quando presente e
-     * risolvibile a uno User esistente, il marker mostra il nominativo (name + surname) invece
-     * del testo anonimo di default ed è cliccabile verso la pagina Nova dello user.
+     * oc:8586 (privacy, misura cautelativa in attesa di parere legale): anche quando user_id è
+     * risolvibile a uno User esistente, il marker resta anonimo e senza link — nessuna
+     * distinzione di ruolo, il nominativo reale e il link alla pagina Nova dell'utente non
+     * vengono più mostrati a nessuno.
      */
-    public function test_position_shows_user_nominativo_and_link_when_user_id_is_present(): void
+    public function test_position_shows_anonymous_label_and_no_link_even_when_user_id_is_resolvable(): void
     {
         $user = User::factory()->create(['name' => 'Maria', 'surname' => 'Rossi']);
 
@@ -148,13 +149,14 @@ class LayerFeatureCollectionMapUserPresenceTest extends TestCase
         ));
 
         $this->assertCount(1, $userPositionFeatures);
-        $this->assertSame('Maria Rossi', $userPositionFeatures[0]['properties']['tooltip']);
-        $this->assertStringContainsString('nova/resources/users/'.$user->id, $userPositionFeatures[0]['properties']['link']);
+        $this->assertSame('Posizione utente (ultimi 30 minuti)', $userPositionFeatures[0]['properties']['tooltip']);
+        $this->assertArrayNotHasKey('link', $userPositionFeatures[0]['properties']);
     }
 
     /**
      * user_id presente sull'evento ma senza uno User corrispondente nel DB locale (es. utente
-     * cancellato) — deve ricadere sul marker anonimo di default, non produrre un link rotto.
+     * cancellato) — oc:8586: dopo la fix questo scenario non produce comportamento diverso dagli
+     * altri due (user risolvibile, user con nome vuoto), perché nessun lookup viene più fatto.
      */
     public function test_position_falls_back_to_default_label_when_user_id_has_no_matching_user(): void
     {
@@ -179,12 +181,12 @@ class LayerFeatureCollectionMapUserPresenceTest extends TestCase
     }
 
     /**
-     * user_id risolve a uno User reale ma con name/surname vuoti (es. riga creata senza
-     * cognome) — il tooltip ricade sul testo anonimo (nessun nominativo da mostrare), ma il
-     * link resta presente: lo user esiste ed è comunque identificabile su Nova, il link non
-     * deve dipendere dalla stringa del nominativo.
+     * oc:8586: user_id risolve a uno User reale ma con name/surname vuoti — prima di questa fix
+     * il link restava comunque presente perché gated solo su $user risolto, non sul nominativo.
+     * Ora il marker è anonimo e senza link in ogni caso, questo scenario non fa più differenza
+     * rispetto a uno user con nome compilato.
      */
-    public function test_position_keeps_link_when_user_is_found_but_nominativo_is_blank(): void
+    public function test_position_shows_anonymous_label_and_no_link_when_user_has_blank_name(): void
     {
         $user = User::factory()->create(['name' => '', 'surname' => null]);
 
@@ -205,6 +207,6 @@ class LayerFeatureCollectionMapUserPresenceTest extends TestCase
 
         $this->assertCount(1, $userPositionFeatures);
         $this->assertSame('Posizione utente (ultimi 30 minuti)', $userPositionFeatures[0]['properties']['tooltip']);
-        $this->assertStringContainsString('nova/resources/users/'.$user->id, $userPositionFeatures[0]['properties']['link']);
+        $this->assertArrayNotHasKey('link', $userPositionFeatures[0]['properties']);
     }
 }

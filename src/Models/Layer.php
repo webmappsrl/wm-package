@@ -496,30 +496,31 @@ class Layer extends Polygon
 
         $recentPositions = app(AnalyticsService::class)->getRecentUserPositions($this);
 
-        // user_id è una property nuova sull'evento userMoved (oc:8159 follow-up): non garantita su
-        // ogni punto (utente non autenticato, o evento registrato prima che l'app la iniziasse a
-        // inviare) — batch lookup, non una query per posizione, e nominativo/link sono un
-        // arricchimento facoltativo: senza user_id risolvibile il marker resta quello anonimo di
-        // sempre, nessun comportamento esistente cambia.
-        // \Wm\WmPackage\Models\User, non la classe App\Models\User importata sopra (usata solo da
-        // layerOwner()): stessa tabella, nessuna differenza di dati per id/name/surname, ma la
-        // classe del package è autoloadabile anche nella suite standalone di wm-package.
-        // try/catch dedicato: getRecentUserPositions() protegge già i propri errori DB/PostHog
-        // (vedi il \Throwable lì), ma questo lookup gira fuori da quella protezione — senza questo
-        // catch, un blip transitorio di Postgres qui romperebbe l'intero getFeatureCollectionMap()
-        // (tracce, EcPoi, taxonomy_wheres compresi) per un arricchimento puramente cosmetico.
-        try {
-            $userIds = array_values(array_unique(array_filter(array_column($recentPositions, 'user_id'))));
-            $usersById = $userIds === []
-                ? collect()
-                : \Wm\WmPackage\Models\User::whereIn('id', $userIds)->get(['id', 'name', 'surname'])->keyBy('id');
-        } catch (\Throwable $e) {
-            Log::error('getFeatureCollectionMap(): user_id lookup failed', ['layer_id' => $this->id, 'error' => $e->getMessage()]);
+        // oc:8586: nominativo e link sono disabilitati per privacy — misura cautelativa richiesta
+        // dal cliente in attesa di un parere legale sulla visualizzazione della posizione degli
+        // utenti. Hardcoded a false (non una config): nessuno deve poterlo riattivare da .env per
+        // errore, va cambiato solo qui nel codice quando la situazione si sarà chiarita.
+        // TODO(oc:8586): quando arriverà il parere legale, valutare se riattivare per tutti (basta
+        // mettere true) o solo per un ruolo specifico (richiede un parametro di contesto/ruolo che
+        // oggi getFeatureCollectionMap() non ha — vedi notes.md del ticket).
+        $showLiveUserIdentity = false;
+
+        if ($showLiveUserIdentity) {
+            try {
+                $userIds = array_values(array_unique(array_filter(array_column($recentPositions, 'user_id'))));
+                $usersById = $userIds === []
+                    ? collect()
+                    : \Wm\WmPackage\Models\User::whereIn('id', $userIds)->get(['id', 'name', 'surname'])->keyBy('id');
+            } catch (\Throwable $e) {
+                Log::error('getFeatureCollectionMap(): user_id lookup failed', ['layer_id' => $this->id, 'error' => $e->getMessage()]);
+                $usersById = collect();
+            }
+        } else {
             $usersById = collect();
         }
 
         foreach ($recentPositions as $position) {
-            $user = isset($position['user_id']) ? $usersById->get($position['user_id']) : null;
+            $user = $showLiveUserIdentity && isset($position['user_id']) ? $usersById->get($position['user_id']) : null;
             $nominativo = $user ? trim("{$user->name} {$user->surname}") : '';
 
             $properties = [
@@ -537,11 +538,12 @@ class Layer extends Polygon
                 'checkpointRouteColors' => ['rgba(255, 255, 255, 1)', 'rgba(34, 197, 94, 0.9)'],
             ];
 
-            // Gated su $user (utente risolto), non su $nominativo: uno user con name/surname
-            // vuoti resta comunque un utente reale e cliccabile, solo senza un nome da mostrare
-            // nel tooltip — il link non deve dipendere dal fatto che la stringa risultante sia
-            // non vuota.
-            if ($user) {
+            // Gated su $showLiveUserIdentity oltre che su $user: con il flag a false $user è
+            // sempre null (vedi sopra), quindi questo ramo non genera mai un link — la doppia
+            // condizione è ridondante finché il flag resta false, ma se un domani lo si rimette a
+            // true senza toccare altro, il link torna a dipendere solo da $user risolto, come da
+            // comportamento originale pre-oc:8586.
+            if ($showLiveUserIdentity && $user) {
                 $properties['link'] = url('nova/resources/users/'.$user->id);
             }
 
