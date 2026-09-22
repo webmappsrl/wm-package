@@ -64,6 +64,42 @@ diretto: verificato via Activity Explorer (oc:8182).
 `RDO_ass_cammini_italia_2026_2`. I due metodi già presenti su `develop`/`main`
 (`getLayerUsage`, `getLayerTrackDownloads`) hanno lo stesso leak di shard e non sono corretti lì.
 
+**Aggregazione fatta in PHP, non in HogQL — unico caso nella classe (oc:8585).**
+`getRouteFilterUsage()` conta gli usi dei 7 filtri del pannello "avanzato" (route) della search
+bar camminiditalia (`filterUsed` con `filter_type: 'route'`). A differenza di ogni altro metodo
+di questa classe, la query non fa `GROUP BY`: recupera righe grezze (`filter_id`, `$session_id`,
+`$lib`, `timestamp`) e la deduplica — eventi consecutivi della stessa `(session_id, filter_id)`
+con gap ≤ 5s contano come un solo utilizzo — è un loop PHP stateful, non una window function
+HogQL. Motivo: `leadInFrame()`, la window function più vicina a questo bisogno, non è affidabile
+in questo ambiente (vedi sopra, ricerche senza risultati) — non ci si è fidati di `lag()`/
+`lagInFrame()` senza una verifica specifica.
+
+Le 7 righe (Lunghezza/`distance`, Tappe/`stageCount`, Tipologia/`shape`, Portata/
+`walkingNetwork`, Regioni/`regions`, Temi/`themes`, Stagioni/`seasons`) sono sempre presenti nel
+risultato, anche a zero: a differenza delle classifiche aperte di questa classe (dove un elemento
+senza eventi semplicemente non compare), qui l'insieme è chiuso e noto — un filtro mai usato è il
+dato più interessante per l'obiettivo del ticket (capire quali filtri rimuovere dall'interfaccia),
+non un dato da nascondere.
+
+`session_id` non è garantito da PostHog (come `layer_id`/`user_id` altrove in questa classe): un
+evento senza sessione non entra nella chiave di dedup e conta sempre come nuovo utilizzo — usare
+una stringa vuota come chiave avrebbe collassato silenziosamente utenti diversi privi di sessione
+fra loro (bug trovato in review, non nella prima implementazione). Il parsing del timestamp è in
+try/catch: una riga con formato non riconosciuto viene scartata con `Log::warning`, non propaga
+un'eccezione che abbatterebbe l'intera `global()` — lo stesso principio difensivo di
+`getUserMovedStats()`/`getRecentUserPositions()`, applicato qui per lo stesso motivo (una query su
+dati grezzi non aggregati è quella più esposta ad anomalie del formato).
+
+**Opt-in per consumer.** L'evento `filterUsed`/`route` esiste solo per il pannello filtri
+camminiditalia (`wm-core`, `fileReplacements` di quello shard) — nessun altro consumer di
+`wm-package` lo emette. `AnalyticsController::global()` chiama `getRouteFilterUsage()` solo se
+`config('wm-package.route_filter_analytics_enabled')` è `true` (default `false` nel pacchetto);
+altrimenti `ranking_route_filters` resta `null` e nessuna query PostHog viene eseguita. Il
+consumer camminiditalia abilita il flag con un override versionato in
+`camminiditalia/config/wm-package.php` (`mergeConfigFrom()`, stesso pattern di
+`internal_attribute_keys`, oc:8463) — mai un `.env`, per lo stesso motivo già documentato lì: un
+`.env` di produzione non è tracciato da nessun test.
+
 ## Come ci siamo arrivati
 
 - Una classifica "ricerche senza risultati" (`getTopSearchQueriesWithoutResults`) esisteva per

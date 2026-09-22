@@ -108,7 +108,7 @@
       </div>
 
       <!-- Classifiche globali (solo modalità globale) -->
-      <div v-if="card.mode === 'global' && (data.ranking_layers?.length || data.ranking_user_presence?.length || data.ranking_tracks?.length || data.ranking_track_shares?.length || data.ranking_search_queries?.length)" style="margin-top:24px;">
+      <div v-if="card.mode === 'global' && (data.ranking_layers?.length || data.ranking_user_presence?.length || data.ranking_tracks?.length || data.ranking_track_shares?.length || data.ranking_search_queries?.length || data.ranking_route_filters?.length)" style="margin-top:24px;">
         <div v-if="data.ranking_layers?.length" style="margin-bottom:24px;">
           <p style="font-size:0.75rem; color:#6b7280; text-transform:uppercase; margin-bottom:8px;">Cammini più aperti</p>
           <div style="display:flex; align-items:center; justify-content:center; gap:16px; margin-bottom:16px;">
@@ -219,7 +219,7 @@
         </div>
 
         <div
-          v-if="!showRestOfAnalytics && (data.ranking_tracks?.length || data.ranking_track_shares?.length || data.ranking_search_queries?.length)"
+          v-if="!showRestOfAnalytics && (data.ranking_tracks?.length || data.ranking_track_shares?.length || data.ranking_search_queries?.length || data.ranking_route_filters?.length)"
           style="position:relative; text-align:center; margin:8px 0 24px;"
         >
           <div style="position:absolute; top:50%; left:0; right:0; height:1px; background:rgba(128,128,128,0.2); z-index:0;"></div>
@@ -311,6 +311,56 @@
             >{{ showAllSearchQueries ? 'Mostra meno' : `Mostra tutti (${data.ranking_search_queries.length})` }}</button>
           </div>
 
+          <div v-if="data.ranking_route_filters?.length" style="margin-top:24px;">
+            <p style="font-size:0.75rem; color:#6b7280; text-transform:uppercase; margin-bottom:8px;">Uso dei filtri sui cammini</p>
+            <div style="display:flex; align-items:center; justify-content:center; gap:16px; margin-bottom:16px;">
+              <div v-for="p in platforms" :key="p.lib" style="display:flex; align-items:center; gap:6px;">
+                <span :style="{ display:'inline-block', width:'40px', height:'12px', borderRadius:'2px', background: p.color }"></span>
+                <span style="font-size:12px; color:#374151;">{{ p.label }}</span>
+              </div>
+            </div>
+            <div>
+              <div
+                v-for="row in data.ranking_route_filters"
+                :key="row.filter_id"
+                style="display:flex; align-items:center; gap:12px; margin-bottom:8px;"
+              >
+                <span
+                  style="width:220px; flex-shrink:0; font-size:0.8125rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#374151;"
+                >{{ row.name }}</span>
+                <div style="flex:1; display:flex; align-items:center; gap:8px; min-width:0;">
+                  <div
+                    tabindex="0"
+                    style="position:relative; flex:1; background:#f3f4f6; border-radius:0 4px 4px 0; height:20px; overflow:visible; display:flex; outline:none;"
+                    @mouseenter="hoveredRouteFilterId = row.filter_id"
+                    @mouseleave="hoveredRouteFilterId = null"
+                    @focus="hoveredRouteFilterId = row.filter_id"
+                    @blur="hoveredRouteFilterId = null"
+                  >
+                    <div style="position:absolute; inset:0; border-radius:0 4px 4px 0; overflow:hidden; display:flex;">
+                      <div
+                        v-for="seg in routeFilterBarSegments(row)"
+                        :key="seg.lib"
+                        :style="{ width: seg.widthPercent + '%', height: '20px', background: seg.color, borderRadius: seg.isLast ? '0 4px 4px 0' : '0', filter: hoveredRouteFilterId === row.filter_id ? 'brightness(1.1)' : 'none' }"
+                      ></div>
+                    </div>
+                    <div
+                      v-if="hoveredRouteFilterId === row.filter_id"
+                      style="position:absolute; bottom:calc(100% + 6px); left:0; z-index:20; background:rgba(0,0,0,0.8); color:#fff; padding:6px; border-radius:6px; font-size:12px; white-space:nowrap;"
+                    >
+                      <div style="font-weight:bold; margin-bottom:6px;">{{ row.name }}</div>
+                      <div v-for="seg in routeFilterBarTooltipRows(row)" :key="seg.lib" style="display:flex; align-items:center; gap:8px; line-height:1.4;">
+                        <span :style="{ display:'inline-block', width:'10px', height:'10px', borderRadius:'2px', background: seg.color, flexShrink:0 }"></span>
+                        <span>{{ seg.label }}: {{ seg.total }}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <span style="width:44px; flex-shrink:0; font-size:0.8125rem; font-weight:600; color:#6b7280; text-align:right;">{{ row.total }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div style="position:relative; text-align:center; margin:24px 0 8px;">
             <div style="position:absolute; top:50%; left:0; right:0; height:1px; background:rgba(128,128,128,0.2); z-index:0;"></div>
             <button
@@ -370,6 +420,7 @@ export default {
       hoveredLayerId: null,
       hoveredLayerLinkId: null,
       hoveredUserPresenceLinkId: null,
+      hoveredRouteFilterId: null,
       showAllSearchQueries: false,
       showRestOfAnalytics: false,
     }
@@ -560,6 +611,29 @@ export default {
     },
 
     layerBarTooltipRows(row) {
+      const breakdown = row.breakdown || []
+      return PLATFORMS
+        .map(({ lib, label, color }) => {
+          const entry = breakdown.find((b) => b.lib === lib)
+          return entry ? { lib, label, color, total: entry.total } : null
+        })
+        .filter(Boolean)
+    },
+
+    routeFilterBarSegments(row) {
+      const max = Math.max(...(this.data.ranking_route_filters || []).map((r) => r.total), 1)
+      const breakdown = row.breakdown || []
+
+      const segments = PLATFORMS.map(({ lib, color }) => {
+        const entry = breakdown.find((b) => b.lib === lib)
+        const value = entry ? entry.total : 0
+        return { lib, color, widthPercent: (value / max) * 100 }
+      }).filter((seg) => seg.widthPercent > 0)
+
+      return segments.map((seg, i) => ({ ...seg, isLast: i === segments.length - 1 }))
+    },
+
+    routeFilterBarTooltipRows(row) {
       const breakdown = row.breakdown || []
       return PLATFORMS
         .map(({ lib, label, color }) => {
