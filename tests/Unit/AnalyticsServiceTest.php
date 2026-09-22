@@ -337,6 +337,249 @@ class AnalyticsServiceTest extends TestCase
     }
 
     // -------------------------------------------------------------------------
+    // Uso dei filtri route (getRouteFilterUsage)
+    // -------------------------------------------------------------------------
+
+    public function test_get_route_filter_usage_always_returns_seven_rows(): void
+    {
+        Http::fake(['*' => Http::response(['results' => []])]);
+
+        $result = (new AnalyticsService)->getRouteFilterUsage('last_30_days');
+
+        $this->assertCount(7, $result);
+        $filterIds = array_column($result, 'filter_id');
+        $this->assertEqualsCanonicalizing(
+            ['distance', 'stageCount', 'shape', 'walkingNetwork', 'regions', 'themes', 'seasons'],
+            $filterIds
+        );
+        foreach ($result as $row) {
+            $this->assertSame(0, $row['total']);
+            $this->assertSame([], $row['breakdown']);
+        }
+    }
+
+    public function test_get_route_filter_usage_labels_match_italian_names(): void
+    {
+        Http::fake(['*' => Http::response(['results' => []])]);
+
+        $result = (new AnalyticsService)->getRouteFilterUsage('last_30_days');
+
+        $byId = array_column($result, 'name', 'filter_id');
+        $this->assertSame('Lunghezza', $byId['distance']);
+        $this->assertSame('Tappe', $byId['stageCount']);
+        $this->assertSame('Tipologia', $byId['shape']);
+        $this->assertSame('Portata', $byId['walkingNetwork']);
+        $this->assertSame('Regioni', $byId['regions']);
+        $this->assertSame('Temi', $byId['themes']);
+        $this->assertSame('Stagioni', $byId['seasons']);
+    }
+
+    public function test_get_route_filter_usage_counts_single_event(): void
+    {
+        Http::fake(['*' => Http::response(['results' => [
+            ['distance', 's1', 'web', '2026-06-01 10:00:00'],
+        ]])]);
+
+        $result = (new AnalyticsService)->getRouteFilterUsage('last_30_days');
+
+        $byId = array_column($result, null, 'filter_id');
+        $this->assertSame(1, $byId['distance']['total']);
+        $this->assertSame([['lib' => 'web', 'total' => 1]], $byId['distance']['breakdown']);
+        $this->assertSame(0, $byId['themes']['total']);
+    }
+
+    public function test_get_route_filter_usage_orders_by_total_descending(): void
+    {
+        Http::fake(['*' => Http::response(['results' => [
+            ['distance', 's1', 'web', '2026-06-01 10:00:00'],
+            ['themes', 's1', 'web', '2026-06-01 10:00:20'],
+            ['themes', 's2', 'web', '2026-06-01 10:00:00'],
+        ]])]);
+
+        $result = (new AnalyticsService)->getRouteFilterUsage('last_30_days');
+
+        $this->assertSame('themes', $result[0]['filter_id']);
+        $this->assertSame(2, $result[0]['total']);
+        $this->assertSame('distance', $result[1]['filter_id']);
+        $this->assertSame(1, $result[1]['total']);
+    }
+
+    public function test_get_route_filter_usage_collapses_events_within_five_seconds(): void
+    {
+        Http::fake(['*' => Http::response(['results' => [
+            ['distance', 's1', 'web', '2026-06-01 10:00:00'],
+            ['distance', 's1', 'web', '2026-06-01 10:00:03'],
+        ]])]);
+
+        $result = (new AnalyticsService)->getRouteFilterUsage('last_30_days');
+
+        $byId = array_column($result, null, 'filter_id');
+        $this->assertSame(1, $byId['distance']['total']);
+    }
+
+    public function test_get_route_filter_usage_counts_events_beyond_five_seconds_separately(): void
+    {
+        Http::fake(['*' => Http::response(['results' => [
+            ['distance', 's1', 'web', '2026-06-01 10:00:00'],
+            ['distance', 's1', 'web', '2026-06-01 10:00:07'],
+        ]])]);
+
+        $result = (new AnalyticsService)->getRouteFilterUsage('last_30_days');
+
+        $byId = array_column($result, null, 'filter_id');
+        $this->assertSame(2, $byId['distance']['total']);
+    }
+
+    public function test_get_route_filter_usage_boundary_exactly_five_seconds_collapses(): void
+    {
+        // Esattamente 5s è considerato "lo stesso utilizzo" — il nuovo conteggio scatta solo
+        // oltre i 5s, non da 5s in poi (vedi dedupeAndCountRouteFilterEvents: `> 5`, non `>= 5`).
+        Http::fake(['*' => Http::response(['results' => [
+            ['distance', 's1', 'web', '2026-06-01 10:00:00'],
+            ['distance', 's1', 'web', '2026-06-01 10:00:05'],
+        ]])]);
+
+        $result = (new AnalyticsService)->getRouteFilterUsage('last_30_days');
+
+        $byId = array_column($result, null, 'filter_id');
+        $this->assertSame(1, $byId['distance']['total']);
+    }
+
+    public function test_get_route_filter_usage_does_not_collapse_across_different_sessions(): void
+    {
+        Http::fake(['*' => Http::response(['results' => [
+            ['distance', 's1', 'web', '2026-06-01 10:00:00'],
+            ['distance', 's2', 'web', '2026-06-01 10:00:01'],
+        ]])]);
+
+        $result = (new AnalyticsService)->getRouteFilterUsage('last_30_days');
+
+        $byId = array_column($result, null, 'filter_id');
+        $this->assertSame(2, $byId['distance']['total']);
+    }
+
+    public function test_get_route_filter_usage_does_not_collapse_across_different_filters_same_session(): void
+    {
+        Http::fake(['*' => Http::response(['results' => [
+            ['distance', 's1', 'web', '2026-06-01 10:00:00'],
+            ['themes', 's1', 'web', '2026-06-01 10:00:01'],
+        ]])]);
+
+        $result = (new AnalyticsService)->getRouteFilterUsage('last_30_days');
+
+        $byId = array_column($result, null, 'filter_id');
+        $this->assertSame(1, $byId['distance']['total']);
+        $this->assertSame(1, $byId['themes']['total']);
+    }
+
+    public function test_get_route_filter_usage_breakdown_splits_by_platform(): void
+    {
+        Http::fake(['*' => Http::response(['results' => [
+            ['distance', 's1', 'posthog-android', '2026-06-01 10:00:00'],
+            ['distance', 's2', 'posthog-ios', '2026-06-01 10:00:00'],
+            ['distance', 's3', 'web', '2026-06-01 10:00:00'],
+        ]])]);
+
+        $result = (new AnalyticsService)->getRouteFilterUsage('last_30_days');
+
+        $byId = array_column($result, null, 'filter_id');
+        $this->assertSame(3, $byId['distance']['total']);
+        $breakdownByLib = array_column($byId['distance']['breakdown'], 'total', 'lib');
+        $this->assertSame(1, $breakdownByLib['posthog-android']);
+        $this->assertSame(1, $breakdownByLib['posthog-ios']);
+        $this->assertSame(1, $breakdownByLib['web']);
+    }
+
+    public function test_get_route_filter_usage_does_not_collapse_events_with_empty_session_id(): void
+    {
+        // session_id non garantito da PostHog: due eventi ravvicinati (< 5s) ma entrambi senza
+        // sessione non devono essere trattati come lo stesso utilizzo — altrimenti utenti
+        // diversi, entrambi privi di sessione, collasserebbero silenziosamente insieme.
+        Http::fake(['*' => Http::response(['results' => [
+            ['distance', '', 'web', '2026-06-01 10:00:00'],
+            ['distance', '', 'web', '2026-06-01 10:00:02'],
+        ]])]);
+
+        $result = (new AnalyticsService)->getRouteFilterUsage('last_30_days');
+
+        $byId = array_column($result, null, 'filter_id');
+        $this->assertSame(2, $byId['distance']['total']);
+    }
+
+    public function test_get_route_filter_usage_discards_row_with_unparsable_timestamp(): void
+    {
+        Http::fake(['*' => Http::response(['results' => [
+            ['distance', 's1', 'web', 'not-a-valid-timestamp'],
+            ['distance', 's2', 'web', '2026-06-01 10:00:00'],
+        ]])]);
+        Log::shouldReceive('warning')
+            ->once()
+            ->withArgs(fn ($msg, $context) => $msg === 'AnalyticsService: timestamp non parsabile in evento filterUsed/route, riga scartata'
+                && $context['timestamp'] === 'not-a-valid-timestamp');
+
+        $result = (new AnalyticsService)->getRouteFilterUsage('last_30_days');
+
+        // La riga malformata è scartata, ma non propaga un'eccezione: l'altra riga valida
+        // dello stesso filtro viene comunque contata.
+        $byId = array_column($result, null, 'filter_id');
+        $this->assertSame(1, $byId['distance']['total']);
+    }
+
+    public function test_get_route_filter_usage_logs_warning_on_unknown_filter_id(): void
+    {
+        Http::fake(['*' => Http::response(['results' => [
+            ['unknownFilter', 's1', 'web', '2026-06-01 10:00:00'],
+        ]])]);
+        Log::shouldReceive('warning')
+            ->once()
+            ->withArgs(fn ($msg, $context) => $msg === 'AnalyticsService: filter_id sconosciuto in evento filterUsed/route'
+                && $context['filter_id'] === 'unknownFilter');
+
+        $result = (new AnalyticsService)->getRouteFilterUsage('last_30_days');
+
+        // Il filtro sconosciuto non compare come riga (solo le 7 note), ma viene comunque
+        // segnalato — non silenziosamente ignorato.
+        $this->assertCount(7, $result);
+    }
+
+    public function test_get_route_filter_usage_sql_includes_shard_name_filter(): void
+    {
+        config(['wm-package.shard_name' => 'camminiditalia']);
+        Cache::flush();
+        Http::fake(['*' => Http::response(['results' => []])]);
+
+        (new AnalyticsService)->getRouteFilterUsage();
+
+        Http::assertSent(fn (Request $request) => str_contains(
+            $request->data()['query']['query'],
+            "properties.shard_name._value = 'camminiditalia'"
+        ));
+    }
+
+    public function test_get_route_filter_usage_second_call_uses_cache_and_does_not_hit_http(): void
+    {
+        Cache::flush();
+        Http::fake(['*' => Http::response(['results' => []])]);
+
+        $service = new AnalyticsService;
+        $service->getRouteFilterUsage('last_30_days');
+        $service->getRouteFilterUsage('last_30_days');
+
+        Http::assertSentCount(1);
+    }
+
+    public function test_get_route_filter_usage_propagates_failure_when_query_fails(): void
+    {
+        Cache::flush();
+        Http::fake(['*' => Http::response('Internal Server Error', 500)]);
+        Log::shouldReceive('error')->atLeast()->once();
+
+        $this->expectException(AnalyticsQueryException::class);
+
+        (new AnalyticsService)->getRouteFilterUsage('last_30_days');
+    }
+
+    // -------------------------------------------------------------------------
     // Gestione errori HTTP
     // -------------------------------------------------------------------------
 

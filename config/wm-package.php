@@ -10,6 +10,7 @@ return [
     'version' => '1.5.0', // x-release-please-version
     'shard_name' => env('SHARD_NAME', env('APP_NAME')),
     'analytics_shard_name' => env('ANALYTICS_SHARD_NAME'),
+    'route_filter_analytics_enabled' => env('ROUTE_FILTER_ANALYTICS_ENABLED', false),
     'layer_user_presence_distance_meters' => env('LAYER_USER_PRESENCE_DISTANCE_METERS', 50),
     'services' => [
         'geometry_computation' => [
