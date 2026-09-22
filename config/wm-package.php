@@ -44,12 +44,13 @@ return [
     ],
     'web_components' => [
         'layer_map' => [
-            'example_url' => 'https://raw.githubusercontent.com/webmappsrl/wm-layer-map/refs/heads/main/test/index.html',
-            'cache_ttl' => 1800,
-            'timeout' => 10,
+            // script_url intenzionalmente assente: il default vive come
+            // costante privata in Wm\WmPackage\Nova\Layer (oc:8590) — questo
+            // config resta un dato primitivo, senza dipendere da una Nova
+            // Resource solo per leggere un URL. Un consumer che vuole un URL
+            // diverso può comunque sovrascrivere 'fallback.script_url' qui.
             'fallback' => [
                 'tag_name' => 'wm-layer-map',
-                'script_url' => 'https://cdn.jsdelivr.net/gh/webmappsrl/wm-layer-map@refs/heads/main/src/wm-layer-map.js',
                 'default_style' => 'display:block;width:100%;height:600px',
             ],
         ],
