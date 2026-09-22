@@ -9,6 +9,7 @@ use Orchestra\Testbench\Attributes\WithMigration;
 use Orchestra\Testbench\TestCase as Orchestra;
 use ReflectionMethod;
 use Spatie\MediaLibrary\MediaLibraryServiceProvider;
+use Spatie\Permission\PermissionServiceProvider;
 use Tymon\JWTAuth\Providers\LaravelServiceProvider;
 use Wm\WmPackage\WmPackageServiceProvider;
 
@@ -44,6 +45,12 @@ class TestCase extends Orchestra
             // `app(config('media-library.file_namer'))` resolves the container itself when
             // that config key is null and calls the missing method on it.
             MediaLibraryServiceProvider::class,
+            // Stesso motivo: senza, `config('permission.models.role')`/`permission.models
+            // .permission` restano null e `RolesAndPermissionsService::seedDatabase()` (Role/
+            // Permission Spatie) fallisce con un TypeError sul costruttore di
+            // PermissionRegistrar — le tabelle esistono già dalle migration, manca solo il
+            // binding di config che il provider normalmente registra (oc:8543).
+            PermissionServiceProvider::class,
         ];
     }
 

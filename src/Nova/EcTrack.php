@@ -94,6 +94,10 @@ class EcTrack extends AbstractEcResource
      */
     public function actions(NovaRequest $request): array
     {
+        // Operazione non annullabile dall'interfaccia (inverte la geometria in place): ristretta
+        // al ruolo Administrator (oc:8543).
+        $administratorOnly = fn (NovaRequest $request) => optional($request->user())->hasRole('Administrator');
+
         return [
             new Actions\ReindexSearchableAction,
             new ExecuteEcTrackDataChainAction([
@@ -104,7 +108,10 @@ class EcTrack extends AbstractEcResource
                 fn ($ecTrack) => new UpdateEcTrackAwsJob($ecTrack),
             ], __('Regenerate Taxonomy Where')),
             new ExecuteEcTrackDataChainAction,
-            (new ReverseEcTrackGeometryAction)->sole(),
+            (new ReverseEcTrackGeometryAction)
+                ->sole()
+                ->canSee($administratorOnly)
+                ->canRun($administratorOnly),
             new DownloadEcTrackAction,
             (new UploadTrackFile)->standalone(),
             new TranslateModelAction,

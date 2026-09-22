@@ -5,21 +5,22 @@ namespace Wm\WmPackage\Nova\Actions;
 use Illuminate\Bus\Queueable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 use Laravel\Nova\Actions\Action;
 use Laravel\Nova\Fields\ActionFields;
-use Wm\WmPackage\Jobs\Track\UpdateEcTrackDemJob;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Nova\Traits\HasDemClassification;
+use Wm\WmPackage\Services\GeometryComputationService;
+use Wm\WmPackage\Services\Models\EcTrackService;
 
 /**
- * Inverte il verso di percorrenza della geometria di una EcTrack e rilancia il ricalcolo
- * dei dati DEM (ascent, descent, ele_from, ele_to, durate) che dipendono da quel verso.
+ * Inverte il verso di percorrenza della geometria di una EcTrack e rilancia l'intera data
+ * chain di ricalcolo dei dati che dipendono da quel verso (DEM, dati correnti, pendenza,
+ * TaxonomyWhere, immagine profilo altimetrico, tile PBF, dati serviti all'app).
  *
- * L'inversione avviene via SQL puro (ST_Reverse), non tramite assegnazione Eloquent seguita
- * da save(): risalvare una geometria PostGIS via ORM la corrompe. Proprio perché la scrittura
- * non passa da Eloquent, l'observer di EcTrack non si attiva — il ricalcolo va quindi
- * dispatchato esplicitamente qui.
+ * L'inversione avviene via SQL puro (GeometryComputationService::reverseGeometry()), non
+ * tramite assegnazione Eloquent seguita da save(): risalvare una geometria PostGIS via ORM la
+ * corrompe. Proprio perché la scrittura non passa da Eloquent, l'observer di EcTrack non si
+ * attiva — il ricalcolo va quindi forzato esplicitamente con updateDataChain(forceGeometryChain: true).
  */
 class ReverseEcTrackGeometryAction extends Action
 {
@@ -48,20 +49,14 @@ class ReverseEcTrackGeometryAction extends Action
      */
     public function handle(ActionFields $fields, Collection $models)
     {
+        $geometryService = app(GeometryComputationService::class);
+        $ecTrackService = app(EcTrackService::class);
+
         $overriddenFieldsByTrack = [];
 
         foreach ($models as $ecTrack) {
             /** @var EcTrack $ecTrack */
-
-            // La colonna è di tipo geography, non geometry: ST_Reverse non ha un overload per
-            // geography (PostGIS lancia "function st_reverse(geography) does not exist"), quindi
-            // serve il cast esplicito. Il risultato torna a geography tramite il cast implicito
-            // di PostgreSQL su INSERT/UPDATE.
-            DB::statement(
-                'UPDATE '.$ecTrack->getTable().' SET geometry = ST_Reverse(geometry::geometry) WHERE id = ?',
-                [$ecTrack->id]
-            );
-
+            $geometryService->reverseGeometry($ecTrack);
             $ecTrack->refresh();
 
             $overriddenFields = $this->getOverriddenFields($ecTrack);
@@ -69,22 +64,20 @@ class ReverseEcTrackGeometryAction extends Action
                 $overriddenFieldsByTrack[$ecTrack->id] = $overriddenFields;
             }
 
-            // Nova esegue l'intera handle() dentro una transazione DB (Actions\Transaction::run()).
-            // Le connessioni di coda del progetto hanno after_commit=false, quindi un dispatch
-            // "nudo" pusha il job subito: un worker potrebbe leggere la geometria pre-inversione
-            // perché la transazione non ha ancora fatto commit. ->afterCommit() forza questo
-            // dispatch specifico ad attendere il commit, indipendentemente dalla config globale.
-            UpdateEcTrackDemJob::dispatch($ecTrack)->afterCommit();
+            $ecTrackService->updateDataChain($ecTrack, forceGeometryChain: true);
         }
 
         if (empty($overriddenFieldsByTrack)) {
-            return Action::message(__('Track geometry reversed. Recalculation in progress.'));
+            return Action::message(__('Track geometry reversed. Recalculation in progress. This may take a while.'));
         }
 
         $overriddenFieldNames = array_values(array_unique(array_merge(...array_values($overriddenFieldsByTrack))));
 
-        return Action::message(__(
-            'Track geometry reversed. Recalculation in progress. Warning: manual overrides present on: :fields — verify they still match the new direction.',
+        // Action::danger() invece di Action::message(): quest'ultimo è reso in verde da Nova,
+        // identico al messaggio di successo, e un avviso che sembra una conferma non viene letto
+        // (pattern già usato nel package, es. ImportTaxonomyWhere.php).
+        return Action::danger(__(
+            'Track geometry reversed. Recalculation in progress. This may take a while. Warning: manual overrides present on: :fields — verify they still match the new direction.',
             ['fields' => implode(', ', $overriddenFieldNames)]
         ));
     }

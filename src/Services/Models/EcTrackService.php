@@ -324,7 +324,13 @@ class EcTrackService extends BaseService
         Bus::chain($chain)->dispatch();
     }
 
-    public function updateDataChain(EcTrack $track)
+    /**
+     * @param  bool  $forceGeometryChain  forza la sotto-catena legata alla geometria anche
+     *                                    quando `wasChanged('geometry')` è falso — necessario per
+     *                                    chi scrive la geometria via SQL puro (Eloquent non se ne
+     *                                    accorge), es. ReverseEcTrackGeometryAction (oc:8543)
+     */
+    public function updateDataChain(EcTrack $track, bool $forceGeometryChain = false)
     {
         $chain = [];
         if (isset($track->properties['osmid']) && $track->properties['osmid']) {
@@ -337,7 +343,7 @@ class EcTrackService extends BaseService
         //         $chain[] = new UpdateLayerTracksJob($layer);
         //     }
         // }
-        if ($track->wasChanged('geometry')) {
+        if ($track->wasChanged('geometry') || $forceGeometryChain) {
             $chain[] = new UpdateEcTrackDemJob($track);
             $chain[] = new UpdateEcTrackManualDataJob($track);
             $chain[] = new UpdateEcTrackCurrentDataJob($track);
@@ -351,6 +357,18 @@ class EcTrackService extends BaseService
         $chain[] = new UpdateEcTrackAwsJob($track);
         $chain[] = new UpdateEcTrackAppRelationsInfoJob($track);
         $chain[] = new UpdateEcTrackOrderRelatedPoi($track);
+
+        // Gli observer chiamano questo metodo già dopo il commit della transazione di
+        // salvataggio ($afterCommit = true sull'observer stesso). Una Nova Action che lo invoca
+        // direttamente da dentro la propria transazione (Actions\Transaction::run()) ha invece
+        // bisogno che il dispatch attenda il commit: senza, un worker potrebbe leggere la
+        // geometria non ancora committata (stesso motivo per cui UpdateEcTrackDemJob lo usa già
+        // altrove). PendingChain (a differenza di PendingDispatch per un job singolo) non ha un
+        // metodo afterCommit() proprio: solo il primo job della catena viene effettivamente
+        // accodato, gli altri partono in base al suo esito — va quindi marcato lui.
+        // Su una chiamata già post-commit (nessuna transazione attiva, il caso degli observer)
+        // afterCommit() dispatcha comunque subito: nessun impatto sui chiamanti esistenti.
+        $chain[0]->afterCommit();
 
         Bus::chain($chain)->dispatch();
     }
