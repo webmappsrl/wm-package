@@ -1,0 +1,47 @@
+> Ticket: oc:8586
+
+# Privacy: rimuovere il nome utente reale dal marker live sulla mappa
+
+## Cosa cambia
+Il marker live che indica la posizione in tempo reale di un utente su un cammino non mostra più il nome e cognome reale nel tooltip, ma un testo anonimo generico ("Utente"), per tutti gli utenti senza distinzione di ruolo. Il marker non è più cliccabile verso la pagina Nova dell'utente: la property `link` non viene più generata per queste posizioni.
+
+**Decisione post-review (2026-09-22):** la logica di risoluzione nominativo/link non è stata eliminata dal codice, ma resta presente e gated da un booleano locale `$showLiveUserIdentity` hardcoded a `false` dentro `Layer::getFeatureCollectionMap()`, con un commento `TODO(oc:8586)` — richiesta esplicita del dev per poterla riattivare senza dover riscrivere la logica quando arriverà il parere legale. Il comportamento osservabile oggi è identico a quanto descritto sopra (marker sempre anonimo, nessun link). Vedi `notes.md`.
+
+Il KPI aggregato "utenti sul cammino" (già anonimo, query separata) non viene toccato.
+
+## Perché
+Richiesta emersa durante la call di collaudo release 13.1.17. Il cliente chiede, come misura cautelativa immediata in attesa di un parere legale sulla visualizzazione della posizione degli utenti, di non identificare più l'utente sul marker live. Oggi chiunque abbia accesso Nova al campo mappa del layer vede nome+cognome reale e può aprire, con un click, la pagina Nova dell'utente — nessuna distinzione di ruolo è applicata.
+
+Il nominativo cliccabile era stato introdotto durante l'implementazione di oc:8159, distinto dal KPI aggregato (sempre anonimo). L'overview di oc:8159 documentava già questo come rischio accettato ("nessun gate di ruolo aggiuntivo, decisione esplicita del dev").
+
+**Nota di scope emersa in fase di ricerca (non nella richiesta cliente originale, ma decisa col dev prima di scrivere questa overview):** il link verso la pagina Nova è gated solo sulla risoluzione dello user (`$user`), non sul nominativo — rimuovere solo il testo del tooltip lascerebbe il pallino comunque cliccabile verso il profilo reale, vanificando la richiesta di "non identificarlo". Per questo la fix rimuove anche il link, non solo il testo.
+
+## Requisiti
+- [ ] Il tooltip del marker live mostra sempre un testo anonimo generico ("Utente"), indipendentemente dal fatto che lo user sia risolvibile o dal suo ruolo
+- [ ] La property `link` non viene più generata per le posizioni live in `Layer::getFeatureCollectionMap()` — il marker non è più cliccabile verso la pagina Nova dell'utente
+- [ ] Il KPI aggregato "utenti sul cammino" (`AnalyticsService::queryUniqueUsers()`) resta invariato
+- [ ] Il test `LayerFeatureCollectionMapUserPresenceTest.php::test_position_shows_user_nominativo_and_link_when_user_id_is_present` viene aggiornato per asserire il nuovo comportamento anonimo (nessun nominativo reale, nessun link)
+- [ ] Il `console.log('GeoJSON loaded:', data)` incondizionato in `FeatureCollectionMap.vue` viene rimosso — logga oggi il payload completo (nome reale + link, prima di questa fix) ad ogni apertura della mappa; emerso in Challenge come leak preesistente verso la console del browser (potenzialmente replicato da tool di monitoring come Sentry)
+
+## Rischi
+- **Perdita di un accesso operativo rapido:** rimuovendo il link, un Administrator non può più aprire con un click la pagina Nova dell'utente in caso di necessità (es. soccorso su un cammino). Mitigazione: nessuna in questo ciclo — la restrizione della visualizzazione ai soli Administrator (che permetterebbe di reintrodurre il link solo per quel ruolo) resta sospesa in attesa di parere legale, situazione aperta separata e fuori scope da questo ticket. Decisione esplicita del dev.
+- **Rottura di test esistente:** `LayerFeatureCollectionMapUserPresenceTest.php` asserisce oggi il nominativo reale "Maria Rossi" e la presenza del link — va riscritto, non solo aggiornato nei valori attesi, perché il comportamento stesso cambia. Nessuna asserzione del comportamento precedente resta in suite dopo la riscrittura (accettato: non è previsto un ripristino diretto, un futuro gate per ruolo sarebbe comunque una feature nuova, non un revert).
+- **Un secondo consumer di `tooltip`/`link` esiste nello stesso package** (trovato in fase di review, non nella ricerca iniziale): `src/Nova/Fields/FeatureCollectionMap/views/feature-collection-map.blade.php:439-440` legge `feature.properties.link` per navigare al click, indipendentemente da `FeatureCollectionMap.vue`. La fix lo copre comunque correttamente per costruzione (stessa fonte dati, `getFeatureCollectionMap()`, nessun `link` mai generato per le posizioni live) — nessuna azione di codice necessaria, ma l'affermazione precedente ("nessun altro consumer noto") era imprecisa. Rischio cross-consumer **esterno** al package (forestas, maphub, osm2cai2) resta invece accettato senza ulteriore verifica (decisione esplicita in Challenge): il contratto `tooltip`/`link` non è versionato come API pubblica — se un consumer esterno vi si è agganciato, la fix è un breaking change silenzioso per lui. Confinato dal fatto che, come da prassi già vista in wm-package, un fix cliente-specifico può restare sul solo branch/PR di camminiditalia.
+- **Endpoint del marker live senza autorizzazione per-record (rischio accettato, fuori scope):** la route `GET /nova-vendor/feature-collection-map/{model}/{id}` è protetta solo dal middleware `nova` generico, nessun controllo di ruolo o di possesso sul layer specifico — qualsiasi utente Nova (Guest incluso) può chiamare direttamente l'endpoint per un layer id qualsiasi e ottenere le posizioni live, indipendentemente da questa fix e dal fatto di vedere o non vedere il campo mappa in UI. Preesistente a oc:8586, non introdotto da questa fix. Decisione esplicita del dev: nessun ticket separato per ora, resta annotato qui come rischio noto.
+- **Nessun aggancio per un futuro gate per ruolo (parzialmente mitigato post-review):** `getFeatureCollectionMap()` non riceve alcun parametro di ruolo/contesto (stesso pattern condiviso da `EcTrack`/`TaxonomyWhere`/`Media`/`GeometryModel`), e la route del campo Nova è model-agnostic. Riattivare nominativo/link **per tutti** è ora un cambio di una riga (`$showLiveUserIdentity = true`, vedi "Cosa cambia"), ma un gate **solo per Administrator** richiederà comunque una progettazione ex novo, non un revert — il flag non risolve il problema del parametro di ruolo/contesto mancante. Tracciato come follow-up in `notes.md`.
+- **Rischio residuo non risolvibile da questo ticket:** anonimizzare tooltip e link non anonimizza posizione/orario/luogo in sé — su un cammino a basso traffico un singolo pallino verde resta potenzialmente attribuibile da chi ha informazioni laterali (familiari, guide locali). Il dato raw (posizione + user_id + timestamp) resta comunque interrogabile via PostHog da chi ha accesso a quel progetto, indipendentemente da questa fix sulla UI Nova. Se il parere legale in attesa riguarda anche la raccolta/ritenzione del dato e non solo la sua visualizzazione, questo ticket copre solo il canale UI Nova.
+- **Gap temporale di deploy:** la fix vive in `wm-package`; diventa effettiva in produzione solo dopo bump del submodule + deploy in camminiditalia. Il bump/deploy non fa parte del piano di questo ticket (decisione esplicita del dev: gestito manualmente a parte dopo il merge) — rischio noto di scarto temporale tra "ticket chiuso su wm-package" e "fix realmente in produzione", nonostante la richiesta cliente sia qualificata come misura cautelativa immediata.
+
+## Out of scope
+- Restrizione della visualizzazione del marker live ai soli Administrator (situazione aperta separata, in attesa di parere legale — non in questo ticket)
+- Modifiche al KPI aggregato "utenti sul cammino" o alla query `queryUniqueUsers()`
+- Traduzione (i18n) del nuovo testo anonimo: il fallback esistente ("Posizione utente (ultimi 30 minuti)") è già oggi una stringa hardcoded, senza `__()`/`trans()`, nonostante il package abbia file di lingua per 5 lingue (`de`, `en`, `es`, `fr`, `it`) — il nuovo testo segue lo stesso pattern hardcoded, nessuna chiamata di traduzione introdotta
+- Autorizzazione per-record sull'endpoint del campo Nova (vedi Rischi) — resta un gap pre-esistente, non affrontato in questo ticket
+- Predisposizione di un parametro di ruolo/contesto su `getFeatureCollectionMap()` per un gate solo-Administrator — solo follow-up in notes.md; il flag hardcoded introdotto (vedi "Cosa cambia") copre solo la riattivazione "per tutti", non un gate per ruolo
+- Bump del submodule `wm-package` e deploy in camminiditalia — gestito manualmente dal dev dopo il merge, non fa parte del piano
+- Verifica di altri consumer di `wm-package` (forestas, maphub, osm2cai2) rispetto al contratto `tooltip`/`link` — rischio accettato senza verifica
+
+## Moduli toccati
+- `wm-package/src/Models/Layer.php` (metodo `getFeatureCollectionMap()`, righe 497-559): tooltip sempre anonimo e nessun `link` generato quando `$showLiveUserIdentity` è `false` (hardcoded); logica originale preservata, gated dal flag
+- `wm-package/src/Nova/Fields/FeatureCollectionMap/resources/js/components/FeatureCollectionMap.vue`: rimozione del `console.log('GeoJSON loaded:', data)` incondizionato
+- `wm-package/tests/Feature/LayerFeatureCollectionMapUserPresenceTest.php`: aggiornamento del test esistente al nuovo comportamento

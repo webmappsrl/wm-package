@@ -451,9 +451,10 @@ SQL;
      * filterPointsNearLayerTracks() — senza quest'ultimo passo i punti sarebbero solo "vicini
      * all'area del layer", non "vicini al sentiero" (bbox è un rettangolo, non la traccia).
      * `user_id` (nullable) è l'id applicativo dello user, non l'id anonimo PostHog `person_id`
-     * (quest'ultimo è solo una chiave di join interna, scartata prima del return) — usato dal
-     * chiamante (Layer::getFeatureCollectionMap()) per mostrare nominativo e link invece del
-     * marker anonimo di default, quando disponibile.
+     * (quest'ultimo è solo una chiave di join interna, scartata prima del return) — dopo oc:8586
+     * il chiamante (Layer::getFeatureCollectionMap()) lo legge solo se `$showLiveUserIdentity` è
+     * `true` (hardcoded a `false` per privacy, in attesa di parere legale): il marker live è oggi
+     * sempre anonimo, il campo resta nel payload per la riattivazione futura di quel flag.
      *
      * @return list<array{lat: float, lng: float, user_id: ?int}>
      */
