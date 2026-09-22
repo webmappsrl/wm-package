@@ -74,11 +74,16 @@ it('su un codice riservato mostra settore e istanza, non il sentiero', function 
 it('non compone una feature per una geometria assente', function () {
     // Nessuna geometria in nessuna delle tre tabelle: la mappa esce vuota
     // invece di sollevare, cosi' la scheda del codice si apre comunque.
+    // geometry_wkt => null esplicito: caso degenere, deliberatamente richiesto.
     $sectorId = makeSector('ZNUB5', 'POLYGON((0 0, 0 10, 10 10, 10 0, 0 0))');
     DB::statement('UPDATE taxonomy_wheres SET geometry = NULL WHERE id = ?', [$sectorId]);
 
     $code = TrailRegistryCode::findOrFail(
-        makeCode(['status' => TrailCodeStatus::Reserved, 'taxonomy_where_id' => $sectorId]),
+        makeCode([
+            'status' => TrailCodeStatus::Reserved,
+            'taxonomy_where_id' => $sectorId,
+            'geometry_wkt' => null,
+        ]),
     );
 
     expect($code->getFeatureCollectionMap()['features'])->toBeEmpty();

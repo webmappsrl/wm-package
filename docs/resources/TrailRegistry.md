@@ -89,7 +89,7 @@ porta un sentiero. Non duplicarne la logica nei consumer.
 | Metodo | Cosa fa |
 |---|---|
 | `resolveSector($wkt)` | il settore che contiene il sentiero, o quello con cui condivide il tratto più lungo |
-| `propose($wkt)` | il primo codice libero in quel settore |
+| `propose($wkt)` | il codice libero più vicino, nel settore |
 | `availableNumbers($fullCode)` | i numeri **puri** ancora liberi: è la domanda che serve a `propose()` |
 | `availableVariants($fullCode, $number)` | le varianti libere di un numero, `'0'` compreso quando il numero puro è libero |
 | `numbersWithAvailableVariants($fullCode)` | i numeri con almeno una variante libera: l'elenco da cui si sceglie nella sostituzione manuale |
@@ -100,6 +100,27 @@ I tre metodi di lettura rispondono a domande diverse e non sono intercambiabili:
 `availableNumbers()` esclude un numero appena il numero puro è occupato,
 `numbersWithAvailableVariants()` lo tiene finché gli avanza una lettera. È ciò che rende
 raggiungibile la variante di un sentiero esistente (oc:8569).
+
+### Il criterio di vicinanza (oc:8570)
+
+`propose()` non prende più il primo numero libero del settore: i numeri già usati si raggruppano
+in **cluster per contiguità numerica** — 11, 12, 13 sono un cluster, 16, 17 un altro — e a decidere
+l'ordine è **solo il cluster più vicino alla traccia in esame**. Gli altri cluster del settore non
+competono: chi vuole aprire una numerazione lontano dalla propria traccia non passa dalla proposta
+automatica, usa l'Action Nova `ReplaceTrailCodeNumber`. I numeri liberi si ordinano per distanza
+numerica dai numeri di quel cluster, nelle due direzioni; a parità di distanza vince il numero
+precedente, così l'esito resta deterministico anche sugli incroci.
+
+Lo stesso criterio governa il campo `Select` dell'Action `ReplaceTrailCodeNumber`, tramite
+`numbersWithAvailableVariants($fullCode, $geometryWkt, $excludeCodeId)`: il terzo parametro esclude
+dal calcolo delle distanze il codice che si sta sostituendo, altrimenti quel codice distarebbe zero
+da sé stesso, farebbe cluster da solo e coprirebbe i vicini veri.
+
+Un settore senza codici non ha nulla da cui misurare la vicinanza: l'ordine resta quello numerico,
+come prima di oc:8570 — è anche il comportamento di `numbersWithAvailableVariants()` quando viene
+chiamato senza geometria, per i consumer che non hanno una traccia da cui misurare. Il fallback alle
+varianti con lettera, quando il numero puro è saturo, segue lo stesso criterio per vicinanza: non è
+un ordine a parte, `orderByProximity()` si applica anche ai numeri liberi di ciascuna variante A-Z.
 
 ### `registerExistingCode()` — gli esiti
 

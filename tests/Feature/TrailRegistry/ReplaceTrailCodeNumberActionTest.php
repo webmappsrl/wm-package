@@ -7,6 +7,7 @@ use Wm\WmPackage\TrailRegistry\Enums\TrailCodeStatus;
 use Wm\WmPackage\TrailRegistry\Models\TrailApplication;
 use Wm\WmPackage\TrailRegistry\Models\TrailRegistryCode;
 use Wm\WmPackage\TrailRegistry\Nova\Actions\ReplaceTrailCodeNumber;
+use Wm\WmPackage\TrailRegistry\TrailRegistryService;
 
 beforeEach(function () {
     runTrailRegistryStubs();
@@ -135,4 +136,46 @@ it('nega quando la combinazione e gia occupata', function () {
     // Vedi nota sul cast nel test precedente.
     expect((string) ($result['danger'] ?? ''))->not->toBe('')
         ->and($code->fresh()->status)->toBe(TrailCodeStatus::Reserved);
+});
+
+it('offre per primi i numeri vicini al sentiero in esame', function () {
+    makeSector('ZNUB5', 'POLYGON((0 0, 0 10, 10 10, 10 0, 0 0))');
+
+    foreach ([11, 12, 13] as $number) {
+        makeCode([
+            'number' => $number,
+            'status' => TrailCodeStatus::Assigned,
+            'geometry_wkt' => 'LINESTRING Z (1 1 0, 1.001 1.001 0)',
+        ]);
+    }
+
+    // Il codice su cui si apre l'Action: sta accanto al cluster 11-13.
+    $codeId = makeCode([
+        'number' => 70,
+        'status' => TrailCodeStatus::Assigned,
+        'geometry_wkt' => 'LINESTRING Z (1 1 0, 1.0015 1.0015 0)',
+    ]);
+
+    $code = TrailRegistryCode::query()->findOrFail($codeId);
+
+    $wkt = DB::selectOne(<<<'SQL'
+        SELECT ST_AsText(COALESCE(t.geometry, a.geometry)) AS wkt
+        FROM trail_registry_codes c
+        LEFT JOIN ec_tracks t ON t.id = c.ec_track_id
+        LEFT JOIN trail_applications a ON a.id = c.trail_application_id
+        WHERE c.id = ?
+    SQL, [$code->id])->wkt;
+
+    $numbers = app(TrailRegistryService::class)
+        ->numbersWithAvailableVariants($code->fullCode, $wkt, $code->id);
+
+    // Senza escludere il codice in esame (il 70), il servizio farebbe
+    // cluster con se stesso e in testa uscirebbero i suoi adiacenti (69, 71),
+    // coprendo il vero cluster vicino. Escludendolo, in testa esce un numero
+    // del cluster 11-13 — la zona dove il sentiero passa davvero — perche' un
+    // numero occupato con lettera libera concorre per vicinanza come gli
+    // altri.
+    expect($numbers[0])->toBeIn([11, 12, 13])
+        ->and($numbers[0])->not->toBe(69)
+        ->and($numbers[0])->not->toBe(71);
 });

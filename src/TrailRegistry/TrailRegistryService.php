@@ -97,11 +97,12 @@ class TrailRegistryService
      * Occupato significa riservato O assegnato, in un unico registro. Una riga
      * liberata non occupa: il numero e' riassegnabile.
      *
-     * Si prova per prima la posizione senza variante su TUTTI i numeri del
-     * settore (0-99), e si passa alle lettere solo quando l'intero settore
-     * senza variante e' esaurito — ma e' l'ordine di ricerca, non il
-     * significato di `0`: ZNUB535 e ZNUB535A sono due sentieri indipendenti,
-     * non uno la diramazione dell'altro.
+     * Si prova per prima la posizione senza variante, scorrendo i numeri
+     * liberi del settore nell'ordine di vicinanza geografica alla traccia in
+     * esame (vedi orderByProximity()), e si passa alle lettere solo quando
+     * l'intero settore senza variante e' esaurito — ma e' l'ordine di
+     * ricerca, non il significato di `0`: ZNUB535 e ZNUB535A sono due
+     * sentieri indipendenti, non uno la diramazione dell'altro.
      *
      * ATTENZIONE, cicli NON invertibili: il ciclo esterno e' la variante,
      * quello interno e' il numero (variante-poi-numero, non numero-poi-
@@ -131,19 +132,26 @@ class TrailRegistryService
             ->map(fn ($row) => $row->number.':'.$row->variant)
             ->all();
 
+        $distances = $this->usedNumbersWithDistance($fullCode, $geometryWkt);
+
         foreach ($this->variantSearchOrder() as $variant) {
-            foreach (range(0, 99) as $number) {
-                if (! in_array($number.':'.$variant, $taken, true)) {
-                    return [
-                        'taxonomy_where_id' => $sector->id,
-                        'region' => substr($fullCode, 0, 1),
-                        'province' => substr($fullCode, 1, 2),
-                        'area' => substr($fullCode, 3, 1),
-                        'sector' => substr($fullCode, 4, 1),
-                        'number' => $number,
-                        'variant' => $variant,
-                    ];
-                }
+            $free = array_values(array_filter(
+                range(0, 99),
+                fn (int $number) => ! in_array($number.':'.$variant, $taken, true),
+            ));
+
+            $ordered = $this->orderByProximity($free, $distances);
+
+            if ($ordered !== []) {
+                return [
+                    'taxonomy_where_id' => $sector->id,
+                    'region' => substr($fullCode, 0, 1),
+                    'province' => substr($fullCode, 1, 2),
+                    'area' => substr($fullCode, 3, 1),
+                    'sector' => substr($fullCode, 4, 1),
+                    'number' => $ordered[0],
+                    'variant' => $variant,
+                ];
             }
         }
 
@@ -208,9 +216,26 @@ class TrailRegistryService
      * Una query sola sul settore: cento chiamate a availableVariants()
      * sarebbero cento query a ogni apertura del modale.
      *
+     * Ordinato per vicinanza quando si passa `$geometryWkt` (oc:8570): e' lo
+     * stesso criterio di propose(), applicato qui alla lista che alimenta la
+     * sostituzione manuale. Senza il parametro l'ordine resta quello di oggi
+     * — numerico — perche' altri consumer chiamano questo metodo col solo
+     * `fullCode` e non devono rompersi.
+     *
+     * Un numero gia' occupato con una lettera ancora libera concorre per
+     * vicinanza come un numero libero: se appartiene al cluster piu' vicino
+     * alla traccia, offrire la sua variante (es. ZNUB511A accanto a ZNUB511)
+     * e' un'offerta legittima quanto un numero nuovo nella stessa zona.
+     *
+     * `$excludeCodeId` esclude il codice in esame dal calcolo delle distanze:
+     * serve quando la geometria passata e' quella dello stesso codice che si
+     * sta per sostituire (l'Action di sostituzione manuale) — altrimenti
+     * quel codice distarebbe zero da se stesso, farebbe cluster da solo e
+     * coprirebbe i vicini veri.
+     *
      * @return array<int, int>
      */
-    public function numbersWithAvailableVariants(string $fullCode): array
+    public function numbersWithAvailableVariants(string $fullCode, ?string $geometryWkt = null, ?int $excludeCodeId = null): array
     {
         $rows = TrailRegistryCode::query()
             ->where('region', substr($fullCode, 0, 1))
@@ -231,7 +256,122 @@ class TrailRegistryService
             ->map(fn ($number) => (int) $number)
             ->all();
 
-        return array_values(array_diff(range(0, 99), $saturated));
+        $available = array_values(array_diff(range(0, 99), $saturated));
+
+        // Senza geometria non c'e' nulla rispetto a cui misurare: resta
+        // l'ordine numerico, che e' anche il comportamento dei consumer che
+        // chiamano questo metodo con il solo fullCode (oc:8570).
+        if ($geometryWkt === null) {
+            return $available;
+        }
+
+        return $this->orderByProximity(
+            $available,
+            $this->usedNumbersWithDistance($fullCode, $geometryWkt, $excludeCodeId),
+        );
+    }
+
+    /**
+     * I numeri disponibili, ordinati per vicinanza al cluster piu' prossimo.
+     *
+     * La numerazione dei sentieri segue la geografia dentro i numeri liberi:
+     * la disponibilita' e' il vincolo, la vicinanza e' il criterio. Prendere
+     * il primo libero in assoluto — quello che il servizio faceva prima di
+     * oc:8570 — produce un numero che il gestore deve quasi sempre correggere
+     * a mano.
+     *
+     * I numeri gia' usati si raggruppano per contiguita' numerica: 11, 12, 13
+     * sono un cluster, 16, 17 un altro. Governa l'ordine **il cluster piu'
+     * vicino alla traccia**, e basta quello: chi vuole aprire una numerazione
+     * altrove non passa dalla proposta automatica, usa
+     * {@see TrailRegistryService::replaceNumber()}. Far competere piu' cluster
+     * non servirebbe a nessuno e renderebbe l'ordine difficile da spiegare.
+     *
+     * L'ordine e' deterministico: a parita' di distanza geografica governa il
+     * cluster col numero piu' basso, e a parita' di distanza numerica vince il
+     * numero precedente. Senza, due chiamate consecutive potrebbero
+     * restituire ordini diversi — e in un settore di sentieristica gli
+     * incroci sono la norma, quindi le parita' a distanza zero pure.
+     *
+     * Ordinare non e' filtrare: l'array restituito contiene sempre tutti gli
+     * elementi ricevuti (oc:8570).
+     *
+     * @param  list<int>  $available  i numeri da ordinare
+     * @param  array<int, float>  $usedWithDistance  numero gia' usato => distanza in metri
+     * @return list<int>
+     */
+    public function orderByProximity(array $available, array $usedWithDistance): array
+    {
+        sort($available);
+
+        if ($usedWithDistance === []) {
+            return $available;
+        }
+
+        $cluster = $this->nearestCluster($usedWithDistance);
+
+        usort($available, function (int $a, int $b) use ($cluster) {
+            $da = $this->numericDistanceFrom($cluster, $a);
+            $db = $this->numericDistanceFrom($cluster, $b);
+
+            // A parita' di distanza numerica vince il precedente, cioe' il
+            // numero piu' basso: «continua quella numerazione» non dice di
+            // saltare in avanti lasciando un buco dietro.
+            return $da <=> $db ?: $a <=> $b;
+        });
+
+        return $available;
+    }
+
+    /**
+     * I numeri del cluster piu' vicino alla traccia.
+     *
+     * Un cluster e' un gruppo di numeri consecutivi fra quelli gia' usati; la
+     * sua distanza e' quella del suo codice piu' prossimo. A parita' vince il
+     * cluster col numero piu' basso, cosi' l'esito non dipende dall'ordine in
+     * cui il database ha restituito le righe (oc:8570).
+     *
+     * @param  array<int, float>  $usedWithDistance
+     * @return list<int>
+     */
+    private function nearestCluster(array $usedWithDistance): array
+    {
+        $numbers = array_keys($usedWithDistance);
+        sort($numbers);
+
+        $clusters = [];
+        $current = [];
+
+        foreach ($numbers as $number) {
+            if ($current !== [] && $number !== end($current) + 1) {
+                $clusters[] = $current;
+                $current = [];
+            }
+
+            $current[] = $number;
+        }
+
+        $clusters[] = $current;
+
+        usort($clusters, function (array $a, array $b) use ($usedWithDistance) {
+            $da = min(array_map(fn (int $n) => $usedWithDistance[$n], $a));
+            $db = min(array_map(fn (int $n) => $usedWithDistance[$n], $b));
+
+            return $da <=> $db ?: $a[0] <=> $b[0];
+        });
+
+        return $clusters[0];
+    }
+
+    /**
+     * Quanto dista un numero dal cluster: la distanza dal suo elemento piu'
+     * vicino, nelle due direzioni.
+     *
+     * @param  list<int>  $cluster
+     */
+    private function numericDistanceFrom(array $cluster, int $number): int
+    {
+        return min(array_map(fn (int $n) => abs($n - $number), $cluster));
     }
 
     /**
@@ -259,6 +399,79 @@ class TrailRegistryService
             fn (TrailCodeStatus $status) => $status->value,
             TrailCodeStatus::active(),
         );
+    }
+
+    /**
+     * I numeri gia' usati del settore con la loro distanza dalla traccia in esame.
+     *
+     * La geometria di un codice non sta nel registro: sta nel sentiero, o
+     * nell'istanza se il codice e' solo riservato — da qui il `COALESCE`,
+     * lo stesso di {@see ComposesTrailRegistryMap::neighbourCodes()}. I
+     * codici che non hanno ne' l'uno ne' l'altra non partecipano: non
+     * sapremmo dove metterli.
+     *
+     * `ST_Distance` su `geography` restituisce metri. Un numero con piu'
+     * varianti compare una volta sola, con la distanza minima: e' il numero a
+     * essere ordinato, non la singola riga.
+     *
+     * @return array<int, float>
+     */
+    protected function usedNumbersWithDistance(string $fullCode, string $geometryWkt, ?int $excludeCodeId = null): array
+    {
+        $ecTracks = (string) config('wm-package.ec_track_table', 'ec_tracks');
+
+        $active = $this->activeStatusValues();
+
+        $placeholders = implode(',', array_fill(0, count($active), '?'));
+
+        // Esclude il codice in esame (oc:8570): quando la geometria e' la
+        // sua, quel codice dista zero da se stesso, farebbe cluster da solo
+        // e coprirebbe i vicini veri — succede aprendo l'Action di
+        // sostituzione manuale, dove il codice e' gia' nel registro. In
+        // propose() il codice non esiste ancora, quindi non c'e' nulla da
+        // escludere e $excludeCodeId resta null.
+        $excludeSql = $excludeCodeId !== null ? 'AND c.id <> ?' : '';
+
+        $rows = DB::select(
+            <<<SQL
+            SELECT
+                c.number,
+                MIN(ST_Distance(
+                    COALESCE(t.geometry, a.geometry),
+                    ST_GeomFromText(?, 4326)::geography
+                )) AS distance
+            FROM trail_registry_codes c
+            LEFT JOIN {$ecTracks} t ON t.id = c.ec_track_id
+            LEFT JOIN trail_applications a ON a.id = c.trail_application_id
+            WHERE c.region = ?
+              AND c.province = ?
+              AND c.area = ?
+              AND c.sector = ?
+              AND c.status IN ({$placeholders})
+              AND COALESCE(t.geometry, a.geometry) IS NOT NULL
+              {$excludeSql}
+            GROUP BY c.number
+            SQL,
+            array_merge(
+                [$geometryWkt],
+                [
+                    substr($fullCode, 0, 1),
+                    substr($fullCode, 1, 2),
+                    substr($fullCode, 3, 1),
+                    substr($fullCode, 4, 1),
+                ],
+                $active,
+                $excludeCodeId !== null ? [$excludeCodeId] : [],
+            ),
+        );
+
+        $distances = [];
+
+        foreach ($rows as $row) {
+            $distances[(int) $row->number] = (float) $row->distance;
+        }
+
+        return $distances;
     }
 
     /**
