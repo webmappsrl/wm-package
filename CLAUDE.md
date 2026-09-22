@@ -97,6 +97,7 @@ questo file, perché vanno lette sempre.
 | Layer e associazione contenuti | modalità auto/manuale, `poi_mode`, pivot `layerables` | [docs/knowledge/layer-e-associazione-contenuti.md](docs/knowledge/layer-e-associazione-contenuti.md) |
 | Campi Nova custom e build | toolchain, Tailwind, componenti condivisi, `dist` | [docs/knowledge/campi-nova-custom-e-build.md](docs/knowledge/campi-nova-custom-e-build.md) |
 | Domini opzionali | interruttore, stub, risorse Nova, Catasto Sentieri | [docs/knowledge/domini-opzionali.md](docs/knowledge/domini-opzionali.md) |
+| Numerazione dei sentieri | come nasce il numero di un sentiero, perché quel criterio, cosa è stato scartato | [docs/knowledge/numerazione-dei-sentieri.md](docs/knowledge/numerazione-dei-sentieri.md) |
 | Testare il package | i due `TestCase`, factory, isolamento verso l'esterno | [docs/knowledge/testare-il-package.md](docs/knowledge/testare-il-package.md) |
 
 ## Procedure

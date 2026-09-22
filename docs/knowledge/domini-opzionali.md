@@ -39,6 +39,8 @@ comandi, cioè lo strumento per i due passi successivi (oc:8492).
 ## Catasto Sentieri (codice REI)
 
 Fonte di verità: [docs/resources/TrailRegistry.md](../resources/TrailRegistry.md).
+Il perché delle scelte sulla numerazione — e cosa è già stato provato e scartato — è in
+[numerazione-dei-sentieri.md](numerazione-dei-sentieri.md).
 
 - **Nel registro entrano solo codici senza dubbi.** Un sentiero con un'anomalia non ha una riga:
   `trail_registry` è l'elenco di ciò che è deciso, `trail_registry_anomalies` ciò che resta da

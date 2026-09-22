@@ -53,3 +53,33 @@ it('non fa una query per numero', function () {
 
     expect(count($queries))->toBeLessThanOrEqual(2);
 });
+
+it('ordina per vicinanza i numeri offerti per la sostituzione', function () {
+    makeSector('ZNUB5', 'POLYGON((0 0, 0 10, 10 10, 10 0, 0 0))');
+
+    foreach ([11, 12, 13] as $number) {
+        makeCode([
+            'number' => $number,
+            'status' => TrailCodeStatus::Assigned,
+            'geometry_wkt' => 'LINESTRING Z (1 1 0, 1.001 1.001 0)',
+        ]);
+    }
+
+    $numbers = app(TrailRegistryService::class)->numbersWithAvailableVariants(
+        'ZNUB5',
+        'MULTILINESTRING Z ((1 1 0, 1.002 1.002 0))',
+    );
+
+    // Il cluster piu' vicino e' 11-13, tutti a distanza zero dalla traccia:
+    // sono candidati legittimi quanto un numero libero, perche' un numero
+    // gia' occupato con una lettera ancora libera concorre per vicinanza
+    // come gli altri (es. ZNUB511A accanto a ZNUB511 e' un'offerta sensata).
+    // Vengono prima dei liberi adiacenti 10 e 14, che distano 1.
+    expect($numbers[0])->toBe(11)
+        ->and($numbers[1])->toBe(12)
+        ->and($numbers[2])->toBe(13)
+        ->and($numbers[3])->toBe(10)
+        ->and($numbers[4])->toBe(14)
+        ->and($numbers)->toContain(11)
+        ->and($numbers)->toHaveCount(100);
+});

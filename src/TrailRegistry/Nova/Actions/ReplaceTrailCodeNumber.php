@@ -5,6 +5,7 @@ namespace Wm\WmPackage\TrailRegistry\Nova\Actions;
 use Illuminate\Bus\Queueable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Laravel\Nova\Actions\Action;
 use Laravel\Nova\Fields\ActionFields;
 use Laravel\Nova\Fields\Select;
@@ -99,7 +100,23 @@ class ReplaceTrailCodeNumber extends Action
             return [];
         }
 
-        return collect(app(TrailRegistryService::class)->numbersWithAvailableVariants($code->fullCode))
+        // La geometria del codice in esame non sta nel registro: sta nel
+        // sentiero, o nell'istanza se il codice e' solo riservato. Stesso
+        // COALESCE di neighbourCodes() (oc:8570).
+        $ecTracks = (string) config('wm-package.ec_track_table', 'ec_tracks');
+
+        $wkt = DB::selectOne(
+            <<<SQL
+            SELECT ST_AsText(COALESCE(t.geometry, a.geometry)) AS wkt
+            FROM trail_registry_codes c
+            LEFT JOIN {$ecTracks} t ON t.id = c.ec_track_id
+            LEFT JOIN trail_applications a ON a.id = c.trail_application_id
+            WHERE c.id = ?
+            SQL,
+            [$code->id],
+        )?->wkt;
+
+        return collect(app(TrailRegistryService::class)->numbersWithAvailableVariants($code->fullCode, $wkt, $code->id))
             ->mapWithKeys(fn (int $number) => [
                 $number => sprintf('%s%02d', $code->sector, $number),
             ])
