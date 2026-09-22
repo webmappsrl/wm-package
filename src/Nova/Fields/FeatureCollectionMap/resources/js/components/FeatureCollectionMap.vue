@@ -423,7 +423,6 @@ export default {
                 }
 
                 const data = await response.json();
-                console.log('GeoJSON loaded:', data);
                 applyGeoJSONData(data);
             } catch (error) {
                 console.error('Error loading GeoJSON:', error);
