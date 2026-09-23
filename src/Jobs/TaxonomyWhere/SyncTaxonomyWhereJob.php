@@ -24,11 +24,16 @@ class SyncTaxonomyWhereJob implements ShouldQueue
     {
         $service = GeometryComputationService::make();
 
+        // preserveOnNoMatch: true — path bulk, non ha un fallback via OSMFeatures come il path
+        // scoped-per-record: azzerare qui su una copertura locale temporaneamente insufficiente
+        // riaprirebbe il rischio CRITICO già documentato (oc:8487, notes.md).
         $tracksSynced = $service->syncTaxonomyWhere(
-            config('wm-package.ec_track_model', EcTrack::class)
+            config('wm-package.ec_track_model', EcTrack::class),
+            preserveOnNoMatch: true
         );
         $poisSynced = $service->syncTaxonomyWhere(
-            config('wm-package.ec_poi_model', EcPoi::class)
+            config('wm-package.ec_poi_model', EcPoi::class),
+            preserveOnNoMatch: true
         );
 
         Log::info('SyncTaxonomyWhereJob completed', [

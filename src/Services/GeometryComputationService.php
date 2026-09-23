@@ -27,9 +27,19 @@ class GeometryComputationService extends BaseService
      *
      * @param  class-string<GeometryModel>|GeometryModel  $model
      * @param  int|null  $modelId  Se valorizzato, scopa l'update alla sola riga con questo id.
+     * @param  bool|null  $preserveOnNoMatch  Se true, quando non trova intersezioni locali lascia
+     *      invariato il valore corrente invece di azzerarlo (upgrade-only). Se `null` (default),
+     *      si deriva da `$modelId`: `true` per una chiamata bulk (`$modelId === null` — i path
+     *      bulk/resync massivi, dove una copertura locale temporaneamente insufficiente non deve
+     *      cancellare dati già buoni), `false` per una chiamata scoped (il path automatico per
+     *      singolo record, dietro un fallback via OSMFeatures: deve azzerare se, dopo aver provato
+     *      anche l'API, non trova comunque nulla). Passare esplicitamente `true`/`false` forza il
+     *      comportamento indipendentemente da `$modelId`.
      */
-    public function syncTaxonomyWhere(string|GeometryModel $model, ?int $modelId = null): int
+    public function syncTaxonomyWhere(string|GeometryModel $model, ?int $modelId = null, ?bool $preserveOnNoMatch = null): int
     {
+        $preserveOnNoMatch ??= $modelId === null;
+
         $modelInstance = is_string($model) ? new $model : $model;
         if (! $modelInstance instanceof GeometryModel) {
             throw new \InvalidArgumentException('The model must extend GeometryModel.');
@@ -42,6 +52,10 @@ class GeometryComputationService extends BaseService
 
         $idCondition = $modelId !== null ? 'AND id = ?' : '';
         $bindings = $modelId !== null ? [$modelId] : [];
+
+        $noMatchFallback = $preserveOnNoMatch
+            ? "COALESCE(properties->'taxonomy_where', '{}'::jsonb)"
+            : "'{}'::jsonb";
 
         DB::statement("
             UPDATE {$tableName}
@@ -69,7 +83,7 @@ class GeometryComputationService extends BaseService
                         WHERE tw.geometry IS NOT NULL
                           AND ST_Intersects({$tableName}.geometry::geometry, tw.geometry::geometry)
                     ),
-                    '{}'::jsonb
+                    {$noMatchFallback}
                 )
             )
             WHERE geometry IS NOT NULL
@@ -83,6 +97,30 @@ class GeometryComputationService extends BaseService
               AND properties->'taxonomy_where' != '{}'::jsonb
               {$idCondition}
         ", $bindings)->c ?? 0);
+    }
+
+    /**
+     * Scrive `$mapped` in `properties.taxonomy_where` per un singolo record, ma solo se il campo
+     * è ancora vuoto in quel momento (protegge da un match locale arrivato nel frattempo — es.
+     * durante una chiamata di rete a un fallback esterno, oc:8487). Usata dal path scoped-per-
+     * record quando il calcolo SQL non trova nulla e un fallback (es. `OsmfeaturesClient`) prova
+     * a colmare il vuoto.
+     *
+     * @param  array<string, array{name: array, admin_level: int|null, source: string}>  $mapped
+     */
+    public function writeTaxonomyWhereIfEmpty(GeometryModel $model, array $mapped): void
+    {
+        $tableName = $model->getTable();
+        if (! preg_match('/^[a-zA-Z0-9_]+$/', $tableName)) {
+            throw new \InvalidArgumentException('Invalid table name.');
+        }
+
+        DB::statement("
+            UPDATE {$tableName}
+            SET properties = jsonb_set(COALESCE(properties, '{}'), '{taxonomy_where}', ?::jsonb)
+            WHERE id = ?
+              AND (properties->'taxonomy_where' IS NULL OR properties->'taxonomy_where' = '{}'::jsonb)
+        ", [json_encode((object) $mapped), $model->id]);
     }
 
     public function get3dLineMergeWktFromGeojson(string $geojson): string

@@ -161,3 +161,83 @@ it('writes a unified taxonomy_where shape with name/admin_level/source keys', fu
     expect($entry['name'])->toBeArray();
 });
 
+it('preserves an existing taxonomy_where when no local coverage matches AND preserveOnNoMatch is true (bulk/resync)', function () {
+    $app = App::factory()->create();
+
+    // Golfo di Guinea: nessuna TaxonomyWhere reale del DB di sviluppo condiviso lo copre
+    // (verificato: 0 righe con ST_Intersects su questo punto) — a differenza del punto
+    // "Corsica" [9.05,42.05] usato altrove in questo file, che oggi interseca where reali
+    // già presenti nel DB (id 1 "Corsica", id 2 "Francia"), non solo quelle create dal test.
+    $poiId = DB::table('ec_pois')->insertGetId([
+        'name' => json_encode(['it' => 'Poi fuori copertura']),
+        'app_id' => $app->id,
+        'user_id' => $app->user_id,
+        'geometry' => DB::raw("ST_GeomFromGeoJSON('{\"type\":\"Point\",\"coordinates\":[0.0,0.0,0]}')"),
+        'properties' => json_encode([
+            'taxonomy_where' => [
+                'R999999' => ['name' => ['it' => 'Regione Precedente'], 'admin_level' => 4, 'source' => 'osmfeatures'],
+            ],
+        ]),
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    // Nessuna TaxonomyWhere locale creata in questo test: la subquery ST_Intersects non trova nulla.
+    GeometryComputationService::make()->syncTaxonomyWhere(EcPoi::class, $poiId, preserveOnNoMatch: true);
+
+    $properties = EcPoi::find($poiId)->properties;
+    expect($properties['taxonomy_where'])->toHaveKey('R999999');
+    expect($properties['taxonomy_where']['R999999']['name']['it'])->toBe('Regione Precedente');
+});
+
+it('clears an existing taxonomy_where when no local coverage matches AND preserveOnNoMatch is false (default, path scoped automatico)', function () {
+    $app = App::factory()->create();
+
+    $poiId = DB::table('ec_pois')->insertGetId([
+        'name' => json_encode(['it' => 'Poi fuori copertura']),
+        'app_id' => $app->id,
+        'user_id' => $app->user_id,
+        'geometry' => DB::raw("ST_GeomFromGeoJSON('{\"type\":\"Point\",\"coordinates\":[0.0,0.0,0]}')"),
+        'properties' => json_encode([
+            'taxonomy_where' => [
+                'R999999' => ['name' => ['it' => 'Regione Precedente'], 'admin_level' => 4, 'source' => 'osmfeatures'],
+            ],
+        ]),
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    // Nessun parametro esplicito: il default deve azzerare, non preservare.
+    GeometryComputationService::make()->syncTaxonomyWhere(EcPoi::class, $poiId);
+
+    $properties = EcPoi::find($poiId)->properties;
+    expect($properties['taxonomy_where'] ?? [])->toBeEmpty();
+});
+
+it('defaults preserveOnNoMatch to true for a bulk call (no id) even without passing the parameter explicitly', function () {
+    $app = App::factory()->create();
+
+    // Un secondo EcPoi in copertura, per rendere la chiamata realmente bulk (nessun id passato)
+    // pur avendo un solo record che ci interessa verificare.
+    $poiIdOutOfCoverage = DB::table('ec_pois')->insertGetId([
+        'name' => json_encode(['it' => 'Poi fuori copertura']),
+        'app_id' => $app->id,
+        'user_id' => $app->user_id,
+        'geometry' => DB::raw("ST_GeomFromGeoJSON('{\"type\":\"Point\",\"coordinates\":[0.0,0.0,0]}')"),
+        'properties' => json_encode([
+            'taxonomy_where' => [
+                'R999999' => ['name' => ['it' => 'Regione Precedente'], 'admin_level' => 4, 'source' => 'osmfeatures'],
+            ],
+        ]),
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    // Chiamata bulk (nessun $modelId) senza passare preserveOnNoMatch: un futuro chiamante bulk
+    // che dimentica il parametro deve restare comunque protetto (finder 5, re-review oc:8487).
+    GeometryComputationService::make()->syncTaxonomyWhere(EcPoi::class);
+
+    $properties = EcPoi::find($poiIdOutOfCoverage)->properties;
+    expect($properties['taxonomy_where'])->toHaveKey('R999999');
+});
+

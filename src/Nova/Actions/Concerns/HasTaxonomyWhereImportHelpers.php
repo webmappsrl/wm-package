@@ -254,11 +254,15 @@ trait HasTaxonomyWhereImportHelpers
     {
         $service = GeometryComputationService::make();
 
+        // preserveOnNoMatch: true — stesso motivo di SyncTaxonomyWhereJob: è un resync bulk
+        // (tutti i contenuti EC, non scoped), senza fallback via OSMFeatures (oc:8487).
         $tracksSynced = $service->syncTaxonomyWhere(
-            config('wm-package.ec_track_model', EcTrack::class)
+            config('wm-package.ec_track_model', EcTrack::class),
+            preserveOnNoMatch: true
         );
         $poisSynced = $service->syncTaxonomyWhere(
-            config('wm-package.ec_poi_model', EcPoi::class)
+            config('wm-package.ec_poi_model', EcPoi::class),
+            preserveOnNoMatch: true
         );
 
         return $message." Sync taxonomy_where su {$tracksSynced} tracks e {$poisSynced} poi avviata.";

@@ -8,6 +8,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use Wm\WmPackage\Http\Clients\OsmfeaturesClient;
 use Wm\WmPackage\Models\Abstracts\GeometryModel;
 use Wm\WmPackage\Services\GeometryComputationService;
 
@@ -19,11 +20,63 @@ class SyncModelTaxonomyWhereJob implements ShouldQueue
 
     public int $backoff = 60;
 
+    public const SOURCE_OSMFEATURES = 'osmfeatures';
+
     public function __construct(protected GeometryModel $model) {}
 
-    public function handle(GeometryComputationService $service): void
+    public function handle(GeometryComputationService $service, OsmfeaturesClient $osmfeaturesClient): void
     {
-        $service->syncTaxonomyWhere(get_class($this->model), $this->model->id);
+        // preserveOnNoMatch di default (null) si deriva da $modelId: scoped qui, quindi false —
+        // il sync locale azzera se non trova corrispondenze. Il conteggio ritornato dice se ha
+        // trovato un match *in questo giro*, indipendentemente da cosa c'era scritto prima
+        // (oc:8487, ripresa 2026-09-23).
+        $synced = $service->syncTaxonomyWhere(get_class($this->model), $this->model->id);
+        if ($synced > 0) {
+            return;
+        }
+
+        $mapped = [];
+        $geojson = $this->model->getGeojson();
+        if ($geojson !== null) {
+            $mapped = $this->mapOsmfeaturesWheres($osmfeaturesClient->getWheresByGeojson($geojson));
+        }
+
+        // Se né il sync locale né l'API trovano nulla, $mapped resta vuoto: la scrittura azzera
+        // comunque, esplicitamente — nessun valore precedente va preservato in questo path
+        // (decisione esplicita del developer, oc:8487). La guardia contro un match locale
+        // arrivato nel frattempo e la corretta serializzazione di un array vuoto sono
+        // responsabilità del service (`writeTaxonomyWhereIfEmpty()`), condivise con l'eventuale
+        // altro scrittore di questo campo.
+        $service->writeTaxonomyWhereIfEmpty($this->model, $mapped);
+    }
+
+    /**
+     * Mappa il formato grezzo di `OsmfeaturesClient::getWheresByGeojson()`
+     * (`{whereId: {lang: label, ..., _admin_level: int}}`) al formato unificato scritto anche dal
+     * calcolo SQL locale (`{whereId: {name: {lang: label}, admin_level, source}}`). Scarta le
+     * entry senza alcuna traduzione del nome: un'area amministrativa con solo `admin_level` e
+     * nessun tag `name*` produrrebbe un'etichetta vuota, meno utile di nessuna entry.
+     *
+     * @param  array<string, array<string, mixed>>  $wheres
+     * @return array<string, array{name: array, admin_level: int|null, source: string}>
+     */
+    private function mapOsmfeaturesWheres(array $wheres): array
+    {
+        $mapped = [];
+        foreach ($wheres as $whereId => $where) {
+            $name = collect($where)->except('_admin_level')->toArray();
+            if (empty($name)) {
+                continue;
+            }
+
+            $mapped[$whereId] = [
+                'name' => $name,
+                'admin_level' => $where['_admin_level'] ?? null,
+                'source' => self::SOURCE_OSMFEATURES,
+            ];
+        }
+
+        return $mapped;
     }
 
     public function failed(\Throwable $e): void
