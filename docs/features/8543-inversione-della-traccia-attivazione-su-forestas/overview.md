@@ -2,6 +2,11 @@
 
 # Inversione della traccia: attivazione su Forestas
 
+> **Terzo ciclo (23/09/2026):** la review sul commit `bb4b75a3` ha chiesto di nuovo modifiche. Le
+> decisioni del terzo ciclo sono nella sezione [Terzo ciclo](#terzo-ciclo-23092026) in fondo e
+> prevalgono su quanto scritto sopra quando lo contraddicono: in particolare sull'avviso sugli
+> override, sul parametro `$forceGeometryChain` e sulla catena completa di 10 job.
+
 > **Secondo ciclo (22/09/2026):** la sezione Requisiti/Rischi/Moduli toccati sotto include anche i
 > fix richiesti dalla review sulla PR [wm-package#278](https://github.com/webmappsrl/wm-package/pull/278)
 > (esito changes requested, 22/09/2026). Le voci del primo ciclo restano, quelle superate sono
@@ -225,3 +230,197 @@ Piccioli in call). Il valore è di prodotto/consistenza con MapHub più che un'u
 - `wm-package/.claude/rules/nova.md` (risoluzione conflitto rebase con `develop` — secondo ciclo)
 - **`wm-package/composer.json`: rimandato** (Task 10 del piano, `config.policy.advisories.ignore-id`
   — decisione di rischio da confermare col dev, non eseguita in questo ciclo, vedi `notes.md`)
+
+---
+
+## Terzo ciclo (23/09/2026)
+
+Review del 23/09/2026 sul commit `bb4b75a3`, esito **changes requested** (dettaglio nel ticket
+oc:8543). Il riferimento di questo ciclo è il ticket: dove la call di scrum del 23/09 diceva altro
+(«la geometria la inverte sempre»), vale il ticket, scritto dopo la call (decisione della dev).
+
+### Cosa cambia
+
+L'Action non inverte più sempre e solo la geometria: diventa **«Inverti verso della traccia»**
+(`Reverse Track Direction`) e apre una finestra in cui l'utente sceglie cosa fare:
+
+- **«Inverti geometria»**, sempre presente e selezionato di default;
+- un flag **«Scambia»** per ogni coppia di dati che dipende dal verso ed è valorizzata sulla
+  traccia, spento di default, con i valori attuali mostrati sotto la casella.
+
+Tutta l'operazione passa in un nuovo metodo `EcTrackService::reverse()`, richiamabile anche da
+artisan o API; l'Action raccoglie le scelte e lo chiama. La catena di ricalcolo non è più quella
+generica di `updateDataChain()`, ma una catena dedicata all'inversione, che dipende da cosa è
+cambiato.
+
+### Perché
+
+1. **La catena completa cancella gli override manuali.** `updateDataChain(forceGeometryChain: true)`
+   accoda `UpdateEcTrackManualDataJob`, che ricostruisce `manual_data` dai valori al primo livello
+   di `properties`. Il form Nova però scrive gli override in `properties.manual_data`: il job non
+   trova nulla e scrive `manual_data = null`. Verificato il 23/09 sul DB locale di Forestas, dentro
+   una transazione annullata: sulla traccia 14 `updateManualData()` cancella `ascent`, `distance`,
+   `duration_forward` e `duration_backward`. L'import da Sardegna Sentieri valorizza `manual_data`
+   su ogni traccia (`forestas/app/Dto/Import/TrackPropertiesData.php:32-50`: distanza, dislivello,
+   durate e quote dall'API), da cui il «767 su 769» del ticket. Sul DB locale di questa macchina
+   invece 742 tracce hanno `manual_data = null`, tutte aggiornate nella stessa ora (09/04/2026, ore
+   16), e la 730 è stata azzerata il 23/09 alle 07:09: con ogni probabilità è lo stesso bug, già
+   avvenuto tramite l'observer dopo un cambio di geometria (ipotesi, non dimostrata).
+2. **Non sempre tutti i dati vanno invertiti insieme alla geometria.** I casi d'uso sono tre,
+   combinabili:
+   - si inverte la geometria e con lei i dati manuali e partenza/arrivo;
+   - si inverte la geometria, ma i dati manuali (o parte di essi) e partenza/arrivo sono già giusti,
+     perché inseriti pensando al verso corretto;
+   - la geometria è già stata invertita e solo dopo ci si accorge che vanno scambiati anche dei
+     dati: serve scambiarli senza toccare di nuovo la geometria.
+3. **`$chain[0]->afterCommit()` dentro `updateDataChain()` vale per tutti i chiamanti**, e cambia il
+   comportamento di `EcPoiObserver` ed `EcPoiEcTrackObserver`, che non hanno `$afterCommit`.
+
+### Requisiti
+
+**Finestra dell'Action**
+
+- [ ] Nome `Reverse Track Direction` → «Inverti verso della traccia».
+- [ ] Flag `Reverse geometry` → «Inverti geometria», sempre visibile, selezionato di default.
+- [ ] Per ciascuna coppia della tabella sotto, un flag `Swap :first / :second` → «Scambia :first /
+      :second», **mostrato solo se almeno uno dei due valori è presente** sulla traccia
+      selezionata, spento di default. I valori attuali stanno nella riga di aiuto (`->help()`), es.
+      «Salita: 500 — Discesa: 320»; il valore mancante si mostra come «—». I valori non entrano
+      nell'etichetta, che resta una chiave di traduzione fissa.
+- [ ] Se nessuna coppia è valorizzata, resta solo «Inverti geometria».
+- [ ] La traccia selezionata si legge dentro `fields()` con `$request->selectedResources()`:
+      `NovaRequest` usa il trait `InteractsWithResourcesSelection` (Nova 5,
+      `InteractsWithResourcesSelection.php:48`). L'Action resta vincolata a una sola traccia con
+      `->sole()`. La verifica a mano controlla che la finestra mostri le coppie giuste sia dalla
+      lista delle tracce sia dalla scheda della traccia.
+- [ ] Tutti i flag spenti → errore `Select at least one operation.` → «Seleziona almeno
+      un'operazione.», e nessuna scrittura.
+- [ ] Messaggio finale `Geometry reversed: :geometry. Swapped: :pairs. Recalculation in progress.` →
+      «Geometria invertita: :geometry. Scambiati: :pairs. Ricalcolo in corso.», con `:geometry`
+      sì/no e `:pairs` l'elenco delle coppie scambiate oppure «nessuno». Sostituisce l'avviso sugli
+      override.
+- [ ] Le chiavi di traduzione vecchie (`Reverse Track Geometry` e i due messaggi) vanno tolte da
+      `en.json` e `it.json`. Le etichette delle coppie riusano quelle già presenti in `it.json` se
+      esistono.
+- [ ] Restano i permessi del secondo ciclo: solo Administrator.
+
+**Come cambiano i dati**
+
+| Dato | Dove sta | Flag | Flag spento | Flag acceso |
+|---|---|---|---|---|
+| `geometry` | colonna | «Inverti geometria» | invariata | invertita |
+| `ascent` / `descent` | `properties.manual_data` | «Scambia» | invariati | scambiati |
+| `ele_from` / `ele_to` | `properties.manual_data` | «Scambia» | invariati | scambiati |
+| `duration_forward` / `duration_backward` | `properties.manual_data` | «Scambia» | invariati | scambiati |
+| `from` / `to` | `properties`, primo livello | «Scambia» | invariati | scambiati |
+| `distance`, `ele_min`, `ele_max` | `properties.manual_data` | nessuno | sempre invariati | — |
+| valori DEM | `properties.dem_data` | nessuno | ricalcolati dalla catena se la geometria è invertita | — |
+
+- [ ] **Coppia con un solo valore, flag acceso:** il valore passa all'altro campo e quello di
+      partenza resta vuoto. Per i dati di `manual_data` il campo vuoto torna a mostrare il valore
+      DEM (es. `ascent=500`, `descent` assente → `descent=500`, `ascent` assente). Per `from`/`to`
+      resta vuoto: su Forestas non c'è un valore di riserva, perché la tabella non ha la colonna
+      `osmfeatures_data` letta come fallback in `EcTrack.php:731`. Sul DB locale di Forestas 52
+      tracce hanno solo uno dei due valori, es. la 93 (`to` = `null`).
+- [ ] Un valore salvato come `null` conta come assente.
+
+**Service e catene**
+
+- [ ] Nuovo `EcTrackService::reverse(EcTrack $track, bool $geometry, array $swaps)` che:
+  - inverte la geometria se richiesto, con `GeometryComputationService::reverseGeometry()`
+    (invariato, già corretto sulle MultiLineString a più parti);
+  - applica solo gli scambi scelti, scrivendo `properties` senza far passare la geometria da
+    Eloquent;
+  - accoda la catena di ricalcolo **dopo il commit**.
+- [ ] Catena con **geometria invertita**: `UpdateEcTrackDemJob`, `UpdateEcTrackCurrentDataJob`,
+      `UpdateEcTrackSlopeValues`, `UpdateEcTrackGenerateElevationChartImage`,
+      `UpdateEcTrackOrderRelatedPoi`, `GenerateEcTrackPBFBatch`, `UpdateEcTrackAwsJob`,
+      `UpdateEcTrackAppRelationsInfoJob`.
+- [ ] Catena con **solo scambi**: `UpdateEcTrackCurrentDataJob`, `GenerateEcTrackPBFBatch` (le tile
+      contengono `duration_forward` letto da `manual_data`, `PBFGeneratorService.php:262-268`),
+      `UpdateEcTrackAwsJob`. Prima di chiuderla, verificare cosa legge ciascun job.
+- [ ] In **nessuna** delle due catene: `UpdateEcTrackManualDataJob` (cancella gli override),
+      `UpdateEcTrackFromOsmJob` (riscriverebbe la geometria da OSM), `UpdateEcTrack3DDemJob` (la
+      quota dei punti non cambia), `UpdateModelWithGeometryTaxonomyWhere` (dipende dalla forma, non
+      dal verso).
+- [ ] `UpdateEcTrackCurrentDataJob` resta in entrambe le catene, come chiede il ticket: è il passo
+      che, per come è progettata la catena, allinea `manual_data` e i valori mostrati. Oggi nel
+      package non lo fa per un bug del porting da GeoHub. In GeoHub la logica stava nel trait
+      `HandlesData`, usato anche dal modello `EcTrack`, e `$track->getDemDataFields()` funzionava.
+      Col refactor oc:4667 (commit `0d0970f4`, `f5371a4a`) la logica è passata in `EcTrackService`,
+      ma la chiamata è rimasta sul modello (`EcTrackService.php:169`), che il metodo non ce l'ha più
+      (è su `EcTrackService.php:48`, su nessun branch del package è sul modello). Il metodo va
+      quindi sempre in errore, il `catch` scrive `HandlesData: An error occurred during a store
+      operation` nel log, e si ferma prima di `saveQuietly()`. Verificato il 23/09 in una
+      transazione annullata: un override salvato da Nova mentre il job gira resta intatto. Quando
+      il bug sarà corretto, il job tornerà a lavorare anche nelle catene dell'inversione.
+
+**Da togliere**
+
+- [ ] Il parametro `$forceGeometryChain` di `EcTrackService::updateDataChain()`.
+- [ ] `$chain[0]->afterCommit()` dentro `updateDataChain()`: torna al comportamento di `develop` per
+      tutti i chiamanti. L'`afterCommit` va solo sulle catene dell'inversione.
+- [ ] L'avviso sugli override, `getOverriddenFields()` e la costante `DIRECTION_DEPENDENT_FIELDS` in
+      `ReverseEcTrackGeometryAction`.
+
+**Test e verifica**
+
+- [ ] Test Pest:
+  - flag di scambio spenti → dati invariati;
+  - flag accesi → coppie scambiate;
+  - combinazione mista;
+  - coppia con un solo valore;
+  - traccia senza dati manuali né partenza/arrivo → solo il flag della geometria;
+  - solo scambi → geometria identica e catena ridotta;
+  - tutti i flag spenti → errore e nessuna scrittura;
+  - elenco esatto dei job di entrambe le catene;
+  - `manual_data` non azzerato dopo l'inversione, senza `Bus::fake()` sul job che lo cancellava:
+    è il test che mancava. Non fa girare l'intera catena, perché AWS, PBF e immagine del profilo
+    scriverebbero su storage esterni (stessa classe di incidente di oc:8251): esegue a mano solo i
+    job che scrivono `properties`, cioè `UpdateEcTrackDemJob` con il `DemClient` finto e
+    `UpdateEcTrackCurrentDataJob`.
+- [ ] Suite completa del package lanciata in `php-forestas` con il `vendor/bin/pest` di
+      `wm-package` (database `wm_package`, isolato da `forestas`), **due volte**: su `develop` e sul
+      branch. Criterio: nessun test fallito in più sul branch rispetto a `develop`, e tutti i test
+      di `ReverseEcTrackGeometryActionTest` verdi. I due elenchi vanno in `notes.md` e nel commento
+      sulla PR. La suite serve perché la PR modifica `tests/TestCase.php`, e la CI dei test è rotta
+      su tutto il repo (oc:8626).
+- [ ] Verifica a mano in Nova su Forestas locale, eseguita dalla dev con una lista di passi
+      preparata nel piano, su tre tracce: una con tutte le coppie valorizzate, una con un solo
+      valore in una coppia (es. la 93), una senza dati manuali né partenza/arrivo. Dopo ogni prova
+      la traccia si rimette com'era rilanciando l'Action con le stesse scelte.
+
+### Rischi
+
+Nessun rischio nuovo in questo ciclo oltre a quelli già accettati nei cicli precedenti (sopra).
+Quello ipotizzato su `UpdateEcTrackCurrentDataJob`, cioè una modifica da Nova sovrascritta dal suo
+`saveQuietly()`, non esiste: il metodo va in errore prima di arrivarci (vedi Requisiti, «Service e
+catene»).
+
+### Out of scope
+
+Da aprire in un ticket separato, insieme:
+
+- `EcTrackService::updateManualData()`, che non legge il formato di `manual_data` usato dal form Nova
+  e lo cancella. Non riguarda solo l'inversione: parte in ogni catena di `updateDataChain()` dopo un
+  cambio di geometria. Da verificare se è la causa delle 742 tracce con `manual_data` azzerato sul
+  DB locale (vedi Perché, punto 1), e se lo stesso è successo in produzione.
+- `EcTrackService::updateCurrentData()`, rotto dal porting da GeoHub alla riga 169 (vedi Requisiti,
+  «Service e catene»). Correggere solo quella riga non basta: il metodo arriverebbe a un
+  `saveQuietly()` che riscrive tutto `properties` anche quando non ha aggiornato nulla, e una
+  modifica fatta da Nova nel frattempo andrebbe persa.
+- La CI dei test (oc:8626) e gli advisory Composer (Task 10 del secondo ciclo).
+- Tutto quanto già fuori scope nei cicli precedenti (attivazione su Forestas, `UgcTrack`, GeoHub).
+
+### Moduli toccati
+
+Tutti in `wm-package`, branch `feature/oc-8543-inversione-della-traccia-attivazione-su-forestas`.
+In `forestas` nessuna modifica.
+
+- `src/Nova/Actions/ReverseEcTrackGeometryAction.php`: `fields()` con i flag, nuovo nome, `handle()`
+  che chiama `EcTrackService::reverse()`, via avviso e costante.
+- `src/Services/Models/EcTrackService.php`: nuovo `reverse()` con le due catene; via
+  `$forceGeometryChain` e `$chain[0]->afterCommit()` da `updateDataChain()`.
+- `resources/lang/en.json`, `resources/lang/it.json`: chiavi nuove, via quelle vecchie.
+- `tests/Feature/Nova/Actions/ReverseEcTrackGeometryActionTest.php` ed eventuale test del service.
+- `docs/features/8543-inversione-della-traccia-attivazione-su-forestas/`: overview, plan, notes.
