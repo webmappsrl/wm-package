@@ -55,14 +55,44 @@ function makeCode(array $attributes = []): int
     $status = $attributes['status'] ?? TrailCodeStatus::Reserved->value;
     $status = $status instanceof TrailCodeStatus ? $status->value : $status;
 
+    // Geometria del detentore, per i test che misurano distanze: senza questa
+    // via ogni codice nasce con la stessa geometria fissa e ogni distanza
+    // risulta uguale, rendendo non verificabile qualunque ordinamento per
+    // vicinanza (oc:8570). Il default esiste perché in produzione un'istanza
+    // ce l'ha sempre; un Reserved senza geometria esplicita null verrebbe
+    // escluso in silenzio dal calcolo COALESCE(t.geometry, a.geometry) IS NOT NULL.
+    // geometry_wkt assente → usa il default (situazione di produzione);
+    // geometry_wkt => null esplicito → crea il detentore senza geometria (caso degenere, deliberato).
+    $geometryWkt = array_key_exists('geometry_wkt', $attributes)
+        ? $attributes['geometry_wkt']
+        : 'LINESTRING Z (9 40 0, 9.01 40.01 0)';
+    unset($attributes['geometry_wkt']);
+
     if ($status === TrailCodeStatus::Reserved->value && ! array_key_exists('trail_application_id', $attributes)) {
-        $attributes['trail_application_id'] = DB::table('trail_applications')->insertGetId([
-            'user_id' => makeTrailRegistryTestUser(),
-            'source' => 'office',
-            'status' => 'under_review',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        if ($geometryWkt === null) {
+            // Caso degenere: istanza senza geometria, deliberatamente richiesto
+            $attributes['trail_application_id'] = DB::table('trail_applications')->insertGetId([
+                'user_id' => makeTrailRegistryTestUser(),
+                'source' => 'office',
+                'status' => 'under_review',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        } else {
+            // Caso normale: inserisci con geometria (default o esplicita)
+            // Attenzione: questa conversione da LINESTRING a MULTILINESTRING accetta
+            // solo un LINESTRING Z — usa str_replace su '(' e ')' e non un parser WKT,
+            // quindi passare qui un WKT già MULTILINESTRING (o con parentesi annidate)
+            // produce una stringa rovinata e un errore PostGIS poco leggibile.
+            $attributes['trail_application_id'] = DB::selectOne(<<<'SQL'
+                INSERT INTO trail_applications (user_id, source, status, geometry, created_at, updated_at)
+                VALUES (:user_id, 'office', 'under_review', ST_GeomFromText(:wkt, 4326)::geography, now(), now())
+                RETURNING id
+            SQL, [
+                'user_id' => makeTrailRegistryTestUser(),
+                'wkt' => 'MULTILINESTRING Z (('.trim(str_replace(['LINESTRING Z (', ')'], '', $geometryWkt)).'))',
+            ])->id;
+        }
     }
 
     if ($status === TrailCodeStatus::Assigned->value && ! array_key_exists('ec_track_id', $attributes)) {
@@ -73,6 +103,13 @@ function makeCode(array $attributes = []): int
         // AppObserver::saved(), che tenta di scrivere la config su storage e
         // fallisce in questo ambiente di test (shard_name non configurato) —
         // un side-effect indesiderato per un semplice detentore di test.
+        if ($geometryWkt === null) {
+            throw new InvalidArgumentException(
+                'geometry_wkt non può essere null per uno stato Assigned: '.
+                'la traccia richiede una geometria (ec_tracks.geometry è NOT NULL)'
+            );
+        }
+
         $appId = DB::table('apps')->value('id') ?? App::factory()->createQuietly()->id;
 
         $attributes['ec_track_id'] = DB::selectOne(<<<'SQL'
@@ -83,7 +120,7 @@ function makeCode(array $attributes = []): int
             'properties' => json_encode([]),
             'name' => 'Trail Registry Test Track',
             'app_id' => $appId,
-            'wkt' => 'LINESTRING Z (9 40 0, 9.01 40.01 0)',
+            'wkt' => $geometryWkt,
         ])->id;
     }
 

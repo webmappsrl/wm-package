@@ -65,7 +65,7 @@ class AppConfigService extends AppBaseService
      * Display the specified resource.
      *
      * @param  int  $id  the app id in the database
-     * @return JsonResponse
+     * @return array<string, mixed>
      */
     public function config()
     {
@@ -377,6 +377,9 @@ class AppConfigService extends AppBaseService
                     }
                 }
                 unset($item['properties']);
+                if (isset($item['attributes']) && is_array($item['attributes'])) {
+                    $item['attributes'] = withoutInternalConfigKeys($item['attributes']);
+                }
                 if (isset($item['name'])) {
                     $item['title'] = $item['name'];
                 }

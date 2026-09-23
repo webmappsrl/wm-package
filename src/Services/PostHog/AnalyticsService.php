@@ -40,8 +40,28 @@ class AnalyticsService
     /** Timeout dedicato più aggressivo del default 10s: query bulk più pesante, non deve bloccare l'intera risposta della card se PostHog è lento. */
     private const USER_PRESENCE_TIMEOUT_SECONDS = 5;
 
+    /** Timeout dedicato per la query grezza di getRouteFilterUsage() — righe non aggregate, potenzialmente più pesante del default 10s; non deve rallentare l'intera global(). */
+    private const ROUTE_FILTER_TIMEOUT_SECONDS = 5;
+
     /** Cap righe finali per le classifiche aggregate (dopo filtro orfani/troncamento). */
     private const RANKING_LIMIT = 20;
+
+    /** Etichette italiane dei 7 filtri "route" del pannello avanzato camminiditalia (oc:8414) — insieme chiuso, coerente con `RouteFilterState` in wm-types. Un filter_id fuori da questa lista è un segnale di drift col frontend, non un valore valido da mostrare come riga fissa. */
+    private const ROUTE_FILTER_LABELS = [
+        'distance' => 'Lunghezza',
+        'stageCount' => 'Tappe',
+        'shape' => 'Tipologia',
+        'walkingNetwork' => 'Portata',
+        'regions' => 'Regioni',
+        'themes' => 'Temi',
+        'seasons' => 'Stagioni',
+    ];
+
+    /** Finestra di raggruppamento per il dedup lato PHP di `filterUsed`/route: eventi consecutivi della stessa sessione/filtro con un gap <= a questo valore contano come un solo utilizzo (oc:8585). */
+    private const ROUTE_FILTER_DEDUP_WINDOW_SECONDS = 5;
+
+    /** Cap di sicurezza sulle righe grezze recuperate (non aggregate in HogQL, a differenza delle altre query di questa classe) — stesso principio del cap 1000 righe di queryAllLayersRanking(). */
+    private const ROUTE_FILTER_MAX_ROWS = 5000;
 
     private string $host;
 
@@ -170,6 +190,160 @@ class AnalyticsService
         return $result;
     }
 
+    /**
+     * Conteggio degli usi dei 7 filtri del pannello "avanzato" (route) della search bar
+     * camminiditalia, con breakdown per piattaforma. Le 7 righe sono sempre presenti (anche a
+     * zero): a differenza delle classifiche aperte di questa classe, qui l'insieme è chiuso e
+     * noto (vedi ROUTE_FILTER_LABELS) — un filtro mai usato è il dato più interessante per
+     * l'obiettivo del ticket (capire quali filtri rimuovere), non un dato da nascondere.
+     *
+     * Conteggio grezzo degli eventi (non utenti unici), con dedup a 5s lato PHP: vedi
+     * dedupeAndCountRouteFilterEvents() per il perché non è fatto in HogQL.
+     */
+    public function getRouteFilterUsage(string $range = 'last_30_days'): array
+    {
+        $cacheKey = "posthog:filterUsed:route:ranking:{$range}";
+
+        return $this->rememberWithLock($cacheKey, $range, fn () => $this->buildRouteFilterUsage($range));
+    }
+
+    private function buildRouteFilterUsage(string $range): array
+    {
+        $rows = $this->queryRouteFilterEvents($range);
+        $counts = $this->dedupeAndCountRouteFilterEvents($rows);
+
+        $result = [];
+        foreach (self::ROUTE_FILTER_LABELS as $filterId => $label) {
+            $entry = $counts[$filterId] ?? ['total' => 0, 'breakdown' => []];
+            $result[] = [
+                'filter_id' => $filterId,
+                'name' => $label,
+                'total' => $entry['total'],
+                'breakdown' => $entry['breakdown'],
+            ];
+        }
+
+        usort($result, fn ($a, $b) => $b['total'] <=> $a['total']);
+
+        return $result;
+    }
+
+    /**
+     * Righe grezze (non aggregate): il dedup a 5s per sessione richiede l'ordine cronologico dei
+     * singoli eventi, che un GROUP BY in HogQL distruggerebbe. ORDER BY session_id, filter_id,
+     * timestamp: fondamentale, dedupeAndCountRouteFilterEvents() assume questo ordine per
+     * riconoscere le sequenze consecutive della stessa (sessione, filtro).
+     */
+    private function queryRouteFilterEvents(string $range): array
+    {
+        $whereClause = $this->whereClause($range);
+        $libs = $this->libList();
+        $limit = self::ROUTE_FILTER_MAX_ROWS;
+
+        $sql = <<<SQL
+SELECT
+    properties.filter_id AS filter_id,
+    properties.\$session_id AS session_id,
+    properties.\$lib AS lib,
+    toString(timestamp) AS ts
+FROM events
+WHERE event = 'filterUsed'
+  AND properties.filter_type = 'route'
+  AND properties.\$lib IN ({$libs})
+  AND {$whereClause}
+ORDER BY session_id, filter_id, timestamp
+LIMIT {$limit}
+SQL;
+
+        $rows = $this->runQuery($sql, true, self::ROUTE_FILTER_TIMEOUT_SECONDS);
+
+        if (count($rows) >= self::ROUTE_FILTER_MAX_ROWS) {
+            Log::warning('queryRouteFilterEvents() hit the safety row cap — route filter usage may be incomplete', ['range' => $range]);
+        }
+
+        return array_map(fn ($row) => [
+            'filter_id' => (string) $row[0],
+            'session_id' => (string) $row[1],
+            'lib' => (string) $row[2],
+            'timestamp' => (string) $row[3],
+        ], $rows);
+    }
+
+    /**
+     * Raggruppa eventi consecutivi della stessa (session_id, filter_id) il cui gap dal
+     * precedente è <= ROUTE_FILTER_DEDUP_WINDOW_SECONDS: contano come un solo utilizzo. Un gap
+     * più ampio apre un nuovo conteggio. Fatto qui e non in HogQL perché leadInFrame() (la window
+     * function più vicina a questo bisogno) non è affidabile in questo ambiente — vedi il
+     * commento su queryTopSearchQueries().
+     *
+     * `session_id` non è garantito da PostHog (come `layer_id`/`user_id` altrove in questa
+     * classe): un evento senza sessione non entra nella chiave di dedup e conta sempre come
+     * nuovo utilizzo — l'alternativa (usare una stringa vuota come chiave) collasserebbe
+     * silenziosamente utenti diversi privi di sessione fra loro (oc:8585, trovato in review).
+     *
+     * @param  array<int, array{filter_id: string, session_id: string, lib: string, timestamp: string}>  $rows  ordinate per (session_id, filter_id, timestamp) — vedi queryRouteFilterEvents()
+     * @return array<string, array{total: int, breakdown: list<array{lib: string, total: int}>}>
+     */
+    private function dedupeAndCountRouteFilterEvents(array $rows): array
+    {
+        $counts = [];
+        $lastTimestamps = [];
+
+        foreach ($rows as $row) {
+            $filterId = $row['filter_id'];
+
+            try {
+                $timestamp = Carbon::parse($row['timestamp']);
+            } catch (\Exception $e) {
+                // Un timestamp malformato non deve abbattere l'intera global() (oc:8585,
+                // trovato in review) — scartiamo la singola riga, come già fa runQuery() per
+                // un fallimento HTTP in modalità non strict, invece di propagare un errore che
+                // travolgerebbe anche le altre metriche già calcolate con successo.
+                Log::warning('AnalyticsService: timestamp non parsabile in evento filterUsed/route, riga scartata', [
+                    'filter_id' => $filterId,
+                    'timestamp' => $row['timestamp'],
+                ]);
+
+                continue;
+            }
+
+            $sessionId = $row['session_id'];
+            $isNewUsage = true;
+
+            if ($sessionId !== '') {
+                $key = "{$sessionId}|{$filterId}";
+                $previous = $lastTimestamps[$key] ?? null;
+
+                $isNewUsage = $previous === null
+                    || $previous->diffInSeconds($timestamp) > self::ROUTE_FILTER_DEDUP_WINDOW_SECONDS;
+
+                $lastTimestamps[$key] = $timestamp;
+            }
+
+            if (! $isNewUsage) {
+                continue;
+            }
+
+            if (! isset(self::ROUTE_FILTER_LABELS[$filterId])) {
+                Log::warning('AnalyticsService: filter_id sconosciuto in evento filterUsed/route', ['filter_id' => $filterId]);
+            }
+
+            $counts[$filterId] ??= ['total' => 0, 'breakdown' => []];
+            $counts[$filterId]['total']++;
+            $counts[$filterId]['breakdown'][$row['lib']] = ($counts[$filterId]['breakdown'][$row['lib']] ?? 0) + 1;
+        }
+
+        foreach ($counts as $filterId => $entry) {
+            $counts[$filterId]['breakdown'] = array_map(
+                fn ($lib, $total) => ['lib' => $lib, 'total' => $total],
+                array_keys($entry['breakdown']),
+                array_values($entry['breakdown']),
+            );
+        }
+
+        return $counts;
+    }
+
     public function getLayerTrackDownloads(Layer $layer, string $range = 'last_30_days'): array
     {
         $trackIds = $layer->ecTracks()->pluck('ec_tracks.id')->toArray();
@@ -277,9 +451,10 @@ class AnalyticsService
      * filterPointsNearLayerTracks() — senza quest'ultimo passo i punti sarebbero solo "vicini
      * all'area del layer", non "vicini al sentiero" (bbox è un rettangolo, non la traccia).
      * `user_id` (nullable) è l'id applicativo dello user, non l'id anonimo PostHog `person_id`
-     * (quest'ultimo è solo una chiave di join interna, scartata prima del return) — usato dal
-     * chiamante (Layer::getFeatureCollectionMap()) per mostrare nominativo e link invece del
-     * marker anonimo di default, quando disponibile.
+     * (quest'ultimo è solo una chiave di join interna, scartata prima del return) — dopo oc:8586
+     * il chiamante (Layer::getFeatureCollectionMap()) lo legge solo se `$showLiveUserIdentity` è
+     * `true` (hardcoded a `false` per privacy, in attesa di parere legale): il marker live è oggi
+     * sempre anonimo, il campo resta nel payload per la riattivazione futura di quel flag.
      *
      * @return list<array{lat: float, lng: float, user_id: ?int}>
      */

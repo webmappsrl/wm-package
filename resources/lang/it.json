@@ -452,5 +452,11 @@
     "Importa": "Importa",
     "Chiudi": "Chiudi",
     "Import in corso...": "Import in corso...",
-    "Errore imprevisto durante l'import.": "Errore imprevisto durante l'import."
+    "Errore imprevisto durante l'import.": "Errore imprevisto durante l'import.",
+    "Sostituisci numero": "Sostituisci numero",
+    "Numero": "Numero",
+    "Variante": "Variante",
+    "nessuna variante": "nessuna variante",
+    "Numero sostituito.": "Numero sostituito.",
+    "Questa istanza non ha un codice attivo da sostituire.": "Questa istanza non ha un codice attivo da sostituire."
 }

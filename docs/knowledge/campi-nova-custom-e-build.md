@@ -12,9 +12,15 @@ L'alternativa in uso è `laravel-mix` + `vue` + `laravel-nova` (pubblici su npm)
 
 - `externals: { vue: 'Vue' }` — senza, la build include una **seconda copia di Vue** e il campo non
   renderizza: nessun errore, il tab appare vuoto.
-- `webpack` pinnato **esatto** a `5.75.0`, non `^5.75.0`: le versioni successive rompono
-  `webpack-cli@4` (bundlato da `laravel-mix@6`) per un cambio nello schema di `ProgressPlugin`
-  (oc:7546).
+- `webpack` pinnato **esatto**, mai con `^`: `laravel-mix@6` porta `webpack-cli@4`, che si rompe
+  a ogni cambio di API interne di webpack. Il numero non è uno solo nel package — `TranslationsBuilder`
+  sta a `5.75.0` (oc:7546, `ProgressPlugin`), `BboxField` e il campo del registro a `5.103.0` — e
+  diversi campi non lo dichiarano affatto, affidandosi al proprio `package-lock.json`. Quello che
+  vale per tutti è il limite superiore: **la 5.103 compila, la 5.111 no** — `laravel-mix` cerca
+  `webpack/lib/SizeFormatHelpers`, che in mezzo è stato rimosso. Dove cada esattamente il confine
+  fra le due non è stato cercato: 5.103 è il valore verificato che funziona, e non c'è motivo di
+  salire. Un campo nuovo senza versione dichiarata e senza lock prende l'ultima e fallisce in
+  compilazione (oc:8568).
 
 **Ogni nuovo campo custom con build CSS deve avere il proprio `postcss.config.js`**
 (`module.exports = {}`). Senza, `npm run prod` risale l'albero delle cartelle e trova il
@@ -82,6 +88,29 @@ sul dist per accertarsene (oc:8093, oc:8043).
   `Illuminate\Http\Resources\MergeValue`, che espone `$data` come proprietà pubblica (oc:8303).
 - Le traduzioni del package stanno in `resources/lang/*.json`, **non** in `lang/`: scrivere
   altrove produce chiavi silenziosamente non caricate (oc:8180).
+
+### Dove stanno le classi PHP di un campo
+
+Quasi tutti i campi tengono le classi in `<Campo>/src/`, ma in due modi diversi, e la differenza
+conta:
+
+- `TrackColor`, `OrderList`, `PoiTrackReferenceField` **non** hanno una voce PSR-4 propria: si
+  fanno caricare dalla mappatura generale `Wm\WmPackage\ → src` mettendo `\src` dentro il
+  namespace (`namespace Wm\WmPackage\Nova\Fields\TrackColor\src;`);
+- `TranslationsBuilder`, `IconSelect`, `LayerFeatures`, `FeatureCollectionMap`,
+  `FeatureCollectionGrid` hanno una voce dedicata in `composer.json`, che salta quel `src` nel
+  namespace.
+
+**Il secondo modo non va usato per un campo nuovo.** L'autoload del consumer non legge il
+`composer.json` del package dal vivo, ma la copia registrata in `vendor/composer/installed.json`
+quando il package è stato installato: una voce PSR-4 aggiunta oggi non esiste per nessun consumer
+finché non esegue `composer update`, e fino ad allora il campo è una classe che non si trova —
+errore a **ogni** pagina di Nova, perché il provider è registrato all'avvio, non solo dove il campo
+è usato.
+
+Un campo nuovo sceglie quindi fra le due strade che non richiedono nulla al consumer: classi
+direttamente nella cartella del campo, oppure in `src/` con `\src` nel namespace. Il campo del
+registro sentieri usa la prima (oc:8568).
 
 ### JavaScript di un dominio opzionale
 

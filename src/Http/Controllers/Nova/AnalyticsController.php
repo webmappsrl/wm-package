@@ -57,6 +57,13 @@ class AnalyticsController extends Controller
             $rankingTrackShares = $service->getAllTracksShares($range);
             $searchTotal = $service->getTotalSearches($range);
             $rankingSearchQueries = $service->getTopSearchQueries($range);
+            // Opt-in per consumer (default disabilitato, vedi config/wm-package.php): il pannello
+            // "filtro avanzato" (route) esiste solo su alcuni shard (oggi solo camminiditalia).
+            // Senza questo gate, ogni consumer di wm-package vedrebbe comunque la sezione, sempre
+            // a zero (oc:8585).
+            $rankingRouteFilters = config('wm-package.route_filter_analytics_enabled')
+                ? $service->getRouteFilterUsage($range)
+                : null;
         } catch (AnalyticsQueryException|LockTimeoutException $e) {
             return response()->json(['error' => 'analytics_query_failed'], 502);
         }
@@ -68,6 +75,7 @@ class AnalyticsController extends Controller
             'ranking_track_shares' => $rankingTrackShares,
             'search_total' => $searchTotal,
             'ranking_search_queries' => $rankingSearchQueries,
+            'ranking_route_filters' => $rankingRouteFilters,
         ]));
     }
 

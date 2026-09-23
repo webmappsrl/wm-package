@@ -10,6 +10,7 @@ return [
     'version' => '1.5.0', // x-release-please-version
     'shard_name' => env('SHARD_NAME', env('APP_NAME')),
     'analytics_shard_name' => env('ANALYTICS_SHARD_NAME'),
+    'route_filter_analytics_enabled' => env('ROUTE_FILTER_ANALYTICS_ENABLED', false),
     'layer_user_presence_distance_meters' => env('LAYER_USER_PRESENCE_DISTANCE_METERS', 50),
     'services' => [
         'geometry_computation' => [
@@ -43,12 +44,13 @@ return [
     ],
     'web_components' => [
         'layer_map' => [
-            'example_url' => 'https://raw.githubusercontent.com/webmappsrl/wm-layer-map/refs/heads/main/test/index.html',
-            'cache_ttl' => 1800,
-            'timeout' => 10,
+            // script_url intenzionalmente assente: il default vive come
+            // costante privata in Wm\WmPackage\Nova\Layer (oc:8590) — questo
+            // config resta un dato primitivo, senza dipendere da una Nova
+            // Resource solo per leggere un URL. Un consumer che vuole un URL
+            // diverso può comunque sovrascrivere 'fallback.script_url' qui.
             'fallback' => [
                 'tag_name' => 'wm-layer-map',
-                'script_url' => 'https://cdn.jsdelivr.net/gh/webmappsrl/wm-layer-map@refs/heads/main/src/wm-layer-map.js',
                 'default_style' => 'display:block;width:100%;height:600px',
             ],
         ],
@@ -80,6 +82,24 @@ return [
     'ec_track_model' => env('EC_TRACK_MODEL', 'App\Models\EcTrack'),
     'ec_poi_track_pivot_table' => env('EC_POI_TRACK_PIVOT_TABLE', 'ec_poi_ec_track'),
     'default_layer_mode' => env('DEFAULT_LAYER_MODE', 'auto'),
+
+    /*
+    | Chiavi di un array di attributi (es. properties->attributes di un Layer,
+    | o di un altro modello in futuro) che un consumer considera riservate a
+    | un uso interno e mai da esporre pubblicamente (config.json, endpoint
+    | layer()). Vuoto di default: il package non sa e non deve sapere quali
+    | concetti "interni" esistano per un consumer specifico. Generico per
+    | costruzione: non è legato a Layer né a nessun modello specifico — vedi
+    | withoutInternalConfigKeys() in src/helpers.php.
+    |
+    | Un consumer la popola con un proprio config/wm-package.php (il
+    | pacchetto fa mergeConfigFrom(): quel file vince sulla stessa chiave,
+    | le altre chiavi restano quelle di qui) — versionato, a differenza di
+    | un .env di produzione che nessun test legge (es. camminiditalia,
+    | 'shape_discontinuous', oc:8463). Nessuna env var qui: sarebbe
+    | un secondo modo di fare la stessa cosa, mai usato da nessun consumer.
+    */
+    'internal_attribute_keys' => [],
 
     /*
     | Domini opzionali del package {@see \Wm\WmPackage\Services\FeaturesService}.

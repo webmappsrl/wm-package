@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Spatie\MediaLibrary\MediaCollections\Models\Media as SpatieMedia;
 use Wm\WmPackage\Models\Interfaces\UserOwnedModelInterface;
+use Wm\WmPackage\Observers\LayerMediaObserver;
 use Wm\WmPackage\Observers\MediaObserver;
 use Wm\WmPackage\Services\GeoJsonService;
 use Wm\WmPackage\Traits\HasPackageFactory;
@@ -40,6 +41,7 @@ class Media extends SpatieMedia implements UserOwnedModelInterface
     protected static function booted()
     {
         Media::observe(MediaObserver::class);
+        Media::observe(LayerMediaObserver::class);
     }
 
     public function author(): BelongsTo

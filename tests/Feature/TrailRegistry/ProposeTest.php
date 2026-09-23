@@ -136,3 +136,28 @@ it('solleva un errore esplicito quando il settore e esaurito', function () {
 
     app(TrailRegistryService::class)->propose('MULTILINESTRING((1 1, 2 2))');
 })->throws(SectorExhaustedException::class);
+
+it('propone il numero che continua la numerazione dei sentieri vicini', function () {
+    makeSector('ZNUB5', 'POLYGON((0 0, 0 10, 10 10, 10 0, 0 0))');
+
+    // Vicino alla traccia in esame: 11, 12, 13. Lontano: 40.
+    foreach ([11, 12, 13] as $number) {
+        makeCode([
+            'number' => $number,
+            'status' => TrailCodeStatus::Assigned,
+            'geometry_wkt' => 'LINESTRING Z (1 1 0, 1.001 1.001 0)',
+        ]);
+    }
+    makeCode([
+        'number' => 40,
+        'status' => TrailCodeStatus::Assigned,
+        'geometry_wkt' => 'LINESTRING Z (9 9 0, 9.001 9.001 0)',
+    ]);
+
+    $proposal = app(TrailRegistryService::class)
+        ->propose('MULTILINESTRING Z ((1 1 0, 1.002 1.002 0))');
+
+    // Prima di oc:8570 sarebbe uscito 0, il primo libero in assoluto.
+    expect($proposal['number'])->toBe(10)
+        ->and($proposal['variant'])->toBe('0');
+});

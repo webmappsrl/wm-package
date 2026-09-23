@@ -15,6 +15,56 @@ di `properties->*` va difensiva (`??`, `is_array()`, `empty()`) (oc:8367).
 Lo stesso observer scrive su AWS anche per un'App appena creata: nei test serve
 `App::factory()->createQuietly()` (oc:7749, oc:8242).
 
+### Rigenerazione asincrona da cambi su Layer
+
+Oltre al percorso sincrono di `AppObserver::saved()` (sopra), `config.json` si rigenera anche in
+modo **asincrono** via `UpdateAppConfigJob::dispatch($appId)`, dispatchato da più punti (almeno
+8): `LayerObserver`, `TileObserver`, `FeatureCollection`, `FeatureCollectionService`,
+`ImportAppJob` (due punti, batch layer e fallback sincrono), `RecalculateAppLayerAttributesAction`
+(consumer), `RecalculateLayerAttributesJob` (consumer), e `LayerMediaObserver` (nuovo, vedi
+sotto).
+
+**Un cambio isolato di un media (logo o immagine) su un `Layer` non faceva scattare nessuno di
+questi trigger** (oc:8564): `LayerObserver::updateAppConf()` è gated su
+`wasChanged('properties')`, che un upload/rimozione di media non tocca mai; nessun altro punto
+osservava eventi `Media`. `LayerMediaObserver` (`src/Observers/LayerMediaObserver.php`,
+registrato in aggiunta a `MediaObserver` su `Media::booted()`) chiude questo gap: su
+`created`/`deleted` di un media di **qualsiasi** collection di un Layer, dispatcha
+`UpdateAppConfigJob` con lo stesso delay di 10s (`->delay(now()->addSeconds(10))`) usato da
+`LayerObserver::updateAppConf()`, per lasciare tempo alle conversion (thumbnail, registrate per
+l'intero modello da `GeometryModel::registerMediaConversions()`, non per singola collection) di
+generarsi prima della rigenerazione. `logo_image` legge sempre l'originale
+(`getFirstMediaUrl('logo')`); `feature_image` legge esplicitamente la thumbnail
+(`MediaService::getThumbnailUrl()`) — solo il secondo avrebbe davvero bisogno del delay, ma è
+applicato a entrambi per semplicità.
+
+**`ShouldBeUnique` su Postgres, dentro una transazione, richiede `uniqueVia()` su Redis** — non
+scontato, e riguarda ogni futuro job unico dispatchato da un salvataggio Nova. `UpdateAppConfigJob`
+implementa `ShouldBeUnique` (oc:8488) con lock di default su `CACHE_STORE=database`.
+`Illuminate\Cache\DatabaseLock::acquire()` prova un `INSERT` e, se fallisce per chiave duplicata,
+ripiega su un `UPDATE` nello **stesso** try/catch — su PostgreSQL una query fallita dentro una
+transazione blocca (`25P02`) tutte le query successive nella stessa transazione, quindi anche
+l'`UPDATE` di fallback fallisce. Nova avvolge ogni salvataggio risorsa in una transazione
+(`ResourceUpdateController`), quindi qualunque dispatch di un job `ShouldBeUnique` con lock su
+database, quando la riga esiste già, fa fallire con 500 il salvataggio che lo dispatcha —
+indipendentemente da quale osservatore lo scatena. Fix: `uniqueVia(): Repository { return
+Cache::store('redis'); }` — pattern già preesistente e idiomatico nel package
+(`BuildAppPoisGeojsonJob::uniqueVia()`, non introdotto da oc:8564). **Debito noto**: altri job
+`ShouldBeUnique`/`ShouldBeUniqueUntilProcessing` nel package/consumer (`UpdateLayerGeometryJob`,
+`ReindexEcTrackSearchableJob`, `SyncAutoLayerAfterPoiTaxonomyChangeJob`,
+`SyncAutoLayerAfterTrackTaxonomyChangeJob`, `DispatcherAppPbfsDebouncedJob`,
+`RecalculateLayerAttributesJob` del consumer) non hanno `uniqueVia()` e restano esposti allo
+stesso rischio se dispatchati da dentro una transazione — non risolti in oc:8564.
+
+**`Bus::fake()` non isola i test da questo lock**: l'acquisizione (`UniqueLock::acquire()`) gira
+in `PendingDispatch::shouldDispatch()`, dentro `__destruct()`, **prima** che il Dispatcher fake
+sostituisca quello vero — quindi un test che dispatcha un job `ShouldBeUnique` con
+`uniqueVia()` su Redis dipende comunque da una connessione Redis reale, anche sotto
+`Bus::fake()`. In un test serve `config(['cache.stores.redis.driver' => 'array'])` per isolarsi
+davvero (vedi `tests/Feature/LayerMediaObserverTest.php`, stesso workaround già presente in
+`tests/Unit/Models/EcPoiAppRelationTest.php` per `BuildAppPoisGeojsonJob`). La CI del package
+(`run-tests.yml`) non provisiona un servizio Redis — solo Postgres.
+
 ### Theme
 
 Lo storage resta `properties->theme->*` in **snake_case** (`primary_color`, `secondary_color`,

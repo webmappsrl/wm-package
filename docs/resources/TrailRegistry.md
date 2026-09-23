@@ -89,10 +89,38 @@ porta un sentiero. Non duplicarne la logica nei consumer.
 | Metodo | Cosa fa |
 |---|---|
 | `resolveSector($wkt)` | il settore che contiene il sentiero, o quello con cui condivide il tratto più lungo |
-| `propose($wkt)` | il primo codice libero in quel settore |
-| `availableNumbers($fullCode)` | i numeri liberi, per la sostituzione manuale |
+| `propose($wkt)` | il codice libero più vicino, nel settore |
+| `availableNumbers($fullCode)` | i numeri **puri** ancora liberi: è la domanda che serve a `propose()` |
+| `availableVariants($fullCode, $number)` | le varianti libere di un numero, `'0'` compreso quando il numero puro è libero |
+| `numbersWithAvailableVariants($fullCode)` | i numeri con almeno una variante libera: l'elenco da cui si sceglie nella sostituzione manuale |
 | `reserve()` / `confirm()` / `release()` / `replaceNumber()` | il ciclo di vita di un'istanza |
 | `registerExistingCode()` | registra un codice storico già esistente |
+
+I tre metodi di lettura rispondono a domande diverse e non sono intercambiabili:
+`availableNumbers()` esclude un numero appena il numero puro è occupato,
+`numbersWithAvailableVariants()` lo tiene finché gli avanza una lettera. È ciò che rende
+raggiungibile la variante di un sentiero esistente (oc:8569).
+
+### Il criterio di vicinanza (oc:8570)
+
+`propose()` non prende più il primo numero libero del settore: i numeri già usati si raggruppano
+in **cluster per contiguità numerica** — 11, 12, 13 sono un cluster, 16, 17 un altro — e a decidere
+l'ordine è **solo il cluster più vicino alla traccia in esame**. Gli altri cluster del settore non
+competono: chi vuole aprire una numerazione lontano dalla propria traccia non passa dalla proposta
+automatica, usa l'Action Nova `ReplaceTrailCodeNumber`. I numeri liberi si ordinano per distanza
+numerica dai numeri di quel cluster, nelle due direzioni; a parità di distanza vince il numero
+precedente, così l'esito resta deterministico anche sugli incroci.
+
+Lo stesso criterio governa il campo `Select` dell'Action `ReplaceTrailCodeNumber`, tramite
+`numbersWithAvailableVariants($fullCode, $geometryWkt, $excludeCodeId)`: il terzo parametro esclude
+dal calcolo delle distanze il codice che si sta sostituendo, altrimenti quel codice distarebbe zero
+da sé stesso, farebbe cluster da solo e coprirebbe i vicini veri.
+
+Un settore senza codici non ha nulla da cui misurare la vicinanza: l'ordine resta quello numerico,
+come prima di oc:8570 — è anche il comportamento di `numbersWithAvailableVariants()` quando viene
+chiamato senza geometria, per i consumer che non hanno una traccia da cui misurare. Il fallback alle
+varianti con lettera, quando il numero puro è saturo, segue lo stesso criterio per vicinanza: non è
+un ordine a parte, `orderByProximity()` si applica anche ai numeri liberi di ciascuna variante A-Z.
 
 ### `registerExistingCode()` — gli esiti
 
@@ -214,12 +242,22 @@ Il gate di CI va invocato con `--with=trail_registry`.
 
 Le tre Resource stanno nella sezione di menu **Catasto**.
 
-- **Registro dei codici** — sola lettura: un codice non si crea e non si modifica da un form,
-  cambiarne il numero significherebbe cambiare un numero già comunicato e forse già stampato.
+- **Registro dei codici** — sola lettura: un codice non si crea, non si modifica e non si
+  sostituisce da qui.
   Ricerca **per codice**, che Nova non saprebbe fare da sé (il codice non è una colonna, si compone
   da sei) — vedi `applySearch()`. Nella scheda: mappa con settore, sentiero ed eventuale istanza,
   legenda e storia dei cambi di stato.
-- **Istanze** — il ciclo di accatastamento, con le azioni che ne fanno avanzare lo stato.
+  Sulla mappa ci sono anche **gli altri sentieri dello stesso settore**, con numero e variante
+  scritti sul tracciato: servono a giudicare un numero, perché la numerazione segue una logica di
+  zona e un numero si sceglie guardando i vicini, non il primo libero. Entrano i codici che
+  occupano una posizione — `Reserved` e `Assigned`, gli stessi della select del «sostituisci
+  numero» — con la geometria del sentiero o, se il codice è solo riservato, quella dell'istanza.
+  I numeri compaiono scritti da un certo zoom in poi (`labelMinZoom` sul campo, 12 di default);
+  più lontano si leggono passando il mouse sul tracciato (oc:8568).
+- **Istanze** — il ciclo di accatastamento, con le azioni che ne fanno avanzare lo stato. Da qui
+  si sostituisce anche il numero prenotato, scegliendo in due tendine — il numero, poi la
+  variante, con «nessuna variante» fra le opzioni della seconda: il gesto avviene mentre si
+  guarda la mappa dell'istanza, che è il contesto su cui si decide (oc:8569).
 - **Anomalie** — sola lettura, con in testa una card che spiega la schermata
   (`TrailRegistryNoticeCard`).
 

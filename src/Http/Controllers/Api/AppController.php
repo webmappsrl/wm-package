@@ -444,6 +444,9 @@ EOF;
         // }
         $json = [];
         $json = $layer->toArray();
+        if (isset($json['properties']['attributes']) && is_array($json['properties']['attributes'])) {
+            $json['properties']['attributes'] = withoutInternalConfigKeys($json['properties']['attributes']);
+        }
         if ($layer->feature_image) {
             $json['featureImage'] = $layer->featureImage->getGeoJson();
         }

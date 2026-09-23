@@ -17,12 +17,14 @@ use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Resource;
 use Wm\WmPackage\Models\User;
 use Wm\WmPackage\TrailRegistry\Enums\TrailApplicationStatus;
+use Wm\WmPackage\TrailRegistry\Enums\TrailCodeStatus;
 use Wm\WmPackage\TrailRegistry\Exceptions\InvalidTrailGeometryException;
 use Wm\WmPackage\TrailRegistry\Exceptions\SectorExhaustedException;
 use Wm\WmPackage\TrailRegistry\Exceptions\SectorNotFoundException;
 use Wm\WmPackage\TrailRegistry\Models\TrailApplication as TrailApplicationModel;
 use Wm\WmPackage\TrailRegistry\Nova\Actions\ApproveTrailApplication;
 use Wm\WmPackage\TrailRegistry\Nova\Actions\RejectTrailApplication;
+use Wm\WmPackage\TrailRegistry\Nova\Actions\ReplaceTrailCodeNumber;
 use Wm\WmPackage\TrailRegistry\Nova\Filters\TrailApplicationSourceFilter;
 use Wm\WmPackage\TrailRegistry\Nova\Filters\TrailApplicationStatusFilter;
 use Wm\WmPackage\TrailRegistry\TrailGeometryReader;
@@ -206,6 +208,12 @@ class TrailApplication extends Resource
         return [
             (new ApproveTrailApplication)->canRun($onlyUnderReview),
             (new RejectTrailApplication)->canRun($onlyUnderReview),
+            // Il vincolo che conta e' quello del service (solo Reserved):
+            // qui lo replichiamo perche' il bottone non compaia quando non
+            // porterebbe da nessuna parte.
+            (new ReplaceTrailCodeNumber)->canRun(
+                fn ($request, $application) => $application->activeCode?->status === TrailCodeStatus::Reserved,
+            ),
         ];
     }
 }

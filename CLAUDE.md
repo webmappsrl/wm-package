@@ -97,6 +97,7 @@ questo file, perché vanno lette sempre.
 | Layer e associazione contenuti | modalità auto/manuale, `poi_mode`, pivot `layerables` | [docs/knowledge/layer-e-associazione-contenuti.md](docs/knowledge/layer-e-associazione-contenuti.md) |
 | Campi Nova custom e build | toolchain, Tailwind, componenti condivisi, `dist` | [docs/knowledge/campi-nova-custom-e-build.md](docs/knowledge/campi-nova-custom-e-build.md) |
 | Domini opzionali | interruttore, stub, risorse Nova, Catasto Sentieri | [docs/knowledge/domini-opzionali.md](docs/knowledge/domini-opzionali.md) |
+| Numerazione dei sentieri | come nasce il numero di un sentiero, perché quel criterio, cosa è stato scartato | [docs/knowledge/numerazione-dei-sentieri.md](docs/knowledge/numerazione-dei-sentieri.md) |
 | Testare il package | i due `TestCase`, factory, isolamento verso l'esterno | [docs/knowledge/testare-il-package.md](docs/knowledge/testare-il-package.md) |
 
 ## Procedure
@@ -109,6 +110,7 @@ Per allineare le migration in un consumer:
 | Lavoro | Ticket | In breve |
 |---|---|---|
 | `EcTrackExcelExporter` e i campi DEM | oc:7984 | L'exporter non legge più i campi DEM da `properties.*` ma passa da `classifyField` (trait `HasDemClassification`), la stessa priorità che usano Nova ed `EcTrackResource`: senza, lo stesso dato usciva diverso a seconda di dove lo si guardava. `docs/features/7984-fix-ectrackexcelexporter-campi-dem/` |
+| `withoutInternalConfigKeys()` — esclusione generica di chiavi interne da config.json/`layer()` | oc:8463 | Nuovo helper globale (`src/helpers.php`) + config `internal_attribute_keys` (vuota di default, popolata dal consumer, mai dal pacchetto): rimuove da un array `properties->attributes` le chiavi che un consumer dichiara riservate a uso interno, senza che wm-package ne conosca il significato (camminiditalia la usa per `shape_discontinuous`, un flag di discontinuità del cammino). Applicato in due canali con nesting diverso: `AppConfigService::config_section_map()` (`$item['attributes']`, appiattito) e `AppController::layer()` (`$json['properties']['attributes']`, annidato). `docs/features/8463-routeshape-discontinuo-come-lineare/` |
 
 ## Convenzioni e documentazione
 
