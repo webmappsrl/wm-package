@@ -10,9 +10,11 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Wm\WmPackage\Jobs\Import\ImportAppJob;
 use Wm\WmPackage\Jobs\Import\ImportEcMediaJob;
+use Wm\WmPackage\Jobs\Import\ImportEcPoiJob;
 use Wm\WmPackage\Jobs\Import\ImportEcTrackJob;
 use Wm\WmPackage\Jobs\Import\ImportLayerJob;
 use Wm\WmPackage\Jobs\Import\ImportTaxonomyActivityJob;
+use Wm\WmPackage\Jobs\TaxonomyWhere\SyncTaxonomyWhereJob;
 use Wm\WmPackage\Jobs\UpdateAppConfigJob;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Services\Import\GeohubImportService;
@@ -142,7 +144,7 @@ it('queues a fresh UpdateAppConfigJob when a taxonomy batch finishes', function 
  * null) e MAP.filters.activities — aggiunto a CONFIG_DEPENDENT_BATCHES, verificato qui non
  * diversamente dagli altri.
  */
-it('queues a fresh UpdateAppConfigJob when the ec_track batch finishes', function () {
+it('queues a fresh UpdateAppConfigJob and a SyncTaxonomyWhereJob when the ec_track batch finishes', function () {
     Bus::fake();
 
     $app = App::factory()->createQuietly();
@@ -167,11 +169,49 @@ it('queues a fresh UpdateAppConfigJob when the ec_track batch finishes', functio
     expect($batches)->toHaveCount(1);
 
     $finallyCallbacks = $batches->first()->finallyCallbacks();
-    expect($finallyCallbacks)->toHaveCount(1);
+    expect($finallyCallbacks)->toHaveCount(2);
 
-    ($finallyCallbacks[0])(Mockery::mock(Batch::class));
+    foreach ($finallyCallbacks as $callback) {
+        $callback(Mockery::mock(Batch::class));
+    }
 
     Bus::assertDispatched(UpdateAppConfigJob::class, fn (UpdateAppConfigJob $dispatched) => $dispatched->appId === $app->id);
+    Bus::assertDispatched(SyncTaxonomyWhereJob::class);
+});
+
+it('queues a SyncTaxonomyWhereJob when the ec_poi batch finishes', function () {
+    Bus::fake();
+
+    $app = App::factory()->createQuietly();
+
+    $service = Mockery::mock(GeohubImportService::class);
+    $service->shouldReceive('getGeohubIdsToImport')
+        ->once()
+        ->with('ec_poi', Mockery::any(), Mockery::any())
+        ->andReturn([444]);
+    $service->shouldReceive('createJob')
+        ->once()
+        ->with('ec_poi', 444, Mockery::any())
+        ->andReturn(new ImportEcPoiJob(444, ['app_id' => $app->id]));
+
+    $job = new ImportAppJob($app->id, []);
+
+    withMockedGeohubService($job, $service);
+
+    invokeProtected($job, 'queueEntityImport', 'ec_poi', $app->user_id, 'user_id', $app->id);
+
+    $batches = Bus::batched(fn ($batch) => true);
+    expect($batches)->toHaveCount(1);
+
+    $finallyCallbacks = $batches->first()->finallyCallbacks();
+    expect($finallyCallbacks)->toHaveCount(2);
+
+    foreach ($finallyCallbacks as $callback) {
+        $callback(Mockery::mock(Batch::class));
+    }
+
+    Bus::assertDispatched(UpdateAppConfigJob::class, fn (UpdateAppConfigJob $dispatched) => $dispatched->appId === $app->id);
+    Bus::assertDispatched(SyncTaxonomyWhereJob::class);
 });
 
 /**

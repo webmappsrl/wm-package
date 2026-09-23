@@ -7,8 +7,8 @@ use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
+use Wm\WmPackage\Jobs\TaxonomyWhere\SyncModelTaxonomyWhereJob;
 use Wm\WmPackage\Jobs\UpdateEcPoiDemJob;
-use Wm\WmPackage\Jobs\UpdateModelWithGeometryTaxonomyWhere;
 use Wm\WmPackage\Models\Abstracts\GeometryModel;
 use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Services\BaseService;
@@ -24,7 +24,7 @@ class EcPoiService extends BaseService
         if ($model->wasChanged('geometry') || $elevation === null || $taxonomyWhere === null) {
 
             $chain = [
-                new UpdateModelWithGeometryTaxonomyWhere($model), // it relates where taxonomy terms to the media model based on geometry attribute
+                new SyncModelTaxonomyWhereJob($model), // it relates where taxonomy terms to the poi based on geometry attribute
                 new UpdateEcPoiDemJob($model),
             ];
 

@@ -151,7 +151,7 @@ class ImportTaxonomyWhere extends Action
         if ($skipped > 0) {
             $msg .= " ({$skipped} già aggiornati, saltati)";
         }
-        $msg = $this->finalizeWithTracksSync($msg);
+        $msg = $this->finalizeWithEcSync($msg);
 
         if ($skippedCollision > 0) {
             $msg .= ' '.__(':count records skipped: identifier already in use.', [
@@ -251,7 +251,7 @@ class ImportTaxonomyWhere extends Action
         if ($skipped > 0) {
             $msg .= " ({$skipped} già aggiornati, saltati)";
         }
-        $msg = $this->finalizeWithTracksSync($msg);
+        $msg = $this->finalizeWithEcSync($msg);
 
         if ($skippedCollision > 0) {
             $msg .= ' '.__(':count records skipped: identifier already in use.', [

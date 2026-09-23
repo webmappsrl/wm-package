@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Log;
 use Wm\WmPackage\Facades\OsmClient;
 use Wm\WmPackage\Http\Clients\DemClient;
 use Wm\WmPackage\Jobs\Pbf\GenerateEcTrackPBFBatch;
+use Wm\WmPackage\Jobs\TaxonomyWhere\SyncModelTaxonomyWhereJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrack3DDemJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackAppRelationsInfoJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
@@ -20,7 +21,6 @@ use Wm\WmPackage\Jobs\Track\UpdateEcTrackGenerateElevationChartImage;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackManualDataJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackOrderRelatedPoi;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackSlopeValues;
-use Wm\WmPackage\Jobs\UpdateModelWithGeometryTaxonomyWhere;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Services\BaseService;
@@ -316,7 +316,7 @@ class EcTrackService extends BaseService
         $chain[] = new UpdateEcTrackCurrentDataJob($track);
         $chain[] = new UpdateEcTrack3DDemJob($track);
         $chain[] = new UpdateEcTrackSlopeValues($track);
-        $chain[] = new UpdateModelWithGeometryTaxonomyWhere($track);
+        $chain[] = new SyncModelTaxonomyWhereJob($track);
         $chain[] = new UpdateEcTrackGenerateElevationChartImage($track);
         $chain[] = new UpdateEcTrackAwsJob($track);
         $chain[] = new UpdateEcTrackOrderRelatedPoi($track);
@@ -343,7 +343,7 @@ class EcTrackService extends BaseService
             $chain[] = new UpdateEcTrackCurrentDataJob($track);
             $chain[] = new UpdateEcTrack3DDemJob($track);
             $chain[] = new UpdateEcTrackSlopeValues($track);
-            $chain[] = new UpdateModelWithGeometryTaxonomyWhere($track);
+            $chain[] = new SyncModelTaxonomyWhereJob($track);
             $chain[] = new UpdateEcTrackGenerateElevationChartImage($track);
             $chain[] = new GenerateEcTrackPBFBatch($track);
         }

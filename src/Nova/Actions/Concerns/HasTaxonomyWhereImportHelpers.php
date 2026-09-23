@@ -8,8 +8,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Laravel\Nova\Fields\ActionFields;
 use Wm\WmPackage\Jobs\TaxonomyWhere\CopyTaxonomyWhereGeometryFromGeohubJob;
-use Wm\WmPackage\Jobs\TaxonomyWhere\SyncTaxonomyWhereTracksJob;
+use Wm\WmPackage\Jobs\TaxonomyWhere\SyncTaxonomyWhereJob;
 use Wm\WmPackage\Models\App;
+use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\TaxonomyWhere;
 use Wm\WmPackage\Services\GeometryComputationService;
@@ -219,12 +220,12 @@ trait HasTaxonomyWhereImportHelpers
             $created++;
         }
 
-        // Stesso motivo dei cicli precedenti: syncTracksTaxonomyWhere() deve
+        // Stesso motivo dei cicli precedenti: syncTaxonomyWhere() deve
         // partire solo a copia geometrie completata, non subito dopo il
         // dispatch asincrono dei job CopyTaxonomyWhereGeometryFromGeohubJob.
         Bus::batch($geometryJobs)
             ->then(function () {
-                SyncTaxonomyWhereTracksJob::dispatch();
+                SyncTaxonomyWhereJob::dispatch();
             })
             ->dispatch();
 
@@ -245,16 +246,25 @@ trait HasTaxonomyWhereImportHelpers
     }
 
     /**
-     * Dispatcha il sync locale (via ST_Intersects) delle track esistenti sulle
-     * taxonomy_where appena importate/aggiornate, e appende il contatore al
+     * Dispatcha il sync locale (via ST_Intersects) di track e poi esistenti sulle
+     * taxonomy_where appena importate/aggiornate, e appende i contatori al
      * messaggio finale — stesso comportamento per tutte e tre le sorgenti.
      */
-    protected function finalizeWithTracksSync(string $message): string
+    protected function finalizeWithEcSync(string $message): string
     {
-        $tracksSynced = GeometryComputationService::make()->syncTracksTaxonomyWhere(
-            config('wm-package.ec_track_model', EcTrack::class)
+        $service = GeometryComputationService::make();
+
+        // preserveOnNoMatch: true — stesso motivo di SyncTaxonomyWhereJob: è un resync bulk
+        // (tutti i contenuti EC, non scoped), senza fallback via OSMFeatures (oc:8487).
+        $tracksSynced = $service->syncTaxonomyWhere(
+            config('wm-package.ec_track_model', EcTrack::class),
+            preserveOnNoMatch: true
+        );
+        $poisSynced = $service->syncTaxonomyWhere(
+            config('wm-package.ec_poi_model', EcPoi::class),
+            preserveOnNoMatch: true
         );
 
-        return $message." Sync taxonomy_where su {$tracksSynced} tracks avviata.";
+        return $message." Sync taxonomy_where su {$tracksSynced} tracks e {$poisSynced} poi avviata.";
     }
 }
