@@ -1194,6 +1194,345 @@ git commit -m "feat(oc:8487): trigger taxonomy_where sync when ec_poi/ec_track i
 
 ---
 
+### Task 9: `GeometryComputationService::syncTaxonomyWhere()` diventa upgrade-only
+
+> ⚠️ L'implementazione ha deviato da questo task: [notes.md](notes.md#task-9-punto-di-test-in-collisione-con-dati-reali-del-db-condiviso) — e più sostanzialmente, dopo review formale e chiarimento del developer, il comportamento upgrade-only qui descritto come "sempre" è stato ridisegnato: cerca "Revisione del comportamento upgrade-only" in `notes.md`
+
+**Files:**
+- Modify: `src/Services/GeometryComputationService.php:69-77`
+- Test: `tests/Feature/Services/GeometryComputationServiceTaxonomyWhereTest.php` (esistente, append)
+
+**Interfaces:**
+- Consumes: nessuna nuova — modifica comportamentale di `syncTaxonomyWhere()` (Task 1).
+- Produces: garanzia "mai downgrade" su cui Task 10 fa affidamento (il job scoped può assumere che `syncTaxonomyWhere()` da solo non cancelli mai un valore preesistente).
+
+- [ ] **Step 1: Scrivi il test che fallisce**
+
+Aggiungi in fondo a `tests/Feature/Services/GeometryComputationServiceTaxonomyWhereTest.php`:
+
+```php
+it('does not reset an existing taxonomy_where when no local coverage matches (upgrade-only)', function () {
+    $app = App::factory()->create();
+
+    $poiId = DB::table('ec_pois')->insertGetId([
+        'name' => json_encode(['it' => 'Poi fuori copertura']),
+        'app_id' => $app->id,
+        'user_id' => $app->user_id,
+        'geometry' => DB::raw("ST_GeomFromGeoJSON('{\"type\":\"Point\",\"coordinates\":[9.05,42.05,0]}')"),
+        'properties' => json_encode([
+            'taxonomy_where' => [
+                'R999999' => ['name' => ['it' => 'Regione Precedente'], 'admin_level' => 4, 'source' => 'osmfeatures'],
+            ],
+        ]),
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    // Nessuna TaxonomyWhere locale creata in questo test: la subquery ST_Intersects non trova nulla.
+    GeometryComputationService::make()->syncTaxonomyWhere(EcPoi::class, $poiId);
+
+    $properties = EcPoi::find($poiId)->properties;
+    expect($properties['taxonomy_where'])->toHaveKey('R999999');
+    expect($properties['taxonomy_where']['R999999']['name']['it'])->toBe('Regione Precedente');
+});
+```
+
+- [ ] **Step 2: Esegui il test e verifica che fallisca**
+
+Run: `docker exec -it php-maphub bash -c "cd wm-package && vendor/bin/pest tests/Feature/Services/GeometryComputationServiceTaxonomyWhereTest.php"`
+Expected: FAIL — `R999999` non è più presente, `taxonomy_where` è stato azzerato a `{}` dalla UPDATE incondizionata
+
+- [ ] **Step 3: Rendi la UPDATE upgrade-only**
+
+In `src/Services/GeometryComputationService.php`, dentro `syncTaxonomyWhere()`, sostituisci:
+
+```php
+                        FROM taxonomy_wheres tw
+                        WHERE tw.geometry IS NOT NULL
+                          AND ST_Intersects({$tableName}.geometry::geometry, tw.geometry::geometry)
+                    ),
+                    '{}'::jsonb
+                )
+            )
+            WHERE geometry IS NOT NULL
+            {$idCondition}
+        ", $bindings);
+```
+
+con:
+
+```php
+                        FROM taxonomy_wheres tw
+                        WHERE tw.geometry IS NOT NULL
+                          AND ST_Intersects({$tableName}.geometry::geometry, tw.geometry::geometry)
+                    ),
+                    COALESCE(properties->'taxonomy_where', '{}'::jsonb)
+                )
+            )
+            WHERE geometry IS NOT NULL
+            {$idCondition}
+        ", $bindings);
+```
+
+Il `COALESCE` più esterno ora ripiega sul valore già presente in colonna (`properties->'taxonomy_where'`) invece che su `{}` fisso: se la subquery non trova intersezioni, il valore esistente resta intatto; per un record che non ne ha mai avuto uno, `properties->'taxonomy_where'` è `NULL` e il `COALESCE` produce comunque `{}` (comportamento identico a oggi in quel caso).
+
+- [ ] **Step 4: Esegui il test e verifica che passi**
+
+Run: `docker exec -it php-maphub bash -c "cd wm-package && vendor/bin/pest tests/Feature/Services/GeometryComputationServiceTaxonomyWhereTest.php"`
+Expected: PASS (tutti i test del file, inclusi i 5 esistenti — nessuna regressione: gli scenari già coperti hanno sempre almeno una `TaxonomyWhere` locale che interseca, quindi il ramo "trovato" non cambia)
+
+- [ ] **Step 5: Verifica di non-regressione sul path bulk**
+
+Run: `docker exec -it php-maphub bash -c "cd wm-package && vendor/bin/pest tests/Feature/Jobs/SyncTaxonomyWhereTracksJobTest.php"`
+Expected: PASS — stesso metodo condiviso, nessuna assertion di quel file dipende dal ramo "nessun match" azzerato a `{}`
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add src/Services/GeometryComputationService.php tests/Feature/Services/GeometryComputationServiceTaxonomyWhereTest.php
+git commit -m "fix(oc:8487): non azzerare taxonomy_where quando il sync locale non trova corrispondenze"
+```
+
+---
+
+### Task 10: Fallback via OSMFeatures in `SyncModelTaxonomyWhereJob`
+
+> ⚠️ L'implementazione ha deviato da questo task: [notes.md](notes.md#task-10-stile-del-file-di-test-diverso-da-quello-assunto-dal-piano) — e più sostanzialmente: 2 bug bloccanti trovati in review formale e corretti, e il design del fallback ridisegnato dopo un chiarimento del developer. Cerca "Review formale" e "Revisione del comportamento upgrade-only" in `notes.md`
+
+**Files:**
+- Modify: `src/Jobs/TaxonomyWhere/SyncModelTaxonomyWhereJob.php`
+- Modify: `tests/Feature/Jobs/SyncModelTaxonomyWhereJobTest.php:1-30` (la chiamata diretta a `->handle()` del test esistente del Task 2 va aggiornata: `handle()` guadagna un secondo parametro obbligatorio)
+- Test: `tests/Feature/Jobs/SyncModelTaxonomyWhereJobTest.php` (append)
+
+**Interfaces:**
+- Consumes: `GeometryComputationService::syncTaxonomyWhere()` (Task 1, upgrade-only da Task 9), `OsmfeaturesClient::getWheresByGeojson(array $geojson): array` (esistente, `src/Http/Clients/OsmfeaturesClient.php:11`)
+- Produces: `SyncModelTaxonomyWhereJob::handle(GeometryComputationService $service, OsmfeaturesClient $osmfeaturesClient): void` — firma aggiornata, stesso costruttore `__construct(GeometryModel $model)` di prima.
+
+- [ ] **Step 1: Aggiorna la chiamata diretta esistente nel test del Task 2**
+
+In `tests/Feature/Jobs/SyncModelTaxonomyWhereJobTest.php`, nel test `it('populates taxonomy_where on the single EcPoi passed to the job', ...)`, sostituisci:
+
+```php
+    (new SyncModelTaxonomyWhereJob($poi))->handle(app(\Wm\WmPackage\Services\GeometryComputationService::class));
+```
+
+con:
+
+```php
+    (new SyncModelTaxonomyWhereJob($poi))->handle(
+        app(\Wm\WmPackage\Services\GeometryComputationService::class),
+        app(\Wm\WmPackage\Http\Clients\OsmfeaturesClient::class)
+    );
+```
+
+Questo test ha già copertura locale (la `TaxonomyWhere` Corsica creata nel test), quindi il fallback non scatterà — nessun'altra modifica necessaria a quel test.
+
+- [ ] **Step 2: Scrivi i test che falliscono**
+
+Aggiungi in fondo a `tests/Feature/Jobs/SyncModelTaxonomyWhereJobTest.php`:
+
+```php
+use Illuminate\Support\Facades\Http;
+use Wm\WmPackage\Http\Clients\OsmfeaturesClient;
+
+it('falls back to OSMFeatures when the local sync finds no taxonomy_where', function () {
+    Http::fake([
+        '*/api/v1/features/admin-areas/geojson' => Http::response([
+            'features' => [
+                [
+                    'properties' => [
+                        'osmfeatures_id' => 'R617447',
+                        'osm_tags' => [
+                            'name' => 'Toscana',
+                            'name:it' => 'Toscana',
+                            'name:en' => 'Tuscany',
+                            'admin_level' => '4',
+                        ],
+                    ],
+                ],
+            ],
+        ], 200),
+    ]);
+
+    $app = App::factory()->create();
+    $poi = EcPoi::create([
+        'name' => ['it' => 'Poi senza copertura locale'],
+        'app_id' => $app->id,
+        'user_id' => $app->user_id,
+        'properties' => [],
+    ]);
+    DB::statement(
+        'UPDATE ec_pois SET geometry = ST_GeomFromGeoJSON(?) WHERE id = ?',
+        ['{"type":"Point","coordinates":[11.25,43.77]}', $poi->id]
+    );
+
+    (new SyncModelTaxonomyWhereJob($poi))->handle(
+        app(\Wm\WmPackage\Services\GeometryComputationService::class),
+        app(OsmfeaturesClient::class)
+    );
+
+    $taxonomyWhere = $poi->fresh()->properties['taxonomy_where'] ?? [];
+    expect($taxonomyWhere)->toHaveKey('R617447');
+    expect($taxonomyWhere['R617447'])->toHaveKeys(['name', 'admin_level', 'source']);
+    expect($taxonomyWhere['R617447']['source'])->toBe('osmfeatures');
+    expect($taxonomyWhere['R617447']['admin_level'])->toBe(4);
+});
+
+it('does not call OSMFeatures when the local sync already found a taxonomy_where', function () {
+    Http::fake();
+
+    $taxonomyWhere = new TaxonomyWhere([
+        'name' => 'Corsica',
+        'properties' => ['source' => 'geohub', 'admin_level' => 4],
+    ]);
+    $taxonomyWhere->identifier = 'corsica-'.Str::lower(Str::random(8));
+    $taxonomyWhere->save();
+    DB::statement(
+        'UPDATE taxonomy_wheres SET geometry = ST_GeomFromGeoJSON(?) WHERE id = ?',
+        ['{"type":"Polygon","coordinates":[[[8.53,41.33],[9.56,41.33],[9.56,43.03],[8.53,43.03],[8.53,41.33]]]}', $taxonomyWhere->id]
+    );
+
+    $app = App::factory()->create();
+    $poi = EcPoi::create([
+        'name' => ['it' => 'Poi in Corsica'],
+        'app_id' => $app->id,
+        'user_id' => $app->user_id,
+        'properties' => [],
+    ]);
+    DB::statement(
+        'UPDATE ec_pois SET geometry = ST_GeomFromGeoJSON(?) WHERE id = ?',
+        ['{"type":"Point","coordinates":[9.05,42.05]}', $poi->id]
+    );
+
+    (new SyncModelTaxonomyWhereJob($poi))->handle(
+        app(\Wm\WmPackage\Services\GeometryComputationService::class),
+        app(OsmfeaturesClient::class)
+    );
+
+    expect($poi->fresh()->properties['taxonomy_where'] ?? [])->not->toBeEmpty();
+    Http::assertNothingSent();
+});
+```
+
+- [ ] **Step 3: Esegui i test e verifica che falliscano**
+
+Run: `docker exec -it php-maphub bash -c "cd wm-package && vendor/bin/pest tests/Feature/Jobs/SyncModelTaxonomyWhereJobTest.php"`
+Expected: FAIL sul primo nuovo test (`R617447` non presente — il job oggi non chiama `OsmfeaturesClient`) e `ArgumentCountError` sul test esistente del Task 2 finché lo Step 1 non è applicato
+
+- [ ] **Step 4: Implementa il fallback nel job**
+
+Sostituisci il contenuto di `src/Jobs/TaxonomyWhere/SyncModelTaxonomyWhereJob.php`:
+
+```php
+<?php
+
+namespace Wm\WmPackage\Jobs\TaxonomyWhere;
+
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Wm\WmPackage\Http\Clients\OsmfeaturesClient;
+use Wm\WmPackage\Models\Abstracts\GeometryModel;
+use Wm\WmPackage\Services\GeometryComputationService;
+
+class SyncModelTaxonomyWhereJob implements ShouldQueue
+{
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+
+    public int $tries = 3;
+
+    public int $backoff = 60;
+
+    public function __construct(protected GeometryModel $model) {}
+
+    public function handle(GeometryComputationService $service, OsmfeaturesClient $osmfeaturesClient): void
+    {
+        $service->syncTaxonomyWhere(get_class($this->model), $this->model->id);
+
+        $current = $this->model->fresh()->properties['taxonomy_where'] ?? [];
+        if (! empty($current)) {
+            return;
+        }
+
+        $wheres = $osmfeaturesClient->getWheresByGeojson($this->model->getGeojson());
+        if (empty($wheres)) {
+            return;
+        }
+
+        $mapped = [];
+        foreach ($wheres as $whereId => $where) {
+            $mapped[$whereId] = [
+                'name' => collect($where)->except('_admin_level')->toArray(),
+                'admin_level' => $where['_admin_level'] ?? null,
+                'source' => 'osmfeatures',
+            ];
+        }
+
+        $tableName = $this->model->getTable();
+        DB::statement("
+            UPDATE {$tableName}
+            SET properties = jsonb_set(COALESCE(properties, '{}'), '{taxonomy_where}', ?::jsonb)
+            WHERE id = ?
+        ", [json_encode($mapped), $this->model->id]);
+    }
+
+    public function failed(\Throwable $e): void
+    {
+        Log::error('SyncModelTaxonomyWhereJob failed after all retries', [
+            'model' => get_class($this->model),
+            'model_id' => $this->model->id,
+            'error' => $e->getMessage(),
+        ]);
+    }
+}
+```
+
+Nessun `try/catch` attorno a `getWheresByGeojson()`: un'eccezione (es. HTTP non `successful()`) si propaga e fa fallire il job, innescando i retry già configurati (`tries=3`, `backoff=60`) e il `failed()` esistente — per scelta esplicita del developer, non un'omissione.
+
+La scrittura usa `DB::statement()` scoped sull'id, non `$model->properties = ...; $model->saveQuietly()`: risalvare un `GeometryModel` via Eloquent transita anche la colonna `geometry` attraverso l'ORM e la corrompe (regola del package, vedi Global Constraints).
+
+- [ ] **Step 5: Esegui i test e verifica che passino**
+
+Run: `docker exec -it php-maphub bash -c "cd wm-package && vendor/bin/pest tests/Feature/Jobs/SyncModelTaxonomyWhereJobTest.php"`
+Expected: PASS (tutti e tre i test del file)
+
+- [ ] **Step 6: Verifica di non-regressione sui call site che chiamano `handle()` tramite il job dispatchato (non direttamente)**
+
+Run: `docker exec -it php-maphub bash -c "cd wm-package && vendor/bin/pest tests/Feature/Services tests/Feature/Jobs tests/Feature/Nova"`
+Expected: PASS — i call site che dispatchano il job in coda (`EcPoiService`, `EcTrackService`, azione inline `EcTrack.php`, Task 2/3) non chiamano `handle()` direttamente: la risoluzione dei due parametri via container resta automatica, nessuna modifica richiesta lì
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add src/Jobs/TaxonomyWhere/SyncModelTaxonomyWhereJob.php tests/Feature/Jobs/SyncModelTaxonomyWhereJobTest.php
+git commit -m "feat(oc:8487): fall back to OSMFeatures when the scoped local sync finds no taxonomy_where"
+```
+
+---
+
+## Self-Review — ripresa 2026-09-23 (Task 9-10)
+
+**1. Copertura spec:** entrambi i requisiti `[PIANIFICATO, non ancora implementato]` di `overview.md` hanno un task — upgrade-only (Task 9), fallback OSMFeatures scoped (Task 10). Il requisito "path bulk esplicitamente escluso" non ha un task perché è un vincolo negativo (nessuna modifica a `SyncTaxonomyWhereJob`), verificato per assenza: nessuno step di Task 9/10 tocca quel file.
+
+**2. Placeholder scan:** nessun TBD — ogni step ha codice completo o comando eseguibile con output atteso.
+
+**3. Coerenza tipi/nomi:** `SyncModelTaxonomyWhereJob::handle()` guadagna un parametro (`OsmfeaturesClient $osmfeaturesClient`) — la firma è coerente ovunque venga richiamata in questo piano: il test del Task 2 (aggiornato in Task 10 Step 1) e i due nuovi test di Task 10 la passano tutti e tre. Nessun altro task/file richiama `handle()` direttamente (i call site di produzione dispatchano il job in coda, risoluzione automatica via container).
+
+**4. Review Focus (aggiuntivo per Task 9-10):**
+- Record con `taxonomy_where` già popolato e sync rilanciato senza copertura locale → non deve azzerarsi (Task 9, testato).
+- Record nuovo senza copertura locale, OSMFeatures ha dati → deve popolarsi via fallback (Task 10, testato).
+- Record con copertura locale già trovata → nessuna chiamata HTTP sprecata (Task 10, testato con `Http::assertNothingSent()`).
+- Fallimento della chiamata OSMFeatures (HTTP non `successful()`) → si propaga, non silenziato (per scelta esplicita, non testato con un `it()` dedicato in questo giro — comportamento delegato al meccanismo di retry già testato implicitamente dal framework Job di Laravel, non riscritto qui).
+- Risposta OSMFeatures vuota (nessuna where trovata nemmeno da OSM) → il job ritorna senza scrivere nulla, `taxonomy_where` resta assente (comportamento implicito nello Step 4 di Task 10, non isolato in un test dedicato — rischio residuo noto, non bloccante: stesso comportamento del vecchio job `UpdateModelWithGeometryTaxonomyWhere` in questo caso).
+
+**Nota di sequenza:** Task 9 va eseguito prima di Task 10 — il secondo assume che `syncTaxonomyWhere()` sia già upgrade-only (altrimenti un record popolato dal fallback in un giro precedente verrebbe cancellato dalla stessa chiamata a `syncTaxonomyWhere()` fatta all'inizio di `handle()` in un rilancio successivo).
+
+---
+
 ## Self-Review (eseguito in fase di scrittura del piano)
 
 **1. Copertura spec:** ogni requisito di `overview.md` ha un task corrispondente — generalizzazione servizio (Task 1), scoped+wiring EcPoi (Task 2), scoped+wiring EcTrack+azione inline (Task 3), meccanismo "nuove where→resync" generalizzato (Task 4), azione bulk unica async (Task 5), rimozione dead code (Task 6), indice GIST (Task 7), aggancio import (Task 8). L'unico "requisito" senza task dedicato è la non-regressione di `getOrderedTaxonomyWheres()`/`getValidName()` sul formato unificato: coperta dall'assertion `toHaveKeys(['name', 'admin_level', 'source'])` in Task 1 più il fatto che nessun task modifica quei due metodi (già tolleranti, verificato nel codice in fase di reverse-interaction).

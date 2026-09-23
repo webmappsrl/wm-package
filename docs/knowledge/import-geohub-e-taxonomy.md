@@ -81,7 +81,7 @@ di compatibilità — decisione esplicita, nessun consumer esterno noto lo chiam
 
 Il meccanismo è agganciato in più punti, tutti generalizzati a entrambi i modelli:
 - Path automatico al salvataggio (`EcPoiService`/`EcTrackService::updateDataChain()`/`createDataChain()`),
-  via un nuovo job scoped-per-record (`SyncModelTaxonomyWhereJob`) che sostituisce il vecchio
+  via un job scoped-per-record (`SyncModelTaxonomyWhereJob`) che sostituisce il vecchio
   `UpdateModelWithGeometryTaxonomyWhere` (via API OSMFeatures, solo Italia) su tutti i call site EC —
   UGC resta sul vecchio meccanismo.
 - Azione Nova unica bulk `SyncEcTaxonomyWhereAction` (sostituisce `SyncTracksTaxonomyWhereAction`),
@@ -90,15 +90,22 @@ Il meccanismo è agganciato in più punti, tutti generalizzati a entrambi i mode
   — risolve la causa per cui i contenuti importati restavano senza `taxonomy_where`
   (`persistQuietly()` disabilita gli observer durante l'import).
 
-**Rischio noto, gestito operativamente non da codice**: `syncTaxonomyWhere()` fa un `UPDATE`
-incondizionato — se la copertura locale di `taxonomy_wheres` è insufficiente per l'area geografica
-di un contenuto, il sync azzera (non solo "non aggiorna") qualsiasi `taxonomy_where` già presente su
-quel contenuto. Misurato (2026-09-16, DB di sviluppo Maphub): con sola copertura locale
-Corsica/Francia/2x Sardegna (4 poligoni, nessuno sull'Italia continentale), un lancio del sync
-avrebbe azzerato 93 `EcPoi` su 93 con `taxonomy_where` allora popolato (dati region+comune da
-OSMFeatures). Per questo l'ordine è vincolante: importare where sufficienti (sezione sopra) prima
-di lanciare/lasciare scattare il sync bulk su un'app, sia al deploy iniziale sia per ogni nuovo
-import futuro.
+**Due comportamenti diversi sul "non trovo nulla in locale", a seconda del path** (oc:8487,
+ripresa 2026-09-23) — `syncTaxonomyWhere()` ha un terzo parametro `?bool $preserveOnNoMatch =
+null`, derivato da `$modelId` se non passato esplicitamente:
+
+- **Path scoped-per-record** (`$modelId` valorizzato → `preserveOnNoMatch` default `false`):
+  se non trova un'intersezione locale, `SyncModelTaxonomyWhereJob` **tenta un fallback via API
+  OSMFeatures** (la stessa chiamata del vecchio meccanismo) prima di arrendersi. Se nemmeno l'API
+  trova nulla, il campo viene **azzerato esplicitamente** — nessun valore precedente viene
+  preservato: ogni ricalcolo riflette sempre lo stato vero (DB locale → API → vuoto). La scrittura
+  finale del fallback è protetta da una guardia (`GeometryComputationService::writeTaxonomyWhereIfEmpty()`)
+  che non sovrascrive un match locale arrivato nel frattempo (es. durante la chiamata HTTP).
+- **Path bulk** (`$modelId` assente → `preserveOnNoMatch` default `true`, usato esplicitamente da
+  `SyncTaxonomyWhereJob` e da `HasTaxonomyWhereImportHelpers::finalizeWithEcSync()`): nessun
+  fallback via API. Se non trova un'intersezione locale, **lascia invariato** il valore esistente
+  (upgrade-only) invece di azzerarlo — è la mitigazione di codice al rischio di azzeramento di
+  massa quando la copertura locale è insufficiente (dettaglio storico sotto).
 
 ### Import Excel
 
@@ -116,6 +123,17 @@ minimale. `EcTrackRowProcessor` non è affetto, non usa `setTranslation` per il 
   `SyncTaxonomyWhereJob` da oc:8487, generalizzato a EcPoi). **Lo stesso difetto esiste ancora in
   `handleOsmfeatures()`/`handleOsm2cai()`**, mai osservato in pratica (oc:8486).
 - Prima di oc:8486 l'Action non aveva alcuna copertura di test, su nessuna delle tre sorgenti.
+- **`syncTaxonomyWhere()` faceva un `UPDATE` incondizionato ovunque, gestito solo operativamente**
+  (fino a oc:8487, ripresa 2026-09-23): se la copertura locale era insufficiente, il sync azzerava
+  qualsiasi `taxonomy_where` già presente, su ogni path (scoped e bulk). Misurato (2026-09-16, DB
+  di sviluppo Maphub): con sola copertura locale Corsica/Francia/2x Sardegna (4 poligoni, nessuno
+  sull'Italia continentale), un lancio del sync avrebbe azzerato 93 `EcPoi` su 93 con
+  `taxonomy_where` allora popolato (dati region+comune da OSMFeatures). La mitigazione era solo
+  operativa: importare where sufficienti prima di lanciare il sync su un'app. Superato dal
+  parametro `preserveOnNoMatch` (vedi "Stato attuale" sopra): il path bulk ora ha una mitigazione
+  di codice (upgrade-only), il path scoped ha il fallback via API che rende l'azzeramento un esito
+  legittimo (non trovato da nessuna parte) invece che una perdita di dati per copertura locale
+  incompleta. La procedura di sequencing manuale resta comunque valida per il solo path bulk.
 
 ## Trappole dell'import, raccolte dai cantieri
 
