@@ -32,4 +32,3 @@ class SyncEcTaxonomyWhereAction extends Action
         return [];
     }
 }
-

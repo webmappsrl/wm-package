@@ -5,8 +5,10 @@ declare(strict_types=1);
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Bus;
 use Laravel\Nova\Fields\ActionFields;
+use Laravel\Nova\Http\Requests\NovaRequest;
 use Tests\TestCase;
 use Wm\WmPackage\Jobs\TaxonomyWhere\SyncModelTaxonomyWhereJob;
+use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Nova\EcTrack as EcTrackResource;
@@ -34,7 +36,7 @@ it('dispatches SyncModelTaxonomyWhereJob from the Regenerate Taxonomy Where inli
     $track = EcTrack::factory()->create(['app_id' => $app->id, 'user_id' => $app->user_id]);
 
     $resource = new EcTrackResource($track);
-    $actions = $resource->actions(app(\Laravel\Nova\Http\Requests\NovaRequest::class));
+    $actions = $resource->actions(app(NovaRequest::class));
 
     $regenerateAction = collect($actions)->first(
         fn ($action) => $action->name() === __('Regenerate Taxonomy Where')
@@ -46,7 +48,6 @@ it('dispatches SyncModelTaxonomyWhereJob from the Regenerate Taxonomy Where inli
 
     Bus::assertChained([
         SyncModelTaxonomyWhereJob::class,
-        \Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob::class,
+        UpdateEcTrackAwsJob::class,
     ]);
 });
-

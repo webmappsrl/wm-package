@@ -28,13 +28,13 @@ class GeometryComputationService extends BaseService
      * @param  class-string<GeometryModel>|GeometryModel  $model
      * @param  int|null  $modelId  Se valorizzato, scopa l'update alla sola riga con questo id.
      * @param  bool|null  $preserveOnNoMatch  Se true, quando non trova intersezioni locali lascia
-     *      invariato il valore corrente invece di azzerarlo (upgrade-only). Se `null` (default),
-     *      si deriva da `$modelId`: `true` per una chiamata bulk (`$modelId === null` — i path
-     *      bulk/resync massivi, dove una copertura locale temporaneamente insufficiente non deve
-     *      cancellare dati già buoni), `false` per una chiamata scoped (il path automatico per
-     *      singolo record, dietro un fallback via OSMFeatures: deve azzerare se, dopo aver provato
-     *      anche l'API, non trova comunque nulla). Passare esplicitamente `true`/`false` forza il
-     *      comportamento indipendentemente da `$modelId`.
+     *                                        invariato il valore corrente invece di azzerarlo (upgrade-only). Se `null` (default),
+     *                                        si deriva da `$modelId`: `true` per una chiamata bulk (`$modelId === null` — i path
+     *                                        bulk/resync massivi, dove una copertura locale temporaneamente insufficiente non deve
+     *                                        cancellare dati già buoni), `false` per una chiamata scoped (il path automatico per
+     *                                        singolo record, dietro un fallback via OSMFeatures: deve azzerare se, dopo aver provato
+     *                                        anche l'API, non trova comunque nulla). Passare esplicitamente `true`/`false` forza il
+     *                                        comportamento indipendentemente da `$modelId`.
      */
     public function syncTaxonomyWhere(string|GeometryModel $model, ?int $modelId = null, ?bool $preserveOnNoMatch = null): int
     {

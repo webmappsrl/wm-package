@@ -240,4 +240,3 @@ it('defaults preserveOnNoMatch to true for a bulk call (no id) even without pass
     $properties = EcPoi::find($poiIdOutOfCoverage)->properties;
     expect($properties['taxonomy_where'])->toHaveKey('R999999');
 });
-

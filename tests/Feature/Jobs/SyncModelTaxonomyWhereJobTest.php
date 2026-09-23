@@ -344,4 +344,3 @@ class SyncModelTaxonomyWhereJobTest extends TestCase
         $this->assertEmpty($taxonomyWhere);
     }
 }
-

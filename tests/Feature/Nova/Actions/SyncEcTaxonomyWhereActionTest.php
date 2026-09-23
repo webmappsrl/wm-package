@@ -24,4 +24,3 @@ it('dispatches SyncTaxonomyWhereJob in queue and returns an immediate message', 
     Bus::assertDispatched(SyncTaxonomyWhereJob::class);
     expect((string) $result['message'])->toContain('avviata');
 });
-
