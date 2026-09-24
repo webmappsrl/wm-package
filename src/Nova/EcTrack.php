@@ -15,7 +15,7 @@ use Wm\WmPackage\Jobs\TaxonomyWhere\SyncModelTaxonomyWhereJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
 use Wm\WmPackage\Nova\Actions\DownloadEcTrackAction;
 use Wm\WmPackage\Nova\Actions\ExecuteEcTrackDataChainAction;
-use Wm\WmPackage\Nova\Actions\ReverseEcTrackGeometryAction;
+use Wm\WmPackage\Nova\Actions\ReverseTrackDirectionAction;
 use Wm\WmPackage\Nova\Actions\TranslateModelAction;
 use Wm\WmPackage\Nova\Actions\UploadTrackFile;
 use Wm\WmPackage\Nova\Cards\ApiLinksCard\EcTrackApiLinksCard;
@@ -26,6 +26,11 @@ use Wm\WmPackage\Nova\Filters\FeaturesIncludeByIds;
 use Wm\WmPackage\Nova\Traits\HasConfigDetailPanel;
 use Wm\WmPackage\Nova\Traits\MultiLinestringResourceTrait;
 
+/**
+ * @mixin \Wm\WmPackage\Models\EcTrack
+ *
+ * @property \Wm\WmPackage\Models\EcTrack $resource
+ */
 class EcTrack extends AbstractEcResource
 {
     use HasConfigDetailPanel;
@@ -94,7 +99,7 @@ class EcTrack extends AbstractEcResource
      */
     public function actions(NovaRequest $request): array
     {
-        // Operazione non annullabile dall'interfaccia (inverte la geometria in place): ristretta
+        // Operazione non annullabile dall'interfaccia (inverte il verso della traccia): ristretta
         // al ruolo Administrator (oc:8543).
         $administratorOnly = fn (NovaRequest $request) => optional($request->user())->hasRole('Administrator');
 
@@ -108,7 +113,7 @@ class EcTrack extends AbstractEcResource
                 fn ($ecTrack) => new UpdateEcTrackAwsJob($ecTrack),
             ], __('Regenerate Taxonomy Where')),
             new ExecuteEcTrackDataChainAction,
-            (new ReverseEcTrackGeometryAction)
+            (new ReverseTrackDirectionAction)
                 ->sole()
                 ->canSee($administratorOnly)
                 ->canRun($administratorOnly),
