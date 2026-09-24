@@ -38,6 +38,26 @@ Si applica quando tocchi Resource, campi, action o card Nova del package.
 - Un'Action istanziata a mano in un test ha `runCallback` nullo e risulta **sempre**
   autorizzata: il `canRun()` va preso dall'istanza che la Resource restituisce, altrimenti il
   test non verifica nulla (oc:8569).
+- `->sole()` vincola un'azione a una singola risorsa **solo lato UI Nova**: il server
+  (`DispatchAction::forModels()`) non lo applica, e una richiesta con più risorse selezionate
+  arriva comunque a `handle()` con più elementi in `$models` — un'azione che assume
+  `$models->first()` processa solo il primo mostrando comunque successo per tutti. `->standalone()`
+  ha un significato opposto (azione eseguibile senza nessun modello selezionato): non sono
+  intercambiabili nonostante il nome suggerisca il contrario (oc:8543).
+- In una Nova Action, `Bus::dispatch()`/`Job::dispatch()` "nudo" può far leggere a un worker un
+  dato non ancora committato: Nova avvolge `handle()` in una transazione DB, e le connessioni di
+  coda hanno `after_commit => false` in `config/queue.php` — un dispatch senza `->afterCommit()`
+  pusha il job in coda prima del commit (oc:8543).
+- `Bus::chain($jobs)->dispatch()->afterCommit()` fallisce (`Call to a member function afterCommit()
+  on null`): a differenza di `Job::dispatch()`, `PendingChain::dispatch()` non è fluente e non ha
+  un metodo `afterCommit()` proprio — dispatcha subito e ritorna `null`. Solo il primo job di una
+  catena viene effettivamente accodato (gli altri partono in base al suo esito), quindi va marcato
+  lui: `$chain[0]->afterCommit(); Bus::chain($chain)->dispatch();` (oc:8543).
 - I Field dentro un `Tab` finiscono anche sull'index se non hanno restrizioni di visibilità: il tab
   DEM porta sull'index `round_trip` e le durate bici/escursionismo. Una Resource che usa
   `getDemTabFields()` dichiara `fieldsForIndex()` (oc:8571).
+- `Boolean::resolveDefaultValue()` restituisce il default solo in una richiesta di Action o di
+  creazione: in un test su `fields()` di un'Action serve un `ActionRequest` reale, altrimenti torna
+  `null` (oc:8543).
+- L'`help()` di un campo è reso con `v-html`: un valore letto dal DB va passato da `e()`, altrimenti
+  il markup arriva nel browser dell'utente (oc:8543).

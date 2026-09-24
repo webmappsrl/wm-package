@@ -26,3 +26,12 @@ Si applica quando scrivi o modifichi un test del package.
 - `Bus::fake()` non onora `afterCommit()`: sotto fake un job accodato dopo il commit parte subito,
   anche se la transazione va in rollback. Si verifica `$job->afterCommit === true`, non lo scarto
   (oc:8571).
+- `EcTrackFactory` valorizza `osmid` a caso nel 70% dei casi: un test che crea tracce con la factory
+  e non fissa `osmid` ottiene a caso una traccia OSM, con precedenze e catene diverse — passa
+  `'osmid' => null` (oc:8543).
+- I test del package non registrano `ScoutServiceProvider`: `EngineManager` non è un singleton e un
+  engine registrato con `extend()` si perde alla chiamata successiva — registra il singleton nel
+  `setUp()` del test (oc:8543).
+- I test in `tests/Unit/Services/EcTrackService/` non si lanciano per file singolo:
+  `AbstractEcTrackServiceTest` è nello spazio dei nomi `Tests\…`, che `autoload-dev` non mappa — usa
+  `vendor/bin/pest tests/Unit/Services/EcTrackService --filter=<Classe>` (oc:8543).

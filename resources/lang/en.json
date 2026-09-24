@@ -460,5 +460,19 @@
     "Questa istanza non ha un codice attivo da sostituire.": "This application has no active code to replace.",
     "In metri": "In meters",
     "In km": "In km",
-    "In minuti": "In minutes"
+    "In minuti": "In minutes",
+    "Reverse Track Direction": "Reverse Track Direction",
+    "Reverse geometry": "Reverse geometry",
+    "Swap :first / :second": "Swap :first / :second",
+    "Select at least one operation.": "Select at least one operation.",
+    "This track comes from OpenStreetMap: its direction must be corrected on OpenStreetMap.": "This track comes from OpenStreetMap: its direction must be corrected on OpenStreetMap.",
+    "Geometry reversed: :geometry. Swapped: :pairs. Recalculation in progress.": "Geometry reversed: :geometry. Swapped: :pairs. Recalculation in progress.",
+    "Ascent": "Ascent",
+    "Descent": "Descent",
+    "Starting Point Elevation": "Starting Point Elevation",
+    "Ending Point Elevation": "Ending Point Elevation",
+    "Duration Forward": "Duration Forward",
+    "Duration Backward": "Duration Backward",
+    "Departure": "Departure",
+    "Arrival": "Arrival"
 }

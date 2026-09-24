@@ -28,6 +28,15 @@ su sentieri (`EcTrack`) e istanze del Catasto Sentieri (`TrailApplication`).
   l'approvazione `properties` e il file passano al sentiero.
 - **`updateManualData()` parte dai manuali esistenti** e aggiunge solo i valori al primo livello
   diversi da DEM e OSM: non cancella più ciò che è stato scritto dal tab.
+- **Invertire il verso di una traccia** passa da `EcTrackService::reverse()`, chiamato dall'Action
+  Nova `ReverseTrackDirectionAction` (solo Administrator). L'utente sceglie se invertire la geometria
+  e quali coppie scambiare: `ascent`/`descent`, `ele_from`/`ele_to`,
+  `duration_forward`/`duration_backward` in `manual_data`, `from`/`to` al primo livello
+  (`REVERSE_SWAP_PAIRS`). `distance`, `ele_min` ed `ele_max` non si toccano. Gli scambi scrivono la
+  sola colonna `properties` con un update mirato e aggiornano `updated_at`. Dopo il commit parte una
+  catena dedicata (con la geometria: il blocco geometria di `updateDataChain()` meno
+  `REVERSE_EXCLUDED_JOBS`, più la coda; con i soli scambi: PBF e AWS) e poi la reindicizzazione
+  Scout, in un `try/catch`. Le tracce con `osmid` sono in sola lettura.
 
 ## Perché così
 
@@ -43,6 +52,22 @@ su sentieri (`EcTrack`) e istanze del Catasto Sentieri (`TrailApplication`).
   dell'intera tile PBF.
 - **L'exporter Excel passa da `classifyField()`** (oc:7984): leggendo `properties.*` lo stesso dato
   usciva diverso a seconda di dove lo si guardava.
+- **L'inversione non tocca i manuali da sola** (oc:8543): i manuali sono spesso inseriti pensando
+  già al verso giusto (tipico con un GPX disegnato al contrario), quindi ogni coppia si scambia solo
+  su scelta esplicita; e la geometria si può lasciare com'è per scambiare dati dopo un'inversione
+  già fatta.
+- **Fuori dalla catena dell'inversione `UpdateEcTrackManualDataJob` e `UpdateEcTrackCurrentDataJob`**
+  (oc:8543): il primo ricalcolerebbe i manuali dal primo livello sovrascrivendo lo scambio; il
+  secondo in coda non fa nulla (`getDirty()` è vuoto su un modello riletto dal DB). Restano nelle
+  catene standard fino a oc:8642.
+- **Le tracce OSM non si invertono** (oc:8543): senza manuale mostrano i valori OSM, e al primo
+  salvataggio `UpdateEcTrackFromOsmJob` riscrive la geometria da OSM. Il verso si corregge su
+  OpenStreetMap.
+- **`reverse()` aggiorna `updated_at`, al contrario del job dell'istanza** (oc:8543): app ed export
+  incrementali scelgono le tracce da riscaricare con quella data. Un operatore con il form della
+  traccia aperto riceve il 409 di Nova, che qui è corretto: i dati sono cambiati.
+- **`ascent` nell'indice Scout è il valore corrente** (oc:8543), come `distance` e
+  `duration_forward`: prima si leggeva dal primo livello, vuoto su Forestas.
 
 ## Come ci siamo arrivati
 
@@ -53,3 +78,8 @@ su sentieri (`EcTrack`) e istanze del Catasto Sentieri (`TrailApplication`).
 - **L'import da Sardegna Sentieri scrive i tempi e le quote di Drupal in `manual_data`**: nella
   call del 14/09/2026 si è deciso di smettere, perché quei valori venivano dalla vecchia libreria
   Webmapp (oc:8641).
+- **Inversione con la catena completa di `updateDataChain(forceGeometryChain: true)`** (superata in
+  oc:8543): accodava `UpdateEcTrackManualDataJob`, che allora azzerava `manual_data`, e il
+  `$chain[0]->afterCommit()` aggiunto dentro `updateDataChain()` cambiava il comportamento di tutti
+  i chiamanti. Prima ancora (primo ciclo) partiva solo il DEM, e scheda, profilo e app restavano al
+  verso vecchio.

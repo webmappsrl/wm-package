@@ -7,6 +7,8 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use InvalidArgumentException;
+use Throwable;
 use Wm\WmPackage\Facades\OsmClient;
 use Wm\WmPackage\Http\Clients\DemClient;
 use Wm\WmPackage\Jobs\Pbf\GenerateEcTrackPBFBatch;
@@ -23,6 +25,8 @@ use Wm\WmPackage\Jobs\Track\UpdateEcTrackOrderRelatedPoi;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackSlopeValues;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcTrack;
+use Wm\WmPackage\Models\Layer;
+use Wm\WmPackage\Models\TaxonomyActivity;
 use Wm\WmPackage\Services\BaseService;
 use Wm\WmPackage\Services\GeometryComputationService;
 
@@ -91,7 +95,7 @@ class EcTrackService extends BaseService
         $track->properties = $properties;
 
         try {
-            if (isset($demData)) {
+            if ($demData !== []) {
                 foreach ($this->getDemDataFields() as $field) {
                     if (
                         isset($demData[$field])
@@ -152,7 +156,7 @@ class EcTrackService extends BaseService
             $properties = $track->properties;
             $track->name = ! empty($track->name) ? $track->name : $trackname;
             $properties['name'] = $track->name;
-            $track->geometry = $geometry ?? $track->geometry;
+            $track->geometry = $geometry;
             $properties['ref'] = $properties['ref'] ?? $osmData['ref'] ?? null;
 
             // Update additional fields only if they are null
@@ -316,7 +320,6 @@ class EcTrackService extends BaseService
             && // E
             (
                 ! isset($trackProperties[$field]) // se non esiste la proprietà su track
-                || $trackProperties[$field] === null // se la proprietà esistente è null
                 || ( // o se esiste una vecchia proprietà e è uguale a quella salvata su track->properties
                     isset($oldProperties[$field])
                     && $trackProperties[$field] == $oldProperties[$field])
@@ -349,6 +352,240 @@ class EcTrackService extends BaseService
         Bus::chain($chain)->dispatch();
     }
 
+    /**
+     * I job del ricalcolo che dipendono dalla geometria, nell'ordine in cui vanno accodati.
+     *
+     * È la lista comune a updateDataChain() e reverse(): un job aggiunto qui entra anche nella
+     * catena dell'inversione, a meno che reverse() non lo escluda di proposito (oc:8543).
+     *
+     * @param  array<int, class-string>  $except  classi da togliere dalla lista
+     * @return array<int, object>
+     */
+    public function geometryDependentJobs(EcTrack $track, array $except = []): array
+    {
+        $jobs = [
+            new UpdateEcTrackDemJob($track),
+            new UpdateEcTrackManualDataJob($track),
+            new UpdateEcTrackCurrentDataJob($track),
+            new UpdateEcTrack3DDemJob($track),
+            new UpdateEcTrackSlopeValues($track),
+            new SyncModelTaxonomyWhereJob($track),
+            new UpdateEcTrackGenerateElevationChartImage($track),
+            new GenerateEcTrackPBFBatch($track),
+        ];
+
+        return array_values(array_filter(
+            $jobs,
+            fn ($job) => ! in_array($job::class, $except, true)
+        ));
+    }
+
+    /**
+     * I job che portano la traccia ad app, mappa e relazioni: la coda di ogni catena di update.
+     *
+     * @return array<int, object>
+     */
+    public function publicationJobs(EcTrack $track): array
+    {
+        return [
+            new UpdateEcTrackAwsJob($track),
+            new UpdateEcTrackAppRelationsInfoJob($track),
+            new UpdateEcTrackOrderRelatedPoi($track),
+        ];
+    }
+
+    /**
+     * Coppie di dati che dipendono dal verso di percorrenza (oc:8543).
+     * chiave => [contenitore, primo campo, secondo campo, etichetta primo, etichetta secondo];
+     * contenitore `manual_data` = properties.manual_data, `null` = primo livello di properties.
+     * distance, ele_min ed ele_max non dipendono dal verso e non compaiono.
+     */
+    public const REVERSE_SWAP_PAIRS = [
+        'ascent_descent' => ['manual_data', 'ascent', 'descent', 'Ascent', 'Descent'],
+        'ele_from_ele_to' => ['manual_data', 'ele_from', 'ele_to', 'Starting Point Elevation', 'Ending Point Elevation'],
+        'duration_forward_duration_backward' => ['manual_data', 'duration_forward', 'duration_backward', 'Duration Forward', 'Duration Backward'],
+        'from_to' => [null, 'from', 'to', 'Departure', 'Arrival'],
+    ];
+
+    /**
+     * Job del blocco geometria che l'inversione non accoda (oc:8543):
+     * - UpdateEcTrackManualDataJob: i manuali li decide l'utente con gli scambi; il job li
+     *   ricalcolerebbe dal primo livello di properties, sovrascrivendo lo scambio (oc:8642);
+     * - UpdateEcTrackCurrentDataJob: in coda non fa nulla (getDirty() è vuoto su un modello
+     *   riletto dal DB, e la riga di getDemDataFields() va comunque in errore);
+     * - UpdateEcTrack3DDemJob: la quota di ogni punto non cambia invertendo il verso;
+     * - SyncModelTaxonomyWhereJob: dipende dalla forma della traccia, non dal verso.
+     */
+    public const REVERSE_EXCLUDED_JOBS = [
+        UpdateEcTrackManualDataJob::class,
+        UpdateEcTrackCurrentDataJob::class,
+        UpdateEcTrack3DDemJob::class,
+        SyncModelTaxonomyWhereJob::class,
+    ];
+
+    /**
+     * Le tracce OSM sono in sola lettura per l'inversione: il verso si corregge su OSM, e al primo
+     * salvataggio UpdateEcTrackFromOsmJob riscriverebbe comunque la geometria (oc:8543).
+     */
+    public function isOsmTrack(EcTrack $track): bool
+    {
+        return $track->osmid !== null || ! empty($track->properties['osmid'] ?? null);
+    }
+
+    /**
+     * Le coppie che dipendono dal verso e hanno almeno un valore sulla traccia.
+     *
+     * @return array<string, array{0: mixed, 1: mixed}>
+     */
+    public function directionPairs(EcTrack $track): array
+    {
+        $properties = $this->decodeArray($track->properties);
+        $pairs = [];
+        foreach (self::REVERSE_SWAP_PAIRS as $key => [$container, $first, $second]) {
+            $bag = $container === null ? $properties : $this->decodeArray($properties[$container] ?? null);
+            $firstValue = $this->presentValue($bag[$first] ?? null);
+            $secondValue = $this->presentValue($bag[$second] ?? null);
+            if ($firstValue !== null || $secondValue !== null) {
+                $pairs[$key] = [$firstValue, $secondValue];
+            }
+        }
+
+        return $pairs;
+    }
+
+    /**
+     * Inverte il verso di una traccia: la geometria se richiesto, e le sole coppie scelte.
+     * Richiamabile da Nova, artisan o API. Dopo il commit accoda la catena dedicata e
+     * reindicizza la traccia (oc:8543).
+     *
+     * @param  array<int, string>  $swaps  chiavi di REVERSE_SWAP_PAIRS da scambiare
+     * @return array<int, string> le chiavi effettivamente scambiate
+     *
+     * @throws InvalidArgumentException traccia OSM, oppure nessuna operazione scelta
+     */
+    public function reverse(EcTrack $track, bool $geometry, array $swaps): array
+    {
+        if ($this->isOsmTrack($track)) {
+            throw new InvalidArgumentException("Track {$track->id} comes from OpenStreetMap: correct its direction there.");
+        }
+
+        $swaps = array_values(array_intersect(array_keys(self::REVERSE_SWAP_PAIRS), $swaps));
+        if (! $geometry && $swaps === []) {
+            throw new InvalidArgumentException('Nothing to do: reverse the geometry or swap at least one pair.');
+        }
+
+        $swapped = DB::transaction(function () use ($track, $geometry, $swaps) {
+            if ($geometry) {
+                $this->geometryComputationService->reverseGeometry($track);
+            }
+
+            $swapped = $this->swapPairs($track, $swaps);
+
+            // updated_at si aggiorna a mano: le scritture sono SQL mirato, e app ed export
+            // incrementali scelgono le tracce da riscaricare proprio con questa data.
+            if ($geometry || $swapped !== []) {
+                DB::table($track->getTable())->where('id', $track->id)->update(['updated_at' => now()]);
+            }
+
+            return $swapped;
+        });
+
+        if (! $geometry && $swapped === []) {
+            return [];
+        }
+
+        $jobs = $geometry
+            ? [...$this->geometryDependentJobs($track, self::REVERSE_EXCLUDED_JOBS), ...$this->publicationJobs($track)]
+            // Solo scambi: bastano le tile (duration_forward da manual_data) e il JSON su AWS
+            // (EcTrackResource passa da classifyField()); verificato il 24/09.
+            : [new GenerateEcTrackPBFBatch($track), new UpdateEcTrackAwsJob($track)];
+
+        // Prima la catena, poi l'indice: un errore di Elasticsearch non deve impedire il
+        // ricalcolo né arrivare a Nova come errore su un'inversione già scritta.
+        DB::afterCommit(function () use ($track, $jobs) {
+            Bus::chain($jobs)->dispatch();
+            $this->reindexForSearch($track);
+        });
+
+        return $swapped;
+    }
+
+    /**
+     * Scambia le coppie scelte scrivendo la sola colonna properties: niente save(), che farebbe
+     * partire l'observer, e niente saveQuietly(), che farebbe transitare la geometria dall'ORM.
+     *
+     * @param  array<int, string>  $swaps
+     * @return array<int, string>
+     */
+    protected function swapPairs(EcTrack $track, array $swaps): array
+    {
+        if ($swaps === []) {
+            return [];
+        }
+
+        $properties = $this->decodeArray(
+            DB::table($track->getTable())->where('id', $track->id)->lockForUpdate()->value('properties')
+        );
+
+        $swapped = [];
+        foreach ($swaps as $key) {
+            [$container, $first, $second] = self::REVERSE_SWAP_PAIRS[$key];
+            $bag = $container === null ? $properties : $this->decodeArray($properties[$container] ?? null);
+            $firstValue = $this->presentValue($bag[$first] ?? null);
+            $secondValue = $this->presentValue($bag[$second] ?? null);
+            if ($firstValue === null && $secondValue === null) {
+                continue;
+            }
+
+            unset($bag[$first], $bag[$second]);
+            if ($secondValue !== null) {
+                $bag[$first] = $secondValue;
+            }
+            if ($firstValue !== null) {
+                $bag[$second] = $firstValue;
+            }
+
+            if ($container === null) {
+                $properties = $bag;
+            } else {
+                $properties[$container] = $bag === [] ? null : $bag;
+            }
+            $swapped[] = $key;
+        }
+
+        if ($swapped !== []) {
+            DB::table($track->getTable())
+                ->where('id', $track->id)
+                ->update(['properties' => json_encode($properties)]);
+        }
+
+        return $swapped;
+    }
+
+    protected function reindexForSearch(EcTrack $track): void
+    {
+        try {
+            // fresh(): l'update mirato ha scritto sul DB, non sul modello in memoria.
+            $track->fresh()?->searchable();
+        } catch (Throwable $e) {
+            Log::error("Reindicizzazione della traccia {$track->id} dopo l'inversione fallita: {$e->getMessage()}");
+        }
+    }
+
+    private function decodeArray(mixed $value): array
+    {
+        if (is_array($value)) {
+            return $value;
+        }
+
+        return is_string($value) ? (json_decode($value, true) ?: []) : [];
+    }
+
+    private function presentValue(mixed $value): mixed
+    {
+        return $value === null || $value === '' ? null : $value;
+    }
+
     public function updateDataChain(EcTrack $track)
     {
         $chain = [];
@@ -363,19 +600,10 @@ class EcTrackService extends BaseService
         //     }
         // }
         if ($track->wasChanged('geometry')) {
-            $chain[] = new UpdateEcTrackDemJob($track);
-            $chain[] = new UpdateEcTrackManualDataJob($track);
-            $chain[] = new UpdateEcTrackCurrentDataJob($track);
-            $chain[] = new UpdateEcTrack3DDemJob($track);
-            $chain[] = new UpdateEcTrackSlopeValues($track);
-            $chain[] = new SyncModelTaxonomyWhereJob($track);
-            $chain[] = new UpdateEcTrackGenerateElevationChartImage($track);
-            $chain[] = new GenerateEcTrackPBFBatch($track);
+            array_push($chain, ...$this->geometryDependentJobs($track));
         }
 
-        $chain[] = new UpdateEcTrackAwsJob($track);
-        $chain[] = new UpdateEcTrackAppRelationsInfoJob($track);
-        $chain[] = new UpdateEcTrackOrderRelatedPoi($track);
+        array_push($chain, ...$this->publicationJobs($track));
 
         Bus::chain($chain)->dispatch();
     }
@@ -408,11 +636,10 @@ class EcTrackService extends BaseService
         $updates = null;
         $ecTrackLayers = $ecTrack->associatedLayers;
         foreach ($ecTrackLayers as $layer) {
-            if (! empty($layer)) {
-                $updates['layers'][$layer->app_id] = $layer->id;
-                $updates['activities'][$layer->app_id] = $this->getTaxonomyArray($ecTrack->taxonomyActivities);
-                $updates['searchable'][$layer->app_id] = $ecTrack->getSearchableString($layer->app_id);
-            }
+            /** @var Layer $layer */
+            $updates['layers'][$layer->app_id] = $layer->id;
+            $updates['activities'][$layer->app_id] = $this->getTaxonomyArray($ecTrack->taxonomyActivities);
+            $updates['searchable'][$layer->app_id] = $ecTrack->getSearchableString($layer->app_id);
         }
         if ($updates) {
             EcTrack::withoutEvents(function () use ($updates, $ecTrack) {
@@ -439,7 +666,7 @@ class EcTrackService extends BaseService
         $validTrackIds = null;
 
         if ($app->app_id !== 'it.webmapp.webmapp') {
-            $validTrackIds = $app->ecTracks->pluck('id')->toArray() ?? [];
+            $validTrackIds = $app->ecTracks->pluck('id')->toArray();
         }
 
         $tracks = is_null($validTrackIds)
@@ -485,6 +712,7 @@ class EcTrackService extends BaseService
         $activities = $track->taxonomyActivities;
 
         foreach ($activities as $activity) {
+            /** @var TaxonomyActivity $activity */
             $activityIdentifier = $activity->identifier;
 
             // Crea la struttura per ogni attività

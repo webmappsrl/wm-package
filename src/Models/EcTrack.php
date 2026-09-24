@@ -23,6 +23,11 @@ use Wm\WmPackage\Traits\NormalizesHexColor;
 use Wm\WmPackage\Traits\TaxonomyAbleModel;
 use Wm\WmPackage\Traits\TaxonomyWhereAbleModel;
 
+/**
+ * @property array<string, mixed>|null $properties null su un modello non ancora salvato
+ * @property int|null $app_id null su un modello non ancora salvato
+ * @property App|null $app
+ */
 class EcTrack extends MultiLineString implements LayerRelatedModel
 {
     use EcFeatureTrait, Favoriteable, HasDemClassification, NormalizesHexColor, Searchable, TaxonomyAbleModel, TaxonomyWhereAbleModel;
@@ -208,7 +213,10 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
             ->orderBy('rank')
             ->orderBy('id');
 
-        return $query->get();
+        /** @var Collection<int, Layer> $layers */
+        $layers = $query->get();
+
+        return $layers;
     }
 
     public function getInheritedTrackColorHex(): string
@@ -479,16 +487,14 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
         $geojson['properties']['id'] = 'ec_track_'.$this->id;
         $geojson = $this->_mapElbrusGeojsonProperties($geojson);
 
-        if ($this->ecPois) {
-            $related = [];
-            $pois = $this->ecPois;
-            foreach ($pois as $poi) {
-                $related['poi']['related'][] = $poi->id;
-            }
+        $related = [];
+        foreach ($this->ecPois as $poi) {
+            /** @var EcPoi $poi */
+            $related['poi']['related'][] = $poi->id;
+        }
 
-            if (count($related) > 0) {
-                $geojson['properties']['related'] = $related;
-            }
+        if (count($related) > 0) {
+            $geojson['properties']['related'] = $related;
         }
 
         return $geojson;
@@ -606,11 +612,11 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
     {
         $result = [];
         foreach ($array as $key => $val) {
-            if (! is_array($val) && ! empty($val) && $val) {
+            if (! is_array($val) && ! empty($val)) {
                 $result[$key] = $val;
             } elseif (is_array($val)) {
                 foreach ($val as $lan => $cont) {
-                    if (! is_array($cont) && ! empty($cont) && $cont) {
+                    if (! is_array($cont) && ! empty($cont)) {
                         $result[$key][$lan] = $cont;
                     }
                 }
@@ -740,7 +746,7 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
             'strokeColor' => isset($this->properties['color']) ? hexToRgba($this->properties['color']) : '',
             'distance' => (float) ($this->classifyField($this, 'distance')['currentValue'] ?? 0),
             'duration_forward' => (float) ($this->classifyField($this, 'duration_forward')['currentValue'] ?? 0),
-            'ascent' => isset($this->properties['ascent']) ? (int) ($this->properties['ascent']) : 0,
+            'ascent' => (int) ($this->classifyField($this, 'ascent')['currentValue'] ?? 0),
             'taxonomyActivities' => $ecTrackService->getTaxonomyArray($this->taxonomyActivities),
             'taxonomyIcons' => $ecTrackService->getTaxonomyIcons($this),
             'layers' => $this->layers->pluck('id')->toArray(),
@@ -790,6 +796,7 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
 
         if (empty($searchables) || (in_array('taxonomyActivities', $searchables) && ! empty($this->taxonomyActivities))) {
             foreach ($this->taxonomyActivities as $tax) {
+                /** @var TaxonomyActivity $tax */
                 $stringValue .= str_replace('"', '', json_encode($tax->getTranslations('name'))).' ';
             }
         }
@@ -837,7 +844,7 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
         foreach ($relatedPoi as $poi) {
             $poiFeature = $poi->getGeojson();
             if ($poiFeature) {
-                $lang = app()->getLocale() ?? 'it';
+                $lang = app()->getLocale();
                 $tooltip = $poi->getTranslation('name', $lang) ?: $poi->getTranslation('name', 'it');
                 $linkPath = trim(config('nova.path', '/nova'), '/').'/resources/ec-pois/'.$poi->id;
 

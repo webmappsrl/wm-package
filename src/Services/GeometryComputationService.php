@@ -123,6 +123,42 @@ class GeometryComputationService extends BaseService
         ", [json_encode((object) $mapped), $model->id]);
     }
 
+    /**
+     * Inverte il verso di percorrenza di una geometria PostGIS via SQL puro. ST_Reverse da solo
+     * inverte i vertici dentro ogni parte di una MultiLineString ma non riordina le parti tra
+     * loro: serve esploderle con ST_Dump, invertirle singolarmente, poi ricomporle in ordine di
+     * `path` discendente (l'ultima parte diventa la prima), preservando la quota Z e il tipo
+     * MultiLineString in uscita (oc:8543).
+     */
+    public function reverseGeometry(MultiLineString $model): void
+    {
+        $table = $model->getTable();
+        if (! preg_match('/^[a-zA-Z0-9_]+$/', $table)) {
+            throw new \InvalidArgumentException('Invalid track table name.');
+        }
+
+        DB::statement(
+            "UPDATE {$table} AS t
+             SET geometry = agg.geom
+             FROM (
+                 SELECT
+                     id,
+                     ST_Force3D(ST_Multi(ST_Collect(ST_Reverse(geom) ORDER BY path DESC)))::geography AS geom
+                 FROM (
+                     SELECT id, (dump).path[1] AS path, (dump).geom AS geom
+                     FROM (
+                         SELECT id, ST_Dump(geometry::geometry) AS dump
+                         FROM {$table}
+                         WHERE id = ?
+                     ) AS d
+                 ) AS parts
+                 GROUP BY id
+             ) AS agg
+             WHERE t.id = agg.id",
+            [$model->getKey()]
+        );
+    }
+
     public function get3dLineMergeWktFromGeojson(string $geojson): string
     {
         return DB::select(
