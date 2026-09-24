@@ -53,3 +53,6 @@ Si applica quando tocchi Resource, campi, action o card Nova del package.
   un metodo `afterCommit()` proprio — dispatcha subito e ritorna `null`. Solo il primo job di una
   catena viene effettivamente accodato (gli altri partono in base al suo esito), quindi va marcato
   lui: `$chain[0]->afterCommit(); Bus::chain($chain)->dispatch();` (oc:8543).
+- I Field dentro un `Tab` finiscono anche sull'index se non hanno restrizioni di visibilità: il tab
+  DEM porta sull'index `round_trip` e le durate bici/escursionismo. Una Resource che usa
+  `getDemTabFields()` dichiara `fieldsForIndex()` (oc:8571).

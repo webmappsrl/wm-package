@@ -118,7 +118,8 @@ Nessuno ancora.
 
 - **Tag associati** (22/09/2026): `wm-package` (id 635). Il tag `forestas` è stato proposto e non
   associato; il dev ha indicato di preferire un tag di dominio del package, che non esiste — il
-  candidato emerso è `trail-registry`. Decisione ancora aperta.
+  candidato emerso è `trail-registry`. Decisione chiusa il 24/09/2026: creato il tag
+  `trail-registry` (id 685), senza descrizione, e associato al ticket.
 - **Niente interruttore di configurazione** per spegnere il criterio (dev, 22/09/2026): il rollback
   resta una manovra su due repo. Proposto in Challenge e scartato esplicitamente.
 - **Fallback alle varianti con lettera lasciato intatto e non ordinato** (dev, 22/09/2026): i cento

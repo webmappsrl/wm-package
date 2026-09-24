@@ -99,6 +99,7 @@ questo file, perché vanno lette sempre.
 | Domini opzionali | interruttore, stub, risorse Nova, Catasto Sentieri | [docs/knowledge/domini-opzionali.md](docs/knowledge/domini-opzionali.md) |
 | Numerazione dei sentieri | come nasce il numero di un sentiero, perché quel criterio, cosa è stato scartato | [docs/knowledge/numerazione-dei-sentieri.md](docs/knowledge/numerazione-dei-sentieri.md) |
 | Testare il package | i due `TestCase`, factory, isolamento verso l'esterno | [docs/knowledge/testare-il-package.md](docs/knowledge/testare-il-package.md) |
+| Dati DEM e valori manuali | le quattro sorgenti, la precedenza, il DEM su sentiero e istanza, le unità | [docs/knowledge/dati-dem-e-valori-manuali.md](docs/knowledge/dati-dem-e-valori-manuali.md) |
 
 ## Procedure
 
@@ -109,7 +110,6 @@ Per allineare le migration in un consumer:
 
 | Lavoro | Ticket | In breve |
 |---|---|---|
-| `EcTrackExcelExporter` e i campi DEM | oc:7984 | L'exporter non legge più i campi DEM da `properties.*` ma passa da `classifyField` (trait `HasDemClassification`), la stessa priorità che usano Nova ed `EcTrackResource`: senza, lo stesso dato usciva diverso a seconda di dove lo si guardava. `docs/features/7984-fix-ectrackexcelexporter-campi-dem/` |
 | `withoutInternalConfigKeys()` — esclusione generica di chiavi interne da config.json/`layer()` | oc:8463 | Nuovo helper globale (`src/helpers.php`) + config `internal_attribute_keys` (vuota di default, popolata dal consumer, mai dal pacchetto): rimuove da un array `properties->attributes` le chiavi che un consumer dichiara riservate a uso interno, senza che wm-package ne conosca il significato (camminiditalia la usa per `shape_discontinuous`, un flag di discontinuità del cammino). Applicato in due canali con nesting diverso: `AppConfigService::config_section_map()` (`$item['attributes']`, appiattito) e `AppController::layer()` (`$json['properties']['attributes']`, annidato). `docs/features/8463-routeshape-discontinuo-come-lineare/` |
 
 ## Convenzioni e documentazione

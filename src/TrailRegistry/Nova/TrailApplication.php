@@ -8,14 +8,14 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Laravel\Nova\Fields\BelongsTo;
-use Laravel\Nova\Fields\Code;
 use Laravel\Nova\Fields\DateTime;
 use Laravel\Nova\Fields\Field;
 use Laravel\Nova\Fields\File;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
-use Laravel\Nova\Resource;
+use Laravel\Nova\Tabs\Tab;
 use Wm\WmPackage\Models\User;
+use Wm\WmPackage\Nova\AbstractGeometryResource;
 use Wm\WmPackage\TrailRegistry\Enums\TrailApplicationStatus;
 use Wm\WmPackage\TrailRegistry\Enums\TrailCodeStatus;
 use Wm\WmPackage\TrailRegistry\Exceptions\InvalidTrailGeometryException;
@@ -25,15 +25,16 @@ use Wm\WmPackage\TrailRegistry\Models\TrailApplication as TrailApplicationModel;
 use Wm\WmPackage\TrailRegistry\Nova\Actions\ApproveTrailApplication;
 use Wm\WmPackage\TrailRegistry\Nova\Actions\RejectTrailApplication;
 use Wm\WmPackage\TrailRegistry\Nova\Actions\ReplaceTrailCodeNumber;
+use Wm\WmPackage\TrailRegistry\Nova\Fields\TrailRegistryMap;
 use Wm\WmPackage\TrailRegistry\Nova\Filters\TrailApplicationSourceFilter;
 use Wm\WmPackage\TrailRegistry\Nova\Filters\TrailApplicationStatusFilter;
 use Wm\WmPackage\TrailRegistry\TrailGeometryReader;
 use Wm\WmPackage\TrailRegistry\TrailRegistryService;
 
 /**
- * @extends resource<TrailApplicationModel>
+ * @extends AbstractGeometryResource<TrailApplicationModel>
  */
-class TrailApplication extends Resource
+class TrailApplication extends AbstractGeometryResource
 {
     use ResolvesCanonicalResources;
 
@@ -54,14 +55,14 @@ class TrailApplication extends Resource
     }
 
     /**
-     * Nessun form di modifica in questo ciclo: cosa sia modificabile dopo la
-     * presentazione e' una domanda aperta con il cliente — se la traccia
-     * cambiasse, potrebbe cambiare il settore e quindi il prefisso di un
-     * codice gia' comunicato.
+     * Si modifica solo in istruttoria, e solo nei valori manuali del tab DEM
+     * (vedi fieldsForUpdate): la traccia non cambia, quindi non cambiano
+     * settore e prefisso del codice gia' comunicato. Approvata o rifiutata,
+     * l'istanza e' uno storico (oc:8571).
      */
     public function authorizedToUpdate(Request $request): bool
     {
-        return false;
+        return $this->resource->status === TrailApplicationStatus::UnderReview;
     }
 
     /**
@@ -75,7 +76,15 @@ class TrailApplication extends Resource
         return false;
     }
 
-    public function fields(NovaRequest $request): array
+    /**
+     * Le sei colonne dell'index (e del dettaglio): denominazione, codice,
+     * stato istruttoria, provenienza, chi l'ha inserita e quando. Estratte
+     * in un metodo perche' fields() e fieldsForIndex() non le duplichino
+     * (oc:8571).
+     *
+     * @return array<int, Field>
+     */
+    protected function summaryFields(NovaRequest $request): array
     {
         $fields = [
             Text::make(__('Denominazione'), 'name')->sortable(),
@@ -98,9 +107,70 @@ class TrailApplication extends Resource
 
         $fields[] = DateTime::make(__('Presentata il'), 'created_at')->sortable();
 
-        $fields[] = Code::make(__('Proprietà'), 'properties')->json()->onlyOnDetail();
+        return $fields;
+    }
+
+    /**
+     * Le sei colonne decise per l'index: niente colonne DEM, che nel tab si
+     * sarebbero appiattite in cinque colonne aggiuntive (oc:8571).
+     *
+     * @return array<int, Field>
+     */
+    public function fieldsForIndex(NovaRequest $request): array
+    {
+        return $this->summaryFields($request);
+    }
+
+    public function fields(NovaRequest $request): array
+    {
+        $fields = $this->summaryFields($request);
+
+        if ($request->isResourceDetailRequest()) {
+            // Il DEM manca solo se il job alla creazione e' fallito: lo si
+            // rilancia qui, e solo dove serve (oc:8571).
+            $this->resource->dispatchDemIfMissing();
+        }
+
+        $fields[] = TrailRegistryMap::make(__('Mappa'), 'geometry');
+
+        $fields[] = Text::make(__('Legenda'), function () {
+            $code = $this->resource->mapCode();
+
+            return $code === null ? '' : MapLegendRenderer::render($code);
+        })->asHtml()->onlyOnDetail();
+
+        $fields[] = Text::make(__('File GPX/GeoJSON caricato'), function () {
+            $media = $this->resource->getFirstMedia(TrailApplicationModel::ORIGINAL_GEOMETRY_COLLECTION);
+
+            return $media === null ? '—' : sprintf('<a class="link-default" href="%s">%s</a>', e($media->getUrl()), e($media->file_name));
+        })->asHtml()->onlyOnDetail();
+
+        $fields[] = Tab::group(__('Dettagli'), [
+            Tab::make(__('DEM'), $this->getDemTabFields()),
+        ]);
 
         return $fields;
+    }
+
+    /**
+     * I nove valori manuali del tab DEM, presi da getDemTabFields() e non
+     * riscritti. Gli altri Field del tab scrivono in `dem_data` e non devono
+     * finire nel form: il calcolato e' il riferimento del confronto.
+     *
+     * @return array<int, Field>
+     */
+    protected function manualDemFields(): array
+    {
+        return array_values(array_filter(
+            $this->getDemTabFields(),
+            fn ($field) => $field instanceof Field
+                && str_starts_with((string) $field->attribute, 'properties->manual_data->'),
+        ));
+    }
+
+    public function fieldsForUpdate(NovaRequest $request): array
+    {
+        return $this->manualDemFields();
     }
 
     /**
@@ -123,9 +193,10 @@ class TrailApplication extends Resource
                 ->acceptedTypes('.gpx,.geojson,.json,application/gpx+xml,application/geo+json,application/json,text/xml')
                 ->rules('required')
                 ->help(__('Il tracciato del sentiero: un GPX (traccia o rotta) oppure un GeoJSON con una o piu\' linee.'))
-                // Il file non si conserva: interessa la geometria, non
-                // l'allegato. Lo `store` callback la estrae e la scrive
-                // sull'attributo, nessun byte finisce sullo storage.
+                // Lo `store` callback estrae la geometria e la scrive
+                // sull'attributo; il file resta comunque conservato in
+                // `original_geometry` (vedi afterCreate()), come riferimento
+                // di cio' che e' stato dichiarato.
                 ->store(fn (NovaRequest $request) => static::geometryFrom($request)),
         ];
     }
@@ -185,6 +256,18 @@ class TrailApplication extends Resource
             app(TrailRegistryService::class)->reserve($model);
         } catch (SectorNotFoundException|SectorExhaustedException $e) {
             throw ValidationException::withMessages(['geometry' => $e->getMessage()]);
+        }
+
+        // Il file originale si conserva solo dopo la riserva: se questa
+        // fallisce la transazione va in rollback e non deve restare un
+        // allegato orfano.
+        $file = $request->file('geometry');
+
+        if ($file !== null) {
+            $model->addMedia($file->getRealPath())
+                ->preservingOriginal()
+                ->usingFileName($file->getClientOriginalName())
+                ->toMediaCollection(TrailApplicationModel::ORIGINAL_GEOMETRY_COLLECTION);
         }
     }
 

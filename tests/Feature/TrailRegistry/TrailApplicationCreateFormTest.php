@@ -3,6 +3,7 @@
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Laravel\Nova\Http\Requests\CreateResourceRequest;
 use Laravel\Nova\Http\Requests\NovaRequest;
@@ -21,6 +22,9 @@ beforeEach(function () {
     // Stesse ragioni di ApproveTrailApplicationTest: gli observer di
     // geometria e media chiamano servizi esterni e pretendono un'app 1.
     Bus::fake();
+    // L'afterCreate della Resource conserva il file originale su media
+    // library: senza fake finirebbe sul disco S3 reale (oc:8571).
+    Storage::fake('wmfe');
     DB::statement('ALTER SEQUENCE apps_id_seq RESTART WITH 1');
     config(['wm-package.shard_name' => 'wm_package_testing']);
     App::factory()->createQuietly();
@@ -198,6 +202,15 @@ it('non crea l istanza se la geometria cade fuori da ogni settore', function () 
         ->toThrow(ValidationException::class);
 
     expect(TrailApplicationModel::count())->toBe(0);
+});
+
+it('conserva il file originale caricato in creazione', function () {
+    $application = createApplicationThroughNova(gpxWithTrack(), 'Sentiero di prova');
+
+    expect($application->getFirstMedia(TrailApplicationModel::ORIGINAL_GEOMETRY_COLLECTION))
+        ->not->toBeNull()
+        ->and(file_get_contents($application->getFirstMediaPath(TrailApplicationModel::ORIGINAL_GEOMETRY_COLLECTION)))
+        ->toBe(gpxWithTrack());
 });
 
 /**

@@ -14,10 +14,16 @@ use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Filters\Filter;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Lenses\Lens;
+use Laravel\Nova\Panel;
 use Laravel\Nova\Resource;
 use Wm\WmPackage\Nova\Fields\PropertiesPanel;
 use Wm\WmPackage\Nova\Traits\HasDemClassification;
 
+/**
+ * @template TModel of \Illuminate\Database\Eloquent\Model
+ *
+ * @extends resource<TModel>
+ */
 abstract class AbstractGeometryResource extends Resource
 {
     use HasDemClassification;
@@ -42,7 +48,7 @@ abstract class AbstractGeometryResource extends Resource
     /**
      * Get the fields displayed by the resource.
      *
-     * @return array<int, Field>
+     * @return array<int, Field|Panel>
      */
     public function fields(NovaRequest $request): array
     {
@@ -132,23 +138,27 @@ abstract class AbstractGeometryResource extends Resource
 
     public function getDemTabFields(): array
     {
+        // Struttura unica per campo: label, unita' di misura mostrata come
+        // help del valore manuale, e regole di validazione decise dal dev
+        // per quel campo (oc:8571). Le quote di elevazione ammettono valori
+        // negativi, le durate sono minuti interi restituiti dal DEM.
         $mainFields = [
-            'ascent' => __('Ascent'),
-            'descent' => __('Descent'),
-            'distance' => __('Distance'),
-            'ele_max' => __('Maximum Elevation'),
-            'ele_min' => __('Minimum Elevation'),
-            'ele_from' => __('Starting Point Elevation'),
-            'ele_to' => __('Ending Point Elevation'),
-            'duration_forward' => __('Duration Forward'),
-            'duration_backward' => __('Duration Backward'),
+            'ascent' => [__('Ascent'), __('In metri'), ['nullable', 'numeric', 'min:0']],
+            'descent' => [__('Descent'), __('In metri'), ['nullable', 'numeric', 'min:0']],
+            'distance' => [__('Distance'), __('In km'), ['nullable', 'numeric', 'min:0']],
+            'ele_max' => [__('Maximum Elevation'), __('In metri'), ['nullable', 'numeric']],
+            'ele_min' => [__('Minimum Elevation'), __('In metri'), ['nullable', 'numeric']],
+            'ele_from' => [__('Starting Point Elevation'), __('In metri'), ['nullable', 'numeric']],
+            'ele_to' => [__('Ending Point Elevation'), __('In metri'), ['nullable', 'numeric']],
+            'duration_forward' => [__('Duration Forward'), __('In minuti'), ['nullable', 'integer', 'min:0']],
+            'duration_backward' => [__('Duration Backward'), __('In minuti'), ['nullable', 'integer', 'min:0']],
         ];
 
         $fields = [
             Boolean::make(__('Round Trip'), 'properties->dem_data->round_trip'),
         ];
 
-        foreach ($mainFields as $fieldKey => $label) {
+        foreach ($mainFields as $fieldKey => [$label, $unit, $rules]) {
             $fields[] = Text::make($label, 'properties->dem_data->'.$fieldKey)
                 ->onlyOnDetail()
                 ->resolveUsing(function ($value, $model) use ($fieldKey) {
@@ -157,7 +167,9 @@ abstract class AbstractGeometryResource extends Resource
                 ->asHtml();
 
             $fields[] = Text::make($label, 'properties->manual_data->'.$fieldKey)
-                ->onlyOnForms();
+                ->onlyOnForms()
+                ->rules(...$rules)
+                ->help($unit);
         }
 
         $fields[] = Text::make(__('Duration Forward (bike)'), 'properties->dem_data->duration_forward_bike');

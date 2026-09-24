@@ -7,11 +7,13 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Facades\DB;
 use Wm\WmPackage\Models\Abstracts\MultiLineString;
 use Wm\WmPackage\Models\User;
 use Wm\WmPackage\TrailRegistry\Database\Factories\TrailApplicationFactory;
 use Wm\WmPackage\TrailRegistry\Enums\TrailApplicationStatus;
 use Wm\WmPackage\TrailRegistry\Enums\TrailCodeStatus;
+use Wm\WmPackage\TrailRegistry\Jobs\UpdateTrailApplicationDemJob;
 
 /**
  * La domanda di accatastamento di un sentiero.
@@ -25,6 +27,9 @@ use Wm\WmPackage\TrailRegistry\Enums\TrailCodeStatus;
  * l'API rifiuta e Nova non salva. Ogni riga qui porta quindi gia' il proprio
  * codice riservato.
  *
+ * Alla creazione accoda il calcolo del DEM (oc:8571): vedi il docblock di
+ * `booted()`.
+ *
  * @property int $id
  * @property int $user_id
  * @property string $source
@@ -36,6 +41,13 @@ use Wm\WmPackage\TrailRegistry\Enums\TrailCodeStatus;
  */
 class TrailApplication extends MultiLineString
 {
+    /**
+     * Il file caricato dall'utente, conservato tale e quale: la geometria in
+     * colonna riceve la quota del nostro DEM, e questo resta il riferimento
+     * di cio' che e' stato dichiarato.
+     */
+    public const ORIGINAL_GEOMETRY_COLLECTION = 'original_geometry';
+
     protected $fillable = [
         'user_id',
         'source',
@@ -58,6 +70,73 @@ class TrailApplication extends MultiLineString
     protected static function newFactory(): Factory
     {
         return TrailApplicationFactory::new();
+    }
+
+    /**
+     * Il calcolo DEM parte a ogni istanza nuova, dopo il commit: Nova crea
+     * l'istanza e riserva il codice nella stessa transazione, e se la
+     * prenotazione fallisce non deve restare in coda un job per una riga che
+     * non esiste (oc:8571).
+     */
+    protected static function booted(): void
+    {
+        static::created(function (TrailApplication $application) {
+            UpdateTrailApplicationDemJob::dispatch($application->id)->afterCommit();
+        });
+    }
+
+    /**
+     * Il file caricato, conservato tale e quale: la geometria riceve la quota
+     * del nostro DEM, e questo resta il riferimento di cio' che e' stato
+     * dichiarato.
+     */
+    public function registerMediaCollections(): void
+    {
+        parent::registerMediaCollections();
+
+        $this->addMediaCollection(self::ORIGINAL_GEOMETRY_COLLECTION)->singleFile();
+    }
+
+    /**
+     * Serve il DEM se c'e' una traccia su cui calcolarlo e il dato manca.
+     */
+    public function needsDem(): bool
+    {
+        if (! empty($this->properties['dem_data'] ?? null)) {
+            return false;
+        }
+
+        return (bool) DB::selectOne(
+            'SELECT geometry IS NOT NULL AND ST_IsValid(geometry::geometry) AND NOT ST_IsEmpty(geometry::geometry) AS ok
+             FROM trail_applications WHERE id = ?',
+            [$this->id],
+        )?->ok;
+    }
+
+    public function dispatchDemIfMissing(): void
+    {
+        if ($this->needsDem()) {
+            UpdateTrailApplicationDemJob::dispatch($this->id);
+        }
+    }
+
+    /**
+     * Il codice di cui mostrare la mappa: quello attivo, oppure, per
+     * un'istanza rifiutata, l'ultimo che ha avuto.
+     */
+    public function mapCode(): ?TrailRegistryCode
+    {
+        return $this->activeCode ?? $this->codes()->latest('id')->first();
+    }
+
+    /**
+     * La mappa del codice, la stessa della scheda nel registro: settore,
+     * vicini, traccia dell'istanza e, se approvata, il sentiero. Chi cambia
+     * TrailRegistryCode::getFeatureCollectionMap() cambia anche questa.
+     */
+    public function getFeatureCollectionMap(): array
+    {
+        return $this->mapCode()?->getFeatureCollectionMap() ?? parent::getFeatureCollectionMap();
     }
 
     /**
@@ -90,6 +169,7 @@ class TrailApplication extends MultiLineString
         return $this->belongsTo(User::class);
     }
 
+    /** @return HasMany<TrailRegistryCode, $this> */
     public function codes(): HasMany
     {
         return $this->hasMany(TrailRegistryCode::class);
