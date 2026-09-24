@@ -174,3 +174,177 @@ del finder non regge.
   Non è stato affrontato in questo ciclo (fuori scope, impatto ampio su tutta la suite, non sui
   file toccati da oc:8543). Vale la pena aprire un ticket dedicato: spiega perché "i test non sono
   mai stati eseguiti" andava oltre il solo blocco licenza Nova già noto.
+
+---
+
+## Terzo ciclo (24/09/2026)
+
+Implementazione di Giuseppe Bonfanti, con Claude, sul branch della PR. Piano: sezione «Terzo ciclo
+(24/09/2026)» di [plan.md](plan.md); specifica: sezioni del 23/09 e del 24/09 di
+[overview.md](overview.md).
+
+### Decisioni
+
+- **Merge di `develop` nel branch** (commit `3c86ec66`, 24/09), non rebase: il branch è di Carla
+  Cupani con PR aperta, e il merge in develop sarà uno squash. Motivo dell'allineamento: oc:8571
+  aveva modificato `EcTrackService` (`updateManualData()` non azzera più `manual_data`) e il tab DEM.
+  Unico conflitto in `.claude/rules/nova.md`, risolto tenendo entrambe le sezioni. Il branch locale
+  era fermo alla versione del primo ciclo prima del rebase (`77934325`, stesso contenuto di
+  `a508ab8f`): è stato riallineato al remoto prima del merge.
+- **Tag Orchestrator:** associato `forestas` (id 676) al ticket il 24/09. Scartati
+  `Documentation: [SHARD] FORESTAS` e `altro_forestas`; gli altri candidati non sono stati proposti,
+  su richiesta del dev.
+- **Decisioni della revisione del 24/09**, dettaglio nei punti 1-9 dell'overview: fuori dalle catene
+  dell'inversione `UpdateEcTrackManualDataJob` e `UpdateEcTrackCurrentDataJob`; reindicizzazione
+  esplicita dopo il commit e protetta da `try/catch`; `ascent` nell'indice dal valore corrente;
+  nessuna conferma aggiuntiva; tracce con `osmid` in sola lettura; blocco geometria in un metodo
+  comune; nessun rischio dall'import di Drupal in produzione.
+- **Rinomina** `ReverseEcTrackGeometryAction` → `ReverseTrackDirectionAction`: l'Action non inverte
+  più sempre la geometria, e «Ec» serve solo a distinguere da una versione Ugc che qui non c'è.
+- **`osmid` controllato in due posti** (`EcTrackService::isOsmTrack()`): la colonna `osmid`, che
+  usa `classifyField()`, e `properties.osmid`, che usa `updateDataChain()` per accodare
+  `UpdateEcTrackFromOsmJob`. Il package usa entrambe: basta una delle due per rendere la traccia in
+  sola lettura.
+- **Stima non rifatta**, su richiesta del dev: su Orchestrator resta 4h.
+
+### Bug trovati
+
+- **`UpdateDataChainTest::test_update_data_chain_dispatches_at_least_one_job` fallisce già su
+  `develop`**: attende i job in un ordine che non è quello del codice (PBF in fondo) e senza
+  `UpdateEcTrackAppRelationsInfoJob`. Non toccato; la catena reale è ora fissata dal nuovo
+  `test_update_data_chain_keeps_the_same_jobs_in_the_same_order`.
+- **`EcTrackFactory` valorizza `osmid` a caso nel 70% dei casi** (`database/factories/EcTrackFactory.php:42`):
+  un test che crea tracce con la factory e non fissa `osmid` ottiene a caso una traccia OSM. I test
+  dell'inversione passano `'osmid' => null`.
+- **I test del package non registrano `ScoutServiceProvider`**: `EngineManager` non è un singleton,
+  e un engine registrato con `extend()` in un test si perde alla chiamata successiva. `ReverseTest`
+  registra il singleton nel proprio `setUp()`. Prima della correzione il test «Elasticsearch fallisce»
+  passava per l'errore sbagliato («Driver not supported»); ora verifica il messaggio.
+- **`Boolean::resolveDefaultValue()` in Nova 5.7.6** restituisce il default solo in una richiesta
+  di Action o di creazione: il test dei campi usa un `ActionRequest` reale.
+
+### Divergenze dal piano, task per task
+
+#### Task 1 — comando dei test
+
+I test in `tests/Unit/Services/EcTrackService/` non si lanciano per file singolo:
+`AbstractEcTrackServiceTest` è nello spazio dei nomi `Tests\…`, che `autoload-dev` non mappa, e
+viene trovato solo se Pest carica prima il suo file. Comando usato:
+`vendor/bin/pest tests/Unit/Services/EcTrackService --filter=<Classe>`.
+
+#### Task 4 — rinomina con `mv`
+
+I file sono stati rinominati con `mv` invece di `git mv`, per non toccare l'indice di git durante
+l'esecuzione. Al commit: `git add -A src/Nova/Actions tests/Feature/Nova/Actions`.
+
+#### Task 5 — suite completa
+
+La suite completa **non parte né su `develop` né sul branch**: circa 80 file usano
+`Tests\TestCase`, che dal package non si carica (esiste solo nei consumer), e passando i file uno a
+uno sulla riga di comando Pest va in conflitto con la dichiarazione della classe base in
+`tests/Pest.php`. Il confronto è stato fatto così:
+
+- una copia di `develop` in `.superpowers/develop-src` (ignorata da git), con le stesse dipendenze;
+- i file di test caricabili (158 su develop, 161 sul branch: i 3 in più sono i nuovi) lanciati uno
+  per volta sui due alberi, con lo stesso criterio di esclusione;
+- la cartella `tests/Unit/Services/EcTrackService` lanciata intera sui due alberi.
+
+**Esito:** nessun test peggiora.
+
+| | develop | branch |
+|---|---|---|
+| File con tutti i test verdi | 103 | 105 |
+| File con test falliti | 22 | 22 |
+| File che non si avviano | 33 | 34 (il file in più è `ReverseTest`, che per file singolo non si avvia, vedi Task 1) |
+| `tests/Unit/Services/EcTrackService` | 1 fallito, 24 verdi | 1 fallito, 39 verdi (stesso fallito, preesistente) |
+| `RolesAndPermissionsServiceTest` | 2 falliti | 1 fallito (effetto del `PermissionServiceProvider` del secondo ciclo) |
+
+Test del lavoro: `ReverseTest` 13/13, `ReverseTrackDirectionActionTest` 9/9,
+`EcTrackSearchableArrayTest` 3/3, `UpdateDataChainTest` 3 verdi più il fallito preesistente.
+
+**PHPStan** sui quattro file toccati: gli stessi 42 messaggi su develop e sul branch, tutti
+preesistenti; `ReverseTrackDirectionAction` nessun errore.
+
+### Follow-up
+
+- **Nota su oc:8642:** `ascent` nell'indice è fatto in oc:8543. Quando oc:8642 toglie
+  `UpdateEcTrackManualDataJob` e `UpdateEcTrackCurrentDataJob` dalle catene standard, controlli
+  anche `EcTrackService::REVERSE_EXCLUDED_JOBS`.
+- **Scout sincrono** su tutta la piattaforma (locale e UAT: `scout.queue = false`): ogni
+  salvataggio da Nova chiama Elasticsearch dentro la transazione. Da valutare a parte.
+- **La suite del package non è avviabile per intero** in questo ambiente (vedi Task 5): va con
+  oc:8626.
+- **`UpdateDataChainTest::test_update_data_chain_dispatches_at_least_one_job`** da correggere o
+  togliere: duplica, sbagliato, il nuovo test sull'ordine della catena.
+- **Verifica a mano in Nova** (Task 5, passo 5): da eseguire dal dev su Forestas locale prima del
+  merge.
+
+### Bypass del gate PHPStan (2026-09-24T16:28:53Z)
+
+Bypass confermato esplicitamente da Giuseppe Bonfanti, che se ne assume la responsabilità.
+Motivazione: «I 15 messaggi PHPStan rimasti sui file modificati sono bug preesistenti in codice che
+l'inversione non usa (già su `develop`). Per decisione del dev non si correggono in oc:8543, per non
+cambiare il comportamento del package senza test: sono tracciati in oc:8643. Il codice nuovo non
+introduce errori.»
+
+### Review finale (24/09/2026)
+
+Code review indipendente sul diff non committato. Nessun rilievo Critical. Due Important, corretti
+con un test che prima falliva:
+
+- **Help della finestra senza escape** (`ReverseTrackDirectionAction::fields()`): Nova rende l'help
+  con `v-html`, e partenza/arrivo o valori manuali importati con del markup arrivavano come HTML nel
+  browser dell'Administrator. Ora l'help passa da `e()`. Test:
+  `test_help_escapes_html_coming_from_the_data`.
+- **`updated_at` non aggiornato** dall'update mirato: app ed export incrementali
+  (`App::getTracksUpdatedAtFromLayer()`, `EcTrackService::getUpdatedAtTracks()`, `updated_after`
+  in `AppExportController`) non avrebbero riscaricato una traccia con i soli scambi. Ora `reverse()`
+  aggiorna `updated_at` nella stessa transazione, sia per gli scambi sia per la geometria. Test:
+  `test_updated_at_advances_so_clients_download_the_track_again`.
+
+Rilievi minori, non corretti (decide il dev):
+
+- `decodeArray()`: un `manual_data` salvato come JSON scalare (es. `"12"`) fa andare in errore il
+  tipo di ritorno `array`.
+- Se all'esecuzione la coppia scelta non ha più valori e la geometria è spenta, l'Action risponde in
+  verde «Scambiati: Nessuno. Ricalcolo in corso.» anche se non è partito nulla.
+- `json_encode()` nell'update mirato senza `JSON_THROW_ON_ERROR`.
+- Dopo `reverse()` il `$track` in memoria non è aggiornato: un chiamante artisan o API che lo riusa
+  deve fare `refresh()`.
+- `ascent` nell'indice cambia anche per gli altri consumer: una traccia con `ascent` solo al primo
+  livello passa a 0 alla prima reindicizzazione. Da citare nella nota su oc:8642 e nel changelog del
+  bump.
+- Test mancanti: che `DB::afterCommit` non accodi nulla prima del commit; l'Action con Elasticsearch
+  che fallisce; una traccia selezionata senza coppie valorizzate.
+- Le etichette nuove traducono anche il tab DEM di Nova su tutti i consumer (effetto voluto, da
+  notare nella verifica a mano).
+
+### PHPStan sui file toccati (24/09/2026)
+
+Il gate di PHPStan segnalava 42 errori su `src/Models/EcTrack.php`, `src/Nova/EcTrack.php` e
+`src/Services/Models/EcTrackService.php`, tutti già presenti su `develop`. Su decisione del dev sono
+stati corretti in questo ticket **solo quelli che non cambiano comportamento**: annotazioni
+(`@property` su `properties`, `app_id` e `app` del modello; `@mixin`/`@property $resource` sulla
+Resource; `@var` nei cicli su layer, POI e attività), controlli ridondanti (`&& $val`, `?? 'it'`,
+`?? []`, `?? $track->geometry` dopo un metodo che restituisce `string`, `=== null` dopo un `!isset`,
+`! empty()` su un modello, `if ($this->ecPois)` su una collection) e il tipo di ritorno di
+`layersOrderedByRankDesc()`. Da 42 a 15.
+
+I 15 rimasti sono **bug veri** in codice che l'inversione non usa, lasciati fuori per non cambiare il
+comportamento del package su tutti i consumer senza test:
+
+- `EcTrack.php`: riferimenti ad `App\Models\User`, classe dei consumer (righe ~162, ~175);
+  `$name` può non essere definita in `cleanTrackNameSpecialChar()` quando il nome è vuoto (riga ~597); `$this->color` non è un
+  attributo (riga ~603);
+- `EcTrackService.php`: condizione sempre falsa in `updateDemData()` (riga ~103);
+  `$track->getDemDataFields()` in `updateCurrentData()` (riga ~193, oc:8642); due negazioni sempre
+  vere (righe ~215, ~218); `convertDuration()` che restituisce `null` e moltiplica una stringa
+  (righe ~281-288); `$track->dem_data` inesistente (riga ~299); `getSearchableString($layer->app_id)`
+  chiamato con un argomento che il metodo ignora, quindi la stringa di ricerca è sempre quella
+  dell'app della traccia, non del layer (riga ~642); `App::$app_id` inesistente (riga ~668);
+  `TaxonomyActivity::$icon` inesistente, quindi `icon_name` è sempre `null` (riga ~721).
+
+Tracciati in **oc:8643** («Azzerare gli errori PHPStan di wm-package»), che copre tutti i 996 errori del package.
+
+Verifica: test del lavoro verdi; i 29 file di test che riguardano `EcTrack` danno lo stesso esito su
+`develop` e sul branch (8 file con falliti preesistenti, identici).

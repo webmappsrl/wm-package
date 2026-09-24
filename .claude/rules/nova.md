@@ -56,3 +56,8 @@ Si applica quando tocchi Resource, campi, action o card Nova del package.
 - I Field dentro un `Tab` finiscono anche sull'index se non hanno restrizioni di visibilità: il tab
   DEM porta sull'index `round_trip` e le durate bici/escursionismo. Una Resource che usa
   `getDemTabFields()` dichiara `fieldsForIndex()` (oc:8571).
+- `Boolean::resolveDefaultValue()` restituisce il default solo in una richiesta di Action o di
+  creazione: in un test su `fields()` di un'Action serve un `ActionRequest` reale, altrimenti torna
+  `null` (oc:8543).
+- L'`help()` di un campo è reso con `v-html`: un valore letto dal DB va passato da `e()`, altrimenti
+  il markup arriva nel browser dell'utente (oc:8543).

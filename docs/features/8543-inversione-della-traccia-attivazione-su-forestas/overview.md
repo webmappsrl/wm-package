@@ -2,6 +2,11 @@
 
 # Inversione della traccia: attivazione su Forestas
 
+> **Terzo ciclo, revisione del 24/09/2026:** dopo il merge di `develop` (oc:8571) alcune premesse
+> del terzo ciclo sono cambiate. Le decisioni aggiornate sono in
+> [Terzo ciclo — revisione del 24/09/2026](#terzo-ciclo--revisione-del-24092026), in fondo, e
+> prevalgono sulla sezione del 23/09 quando la contraddicono.
+
 > **Terzo ciclo (23/09/2026):** la review sul commit `bb4b75a3` ha chiesto di nuovo modifiche. Le
 > decisioni del terzo ciclo sono nella sezione [Terzo ciclo](#terzo-ciclo-23092026) in fondo e
 > prevalgono su quanto scritto sopra quando lo contraddicono: in particolare sull'avviso sugli
@@ -424,3 +429,194 @@ In `forestas` nessuna modifica.
 - `resources/lang/en.json`, `resources/lang/it.json`: chiavi nuove, via quelle vecchie.
 - `tests/Feature/Nova/Actions/ReverseEcTrackGeometryActionTest.php` ed eventuale test del service.
 - `docs/features/8543-inversione-della-traccia-attivazione-su-forestas/`: overview, plan, notes.
+
+## Terzo ciclo — revisione del 24/09/2026
+
+Il 24/09/2026 il branch è stato allineato a `develop` con un merge (commit `3c86ec66`, non ancora
+pushato). Da `develop` è entrato oc:8571, che ha cambiato due premesse della sezione del 23/09.
+L'implementazione del terzo ciclo passa a Giuseppe Bonfanti, su questo branch. Valgono tutti i
+requisiti del 23/09 tranne quelli modificati qui sotto.
+
+### Cosa cambia rispetto al 23/09
+
+1. **`manual_data` non viene più azzerato: il bug è corretto su `develop`.** oc:8571 ha modificato
+   `EcTrackService::updateManualData()` (`src/Services/Models/EcTrackService.php:229-265`): ora
+   parte dal `manual_data` esistente invece di ricostruirlo dal primo livello di `properties`. Il
+   «Perché», punto 1, e la prima voce dell'Out of scope del 23/09 non valgono più come scritti.
+2. **`UpdateEcTrackManualDataJob` resta fuori dalle catene dell'inversione, per un motivo diverso.**
+   Nell'inversione i dati manuali li decide l'utente con i flag «Scambia». Il job li ricalcolerebbe
+   dal primo livello di `properties` e, su una traccia che lì ha dei valori (flusso OSM/GeoHub),
+   sovrascriverebbe lo scambio appena fatto. Il primo livello è destinato a sparire (oc:8642).
+3. **Anche `UpdateEcTrackCurrentDataJob` esce da entrambe le catene.** Il job non fa niente, per due
+   motivi indipendenti:
+   - `updateCurrentData()` chiama `$track->getDemDataFields()` sul modello
+     (`EcTrackService.php:189`), mentre il metodo esiste solo sul service (riga 48): va sempre in
+     errore e il `catch` scrive nel log. È rotto dal 27/01/2025 (commit `f5371a4a`, oc:4667);
+   - anche corretta quella riga, il metodo lavora su `$track->getDirty()`, che in un job accodato è
+     sempre vuoto perché il modello viene riletto dal DB.
+
+   I valori mostrati non ne hanno bisogno: scheda Nova, API, JSON su AWS e tile PBF calcolano il
+   valore corrente in lettura (`HasDemClassification::classifyField()`): manuale se c'è, poi OSM se
+   la traccia ha `osmid`, altrimenti DEM (`HasDemClassification.php:33-51`). Le tracce con `osmid`
+   sono escluse dall'Action (punto 7), quindi per l'inversione vale «manuale, altrimenti DEM». La
+   rimozione del job dalle catene standard è di oc:8642.
+4. **L'indice Elasticsearch si aggiorna in modo esplicito.** `EcTrack` usa Scout
+   (`src/Models/EcTrack.php:28`) e l'indice contiene `from`, `to` e `duration_forward`
+   (`toSearchableArray()`, `EcTrack.php:709-743`). `reverse()` non passa dall'observer, quindi Scout
+   non reindicizza da solo: dopo il commit `reverse()` reindicizza la traccia, sia dopo
+   un'inversione della geometria sia dopo i soli scambi. Come, e perché un errore dell'indice non
+   deve far fallire l'Action, è nei Requisiti modificati.
+5. **Nell'indice `ascent` diventa il valore corrente.** Oggi `toSearchableArray()` legge `ascent`
+   dal primo livello di `properties`, che su Forestas è vuoto: il dislivello indicizzato è sempre 0,
+   e uno scambio salita/discesa non cambierebbe niente nella ricerca. Si allinea a `distance` e
+   `duration_forward`, che già usano `classifyField(...)['currentValue']`, cioè lo stesso valore
+   mostrato nel detail di Nova. `from`/`to` restano letti dal primo livello, che è il loro posto
+   (non sono campi DEM). Su oc:8642, che elenca questo punto, va una nota: è fatto qui.
+6. **Nessuna conferma aggiuntiva prima dell'esecuzione.** La finestra con i flag è già la scelta
+   esplicita. L'inversione si annulla rilanciando l'Action con le stesse scelte, e il messaggio
+   finale dice cosa è stato fatto.
+7. **Le tracce con `osmid` sono in sola lettura: l'Action non le modifica.** Su quelle tracce
+   l'inversione non reggerebbe: senza valore manuale `classifyField()` mostra i valori OSM, riferiti
+   al verso vecchio, e al primo salvataggio da Nova `updateDataChain()` mette in testa
+   `UpdateEcTrackFromOsmJob` (`EcTrackService.php:361-362`), che riscrive la geometria da OSM. Il
+   verso di quelle tracce si corregge su OpenStreetMap. Su Forestas oggi 0 tracce su 769 hanno
+   `osmid`, ma l'Action sta nella Resource `EcTrack` del package e arriva a tutti i consumer.
+8. **Il blocco dei job legati alla geometria diventa un metodo comune.** La catena dell'inversione
+   è il blocco geometria di `updateDataChain()` meno quattro job, più la coda che la catena standard
+   accoda sempre. Invece di una seconda lista scritta a mano, che col tempo si allontanerebbe da
+   quella standard, il blocco si estrae in un metodo (es. `geometryDependentJobs(EcTrack $track,
+   array $except = [])`) usato sia da `updateDataChain()` sia da `reverse()`, che gli passa le
+   esclusioni. Un job aggiunto in futuro al blocco entra anche nell'inversione, salvo esclusione
+   esplicita. `updateDataChain()` non cambia comportamento: le righe si spostano, non cambiano.
+9. **Import da Drupal: nessun rischio in produzione.** L'import da Sardegna Sentieri riscrive
+   geometria, `from`/`to` e `ascent` quando riprende una traccia. In produzione quei dati non
+   verranno più importati da Drupal. Su UAT l'import `--reset` delle 06:00 ricostruisce il DB ogni
+   notte: un'inversione di prova su UAT vale fino al mattino dopo.
+
+### Requisiti modificati
+
+- [ ] Catena con **geometria invertita**: `UpdateEcTrackDemJob`, `UpdateEcTrackSlopeValues`,
+      `UpdateEcTrackGenerateElevationChartImage`, `UpdateEcTrackOrderRelatedPoi`,
+      `GenerateEcTrackPBFBatch`, `UpdateEcTrackAwsJob`, `UpdateEcTrackAppRelationsInfoJob`.
+      Si ottiene dal metodo comune del blocco geometria (punto 8), escludendo
+      `UpdateEcTrackManualDataJob`, `UpdateEcTrackCurrentDataJob`, `UpdateEcTrack3DDemJob` e
+      `SyncModelTaxonomyWhereJob`, più la coda.
+- [ ] Nuovo metodo comune per il blocco geometria, usato da `updateDataChain()` e `reverse()`;
+      `updateDataChain()` accoda gli stessi job, nello stesso ordine, di prima.
+- [ ] Tracce con `osmid`: l'Action risponde con un errore che spiega che il verso va corretto su
+      OpenStreetMap, e non scrive nulla.
+- [ ] Catena con **solo scambi**: `GenerateEcTrackPBFBatch`, `UpdateEcTrackAwsJob`, più la
+      reindicizzazione. Verificato il 24/09 che bastano, leggendo chi usa i campi scambiabili:
+      - il JSON su AWS: `UpdateEcTrackAwsJob` rilegge la traccia dal DB e serializza
+        `EcTrackResource`, che passa i campi DEM da `applyDemFields()` → `classifyField()`
+        (`src/Http/Resources/EcTrackResource.php:41,62-73`). `from`/`to` passano così come sono;
+      - le tile: `PBFGeneratorService.php:262-270` legge `distance` e `duration_forward` con la
+        precedenza `manual_data` → `osm_data` → `dem_data`;
+      - l'indice Elasticsearch: `from`, `to`, `duration_forward`, `ascent` (punti 4 e 5);
+      - nessun altro: la stringa di ricerca per app (`EcTrack::getSearchableString()`) usa nome,
+        descrizione, ref, osmid e tassonomie, e `AppConfigService` cita `duration_forward` solo come
+        nome del filtro. `UpdateEcTrackAppRelationsInfoJob` riscrive layer, attività e stringa di
+        ricerca, che non dipendono dagli scambi: non serve.
+- [ ] In **nessuna** delle due catene: `UpdateEcTrackManualDataJob`, `UpdateEcTrackCurrentDataJob`,
+      `UpdateEcTrackFromOsmJob`, `UpdateEcTrack3DDemJob`, `SyncModelTaxonomyWhereJob` (è il nome
+      attuale di `UpdateModelWithGeometryTaxonomyWhere`, rinominato da oc:8487).
+- [ ] Gli scambi scrivono **solo la colonna `properties`**, con un update mirato sulla riga, non con
+      `save()`/`saveQuietly()` del modello intero. `save()` farebbe partire l'observer e la catena
+      standard; `saveQuietly()` eviterebbe l'observer, ma farebbe comunque passare il modello da
+      Eloquent, e la regola del package vuole che le geometrie non transitino dall'ORM.
+- [ ] Dopo il commit, `reverse()` accoda la catena scelta e reindicizza la traccia. La
+      reindicizzazione va dentro `DB::afterCommit(fn () => $track->fresh()->searchable())`, per due
+      motivi verificati il 24/09:
+      - Scout è **sincrono** e **non aspetta il commit**: `config/scout.php` non è pubblicato né nel
+        package né in Forestas, quindi valgono i default di `vendor/laravel/scout/config/scout.php`
+        (`'queue' => env('SCOUT_QUEUE', false)`, `'after_commit' => false`), e nel `.env` locale
+        `SCOUT_QUEUE` non c'è. Stessa situazione su UAT, verificata in sola lettura il 24/09 con
+        tinker in `php-forestasuat`: `scout.queue = false`, `scout.after_commit = false`, nessun
+        `config/scout.php`. Chiamato dentro la transazione di Nova, `searchable()` scriverebbe
+        subito sull'indice un dato che un rollback potrebbe annullare. `DB::afterCommit()` fuori da
+        una transazione (artisan, API) esegue subito;
+      - l'update mirato scrive sul DB e non sul modello in memoria: senza `fresh()`,
+        `toSearchableArray()` leggerebbe i valori di prima dello scambio.
+- [ ] **Un errore di Elasticsearch non deve far fallire l'inversione.** Il driver lancia
+      un'eccezione se l'indicizzazione fallisce (`vendor/matchish/laravel-scout-elasticsearch/src/Engines/ElasticSearchEngine.php:44-53`,
+      «Bulk update error»). Dopo il commit geometria e scambi sono già scritti: un'eccezione che
+      arrivasse a Nova mostrerebbe un errore su un'inversione riuscita, e l'utente la rilancerebbe
+      invertendo la traccia una seconda volta. Quindi, dopo il commit:
+      - prima si accoda la catena, poi si reindicizza: un errore dell'indice non deve impedire
+        l'accodamento;
+      - la reindicizzazione sta in un `try/catch` che scrive l'errore nel log e non lo propaga. Nel
+        caso peggiore la ricerca resta indietro su quella traccia fino al prossimo salvataggio.
+- [ ] `EcTrack::toSearchableArray()`: `ascent` letto con `classifyField($this, 'ascent')['currentValue']`,
+      con il cast `(int)`: da `manual_data` il valore può arrivare come stringa. Nessun reindex
+      obbligatorio al rilascio: le tracce passano al valore corrente man mano che vengono
+      reindicizzate, e quelle non toccate tengono il valore di oggi. Se si vuole l'indice allineato
+      subito: `scout:import` sul modello `EcTrack` (o l'Action `ReindexAppScoutAction`).
+
+### Test modificati o aggiunti
+
+- [ ] L'elenco esatto dei job di entrambe le catene riflette le liste sopra: nessuna delle due
+      contiene `UpdateEcTrackManualDataJob` né `UpdateEcTrackCurrentDataJob`.
+- [ ] Il test «`manual_data` non azzerato dopo l'inversione» resta: esegue a mano
+      `UpdateEcTrackDemJob` con il `DemClient` finto e verifica che gli override siano intatti.
+      Non esegue più `UpdateEcTrackCurrentDataJob`, che non è nelle catene.
+- [ ] La traccia viene reindicizzata una volta, sia con la geometria invertita sia con i soli
+      scambi.
+- [ ] Elasticsearch che fallisce: la catena è comunque accodata, l'Action risponde con il messaggio
+      di successo e l'errore finisce nel log.
+- [ ] `toSearchableArray()` restituisce come `ascent` il valore corrente: quello manuale se
+      presente, altrimenti il DEM.
+- [ ] Il test delle catene controlla l'elenco delle esclusioni dal blocco geometria, oltre
+      all'elenco dei job.
+- [ ] Traccia con `osmid`: errore, nessuna scrittura, nessun job accodato.
+- [ ] `updateDataChain()` accoda gli stessi job di prima dell'estrazione del metodo comune.
+
+La verifica a mano in Nova su Forestas locale resta come scritta il 23/09. Il dato locale è cambiato
+da allora: il 24/09 769 tracce su 769 hanno `manual_data` valorizzato (non più 742 con `null`).
+
+Il piano del terzo ciclo si apre con un **elenco unico dei requisiti validi**, preso dalle sezioni
+del 23/09 e del 24/09. Le checkbox dei cicli precedenti non vanno eseguite.
+
+### Out of scope, aggiornato
+
+- `updateManualData()` è corretto da oc:8571. Il resto della pulizia del primo livello di
+  `properties` è di oc:8642: `updateManualData()` e `updateCurrentData()` con i loro job, e la
+  rimozione dalle catene standard.
+- Il valore `ascent` nell'indice **non** è più fuori scope: è fatto qui (punto 5).
+- Scout sincrono su tutta la piattaforma (locale e UAT: `scout.queue = false`): ogni salvataggio da
+  Nova chiama Elasticsearch dentro la transazione, e se l'indice fallisce il salvataggio viene
+  annullato. Passare alla coda è una scelta di piattaforma, da valutare a parte.
+
+### Codice della PR da togliere o rinominare
+
+Oltre a quanto già elencato il 23/09 in «Da togliere»:
+- la classe `ReverseEcTrackGeometryAction` diventa **`ReverseTrackDirectionAction`**, e il test
+  `ReverseTrackDirectionActionTest`. L'Action non inverte più sempre la geometria, e «Ec» serve solo
+  a distinguere da una versione Ugc, che qui non esiste (precedenti: `UploadTrackFile`,
+  `UpdateTracksOnAws`). Resta `EcTrackService::reverse()`, che sta nel service delle `EcTrack`;
+- `use HasDemClassification` nell'Action: serviva solo a `getOverriddenFields()`;
+- il docblock della classe, che descrive la catena completa e `forceGeometryChain`: va riscritto;
+- i test sull'avviso degli override e su `forceGeometryChain`.
+
+Restano: `GeometryComputationService::reverseGeometry()`, la registrazione in `EcTrack.php`
+(`->sole()`, solo Administrator), `PermissionServiceProvider` in `tests/TestCase.php`, il ciclo su
+`$models` in `handle()`, `InteractsWithQueue`/`Queueable` (coerenza col package, review del 22/09) e
+le trappole in `.claude/rules/nova.md`.
+
+### Moduli toccati, in aggiunta
+
+- `src/Models/EcTrack.php`: `toSearchableArray()`, riga di `ascent`.
+- `src/Services/Models/EcTrackService.php`: anche `updateDataChain()`, per l'estrazione del metodo
+  comune del blocco geometria.
+
+### Rischi, aggiornato
+
+Dalla challenge del 24/09. Rischi reali gestiti: import da Drupal (punto 9), tracce OSM (punto 7),
+catene che si allontanano (punto 8), documentazione a strati (elenco unico nel piano). L'indice
+misto dopo il rilascio non è un rischio: le tracce non reindicizzate tengono il valore di oggi, e
+il reindex completo è facoltativo (requisito su `ascent`). Rischi ipotetici accettati senza misure:
+- tracce 2D o `LINESTRING` semplici non riportate al tipo originale da una seconda inversione (su
+  Forestas sono tutte 3D e `MULTILINESTRING`);
+- due scritture su `properties` della stessa traccia negli stessi pochi secondi;
+- coda o Redis che non rispondono proprio al momento del commit;
+- valori della traccia che cambiano fra l'apertura della finestra e l'esecuzione;
+- nessun feature flag: l'Action arriva su tutti i consumer al bump, limitata ad Administrator.
