@@ -119,9 +119,11 @@ it('filtra il registro per provincia, area, settore e stato', function () {
     );
 });
 
-it('non permette di modificare un istanza in questo ciclo', function () {
+it('non permette di modificare un istanza non in istruttoria', function () {
+    // La regola completa (solo in istruttoria, solo i nove valori manuali
+    // del tab DEM) e' testata in TrailApplicationDemTabTest (oc:8571).
     $resource = new TrailApplicationResource(
-        TrailApplicationModel::factory()->create()
+        TrailApplicationModel::factory()->create(['status' => TrailApplicationStatus::Approved])
     );
 
     expect($resource->authorizedToUpdate(NovaRequest::create('/')))->toBeFalse();
@@ -130,18 +132,24 @@ it('non permette di modificare un istanza in questo ciclo', function () {
 it('mostra nell elenco delle istanze le sei colonne decise', function () {
     $resource = new TrailApplicationResource(TrailApplicationModel::factory()->create());
 
-    $fields = collect($resource->fields(NovaRequest::create('/')))
+    // indexFields() applica fieldsForIndex() solo su una richiesta che Nova
+    // riconosce come "resource index" (isResourceIndexRequest()): un
+    // NovaRequest generico non basta.
+    $request = \Laravel\Nova\Http\Requests\ResourceIndexRequest::create('/');
+
+    $fields = $resource->indexFields($request)
         ->map(fn ($f) => $f->name)
+        ->values()
         ->all();
 
-    expect($fields)->toContain(
+    expect($fields)->toBe([
         'Denominazione',
         'Codice',
         'Stato istruttoria',
         'Provenienza',
         'Inserita da',
         'Presentata il',
-    );
+    ]);
 });
 
 it('la storia di un codice senza passaggi non e una tabella vuota', function () {

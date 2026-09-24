@@ -94,4 +94,37 @@ class UpdateManualDataTest extends AbstractEcTrackServiceTest
             self::DISTANCE_FIELD_LABEL => self::DIRTY_FIELDS[self::DISTANCE_FIELD_LABEL],
         ], $this->getManualData($this->track));
     }
+
+    /** @test */
+    public function update_manual_data_keeps_existing_manual_values()
+    {
+        // Un valore scritto dal tab DEM vive solo in manual_data: il primo
+        // livello e' vuoto, come su Forestas e sulle istanze del Catasto.
+        $this->track->properties = [
+            ...$this->track->properties,
+            'manual_data' => ['duration_forward' => 180],
+        ];
+
+        $this->ecTrackService->updateManualData($this->track);
+
+        $this->assertEquals(180, $this->track->properties['manual_data']['duration_forward']);
+    }
+
+    /** @test */
+    public function update_manual_data_adds_top_level_value_without_dropping_existing_ones()
+    {
+        $this->track->properties = [
+            ...$this->track->properties,
+            'ascent' => self::DIRTY_FIELDS[self::ASCENT_FIELD_LABEL],
+            'manual_data' => ['duration_forward' => 180],
+        ];
+
+        $this->ecTrackService->updateManualData($this->track);
+
+        $this->assertEquals(180, $this->track->properties['manual_data']['duration_forward']);
+        $this->assertEquals(
+            self::DIRTY_FIELDS[self::ASCENT_FIELD_LABEL],
+            $this->track->properties['manual_data']['ascent'],
+        );
+    }
 }

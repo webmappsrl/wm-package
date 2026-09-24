@@ -457,5 +457,8 @@
     "Variante": "Variant",
     "nessuna variante": "no variant",
     "Numero sostituito.": "Number replaced.",
-    "Questa istanza non ha un codice attivo da sostituire.": "This application has no active code to replace."
+    "Questa istanza non ha un codice attivo da sostituire.": "This application has no active code to replace.",
+    "In metri": "In meters",
+    "In km": "In km",
+    "In minuti": "In minutes"
 }

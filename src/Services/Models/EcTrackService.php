@@ -51,6 +51,29 @@ class EcTrackService extends BaseService
     }
 
     /**
+     * La risposta grezza del servizio DEM per una traccia.
+     *
+     * Separata da updateDemData() perche' la usa anche l'istanza del Catasto
+     * Sentieri, che salva il risultato in SQL e non via Eloquent.
+     */
+    public function fetchDemTechData(array $geojson): array
+    {
+        return $this->demClient->getTechData($geojson);
+    }
+
+    /**
+     * I valori DEM nella forma che si salva in `properties['dem_data']`: le
+     * durate "correnti" sono quelle per l'escursionismo.
+     */
+    public function normalizeDemData(array $properties): array
+    {
+        $properties['duration_forward'] = $properties['duration_forward_hiking'] ?? null;
+        $properties['duration_backward'] = $properties['duration_backward_hiking'] ?? null;
+
+        return $properties;
+    }
+
+    /**
      * Update track with DEM data.
      *
      * @return void
@@ -59,11 +82,8 @@ class EcTrackService extends BaseService
     {
         $geojson = $track->getGeojson();
 
-        // Request was successful, handle the response data here
-        $responseData = $this->demClient->getTechData($geojson);
-        $demData = $responseData['properties'];
-        $demData['duration_forward'] = $demData['duration_forward_hiking'];
-        $demData['duration_backward'] = $demData['duration_backward_hiking'];
+        $responseData = $this->fetchDemTechData($geojson);
+        $demData = $this->normalizeDemData($responseData['properties']);
 
         $oldDemData = $track->properties['dem_data'] ?? [];
         $properties = $track->properties;
@@ -208,7 +228,12 @@ class EcTrackService extends BaseService
 
     public function updateManualData(EcTrack $track)
     {
-        $manualData = null;
+        // Si parte dai manuali gia' presenti: quelli scritti dal tab DEM vivono
+        // solo in manual_data, e ricostruirlo dal primo livello li cancellerebbe
+        // (oc:8571). Il primo livello resta una sorgente in piu', per il flusso
+        // OSM/GeoHub che lo scrive ancora (eliminazione in oc:8642).
+        $existing = $track->properties['manual_data'] ?? [];
+        $manualData = is_array($existing) ? $existing : (json_decode((string) $existing, true) ?: []);
         $fieldsToCheck = $this->getDemDataFields();
 
         $demData = isset($track->properties['dem_data']) ? (
@@ -236,7 +261,7 @@ class EcTrackService extends BaseService
         }
 
         $properties = $track->properties;
-        $properties['manual_data'] = $manualData;
+        $properties['manual_data'] = $manualData === [] ? null : $manualData;
         $track->properties = $properties;
         $track->saveQuietly();
     }
