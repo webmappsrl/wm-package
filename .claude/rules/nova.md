@@ -38,3 +38,6 @@ Si applica quando tocchi Resource, campi, action o card Nova del package.
 - Un'Action istanziata a mano in un test ha `runCallback` nullo e risulta **sempre**
   autorizzata: il `canRun()` va preso dall'istanza che la Resource restituisce, altrimenti il
   test non verifica nulla (oc:8569).
+- I Field dentro un `Tab` finiscono anche sull'index se non hanno restrizioni di visibilità: il tab
+  DEM porta sull'index `round_trip` e le durate bici/escursionismo. Una Resource che usa
+  `getDemTabFields()` dichiara `fieldsForIndex()` (oc:8571).

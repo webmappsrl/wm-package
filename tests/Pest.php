@@ -1,11 +1,27 @@
 <?php
 
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Tests\TestCase;
 use Wm\WmPackage\TrailRegistry\Enums\TrailCodeStatus;
+use Wm\WmPackage\TrailRegistry\Jobs\UpdateTrailApplicationDemJob;
 
 uses(TestCase::class)->in(__DIR__);
+
+// Ogni istanza creata accoda il calcolo DEM (oc:8571): nei test del catasto il
+// job e' finto per default, cosi' nessun test esce verso il servizio DEM. Chi
+// vuole il job vero lo esegue a mano con Http::fake().
+uses()->beforeEach(function () {
+    // UpdateTrailApplicationDemJob usa uniqueVia() su Redis (oc:8564): senza
+    // isolarlo qui, anche un test che non dispatcha mai il job (perche' e'
+    // fake) dipenderebbe da un Redis reale solo per l'acquisizione del lock.
+    config(['cache.stores.redis.driver' => 'array']);
+
+    Bus::fake([
+        UpdateTrailApplicationDemJob::class,
+    ]);
+})->in('Feature/TrailRegistry');
 
 /**
  * Crea un settore (riga taxonomy_wheres) con una geometria poligonale reale,

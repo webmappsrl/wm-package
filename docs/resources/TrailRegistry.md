@@ -258,6 +258,11 @@ Le tre Resource stanno nella sezione di menu **Catasto**.
   si sostituisce anche il numero prenotato, scegliendo in due tendine — il numero, poi la
   variante, con «nessuna variante» fra le opzioni della seconda: il gesto avviene mentre si
   guarda la mappa dell'istanza, che è il contesto su cui si decide (oc:8569).
+  Nel dettaglio ci sono la mappa del codice dell'istanza (quello attivo, o l'ultimo se l'istanza è
+  rifiutata) con la sua legenda, il link al «File GPX/GeoJSON caricato» e il tab DEM. Si modifica
+  solo in istruttoria, e solo nei nove valori manuali del tab; l'index mostra le sei colonne di
+  sempre. Come nasce e si calcola il DEM dell'istanza è in
+  [docs/knowledge/dati-dem-e-valori-manuali.md](../knowledge/dati-dem-e-valori-manuali.md) (oc:8571).
 - **Anomalie** — sola lettura, con in testa una card che spiega la schermata
   (`TrailRegistryNoticeCard`).
 
@@ -282,3 +287,7 @@ route: `resources/js/domains/<dominio>.js`.
 - **Il titolo di una Resource non può essere una colonna enum.** `public static $title = 'type'`
   fa convertire l'enum in stringa (`Resource.php:416`) e la pagina non si apre: serve un metodo
   `title()`.
+- **La factory crea le istanze con `properties = []`, un array jsonb.** Su un array `||` concatena
+  invece di unire: `'[]'::jsonb || '{"dem_data": …}'` dà `[{"dem_data": …}]`, e la chiave non
+  esiste. Nel SQL che scrive in `properties` si parte da
+  `CASE WHEN jsonb_typeof(properties) = 'object' THEN properties ELSE '{}'::jsonb END` (oc:8571).

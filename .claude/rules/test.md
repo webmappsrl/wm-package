@@ -23,3 +23,6 @@ Si applica quando scrivi o modifichi un test del package.
   job ha `uniqueVia()` su Redis (es. `UpdateAppConfigJob`, `BuildAppPoisGeojsonJob`), un test sotto
   `Bus::fake()` dipende comunque da Redis reale — isola con
   `config(['cache.stores.redis.driver' => 'array'])` (oc:8564).
+- `Bus::fake()` non onora `afterCommit()`: sotto fake un job accodato dopo il commit parte subito,
+  anche se la transazione va in rollback. Si verifica `$job->afterCommit === true`, non lo scarto
+  (oc:8571).

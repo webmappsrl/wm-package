@@ -7,6 +7,7 @@ use Wm\WmPackage\Jobs\Track\UpdateEcTrackDemJob;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\TaxonomyActivity;
+use Wm\WmPackage\Services\Models\EcTrackService;
 use Wm\WmPackage\TrailRegistry\Enums\TrailApplicationStatus;
 use Wm\WmPackage\TrailRegistry\Enums\TrailCodeStatus;
 use Wm\WmPackage\TrailRegistry\Models\TrailApplication;
@@ -172,6 +173,45 @@ it('mette in coda la catena degli observer per il sentiero creato', function () 
     // Sotto Bus::fake() si verifica che venga MESSA IN CODA, non eseguita.
     Bus::assertDispatched(UpdateEcTrackDemJob::class);
 });
+
+it('i valori manuali corretti in istruttoria restano sul sentiero dopo la catena', function () {
+    // La factory valorizza `properties` come array jsonb (`[]`), non oggetto:
+    // `COALESCE(properties, '{}'::jsonb) || ?::jsonb` su un array produce un
+    // array con l'oggetto dentro (`[{"manual_data": ...}]`), non un oggetto
+    // con la chiave `manual_data` — stesso schema usato dal job di update.
+    DB::statement(
+        "UPDATE trail_applications SET properties = CASE WHEN jsonb_typeof(properties) = 'object' THEN properties ELSE '{}'::jsonb END || ?::jsonb WHERE id = ?",
+        [json_encode(['manual_data' => ['duration_forward' => 180]]), $this->application->id]
+    );
+
+    expect($this->application->fresh()->properties['manual_data']['duration_forward'])->toBe(180);
+
+    (new ApproveTrailApplication)->handle(emptyActionFields(), collect([$this->application->fresh()]));
+
+    $track = EcTrack::query()->latest('id')->first();
+    app(EcTrackService::class)->updateManualData($track);
+
+    expect($track->fresh()->properties['manual_data']['duration_forward'])->toBe(180);
+});
+
+it('il file originale arriva sul sentiero', function () {
+    Storage::fake('public');
+    Storage::fake('wmfe');
+
+    $this->application->addMediaFromString(gpxContentForApproval())
+        ->usingFileName('traccia.gpx')
+        ->toMediaCollection(TrailApplication::ORIGINAL_GEOMETRY_COLLECTION);
+
+    (new ApproveTrailApplication)->handle(emptyActionFields(), collect([$this->application->fresh()]));
+
+    $track = EcTrack::query()->latest('id')->first();
+    expect($track->getFirstMedia(TrailApplication::ORIGINAL_GEOMETRY_COLLECTION))->not->toBeNull();
+});
+
+function gpxContentForApproval(): string
+{
+    return '<?xml version="1.0"?><gpx version="1.1"><trk><trkseg><trkpt lat="1" lon="1"/><trkpt lat="2" lon="2"/></trkseg></trk></gpx>';
+}
 
 it('carica un allegato su un istanza e lo salva col model_type reale', function () {
     Storage::fake('public');
