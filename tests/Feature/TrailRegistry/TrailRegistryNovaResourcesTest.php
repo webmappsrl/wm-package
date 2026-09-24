@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\DB;
 use Laravel\Nova\Http\Requests\NovaRequest;
+use Laravel\Nova\Http\Requests\ResourceIndexRequest;
 use Wm\WmPackage\TrailRegistry\Enums\TrailApplicationStatus;
 use Wm\WmPackage\TrailRegistry\Enums\TrailCodeStatus;
 use Wm\WmPackage\TrailRegistry\Models\TrailApplication as TrailApplicationModel;
@@ -135,7 +136,7 @@ it('mostra nell elenco delle istanze le sei colonne decise', function () {
     // indexFields() applica fieldsForIndex() solo su una richiesta che Nova
     // riconosce come "resource index" (isResourceIndexRequest()): un
     // NovaRequest generico non basta.
-    $request = \Laravel\Nova\Http\Requests\ResourceIndexRequest::create('/');
+    $request = ResourceIndexRequest::create('/');
 
     $fields = $resource->indexFields($request)
         ->map(fn ($f) => $f->name)
