@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Bus;
 use Wm\WmPackage\Jobs\Pbf\GenerateEcTrackPBFBatch;
 use Wm\WmPackage\Jobs\TaxonomyWhere\SyncModelTaxonomyWhereJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrack3DDemJob;
+use Wm\WmPackage\Jobs\Track\UpdateEcTrackAppRelationsInfoJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackCurrentDataJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackDemJob;
@@ -75,5 +76,49 @@ class UpdateDataChainTest extends AbstractEcTrackServiceTest
         Bus::assertDispatched(UpdateEcTrackFromOsmJob::class, function ($job) use ($updatedTrack) {
             return $job->getEcTrack()->id === $updatedTrack->id;
         });
+    }
+
+    public function test_update_data_chain_keeps_the_same_jobs_in_the_same_order()
+    {
+        // L'estrazione di geometryDependentJobs()/publicationJobs() sposta righe, non le cambia:
+        // la catena standard deve restare identica (oc:8543).
+        $track = EcTrack::factory()->createQuietly();
+        $track->geometry = 'LINESTRING(1 1 0, 2 2 0)';
+        $track->saveQuietly();
+
+        $this->ecTrackService->updateDataChain($track);
+
+        Bus::assertChained([
+            UpdateEcTrackDemJob::class,
+            UpdateEcTrackManualDataJob::class,
+            UpdateEcTrackCurrentDataJob::class,
+            UpdateEcTrack3DDemJob::class,
+            UpdateEcTrackSlopeValues::class,
+            SyncModelTaxonomyWhereJob::class,
+            UpdateEcTrackGenerateElevationChartImage::class,
+            GenerateEcTrackPBFBatch::class,
+            UpdateEcTrackAwsJob::class,
+            UpdateEcTrackAppRelationsInfoJob::class,
+            UpdateEcTrackOrderRelatedPoi::class,
+        ]);
+    }
+
+    public function test_geometry_dependent_jobs_skips_the_excluded_classes()
+    {
+        $track = EcTrack::factory()->createQuietly();
+
+        $jobs = $this->ecTrackService->geometryDependentJobs($track, [
+            UpdateEcTrackManualDataJob::class,
+            UpdateEcTrackCurrentDataJob::class,
+        ]);
+
+        $this->assertSame([
+            UpdateEcTrackDemJob::class,
+            UpdateEcTrack3DDemJob::class,
+            UpdateEcTrackSlopeValues::class,
+            SyncModelTaxonomyWhereJob::class,
+            UpdateEcTrackGenerateElevationChartImage::class,
+            GenerateEcTrackPBFBatch::class,
+        ], array_map(fn ($job) => $job::class, $jobs));
     }
 }
