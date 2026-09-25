@@ -38,3 +38,8 @@ Effetto sui test: nessuna modifica necessaria — con il flag a `false`, `$user`
 - Esecuzione reale della suite Pest/PHPUnit di wm-package (`composer test` / `vendor/bin/pest tests/Feature/LayerFeatureCollectionMapUserPresenceTest.php`) nell'ambiente corretto (container `php-forestas` o equivalente) — a cura del dev.
 - Verifica manuale nel browser (Task 3, Step 3 del piano): apertura del campo `FeatureCollectionMap` in Nova con una posizione live attiva, verifica che il marker sia anonimo, senza link cliccabile, e che la console DevTools non mostri più il payload completo — a cura del dev.
 - Valutare se il gap di autorizzazione per-record sull'endpoint del campo Nova (qualsiasi ruolo Nova, incluso Guest, può chiamarlo direttamente per un layer id qualsiasi) merita un ticket dedicato in un ciclo futuro.
+
+## Aggiornamento successivo (oc:8637, 25/09/2026)
+Il valore fisso `$showLiveUserIdentity = false` descritto sopra è stato superato: ora è la config
+`wm-package.analytics_show_live_user_identity` (env `ANALYTICS_SHOW_LIVE_USER_IDENTITY`, default false),
+attivabile per shard. Vedi `docs/features/8637-nome-utente-sul-marker-live-della-mappa-attivabile-per-singolo-shard/`.

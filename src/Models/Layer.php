@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Laravel\Nova\Nova;
 use Spatie\Translatable\HasTranslations;
 use Wm\WmPackage\Jobs\FeatureCollection\GenerateFeatureCollectionJob;
 use Wm\WmPackage\Models\Abstracts\Polygon;
@@ -496,14 +497,15 @@ class Layer extends Polygon
 
         $recentPositions = app(AnalyticsService::class)->getRecentUserPositions($this);
 
-        // oc:8586: nominativo e link sono disabilitati per privacy — misura cautelativa richiesta
-        // dal cliente in attesa di un parere legale sulla visualizzazione della posizione degli
-        // utenti. Hardcoded a false (non una config): nessuno deve poterlo riattivare da .env per
-        // errore, va cambiato solo qui nel codice quando la situazione si sarà chiarita.
-        // TODO(oc:8586): quando arriverà il parere legale, valutare se riattivare per tutti (basta
-        // mettere true) o solo per un ruolo specifico (richiede un parametro di contesto/ruolo che
-        // oggi getFeatureCollectionMap() non ha — vedi notes.md del ticket).
-        $showLiveUserIdentity = false;
+        // oc:8637: nominativo e link sul marker live dipendono da una config per shard
+        // (wm-package.analytics_show_live_user_identity ← ANALYTICS_SHOW_LIVE_USER_IDENTITY, default false). Supera la
+        // scelta di oc:8586, che li aveva fissati a false nel codice: allo scrum del 23/09/2026 si è
+        // deciso di renderli opzionali per shard, senza interruttore in Nova.
+        // Limite noto: l'identità mostrata è quella dichiarata dall'app nell'evento PostHog
+        // `userMoved` (properties.user_id), non verificata dal backend.
+        // FILTER_VALIDATE_BOOLEAN e non (bool): su un flag di privacy un valore ambiguo nel .env
+        // ("off", "no") deve lasciare il marker anonimo, mentre (bool) "off" varrebbe true.
+        $showLiveUserIdentity = filter_var(config('wm-package.analytics_show_live_user_identity'), FILTER_VALIDATE_BOOLEAN);
 
         if ($showLiveUserIdentity) {
             try {
@@ -538,13 +540,12 @@ class Layer extends Polygon
                 'checkpointRouteColors' => ['rgba(255, 255, 255, 1)', 'rgba(34, 197, 94, 0.9)'],
             ];
 
-            // Gated su $showLiveUserIdentity oltre che su $user: con il flag a false $user è
-            // sempre null (vedi sopra), quindi questo ramo non genera mai un link — la doppia
-            // condizione è ridondante finché il flag resta false, ma se un domani lo si rimette a
-            // true senza toccare altro, il link torna a dipendere solo da $user risolto, come da
-            // comportamento originale pre-oc:8586.
+            // Gated su $showLiveUserIdentity oltre che su $user: con il flag spento $user è sempre
+            // null (vedi sopra), la doppia condizione è una difesa in più. Con il flag acceso il
+            // link dipende solo da $user risolto, non dal nominativo: un utente senza nome e
+            // cognome ha tooltip generico ma link alla scheda (oc:8637, come prima di oc:8586).
             if ($showLiveUserIdentity && $user) {
-                $properties['link'] = url('nova/resources/users/'.$user->id);
+                $properties['link'] = url(trim(Nova::path(), '/').'/resources/users/'.$user->id);
             }
 
             $this->addFeaturesForMap([[

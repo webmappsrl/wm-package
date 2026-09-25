@@ -116,6 +116,10 @@ consumer camminiditalia abilita il flag con un override versionato in
   nuda in AND rendeva l'OR logicamente inefficace (`A ∧ (A ∨ C) = A`). Debito accettato:
   `shardNameClause()` è ora invocato due volte per quelle query — SQL più verboso, stessi
   risultati (oc:8354).
+- oc:8586 aveva fissato l'anonimato nel codice (variabile locale `$showLiveUserIdentity = false`, non
+  config) proprio per impedire una riattivazione da `.env` per errore, in attesa di un parere legale.
+  Superato da oc:8637: il team ha deciso di renderlo opzionale per shard, e ora la protezione è il
+  default `false`, non più il codice.
 
 ## Utenti che percorrono davvero un cammino (oc:8159)
 
@@ -131,3 +135,27 @@ in Postgres per un match `ST_DWithin` contro le singole tracce. Il risultato è 
 È la stessa logica geografica che `UgcService::resolveLayerByProximity()` usa per attribuire una
 segnalazione a un layer, ma qui in un'unica query su un intero insieme di punti invece che punto per
 punto.
+
+## Marker live degli utenti sulla mappa del layer (oc:8586, oc:8637)
+
+La mappa Nova del layer (`Layer::getFeatureCollectionMap()`, servita da
+`/nova-vendor/feature-collection-map/{model}/{id}`) mostra le posizioni degli ultimi 30 minuti vicine
+alle tracce, prese dalle stesse query `userMoved` (`AnalyticsService::getRecentUserPositions()`).
+
+- **Di default il marker è anonimo**: tooltip «Posizione utente (ultimi 30 minuti)», nessun link,
+  nessuna query su `users`.
+- **`wm-package.analytics_show_live_user_identity`** (env `ANALYTICS_SHOW_LIVE_USER_IDENTITY`, default
+  `false`) riattiva, per shard, nome e cognome e il link alla scheda utente (costruito con
+  `Nova::path()`). Un solo flag per nome e link, nessuna distinzione per ruolo. Letto con
+  `FILTER_VALIDATE_BOOLEAN`: accendono solo `true`/`1`/`on`/`yes`, perché con `(bool)` un `off` nel
+  `.env` lo accendeva.
+- Con il flag acceso: utente esistente senza nome → tooltip generico **ma** link; `user_id` assente
+  o senza utente corrispondente → marker anonimo.
+- **Limiti accettati**: l'endpoint non ha autorizzazione per singolo layer (chi supera il gate Nova
+  vede le posizioni di ogni layer, con i nomi se il flag è acceso); `user_id` è quello dichiarato
+  dall'app nell'evento, non verificato dal backend.
+- **Perché una variabile d'ambiente**: allo scrum del 23/09/2026 non c'erano casi d'uso per un
+  interruttore in Nova. È un'**eccezione voluta** alla regola "override versionato, mai `.env`"
+  scritta sopra per `route_filter_analytics_enabled`: il flag è pensato per essere acceso dagli shard
+  che lo chiedono, dal loro `.env`, e chi imposta la variabile lo fa di proposito. Camminiditalia non
+  lo attiva e non lo blocca nel config locale (oc:8637).

@@ -451,10 +451,10 @@ SQL;
      * filterPointsNearLayerTracks() — senza quest'ultimo passo i punti sarebbero solo "vicini
      * all'area del layer", non "vicini al sentiero" (bbox è un rettangolo, non la traccia).
      * `user_id` (nullable) è l'id applicativo dello user, non l'id anonimo PostHog `person_id`
-     * (quest'ultimo è solo una chiave di join interna, scartata prima del return) — dopo oc:8586
-     * il chiamante (Layer::getFeatureCollectionMap()) lo legge solo se `$showLiveUserIdentity` è
-     * `true` (hardcoded a `false` per privacy, in attesa di parere legale): il marker live è oggi
-     * sempre anonimo, il campo resta nel payload per la riattivazione futura di quel flag.
+     * (quest'ultimo è solo una chiave di join interna, scartata prima del return) — il chiamante
+     * (Layer::getFeatureCollectionMap()) lo usa solo se la config
+     * `wm-package.analytics_show_live_user_identity` è attiva (default false, oc:8637). Il valore arriva
+     * dall'evento inviato dall'app e non è verificato dal backend.
      *
      * @return list<array{lat: float, lng: float, user_id: ?int}>
      */
