@@ -3,6 +3,7 @@
 namespace Wm\WmPackage\Tests\Feature;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcTrack;
@@ -12,6 +13,12 @@ use Wm\WmPackage\Tests\TestCase;
 
 class LayerFeatureCollectionMapUserPresenceTest extends TestCase
 {
+    /** Tooltip del marker anonimo, definito in Layer::getFeatureCollectionMap(). */
+    private const ANONYMOUS_TOOLTIP = 'Posizione utente (ultimi 30 minuti)';
+
+    /** user_id senza User corrispondente nel DB (es. utente cancellato). */
+    private const MISSING_USER_ID = 999999;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -48,6 +55,19 @@ class LayerFeatureCollectionMapUserPresenceTest extends TestCase
     }
 
     /**
+     * Estrae i soli marker di posizione utente (riconoscibili da checkpointRouteColors).
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function userPositionFeatures(Layer $layer): array
+    {
+        return array_values(array_filter(
+            $layer->getFeatureCollectionMap()['features'],
+            fn ($f) => isset($f['properties']['checkpointRouteColors'])
+        ));
+    }
+
+    /**
      * Verifica di regressione (oc:8159, post-review manuale): senza il filtro ST_DWithin,
      * getRecentUserPositions() mostrava punti a livello di shard, non di layer — un utente
      * a centinaia di km dal cammino comparso come "sul cammino" in una verifica manuale reale.
@@ -68,7 +88,7 @@ class LayerFeatureCollectionMapUserPresenceTest extends TestCase
 
         $userPositionFeatures = array_values(array_filter(
             $geojson['features'],
-            fn ($f) => ($f['properties']['tooltip'] ?? null) === 'Posizione utente (ultimi 30 minuti)'
+            fn ($f) => ($f['properties']['tooltip'] ?? null) === self::ANONYMOUS_TOOLTIP
         ));
 
         $this->assertCount(1, $userPositionFeatures);
@@ -95,7 +115,7 @@ class LayerFeatureCollectionMapUserPresenceTest extends TestCase
 
         $userPositionFeatures = array_filter(
             $geojson['features'],
-            fn ($f) => ($f['properties']['tooltip'] ?? null) === 'Posizione utente (ultimi 30 minuti)'
+            fn ($f) => ($f['properties']['tooltip'] ?? null) === self::ANONYMOUS_TOOLTIP
         );
 
         $this->assertCount(0, $userPositionFeatures);
@@ -117,20 +137,24 @@ class LayerFeatureCollectionMapUserPresenceTest extends TestCase
 
         $userPositionFeatures = array_filter(
             $geojson['features'],
-            fn ($f) => ($f['properties']['tooltip'] ?? null) === 'Posizione utente (ultimi 30 minuti)'
+            fn ($f) => ($f['properties']['tooltip'] ?? null) === self::ANONYMOUS_TOOLTIP
         );
 
         $this->assertCount(0, $userPositionFeatures);
     }
 
     /**
-     * oc:8586 (privacy, misura cautelativa in attesa di parere legale): anche quando user_id è
-     * risolvibile a uno User esistente, il marker resta anonimo e senza link — nessuna
-     * distinzione di ruolo, il nominativo reale e il link alla pagina Nova dell'utente non
-     * vengono più mostrati a nessuno.
+     * oc:8637: senza impostare la config, il default del package (analytics_show_live_user_identity =
+     * false) tiene il marker anonimo e senza link anche con un utente risolvibile. Non impostare
+     * la config in questo test: è il controllo che il default resti false.
      */
-    public function test_position_shows_anonymous_label_and_no_link_even_when_user_id_is_resolvable(): void
+    public function test_default_config_keeps_marker_anonymous_even_when_user_is_resolvable(): void
     {
+        // La chiave deve esistere nel config del package: senza, Layer ricadrebbe su null (anonimo)
+        // e questo test passerebbe anche se la chiave venisse rimossa per errore.
+        $this->assertArrayHasKey('analytics_show_live_user_identity', config('wm-package'));
+        $this->assertFalse(config('wm-package.analytics_show_live_user_identity'));
+
         $user = User::factory()->create(['name' => 'Maria', 'surname' => 'Rossi']);
 
         Http::fake([
@@ -141,52 +165,40 @@ class LayerFeatureCollectionMapUserPresenceTest extends TestCase
 
         $layer = $this->createLayerWithTrack();
 
-        $geojson = $layer->getFeatureCollectionMap();
-
-        $userPositionFeatures = array_values(array_filter(
-            $geojson['features'],
-            fn ($f) => isset($f['properties']['checkpointRouteColors'])
-        ));
+        $userPositionFeatures = $this->userPositionFeatures($layer);
 
         $this->assertCount(1, $userPositionFeatures);
-        $this->assertSame('Posizione utente (ultimi 30 minuti)', $userPositionFeatures[0]['properties']['tooltip']);
+        $this->assertSame(self::ANONYMOUS_TOOLTIP, $userPositionFeatures[0]['properties']['tooltip']);
         $this->assertArrayNotHasKey('link', $userPositionFeatures[0]['properties']);
     }
 
     /**
-     * user_id presente sull'evento ma senza uno User corrispondente nel DB locale (es. utente
-     * cancellato) — oc:8586: dopo la fix questo scenario non produce comportamento diverso dagli
-     * altri due (user risolvibile, user con nome vuoto), perché nessun lookup viene più fatto.
+     * oc:8637: con il default (flag spento) un user_id senza utente corrispondente dà tooltip
+     * generico e nessun link.
      */
-    public function test_position_falls_back_to_default_label_when_user_id_has_no_matching_user(): void
+    public function test_default_config_falls_back_to_default_label_when_user_is_missing(): void
     {
         Http::fake([
             '*' => Http::response(['results' => [
-                ['near-1', 43.70004, 10.405, 999999],
+                ['near-1', 43.70004, 10.405, self::MISSING_USER_ID],
             ]]),
         ]);
 
         $layer = $this->createLayerWithTrack();
 
-        $geojson = $layer->getFeatureCollectionMap();
-
-        $userPositionFeatures = array_values(array_filter(
-            $geojson['features'],
-            fn ($f) => isset($f['properties']['checkpointRouteColors'])
-        ));
+        $userPositionFeatures = $this->userPositionFeatures($layer);
 
         $this->assertCount(1, $userPositionFeatures);
-        $this->assertSame('Posizione utente (ultimi 30 minuti)', $userPositionFeatures[0]['properties']['tooltip']);
+        $this->assertSame(self::ANONYMOUS_TOOLTIP, $userPositionFeatures[0]['properties']['tooltip']);
         $this->assertArrayNotHasKey('link', $userPositionFeatures[0]['properties']);
     }
 
     /**
-     * oc:8586: user_id risolve a uno User reale ma con name/surname vuoti — prima di questa fix
-     * il link restava comunque presente perché gated solo su $user risolto, non sul nominativo.
-     * Ora il marker è anonimo e senza link in ogni caso, questo scenario non fa più differenza
-     * rispetto a uno user con nome compilato.
+     * oc:8637: con il default (flag spento) anche un utente con nome vuoto dà tooltip generico e
+     * nessun link; con il flag acceso il link c'è (vedi
+     * test_flag_enabled_keeps_link_with_default_label_when_user_has_blank_name).
      */
-    public function test_position_shows_anonymous_label_and_no_link_when_user_has_blank_name(): void
+    public function test_default_config_keeps_marker_anonymous_when_user_has_blank_name(): void
     {
         $user = User::factory()->create(['name' => '', 'surname' => null]);
 
@@ -198,15 +210,196 @@ class LayerFeatureCollectionMapUserPresenceTest extends TestCase
 
         $layer = $this->createLayerWithTrack();
 
-        $geojson = $layer->getFeatureCollectionMap();
-
-        $userPositionFeatures = array_values(array_filter(
-            $geojson['features'],
-            fn ($f) => isset($f['properties']['checkpointRouteColors'])
-        ));
+        $userPositionFeatures = $this->userPositionFeatures($layer);
 
         $this->assertCount(1, $userPositionFeatures);
-        $this->assertSame('Posizione utente (ultimi 30 minuti)', $userPositionFeatures[0]['properties']['tooltip']);
+        $this->assertSame(self::ANONYMOUS_TOOLTIP, $userPositionFeatures[0]['properties']['tooltip']);
         $this->assertArrayNotHasKey('link', $userPositionFeatures[0]['properties']);
+    }
+
+    /**
+     * oc:8637: con il flag acceso il marker torna a mostrare nome e cognome e il link alla
+     * scheda Nova dell'utente, come prima di oc:8586.
+     */
+    public function test_flag_enabled_shows_full_name_and_link_when_user_is_resolvable(): void
+    {
+        config(['wm-package.analytics_show_live_user_identity' => true]);
+        $user = User::factory()->create(['name' => 'Maria', 'surname' => 'Rossi']);
+
+        Http::fake([
+            '*' => Http::response(['results' => [
+                ['near-1', 43.70004, 10.405, $user->id],
+            ]]),
+        ]);
+
+        $features = $this->userPositionFeatures($this->createLayerWithTrack());
+
+        $this->assertCount(1, $features);
+        $this->assertSame('Maria Rossi', $features[0]['properties']['tooltip']);
+        $this->assertSame(url('nova/resources/users/'.$user->id), $features[0]['properties']['link']);
+    }
+
+    /**
+     * oc:8637: utente esistente senza nome e cognome — tooltip generico ma link presente: se
+     * l'utente esiste il link c'è (decisione del dev, comportamento precedente a oc:8586).
+     */
+    public function test_flag_enabled_keeps_link_with_default_label_when_user_has_blank_name(): void
+    {
+        config(['wm-package.analytics_show_live_user_identity' => true]);
+        $user = User::factory()->create(['name' => '', 'surname' => null]);
+
+        Http::fake([
+            '*' => Http::response(['results' => [
+                ['near-1', 43.70004, 10.405, $user->id],
+            ]]),
+        ]);
+
+        $features = $this->userPositionFeatures($this->createLayerWithTrack());
+
+        $this->assertCount(1, $features);
+        $this->assertSame(self::ANONYMOUS_TOOLTIP, $features[0]['properties']['tooltip']);
+        $this->assertSame(url('nova/resources/users/'.$user->id), $features[0]['properties']['link']);
+    }
+
+    /**
+     * oc:8637: flag acceso ma user_id senza utente corrispondente (es. utente cancellato) —
+     * tooltip generico e nessun link.
+     */
+    public function test_flag_enabled_falls_back_to_default_label_without_link_when_user_is_missing(): void
+    {
+        config(['wm-package.analytics_show_live_user_identity' => true]);
+
+        Http::fake([
+            '*' => Http::response(['results' => [
+                ['near-1', 43.70004, 10.405, self::MISSING_USER_ID],
+            ]]),
+        ]);
+
+        $features = $this->userPositionFeatures($this->createLayerWithTrack());
+
+        $this->assertCount(1, $features);
+        $this->assertSame(self::ANONYMOUS_TOOLTIP, $features[0]['properties']['tooltip']);
+        $this->assertArrayNotHasKey('link', $features[0]['properties']);
+    }
+
+    /**
+     * oc:8637: più posizioni nella stessa risposta — ogni marker porta il proprio nome e link,
+     * nessuna mescolanza fra utenti.
+     */
+    public function test_flag_enabled_assigns_each_position_its_own_user(): void
+    {
+        config(['wm-package.analytics_show_live_user_identity' => true]);
+        $maria = User::factory()->create(['name' => 'Maria', 'surname' => 'Rossi']);
+        $luca = User::factory()->create(['name' => 'Luca', 'surname' => 'Bianchi']);
+
+        Http::fake([
+            '*' => Http::response(['results' => [
+                ['near-1', 43.70004, 10.405, $maria->id],
+                ['near-2', 43.70003, 10.407, $luca->id],
+            ]]),
+        ]);
+
+        $features = $this->userPositionFeatures($this->createLayerWithTrack());
+
+        $this->assertCount(2, $features);
+        $byTooltip = collect($features)->keyBy(fn ($f) => $f['properties']['tooltip']);
+        $this->assertSame(url('nova/resources/users/'.$maria->id), $byTooltip['Maria Rossi']['properties']['link']);
+        $this->assertSame(url('nova/resources/users/'.$luca->id), $byTooltip['Luca Bianchi']['properties']['link']);
+    }
+
+    /**
+     * oc:8637: con il flag acceso una riga senza user_id (colonna assente o null) resta un marker
+     * anonimo e senza link, senza errori.
+     */
+    public function test_flag_enabled_keeps_marker_anonymous_when_position_has_no_user_id(): void
+    {
+        config(['wm-package.analytics_show_live_user_identity' => true]);
+
+        Http::fake([
+            '*' => Http::response(['results' => [
+                ['near-1', 43.70004, 10.405],
+                ['near-2', 43.70003, 10.407, null],
+            ]]),
+        ]);
+
+        $features = $this->userPositionFeatures($this->createLayerWithTrack());
+
+        $this->assertCount(2, $features);
+        foreach ($features as $feature) {
+            $this->assertSame(self::ANONYMOUS_TOOLTIP, $feature['properties']['tooltip']);
+            $this->assertArrayNotHasKey('link', $feature['properties']);
+        }
+    }
+
+    /**
+     * oc:8637: con il flag spento non parte nessuna query sulla tabella users, anche se le
+     * posizioni portano user_id risolvibili.
+     */
+    public function test_default_config_does_not_query_users(): void
+    {
+        $user = User::factory()->create(['name' => 'Maria', 'surname' => 'Rossi']);
+
+        Http::fake([
+            '*' => Http::response(['results' => [
+                ['near-1', 43.70004, 10.405, $user->id],
+            ]]),
+        ]);
+
+        $layer = $this->createLayerWithTrack();
+
+        DB::enableQueryLog();
+        $this->userPositionFeatures($layer);
+        $queries = array_column(DB::getQueryLog(), 'query');
+        DB::disableQueryLog();
+
+        $this->assertEmpty(array_filter($queries, fn ($q) => preg_match('/from\s+"users"/i', $q)));
+    }
+
+    /**
+     * oc:8637: valori "umani" di spegnimento (off, no) non devono accendere il flag — su un flag
+     * di privacy un valore ambiguo deve lasciare il marker anonimo.
+     */
+    public function test_flag_stays_off_for_human_readable_false_values(): void
+    {
+        $user = User::factory()->create(['name' => 'Maria', 'surname' => 'Rossi']);
+
+        Http::fake([
+            '*' => Http::response(['results' => [
+                ['near-1', 43.70004, 10.405, $user->id],
+            ]]),
+        ]);
+
+        $layer = $this->createLayerWithTrack();
+
+        foreach (['off', 'no', 'false', '0', ''] as $value) {
+            config(['wm-package.analytics_show_live_user_identity' => $value]);
+
+            $features = $this->userPositionFeatures($layer);
+
+            $this->assertSame(self::ANONYMOUS_TOOLTIP, $features[0]['properties']['tooltip'], "valore '{$value}'");
+            $this->assertArrayNotHasKey('link', $features[0]['properties'], "valore '{$value}'");
+        }
+    }
+
+    /**
+     * oc:8637: il link alla scheda utente segue il path Nova del consumer, non un "nova/" fisso.
+     */
+    public function test_flag_enabled_link_follows_nova_path(): void
+    {
+        config([
+            'wm-package.analytics_show_live_user_identity' => true,
+            'nova.path' => '/admin',
+        ]);
+        $user = User::factory()->create(['name' => 'Maria', 'surname' => 'Rossi']);
+
+        Http::fake([
+            '*' => Http::response(['results' => [
+                ['near-1', 43.70004, 10.405, $user->id],
+            ]]),
+        ]);
+
+        $features = $this->userPositionFeatures($this->createLayerWithTrack());
+
+        $this->assertSame(url('admin/resources/users/'.$user->id), $features[0]['properties']['link']);
     }
 }

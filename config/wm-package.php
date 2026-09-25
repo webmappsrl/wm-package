@@ -12,6 +12,12 @@ return [
     'analytics_shard_name' => env('ANALYTICS_SHARD_NAME'),
     'route_filter_analytics_enabled' => env('ROUTE_FILTER_ANALYTICS_ENABLED', false),
     'layer_user_presence_distance_meters' => env('LAYER_USER_PRESENCE_DISTANCE_METERS', 50),
+    // oc:8637: mostra nome, cognome e link alla scheda Nova dell'utente sul marker live della mappa
+    // del layer. Default false (marker anonimo, come da oc:8586): ogni shard lo accende dal proprio
+    // .env. Con il flag acceso l'identità è visibile a ogni utente che supera il gate Nova del
+    // consumer, su qualunque layer (l'endpoint della mappa non ha autorizzazione per singolo layer).
+    // Letto con FILTER_VALIDATE_BOOLEAN: accesi solo true/1/on/yes, ogni altro valore lo lascia spento.
+    'analytics_show_live_user_identity' => env('ANALYTICS_SHOW_LIVE_USER_IDENTITY', false),
     'services' => [
         'geometry_computation' => [
             'neighbours_distance' => env('WM_NEIGHBOURS_DISTANCE', 500),
