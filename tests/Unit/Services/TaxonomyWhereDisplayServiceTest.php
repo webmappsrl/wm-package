@@ -2,7 +2,10 @@
 
 declare(strict_types=1);
 
+use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
+use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Services\TaxonomyWhereDisplayService;
 
 uses(TestCase::class);
@@ -99,29 +102,29 @@ it('classifies the stored format', function () {
 });
 
 it('reads the option again after the scoped instance is flushed', function () {
-    $app = \Wm\WmPackage\Models\App::factory()->create(['properties' => ['taxonomy_where_display' => ['4']]]);
+    $app = App::factory()->create(['properties' => ['taxonomy_where_display' => ['4']]]);
     expect(displayService()->selectedCategoriesForApp($app->id))->toBe(['4']);
 
-    \Illuminate\Support\Facades\DB::table('apps')->where('id', $app->id)
+    DB::table('apps')->where('id', $app->id)
         ->update(['properties' => json_encode(['taxonomy_where_display' => ['8']])]);
     app()->forgetScopedInstances();
 
     expect(displayService()->selectedCategoriesForApp($app->id))->toBe(['8']);
-})->uses(\Illuminate\Foundation\Testing\DatabaseTransactions::class);
+})->uses(DatabaseTransactions::class);
 
 it('reads the selected categories when the MultiSelect field saved them as a JSON string', function () {
     // Fallback per un eventuale campo Nova MultiSelect su properties->taxonomy_where_display
     // che, invece di un array nativo, salva la lista come stringa JSON serializzata
     // (verifica non eseguibile senza Nova UI diretta, coperta invece da normalizeOptionValue()
     // sotto — regressione emersa in review, oc:8588).
-    $app = \Wm\WmPackage\Models\App::factory()->create();
+    $app = App::factory()->create();
 
-    \Illuminate\Support\Facades\DB::table('apps')->where('id', $app->id)
+    DB::table('apps')->where('id', $app->id)
         ->update(['properties' => json_encode(['taxonomy_where_display' => '["4","8"]'])]);
     app()->forgetScopedInstances();
 
     expect(displayService()->selectedCategoriesForApp($app->id))->toBe(['4', '8']);
-})->uses(\Illuminate\Foundation\Testing\DatabaseTransactions::class);
+})->uses(DatabaseTransactions::class);
 
 it('normalizes a JSON-string option value to a string array (oc:8588)', function () {
     expect(displayService()->normalizeOptionValue('["4","8"]'))->toBe(['4', '8']);

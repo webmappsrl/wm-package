@@ -50,6 +50,7 @@ use Wm\WmPackage\Services\FeaturesService;
 use Wm\WmPackage\Services\Import\EcMediaImportService;
 use Wm\WmPackage\Services\Import\GeohubImportService;
 use Wm\WmPackage\Services\Import\UgcMediaImportService;
+use Wm\WmPackage\Services\TaxonomyWhereDisplayService;
 use Wm\WmPackage\Tests\Feature\OptionalDomainRegistrationTest;
 use Wm\WmPackage\TrailRegistry\Nova\TrailApplication;
 use Wm\WmPackage\TrailRegistry\Nova\TrailRegistryAnomaly;
@@ -70,7 +71,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
 
         $this->app->bind(HitsIteratorAggregate::class, ElasticSearchHitsIteratorAggregate::class);
 
-        $this->app->scoped(\Wm\WmPackage\Services\TaxonomyWhereDisplayService::class);
+        $this->app->scoped(TaxonomyWhereDisplayService::class);
 
         // Registra il GlobalFileServiceProvider
         $this->app->register(GlobalFileServiceProvider::class);
