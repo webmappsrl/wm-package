@@ -40,6 +40,8 @@ class EcTrackResource extends JsonResource
         // Applica priorità MANUAL > OSM > DEM per i 9 campi principali e rimuove le sorgenti raw
         $properties = $this->applyDemFields($properties, $this->resource);
 
+        $properties = $this->resource->applyTaxonomyWhereDisplay($properties);
+
         $properties['name'] = $this->getTranslations('name');
         $properties['roundtrip'] = $properties['round_trip'] ?? $geometryComputationService->isRoundtrip($geojson['geometry']['coordinates']);
         $properties['related_pois'] = $this->getRelatedPois();

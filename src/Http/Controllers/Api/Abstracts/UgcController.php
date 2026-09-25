@@ -155,6 +155,8 @@ abstract class UgcController extends Controller
                     continue;
                 }
 
+                $geojson['properties'] = $feature->applyTaxonomyWhereDisplay($geojson['properties']);
+
                 $geojson['properties']['media'] = $feature->getMedia()->map(fn ($media) => [
                     'id' => $media->id,
                     'name' => $media->name,

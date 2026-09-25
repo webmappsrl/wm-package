@@ -121,7 +121,11 @@ minimale. `EcTrackRowProcessor` non è affetto, non usa `setTranslation` per il 
   la sync trova sempre geometrie vuote e riporta "0 tracks". Corretto solo per GeoHub con
   `Bus::batch($jobs)->then(fn () => SyncTaxonomyWhereTracksJob::dispatch())` (rinominato in
   `SyncTaxonomyWhereJob` da oc:8487, generalizzato a EcPoi). **Lo stesso difetto esiste ancora in
-  `handleOsmfeatures()`/`handleOsm2cai()`**, mai osservato in pratica (oc:8486).
+  `handleOsmfeatures()`/`handleOsm2cai()`**: considerato mai osservato in oc:8486, **è stato
+  osservato in oc:8588** su camminiditalia. Dopo l'import di regioni e comuni, il ricalcolo
+  automatico ha lasciato tutte le 1285 tracce con la sola regione, perché le geometrie dei
+  comuni arrivavano dopo dai job di dettaglio. Mitigazione in oc:8588: `wm:resync-taxonomy-where`
+  avvisa se ci sono where senza geometria. La correzione nell'import resta da fare.
 - Prima di oc:8486 l'Action non aveva alcuna copertura di test, su nessuna delle tre sorgenti.
 - **`syncTaxonomyWhere()` faceva un `UPDATE` incondizionato ovunque, gestito solo operativamente**
   (fino a oc:8487, ripresa 2026-09-23): se la copertura locale era insufficiente, il sync azzerava

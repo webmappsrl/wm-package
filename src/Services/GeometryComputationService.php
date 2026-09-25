@@ -63,26 +63,7 @@ class GeometryComputationService extends BaseService
                 COALESCE(properties, '{}'),
                 '{taxonomy_where}',
                 COALESCE(
-                    (
-                        SELECT jsonb_object_agg(
-                            COALESCE(tw.properties->>'osmfeatures_id', (tw.properties->>'osm2cai_id'), tw.id::text),
-                            jsonb_build_object(
-                                'name',
-                                CASE
-                                    WHEN tw.name IS NULL OR btrim(tw.name) = '' THEN '{}'::jsonb
-                                    WHEN left(ltrim(tw.name), 1) = '{' THEN tw.name::jsonb
-                                    ELSE jsonb_build_object('it', tw.name, 'en', tw.name)
-                                END,
-                                'admin_level',
-                                (tw.properties->>'admin_level')::int,
-                                'source',
-                                tw.properties->>'source'
-                            )
-                        )
-                        FROM taxonomy_wheres tw
-                        WHERE tw.geometry IS NOT NULL
-                          AND ST_Intersects({$tableName}.geometry::geometry, tw.geometry::geometry)
-                    ),
+                    ({$this->taxonomyWhereAggregateSql($tableName)}),
                     {$noMatchFallback}
                 )
             )
@@ -106,7 +87,7 @@ class GeometryComputationService extends BaseService
      * record quando il calcolo SQL non trova nulla e un fallback (es. `OsmfeaturesClient`) prova
      * a colmare il vuoto.
      *
-     * @param  array<string, array{name: array, admin_level: int|null, source: string}>  $mapped
+     * @param  array<string, array<string, mixed>>  $mapped  Nella forma vecchia `{<lingue>, _admin_level?, _source}` (oc:8588).
      */
     public function writeTaxonomyWhereIfEmpty(GeometryModel $model, array $mapped): void
     {
@@ -157,6 +138,88 @@ class GeometryComputationService extends BaseService
              WHERE t.id = agg.id",
             [$model->getKey()]
         );
+    }
+
+    /**
+     * Espressione SQL che aggrega le taxonomy_wheres intersecate da `{$tableName}.geometry`
+     * nella forma vecchia `{id: {<lingue>, _admin_level, _source}}` (oc:8588): lingue appiattite
+     * al primo livello (solo chiavi `^[a-z]{2,3}$` con valore stringa non vuota/non solo spazi),
+     * `_admin_level` e `_source` omessi se nulli.
+     *
+     * I commenti `-- ...` che spiegano i singoli passaggi stanno qui in PHPDoc, non dentro la
+     * stringa SQL restituita (fix round 1, oc:8588, review): su PHP < 8.4 lo scanner dei
+     * placeholder di PDO non salta i commenti SQL, quindi un token preceduto da `:` dentro un
+     * commento — es. `oc:8588` — puo' essere letto come un named placeholder e rompere il
+     * binding posizionale usato altrove nel chiamante.
+     *
+     * - `WHEN tw.name IS NULL OR btrim(tw.name) IN ('', '[]', '{}') THEN '{}'::jsonb`: 'name' e'
+     *   testo Spatie HasTranslations, un nome vuoto e' salvato come '[]' letterale
+     *   (json_encode([]), non '{}' — setTranslations() ripiega su asJson([]) quando l'array e'
+     *   vuoto), quindi va escluso esplicitamente insieme a NULL/stringa vuota/'{}', altrimenti
+     *   finisce nel ramo ELSE e viene trattato come un nome reale letterale "[ ]" (bug scoperto in
+     *   review su ImportTaxonomyWhere).
+     * - `AND btrim(n.value #>> '{}') <> ''`: una lingua il cui valore e' una stringa vuota o solo
+     *   spazi (es. `{"it":""}`, `{"en":"  "}`) supera `jsonb_typeof(n.value) = 'string'` ma non e'
+     *   un nome valido — stesso scarto applicato lato PHP da
+     *   TaxonomyWhereDisplayService::toLegacyEntry()/hasName() (fix round 1, review).
+     * - `WHERE agg.names != '{}'::jsonb`: una where senza nessun nome valido (dopo i due filtri
+     *   sopra) va esclusa dall'aggregato, non solo svuotata: stesso comportamento di
+     *   TaxonomyWhereDisplayService::fromOsmfeatures()/normalize(), che scartano le voci senza
+     *   nome. Se per un record non resta nessuna voce, jsonb_object_agg() su un input vuoto torna
+     *   NULL, cosi' il chiamante (syncTaxonomyWhere/computeTaxonomyWhere) ripiega sullo stesso
+     *   path del "nessuna where in copertura" (review).
+     */
+    private function taxonomyWhereAggregateSql(string $tableName): string
+    {
+        return "
+            SELECT jsonb_object_agg(agg.key, agg.names || agg.meta)
+            FROM (
+                SELECT
+                    COALESCE(tw.properties->>'osmfeatures_id', (tw.properties->>'osm2cai_id'), tw.id::text) AS key,
+                    (
+                        SELECT COALESCE(jsonb_object_agg(n.key, n.value), '{}'::jsonb)
+                        FROM jsonb_each(
+                            CASE
+                                WHEN tw.name IS NULL OR btrim(tw.name) IN ('', '[]', '{}') THEN '{}'::jsonb
+                                WHEN left(ltrim(tw.name), 1) = '{' THEN tw.name::jsonb
+                                ELSE jsonb_build_object('it', tw.name, 'en', tw.name)
+                            END
+                        ) AS n(key, value)
+                        WHERE n.key ~ '^[a-z]{2,3}$' AND jsonb_typeof(n.value) = 'string'
+                          AND btrim(n.value #>> '{}') <> ''
+                    ) AS names,
+                    jsonb_strip_nulls(jsonb_build_object(
+                        '_admin_level', (tw.properties->>'admin_level')::int,
+                        '_source', tw.properties->>'source'
+                    )) AS meta
+                FROM taxonomy_wheres tw
+                WHERE tw.geometry IS NOT NULL
+                  AND ST_Intersects({$tableName}.geometry::geometry, tw.geometry::geometry)
+            ) agg
+            WHERE agg.names != '{}'::jsonb
+        ";
+    }
+
+    /**
+     * Calcola, senza scriverla, la taxonomy_where che il sync SQL assegnerebbe a un record
+     * (usata dal riallineamento conservativo, oc:8588).
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    public function computeTaxonomyWhere(GeometryModel $model): array
+    {
+        $tableName = $model->getTable();
+        if (! preg_match('/^[a-zA-Z0-9_]+$/', $tableName)) {
+            throw new \InvalidArgumentException('Invalid table name.');
+        }
+
+        $row = DB::selectOne("
+            SELECT ({$this->taxonomyWhereAggregateSql($tableName)}) AS tw
+            FROM {$tableName}
+            WHERE id = ? AND geometry IS NOT NULL
+        ", [$model->id]);
+
+        return json_decode($row->tw ?? 'null', true) ?: [];
     }
 
     public function get3dLineMergeWktFromGeojson(string $geojson): string

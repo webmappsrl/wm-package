@@ -474,5 +474,12 @@
     "Duration Forward": "Duration Forward",
     "Duration Backward": "Duration Backward",
     "Departure": "Departure",
-    "Arrival": "Arrival"
+    "Arrival": "Arrival",
+    "Displayed locations": "Displayed locations",
+    "Region": "Region",
+    "Province": "Province",
+    "Municipality": "Municipality",
+    "Admin level :level": "Admin level :level",
+    "Source: :source": "Source: :source",
+    "Location categories shown in the app and on the WordPress sites (track and POI detail, cards, search filters). Leave empty to show them all. The app detail only shows Region, Province and Municipality; cards show the last selected level. After saving, published files and the search index are regenerated in the background.": "Location categories shown in the app and on the WordPress sites (track and POI detail, cards, search filters). Leave empty to show them all. The app detail only shows Region, Province and Municipality; cards show the last selected level. After saving, published files and the search index are regenerated in the background."
 }

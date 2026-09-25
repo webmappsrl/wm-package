@@ -259,7 +259,7 @@ class App extends Model implements HasMedia
                 try {
                     // Verifica che il POI abbia una geometria valida
                     if ($poi->geometry && ! empty($poi->geometry)) {
-                        $item = $poi->getGeojson(false, $this->id);
+                        $item = $poi->applyTaxonomyWhereDisplayToFeature($poi->getGeojson(false, $this->id));
 
                         // Aggiungo le taxonomy identifiers necessari per filtri
                         $taxonomiesidentifiers = array_merge(

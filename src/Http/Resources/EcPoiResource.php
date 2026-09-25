@@ -17,12 +17,12 @@ class EcPoiResource extends JsonResource
     {
         $geojson = $this->getGeojson();
 
-        $geojson['properties'] = [
+        $geojson['properties'] = $this->resource->applyTaxonomyWhereDisplay([
             ...GeoJsonService::make()->removeInvalidProperties($geojson['properties']),
             'name' => $this->getTranslations('name'),
             'feature_image' => new MediaResource($this->getMedia()->first()),
             'image_gallery' => MediaResource::collection($this->getMedia()),
-        ];
+        ]);
 
         $fileTypes = ['geojson', 'gpx', 'kml'];
         foreach ($fileTypes as $fileType) {

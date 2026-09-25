@@ -32,6 +32,7 @@ use Wm\WmPackage\Commands\WmPackageCommand;
 use Wm\WmPackage\Commands\WmPackagePublishMigrationCommand;
 use Wm\WmPackage\Commands\WmPackagePublishMissingMigrationsCommand;
 use Wm\WmPackage\Commands\WmRestoreDbCommand;
+use Wm\WmPackage\Commands\WmResyncTaxonomyWhereCommand;
 use Wm\WmPackage\Commands\WmSyncUgcTaxonomyWhereCommand;
 use Wm\WmPackage\ElasticSearch\HitsIteratorAggregate as ElasticSearchHitsIteratorAggregate;
 use Wm\WmPackage\Http\Controllers\Nova\AnalyticsController;
@@ -68,6 +69,8 @@ class WmPackageServiceProvider extends PackageServiceProvider
         parent::register();
 
         $this->app->bind(HitsIteratorAggregate::class, ElasticSearchHitsIteratorAggregate::class);
+
+        $this->app->scoped(\Wm\WmPackage\Services\TaxonomyWhereDisplayService::class);
 
         // Registra il GlobalFileServiceProvider
         $this->app->register(GlobalFileServiceProvider::class);
@@ -221,6 +224,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
                 WmDownloadDbBackupCommand::class,
                 WmBuildAppPoisGeojsonCommand::class,
                 WmSyncUgcTaxonomyWhereCommand::class,
+                WmResyncTaxonomyWhereCommand::class,
                 WmBackfillGravatarAvatarsCommand::class,
                 WmRestoreDbCommand::class,
                 WmGenerateIconsCommand::class,

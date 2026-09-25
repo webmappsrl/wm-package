@@ -29,3 +29,11 @@ Si applica quando tocchi job, comandi artisan, import o servizi del package.
   try/catch, e Postgres blocca tutte le query dopo la prima fallita nella stessa transazione. Usa
   `uniqueVia() { return Cache::store('redis'); }` (oc:8564, pattern preesistente in
   `BuildAppPoisGeojsonJob`).
+- Nelle query raw con binding posizionali l'operatore jsonb `?` va scritto `??`, altrimenti PDO lo
+  prende per un segnaposto (oc:8588).
+- Niente commenti `--` con token tipo `:parola` (per esempio `oc:8588`) dentro una query raw:
+  sotto PHP < 8.4 PDO non salta i commenti e può leggerli come segnaposti nominati, in conflitto
+  con quelli posizionali. I commenti vanno nel PHP (oc:8588).
+- `$this->confirm()` in un comando lanciato senza terminale (`--no-interaction`, scheduler,
+  `Artisan::call`) restituisce il default senza chiedere: un comando che chiede conferma deve
+  avere un `--force` e fallire se la conferma manca (oc:8588).

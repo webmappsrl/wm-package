@@ -5,8 +5,10 @@ namespace Wm\WmPackage\Observers;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 use Wm\WmPackage\Jobs\SyncWellKnownRegistryJob;
+use Wm\WmPackage\Jobs\TaxonomyWhere\RegenerateTaxonomyWhereOutputsJob;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Services\Models\App\AppConfigService;
+use Wm\WmPackage\Services\TaxonomyWhereDisplayService;
 
 class AppObserver extends AbstractObserver
 {
@@ -35,6 +37,8 @@ class AppObserver extends AbstractObserver
             // prevent the App itself from being saved.
             Log::error("AppObserver: failed to sync well-known registry for app {$app->id}: ".$e->getMessage());
         }
+
+        $this->regenerateTaxonomyWhereOutputsIfChanged($app);
     }
 
     /**
@@ -105,6 +109,44 @@ class AppObserver extends AbstractObserver
             if ($oldFingerprint !== $newFingerprint || $oldTeamId !== $appleTeamId) {
                 SyncWellKnownRegistryJob::dispatch('add', $app->sku, $newFingerprint, $appleTeamId);
             }
+        }
+    }
+
+    /**
+     * Se cambia l'opzione "Località mostrate" (oc:8588), le uscite già generate (json statici,
+     * Elasticsearch, pois.geojson) vanno rigenerate: altrimenti il cambio in Nova non si vede.
+     *
+     * Niente controllo su `wasRecentlyCreated` qui (a differenza di `syncWellKnownRegistry`
+     * sopra): `wasChanged('properties')` è già `false` su un modello appena creato, pure con
+     * `properties` valorizzato in `create()` (stesso trap noto per LayerObserver, oc:8080) — il
+     * controllo sarebbe ridondante per saltare la creazione, e `wasRecentlyCreated` **non torna
+     * mai a `false`** dopo un secondo `save()` sulla stessa istanza PHP (mai resettato da
+     * Eloquent fuori da `performInsert()`): un secondo salvataggio con proprietà davvero
+     * cambiate verrebbe saltato per errore. Verificato empiricamente in tinker.
+     */
+    private function regenerateTaxonomyWhereOutputsIfChanged(App $app): void
+    {
+        if (! $app->wasChanged('properties')) {
+            return;
+        }
+
+        $original = $app->getOriginal('properties');
+        $original = is_array($original) ? $original : (json_decode($original ?? '{}', true) ?: []);
+
+        // normalizeOptionValue() (TaxonomyWhereDisplayService, oc:8588, review): il campo Nova
+        // Outl1ne salva l'opzione come array nativo quando dichiara ->saveAsJSON() (vedi
+        // Wm\WmPackage\Nova\App::app_tab()), ma un dato storico o un futuro campo che dimentica
+        // quella opzione salverebbe una stringa JSON serializzata; un cast diretto `(array)
+        // $stringaJson` produrrebbe un solo elemento con l'intera stringa, facendo scattare la
+        // rigenerazione ad ogni salvataggio anche a parità di selezione.
+        $service = app(TaxonomyWhereDisplayService::class);
+        $before = $service->normalizeOptionValue($original[TaxonomyWhereDisplayService::APP_OPTION] ?? []);
+        $after = $service->normalizeOptionValue($app->properties[TaxonomyWhereDisplayService::APP_OPTION] ?? []);
+        sort($before);
+        sort($after);
+
+        if ($before !== $after) {
+            RegenerateTaxonomyWhereOutputsJob::dispatch($app->id);
         }
     }
 }
