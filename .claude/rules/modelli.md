@@ -33,3 +33,8 @@ Si applica quando tocchi modelli, trait, observer o enum del package.
   chi lo usa da solo ottiene tutti i modelli dell'app, non zero (oc:8140).
 - Un consumer non può registrare un observer **prima** di quello del package: serve
   `Event::listen('eloquent.deleting: ...')` (oc:8180).
+- Assegnare una **stringa** a un attributo Spatie `HasTranslations` la salva sotto la lingua di
+  `app.locale`: con `app.locale = en` un nome italiano diventa `en`. Si passa sempre l'array per
+  lingua (`['it' => $nome]`) (oc:8588).
+- Assegnare `[]` a un attributo tradotto salva nella colonna il testo `"[]"`, non `"{}"`: chi
+  legge la colonna in SQL deve trattare `NULL`, `''`, `'[]'` e `'{}'` come vuoti (oc:8588).

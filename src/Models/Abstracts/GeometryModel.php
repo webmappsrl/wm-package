@@ -12,6 +12,7 @@ use Wm\WmPackage\Services\GeoJsonService;
 use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Services\Models\MediaService;
 use Wm\WmPackage\Services\StorageService;
+use Wm\WmPackage\Services\TaxonomyWhereDisplayService;
 use Wm\WmPackage\Traits\HasSafeTranslatable;
 
 abstract class GeometryModel extends Model implements HasMedia
@@ -159,6 +160,10 @@ abstract class GeometryModel extends Model implements HasMedia
 
     /**
      * Get a valid localized name from taxonomy where data.
+     *
+     * @deprecated Nessun chiamante interno da oc:8588: la stessa logica (con lo scarto esplicito
+     *             delle voci senza nome) vive ora in `TaxonomyWhereDisplayService::orderedNames()`.
+     *             Resta pubblico per compatibilità con eventuali consumer esterni.
      */
     public function getValidName(array $whereData): string
     {
@@ -213,42 +218,51 @@ abstract class GeometryModel extends Model implements HasMedia
     {
         $wheres = $this->properties['taxonomy_where'] ?? [];
 
-        if (empty($wheres)) {
-            return [];
+        return is_array($wheres) ? app(TaxonomyWhereDisplayService::class)->orderedNames($wheres) : [];
+    }
+
+    /**
+     * Applica l'opzione "Località mostrate" dell'App proprietaria alle proprietà di
+     * un'uscita pubblica (json statico, pois.geojson, API, Elasticsearch — oc:8588).
+     * Non va usata da job interni che rileggono o risalvano `properties`.
+     */
+    public function applyTaxonomyWhereDisplay(array $properties): array
+    {
+        unset($properties['_taxonomy_where_backup']);
+
+        if (! isset($properties['taxonomy_where']) || ! is_array($properties['taxonomy_where'])) {
+            return $properties;
         }
 
-        $entries = [];
-        $idx = 0;
+        $service = app(TaxonomyWhereDisplayService::class);
+        $filtered = $service->filter(
+            $properties['taxonomy_where'],
+            $service->selectedCategoriesForApp($this->app_id)
+        );
 
-        foreach ($wheres as $whereId => $whereData) {
-            $adminLevel = $whereData['admin_level'] ?? $whereData['_admin_level'] ?? null;
-            $name = $this->getValidName($whereData);
+        $properties['taxonomy_where'] = $filtered;
+        $properties['taxonomyWheres'] = $service->orderedNames($filtered);
 
-            if ($name) {
-                $entries[] = [
-                    'name' => $name,
-                    'adminLevel' => $adminLevel,
-                    'idx' => $idx++,
-                ];
-            }
+        return $properties;
+    }
+
+    /**
+     * Applica `applyTaxonomyWhereDisplay()` a una feature GeoJSON (`['properties' => [...], ...]`),
+     * se ha una chiave `properties` — stesso controllo `isset($x['properties'])` che era duplicato
+     * in tre punti (`EcTrackController::getGeojson()`/`multiple()`, `App::getAllPoisGeojson()`),
+     * estratto qui (oc:8588, review). Una feature `null` (es. `EcTrack::getGeojson()` che non
+     * trova il record) o senza `properties` viene restituita invariata.
+     *
+     * @param  array<string, mixed>|null  $feature
+     * @return array<string, mixed>|null
+     */
+    public function applyTaxonomyWhereDisplayToFeature(?array $feature): ?array
+    {
+        if (isset($feature['properties'])) {
+            $feature['properties'] = $this->applyTaxonomyWhereDisplay($feature['properties']);
         }
 
-        usort($entries, function (array $a, array $b): int {
-            $aNull = $a['adminLevel'] === null;
-            $bNull = $b['adminLevel'] === null;
-
-            if ($aNull !== $bNull) {
-                return $aNull ? -1 : 1;
-            }
-
-            if ($a['adminLevel'] !== $b['adminLevel']) {
-                return $a['adminLevel'] <=> $b['adminLevel'];
-            }
-
-            return $a['idx'] <=> $b['idx'];
-        });
-
-        return array_map(static fn (array $e) => $e['name'], $entries);
+        return $feature;
     }
 
     /**

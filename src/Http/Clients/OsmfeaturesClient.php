@@ -156,14 +156,48 @@ class OsmfeaturesClient extends JsonClient
         return $bbox;
     }
 
+    /**
+     * Il dettaglio espone properties.name (nome base) e properties.osm_tags, che contiene il tag
+     * 'name' e le traduzioni 'name:<lang>' (fino a ~25 lingue per un'area OSM completa — oc:8588).
+     * 'names' qui restituisce TUTTE le traduzioni trovate: il filtro sulle sole lingue della
+     * piattaforma è responsabilità del chiamante (FetchTaxonomyWhereGeometryJob).
+     *
+     * 'name' resta per compatibilità ma NON ripiega più sull'id OSM quando manca: un id salvato
+     * come nome è un segnaposto, mai un dato valido (oc:8588). L'unico chiamante verificato
+     * (FetchTaxonomyWhereGeometryJob::syncNameFromDetail()) già tratta un nome vuoto come "nessun
+     * nome trovato", quindi rimuovere il ripiego sull'id non richiede modifiche lì oltre al fix
+     * della regola delle 5 lingue.
+     */
     public function getAdminAreaDetail(string $osmfeaturesId): array
     {
         $response = Http::get($this->getHost().'/api/v2/features/admin-areas/'.$osmfeaturesId);
         $data = $response->json();
 
+        $osmTags = $data['properties']['osm_tags'] ?? [];
+        if (! is_array($osmTags)) {
+            $osmTags = [];
+        }
+
+        $names = [];
+        foreach ($osmTags as $tag => $value) {
+            if (! is_string($tag) || ! str_starts_with($tag, 'name:')) {
+                continue;
+            }
+            if (! is_string($value) || $value === '') {
+                continue;
+            }
+            $names[substr($tag, strlen('name:'))] = $value;
+        }
+
+        $baseName = $data['properties']['name'] ?? ($osmTags['name'] ?? null);
+        if (! is_string($baseName) || $baseName === '') {
+            $baseName = null;
+        }
+
         return [
             'osmfeatures_id' => $osmfeaturesId,
-            'name' => $data['properties']['name'] ?? $osmfeaturesId,
+            'name' => $baseName,
+            'names' => $names,
             'admin_level' => $data['properties']['admin_level'] ?? null,
             'geometry' => isset($data['geometry']) ? json_encode($data['geometry']) : null,
         ];

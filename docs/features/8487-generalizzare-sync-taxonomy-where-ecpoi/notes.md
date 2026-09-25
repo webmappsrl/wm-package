@@ -371,3 +371,10 @@ La review formale su oc:8487 (5 finder paralleli) non ha trovato bug bloccanti. 
 - **Test scoped-per-id mancante su EcTrack**: il requisito del ticket copriva esplicitamente bulk+scoped × EcTrack+EcPoi, ma esisteva solo lo scoped-per-id per EcPoi (i test EcTrack esistenti usano `Bus::fake()`, verificano solo il wiring). Aggiunto `it('scopes the sync to a single EcTrack id without touching other rows', ...)` in `GeometryComputationServiceTaxonomyWhereTest.php`, con geometrie PostGIS reali.
 - **Commento obsoleto** in `EcPoiService.php:27` ("the media model", relitto di copia-incolla) corretto in "the poi model".
 - **Docblock impreciso** in `HasTaxonomyWhereImportHelpers::finalizeWithEcSync()` ("il contatore" singolare quando il metodo appende due contatori) corretto in "i contatori".
+
+## Nota successiva (oc:8588, 2026-09-23)
+
+Il formato unificato `{name, admin_level, source}` introdotto qui è stato rovesciato da oc:8588:
+tutti gli scrittori tornano alla forma `{<lingue>, _admin_level, _source}`, perché wm-core
+(`<wm-txn-where>`) e wp-geohub (`single_track.php`) leggono solo quella e non mostravano più la
+sezione "Dove". Dettaglio in `docs/features/8588-mostrare-solo-la-regione-non-il-comune-nel-dettaglio-tappa/`.

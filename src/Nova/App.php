@@ -50,6 +50,7 @@ use Wm\WmPackage\Nova\Flexible\ConfigHome\HorizontalScrollRepeaterJsonPreset;
 use Wm\WmPackage\Nova\Flexible\Resolvers\ConfigHomeResolver;
 use Wm\WmPackage\Nova\Flexible\Resolvers\ConfigOverlaysResolver;
 use Wm\WmPackage\Services\RolesAndPermissionsService;
+use Wm\WmPackage\Services\TaxonomyWhereDisplayService;
 use Wm\WmPackage\Support\ImportedAppProperties;
 
 class App extends Resource
@@ -453,9 +454,34 @@ class App extends Resource
             // gruppo sopra (oc:8488, mai esposta in Nova prima).
             ...$this->technicalDetailsFields(),
 
+            // Subito dopo le opzioni generali e prima dei tab FEwebapp/FE: mobile: vale per
+            // entrambe (richiesta del dev, oc:8588).
+            // Outl1ne (non il MultiSelect nativo di Nova, che rende un <select multiple> del
+            // browser: impossibile selezionare una sola voce, oc:8588 post-test). Senza
+            // ->saveAsJSON() il campo, non trovando un cast per la chiave letterale
+            // "properties->taxonomy_where_display" in $model->getCasts(), salverebbe
+            // json_encode($value) come STRINGA dentro properties invece dell'array nativo
+            // (verificato nel vendor, Outl1ne\MultiselectField\Multiselect::fillAttributeFromRequest
+            // + shouldSaveAsJson()).
+            Multiselect::make(__('Displayed locations'), 'properties->taxonomy_where_display')
+                ->options(fn () => $this->resource->id
+                    ? TaxonomyWhereDisplayService::make()->availableCategories(
+                        $this->resource->id,
+                        // normalizeOptionValue() invece di un cast (array) diretto: un valore
+                        // salvato come stringa JSON (dato storico, o un futuro campo che
+                        // dimentica ->saveAsJSON()) con (array) produrrebbe una voce finta con
+                        // l'intera stringa (oc:8588, review).
+                        TaxonomyWhereDisplayService::make()->normalizeOptionValue($this->resource->properties['taxonomy_where_display'] ?? [])
+                    )
+                    : [])
+                ->saveAsJSON()
+                ->hideFromIndex()
+                ->help(__('Location categories shown in the app and on the WordPress sites (track and POI detail, cards, search filters). Leave empty to show them all. The app detail only shows Region, Province and Municipality; cards show the last selected level. After saving, published files and the search index are regenerated in the background.')),
+
             Tab::make('FEwebapp', $this->webapp_tab()),
             Tab::make('FE: mobile', $this->mobile_tab()),
             Tab::make('FE: widget', $this->widget_tab()),
+
         ];
     }
 

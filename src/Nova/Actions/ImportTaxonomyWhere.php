@@ -120,17 +120,35 @@ class ImportTaxonomyWhere extends Action
                 'source_updated_at' => $apiUpdatedAt?->toIso8601String(),
             ];
 
+            // OsmfeaturesClient::getAdminAreasIds() ha gia' risolto $item['name']
+            // a una singola stringa affidabile (preferenza it poi en) o a null: qui
+            // non si legge piu' ne' un oggetto di traduzioni per-lingua ne' il tag
+            // 'name' base (quello arriva solo dal dettaglio, scaricato da
+            // FetchTaxonomyWhereGeometryJob). Va sempre scritta esplicitamente
+            // sotto 'it' (i dati sono italiani): assegnare una stringa semplice a
+            // un campo Spatie HasTranslations la salva sotto app.locale (oc:8588,
+            // qui 'en' in produzione), etichettando il nome vero come inglese.
+            // Quando manca un nome affidabile non si scrive mai l'id OSM al suo
+            // posto (era il segnaposto di oc:8588): si lascia vuoto ('name' => [])
+            // e sara' il job di dettaglio a riempirlo. Spatie HasTranslations
+            // salva un array vuoto come testo letterale '[]' (json_encode([])),
+            // NON '{}': taxonomyWhereAggregateSql() (GeometryComputationService)
+            // riconosce esplicitamente anche '[]' come "nessun nome", altrimenti
+            // lo tratterebbe come un nome reale letterale "[]".
+            $name = $item['name'] ?? null;
+
             try {
                 if ($existing) {
-                    $existing->update([
-                        'name' => $item['name'] ?? $item['id'],
-                        'properties' => array_merge($existing->properties ?? [], $properties),
-                    ]);
+                    $updateData = ['properties' => array_merge($existing->properties ?? [], $properties)];
+                    if (! empty($name)) {
+                        $updateData['name'] = ['it' => $name];
+                    }
+                    $existing->update($updateData);
                     $this->assignTaxonomyUserFromApp($existing, $app);
                     FetchTaxonomyWhereGeometryJob::dispatch($existing->id);
                 } else {
                     $taxonomyWhere = TaxonomyWhere::create([
-                        'name' => $item['name'] ?? $item['id'],
+                        'name' => ! empty($name) ? ['it' => $name] : [],
                         'properties' => $properties,
                     ]);
                     $this->assignTaxonomyUserFromApp($taxonomyWhere, $app);

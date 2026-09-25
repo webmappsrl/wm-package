@@ -109,9 +109,10 @@ class SyncModelTaxonomyWhereJobTest extends TestCase
 
         $taxonomyWhere = $poi->fresh()->properties['taxonomy_where'] ?? [];
         $this->assertArrayHasKey('R617447', $taxonomyWhere);
-        $this->assertEqualsCanonicalizing(['name', 'admin_level', 'source'], array_keys($taxonomyWhere['R617447']));
-        $this->assertSame(SyncModelTaxonomyWhereJob::SOURCE_OSMFEATURES, $taxonomyWhere['R617447']['source']);
-        $this->assertSame(4, $taxonomyWhere['R617447']['admin_level']);
+        $this->assertEquals(
+            ['it' => 'Toscana', 'en' => 'Tuscany', '_admin_level' => 4, '_source' => SyncModelTaxonomyWhereJob::SOURCE_OSMFEATURES],
+            $taxonomyWhere['R617447']
+        );
     }
 
     public function test_does_not_call_osmfeatures_when_the_local_sync_already_found_a_taxonomy_where(): void

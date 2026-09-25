@@ -741,7 +741,9 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
                 ?? data_get($this->osmfeatures_data ?? null, 'properties.to')
                 ?? '',
             'name' => $this->getTranslation('name', 'it'),
-            'taxonomyWheres' => $this->getOrderedTaxonomyWheres(),
+            'taxonomyWheres' => $this->applyTaxonomyWhereDisplay([
+                'taxonomy_where' => $this->properties['taxonomy_where'] ?? [],
+            ])['taxonomyWheres'] ?? [],
             'feature_image' => $firstMedia ? $mediaService->getThumbnailUrl($firstMedia) : '',
             'strokeColor' => isset($this->properties['color']) ? hexToRgba($this->properties['color']) : '',
             'distance' => (float) ($this->classifyField($this, 'distance')['currentValue'] ?? 0),

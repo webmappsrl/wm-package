@@ -9,5 +9,12 @@
     "Regional walking network": "Regional",
     "Spring": "Frühling",
     "Summer": "Sommer",
-    "Winter": "Winter"
+    "Winter": "Winter",
+    "Displayed locations": "Angezeigte Orte",
+    "Region": "Region",
+    "Province": "Provinz",
+    "Municipality": "Gemeinde",
+    "Admin level :level": "Verwaltungsebene :level",
+    "Source: :source": "Quelle: :source",
+    "Location categories shown in the app and on the WordPress sites (track and POI detail, cards, search filters). Leave empty to show them all. The app detail only shows Region, Province and Municipality; cards show the last selected level. After saving, published files and the search index are regenerated in the background.": "Ortskategorien, die in der App und auf den WordPress-Seiten angezeigt werden (Detail von Etappen und POIs, Karten, Suchfilter). Leer lassen, um alle anzuzeigen. Das App-Detail zeigt nur Region, Provinz und Gemeinde; Karten zeigen die letzte ausgewählte Ebene. Nach dem Speichern werden veröffentlichte Dateien und Suchindex im Hintergrund neu erzeugt."
 }

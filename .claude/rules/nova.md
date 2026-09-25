@@ -61,3 +61,9 @@ Si applica quando tocchi Resource, campi, action o card Nova del package.
   `null` (oc:8543).
 - L'`help()` di un campo è reso con `v-html`: un valore letto dal DB va passato da `e()`, altrimenti
   il markup arriva nel browser dell'utente (oc:8543).
+- Il `MultiSelect` nativo di Nova è una `<select multiple>` del browser (si sceglie una voce sola
+  solo con un clic senza modificatori, le altre con ⌘/Ctrl): per le select multiple si usa il
+  `Multiselect` di Outl1ne, come nel resto del package (oc:8588).
+- `Multiselect` di Outl1ne su un attributo `properties->chiave` salva una **stringa** JSON dentro
+  `properties` se non si chiama `->saveAsJSON()`: decide guardando il cast della chiave con la
+  freccia, che non esiste (oc:8588).
