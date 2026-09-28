@@ -52,9 +52,7 @@ use Wm\WmPackage\Services\Import\GeohubImportService;
 use Wm\WmPackage\Services\Import\UgcMediaImportService;
 use Wm\WmPackage\Services\TaxonomyWhereDisplayService;
 use Wm\WmPackage\Tests\Feature\OptionalDomainRegistrationTest;
-use Wm\WmPackage\TrailRegistry\Nova\TrailApplication;
-use Wm\WmPackage\TrailRegistry\Nova\TrailRegistryAnomaly;
-use Wm\WmPackage\TrailRegistry\Nova\TrailRegistryCode;
+use Wm\WmPackage\TrailRegistry\TrailRegistryClasses;
 
 class WmPackageServiceProvider extends PackageServiceProvider
 {
@@ -251,6 +249,11 @@ class WmPackageServiceProvider extends PackageServiceProvider
      * altrove. Il vincolo e' verificato da
      * {@see OptionalDomainRegistrationTest}.
      *
+     * Eccezione: per il dominio `trail_registry` (Catasto) `nova_resources`
+     * resta vuoto, perche' le Resource le registra lo shard con le sue
+     * sottoclassi (oc:8539) — vedi il docblock di
+     * {@see self::injectMenuSectionItems()}.
+     *
      * @see FeaturesService
      * @see docs/resources/OptionalDomains.md
      */
@@ -388,15 +391,37 @@ class WmPackageServiceProvider extends PackageServiceProvider
      * dominio acceso — a interruttore spento nessuna sezione Catasto deve
      * comparire.
      *
+     * Le Resource le registra lo shard (oc:8539): ogni voce si
+     * risolve per uriKey, fisso nella classe base ed ereditato dalla
+     * sottoclasse dello shard. Per modello non funzionerebbe: con un modello
+     * sostituito da config, `$model` della Resource resta quello del package
+     * e Nova::resourceForModel() non troverebbe nulla. La voce si omette se
+     * lo shard non ha registrato la Resource — altrimenti il link porterebbe
+     * a una pagina inesistente.
+     *
      * @return array<int, MenuItem>
      */
     protected function trailRegistryMenuItems(): array
     {
-        return [
-            MenuItem::resource(TrailApplication::class)->name(__('Istanze')),
-            MenuItem::resource(TrailRegistryCode::class)->name(__('Registro dei codici')),
-            MenuItem::resource(TrailRegistryAnomaly::class)->name(__('Anomalie')),
+        $items = [
+            ['trail-applications', __('Istanze')],
+            ['trail-registry-codes', __('Registro dei codici')],
+            ['trail-registry-anomalies', __('Anomalie')],
         ];
+
+        return collect($items)
+            ->map(fn (array $item) => [Nova::resourceForKey($item[0]), $item[1]])
+            ->filter(fn (array $item) => $item[0] !== null)
+            ->map(fn (array $item) => MenuItem::resource($item[0])->name($item[1]))
+            ->values()
+            ->all();
+    }
+
+    public function packageBooted()
+    {
+        if (FeaturesService::isEnabled('trail_registry')) {
+            TrailRegistryClasses::assertValid();
+        }
     }
 
     public function packageRegistered()

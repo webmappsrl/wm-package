@@ -10,6 +10,7 @@ use Wm\WmPackage\TrailRegistry\Exceptions\SectorNotFoundException;
 use Wm\WmPackage\TrailRegistry\Models\TrailRegistryAnomaly;
 use Wm\WmPackage\TrailRegistry\TrailCodeParser;
 use Wm\WmPackage\TrailRegistry\TrailCodeRegistrationOutcome;
+use Wm\WmPackage\TrailRegistry\TrailRegistryClasses;
 use Wm\WmPackage\TrailRegistry\TrailRegistryService;
 
 /**
@@ -684,11 +685,13 @@ class TrailRegistryNormalizeCommand extends Command
         $now = now();
 
         DB::transaction(function () use ($anomalies, $now) {
-            TrailRegistryAnomaly::query()->delete();
+            TrailRegistryClasses::anomaly()::query()
+                ->fromSource(TrailRegistryAnomaly::SOURCE_CATASTO)
+                ->delete();
 
             foreach (array_chunk($anomalies, 500) as $chunk) {
                 DB::table('trail_registry_anomalies')->insert(array_map(
-                    fn (array $row) => [...$row, 'created_at' => $now],
+                    fn (array $row) => [...$row, 'source' => TrailRegistryAnomaly::SOURCE_CATASTO, 'created_at' => $now],
                     $chunk,
                 ));
             }

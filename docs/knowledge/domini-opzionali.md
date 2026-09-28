@@ -19,6 +19,12 @@ route in `routes/domains/<dominio>.php`. Registra tutto
 `WmPackageServiceProvider::registerEnabledDomains()`, e `OptionalDomainRegistrationTest` fallisce
 se qualcuno crea `src/Nova/<Dominio>/`.
 
+**Eccezione dal Catasto Sentieri (`trail_registry`, oc:8539): non registra più le proprie Resource.**
+La chiave `nova_resources` è sparita dalla sua sezione; le sue Resource base restano in
+`src/TrailRegistry/Nova`, ma è lo shard che accende il dominio a creare le sottoclassi in
+`app/Nova` e a registrarle, come per `EcTrack`. A dominio spento le nasconde la classe base del
+package. Procedura: [docs/howto/attivare-catasto-sentieri.md](../howto/attivare-catasto-sentieri.md).
+
 **Nessuno stub di dominio può avere lo stesso nome-base di uno stub della root o di un altro
 dominio.** L'identificatore qualificato risolve l'ambiguità solo dentro il package: il lato
 pubblicato cerca per suffisso del nome file, che il dominio non lo contiene, e due omonimi

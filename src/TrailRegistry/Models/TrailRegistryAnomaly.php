@@ -2,11 +2,13 @@
 
 namespace Wm\WmPackage\TrailRegistry\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Wm\WmPackage\Models\EcTrack;
+use Wm\WmPackage\TrailRegistry\Anomalies\AnomalyTypeCast;
 use Wm\WmPackage\TrailRegistry\Enums\TrailRegistryAnomalyType;
 use Wm\WmPackage\TrailRegistry\TrailCodeParser;
 
@@ -29,7 +31,7 @@ use Wm\WmPackage\TrailRegistry\TrailCodeParser;
  *
  * @property int|null $id
  * @property int|null $ec_track_id
- * @property TrailRegistryAnomalyType|null $type
+ * @property TrailRegistryAnomalyType|string|null $type
  * @property int|null $related_ec_track_id
  * @property array<string, mixed>|null $context
  * @property Carbon|null $created_at
@@ -40,6 +42,14 @@ class TrailRegistryAnomaly extends Model
 {
     use Concerns\ComposesTrailRegistryMap;
 
+    /**
+     * La provenienza delle anomalie scritte dal Catasto Sentieri. Le anomalie
+     * di altre provenienze (es. quelle di uno shard) usano un'altra
+     * stringa e il normalize del catasto non le tocca: vedi
+     * TrailRegistryNormalizeCommand::rewriteAnomalies().
+     */
+    const SOURCE_CATASTO = 'catasto';
+
     protected $table = 'trail_registry_anomalies';
 
     public $timestamps = false;
@@ -49,11 +59,12 @@ class TrailRegistryAnomaly extends Model
         'type',
         'related_ec_track_id',
         'context',
+        'source',
         'created_at',
     ];
 
     protected $casts = [
-        'type' => TrailRegistryAnomalyType::class,
+        'type' => AnomalyTypeCast::class,
         'context' => 'array',
         'created_at' => 'datetime',
     ];
@@ -66,6 +77,15 @@ class TrailRegistryAnomaly extends Model
     public function relatedEcTrack(): BelongsTo
     {
         return $this->belongsTo(EcTrack::class, 'related_ec_track_id');
+    }
+
+    /**
+     * Filtra le anomalie per provenienza: `SOURCE_CATASTO` per quelle scritte
+     * dal Catasto Sentieri, un'altra stringa per quelle di uno shard.
+     */
+    public function scopeFromSource(Builder $query, string $source): Builder
+    {
+        return $query->where('source', $source);
     }
 
     /**
@@ -95,6 +115,14 @@ class TrailRegistryAnomaly extends Model
      */
     public function getFeatureCollectionMap(): array
     {
+        // Senza traccia (es. un'anomalia di uno shard che non nasce da un
+        // sentiero) non c'e' nulla da disegnare: niente soggetto, niente
+        // settori, niente controparti — tutte le feature qui sotto derivano
+        // dalla traccia del soggetto.
+        if ($this->ec_track_id === null) {
+            return ['type' => 'FeatureCollection', 'features' => []];
+        }
+
         $novaPath = $this->novaPath();
         $table = config('wm-package.ec_track_table', 'ec_tracks');
 

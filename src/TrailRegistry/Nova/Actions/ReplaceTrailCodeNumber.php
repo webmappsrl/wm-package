@@ -14,6 +14,7 @@ use Wm\WmPackage\TrailRegistry\Exceptions\InvalidTrailCodeTransitionException;
 use Wm\WmPackage\TrailRegistry\Exceptions\NumberOccupiedException;
 use Wm\WmPackage\TrailRegistry\Models\TrailApplication;
 use Wm\WmPackage\TrailRegistry\Models\TrailRegistryCode;
+use Wm\WmPackage\TrailRegistry\TrailRegistryClasses;
 use Wm\WmPackage\TrailRegistry\TrailRegistryService;
 
 /**
@@ -168,7 +169,7 @@ class ReplaceTrailCodeNumber extends Action
             return null;
         }
 
-        return TrailApplication::find($applicationId)?->activeCode;
+        return TrailRegistryClasses::application()::find($applicationId)?->activeCode;
     }
 
     /**

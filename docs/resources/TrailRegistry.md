@@ -169,6 +169,24 @@ Ogni riga porta il collegamento alla **scheda sulla piattaforma di origine**
 indietro da sé. Per questo la lista si **riscrive da zero** a ogni esecuzione — è ciò che fa
 sparire una riga quando la scheda è stata sistemata.
 
+### Provenienza (`source`)
+
+Ogni anomalia ha una colonna `source`, **non nullable e senza default**: `TrailRegistryAnomaly::SOURCE_CATASTO`
+per quelle scritte dal catasto, un valore proprio per quelle di uno shard che aggiunge una sorgente
+diversa (vedi «Estendere il dominio»). Lo scope `fromSource()` filtra per provenienza.
+
+`trail-registry-normalize` **cancella e riscrive solo** le anomalie con `source = 'catasto'`: le
+anomalie di un'altra provenienza restano intatte a ogni esecuzione.
+
+La verifica «un sentiero con un'anomalia non ha un codice» (la join sopra) **vale solo per le
+anomalie di provenienza `catasto`**: un'anomalia di un'altra fonte può riguardare un oggetto che
+non è nemmeno un sentiero — è per questo che `ec_track_id` è nullable.
+
+`type` non è più un enum chiuso: si legge come stringa e si risolve con il registro dei tipi
+(`TrailRegistryAnomalyTypes`), che unisce i tipi fissi del catasto (`TrailRegistryAnomalyType`) e
+quelli dichiarati da uno shard in `anomaly_types`. Un tipo sconosciuto al registro si mostra con un
+dettaglio generico invece di dare errore in index e detail.
+
 ## Il comando
 
 ```bash
@@ -189,7 +207,9 @@ Tutto sotto `config('wm-package.features.trail_registry')`:
 | Chiave | Default | A cosa serve |
 |---|---|---|
 | `enabled` | `false` | l'interruttore del dominio |
-| `commands`, `nova_resources` | — | cosa registrare a dominio acceso |
+| `commands` | — | i comandi artisan del dominio, registrati a dominio acceso |
+| `models.*` | le classi del package | modelli sostituibili da uno shard: `code`, `event`, `application`, `anomaly` — vedi «Estendere il dominio» |
+| `anomaly_types` | `[]` | tipi di anomalia dichiarati da uno shard, accanto a quelli fissi del catasto — vedi «Estendere il dominio» |
 | `legacy_code_property` | `ref` | dove vive il codice storico nelle proprietà del tracciato |
 | `source_url_property` | **vuota** | dove vive l'indirizzo della scheda sulla piattaforma di origine |
 | `source_label` | **vuota** | come si chiama quella piattaforma («Apri su Drupal») |
@@ -214,16 +234,19 @@ nessun codice indovinato:
   settore viene trovato e ogni sentiero risulta «fuori da ogni settore»;
 - **come si riconosce un codice scritto nel nome** (`name_code_pattern`): le parentesi finali sono
   la convenzione di Sardegna Sentieri, non una legge;
-- **le chiavi delle Resource Nova** (`nova_uri_keys`): servono solo a chi sovrascrive `uriKey()`;
+- **le chiavi delle Resource Nova** (`nova_uri_keys`): servono solo a chi sovrascrive `uriKey()`
+  di `EcTrack` o `TaxonomyWhere`; `trail_application` deve coincidere con l'uriKey fisso della
+  Resource delle istanze (`trail-applications`);
 - **la lingua del nome del sentiero**: presa da `app.locale` e `app.fallback_locale`, non da un
   elenco fisso.
 
 `TrailRegistryShardNeutralityTest` presidia tutto questo: ogni presunzione che rientri di nascosto
 fa fallire uno di quei test.
 
-Le Resource Nova del dominio **non possono stare in `src/Nova`**, scandita integralmente da
-`Nova::resourcesIn()`: vivono in `src/TrailRegistry/Nova` e sono dichiarate in `nova_resources`.
-Un test (`TrailRegistryDomainRegistrationTest`) fallisce se qualcuno le sposta.
+Le Resource base del dominio vivono in `src/TrailRegistry/Nova` e **il package non le registra
+più**: è lo shard a registrare le proprie sottoclassi in `app/Nova`, come per `EcTrack` — vedi
+«Estendere il dominio». Un test (`TrailRegistryDomainRegistrationTest`) fallisce se le Resource base
+finiscono in `src/Nova`, scandita integralmente da `Nova::resourcesIn()`.
 
 ## Migration
 
@@ -240,7 +263,10 @@ Il gate di CI va invocato con `--with=trail_registry`.
 
 ## Interfaccia Nova
 
-Le tre Resource stanno nella sezione di menu **Catasto**.
+Le tre Resource stanno nella sezione di menu **Catasto**. Chi le vede in Nova non è il package: è
+lo shard, con le proprie sottoclassi in `app/Nova` — vedi «Estendere il dominio». A dominio spento
+`HidesWhenTrailRegistryDisabled` le nasconde (navigazione e autorizzazione: vista, creazione,
+modifica, cancellazione, Action) senza che lo shard debba ricordarsene.
 
 - **Registro dei codici** — sola lettura: un codice non si crea, non si modifica e non si
   sostituisce da qui.
@@ -271,6 +297,38 @@ Il componente Vue della card è registrato con una **render function in JS puro*
 la build runtime-only, che non compilerebbe un template scritto come stringa, mentre la globale
 `Vue` è garantita. Lo script si carica solo a dominio acceso, con la stessa convenzione delle
 route: `resources/js/domains/<dominio>.js`.
+
+## Estendere il dominio
+
+Il Catasto è estendibile come il resto del package: Resource Nova, modelli, service e tipi di
+anomalia. La procedura completa, con i riferimenti di Forestas, è in
+[docs/howto/attivare-catasto-sentieri.md](../howto/attivare-catasto-sentieri.md). In breve:
+
+- **Resource Nova come `EcTrack`.** Il package non registra `TrailRegistryCode`,
+  `TrailApplication` né `TrailRegistryAnomaly`: lo shard che accende il dominio crea le proprie
+  sottoclassi in `app/Nova` (anche vuote) e le registra come le altre Resource. A dominio spento
+  `HidesWhenTrailRegistryDisabled` le nasconde senza che lo shard debba fare nulla. `uriKey()` è
+  fisso su ciascuna Resource base (`trail-registry-codes`, `trail-applications`,
+  `trail-registry-anomalies`): la sottoclasse la eredita, e non va cambiata — altre parti del
+  dominio (`ComposesTrailRegistryMap.php`, `nova_uri_keys`) la danno per scontata.
+- **Modelli sostituibili da config.** `config('wm-package.features.trail_registry.models.*')`
+  (`code`, `event`, `application`, `anomaly`): relazioni, `newModel()` delle Resource, service e
+  comandi risolvono la classe da lì tramite `TrailRegistryClasses`. La sostituzione va in
+  `AppServiceProvider::register()`, e `$model` della sottoclasse Nova va allineato alla config
+  (se la sottoclasse lo cambia, `newModel()` segue lei); menu e `BelongsTo` fra Resource del
+  dominio le cercano per uriKey, quindi reggono anche un disallineamento. Una classe dichiarata che non
+  esiste o non estende quella del package fa fallire l'avvio (`TrailRegistryClasses::assertValid()`,
+  chiamata da `WmPackageServiceProvider::packageBooted()`).
+- **Service risolti dal container**, sempre con `app(TrailRegistryService::class)`: uno shard li
+  sostituisce con un binding.
+- **Tipi di anomalia**: il registro (`TrailRegistryAnomalyTypes`) unisce i tipi fissi del catasto
+  e quelli dichiarati in `anomaly_types` (chiave => classe che implementa
+  `AnomalyTypeDefinition`, con `label()` e `detailRows()`). Ogni tipo aggiunto da uno shard deve
+  avere una provenienza propria, diversa da `TrailRegistryAnomaly::SOURCE_CATASTO`: il normalize
+  tocca solo le anomalie di provenienza `catasto`.
+- **Interfaccia delle Anomalie sovrascrivibile**: `noticeBody()`, `titleFor()` e `subjectField()`
+  sono metodi che la sottoclasse dello shard può ridefinire; il package tiene i propri, scritti per
+  il catasto.
 
 ## Trappole
 

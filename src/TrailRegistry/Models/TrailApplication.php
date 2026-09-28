@@ -14,6 +14,7 @@ use Wm\WmPackage\TrailRegistry\Database\Factories\TrailApplicationFactory;
 use Wm\WmPackage\TrailRegistry\Enums\TrailApplicationStatus;
 use Wm\WmPackage\TrailRegistry\Enums\TrailCodeStatus;
 use Wm\WmPackage\TrailRegistry\Jobs\UpdateTrailApplicationDemJob;
+use Wm\WmPackage\TrailRegistry\TrailRegistryClasses;
 
 /**
  * La domanda di accatastamento di un sentiero.
@@ -172,7 +173,7 @@ class TrailApplication extends MultiLineString
     /** @return HasMany<TrailRegistryCode, $this> */
     public function codes(): HasMany
     {
-        return $this->hasMany(TrailRegistryCode::class);
+        return $this->hasMany(TrailRegistryClasses::code());
     }
 
     /**
@@ -181,7 +182,7 @@ class TrailApplication extends MultiLineString
      */
     public function activeCode(): HasOne
     {
-        return $this->hasOne(TrailRegistryCode::class)
+        return $this->hasOne(TrailRegistryClasses::code())
             ->whereIn('status', array_map(
                 fn (TrailCodeStatus $s) => $s->value,
                 TrailCodeStatus::active(),
