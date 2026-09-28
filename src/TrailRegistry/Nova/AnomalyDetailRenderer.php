@@ -3,6 +3,7 @@
 namespace Wm\WmPackage\TrailRegistry\Nova;
 
 use Laravel\Nova\Nova;
+use Wm\WmPackage\TrailRegistry\Anomalies\TrailRegistryAnomalyTypes;
 use Wm\WmPackage\TrailRegistry\Enums\TrailRegistryAnomalyType;
 use Wm\WmPackage\TrailRegistry\Models\TrailRegistryAnomaly;
 
@@ -38,6 +39,10 @@ class AnomalyDetailRenderer
     {
         $context = $anomaly->context ?? [];
 
+        if (is_string($anomaly->type)) {
+            return static::table(static::shardRows($anomaly));
+        }
+
         $rows = match ($anomaly->type) {
             TrailRegistryAnomalyType::CodiceGiaAssegnato => [
                 [__('Codice'), static::code((string) ($context['code'] ?? ''))],
@@ -63,6 +68,30 @@ class AnomalyDetailRenderer
         };
 
         return static::table($rows);
+    }
+
+    /**
+     * Un tipo che non e' dell'enum: o e' dichiarato da uno shard (ha la sua
+     * definizione, e detta le righe), o e' sconosciuto (dichiarato in
+     * passato da uno shard che poi lo ha tolto, o mai dichiarato) — riga
+     * generica con tipo e contesto grezzo, cosi' la scheda resta leggibile
+     * anche per un caso che non si sa piu' spiegare.
+     *
+     * @return list<array{0: string, 1: string}>
+     */
+    protected static function shardRows(TrailRegistryAnomaly $anomaly): array
+    {
+        $type = (string) $anomaly->type;
+        $definition = TrailRegistryAnomalyTypes::definition($type);
+
+        if ($definition !== null) {
+            return $definition->detailRows($anomaly);
+        }
+
+        return [
+            [__('Tipo'), e($type)],
+            [__('Contesto'), e(json_encode($anomaly->context ?? [], JSON_UNESCAPED_UNICODE))],
+        ];
     }
 
     /**
@@ -168,9 +197,17 @@ class AnomalyDetailRenderer
     public static function trackLink(array $track): string
     {
         $id = $track['id'] ?? null;
+
+        if ($id === null && ! (is_string($track['name'] ?? null) && trim($track['name']) !== '')) {
+            // Nessun id e nessun nome: non c'e' un sentiero da linkare (es.
+            // un'anomalia senza traccia). Un `#?` non direbbe nulla in piu'
+            // di un trattino, e farebbe pensare a un id perso per strada.
+            return static::none();
+        }
+
         $name = is_string($track['name'] ?? null) && trim($track['name']) !== ''
             ? $track['name']
-            : ('#'.($id ?? '?'));
+            : ('#'.$id);
 
         $html = $id === null
             ? '<strong>'.e($name).'</strong>'

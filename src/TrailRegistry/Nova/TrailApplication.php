@@ -29,6 +29,7 @@ use Wm\WmPackage\TrailRegistry\Nova\Fields\TrailRegistryMap;
 use Wm\WmPackage\TrailRegistry\Nova\Filters\TrailApplicationSourceFilter;
 use Wm\WmPackage\TrailRegistry\Nova\Filters\TrailApplicationStatusFilter;
 use Wm\WmPackage\TrailRegistry\TrailGeometryReader;
+use Wm\WmPackage\TrailRegistry\TrailRegistryClasses;
 use Wm\WmPackage\TrailRegistry\TrailRegistryService;
 
 /**
@@ -36,9 +37,24 @@ use Wm\WmPackage\TrailRegistry\TrailRegistryService;
  */
 class TrailApplication extends AbstractGeometryResource
 {
-    use ResolvesCanonicalResources;
+    use HidesWhenTrailRegistryDisabled, ResolvesCanonicalResources;
 
     public static $model = TrailApplicationModel::class;
+
+    public static function newModel()
+    {
+        return static::newDomainModel(TrailApplicationModel::class, TrailRegistryClasses::application());
+    }
+
+    /**
+     * Fissa, non derivata dal nome della classe: una sottoclasse dello shard
+     * deve restare raggiungibile con la stessa chiave, gia' usata come
+     * valore letterale in ComposesTrailRegistryMap.
+     */
+    public static function uriKey()
+    {
+        return 'trail-applications';
+    }
 
     public static $title = 'name';
 
@@ -59,10 +75,14 @@ class TrailApplication extends AbstractGeometryResource
      * (vedi fieldsForUpdate): la traccia non cambia, quindi non cambiano
      * settore e prefisso del codice gia' comunicato. Approvata o rifiutata,
      * l'istanza e' uno storico (oc:8571).
+     *
+     * Ridefinisce il metodo del trait HidesWhenTrailRegistryDisabled, quindi
+     * il controllo del dominio spento va rifatto qui.
      */
     public function authorizedToUpdate(Request $request): bool
     {
-        return $this->resource->status === TrailApplicationStatus::UnderReview;
+        return static::trailRegistryEnabled()
+            && $this->resource->status === TrailApplicationStatus::UnderReview;
     }
 
     /**

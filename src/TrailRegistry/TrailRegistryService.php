@@ -14,7 +14,6 @@ use Wm\WmPackage\TrailRegistry\Exceptions\SectorExhaustedException;
 use Wm\WmPackage\TrailRegistry\Exceptions\SectorNotFoundException;
 use Wm\WmPackage\TrailRegistry\Models\TrailApplication;
 use Wm\WmPackage\TrailRegistry\Models\TrailRegistryCode;
-use Wm\WmPackage\TrailRegistry\Models\TrailRegistryCodeEvent;
 
 /**
  * Unico service di dominio del catasto.
@@ -122,7 +121,7 @@ class TrailRegistryService
         $sector = $this->resolveSector($geometryWkt);
         $fullCode = $sector->properties['full_code'];
 
-        $taken = TrailRegistryCode::query()
+        $taken = TrailRegistryClasses::code()::query()
             ->where('region', substr($fullCode, 0, 1))
             ->where('province', substr($fullCode, 1, 2))
             ->where('area', substr($fullCode, 3, 1))
@@ -166,7 +165,7 @@ class TrailRegistryService
      */
     public function availableNumbers(string $fullCode): array
     {
-        $taken = TrailRegistryCode::query()
+        $taken = TrailRegistryClasses::code()::query()
             ->where('region', substr($fullCode, 0, 1))
             ->where('province', substr($fullCode, 1, 2))
             ->where('area', substr($fullCode, 3, 1))
@@ -191,7 +190,7 @@ class TrailRegistryService
      */
     public function availableVariants(string $fullCode, int $number): array
     {
-        $taken = TrailRegistryCode::query()
+        $taken = TrailRegistryClasses::code()::query()
             ->where('region', substr($fullCode, 0, 1))
             ->where('province', substr($fullCode, 1, 2))
             ->where('area', substr($fullCode, 3, 1))
@@ -237,7 +236,7 @@ class TrailRegistryService
      */
     public function numbersWithAvailableVariants(string $fullCode, ?string $geometryWkt = null, ?int $excludeCodeId = null): array
     {
-        $rows = TrailRegistryCode::query()
+        $rows = TrailRegistryClasses::code()::query()
             ->where('region', substr($fullCode, 0, 1))
             ->where('province', substr($fullCode, 1, 2))
             ->where('area', substr($fullCode, 3, 1))
@@ -533,7 +532,7 @@ class TrailRegistryService
     protected function insertReservation(array $candidate, TrailApplication $application, string $reason): TrailRegistryCode
     {
         return DB::transaction(function () use ($candidate, $application, $reason) {
-            $code = TrailRegistryCode::create([
+            $code = TrailRegistryClasses::code()::create([
                 'region' => $candidate['region'],
                 'province' => $candidate['province'],
                 'area' => $candidate['area'],
@@ -616,7 +615,7 @@ class TrailRegistryService
             // modale e il salvataggio un'altra approvazione puo' aver portato
             // il codice ad Assigned, e sostituirlo significherebbe liberare un
             // numero gia' comunicato al richiedente.
-            $code = TrailRegistryCode::query()
+            $code = TrailRegistryClasses::code()::query()
                 ->whereKey($code->getKey())
                 ->lockForUpdate()
                 ->firstOrFail();
@@ -801,7 +800,7 @@ class TrailRegistryService
      */
     protected function hasExistingRegistrationForTrack(int $ecTrackId): bool
     {
-        return TrailRegistryCode::query()
+        return TrailRegistryClasses::code()::query()
             ->where('ec_track_id', $ecTrackId)
             ->whereIn('status', array_column(TrailCodeStatus::active(), 'value'))
             ->exists();
@@ -815,7 +814,7 @@ class TrailRegistryService
      */
     protected function activeCodeAt(array $candidate): ?TrailRegistryCode
     {
-        return TrailRegistryCode::query()
+        return TrailRegistryClasses::code()::query()
             ->where('region', $candidate['region'])
             ->where('province', $candidate['province'])
             ->where('area', $candidate['area'])
@@ -842,7 +841,7 @@ class TrailRegistryService
     {
         try {
             return DB::transaction(function () use ($candidate, $ecTrackId, $origin) {
-                return TrailRegistryCode::create([
+                return TrailRegistryClasses::code()::create([
                     ...$candidate,
                     'status' => TrailCodeStatus::Assigned,
                     'origin' => $origin,
@@ -880,7 +879,7 @@ class TrailRegistryService
         string $reason,
         ?int $userId,
     ): void {
-        TrailRegistryCodeEvent::create([
+        TrailRegistryClasses::event()::create([
             'trail_registry_code_id' => $code->id,
             'from_status' => $from,
             'to_status' => $to,

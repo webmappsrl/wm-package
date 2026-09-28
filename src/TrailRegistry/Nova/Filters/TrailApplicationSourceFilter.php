@@ -4,7 +4,7 @@ namespace Wm\WmPackage\TrailRegistry\Nova\Filters;
 
 use Laravel\Nova\Filters\Filter;
 use Laravel\Nova\Http\Requests\NovaRequest;
-use Wm\WmPackage\TrailRegistry\Models\TrailApplication;
+use Wm\WmPackage\TrailRegistry\TrailRegistryClasses;
 
 /**
  * La provenienza non e' un enum: e' una stringa libera scritta da chi deposita
@@ -23,7 +23,7 @@ class TrailApplicationSourceFilter extends Filter
 
     public function options(NovaRequest $request): array
     {
-        return TrailApplication::query()
+        return TrailRegistryClasses::application()::query()
             ->select('source')
             ->distinct()
             ->orderBy('source')

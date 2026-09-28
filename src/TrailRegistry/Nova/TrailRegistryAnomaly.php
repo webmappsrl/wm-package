@@ -6,14 +6,17 @@ use Illuminate\Contracts\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Laravel\Nova\Fields\BelongsTo;
 use Laravel\Nova\Fields\DateTime;
+use Laravel\Nova\Fields\Field;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Resource;
 use Wm\WmPackage\Models\EcTrack;
+use Wm\WmPackage\TrailRegistry\Anomalies\TrailRegistryAnomalyTypes;
 use Wm\WmPackage\TrailRegistry\Enums\TrailRegistryAnomalyType;
 use Wm\WmPackage\TrailRegistry\Nova\Cards\TrailRegistryNoticeCard;
 use Wm\WmPackage\TrailRegistry\Nova\Fields\TrailRegistryMap;
 use Wm\WmPackage\TrailRegistry\Nova\Filters\TrailAnomalyTypeFilter;
+use Wm\WmPackage\TrailRegistry\TrailRegistryClasses;
 
 /**
  * La lista di lavoro del gestore: cosa non va, su quale sentiero, e
@@ -27,22 +30,60 @@ use Wm\WmPackage\TrailRegistry\Nova\Filters\TrailAnomalyTypeFilter;
  */
 class TrailRegistryAnomaly extends Resource
 {
-    use ResolvesCanonicalResources;
+    use HidesWhenTrailRegistryDisabled, ResolvesCanonicalResources;
 
     public static $model = \Wm\WmPackage\TrailRegistry\Models\TrailRegistryAnomaly::class;
+
+    public static function newModel()
+    {
+        return static::newDomainModel(\Wm\WmPackage\TrailRegistry\Models\TrailRegistryAnomaly::class, TrailRegistryClasses::anomaly());
+    }
+
+    /**
+     * Fissa, non derivata dal nome della classe: coerente con TrailRegistryCode
+     * e TrailApplication, cosi' anche una sottoclasse dello shard resta
+     * raggiungibile con la stessa chiave.
+     */
+    public static function uriKey()
+    {
+        return 'trail-registry-anomalies';
+    }
 
     /**
      * Il titolo non e' una colonna: `type` e' un enum, e Nova lo darebbe in
      * pasto a una conversione in stringa che solleva un errore (verificato:
      * «Object of class TrailRegistryAnomalyType could not be converted to
-     * string», vendor/laravel/nova/src/Resource.php:416). Si compone qui.
+     * string», vendor/laravel/nova/src/Resource.php:416). Si compone qui,
+     * delegando a `titleFor()`.
      */
     public function title(): string
     {
-        $type = $this->resource->type;
+        return $this->titleFor($this->resource);
+    }
 
-        return trim(($type instanceof TrailRegistryAnomalyType ? $type->value : __('anomalia'))
-            .' · #'.$this->resource->ec_track_id);
+    /**
+     * Punto di estensione per lo shard: compone il titolo dell'anomalia.
+     * Il pacchetto appende ` · #<id traccia>` solo quando la traccia esiste
+     * — un'anomalia senza traccia (es. un tipo dello shard che riguarda un
+     * dato esterno, non una traccia) non ha nulla da appendere dopo il
+     * cancelletto, e ometterlo evita un titolo tipo «tipo · #» che non dice
+     * nulla in piu'. Un tipo dello shard si mostra con l'etichetta del
+     * registro dei tipi; uno sconosciuto con la chiave grezza.
+     */
+    protected function titleFor(\Wm\WmPackage\TrailRegistry\Models\TrailRegistryAnomaly $anomaly): string
+    {
+        $type = $anomaly->type;
+        $label = match (true) {
+            $type instanceof TrailRegistryAnomalyType => $type->value,
+            is_string($type) && $type !== '' => TrailRegistryAnomalyTypes::label($type),
+            default => __('anomalia'),
+        };
+
+        if ($anomaly->ec_track_id === null) {
+            return trim($label);
+        }
+
+        return trim($label.' · #'.$anomaly->ec_track_id);
     }
 
     /**
@@ -74,16 +115,19 @@ class TrailRegistryAnomaly extends Resource
     }
 
     /**
-     * Ordinamento predefinito per tipo: le anomalie dello stesso genere
-     * stanno insieme, ed e' cosi' che si lavorano — una correzione per volta,
-     * ripetuta su tutte le schede che ne hanno bisogno.
+     * Ordinamento predefinito: prima la provenienza (uno shard puo' avere le
+     * sue accanto a quelle del catasto senza mischiarle), poi il tipo — le
+     * anomalie dello stesso genere stanno insieme, ed e' cosi' che si
+     * lavorano, una correzione per volta ripetuta su tutte le schede che ne
+     * hanno bisogno — infine la traccia, con quelle senza traccia in coda:
+     * non hanno un id su cui ordinare, e non sono comunque il caso comune.
      */
     public static function indexQuery(NovaRequest $request, $query)
     {
         if (empty($request->query('orderBy'))) {
             $query->getQuery()->orders = [];
 
-            $query->orderBy('type')->orderBy('ec_track_id');
+            $query->orderBy('source')->orderBy('type')->orderByRaw('ec_track_id NULLS LAST');
         }
 
         return $query;
@@ -118,16 +162,19 @@ class TrailRegistryAnomaly extends Resource
 
         $fields = [];
 
-        // Non un BelongsTo: al nome va appesa l'icona che porta alla scheda
-        // sulla piattaforma di origine, e un campo di relazione non lascia
-        // spazio per aggiungerci nulla. Il collegamento interno lo compone
-        // comunque il renderer, quindi il nome resta cliccabile come prima.
-        $fields[] = Text::make(
-            __('Sentiero'),
-            fn () => AnomalyDetailRenderer::trackLink($this->context['track'] ?? ['id' => $this->ec_track_id]),
-        )->asHtml();
+        $fields[] = $this->subjectField();
 
-        $fields[] = Text::make(__('Tipo'), fn () => $this->type?->value)->sortable();
+        // `type` e' l'enum del catasto o una stringa (shard/sconosciuto, vedi
+        // AnomalyTypeCast): un tipo stringa non ha `->value`, quindi si passa
+        // dal registro, che per un tipo sconosciuto ricade sulla stringa
+        // grezza.
+        $fields[] = Text::make(__('Tipo'), function () {
+            $type = $this->type;
+
+            return $type instanceof TrailRegistryAnomalyType
+                ? $type->value
+                : ($type !== null ? TrailRegistryAnomalyTypes::label($type) : null);
+        })->sortable();
 
         // Una sola colonna, con dentro una tabellina etichetta/valore le cui
         // righe cambiano con il tipo di anomalia: vedi AnomalyDetailRenderer.
@@ -159,6 +206,33 @@ class TrailRegistryAnomaly extends Resource
         )->asHtml()->onlyOnDetail();
 
         return $fields;
+    }
+
+    /**
+     * Punto di estensione per lo shard: la colonna «Sentiero». Il pacchetto
+     * la rende un `Text` con dentro il link composto da
+     * `AnomalyDetailRenderer::trackLink()` (nome + icona verso la
+     * piattaforma di origine) e non un `BelongsTo`, perche' un campo di
+     * relazione non lascia spazio per appenderci l'icona. Uno shard con
+     * un'altra fonte per l'anomalia (niente traccia EC) puo' sostituirla con
+     * il campo che gli serve.
+     *
+     * Senza traccia (`ec_track_id` nullo) non c'e' nulla da linkare: si
+     * mostra solo il titolo dell'anomalia, senza il cancelletto vuoto che
+     * `trackLink()` produrrebbe da un id assente.
+     */
+    protected function subjectField(): Field
+    {
+        return Text::make(
+            __('Sentiero'),
+            function () {
+                if ($this->resource->ec_track_id === null) {
+                    return e($this->titleFor($this->resource));
+                }
+
+                return AnomalyDetailRenderer::trackLink($this->context['track'] ?? ['id' => $this->ec_track_id]);
+            },
+        )->asHtml();
     }
 
     /**

@@ -1,9 +1,10 @@
 <?php
 
 use Wm\WmPackage\TrailRegistry\Commands\TrailRegistryNormalizeCommand;
-use Wm\WmPackage\TrailRegistry\Nova\TrailApplication;
-use Wm\WmPackage\TrailRegistry\Nova\TrailRegistryAnomaly;
-use Wm\WmPackage\TrailRegistry\Nova\TrailRegistryCode;
+use Wm\WmPackage\TrailRegistry\Models\TrailApplication;
+use Wm\WmPackage\TrailRegistry\Models\TrailRegistryAnomaly;
+use Wm\WmPackage\TrailRegistry\Models\TrailRegistryCode;
+use Wm\WmPackage\TrailRegistry\Models\TrailRegistryCodeEvent;
 
 // config for Wm/WmPackage
 return [
@@ -118,17 +119,31 @@ return [
         'trail_registry' => [
             'enabled' => env('WM_TRAIL_REGISTRY_ENABLED', false),
 
-            // Comandi artisan e risorse Nova del dominio: registrati solo a
-            // dominio acceso. Le risorse Nova NON possono stare in src/Nova,
-            // che viene scandita integralmente da Nova::resourcesIn().
+            // Comandi artisan del dominio: registrati solo a dominio acceso.
+            // Le risorse Nova del Catasto le registra lo shard (come EcTrack):
+            // il package non ha piu' una chiave `nova_resources` qui. Le tre
+            // Resource base restano in src/TrailRegistry/Nova, estendibili
+            // ma mai registrate da nessuno se lo shard non le monta.
             'commands' => [
                 TrailRegistryNormalizeCommand::class,
             ],
-            'nova_resources' => [
-                TrailRegistryCode::class,
-                TrailApplication::class,
-                TrailRegistryAnomaly::class,
+
+            // Classi dei modelli del dominio. Uno shard le sostituisce con una propria
+            // sottoclasse impostando la chiave (es. in AppServiceProvider::register()):
+            // relazioni, service, comandi e Resource leggono da qui. Vedi
+            // docs/howto/attivare-catasto-sentieri.md.
+            'models' => [
+                'code' => TrailRegistryCode::class,
+                'event' => TrailRegistryCodeEvent::class,
+                'application' => TrailApplication::class,
+                'anomaly' => TrailRegistryAnomaly::class,
             ],
+
+            // Tipi di anomalia dichiarati da uno shard, accanto a quelli
+            // fissi del catasto (TrailRegistryAnomalyType): chiave => classe
+            // che implementa AnomalyTypeDefinition. Vuota di default, il
+            // package non ne conosce nessuno.
+            'anomaly_types' => [],
 
             // In quale proprieta' del tracciato vive il codice storico.
             // Su forestas e' `ref`, ereditato dall'import da Sardegna
@@ -168,6 +183,12 @@ return [
             // della classe, ma un consumer puo' sovrascrivere `uriKey()`: se
             // lo fa, senza queste chiavi i collegamenti porterebbero a pagine
             // inesistenti.
+            //
+            // `trail_application` e' diverso: la Resource delle istanze e'
+            // del dominio, e il suo uriKey() e' fisso nella classe base
+            // (`trail-applications`) ed ereditato dalla sottoclasse dello
+            // shard. Questo valore deve coincidere con quello: cambiarlo da
+            // solo rompe i link della mappa, non sposta la Resource.
             'nova_uri_keys' => [
                 'ec_track' => env('WM_TRAIL_URI_KEY_EC_TRACK', 'ec-tracks'),
                 'taxonomy_where' => env('WM_TRAIL_URI_KEY_TAXONOMY_WHERE', 'taxonomy-wheres'),

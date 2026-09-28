@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 use Wm\WmPackage\Models\User;
 use Wm\WmPackage\TrailRegistry\Enums\TrailCodeStatus;
+use Wm\WmPackage\TrailRegistry\TrailRegistryClasses;
 
 /**
  * Un passaggio di stato di un codice. Tabella in sola aggiunta: non si
@@ -45,7 +46,7 @@ class TrailRegistryCodeEvent extends Model
 
     public function code(): BelongsTo
     {
-        return $this->belongsTo(TrailRegistryCode::class, 'trail_registry_code_id');
+        return $this->belongsTo(TrailRegistryClasses::code(), 'trail_registry_code_id');
     }
 
     public function user(): BelongsTo

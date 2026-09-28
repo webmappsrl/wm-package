@@ -11,7 +11,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Wm\WmPackage\Services\Models\EcTrackService;
-use Wm\WmPackage\TrailRegistry\Models\TrailApplication;
+use Wm\WmPackage\TrailRegistry\TrailRegistryClasses;
 
 /**
  * Il calcolo DEM di un'istanza del Catasto Sentieri: scrive
@@ -62,7 +62,7 @@ class UpdateTrailApplicationDemJob implements ShouldBeUnique, ShouldQueue
 
     public function handle(EcTrackService $ecTrackService): void
     {
-        $application = TrailApplication::find($this->applicationId);
+        $application = TrailRegistryClasses::application()::find($this->applicationId);
 
         if ($application === null) {
             return;

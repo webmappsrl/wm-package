@@ -19,6 +19,10 @@ use Wm\WmPackage\TrailRegistry\TrailGeometryReader;
 beforeEach(function () {
     runTrailRegistryStubs();
 
+    // A dominio spento HidesWhenTrailRegistryDisabled nega ogni scrittura:
+    // qui si verificano le regole della Resource, che valgono a dominio acceso.
+    config(['wm-package.features.trail_registry.enabled' => true]);
+
     // Stesse ragioni di ApproveTrailApplicationTest: gli observer di
     // geometria e media chiamano servizi esterni e pretendono un'app 1.
     Bus::fake();

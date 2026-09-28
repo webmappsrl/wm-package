@@ -107,6 +107,8 @@ questo file, perché vanno lette sempre.
 Per allineare le migration in un consumer:
 [docs/howto/migration-wm-package.md](docs/howto/migration-wm-package.md).
 
+Per attivare il Catasto Sentieri su uno shard: [docs/howto/attivare-catasto-sentieri.md](docs/howto/attivare-catasto-sentieri.md).
+
 ## Lavori senza una pagina dedicata
 
 | Lavoro | Ticket | In breve |

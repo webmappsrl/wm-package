@@ -10,6 +10,10 @@ use Wm\WmPackage\TrailRegistry\Nova\TrailApplication as TrailApplicationResource
 
 beforeEach(function () {
     runTrailRegistryStubs();
+
+    // A dominio spento HidesWhenTrailRegistryDisabled nega ogni scrittura:
+    // qui si verificano le regole della Resource, che valgono a dominio acceso.
+    config(['wm-package.features.trail_registry.enabled' => true]);
 });
 
 function resourceFor(TrailApplicationStatus $status): TrailApplicationResource

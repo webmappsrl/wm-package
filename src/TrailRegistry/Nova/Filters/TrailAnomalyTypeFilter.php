@@ -4,10 +4,11 @@ namespace Wm\WmPackage\TrailRegistry\Nova\Filters;
 
 use Laravel\Nova\Filters\Filter;
 use Laravel\Nova\Http\Requests\NovaRequest;
-use Wm\WmPackage\TrailRegistry\Enums\TrailRegistryAnomalyType;
+use Wm\WmPackage\TrailRegistry\Anomalies\TrailRegistryAnomalyTypes;
 
 /**
- * Le opzioni vengono dai casi dell'enum, non dalla tabella: un tipo che oggi
+ * Le opzioni vengono dal registro dei tipi — i casi dell'enum del catasto
+ * piu' quelli che uno shard dichiara — non dalla tabella: un tipo che oggi
  * non ha righe (i codici illeggibili, le tracce fuori da ogni settore) resta
  * una scelta legittima — e quando capitera' sara' gia' filtrabile.
  */
@@ -22,10 +23,24 @@ class TrailAnomalyTypeFilter extends Filter
         return $query->where('type', $value);
     }
 
+    /**
+     * Le opzioni di Nova sono indicizzate per etichetta: due tipi con la
+     * stessa etichetta (uno shard che ne riusa una del catasto, o due tipi
+     * dello shard) collasserebbero in una voce sola, e uno dei due non
+     * sarebbe piu' filtrabile. In quel caso l'etichetta porta la chiave fra
+     * parentesi.
+     */
     public function options(NovaRequest $request): array
     {
-        return collect(TrailRegistryAnomalyType::cases())
-            ->mapWithKeys(fn (TrailRegistryAnomalyType $type) => [$type->value => $type->value])
+        $labels = collect(TrailRegistryAnomalyTypes::values())
+            ->mapWithKeys(fn (string $type) => [$type => TrailRegistryAnomalyTypes::label($type)]);
+
+        $counts = $labels->countBy();
+
+        return $labels
+            ->mapWithKeys(fn (string $label, string $type) => [
+                ($counts[$label] > 1 ? "{$label} ({$type})" : $label) => $type,
+            ])
             ->all();
     }
 }

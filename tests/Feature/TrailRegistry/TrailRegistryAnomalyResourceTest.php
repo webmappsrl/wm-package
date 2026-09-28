@@ -23,3 +23,15 @@ it('regge un record vuoto, come quando Nova costruisce le colonne', function () 
     expect(AnomalyDetailRenderer::render(new TrailRegistryAnomaly))->toBeString();
     expect((new AnomalyResource(new TrailRegistryAnomaly))->title())->toBeString();
 });
+
+it('un anomalia senza traccia ha un titolo senza cancelletto vuoto', function () {
+    $anomaly = new TrailRegistryAnomaly(['type' => 'codice_gia_assegnato', 'ec_track_id' => null]);
+
+    expect((new AnomalyResource($anomaly))->title())->toBe('codice_gia_assegnato');
+});
+
+it('la mappa di un anomalia senza traccia e una collezione vuota', function () {
+    $anomaly = new TrailRegistryAnomaly(['type' => 'shard_tipo_esempio', 'ec_track_id' => null]);
+
+    expect($anomaly->getFeatureCollectionMap()['features'])->toBe([]);
+});

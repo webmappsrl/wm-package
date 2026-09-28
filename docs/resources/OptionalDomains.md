@@ -135,6 +135,15 @@ acceso. Un test di regressione
 (`OptionalDomainRegistrationTest::test_no_declared_domain_has_a_folder_under_src_nova`)
 fallisce se qualcuno crea `src/Nova/<Dominio>/`.
 
+**Eccezione: il Catasto Sentieri (`trail_registry`) non ha piu' una chiave `nova_resources`
+(oc:8539).** Le sue Resource base restano in `src/TrailRegistry/Nova`, ma il package non le
+registra: e' lo shard che accende il dominio a creare le proprie sottoclassi in `app/Nova` e a
+registrarle, come per `EcTrack`. A dominio spento la classe base del package le nasconde
+(navigazione e autorizzazione) senza che lo shard debba ricordarsene. Procedura completa:
+[docs/howto/attivare-catasto-sentieri.md](../howto/attivare-catasto-sentieri.md). Un dominio nuovo
+puo' ancora scegliere la via `nova_resources` descritta sopra; il Catasto è, per ora, l'unico che
+segue quest'altra strada.
+
 ## Spegnere un dominio
 
 Spegnere l'interruttore nasconde la feature ma **non rimuove la tabella**: i dati

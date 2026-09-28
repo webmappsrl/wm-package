@@ -4,7 +4,7 @@ namespace Wm\WmPackage\TrailRegistry\Nova\Filters;
 
 use Laravel\Nova\Filters\Filter;
 use Laravel\Nova\Http\Requests\NovaRequest;
-use Wm\WmPackage\TrailRegistry\Models\TrailRegistryCode;
+use Wm\WmPackage\TrailRegistry\TrailRegistryClasses;
 
 /**
  * Le opzioni sono i valori distinti presenti in tabella: l'elenco completo dei
@@ -24,7 +24,7 @@ class TrailCodeSectorFilter extends Filter
 
     public function options(NovaRequest $request): array
     {
-        return TrailRegistryCode::query()
+        return TrailRegistryClasses::code()::query()
             ->select('sector')
             ->distinct()
             ->orderBy('sector')

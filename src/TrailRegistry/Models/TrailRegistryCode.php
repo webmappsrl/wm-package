@@ -11,6 +11,7 @@ use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\TaxonomyWhere;
 use Wm\WmPackage\TrailRegistry\Enums\TrailCodeOrigin;
 use Wm\WmPackage\TrailRegistry\Enums\TrailCodeStatus;
+use Wm\WmPackage\TrailRegistry\TrailRegistryClasses;
 
 /**
  * Una riga per ogni codice del registro.
@@ -85,11 +86,7 @@ class TrailRegistryCode extends Model
      */
     protected function label(): Attribute
     {
-        return Attribute::get(fn () => sprintf(
-            '%02d%s',
-            $this->number,
-            $this->variant === '0' ? '' : $this->variant,
-        ));
+        return Attribute::get(fn () => static::formatCode(null, null, '', '', $this->number, $this->variant));
     }
 
     /**
@@ -97,7 +94,30 @@ class TrailRegistryCode extends Model
      */
     protected function code(): Attribute
     {
-        return Attribute::get(fn () => $this->fullCode.$this->label);
+        return Attribute::get(fn () => static::formatCode(
+            $this->region,
+            $this->province,
+            $this->area,
+            $this->sector,
+            $this->number,
+            $this->variant,
+        ));
+    }
+
+    /**
+     * Il formato del codice in un posto solo: lo usano `code` e `label` qui
+     * sopra, e il matcher del registro catastale in Forestas (oc:8539), che
+     * lavora su righe `DB::table` senza istanziare il modello e ricompone lo
+     * stesso codice da colonne lette a mano. Region e province a `null`
+     * producono la sola etichetta (numero e variante), come fa `label`.
+     */
+    public static function formatCode(?string $region, ?string $province, string $area, string $sector, int $number, string $variant): string
+    {
+        return ($region ?? '').($province ?? '').$area.$sector.sprintf(
+            '%02d%s',
+            $number,
+            $variant === '0' ? '' : $variant,
+        );
     }
 
     /**
@@ -114,7 +134,7 @@ class TrailRegistryCode extends Model
 
     public function application(): BelongsTo
     {
-        return $this->belongsTo(TrailApplication::class, 'trail_application_id');
+        return $this->belongsTo(TrailRegistryClasses::application(), 'trail_application_id');
     }
 
     public function ecTrack(): BelongsTo
@@ -129,7 +149,7 @@ class TrailRegistryCode extends Model
 
     public function events(): HasMany
     {
-        return $this->hasMany(TrailRegistryCodeEvent::class, 'trail_registry_code_id')
+        return $this->hasMany(TrailRegistryClasses::event(), 'trail_registry_code_id')
             ->orderBy('created_at');
     }
 

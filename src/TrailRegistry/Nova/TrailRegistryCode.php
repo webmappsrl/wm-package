@@ -17,15 +17,32 @@ use Wm\WmPackage\TrailRegistry\Nova\Filters\TrailCodeOriginFilter;
 use Wm\WmPackage\TrailRegistry\Nova\Filters\TrailCodeProvinceFilter;
 use Wm\WmPackage\TrailRegistry\Nova\Filters\TrailCodeSectorFilter;
 use Wm\WmPackage\TrailRegistry\Nova\Filters\TrailCodeStatusFilter;
+use Wm\WmPackage\TrailRegistry\TrailRegistryClasses;
 
 /**
  * @extends resource<\Wm\WmPackage\TrailRegistry\Models\TrailRegistryCode>
  */
 class TrailRegistryCode extends Resource
 {
-    use ResolvesCanonicalResources;
+    use HidesWhenTrailRegistryDisabled, ResolvesCanonicalResources;
 
     public static $model = \Wm\WmPackage\TrailRegistry\Models\TrailRegistryCode::class;
+
+    public static function newModel()
+    {
+        return static::newDomainModel(\Wm\WmPackage\TrailRegistry\Models\TrailRegistryCode::class, TrailRegistryClasses::code());
+    }
+
+    /**
+     * Fissa, non derivata dal nome della classe: la Resource dello shard
+     * (es. `ShardCodeResource extends TrailRegistryCode`) deve restare
+     * raggiungibile con la stessa chiave, che ComposesTrailRegistryMap usa
+     * gia' come valore letterale per i link della mappa.
+     */
+    public static function uriKey()
+    {
+        return 'trail-registry-codes';
+    }
 
     public static $title = 'code';
 
@@ -166,7 +183,11 @@ class TrailRegistryCode extends Resource
             // da un campo, quali dedotti da un nome, quali proposti d'ufficio.
             Text::make(__('Provenienza'), fn () => $this->origin->value),
 
-            BelongsTo::make(__('Istanza'), 'application', TrailApplication::class)->nullable(),
+            BelongsTo::make(
+                __('Istanza'),
+                'application',
+                static::resourceForKey(TrailApplication::uriKey(), TrailApplication::class),
+            )->nullable(),
         ];
 
         $trackResource = static::resourceForModel(
