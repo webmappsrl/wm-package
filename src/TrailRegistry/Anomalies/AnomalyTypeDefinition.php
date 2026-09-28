@@ -15,7 +15,7 @@ interface AnomalyTypeDefinition
 
     /**
      * @return list<array{0: string, 1: string}> etichetta e valore, il
-     *                                            valore gia' sottoposto a escape con e()
+     *                                           valore gia' sottoposto a escape con e()
      */
     public function detailRows(TrailRegistryAnomaly $anomaly): array;
 }
