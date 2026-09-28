@@ -75,9 +75,6 @@ su sentieri (`EcTrack`) e istanze del Catasto Sentieri (`TrailApplication`).
   GeoHub, dove i nove campi erano colonne di `ec_tracks`. Cancellava a ogni modifica della
   geometria i valori scritti dal tab DEM, che vivono solo in `manual_data`. L'eliminazione del
   primo livello, che attraversa package e osm2cai2, è in oc:8642.
-- **L'import da Sardegna Sentieri scrive i tempi e le quote di Drupal in `manual_data`**: nella
-  call del 14/09/2026 si è deciso di smettere, perché quei valori venivano dalla vecchia libreria
-  Webmapp (oc:8641).
 - **Inversione con la catena completa di `updateDataChain(forceGeometryChain: true)`** (superata in
   oc:8543): accodava `UpdateEcTrackManualDataJob`, che allora azzerava `manual_data`, e il
   `$chain[0]->afterCommit()` aggiunto dentro `updateDataChain()` cambiava il comportamento di tutti
