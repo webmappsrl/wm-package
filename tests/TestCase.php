@@ -62,6 +62,11 @@ class TestCase extends Orchestra
             'driver' => 'jwt',
             'provider' => 'users',
         ]);
+
+        // Il lock del DEM (oc:8660) e i job con uniqueVia() usano lo store
+        // `redis`: nei test Redis non c'e', e ogni EcTrack creata prende il
+        // lock in createDataChain(). Uno store in memoria per test basta.
+        $app['config']->set('cache.stores.redis.driver', 'array');
     }
 
     protected function defineDatabaseMigrations()

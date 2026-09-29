@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
-use Illuminate\Support\Facades\DB;
 use Wm\WmPackage\Models\Abstracts\MultiLineString;
 use Wm\WmPackage\Models\User;
 use Wm\WmPackage\TrailRegistry\Database\Factories\TrailApplicationFactory;
@@ -82,6 +81,9 @@ class TrailApplication extends MultiLineString
     protected static function booted(): void
     {
         static::created(function (TrailApplication $application) {
+            // Il lock si prende anche qui: il dettaglio che Nova apre subito
+            // dopo non deve accodare un secondo job (oc:8660).
+            $application->acquireDemLock();
             UpdateTrailApplicationDemJob::dispatch($application->id)->afterCommit();
         });
     }
@@ -98,27 +100,9 @@ class TrailApplication extends MultiLineString
         $this->addMediaCollection(self::ORIGINAL_GEOMETRY_COLLECTION)->singleFile();
     }
 
-    /**
-     * Serve il DEM se c'e' una traccia su cui calcolarlo e il dato manca.
-     */
-    public function needsDem(): bool
+    public function dispatchDem(): void
     {
-        if (! empty($this->properties['dem_data'] ?? null)) {
-            return false;
-        }
-
-        return (bool) DB::selectOne(
-            'SELECT geometry IS NOT NULL AND ST_IsValid(geometry::geometry) AND NOT ST_IsEmpty(geometry::geometry) AS ok
-             FROM trail_applications WHERE id = ?',
-            [$this->id],
-        )?->ok;
-    }
-
-    public function dispatchDemIfMissing(): void
-    {
-        if ($this->needsDem()) {
-            UpdateTrailApplicationDemJob::dispatch($this->id);
-        }
+        UpdateTrailApplicationDemJob::dispatch($this->id);
     }
 
     /**

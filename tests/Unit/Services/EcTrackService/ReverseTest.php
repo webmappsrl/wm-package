@@ -79,6 +79,9 @@ class ReverseTest extends AbstractEcTrackServiceTest
         $this->assertSame('MULTILINESTRING Z ((2 2 200,1 1 100,0 0 0))', $this->wkt($track));
         $this->assertSame($properties['manual_data'], $this->storedProperties($track)['manual_data']);
         $this->assertSame('A', $this->storedProperties($track)['from']);
+        // La catena include i job dipendenti dalla geometria: reverse() ha preso il lock del
+        // ricalcolo DEM, il dettaglio aperto subito dopo non ne accoda uno in parallelo (oc:8660).
+        $this->assertFalse($track->acquireDemLock());
         Bus::assertChained([
             UpdateEcTrackDemJob::class,
             UpdateEcTrackSlopeValues::class,
