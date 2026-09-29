@@ -226,7 +226,7 @@ class TrailRegistryCode extends Resource
         // d'occhio perche' quel codice ha quel prefisso e a chi appartiene.
         // La rotta del campo risale al modello dall'elenco delle Resource di
         // Nova, quindi non serve dichiarare l'endpoint a mano.
-        $fields[] = TrailRegistryMap::make(__('Mappa'), 'geometry');
+        $fields[] = TrailRegistryMap::make(__('Mappa'), 'geometry')->enableSlopeChart();
 
         // La legenda e' HTML statico accanto alla mappa, non un componente
         // dentro di essa: vedi MapLegendRenderer per il perche'.

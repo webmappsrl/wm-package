@@ -35,14 +35,19 @@ class MapLegendRenderer
         'application' => ['rgba(234, 88, 12, 1)', '', 'Traccia dell\'istanza da cui il codice e\' nato'],
     ];
 
-    public static function render(TrailRegistryCodeModel $code): string
+    /**
+     * `$subject` e' il punto di vista della scheda che mostra la legenda: deve
+     * essere lo stesso della mappa accanto, altrimenti la voce del profilo
+     * nominerebbe la linea sbagliata (oc:8662).
+     */
+    public static function render(TrailRegistryCodeModel $code, string $subject = TrailRegistryCodeModel::MAP_SUBJECT_CODE): string
     {
         $rows = [];
 
         // La collection si compone una volta sola: da qui si contano sia i
         // settori — per sapere se la voce «altri settori» ha senso — sia i
         // vicini, che nelle colonne non si vedono affatto.
-        $features = $code->getFeatureCollectionMap()['features'];
+        $features = $code->getFeatureCollectionMap($subject)['features'];
 
         $sectorCount = count(array_filter(
             $features,
@@ -77,11 +82,93 @@ class MapLegendRenderer
             );
         }
 
+        foreach (self::signRows($features) as $row) {
+            $rows[] = $row;
+        }
+
+        $subjectFeature = collect($features)->first(fn (array $f) => ($f['properties']['slopeChart'] ?? false) === true);
+
+        if ($subjectFeature !== null) {
+            $rows[] = sprintf(
+                '<li style="margin:0 0 6px 0;list-style:none">%s</li>',
+                e(($subjectFeature['properties']['subjectKind'] ?? '') === 'track'
+                    ? __('Profilo altimetrico sotto la mappa: del sentiero')
+                    : __('Profilo altimetrico sotto la mappa: della traccia dell\'istanza')),
+            );
+        }
+
         if ($rows === []) {
             return '<p>'.e(__('Nessuna geometria da mostrare per questo codice.')).'</p>';
         }
 
         return '<ul style="margin:0;padding:0;font-size:0.875rem">'.implode('', $rows).'</ul>';
+    }
+
+    /**
+     * I segnavia, con gli stessi colori del componente Vue
+     * (`TrailRegistryMapField/resources/js/trail-sign.mjs`): vanno cambiati
+     * insieme (oc:8662). [bande, bordo, barrato, etichetta]
+     *
+     * @var array<string, array{0: string|null, 1: string, 2: bool, 3: string}>
+     */
+    protected const SIGNS = [
+        'current' => ['rgba(234, 88, 12, 1)', 'rgba(234, 88, 12, 1)', false, 'Numero di questo codice'],
+        'released' => ['rgba(148, 163, 184, 1)', 'rgba(148, 163, 184, 1)', true, 'Numero liberato: non appartiene piu\' a questa istanza'],
+        'assigned' => ['rgba(220, 38, 38, 1)', 'rgba(220, 38, 38, 1)', false, 'Numero di un sentiero validato'],
+        'reserved' => [null, 'rgba(220, 38, 38, 1)', false, 'Numero proposto da un\'altra istanza'],
+    ];
+
+    /**
+     * Una voce per ogni tipo di segnavia davvero presente sulla mappa, per la
+     * stessa ragione delle altre voci: una legenda che nomina un elemento
+     * assente lo fa cercare.
+     *
+     * @param  array<int, array<string, mixed>>  $features
+     * @return array<int, string>
+     */
+    protected static function signRows(array $features): array
+    {
+        $present = [];
+
+        foreach ($features as $f) {
+            $p = $f['properties'];
+
+            if (($p['current'] ?? false) === true) {
+                $present[($p['codeStatus'] ?? '') === 'released' ? 'released' : 'current'] = true;
+            } elseif (($p['neighbour'] ?? false) === true && isset($p['codeStatus'])) {
+                $present[$p['codeStatus']] = true;
+            }
+        }
+
+        $rows = [];
+
+        foreach (self::SIGNS as $key => [$band, $border, $strike, $label]) {
+            if (! isset($present[$key])) {
+                continue;
+            }
+
+            $bandCss = $band ?? '#fff';
+            $middle = $strike
+                ? sprintf('background:linear-gradient(to bottom right,transparent 44%%,%1$s 44%%,%1$s 56%%,transparent 56%%),#fff', e($border))
+                : 'background:#fff';
+
+            $swatch = sprintf(
+                '<span style="display:inline-flex;flex-direction:column;width:24px;border:1px solid %s;vertical-align:middle">'
+                .'<span style="height:4px;background:%s"></span><span style="height:8px;%s"></span><span style="height:4px;background:%s"></span></span>',
+                e($border),
+                e($bandCss),
+                $middle,
+                e($bandCss),
+            );
+
+            $rows[] = sprintf(
+                '<li style="margin:0 0 6px 0;list-style:none">%s <span style="margin-left:8px">%s</span></li>',
+                $swatch,
+                e(__($label)),
+            );
+        }
+
+        return $rows;
     }
 
     /**

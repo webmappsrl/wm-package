@@ -292,3 +292,84 @@ it('non disegna il codice in esame fra i suoi vicini', function () {
 
     expect($vicini)->toBe([]);
 });
+
+it('i vicini portano lo stato del loro codice', function () {
+    $sectorId = makeSector('ZNUB5', 'POLYGON((0 0, 0 10, 10 10, 10 0, 0 0))');
+
+    $inEsame = makeCode(['status' => TrailCodeStatus::Assigned, 'taxonomy_where_id' => $sectorId, 'number' => 62]);
+    makeCode(['status' => TrailCodeStatus::Assigned, 'taxonomy_where_id' => $sectorId, 'number' => 63]);
+    makeCode(['status' => TrailCodeStatus::Reserved, 'taxonomy_where_id' => $sectorId, 'number' => 64]);
+
+    DB::statement('UPDATE ec_tracks SET geometry = ST_GeomFromText(?, 4326)', ['MULTILINESTRING Z((1 1 0, 2 2 0))']);
+
+    $stati = collect(TrailRegistryCode::findOrFail($inEsame)->getFeatureCollectionMap()['features'])
+        ->filter(fn (array $f) => ($f['properties']['neighbour'] ?? false) === true)
+        ->mapWithKeys(fn (array $f) => [$f['properties']['label'] => $f['properties']['codeStatus']])
+        ->all();
+
+    expect($stati)->toBe(['63' => 'assigned', '64' => 'reserved']);
+});
+
+it('marca il sentiero come codice in esame quando c e, con numero stato e profilo', function () {
+    $sectorId = makeSector('ZNUB5', 'POLYGON((0 0, 0 10, 10 10, 10 0, 0 0))');
+    $applicationId = DB::table('trail_applications')->insertGetId([
+        'user_id' => makeTrailRegistryTestUser(),
+        'source' => 'api',
+        'status' => 'approved',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+    $code = TrailRegistryCode::findOrFail(makeCode([
+        'status' => TrailCodeStatus::Assigned,
+        'taxonomy_where_id' => $sectorId,
+        'trail_application_id' => $applicationId,
+        'number' => 62,
+        'variant' => 'A',
+    ]));
+    foreach ([['trail_applications', $applicationId], ['ec_tracks', $code->ec_track_id]] as [$table, $id]) {
+        DB::statement("UPDATE {$table} SET geometry = ST_GeomFromText(?, 4326) WHERE id = ?", ['MULTILINESTRING Z((1 1 0, 2 2 0))', $id]);
+    }
+
+    $correnti = array_values(array_filter(
+        $code->fresh()->getFeatureCollectionMap()['features'],
+        fn (array $f) => ($f['properties']['current'] ?? false) === true,
+    ));
+
+    expect($correnti)->toHaveCount(1)
+        ->and($correnti[0]['properties'])->toMatchArray([
+            'label' => '62A',
+            'codeStatus' => 'assigned',
+            'slopeChart' => true,
+            'subjectKind' => 'track',
+        ])
+        ->and($correnti[0]['properties']['tooltip'])->toContain('Sentiero');
+});
+
+it('senza sentiero marca la traccia dell istanza come codice in esame', function () {
+    $sectorId = makeSector('ZNUB5', 'POLYGON((0 0, 0 10, 10 10, 10 0, 0 0))');
+    $code = TrailRegistryCode::findOrFail(makeCode(['status' => TrailCodeStatus::Reserved, 'taxonomy_where_id' => $sectorId, 'number' => 66]));
+
+    $correnti = array_values(array_filter(
+        $code->getFeatureCollectionMap()['features'],
+        fn (array $f) => ($f['properties']['current'] ?? false) === true,
+    ));
+
+    expect($correnti)->toHaveCount(1)
+        ->and($correnti[0]['properties'])->toMatchArray([
+            'label' => '66',
+            'codeStatus' => 'reserved',
+            'subjectKind' => 'application',
+        ]);
+});
+
+it('un codice liberato resta il codice in esame, con lo stato released', function () {
+    $sectorId = makeSector('ZNUB5', 'POLYGON((0 0, 0 10, 10 10, 10 0, 0 0))');
+    // Si nasce Reserved (con l'istanza e la sua geometria) e si libera, come fa «Rifiuta».
+    $code = TrailRegistryCode::findOrFail(makeCode(['status' => TrailCodeStatus::Reserved, 'taxonomy_where_id' => $sectorId, 'number' => 59]));
+    $code->update(['status' => TrailCodeStatus::Released]);
+
+    $corrente = collect($code->fresh()->getFeatureCollectionMap()['features'])
+        ->first(fn (array $f) => ($f['properties']['current'] ?? false) === true);
+
+    expect($corrente['properties']['codeStatus'])->toBe('released');
+});

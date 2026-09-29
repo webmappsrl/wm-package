@@ -62,7 +62,7 @@
 <script>
 import { ref, nextTick, onMounted, onUnmounted, watch } from 'vue';
 import SlopeChart from './SlopeChart.vue';
-import { getSlopeChartTrackFromGeojson, toLineStringFeatureObject } from '../slope-chart/utils.mjs';
+import { findExplicitSlopeChartFeature, getSlopeChartTrackFromGeojson, toLineStringFeatureObject } from '../slope-chart/utils.mjs';
 
 // OpenLayers imports
 import Map from 'ol/Map';
@@ -147,6 +147,12 @@ export default {
         enableSlopeChart: {
             type: Boolean,
             default: true
+        },
+        // Alla ricarica dei dati mantiene centro e zoom scelti dall'utente:
+        // l'inquadratura sul tracciato si fa solo al primo caricamento (oc:8662).
+        preserveViewOnReload: {
+            type: Boolean,
+            default: false
         }
     },
 
@@ -180,12 +186,18 @@ export default {
         const slopeHover = ref({ location: undefined, track: undefined });
         const hoverSource = ref(null); // 'map' | 'chart' | null
         const slopeChartAllowed = ref(false);
+        // True quando il GeoJSON indica esplicitamente la linea del profilo:
+        // allora ne' il passaggio del mouse ne' il clic su altre linee la
+        // sostituiscono (oc:8662).
+        const slopeChartLocked = ref(false);
+        let hasFitted = false;
 
         const hoverMarkerSource = ref(null);
         const hoverMarkerFeature = ref(null);
 
         const setDefaultTrackForChartFromGeojson = (data) => {
             const track = getSlopeChartTrackFromGeojson(data, props.enableSlopeChart);
+            slopeChartLocked.value = props.enableSlopeChart && !!findExplicitSlopeChartFeature(data);
             slopeChartAllowed.value = !!track;
             selectedTrackForChart.value = track;
             try {
@@ -345,7 +357,9 @@ export default {
             vectorSource.value.clear();
             vectorSource.value.addFeatures(features);
 
-            if (features.length > 0) {
+            const reloaded = hasFitted;
+
+            if (features.length > 0 && !(props.preserveViewOnReload && reloaded)) {
                 const lineStringFeatures = features.filter(feature => {
                     const geometry = feature.getGeometry();
                     if (!geometry) {
@@ -391,13 +405,17 @@ export default {
                 }
             }
 
+            if (features.length > 0) {
+                hasFitted = true;
+            }
+
             if (props.enableScreenshot && !screenshotCaptured.value) {
                 map.value.once('rendercomplete', () => {
                     captureScreenshot();
                 });
             }
 
-            emit('map-ready', { map: map.value, features, geojson: data, featuresMap: featuresMap.value });
+            emit('map-ready', { map: map.value, features, geojson: data, featuresMap: featuresMap.value, reloaded });
             isLoading.value = false;
         };
 
@@ -434,7 +452,10 @@ export default {
         const handleFeatureClick = (feature, featureProps) => {
             const clickAction = featureProps.clickAction || (featureProps.link ? 'link' : 'none');
             try {
-                if (!props.enableSlopeChart || !slopeChartAllowed.value) {
+                if (slopeChartLocked.value) {
+                    // La linea del profilo la decide il GeoJSON: il clic su un'altra
+                    // linea apre il suo link ma non cambia il profilo (oc:8662).
+                } else if (!props.enableSlopeChart || !slopeChartAllowed.value) {
                     // Non mostrare il chart se disabilitato o se ci sono più linee nella FeatureCollection
                     selectedTrackForChart.value = null;
                 } else {
@@ -544,7 +565,18 @@ export default {
                     }
                     const geom = feature?.getGeometry?.();
                     const type = geom?.getType?.();
-                    if (type === 'LineString' || type === 'MultiLineString') {
+                    // Con la linea del profilo fissata conta solo se il mouse e' su
+                    // quella linea, anche quando sopra c'e' altro — un vicino o una
+                    // traccia con la stessa geometria, un'etichetta: la si cerca
+                    // apposta, invece di guardare solo la feature piu' in alto (oc:8662).
+                    const onChartLine = slopeChartLocked.value
+                        ? !!map.value.forEachFeatureAtPixel(
+                            pixel,
+                            (f) => (f.get('slopeChart') === true ? f : undefined),
+                            { hitTolerance: 6 },
+                        )
+                        : (type === 'LineString' || type === 'MultiLineString');
+                    if (onChartLine) {
                         const [lon, lat] = toLonLat(event.coordinate);
                         hoverSource.value = 'map';
                         slopeChartRef.value?.setHoverLocation?.({ lon, lat });
@@ -688,11 +720,16 @@ export default {
             hoverMarkerSource.value = new VectorSource();
             const hoverMarkerLayer = new VectorLayer({
                 source: hoverMarkerSource.value,
+                // Colori come array e non come stringa: OpenLayers li usa cosi'
+                // come sono. Una stringa passa da `color-parse` per il canvas di
+                // hit detection del cerchio, e nel bundle del catasto quel
+                // parsing fallisce: l'eccezione interrompe il disegno e la mappa
+                // si svuota al primo passaggio sul profilo (oc:8662).
                 style: new Style({
                     image: new CircleStyle({
                         radius: 6,
-                        fill: new Fill({ color: 'rgba(0, 0, 0, 0.9)' }),
-                        stroke: new Stroke({ color: 'rgba(255, 255, 255, 1)', width: 2 })
+                        fill: new Fill({ color: [0, 0, 0, 0.9] }),
+                        stroke: new Stroke({ color: [255, 255, 255, 1], width: 2 })
                     })
                 }),
                 zIndex: 5

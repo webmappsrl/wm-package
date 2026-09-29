@@ -178,6 +178,7 @@ trait ComposesTrailRegistryMap
                 c.id,
                 c.number,
                 c.variant,
+                c.status,
                 c.ec_track_id,
                 c.trail_application_id,
                 ST_AsGeoJSON(COALESCE(t.geometry, a.geometry)) AS geojson

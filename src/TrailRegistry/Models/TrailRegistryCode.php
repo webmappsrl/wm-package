@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\TaxonomyWhere;
 use Wm\WmPackage\TrailRegistry\Enums\TrailCodeOrigin;
@@ -32,6 +33,7 @@ use Wm\WmPackage\TrailRegistry\TrailRegistryClasses;
  * @property int|null $taxonomy_where_id
  * @property int|null $trail_application_id
  * @property int|null $ec_track_id
+ * @property Carbon|null $updated_at
  * @property-read string $fullCode
  * @property-read string $label
  * @property-read string $code
@@ -154,6 +156,33 @@ class TrailRegistryCode extends Model
     }
 
     /**
+     * Cambia ogni volta che cambia cio' che la mappa di questo codice disegna
+     * per lui: un codice nuovo (id), una transizione (stato) o un nuovo
+     * detentore (updated_at). Il campo la mette nell'URL del GeoJSON, e il
+     * componente Vue riscarica la mappa quando l'URL cambia (oc:8662).
+     *
+     * Lo stato e' esplicito e non affidato a updated_at: due transizioni nello
+     * stesso secondo lascerebbero il timestamp identico.
+     */
+    public function mapVersion(): string
+    {
+        return sprintf('%d-%s-%d', $this->id, $this->status->value, $this->updated_at?->getTimestamp() ?? 0);
+    }
+
+    /**
+     * Da quale scheda si guarda la mappa (oc:8662). Decide quale linea porta
+     * il numero del codice in esame e il profilo altimetrico:
+     *
+     * - dalla scheda del codice, il sentiero se c'e', altrimenti la traccia
+     *   dell'istanza: il codice appartiene al sentiero da quando esiste;
+     * - dalla scheda dell'istanza, sempre la traccia proposta: e' quella che
+     *   il gestore sta valutando.
+     */
+    public const MAP_SUBJECT_CODE = 'code';
+
+    public const MAP_SUBJECT_APPLICATION = 'application';
+
+    /**
      * Le geometrie che spiegano questo codice, su una mappa sola.
      *
      * Tre feature, tutte facoltative perche' dipendono dallo stato:
@@ -175,20 +204,50 @@ class TrailRegistryCode extends Model
      *
      * @return array{type: string, features: array<int, array<string, mixed>>}
      */
-    public function getFeatureCollectionMap(): array
+    public function getFeatureCollectionMap(string $subject = self::MAP_SUBJECT_CODE): array
     {
         $novaPath = $this->novaPath();
+
+        $track = $this->trackFeature($novaPath);
+        $application = $this->applicationFeature($novaPath);
+
+        if ($subject === self::MAP_SUBJECT_CODE && $track !== null) {
+            $track = $this->markSubject($track, 'track');
+        } elseif ($application !== null) {
+            $application = $this->markSubject($application, 'application');
+        }
 
         $features = array_values(array_filter(array_merge(
             $this->sectorFeatures($novaPath),
             $this->neighbourFeatures($novaPath),
-            [
-                $this->trackFeature($novaPath),
-                $this->applicationFeature($novaPath),
-            ],
+            [$track, $application],
         )));
 
         return ['type' => 'FeatureCollection', 'features' => $features];
+    }
+
+    /**
+     * La linea che rappresenta il codice in esame: porta il suo numero, il suo
+     * stato e il profilo altimetrico. Una sola per mappa — anche quando
+     * sentiero e traccia coincidono — cosi' il numero compare una volta.
+     *
+     * `current`, `codeStatus`, `slopeChart` e `subjectKind` sono il contratto
+     * con il componente Vue del campo e con la legenda (oc:8662).
+     *
+     * @param  array<string, mixed>  $feature
+     * @return array<string, mixed>
+     */
+    protected function markSubject(array $feature, string $kind): array
+    {
+        $feature['properties'] += [
+            'current' => true,
+            'label' => $this->label,
+            'codeStatus' => $this->status->value,
+            'slopeChart' => true,
+            'subjectKind' => $kind,
+        ];
+
+        return $feature;
     }
 
     /**
@@ -351,6 +410,8 @@ class TrailRegistryCode extends Model
                 'properties' => [
                     'neighbour' => true,
                     'label' => $label,
+                    // Validato o proposto: il componente Vue ne ricava lo stile del segnavia (oc:8662).
+                    'codeStatus' => (string) $row->status,
                     'tooltip' => __('Sentiero').' '.$this->fullCode.$label,
                     'strokeColor' => 'rgba(100, 116, 139, 0.9)',
                     'strokeWidth' => 2,

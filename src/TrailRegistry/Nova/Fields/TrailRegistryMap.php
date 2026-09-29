@@ -42,6 +42,25 @@ class TrailRegistryMap extends FeatureCollectionMap
         // Un codice non si modifica da un form, quindi la mappa non ha senso
         // altrove: e' una scheda di sola lettura.
         $this->onlyOnDetail();
+
+        // Il profilo si accende Resource per Resource: la scheda delle
+        // anomalie usa questo stesso campo e non lo vuole (oc:8662).
+        $this->enableSlopeChart(false);
+    }
+
+    /**
+     * Oltre alla geometria, espone la versione della mappa del modello: il
+     * componente la aggiunge all'URL del GeoJSON, cosi' dopo un'Action Nova —
+     * che rilegge la risorsa ma non ricrea il componente — l'URL cambia e la
+     * mappa si riscarica da sola (oc:8662).
+     */
+    public function resolve($resource, ?string $attribute = null): void
+    {
+        parent::resolve($resource, $attribute);
+
+        if (is_object($resource) && method_exists($resource, 'mapVersion')) {
+            $this->withMeta(['mapVersion' => (string) $resource->mapVersion()]);
+        }
     }
 
     /**

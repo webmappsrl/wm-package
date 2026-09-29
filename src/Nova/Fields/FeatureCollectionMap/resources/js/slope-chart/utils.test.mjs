@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { STEPS, computeSlopeChartData, getSlopeChartTrackFromGeojson, haversineMeters, isTrack3d } from './utils.mjs';
+import { STEPS, computeSlopeChartData, findExplicitSlopeChartFeature, getSlopeChartTrackFromGeojson, haversineMeters, isTrack3d } from './utils.mjs';
 
 describe('SlopeChart computeSlopeChartData', () => {
     it('considera 3D solo se esiste almeno una z != 0', () => {
@@ -131,3 +131,36 @@ describe('SlopeChart enable/disable (FeatureCollection gating)', () => {
     });
 });
 
+
+describe('linea del profilo indicata nel GeoJSON (oc:8662)', () => {
+    const line = (props, coords = [[0, 0, 1], [0, 0.001, 2]]) => ({
+        type: 'Feature',
+        properties: props,
+        geometry: { type: 'LineString', coordinates: coords },
+    });
+
+    it('con piu linee sceglie quella marcata slopeChart', () => {
+        const fc = { type: 'FeatureCollection', features: [line({ neighbour: true }), line({ slopeChart: true, id: 'x' }), line({})] };
+        expect(getSlopeChartTrackFromGeojson(fc)?.properties?.id).toBe('x');
+    });
+
+    it('senza marcatura resta il comportamento di prima: piu linee, niente profilo', () => {
+        const fc = { type: 'FeatureCollection', features: [line({}), line({})] };
+        expect(getSlopeChartTrackFromGeojson(fc)).toBeNull();
+    });
+
+    it('senza marcatura una sola linea da ancora il profilo', () => {
+        const fc = { type: 'FeatureCollection', features: [line({ id: 'solo' })] };
+        expect(getSlopeChartTrackFromGeojson(fc)?.properties?.id).toBe('solo');
+    });
+
+    it('ignora la marcatura su una geometria che non e una linea', () => {
+        const fc = { type: 'FeatureCollection', features: [{ type: 'Feature', properties: { slopeChart: true }, geometry: { type: 'Point', coordinates: [0, 0] } }] };
+        expect(findExplicitSlopeChartFeature(fc)).toBeNull();
+    });
+
+    it('con il profilo spento non restituisce nulla anche se marcato', () => {
+        const fc = { type: 'FeatureCollection', features: [line({ slopeChart: true })] };
+        expect(getSlopeChartTrackFromGeojson(fc, false)).toBeNull();
+    });
+});
