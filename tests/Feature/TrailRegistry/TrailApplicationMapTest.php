@@ -62,5 +62,5 @@ it('nella scheda dell istanza il codice in esame e il profilo stanno sul traccia
     expect($correnti)->toHaveCount(1)
         ->and($correnti[0]['properties']['subjectKind'])->toBe('application')
         ->and($correnti[0]['properties']['slopeChart'])->toBeTrue()
-        ->and($correnti[0]['properties']['label'])->toBe('66');
+        ->and($correnti[0]['properties']['label'])->toBe('566');
 });

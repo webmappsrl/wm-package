@@ -241,7 +241,8 @@ class TrailRegistryCode extends Model
     {
         $feature['properties'] += [
             'current' => true,
-            'label' => $this->label,
+            // Col settore davanti, come i vicini (oc:8662).
+            'label' => $this->sector.$this->label,
             'codeStatus' => $this->status->value,
             'slopeChart' => true,
             'subjectKind' => $kind,
@@ -363,19 +364,19 @@ class TrailRegistryCode extends Model
      * Gli altri sentieri del settore: tratto sottile e tenue, perche' sono
      * contesto e non devono competere con la traccia in esame.
      *
-     * L'etichetta e' numero e variante, non il codice intero: regione,
-     * provincia e area sono costanti nel contesto, e il settore e' gia'
-     * leggibile sulla mappa, dove i suoi confini sono disegnati. Ripeterlo in
-     * ogni etichetta sarebbe informazione doppia.
+     * L'etichetta e' settore, numero e variante (`211`, `210A`): regione,
+     * provincia e area sono costanti nel contesto e restano fuori, il settore
+     * no — e' il numero come lo legge il gestore, lo stesso delle opzioni del
+     * «sostituisci numero» (oc:8662). Fino a oc:8662 era solo numero e
+     * variante.
      *
      * `neighbour` nelle properties e' il contratto con il componente Vue del
      * campo: da li' riconosce quali feature portare sul layer delle etichette
      * e quali escludere dall'inquadratura iniziale.
      *
-     * Le righe arrivano da `DB::select` e non sono modelli, quindi l'etichetta
-     * si compone qui con la stessa formula dell'accessor `label`. E' l'unica
-     * ripetizione di quella regola, e sta a due metodi di distanza: istanziare
-     * un modello per riga costerebbe piu' di quanto valga toglierla.
+     * Le righe arrivano da `DB::select` e non sono modelli: l'etichetta si
+     * compone con `formatCode()`, lo stesso metodo di `label` e `code`, senza
+     * istanziare un modello per riga.
      *
      * @return array<int, array<string, mixed>>
      */
@@ -398,18 +399,16 @@ class TrailRegistryCode extends Model
                 continue;
             }
 
-            $label = sprintf(
-                '%02d%s',
-                (int) $row->number,
-                $row->variant === '0' ? '' : $row->variant,
-            );
+            // Numero e variante per il tooltip, che ha gia' il settore nel
+            // fullCode; settore, numero e variante per il segnavia.
+            $label = static::formatCode(null, null, '', '', (int) $row->number, (string) $row->variant);
 
             $features[] = [
                 'type' => 'Feature',
                 'geometry' => $geometry,
                 'properties' => [
                     'neighbour' => true,
-                    'label' => $label,
+                    'label' => $this->sector.$label,
                     // Validato o proposto: il componente Vue ne ricava lo stile del segnavia (oc:8662).
                     'codeStatus' => (string) $row->status,
                     'tooltip' => __('Sentiero').' '.$this->fullCode.$label,

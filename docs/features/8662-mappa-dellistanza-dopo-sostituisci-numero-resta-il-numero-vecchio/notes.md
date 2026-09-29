@@ -64,6 +64,11 @@ e poi lo passa a `Released`, invece di preparare a mano istanza e geometria come
   `resources/lang/*.json`. È la convenzione già in uso per tutte le voci di `MapLegendRenderer`,
   nessuna delle quali è tradotta; tradurre solo le nuove creerebbe una legenda metà tradotta.
 
+- **Settore davanti al numero sui segnavia** (richiesta del dev dopo il rilascio, diretta su
+  `develop`): l'etichetta passa da numero e variante (`11`, `10A`) a settore, numero e variante
+  (`211`, `210A`), come le opzioni del «sostituisci numero». Il tooltip resta `Sentiero` + codice
+  intero.
+
 ## Follow-up
 
 Rilievi minori della review finale, non corretti:

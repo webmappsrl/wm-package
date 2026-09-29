@@ -279,7 +279,7 @@ modifica, cancellazione, Action) senza che lo shard debba ricordarsene.
   `Assigned`, gli stessi della select del «sostituisci numero» — con la geometria del sentiero o,
   se il codice è solo riservato, quella dell'istanza (oc:8568).
   I numeri sono **segnavia CAI** (banda, fascia bianca con il numero, banda), orizzontali e posati
-  a metà tracciato: bande rosse per un sentiero validato (`Assigned`), bordo rosso e bande vuote
+  a metà tracciato, con l'ultima cifra del settore davanti (`211`, `210A` nel settore ZNUG2): bande rosse per un sentiero validato (`Assigned`), bordo rosso e bande vuote
   per un numero proposto da un'altra istanza (`Reserved`). **Il numero del codice in esame** ha
   bande arancioni, il colore della traccia dell'istanza, e sta sopra tutti gli altri; se il codice
   è stato liberato è grigio e barrato. I numeri dei vicini compaiono da un certo zoom in poi

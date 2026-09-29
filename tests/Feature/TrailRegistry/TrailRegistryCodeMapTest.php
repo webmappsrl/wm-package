@@ -257,7 +257,7 @@ it('disegna i vicini del settore con numero e variante, sotto la traccia in esam
     ));
 
     expect($vicini)->toHaveCount(1)
-        ->and($vicini[0]['properties']['label'])->toBe('63A')
+        ->and($vicini[0]['properties']['label'])->toBe('563A')
         ->and($vicini[0]['properties']['tooltip'])->toContain('63A');
 
     // I vicini stanno sotto: il sentiero in esame e' disegnato dopo.
@@ -307,7 +307,7 @@ it('i vicini portano lo stato del loro codice', function () {
         ->mapWithKeys(fn (array $f) => [$f['properties']['label'] => $f['properties']['codeStatus']])
         ->all();
 
-    expect($stati)->toBe(['63' => 'assigned', '64' => 'reserved']);
+    expect($stati)->toBe(['563' => 'assigned', '564' => 'reserved']);
 });
 
 it('marca il sentiero come codice in esame quando c e, con numero stato e profilo', function () {
@@ -337,7 +337,7 @@ it('marca il sentiero come codice in esame quando c e, con numero stato e profil
 
     expect($correnti)->toHaveCount(1)
         ->and($correnti[0]['properties'])->toMatchArray([
-            'label' => '62A',
+            'label' => '562A',
             'codeStatus' => 'assigned',
             'slopeChart' => true,
             'subjectKind' => 'track',
@@ -356,7 +356,7 @@ it('senza sentiero marca la traccia dell istanza come codice in esame', function
 
     expect($correnti)->toHaveCount(1)
         ->and($correnti[0]['properties'])->toMatchArray([
-            'label' => '66',
+            'label' => '566',
             'codeStatus' => 'reserved',
             'subjectKind' => 'application',
         ]);
