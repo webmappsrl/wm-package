@@ -23,6 +23,7 @@ use Wm\WmPackage\Nova\Fields\TrackColor\src\TrackColor;
 use Wm\WmPackage\Nova\Filters\FeaturesByLayerFilter;
 use Wm\WmPackage\Nova\Filters\FeaturesExcludeByIds;
 use Wm\WmPackage\Nova\Filters\FeaturesIncludeByIds;
+use Wm\WmPackage\Nova\Traits\DispatchesDemOnDetail;
 use Wm\WmPackage\Nova\Traits\HasConfigDetailPanel;
 use Wm\WmPackage\Nova\Traits\MultiLinestringResourceTrait;
 
@@ -33,6 +34,7 @@ use Wm\WmPackage\Nova\Traits\MultiLinestringResourceTrait;
  */
 class EcTrack extends AbstractEcResource
 {
+    use DispatchesDemOnDetail;
     use HasConfigDetailPanel;
     use MultiLinestringResourceTrait {
         fields as protected fieldsTrait;
@@ -59,6 +61,8 @@ class EcTrack extends AbstractEcResource
 
     public function fields(NovaRequest $request): array
     {
+        $this->dispatchDemOnDetail($request);
+
         return [
             ...$this->fieldsTrait($request),
             $this->configDetailPanel(),

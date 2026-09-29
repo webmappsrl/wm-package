@@ -19,13 +19,22 @@ su sentieri (`EcTrack`) e istanze del Catasto Sentieri (`TrailApplication`).
   `nullable|numeric|min:0`. Gli altri cinque Field del tab (`round_trip`, durate bici ed
   escursionismo) scrivono in `dem_data` e non hanno restrizioni di visibilità.
 - **Sul sentiero** il DEM lo calcola la catena di `EcTrackService` (`UpdateEcTrackDemJob`,
-  `UpdateEcTrack3DDemJob`), alla creazione e a ogni modifica della geometria.
+  `UpdateEcTrack3DDemJob`), alla creazione, a ogni modifica della geometria e, se manca,
+  all'apertura del dettaglio in Nova: in quel caso parte `dispatchDemChain()`, cioè
+  `geometryDependentJobs()` senza `SyncModelTaxonomyWhereJob`, seguito da `publicationJobs()`.
 - **Sull'istanza** lo calcola `UpdateTrailApplicationDemJob`: accodato alla creazione con
-  `afterCommit()`, rilanciato dal dettaglio solo se la geometria è valida e `dem_data` è vuoto,
-  unico per istanza con lock su Redis. Scrive in SQL solo `dem_data` e la geometria con la Z del
-  DEM, senza toccare `updated_at`. Il file caricato resta intatto nella collection
-  `original_geometry`. L'operatore corregge i manuali solo mentre l'istanza è `under_review`; con
-  l'approvazione `properties` e il file passano al sentiero.
+  `afterCommit()`, unico per istanza con lock su Redis. Scrive in SQL solo `dem_data` e la
+  geometria con la Z del DEM, senza toccare `updated_at`. Il file caricato resta intatto nella
+  collection `original_geometry`. L'operatore corregge i manuali solo mentre l'istanza è
+  `under_review`; con l'approvazione `properties` e il file passano al sentiero.
+- **Il DEM mancante si ricalcola all'apertura del dettaglio**, su sentiero e istanza, con la
+  logica nel padre `MultiLineString`. `needsDem()` è vero se PostGIS giudica la geometria valida e
+  non vuota, e `dem_data` è vuoto oppure tutte le Z valgono 0. `dispatchDemIfMissing()` prende un
+  lock di un'ora (`DEM_LOCK_SECONDS`) per tabella e id e chiama `dispatchDem()`, ridefinito da ogni
+  figlio. Lo stesso lock lo prendono `createDataChain()`, `updateDataChain()` quando cambia la
+  geometria, `reverse()` con la geometria e il `created()` dell'istanza. Lo attiva il trait Nova
+  `DispatchesDemOnDetail`, chiamato esplicitamente nel `fields()` di `Nova\EcTrack` e
+  `TrailApplication`.
 - **`updateManualData()` parte dai manuali esistenti** e aggiunge solo i valori al primo livello
   diversi da DEM e OSM: non cancella più ciò che è stato scritto dal tab.
 - **Invertire il verso di una traccia** passa da `EcTrackService::reverse()`, chiamato dall'Action
@@ -66,6 +75,19 @@ su sentieri (`EcTrack`) e istanze del Catasto Sentieri (`TrailApplication`).
 - **`reverse()` aggiorna `updated_at`, al contrario del job dell'istanza** (oc:8543): app ed export
   incrementali scelgono le tracce da riscaricare con quella data. Un operatore con il form della
   traccia aperto riceve il 409 di Nova, che qui è corretto: i dati sono cambiati.
+- **Il lock lo prende anche chi accoda la catena** (oc:8660): dopo una creazione o un
+  salvataggio Nova riapre il dettaglio mentre la catena è ancora in coda, e senza lock partivano
+  due catene in parallelo che salvano l'intero `properties` e si cancellano i valori a vicenda. Il
+  lock non ferma la catena di chi lo prende, solo quella del dettaglio. Sta nel padre e non nei
+  job perché `Bus::chain()` non rispetta `ShouldBeUnique`.
+- **Le Z tutte a zero contano come DEM mancante** (oc:8660): la colonna è `MultiLineStringZ`, la Z
+  c'è sempre, e una traccia importata senza quote ha Z = 0 su ogni punto. Basta un punto sopra zero
+  per considerare le quote calcolate: un tratto sul mare ha davvero quota 0.
+- **Il PBF resta nella catena del DEM mancante** (oc:8660): le tile leggono `distance` e
+  `duration_forward` anche da `dem_data`.
+- **La catena del sentiero aggiorna `updated_at`, il job dell'istanza no** (oc:8660): sul sentiero
+  app ed export riscaricano la traccia con quella data. Un operatore con il form aperto mentre la
+  catena lavora riceve il 409 di Nova, come già succedeva alla creazione.
 - **`ascent` nell'indice Scout è il valore corrente** (oc:8543), come `distance` e
   `duration_forward`: prima si leggeva dal primo livello, vuoto su Forestas.
 
@@ -80,3 +102,8 @@ su sentieri (`EcTrack`) e istanze del Catasto Sentieri (`TrailApplication`).
   `$chain[0]->afterCommit()` aggiunto dentro `updateDataChain()` cambiava il comportamento di tutti
   i chiamanti. Prima ancora (primo ciclo) partiva solo il DEM, e scheda, profilo e app restavano al
   verso vecchio.
+- **Ricalcolo alla visualizzazione solo sull'istanza** (superata in oc:8660): `needsDem()` e
+  `dispatchDemIfMissing()` vivevano in `TrailApplication`, guardavano solo `dem_data` e non
+  prendevano lock; l'unica deduplica era `ShouldBeUnique` del job, con `uniqueFor` di 600
+  secondi. Il sentiero non aveva alcun ricalcolo alla visualizzazione, e un'istanza con
+  `dem_data` pieno ma quote a zero non ripartiva.

@@ -335,6 +335,10 @@ class EcTrackService extends BaseService
 
     public function createDataChain(EcTrack $track)
     {
+        // Il dettaglio che Nova apre subito dopo la creazione trova il lock
+        // preso e non accoda una seconda catena in parallelo (oc:8660).
+        $track->acquireDemLock();
+
         $chain = [];
         if (isset($track->properties['osmid']) && $track->properties['osmid']) {
             $chain[] = new UpdateEcTrackFromOsmJob($track);
@@ -392,6 +396,21 @@ class EcTrackService extends BaseService
             new UpdateEcTrackAppRelationsInfoJob($track),
             new UpdateEcTrackOrderRelatedPoi($track),
         ];
+    }
+
+    /**
+     * La catena del DEM mancante, accodata all'apertura del dettaglio
+     * (oc:8660): i job che dipendono dalla geometria, poi la pubblicazione.
+     * Fuori solo la taxonomy where, che dipende dalla forma della traccia e
+     * non dalle quote. Il PBF resta: le tile leggono distanza e durate anche
+     * da `dem_data`.
+     */
+    public function dispatchDemChain(EcTrack $track): void
+    {
+        Bus::chain([
+            ...$this->geometryDependentJobs($track, [SyncModelTaxonomyWhereJob::class]),
+            ...$this->publicationJobs($track),
+        ])->dispatch();
     }
 
     /**
@@ -500,6 +519,13 @@ class EcTrackService extends BaseService
             // (EcTrackResource passa da classifyField()); verificato il 24/09.
             : [new GenerateEcTrackPBFBatch($track), new UpdateEcTrackAwsJob($track)];
 
+        if ($geometry) {
+            // Stesso motivo di updateDataChain(): la catena include i job dipendenti dalla
+            // geometria, quindi prende il lock per non far accodare una seconda catena DEM
+            // in parallelo al dettaglio che Nova apre dopo l'inversione (oc:8660).
+            $track->acquireDemLock();
+        }
+
         // Prima la catena, poi l'indice: un errore di Elasticsearch non deve impedire il
         // ricalcolo né arrivare a Nova come errore su un'inversione già scritta.
         DB::afterCommit(function () use ($track, $jobs) {
@@ -600,6 +626,10 @@ class EcTrackService extends BaseService
         //     }
         // }
         if ($track->wasChanged('geometry')) {
+            // Prende comunque il lock del ricalcolo DEM: la catena parte lo stesso, ma il
+            // dettaglio che Nova apre subito dopo non trova il lock libero e non ne accoda
+            // una seconda in parallelo che si sovrascriverebbe properties (oc:8660).
+            $track->acquireDemLock();
             array_push($chain, ...$this->geometryDependentJobs($track));
         }
 

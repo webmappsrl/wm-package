@@ -10,6 +10,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Wm\WmPackage\Models\Abstracts\MultiLineString;
 use Wm\WmPackage\Services\Models\EcTrackService;
 use Wm\WmPackage\TrailRegistry\TrailRegistryClasses;
 
@@ -32,9 +33,10 @@ class UpdateTrailApplicationDemJob implements ShouldBeUnique, ShouldQueue
 
     /**
      * Il lock di ShouldBeUnique scade da solo: un job perso non blocca per
-     * sempre il ricalcolo di quell'istanza.
+     * sempre il ricalcolo di quell'istanza. Stessa durata del lock del
+     * ricalcolo alla visualizzazione (oc:8660).
      */
-    public int $uniqueFor = 600;
+    public int $uniqueFor = MultiLineString::DEM_LOCK_SECONDS;
 
     public function __construct(public int $applicationId)
     {

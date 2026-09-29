@@ -16,6 +16,7 @@ use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Tabs\Tab;
 use Wm\WmPackage\Models\User;
 use Wm\WmPackage\Nova\AbstractGeometryResource;
+use Wm\WmPackage\Nova\Traits\DispatchesDemOnDetail;
 use Wm\WmPackage\TrailRegistry\Enums\TrailApplicationStatus;
 use Wm\WmPackage\TrailRegistry\Enums\TrailCodeStatus;
 use Wm\WmPackage\TrailRegistry\Exceptions\InvalidTrailGeometryException;
@@ -37,7 +38,7 @@ use Wm\WmPackage\TrailRegistry\TrailRegistryService;
  */
 class TrailApplication extends AbstractGeometryResource
 {
-    use HidesWhenTrailRegistryDisabled, ResolvesCanonicalResources;
+    use DispatchesDemOnDetail, HidesWhenTrailRegistryDisabled, ResolvesCanonicalResources;
 
     public static $model = TrailApplicationModel::class;
 
@@ -145,11 +146,9 @@ class TrailApplication extends AbstractGeometryResource
     {
         $fields = $this->summaryFields($request);
 
-        if ($request->isResourceDetailRequest()) {
-            // Il DEM manca solo se il job alla creazione e' fallito: lo si
-            // rilancia qui, e solo dove serve (oc:8571).
-            $this->resource->dispatchDemIfMissing();
-        }
+        // Il DEM manca se il job alla creazione e' fallito o se la geometria
+        // e' senza quote: lo si rilancia qui, e solo dove serve (oc:8571, oc:8660).
+        $this->dispatchDemOnDetail($request);
 
         $fields[] = TrailRegistryMap::make(__('Mappa'), 'geometry');
 

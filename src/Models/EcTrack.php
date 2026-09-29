@@ -128,6 +128,11 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
         });
     }
 
+    public function dispatchDem(): void
+    {
+        EcTrackService::make()->dispatchDemChain($this);
+    }
+
     // TODO FIX MAP MULTILINESTRING NOVA FIELD BUG 3D GEOMETRY
     public function setGeometryAttribute($value)
     {

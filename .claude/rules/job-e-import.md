@@ -37,3 +37,7 @@ Si applica quando tocchi job, comandi artisan, import o servizi del package.
 - `$this->confirm()` in un comando lanciato senza terminale (`--no-interaction`, scheduler,
   `Artisan::call`) restituisce il default senza chiedere: un comando che chiede conferma deve
   avere un `--force` e fallire se la conferma manca (oc:8588).
+- `Bus::chain()` non rispetta `ShouldBeUnique` del primo job: `PendingChain::dispatch()` passa dal
+  `Dispatcher` e non da `PendingDispatch`, dove vive il controllo. Per non accodare due volte una
+  catena prendi un lock esplicito prima del dispatch, come `MultiLineString::acquireDemLock()`
+  (oc:8660).
