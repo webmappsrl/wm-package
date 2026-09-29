@@ -23,7 +23,13 @@ Si applica quando tocchi la build di un campo o di una card Nova custom (ogni ca
   solo cosa si vede: il tooltip nasce da `forEachFeatureAtPixel`, che si ferma alla prima feature
   dall'alto. Un poligono pieno in cima — un settore, un'area — rende muto tutto ciò che sta sotto.
   E due layer che condividono la stessa `source` con `declutter` su uno solo si contendono quella
-  ricerca: le etichette vanno su feature clonate e senza `tooltip` (oc:8568).
+  ricerca: le etichette vanno su feature separate e senza `tooltip` (oc:8568).
+- Nel bundle di `TrailRegistryMapField` un colore **stringa** che OpenLayers deve convertire (hit
+  detection di `CircleStyle`/`RegularShape`, `Icon` con `color`) lancia `Failed to parse … as
+  color` e l'eccezione svuota l'intera mappa: lì i colori di punti e forme si passano come array
+  `[r, g, b, a]` (oc:8662).
+- Un campo con test vitest ha bisogno del proprio `vitest.config.cjs`: senza, vitest risale le
+  cartelle, trova il `vite.config.js` del consumer e non parte (oc:8662).
 - Trix scarta silenziosamente un `<iframe>` già salvato alla riapertura, e il save successivo lo
   cancella dal DB: va collassato in un marker testuale prima di passarglielo (oc:8349).
 - Verifica sempre il consumer frontend reale prima di considerare chiusa una feature che scrive

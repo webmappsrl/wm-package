@@ -273,19 +273,28 @@ modifica, cancellazione, Action) senza che lo shard debba ricordarsene.
   Ricerca **per codice**, che Nova non saprebbe fare da sé (il codice non è una colonna, si compone
   da sei) — vedi `applySearch()`. Nella scheda: mappa con settore, sentiero ed eventuale istanza,
   legenda e storia dei cambi di stato.
-  Sulla mappa ci sono anche **gli altri sentieri dello stesso settore**, con numero e variante
-  scritti sul tracciato: servono a giudicare un numero, perché la numerazione segue una logica di
-  zona e un numero si sceglie guardando i vicini, non il primo libero. Entrano i codici che
-  occupano una posizione — `Reserved` e `Assigned`, gli stessi della select del «sostituisci
-  numero» — con la geometria del sentiero o, se il codice è solo riservato, quella dell'istanza.
-  I numeri compaiono scritti da un certo zoom in poi (`labelMinZoom` sul campo, 12 di default);
-  più lontano si leggono passando il mouse sul tracciato (oc:8568).
+  Sulla mappa ci sono anche **gli altri sentieri dello stesso settore**: servono a giudicare un
+  numero, perché la numerazione segue una logica di zona e un numero si sceglie guardando i
+  vicini, non il primo libero. Entrano i codici che occupano una posizione — `Reserved` e
+  `Assigned`, gli stessi della select del «sostituisci numero» — con la geometria del sentiero o,
+  se il codice è solo riservato, quella dell'istanza (oc:8568).
+  I numeri sono **segnavia CAI** (banda, fascia bianca con il numero, banda), orizzontali e posati
+  a metà tracciato: bande rosse per un sentiero validato (`Assigned`), bordo rosso e bande vuote
+  per un numero proposto da un'altra istanza (`Reserved`). **Il numero del codice in esame** ha
+  bande arancioni, il colore della traccia dell'istanza, e sta sopra tutti gli altri; se il codice
+  è stato liberato è grigio e barrato. I numeri dei vicini compaiono da un certo zoom in poi
+  (`labelMinZoom` sul campo, 12 di default), quello del codice in esame sempre (oc:8662).
+  Sotto la mappa c'è il **profilo altimetrico**: del sentiero se c'è, altrimenti della traccia
+  dell'istanza. La linea del profilo la indica il GeoJSON (`slopeChart` sulla feature del codice
+  in esame), perché su una mappa con molte linee il componente condiviso non saprebbe sceglierla
+  (oc:8662).
 - **Istanze** — il ciclo di accatastamento, con le azioni che ne fanno avanzare lo stato. Da qui
   si sostituisce anche il numero prenotato, scegliendo in due tendine — il numero, poi la
   variante, con «nessuna variante» fra le opzioni della seconda: il gesto avviene mentre si
   guarda la mappa dell'istanza, che è il contesto su cui si decide (oc:8569).
   Nel dettaglio ci sono la mappa del codice dell'istanza (quello attivo, o l'ultimo se l'istanza è
-  rifiutata) con la sua legenda, il link al «File GPX/GeoJSON caricato» e il tab DEM. Si modifica
+  rifiutata) con la sua legenda — qui numero e profilo stanno sempre sulla traccia proposta, anche
+  dopo l'approvazione, perché è quella che il gestore valuta (oc:8662) — il link al «File GPX/GeoJSON caricato» e il tab DEM. Si modifica
   solo in istruttoria, e solo nei nove valori manuali del tab; l'index mostra le sei colonne di
   sempre. Come nasce e si calcola il DEM dell'istanza è in
   [docs/knowledge/dati-dem-e-valori-manuali.md](../knowledge/dati-dem-e-valori-manuali.md) (oc:8571).

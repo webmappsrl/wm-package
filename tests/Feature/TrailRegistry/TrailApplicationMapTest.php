@@ -2,7 +2,9 @@
 
 use Illuminate\Support\Facades\DB;
 use Wm\WmPackage\TrailRegistry\Enums\TrailApplicationStatus;
+use Wm\WmPackage\TrailRegistry\Enums\TrailCodeStatus;
 use Wm\WmPackage\TrailRegistry\Models\TrailApplication;
+use Wm\WmPackage\TrailRegistry\Models\TrailRegistryCode;
 use Wm\WmPackage\TrailRegistry\TrailRegistryService;
 
 beforeEach(function () {
@@ -44,4 +46,21 @@ it('senza codici la mappa e la sola traccia', function () {
 
     expect($application->mapCode())->toBeNull()
         ->and($application->getFeatureCollectionMap()['features'])->toHaveCount(1);
+});
+
+it('nella scheda dell istanza il codice in esame e il profilo stanno sul tracciato proposto', function () {
+    $application = applicationWithGeometry();
+    $codeId = makeCode(['status' => TrailCodeStatus::Assigned, 'trail_application_id' => $application->id, 'number' => 66]);
+    $code = TrailRegistryCode::findOrFail($codeId);
+    DB::statement('UPDATE ec_tracks SET geometry = ST_GeomFromText(?, 4326) WHERE id = ?', ['MULTILINESTRING Z((1 1 0, 2 2 0))', $code->ec_track_id]);
+
+    $correnti = array_values(array_filter(
+        $application->fresh()->getFeatureCollectionMap()['features'],
+        fn (array $f) => ($f['properties']['current'] ?? false) === true,
+    ));
+
+    expect($correnti)->toHaveCount(1)
+        ->and($correnti[0]['properties']['subjectKind'])->toBe('application')
+        ->and($correnti[0]['properties']['slopeChart'])->toBeTrue()
+        ->and($correnti[0]['properties']['label'])->toBe('66');
 });

@@ -23,6 +23,7 @@ use Wm\WmPackage\TrailRegistry\Exceptions\InvalidTrailGeometryException;
 use Wm\WmPackage\TrailRegistry\Exceptions\SectorExhaustedException;
 use Wm\WmPackage\TrailRegistry\Exceptions\SectorNotFoundException;
 use Wm\WmPackage\TrailRegistry\Models\TrailApplication as TrailApplicationModel;
+use Wm\WmPackage\TrailRegistry\Models\TrailRegistryCode as TrailRegistryCodeModel;
 use Wm\WmPackage\TrailRegistry\Nova\Actions\ApproveTrailApplication;
 use Wm\WmPackage\TrailRegistry\Nova\Actions\RejectTrailApplication;
 use Wm\WmPackage\TrailRegistry\Nova\Actions\ReplaceTrailCodeNumber;
@@ -150,12 +151,12 @@ class TrailApplication extends AbstractGeometryResource
         // e' senza quote: lo si rilancia qui, e solo dove serve (oc:8571, oc:8660).
         $this->dispatchDemOnDetail($request);
 
-        $fields[] = TrailRegistryMap::make(__('Mappa'), 'geometry');
+        $fields[] = TrailRegistryMap::make(__('Mappa'), 'geometry')->enableSlopeChart();
 
         $fields[] = Text::make(__('Legenda'), function () {
             $code = $this->resource->mapCode();
 
-            return $code === null ? '' : MapLegendRenderer::render($code);
+            return $code === null ? '' : MapLegendRenderer::render($code, TrailRegistryCodeModel::MAP_SUBJECT_APPLICATION);
         })->asHtml()->onlyOnDetail();
 
         $fields[] = Text::make(__('File GPX/GeoJSON caricato'), function () {

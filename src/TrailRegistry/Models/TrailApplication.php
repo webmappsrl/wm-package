@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Carbon;
 use Wm\WmPackage\Models\Abstracts\MultiLineString;
 use Wm\WmPackage\Models\User;
 use Wm\WmPackage\TrailRegistry\Database\Factories\TrailApplicationFactory;
@@ -35,6 +36,7 @@ use Wm\WmPackage\TrailRegistry\TrailRegistryClasses;
  * @property string $source
  * @property TrailApplicationStatus $status
  * @property string|null $name
+ * @property Carbon|null $updated_at
  * @property-read User $user
  * @property-read Collection<int, TrailRegistryCode> $codes
  * @property-read TrailRegistryCode|null $activeCode
@@ -115,13 +117,33 @@ class TrailApplication extends MultiLineString
     }
 
     /**
+     * La versione della mappa dell'istanza: quella del codice mostrato, piu'
+     * lo stato dell'istanza — «Approva» e «Rifiuta» cambiano l'istanza anche
+     * quando il codice non cambia id (oc:8662).
+     */
+    public function mapVersion(): string
+    {
+        return sprintf(
+            '%s-%s-%d',
+            $this->mapCode()?->mapVersion() ?? 'none',
+            $this->status->value,
+            $this->updated_at?->getTimestamp() ?? 0,
+        );
+    }
+
+    /**
      * La mappa del codice, la stessa della scheda nel registro: settore,
      * vicini, traccia dell'istanza e, se approvata, il sentiero. Chi cambia
      * TrailRegistryCode::getFeatureCollectionMap() cambia anche questa.
+     *
+     * Dalla scheda dell'istanza numero e profilo stanno sulla traccia
+     * proposta anche dopo l'approvazione: e' quella che il gestore valuta
+     * (oc:8662).
      */
     public function getFeatureCollectionMap(): array
     {
-        return $this->mapCode()?->getFeatureCollectionMap() ?? parent::getFeatureCollectionMap();
+        return $this->mapCode()?->getFeatureCollectionMap(TrailRegistryCode::MAP_SUBJECT_APPLICATION)
+            ?? parent::getFeatureCollectionMap();
     }
 
     /**

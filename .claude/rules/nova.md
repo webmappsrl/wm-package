@@ -67,3 +67,7 @@ Si applica quando tocchi Resource, campi, action o card Nova del package.
 - `Multiselect` di Outl1ne su un attributo `properties->chiave` salva una **stringa** JSON dentro
   `properties` se non si chiama `->saveAsJSON()`: decide guardando il cast della chiave con la
   freccia, che non esiste (oc:8588).
+- Dopo un'Action Nova **ricrea** il dettaglio: `getResource()` in
+  `vendor/laravel/nova/resources/js/views/Detail.vue` azzera `panels`, i campi si smontano e si
+  rimontano. Lo stato di un componente — la vista di una mappa, dati caricati — si perde: ciò che
+  deve sopravvivere va tenuto fuori dal componente (oc:8662).

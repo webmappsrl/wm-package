@@ -126,9 +126,24 @@ export function toLineStringFeatureObject(featureObject) {
 }
 
 /**
+ * La linea che il GeoJSON indica esplicitamente per il profilo
+ * (`properties.slopeChart === true`). Serve alle mappe con molte linee, dove
+ * la regola «una sola linea» non sceglierebbe nulla (oc:8662).
+ */
+export function findExplicitSlopeChartFeature(featureCollection) {
+    const feats = Array.isArray(featureCollection?.features) ? featureCollection.features : [];
+
+    return feats.find((f) => {
+        const t = f?.geometry?.type;
+        return f?.properties?.slopeChart === true && (t === 'LineString' || t === 'MultiLineString');
+    }) || null;
+}
+
+/**
  * Decide se lo SlopeChart è “abilitabile” dalla FeatureCollection:
  * - deve essere enableSlopeChart=true
- * - deve esserci ESATTAMENTE 1 feature LineString o MultiLineString
+ * - se una linea ha `properties.slopeChart === true`, e' quella (oc:8662);
+ * - altrimenti deve esserci ESATTAMENTE 1 feature LineString o MultiLineString
  * Ritorna il track normalizzato (LineString) oppure null.
  */
 export function getSlopeChartTrackFromGeojson(featureCollection, enableSlopeChart = true) {
@@ -137,6 +152,10 @@ export function getSlopeChartTrackFromGeojson(featureCollection, enableSlopeChar
     }
     if (!featureCollection || typeof featureCollection !== 'object') {
         return null;
+    }
+    const explicit = findExplicitSlopeChartFeature(featureCollection);
+    if (explicit) {
+        return toLineStringFeatureObject(explicit);
     }
     const feats = Array.isArray(featureCollection.features) ? featureCollection.features : [];
     const lineFeats = feats.filter((f) => {
