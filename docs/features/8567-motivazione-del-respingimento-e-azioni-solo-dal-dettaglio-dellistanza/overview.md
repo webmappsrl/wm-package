@@ -67,15 +67,19 @@
   ```sql
   ALTER TABLE trail_applications ADD COLUMN rejection_reason text NULL;
   ```
-  In alternativa si può fare un rollback mirato delle 4 migration del Catasto e poi `migrate`. È
-  un'operazione che svuota codici, anomalie, eventi e istanze: i codici e le anomalie si
-  ricostruiscono rilanciando l'import, lo storico degli eventi e le istanze no. Un semplice
-  `migrate:rollback` non va usato: in forestas annullerebbe tutto il batch 9, cioè 10 migration,
+  Un `migrate:rollback` non va usato: in forestas annullerebbe tutto il batch 9, cioè 10 migration,
   fra cui `add_identifier_to_taxonomy_wheres`. Se l'`ALTER` viene dimenticato, il primo
-  respingimento fallisce con un errore di colonna inesistente. La mitigazione è riportare il
-  comando nelle note del ticket, e il gate `publish-missing-migrations --dry-run` segnala la
-  colonna mancante. Il dominio non è ancora in produzione, quindi il danno si limita agli ambienti
-  di sviluppo e di test.
+  respingimento fallisce con un errore di colonna inesistente. Nessuno strumento lo segnala:
+  il gate `publish-missing-migrations --dry-run` dà «allineati» anche senza la colonna (vedi
+  domanda aperta 5), e il deploy (`scripts/deploy_prod.sh`) fa solo `migrate --force`, che non
+  la aggiunge. La mitigazione è riportare il comando nelle note del ticket, con la query di
+  verifica:
+  ```sql
+  select column_name from information_schema.columns
+  where table_name = 'trail_applications' and column_name = 'rejection_reason';
+  ```
+  Se non restituisce righe, serve l'`ALTER`. Il dominio non è ancora in produzione, quindi il
+  danno si limita agli ambienti di sviluppo e di test.
 - **La motivazione è testo libero e arriverà a un cittadino.** Con l'integrazione SUS sarà ciò che
   legge il richiedente: va scritta con la stessa cura di una risposta al cliente. L'etichetta e il
   testo di aiuto del campo lo dicono esplicitamente.
@@ -100,7 +104,7 @@
 2. **Su UAT o sul server il dominio `trail_registry` è già attivo?** La dev pensa di sì, ma non
    ha una conferma, e dal repo non si vede. Se è attivo, prima del deploy di questo ticket va
    lanciato anche lì l'`ALTER` di `rejection_reason`. Chi gestisce l'ambiente può verificarlo
-   con `php artisan wm-package:publish-missing-migrations --dry-run` lanciato sul server.
+   con la query su `information_schema.columns` riportata nei Rischi.
 3. **I messaggi di esito al plurale.** Con `onlyOnDetail` l'azione riceve sempre una sola istanza,
    quindi «Istanze respinte: :rejected. Saltate perché non in istruttoria: :refused.» non si vedrà
    più dall'interfaccia. Il ciclo in `handle()` resta, perché l'endpoint si può chiamare
@@ -110,6 +114,56 @@
    passaggio del 15/09 (~00:40) in cui Piccioli mostra le due azioni, ma nelle call di quel giorno
    non si trova: se ne parla il 21/09 (Bonfanti, spiegazione delle azioni) e il 30/09 (istruzioni
    a Carla). Correggiamo la description?
+5. **Il gate delle migration non vede una colonna aggiunta a uno stub già eseguito.** In
+   `src/Commands/Concerns/InteractsWithWmPackageMigrationStubs.php`:
+   - `needsPublishing()` (righe 247-258) considera uno stub da pubblicare solo se il file
+     pubblicato **non** è identico;
+   - `stubsPendingMigration()` (righe 276-283) lo considera da migrare solo se il file identico
+     **non** è in `migrations`.
+
+   `schemaGapsForStub()`, che confronta davvero le colonne con il DB, viene chiamato solo per gli
+   stub da pubblicare (`WmPackagePublishMissingMigrationsCommand.php:63`). Il risultato è che su un
+   DB che ha già la tabella, con il file di forestas identico al nuovo stub, il comando stampa
+   «allineati» anche se `rejection_reason` manca. In CI non succede, perché `run-tests.yml` lancia
+   `migrate` su un DB vuoto prima del gate.
+
+   Il gate è nato per la CI (oc:8218, oc:8492), dove è corretto. Il caso scoperto nasce dalla
+   pratica di modificare lo stub `create` invece di aggiungerne uno nuovo, già usata in oc:8539 e
+   ripresa qui. Nessun test di `WmPackagePublishMissingMigrationsCommandTest` copre il caso «file
+   identico, già eseguito, ma con colonne mancanti».
+
+   La correzione possibile è piccola: segnalare come non allineato anche uno stub con gap di
+   schema, pure quando il file è identico e già eseguito. Tocca però un comando che usano tutti i
+   consumer. La facciamo in un ticket a parte, o si accetta il limite finché il dominio non va in
+   produzione?
+6. **Il rollback mirato va offerto come alternativa all'`ALTER`?** Allo scrum del 30/09 Alessandro
+   Peci ha detto «Rollback.» e Giuseppe «Esatto.», senza dettagli. Su un DB che ha già la tabella,
+   il rollback della sola migration delle istanze fallisce: `trail_registry_codes` ha una foreign
+   key verso `trail_applications`. Per farlo passare bisogna fare rollback delle 4 migration del
+   Catasto, e poi `migrate`. Così si svuotano codici, anomalie, eventi e istanze. I codici e le
+   anomalie si ricostruiscono rilanciando l'import; lo storico degli eventi e le istanze no.
+   L'`ALTER` porta allo stesso schema senza perdere nulla, ed è l'unica strada indicata nei
+   Rischi. Il rollback va aggiunto come alternativa, per esempio per chi preferisce ripartire da
+   un DB locale pulito, o resta fuori dal documento?
+7. **Con che `APP_LOCALE` gira il server di forestas?** In forestas `.env-deploy:49-50` ha
+   `APP_LOCALE=en` e `APP_FALLBACK_LOCALE=en`, mentre il `.env` locale ha `it`. Dal repo non si
+   vede se corrisponde al `.env` reale del server. Oggi le chiavi delle due azioni sono in
+   italiano e non sono in nessun JSON, quindi «Approva» e «Respingi» compaiono in qualsiasi
+   lingua. Dopo questo ticket le chiavi sono in inglese: se il server gira con `en`, l'operatore
+   vedrà «Approve», «Reject» e «Rejection reason».
+8. **Serve un test che verifichi la presenza delle traduzioni?** Con le chiavi in inglese, una
+   chiave dimenticata in `it.json` mostra l'inglese all'operatore italiano senza nessun errore.
+   Nel package oggi nessun test controlla `resources/lang/*.json`: una traduzione mancante si
+   scopre solo guardando lo schermo, ed era già stato segnalato come rischio in oc:8569
+   (`overview.md:105`). Il test confronterebbe le chiavi usate dalle due azioni con `it.json` ed
+   `en.json`, e sarebbe il primo di questo tipo nel package. Lo aggiungiamo in questo ticket, in
+   uno generale per tutto il package, o non serve?
+9. **Le chiavi in italiano del Catasto sono una scelta voluta?** Le ha introdotte oc:8489
+   (commit `76515a2a`), e nel TrailRegistry ci sono 96 chiamate a `__()`, quasi tutte con chiavi
+   italiane. Nessun documento lo spiega come regola. oc:8662 (`plan.md:33`) dice «il package non
+   ha file di lingua», ma `resources/lang/*.json` esiste. Questo ticket porta in inglese le chiavi
+   delle due azioni, per coerenza con le 422 chiavi inglesi del resto del package. Va bene, o
+   c'era un motivo per tenerle in italiano, per esempio la lingua del server (domanda 7)?
 
 ## Out of scope
 
