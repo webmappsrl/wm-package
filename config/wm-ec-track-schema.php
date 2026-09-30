@@ -38,6 +38,16 @@ return [
                 ],
             ],
             [
+                'name' => 'via',
+                'type' => 'text',
+                'required' => false,
+                'translatable' => false,
+                'label' => [
+                    'it' => 'meta intermedia',
+                    'en' => 'Via',
+                ],
+            ],
+            [
                 'name' => 'to',
                 'type' => 'text',
                 'required' => false,

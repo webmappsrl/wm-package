@@ -38,6 +38,8 @@ readonly class EcTrackPropertiesData
         public ?string $from = null,
         public ?string $to = null,
         public ?string $ref = null,
+        /** Meta intermedia del percorso, come il tag OSM `via` delle relazioni route (oc:8540). In fondo: gli shard che passano argomenti per posizione non si spostano. */
+        public ?string $via = null,
     ) {}
 
     /**
