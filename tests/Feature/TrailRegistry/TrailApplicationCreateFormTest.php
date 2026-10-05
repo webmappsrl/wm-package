@@ -6,7 +6,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Laravel\Nova\Http\Requests\CreateResourceRequest;
-use Laravel\Nova\Http\Requests\NovaRequest;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\User;
 use Wm\WmPackage\TrailRegistry\Enums\TrailApplicationStatus;
@@ -152,7 +151,7 @@ it('rifiuta un GeoJSON con una geometria che non e una linea', function () {
 });
 
 it('permette di creare un istanza d ufficio', function () {
-    expect(TrailApplicationResource::authorizedToCreate(NovaRequest::create('/')))->toBeTrue();
+    expect(TrailApplicationResource::authorizedToCreate(richiestaConRuolo('Editor')))->toBeTrue();
 });
 
 it('chiede all operatore solo denominazione e geometria', function () {

@@ -26,7 +26,7 @@ it('estende la base geometrica del sentiero', function () {
 });
 
 it('si modifica solo in istruttoria', function () {
-    $request = Request::create('/');
+    $request = richiestaConRuolo('Editor', Request::class);
 
     expect(resourceFor(TrailApplicationStatus::UnderReview)->authorizedToUpdate($request))->toBeTrue()
         ->and(resourceFor(TrailApplicationStatus::Approved)->authorizedToUpdate($request))->toBeFalse()

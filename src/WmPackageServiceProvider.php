@@ -52,6 +52,12 @@ use Wm\WmPackage\Services\Import\GeohubImportService;
 use Wm\WmPackage\Services\Import\UgcMediaImportService;
 use Wm\WmPackage\Services\TaxonomyWhereDisplayService;
 use Wm\WmPackage\Tests\Feature\OptionalDomainRegistrationTest;
+use Wm\WmPackage\TrailRegistry\Models\TrailApplication as TrailApplicationModel;
+use Wm\WmPackage\TrailRegistry\Models\TrailRegistryAnomaly as TrailRegistryAnomalyModel;
+use Wm\WmPackage\TrailRegistry\Models\TrailRegistryCode as TrailRegistryCodeModel;
+use Wm\WmPackage\TrailRegistry\Policies\TrailApplicationPolicy;
+use Wm\WmPackage\TrailRegistry\Policies\TrailRegistryAnomalyPolicy;
+use Wm\WmPackage\TrailRegistry\Policies\TrailRegistryCodePolicy;
 use Wm\WmPackage\TrailRegistry\TrailRegistryClasses;
 
 class WmPackageServiceProvider extends PackageServiceProvider
@@ -161,6 +167,22 @@ class WmPackageServiceProvider extends PackageServiceProvider
         //     return $t;
         // });
         Gate::policy(AppModel::class, AppPolicy::class);
+
+        // Catasto Sentieri (oc:8700): le policy si registrano sempre, anche a
+        // dominio spento. Il flag si legge a runtime, e a dominio spento le
+        // Resource restano nascoste dal trait HidesWhenTrailRegistryDisabled,
+        // che mette il dominio in AND con la policy. Si registra sia il modello
+        // base sia quello configurato dallo shard, se diverso.
+        foreach ([
+            [TrailApplicationModel::class, TrailRegistryClasses::application(), TrailApplicationPolicy::class],
+            [TrailRegistryCodeModel::class, TrailRegistryClasses::code(), TrailRegistryCodePolicy::class],
+            [TrailRegistryAnomalyModel::class, TrailRegistryClasses::anomaly(), TrailRegistryAnomalyPolicy::class],
+        ] as [$base, $configured, $policy]) {
+            Gate::policy($base, $policy);
+            if ($configured !== $base) {
+                Gate::policy($configured, $policy);
+            }
+        }
 
         // SENTRY
         $this->app->booted(function () {
@@ -300,6 +322,9 @@ class WmPackageServiceProvider extends PackageServiceProvider
      * anche la sezione "Catasto" del dominio trail_registry lo riusa,
      * evitando un secondo meccanismo parallelo.
      *
+     * La sezione ricostruita riporta anche il `canSee` del consumer e si
+     * nasconde se nessuna delle sue voci e' visibile (oc:8700).
+     *
      * @param  array<int, mixed>  $menuItems
      * @param  array<int, MenuItem>  $items
      * @return array<int, mixed>
@@ -322,10 +347,14 @@ class WmPackageServiceProvider extends PackageServiceProvider
             // lavora — mentre quelle del consumer sono aggiunte, tipicamente
             // collegamenti a documentazione o strumenti esterni, che stanno
             // meglio in coda.
-            $rebuilt = MenuSection::make(
-                $sectionOrGroup->name,
-                array_merge($items, $this->menuSectionItems($sectionOrGroup)),
-            )->icon($sectionOrGroup->icon ?? $icon);
+            //
+            // Anche il `canSee` del consumer va riportato (oc:8700), in AND con
+            // la regola «almeno una voce visibile».
+            $merged = array_merge($items, $this->menuSectionItems($sectionOrGroup));
+
+            $rebuilt = MenuSection::make($sectionOrGroup->name, $merged)
+                ->icon($sectionOrGroup->icon ?? $icon)
+                ->canSee($this->visibleWhenAnyItemIs($merged, $sectionOrGroup->seeCallback));
 
             // `collapsedByDefault()` chiama gia' `collapsable()`: chiamarli
             // entrambi renderebbe richiudibile anche una sezione che non lo
@@ -345,9 +374,38 @@ class WmPackageServiceProvider extends PackageServiceProvider
         // le voci del package. Chi la vuole altrove — o chiusa di default —
         // la dichiara nel proprio menu, anche vuota, e questo metodo la
         // riempie lasciandola dov'e'.
-        $menuItems[] = MenuSection::make($sectionName, $items)->icon($icon)->collapsedByDefault();
+        $menuItems[] = MenuSection::make($sectionName, $items)
+            ->icon($icon)
+            ->collapsedByDefault()
+            ->canSee($this->visibleWhenAnyItemIs($items, null));
 
         return $menuItems;
+    }
+
+    /**
+     * Una sezione si vede solo se almeno una delle sue voci e' visibile
+     * (oc:8700): Nova non nasconde da se' una sezione di primo livello vuota,
+     * e un utente a cui la policy del Catasto nega tutte le voci vedrebbe
+     * «Catasto» senza niente dentro. Il `canSee` che il consumer aveva messo
+     * sulla sezione resta in AND: la ricostruzione non lo perde piu'.
+     *
+     * @param  array<int, mixed>  $items
+     */
+    protected function visibleWhenAnyItemIs(array $items, ?callable $sectionCallback): \Closure
+    {
+        return function (Request $request) use ($items, $sectionCallback): bool {
+            if ($sectionCallback !== null && ! $sectionCallback($request)) {
+                return false;
+            }
+
+            foreach ($items as $item) {
+                if (! method_exists($item, 'authorizedToSee') || $item->authorizedToSee($request)) {
+                    return true;
+                }
+            }
+
+            return false;
+        };
     }
 
     /**
@@ -774,13 +832,19 @@ class WmPackageServiceProvider extends PackageServiceProvider
                 $menuItems = [
                     MenuSection::make(__('Tools'), $toolsItems)
                         ->icon('color-swatch')
-                        ->collapsedByDefault(),
+                        ->collapsedByDefault()
+                        ->canSee($this->visibleWhenAnyItemIs($toolsItems, null)),
                 ];
 
                 if (FeaturesService::isEnabled('trail_registry')) {
-                    $menuItems[] = MenuSection::make(__('Catasto'), $this->trailRegistryMenuItems())
+                    $catastoItems = $this->trailRegistryMenuItems();
+
+                    // Stessa regola di injectMenuSectionItems() (oc:8700):
+                    // senza voci visibili la sezione non si mostra.
+                    $menuItems[] = MenuSection::make(__('Catasto'), $catastoItems)
                         ->icon('map')
-                        ->collapsedByDefault();
+                        ->collapsedByDefault()
+                        ->canSee($this->visibleWhenAnyItemIs($catastoItems, null));
                 }
 
                 return $menuItems;

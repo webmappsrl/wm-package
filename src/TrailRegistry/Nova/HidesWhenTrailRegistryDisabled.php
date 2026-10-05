@@ -12,10 +12,12 @@ use Wm\WmPackage\Services\FeaturesService;
  * spento resterebbero comunque in app/Nova. Il controllo sta qui, nella
  * classe base, perche' lo shard non debba ricordarsene.
  *
- * A dominio acceso ogni metodo lascia decidere al parent. Attenzione: un
- * metodo ridefinito nella Resource vince su quello del trait, quindi chi
- * ridefinisce un authorizedTo*() deve rifare il controllo con
- * trailRegistryEnabled() — o negare sempre, come fanno le Resource del
+ * A dominio acceso ogni metodo lascia decidere al parent, che passa dalla
+ * policy del Catasto (TrailRegistryPolicy, oc:8700): il trait aggiunge solo
+ * il controllo del dominio. Attenzione: un metodo ridefinito nella Resource
+ * vince su quello del trait, quindi chi ridefinisce un authorizedTo*() deve
+ * rifare sia il controllo con trailRegistryEnabled() sia
+ * TrailRegistryPolicy::allows() — o negare sempre, come fanno le Resource del
  * package sulle scritture.
  */
 trait HidesWhenTrailRegistryDisabled

@@ -6,7 +6,9 @@ use Laravel\Nova\Events\ServingNova;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Menu\MenuSection;
 use Laravel\Nova\Nova;
+use Wm\WmPackage\Models\User;
 use Wm\WmPackage\Services\FeaturesService;
+use Wm\WmPackage\Services\RolesAndPermissionsService;
 use Wm\WmPackage\TrailRegistry\Enums\TrailApplicationStatus;
 use Wm\WmPackage\TrailRegistry\Models\TrailApplication as TrailApplicationModel;
 use Wm\WmPackage\TrailRegistry\Models\TrailRegistryCode as TrailRegistryCodeModel;
@@ -109,13 +111,37 @@ it('a dominio spento un istanza in istruttoria non si modifica', function () {
 
 it('a dominio acceso le autorizzazioni restano quelle della Resource', function () {
     config(['wm-package.features.trail_registry.enabled' => true]);
+    RolesAndPermissionsService::seedDatabase();
+    $editor = User::factory()->create();
+    $editor->assignRole('Editor');
     $request = Request::create('/');
+    $request->setUserResolver(fn () => $editor);
+    $novaRequest = NovaRequest::create('/');
+    $novaRequest->setUserResolver(fn () => $editor);
+    $this->actingAs($editor);
     $application = (new TrailApplicationModel)->forceFill(['status' => TrailApplicationStatus::UnderReview]);
 
     expect((new ShardApplicationResource($application))->authorizedToUpdate($request))->toBeTrue();
     // Il registro dei codici nega sempre le scritture, acceso o spento.
     expect(ShardCodeResource::authorizedToCreate($request))->toBeFalse();
-    expect((new ShardCodeResource(new TrailRegistryCodeModel))->authorizedToRunAction(NovaRequest::create('/'), new ShardNoopAction))->toBeTrue();
+    expect((new ShardCodeResource(new TrailRegistryCodeModel))->authorizedToRunAction($novaRequest, new ShardNoopAction))->toBeTrue();
+});
+
+it('a dominio acceso un Validator non ottiene le autorizzazioni di un Editor', function () {
+    config(['wm-package.features.trail_registry.enabled' => true]);
+    RolesAndPermissionsService::seedDatabase();
+    $validator = User::factory()->create();
+    $validator->assignRole('Validator');
+    $request = Request::create('/');
+    $request->setUserResolver(fn () => $validator);
+    $novaRequest = NovaRequest::create('/');
+    $novaRequest->setUserResolver(fn () => $validator);
+    $this->actingAs($validator);
+    $application = (new TrailApplicationModel)->forceFill(['status' => TrailApplicationStatus::UnderReview]);
+
+    expect((new ShardApplicationResource($application))->authorizedToUpdate($request))->toBeFalse();
+    expect(ShardApplicationResource::authorizedToCreate($request))->toBeFalse();
+    expect((new ShardCodeResource(new TrailRegistryCodeModel))->authorizedToRunAction($novaRequest, new ShardNoopAction))->toBeFalse();
 });
 
 it('a dominio acceso la navigazione rispetta displayInNavigation', function () {

@@ -30,6 +30,7 @@ use Wm\WmPackage\TrailRegistry\Nova\Actions\ReplaceTrailCodeNumber;
 use Wm\WmPackage\TrailRegistry\Nova\Fields\TrailRegistryMap;
 use Wm\WmPackage\TrailRegistry\Nova\Filters\TrailApplicationSourceFilter;
 use Wm\WmPackage\TrailRegistry\Nova\Filters\TrailApplicationStatusFilter;
+use Wm\WmPackage\TrailRegistry\Policies\TrailRegistryPolicy;
 use Wm\WmPackage\TrailRegistry\TrailGeometryReader;
 use Wm\WmPackage\TrailRegistry\TrailRegistryClasses;
 use Wm\WmPackage\TrailRegistry\TrailRegistryService;
@@ -79,11 +80,13 @@ class TrailApplication extends AbstractGeometryResource
      * l'istanza e' uno storico (oc:8571).
      *
      * Ridefinisce il metodo del trait HidesWhenTrailRegistryDisabled, quindi
-     * il controllo del dominio spento va rifatto qui.
+     * vanno rifatti qui sia il controllo del dominio spento sia la regola dei
+     * ruoli del Catasto (oc:8700).
      */
     public function authorizedToUpdate(Request $request): bool
     {
         return static::trailRegistryEnabled()
+            && TrailRegistryPolicy::allows($request->user())
             && $this->resource->status === TrailApplicationStatus::UnderReview;
     }
 
@@ -300,22 +303,29 @@ class TrailApplication extends AbstractGeometryResource
     }
 
     /**
-     * Le due action si offrono solo sulle istanze in istruttoria. La stessa
+     * Le tre action si offrono solo a chi gestisce il Catasto (oc:8700); le
+     * due di istruttoria solo sulle istanze in istruttoria. La stessa
      * guardia e' ripetuta dentro handle(): questa risparmia all'operatore un
      * bottone che non puo' funzionare, quella e' il presidio.
      */
     public function actions(NovaRequest $request): array
     {
-        $onlyUnderReview = fn ($request, $application) => $application->status === TrailApplicationStatus::UnderReview;
+        // canRun() fa saltare a Nova l'autorizzazione della Resource
+        // (ActionModelCollection::filterForExecution()): la regola dei ruoli
+        // del Catasto (oc:8700) va ripetuta qui, o un POST all'Action passa.
+        $canManage = fn ($request) => TrailRegistryPolicy::allows($request->user());
+        $onlyUnderReview = fn ($request, $application) => $canManage($request)
+            && $application->status === TrailApplicationStatus::UnderReview;
 
         return [
-            (new ApproveTrailApplication)->canRun($onlyUnderReview),
-            (new RejectTrailApplication)->canRun($onlyUnderReview),
+            (new ApproveTrailApplication)->canSee($canManage)->canRun($onlyUnderReview),
+            (new RejectTrailApplication)->canSee($canManage)->canRun($onlyUnderReview),
             // Il vincolo che conta e' quello del service (solo Reserved):
             // qui lo replichiamo perche' il bottone non compaia quando non
             // porterebbe da nessuna parte.
-            (new ReplaceTrailCodeNumber)->canRun(
-                fn ($request, $application) => $application->activeCode?->status === TrailCodeStatus::Reserved,
+            (new ReplaceTrailCodeNumber)->canSee($canManage)->canRun(
+                fn ($request, $application) => $canManage($request)
+                    && $application->activeCode?->status === TrailCodeStatus::Reserved,
             ),
         ];
     }

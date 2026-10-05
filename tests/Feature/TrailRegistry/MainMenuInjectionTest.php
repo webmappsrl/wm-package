@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Laravel\Nova\Events\ServingNova;
 use Laravel\Nova\Menu\MenuSection;
 use Laravel\Nova\Nova;
@@ -100,4 +101,43 @@ it('non rompe la sezione Tools gia iniettata dallo stesso meccanismo', function 
     $labelsOn = collect($toolsOn->items)->map(fn ($item) => (string) $item->name)->all();
 
     expect($labelsOn)->toEqualCanonicalizing($labelsOff);
+});
+
+/**
+ * Ramo del menu senza callback dello shard: le sezioni si costruiscono da
+ * zero, e anche li' «Catasto» non deve restare vuota (oc:8700).
+ */
+function buildMainMenuWithoutShardCallback(): array
+{
+    Nova::resources([TrailApplication::class, TrailRegistryCode::class, TrailRegistryAnomaly::class]);
+
+    $original = Nova::$mainMenuCallback;
+    Nova::$mainMenuCallback = null;
+
+    try {
+        ServingNova::dispatch(app(), Request::create('/'));
+
+        return call_user_func(Nova::$mainMenuCallback, Request::create('/'));
+    } finally {
+        Nova::$mainMenuCallback = $original;
+    }
+}
+
+it('senza menu dello shard nasconde Catasto se la policy nega tutte le voci', function () {
+    config(['wm-package.features.trail_registry.enabled' => true]);
+    Gate::before(fn ($user = null) => false);
+
+    $catasto = findMenuSection(buildMainMenuWithoutShardCallback(), __('Catasto'));
+
+    expect($catasto)->not->toBeNull()
+        ->and($catasto->authorizedToSee(Request::create('/')))->toBeFalse();
+});
+
+it('senza menu dello shard mostra Catasto se almeno una voce e visibile', function () {
+    config(['wm-package.features.trail_registry.enabled' => true]);
+    Gate::before(fn ($user = null) => true);
+
+    $catasto = findMenuSection(buildMainMenuWithoutShardCallback(), __('Catasto'));
+
+    expect($catasto->authorizedToSee(Request::create('/')))->toBeTrue();
 });
