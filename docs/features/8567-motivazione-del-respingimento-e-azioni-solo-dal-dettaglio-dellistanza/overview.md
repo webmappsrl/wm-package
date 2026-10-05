@@ -47,14 +47,25 @@
   - la liberazione del numero riservato con causa `application_rejected`;
   - la transazione che tiene insieme le scritture.
 - [ ] Tutte le stringhe delle due azioni, quelle esistenti e quelle nuove, usano chiavi in
-      **inglese**, con la traduzione in `resources/lang/en.json` e `resources/lang/it.json` del
-      package. In forestas (`APP_LOCALE=it`) le etichette restano in italiano come oggi.
-      `de`, `es` e `fr` non si toccano.
+      **inglese**, con la traduzione in tutti i file di lingua del package:
+      `resources/lang/en.json`, `it.json`, `de.json`, `es.json` e `fr.json`. In forestas e su UAT
+      (`APP_LOCALE=it`) le etichette restano in italiano come oggi.
+- [ ] I messaggi di esito al plurale («Applications rejected: :rejected. Skipped because not under
+      review: :refused.» e gli analoghi) restano come sono, tradotti. Il ciclo in `handle()` resta
+      per le chiamate dirette all'endpoint.
 - [ ] Test (Pest, nel package):
-  - il respingimento con motivazione salva il testo e cambia lo stato;
-  - senza motivazione la validazione fallisce e lo stato non cambia;
-  - una motivazione oltre i 2000 caratteri viene rifiutata;
-  - le due azioni hanno `onlyOnDetail`;
+  - il respingimento con motivazione salva il testo e cambia lo stato (qui si può chiamare
+    `handle()`, perché si verifica il salvataggio, non la validazione);
+  - l'obbligatorietà e il limite di 2000 caratteri si verificano sulle `rules` del campo
+    restituito da `fields()`, oppure passando dall'endpoint Nova dell'azione (POST su
+    `/nova-api/trail-applications/action?action=reject-trail-application`). **Non** chiamando
+    `handle()` direttamente: così Nova non valida niente, e il test passerebbe comunque;
+  - sulle azioni restituite da `TrailApplication::actions()`, per `ApproveTrailApplication` e
+    `RejectTrailApplication` `shownOnIndex()` è `false` e `shownOnDetail()` è `true`. Si verificano
+    i metodi, non la proprietà `$onlyOnDetail`: un test sulla proprietà non si accorgerebbe di un
+    `->showOnIndex()` aggiunto in `actions()` della Resource;
+  - le chiavi nuove esistono in `it.json` ed `en.json`. Un test generale sulle traduzioni di tutto
+    il package è oc:8672;
   - i test esistenti del respingimento (liberazione del numero, guardia sullo stato) restano
     verdi.
 
@@ -62,16 +73,16 @@
 
 - **Su un DB che ha già la tabella, la colonna non arriva da sola.** Lo stub inizia con
   `if (Schema::hasTable('trail_applications')) { return; }` e Laravel non riesegue una migration già
-  registrata. Chi ha già la tabella (i DB locali dei dev, ed eventuali UAT) deve aggiornarla. Il
-  modo consigliato è un comando una tantum:
+  registrata. Chi ha già la tabella deve aggiornarla: i DB locali dei dev e **UAT**, dove la
+  tabella esiste già e l'`ALTER` lo lancia il team prima del deploy. Il comando, una tantum:
   ```sql
   ALTER TABLE trail_applications ADD COLUMN rejection_reason text NULL;
   ```
   Un `migrate:rollback` non va usato: in forestas annullerebbe tutto il batch 9, cioè 10 migration,
   fra cui `add_identifier_to_taxonomy_wheres`. Se l'`ALTER` viene dimenticato, il primo
   respingimento fallisce con un errore di colonna inesistente. Nessuno strumento lo segnala:
-  il gate `publish-missing-migrations --dry-run` dà «allineati» anche senza la colonna (vedi
-  domanda aperta 5), e il deploy (`scripts/deploy_prod.sh`) fa solo `migrate --force`, che non
+  il gate `publish-missing-migrations --dry-run` dà «allineati» anche senza la colonna (limite
+  noto, fuori scope: il gate non si tocca), e il deploy (`scripts/deploy_prod.sh`) fa solo `migrate --force`, che non
   la aggiunge. La mitigazione è riportare il comando nelle note del ticket, con la query di
   verifica:
   ```sql
@@ -88,82 +99,27 @@
 - **Il campo non è retroattivo.** Le istanze già respinte (2 nel DB locale) restano senza
   motivazione.
 
-## Domande aperte per il reviewer
+## Risposte del reviewer
 
-1. **Chiavi di traduzione in italiano nei file che questo ticket non tocca.** Le chiavi delle due
-   azioni passano all'inglese solo per coerenza con il resto del package, dove 422 chiavi di
-   `en.json` su 483 sono in inglese. Restano in italiano:
-   - «Sostituisci numero», «Numero», «Variante», «nessuna variante», «Numero sostituito.» e
-     «Questa istanza non ha un codice attivo da sostituire.», in
-     `src/TrailRegistry/Nova/Actions/ReplaceTrailCodeNumber.php`;
-   - le etichette della Resource `src/TrailRegistry/Nova/TrailApplication.php`: «Istanze»,
-     «Istanza», «Denominazione», «Codice», «Stato istruttoria» e le altre;
-   - «Tipologie di POI associate a questo punto di interesse», fuori dal Catasto.
+Le domande aperte sono state chiuse nella review della PR webmappsrl/wm-package#292:
 
-   Vanno portate in inglese anche queste? Se sì, in questo ticket o in uno dedicato?
-2. **Su UAT o sul server il dominio `trail_registry` è già attivo?** La dev pensa di sì, ma non
-   ha una conferma, e dal repo non si vede. Se è attivo, prima del deploy di questo ticket va
-   lanciato anche lì l'`ALTER` di `rejection_reason`. Chi gestisce l'ambiente può verificarlo
-   con la query su `information_schema.columns` riportata nei Rischi.
-3. **I messaggi di esito al plurale.** Con `onlyOnDetail` l'azione riceve sempre una sola istanza,
-   quindi «Istanze respinte: :rejected. Saltate perché non in istruttoria: :refused.» non si vedrà
-   più dall'interfaccia. Il ciclo in `handle()` resta, perché l'endpoint si può chiamare
-   direttamente con più id. Semplifichiamo i messaggi al singolare o li lasciamo come sono,
-   tradotti?
-4. **Il riferimento alla call del 15/09 nella description del ticket.** La description cita un
-   passaggio del 15/09 (~00:40) in cui Piccioli mostra le due azioni, ma nelle call di quel giorno
-   non si trova: se ne parla il 21/09 (Bonfanti, spiegazione delle azioni) e il 30/09 (istruzioni
-   a Carla). Correggiamo la description?
-5. **Il gate delle migration non vede una colonna aggiunta a uno stub già eseguito.** In
-   `src/Commands/Concerns/InteractsWithWmPackageMigrationStubs.php`:
-   - `needsPublishing()` (righe 247-258) considera uno stub da pubblicare solo se il file
-     pubblicato **non** è identico;
-   - `stubsPendingMigration()` (righe 276-283) lo considera da migrare solo se il file identico
-     **non** è in `migrations`.
-
-   `schemaGapsForStub()`, che confronta davvero le colonne con il DB, viene chiamato solo per gli
-   stub da pubblicare (`WmPackagePublishMissingMigrationsCommand.php:63`). Il risultato è che su un
-   DB che ha già la tabella, con il file di forestas identico al nuovo stub, il comando stampa
-   «allineati» anche se `rejection_reason` manca. In CI non succede, perché `run-tests.yml` lancia
-   `migrate` su un DB vuoto prima del gate.
-
-   Il gate è nato per la CI (oc:8218, oc:8492), dove è corretto. Il caso scoperto nasce dalla
-   pratica di modificare lo stub `create` invece di aggiungerne uno nuovo, già usata in oc:8539 e
-   ripresa qui. Nessun test di `WmPackagePublishMissingMigrationsCommandTest` copre il caso «file
-   identico, già eseguito, ma con colonne mancanti».
-
-   La correzione possibile è piccola: segnalare come non allineato anche uno stub con gap di
-   schema, pure quando il file è identico e già eseguito. Tocca però un comando che usano tutti i
-   consumer. La facciamo in un ticket a parte, o si accetta il limite finché il dominio non va in
-   produzione?
-6. **Il rollback mirato va offerto come alternativa all'`ALTER`?** Allo scrum del 30/09 Alessandro
-   Peci ha detto «Rollback.» e Giuseppe «Esatto.», senza dettagli. Su un DB che ha già la tabella,
-   il rollback della sola migration delle istanze fallisce: `trail_registry_codes` ha una foreign
-   key verso `trail_applications`. Per farlo passare bisogna fare rollback delle 4 migration del
-   Catasto, e poi `migrate`. Così si svuotano codici, anomalie, eventi e istanze. I codici e le
-   anomalie si ricostruiscono rilanciando l'import; lo storico degli eventi e le istanze no.
-   L'`ALTER` porta allo stesso schema senza perdere nulla, ed è l'unica strada indicata nei
-   Rischi. Il rollback va aggiunto come alternativa, per esempio per chi preferisce ripartire da
-   un DB locale pulito, o resta fuori dal documento?
-7. **Con che `APP_LOCALE` gira il server di forestas?** In forestas `.env-deploy:49-50` ha
-   `APP_LOCALE=en` e `APP_FALLBACK_LOCALE=en`, mentre il `.env` locale ha `it`. Dal repo non si
-   vede se corrisponde al `.env` reale del server. Oggi le chiavi delle due azioni sono in
-   italiano e non sono in nessun JSON, quindi «Approva» e «Respingi» compaiono in qualsiasi
-   lingua. Dopo questo ticket le chiavi sono in inglese: se il server gira con `en`, l'operatore
-   vedrà «Approve», «Reject» e «Rejection reason».
-8. **Serve un test che verifichi la presenza delle traduzioni?** Con le chiavi in inglese, una
-   chiave dimenticata in `it.json` mostra l'inglese all'operatore italiano senza nessun errore.
-   Nel package oggi nessun test controlla `resources/lang/*.json`: una traduzione mancante si
-   scopre solo guardando lo schermo, ed era già stato segnalato come rischio in oc:8569
-   (`overview.md:105`). Il test confronterebbe le chiavi usate dalle due azioni con `it.json` ed
-   `en.json`, e sarebbe il primo di questo tipo nel package. Lo aggiungiamo in questo ticket, in
-   uno generale per tutto il package, o non serve?
-9. **Le chiavi in italiano del Catasto sono una scelta voluta?** Le ha introdotte oc:8489
-   (commit `76515a2a`), e nel TrailRegistry ci sono 96 chiamate a `__()`, quasi tutte con chiavi
-   italiane. Nessun documento lo spiega come regola. oc:8662 (`plan.md:33`) dice «il package non
-   ha file di lingua», ma `resources/lang/*.json` esiste. Questo ticket porta in inglese le chiavi
-   delle due azioni, per coerenza con le 422 chiavi inglesi del resto del package. Va bene, o
-   c'era un motivo per tenerle in italiano, per esempio la lingua del server (domanda 7)?
+1. **Chiavi italiane negli altri file del Catasto e di forestas:** vanno portate in inglese, ma in
+   **oc:8672**, che copre le chiavi italiane rimaste nel Catasto, le tre fuori dal Catasto e le 34
+   di forestas. Qui si portano in inglese solo quelle di `ApproveTrailApplication` e
+   `RejectTrailApplication`.
+2. **UAT:** la tabella `trail_applications` esiste già. L'`ALTER` di `rejection_reason` lo lancia
+   il team prima del deploy.
+3. **Messaggi al plurale:** restano come sono, tradotti.
+4. **Call del 15/09 citata nella description:** la data non cambia nulla, perché il requisito lo
+   fissano la `customer_request` e lo scrum del 30/09. La description resta com'è.
+5. **Gate delle migration:** fuori scope, non si tocca. Il limite è noto.
+6. **Rollback:** resta fuori dal documento, basta l'`ALTER`.
+7. **`APP_LOCALE` del server:** su UAT è `it`. `.env-deploy` è solo il template.
+8. **Test sulle traduzioni:** quello generale, su tutte le chiavi dei due repo, è oc:8672. Qui
+   basta verificare che le chiavi nuove esistano in `it.json` ed `en.json`.
+9. **Chiavi italiane del Catasto:** non erano una scelta voluta. Sono nate dalla regola sulle
+   traduzioni di wm-plan, che chiedeva il testo base nella lingua di `APP_LOCALE`; la regola è
+   corretta in webmappsrl/claude-marketplace#23.
 
 ## Out of scope
 
@@ -173,7 +129,9 @@
 - Una motivazione anche sull'approvazione.
 - La modifica della motivazione dopo il respingimento: si scrive una volta sola, dall'azione.
 - Qualsiasi modifica alla liberazione del numero.
-- La traduzione in `de`, `es` e `fr`.
+- Le chiavi in italiano degli altri file del Catasto e di forestas: oc:8672.
+- La correzione del gate `publish-missing-migrations`.
+- Il test generale sulla completezza delle traduzioni del package: oc:8672.
 
 ## Moduli toccati
 
@@ -186,7 +144,7 @@
 - `src/TrailRegistry/Nova/Actions/ApproveTrailApplication.php`: `$onlyOnDetail`, chiavi in inglese
 - `src/TrailRegistry/Nova/TrailApplication.php`: campo in sola lettura nel dettaglio, visibile solo
   se `rejected`
-- `resources/lang/en.json`, `resources/lang/it.json`
+- `resources/lang/en.json`, `it.json`, `de.json`, `es.json`, `fr.json`
 - `tests/Feature/TrailRegistry/`: test del respingimento e delle azioni
 - `docs/resources/TrailRegistry.md`: motivazione e azioni dal dettaglio
 

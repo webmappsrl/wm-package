@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Laravel\Nova\Fields\ActionFields;
+use Laravel\Nova\Http\Requests\NovaRequest;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackDemJob;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcTrack;
@@ -151,6 +152,42 @@ it('non respinge un istanza gia approvata: il numero assegnato non torna libero'
 
     // Il numero non torna proponibile a una seconda domanda.
     expect(app(TrailRegistryService::class)->availableNumbers('ZNUB5'))->not->toContain(0);
+});
+
+it('respingendo salva la motivazione insieme allo stato', function () {
+    (new RejectTrailApplication)->handle(
+        new ActionFields(collect(['rejection_reason' => 'Tracciato sovrapposto al sentiero 105']), collect()),
+        collect([$this->application->fresh()]),
+    );
+
+    $application = $this->application->fresh();
+
+    expect($application->status)->toBe(TrailApplicationStatus::Rejected)
+        ->and($application->rejection_reason)->toBe('Tracciato sovrapposto al sentiero 105');
+});
+
+it('la motivazione del respingimento e obbligatoria e al massimo di 2000 caratteri', function () {
+    // Le regole si verificano sul campo: chiamando handle() a mano Nova non
+    // valida nulla, e un test senza motivazione passerebbe comunque (oc:8567).
+    $field = collect((new RejectTrailApplication)->fields(NovaRequest::create('/')))
+        ->firstWhere('attribute', 'rejection_reason');
+
+    expect($field)->not->toBeNull()
+        ->and($field->rules)->toContain('required', 'max:2000');
+});
+
+it('non scrive la motivazione su un istanza gia approvata', function () {
+    (new ApproveTrailApplication)->handle(emptyActionFields(), collect([$this->application->fresh()]));
+
+    (new RejectTrailApplication)->handle(
+        new ActionFields(collect(['rejection_reason' => 'Motivo che non deve arrivare']), collect()),
+        collect([$this->application->fresh()]),
+    );
+
+    $application = $this->application->fresh();
+
+    expect($application->status)->toBe(TrailApplicationStatus::Approved)
+        ->and($application->rejection_reason)->toBeNull();
 });
 
 it('non approva un istanza gia respinta', function () {

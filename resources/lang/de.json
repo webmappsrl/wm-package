@@ -16,5 +16,15 @@
     "Municipality": "Gemeinde",
     "Admin level :level": "Verwaltungsebene :level",
     "Source: :source": "Quelle: :source",
-    "Location categories shown in the app and on the WordPress sites (track and POI detail, cards, search filters). Leave empty to show them all. The app detail only shows Region, Province and Municipality; cards show the last selected level. After saving, published files and the search index are regenerated in the background.": "Ortskategorien, die in der App und auf den WordPress-Seiten angezeigt werden (Detail von Etappen und POIs, Karten, Suchfilter). Leer lassen, um alle anzuzeigen. Das App-Detail zeigt nur Region, Provinz und Gemeinde; Karten zeigen die letzte ausgewählte Ebene. Nach dem Speichern werden veröffentlichte Dateien und Suchindex im Hintergrund neu erzeugt."
+    "Location categories shown in the app and on the WordPress sites (track and POI detail, cards, search filters). Leave empty to show them all. The app detail only shows Region, Province and Municipality; cards show the last selected level. After saving, published files and the search index are regenerated in the background.": "Ortskategorien, die in der App und auf den WordPress-Seiten angezeigt werden (Detail von Etappen und POIs, Karten, Suchfilter). Leer lassen, um alle anzuzeigen. Das App-Detail zeigt nur Region, Provinz und Gemeinde; Karten zeigen die letzte ausgewählte Ebene. Nach dem Speichern werden veröffentlichte Dateien und Suchindex im Hintergrund neu erzeugt.",
+    "Approve": "Genehmigen",
+    "Reject": "Ablehnen",
+    "Applications approved.": "Anträge genehmigt.",
+    "Applications rejected.": "Anträge abgelehnt.",
+    "Applications approved: :approved. Skipped because not under review: :refused.": "Anträge genehmigt: :approved. Übersprungen, weil nicht in Prüfung: :refused.",
+    "Applications rejected: :rejected. Skipped because not under review: :refused.": "Anträge abgelehnt: :rejected. Übersprungen, weil nicht in Prüfung: :refused.",
+    "No application approved: only applications under review can be approved.": "Kein Antrag genehmigt: Nur Anträge in Prüfung können genehmigt werden.",
+    "No application rejected: only applications under review can be rejected.": "Kein Antrag abgelehnt: Nur Anträge in Prüfung können abgelehnt werden.",
+    "Rejection reason": "Ablehnungsgrund",
+    "Visible to the applicant: explain what to correct in the new application.": "Für den Antragsteller sichtbar: Erkläre, was im neuen Antrag zu korrigieren ist."
 }
