@@ -36,7 +36,8 @@ submodule.
 ## Decisioni
 
 - **Tag Orchestrator rimandati alla fine del lavoro** (30/09, su richiesta della dev). Candidati
-  trovati per l'ambiente: `wm-package` (id 635) e `forestas` (id 676). Nessuno è stato associato.
+  trovati per l'ambiente: `wm-package` (id 635) e `forestas` (id 676). Associati entrambi il
+  05/10, uno per volta, con il sì della dev.
 - **Stima: 4h**, cioè il tetto dato da Giuseppe Bonfanti allo scrum del 30/09 («facciamo che entro
   4 ore lo chiudiamo»), scelto dalla dev. La stima indipendente di `wm-estimate` era di
   **3.65h misurate** di pianificazione **+ 2.4h stimate** di implementazione **= 6.05h**.
@@ -49,6 +50,11 @@ submodule.
   `fr`; validazione verificata sulle `rules` del campo e non con `handle()`; `onlyOnDetail`
   verificato con `shownOnIndex()` e `shownOnDetail()` sulle azioni di
   `TrailApplication::actions()`; test sulle chiavi nuove in `it.json` ed `en.json`.
+- **Rebase su `develop`** (05/10, su richiesta della dev): sul branch mancava solo `fbae7710`
+  (oc:8540), che non tocca nessun file di questo ticket, quindi nessun conflitto. Il push forzato
+  è stato fatto con il consenso della dev. Il commit del codice del ticket ora è `59a519bd` (prima
+  `4a0d93b4`). Su quale commit fissare il puntatore del submodule in forestas lo dicono le note di
+  forestas: il commit di `develop` che contiene il merge di questa PR.
 
 ## Verifiche eseguite
 
@@ -61,8 +67,17 @@ submodule.
 - **PHPStan** di forestas: 5 errori in 4 file di `tests/Feature/Sus/`, che questo ticket non tocca.
   Il diff di forestas contiene solo la migration e la documentazione.
 - **Migration di forestas**: identica allo stub, byte per byte (`cmp`).
-- **Prova manuale in Nova** (task 11.3): non ancora fatta. Nel DB locale non ci sono istanze in
-  istruttoria su cui provare il respingimento.
+- **Prova manuale in Nova** (task 11.3), fatta dalla dev il 05/10 sull'istanza «prova finale»
+  (id 3) del DB locale di forestas. Verificata nel DB in sola lettura:
+  - stato `rejected`, motivazione salvata in `rejection_reason`;
+  - codice 590 (`Z-NU-B-4-39`) passato da `reserved` a `released`, con l'evento
+    `application_rejected` in `trail_registry_code_events`;
+  - cambio di stato e liberazione del numero allo stesso istante (09:16:29), quindi nella stessa
+    transazione.
+
+  Sull'istanza respinta Approva, Respingi e Sostituisci numero compaiono grigie e non si possono
+  cliccare. È il comportamento atteso: le condizioni sono in `canRun()`, che disabilita l'azione,
+  e non in `canSee()`, che la nasconderebbe.
 
 ## Follow-up
 
