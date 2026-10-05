@@ -4,12 +4,14 @@ Chi può fare cosa nel package, e dove il consumer deve completare il quadro.
 
 ## Stato attuale
 
-### Il package registra una sola policy
+### Le policy che il package registra
 
-`WmPackageServiceProvider` registra **solo** `App::class → AppPolicy`. Non registra policy di
-default per `Layer`, `EcTrack`, `EcPoi`, `UgcPoi`, `UgcTrack`, e l'auto-registrazione
-(`Gate::guessPolicyNamesUsing()`) è stata scartata deliberatamente: sovrascriverebbe tutte le
-policy applicative del consumer.
+`WmPackageServiceProvider` registra `App::class → AppPolicy` e, da oc:8700, le policy del Catasto
+Sentieri: `TrailApplicationPolicy`, `TrailRegistryCodePolicy` e `TrailRegistryAnomalyPolicy`, su
+una base comune `TrailRegistryPolicy` (dettagli in [TrailRegistry.md](../resources/TrailRegistry.md),
+«Chi vede il Catasto»). Non registra policy di default per `Layer`, `EcTrack`, `EcPoi`, `UgcPoi`,
+`UgcTrack`, e l'auto-registrazione (`Gate::guessPolicyNamesUsing()`) è stata scartata
+deliberatamente: sovrascriverebbe tutte le policy applicative del consumer.
 
 **Conseguenza**: un consumer che monta la Nova Resource `EcTrack` senza fare
 `Gate::policy(EcTrack::class, EcTrackPolicy::class)` nel proprio `AppServiceProvider` lascia Nova
@@ -25,6 +27,19 @@ ownership-based, perché EcTrack ed EcPoi sono il contenuto quotidiano.
 
 Non è un'incoerenza da correggere: è scritto qui perché un ticket futuro sull'autorizzazione di
 questi tre modelli non lo "aggiusti" per errore (oc:8181).
+
+### Catasto Sentieri: solo Administrator ed Editor (oc:8700)
+
+Il Catasto in Nova lo vedono e lo usano solo Administrator ed Editor. La regola sta in un punto
+solo, `TrailRegistryPolicy::allows()`, che le Policy, le Action di `TrailApplication` e le Resource
+del Catasto degli shard richiamano.
+
+Serve una policy, non bastano gli `authorizedTo*()` di una Resource: senza policy
+`authorizable()` è falso e Nova non controlla detail, modifica e download aperti per URL. Le Action
+con `canRun()` saltano comunque Resource e policy, per questo la regola è ripetuta lì. Gli
+endpoint `/nova-api/{resource}/search`, `/count` e `/filters` non applicano nessuna
+autorizzazione: restano aperti per scelta
+([note di oc:8700](../features/8700-resource-nova-filtrabile-per-le-righe-del-registro-catastale/notes.md)).
 
 ### Super-admin per email
 

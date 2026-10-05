@@ -82,7 +82,7 @@ Il package non le registra. Su Forestas (oc:8539): `app/Nova/TrailRegistryCode.p
 A dominio spento le sottoclassi restano in `app/Nova`, ma il trait `HidesWhenTrailRegistryDisabled`
 della classe base le toglie dalla navigazione e nega visualizzazione, creazione, modifica,
 cancellazione ed esecuzione delle Action. Una sottoclasse che ridefinisce uno di questi metodi
-scavalca il trait, e deve rifare il controllo con `static::trailRegistryEnabled()`.
+scavalca il trait, e deve rifare sia il controllo di dominio con `static::trailRegistryEnabled()` sia quello di ruolo con `TrailRegistryPolicy::allows()` (oc:8700).
 
 **Sezione di menu «Catasto»**: va dichiarata **vuota** nel `mainMenu` dello shard, solo per
 fissarne la posizione — le voci le aggiunge il package

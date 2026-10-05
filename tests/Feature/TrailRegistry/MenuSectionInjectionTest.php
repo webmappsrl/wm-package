@@ -98,3 +98,35 @@ it('crea la sezione in fondo se il consumer non l ha dichiarata', function () {
         ->and($result[1]->name)->toBe('Catasto')
         ->and($result[1]->collapsedByDefault)->toBeTrue();
 });
+
+it('conserva il canSee che lo shard ha messo sulla sezione', function () {
+    $menu = [
+        MenuSection::make('Catasto', [])->canSee(fn () => false),
+    ];
+
+    $result = inject($menu, 'Catasto', [MenuItem::link('Codici', '/codici')]);
+
+    expect($result[0]->authorizedToSee(request()))->toBeFalse();
+});
+
+it('nasconde la sezione se nessuna delle sue voci e visibile', function () {
+    $menu = [MenuSection::make('Catasto', [MenuItem::link('Doc', '/docs')->canSee(fn () => false)])];
+
+    $result = inject($menu, 'Catasto', [MenuItem::link('Codici', '/codici')->canSee(fn () => false)]);
+
+    expect($result[0]->authorizedToSee(request()))->toBeFalse();
+});
+
+it('mostra la sezione se almeno una voce e visibile', function () {
+    $menu = [MenuSection::make('Catasto', [MenuItem::link('Doc', '/docs')->canSee(fn () => false)])];
+
+    $result = inject($menu, 'Catasto', [MenuItem::link('Codici', '/codici')]);
+
+    expect($result[0]->authorizedToSee(request()))->toBeTrue();
+});
+
+it('la sezione creata in fondo segue la stessa regola', function () {
+    $result = inject([], 'Catasto', [MenuItem::link('Codici', '/codici')->canSee(fn () => false)]);
+
+    expect($result[0]->authorizedToSee(request()))->toBeFalse();
+});

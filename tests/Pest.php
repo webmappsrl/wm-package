@@ -2,10 +2,22 @@
 
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
+use Laravel\Nova\Http\Requests\NovaRequest;
 use Wm\WmPackage\Models\App;
+use Wm\WmPackage\Models\User;
+use Wm\WmPackage\Services\RolesAndPermissionsService;
 use Wm\WmPackage\Tests\TestCase;
 use Wm\WmPackage\TrailRegistry\Enums\TrailCodeStatus;
 use Wm\WmPackage\TrailRegistry\Jobs\UpdateTrailApplicationDemJob;
+
+// src/Policies/Concerns/AuthorizesViaBypassRoles.php:31 (before() di
+// EcTrackPolicy e simili) tipizza App\Models\User, la classe dello shard, che
+// nel package da solo non esiste: senza alias ogni richiesta Nova con un utente
+// del package va in TypeError. Qui vale per tutta la suite, indipendentemente
+// dall'ordine di esecuzione.
+if (! class_exists('App\\Models\\User')) {
+    class_alias(User::class, 'App\\Models\\User');
+}
 
 uses(TestCase::class)->in(__DIR__);
 
@@ -202,4 +214,30 @@ function runTrailRegistryStubs(): void
         $migration = require __DIR__."/../database/migrations/trail_registry/{$stub}";
         $migration->up();
     }
+}
+
+/**
+ * Crea un utente col ruolo dato e lo rende l'utente corrente, restituendo una
+ * NovaRequest (o altra classe di richiesta) che lo risolve. Serve ai test che
+ * interrogano la Resource direttamente: dall'oc:8700 le Policy del Catasto
+ * negano a chi non e' Administrator o Editor, e una richiesta senza utente
+ * viene rifiutata.
+ *
+ * @template T of \Illuminate\Http\Request
+ *
+ * @param  class-string<T>  $requestClass
+ * @return T
+ */
+function richiestaConRuolo(string $role, string $requestClass = NovaRequest::class)
+{
+    RolesAndPermissionsService::seedDatabase();
+
+    $user = User::factory()->create();
+    $user->assignRole($role);
+    test()->actingAs($user);
+
+    $request = $requestClass::create('/');
+    $request->setUserResolver(fn () => $user);
+
+    return $request;
 }

@@ -60,7 +60,7 @@ it('espone dall istanza la action che sostituisce il numero', function () {
 });
 
 it('il canRun della sostituzione segue lo stato del codice attivo', function () {
-    $request = NovaRequest::create('/');
+    $request = richiestaConRuolo('Editor');
 
     // Il canRun vive sulla Resource, non sull'Action: va preso da li',
     // esattamente come lo vede Nova.
@@ -159,7 +159,7 @@ it('la storia di un codice senza passaggi non e una tabella vuota', function () 
 });
 
 it('offre le action di istruttoria solo sulle istanze in istruttoria', function () {
-    $request = NovaRequest::create('/');
+    $request = richiestaConRuolo('Editor');
 
     $underReview = TrailApplicationModel::factory()->create([
         'status' => TrailApplicationStatus::UnderReview,
@@ -184,6 +184,27 @@ it('offre le action di istruttoria solo sulle istanze in istruttoria', function 
         expect($action->authorizedToRun($request, $approved))->toBeFalse();
     }
 });
+
+it('il canRun delle tre action segue il ruolo oltre allo stato', function (string $role, bool $atteso) {
+    $request = richiestaConRuolo($role);
+
+    // makeCode() crea un codice Reserved con la sua istanza in istruttoria:
+    // per questa istanza tutte e tre le action sono applicabili per stato,
+    // quindi l'unica differenza fra i casi e' il ruolo (oc:8700).
+    $application = TrailApplicationModel::find(TrailRegistryCodeModel::find(makeCode(['number' => 30]))->trail_application_id);
+
+    $actions = (new TrailApplicationResource($application))->actions($request);
+
+    expect(collect($actions)->map(fn ($a) => class_basename($a))->all())
+        ->toBe(['ApproveTrailApplication', 'RejectTrailApplication', 'ReplaceTrailCodeNumber']);
+
+    foreach ($actions as $action) {
+        expect($action->authorizedToRun($request, $application))->toBe($atteso, class_basename($action));
+    }
+})->with([
+    'Validator' => ['Validator', false],
+    'Editor' => ['Editor', true],
+]);
 
 it('non permette di cancellare un istanza', function () {
     $resource = new TrailApplicationResource(TrailApplicationModel::factory()->create());

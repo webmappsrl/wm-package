@@ -301,6 +301,33 @@ modifica, cancellazione, Action) senza che lo shard debba ricordarsene.
 - **Anomalie** — sola lettura, con in testa una card che spiega la schermata
   (`TrailRegistryNoticeCard`).
 
+### Chi vede il Catasto (oc:8700)
+
+Il Catasto lo vedono solo gli utenti con ruolo `Administrator` o `Editor`. La regola sta in un
+punto solo, `TrailRegistryPolicy::allows()` (`src/TrailRegistry/Policies/`, costante `ROLES`), e la
+usano tutte le altre parti:
+
+- tre Policy, una per modello: `TrailApplicationPolicy`, `TrailRegistryCodePolicy`,
+  `TrailRegistryAnomalyPolicy`. Sono tre classi, non una, perché il Gate di Laravel toglie il nome
+  della classe prima di chiamare `create()`. Estendono `TrailRegistryPolicy`: le due del registro
+  dei codici e delle anomalie sono di sola lettura (`create` e `update` negati), quella delle
+  istanze concede `create` a chi `allows()` e `update` a chi `allows()` quando l'istanza è
+  `UnderReview`;
+- `WmPackageServiceProvider` le registra **sempre**, anche a dominio spento, sia per il modello
+  base sia per quello configurato dallo shard (`TrailRegistryClasses`). A dominio spento le
+  Resource restano nascoste da `HidesWhenTrailRegistryDisabled`, che mette il dominio in AND con la
+  policy;
+- le tre Action di `TrailApplication` (approva, rifiuta, sostituisci numero) hanno `canSee` e
+  `canRun` che richiamano `TrailRegistryPolicy::allows()`, e `authorizedToUpdate()` della Resource
+  lo include;
+- la sezione di menu «Catasto» si mostra solo se almeno una delle sue voci è visibile
+  (`visibleWhenAnyItemIs()`), sia quando la riempie `injectMenuSectionItems()` nel menu dello
+  shard sia nel ramo di `Nova::mainMenu` senza menu dello shard.
+
+Uno shard che ha le proprie Resource del Catasto, sottoclassi di quelle del package, eredita la
+regola. Se ne scrive di nuove o ridefinisce un `authorizedTo*()`, richiama
+`TrailRegistryPolicy::allows($request->user())`.
+
 Il componente Vue della card è registrato con una **render function in JS puro**
 (`resources/js/domains/trail_registry.js`), non con un bundle compilato: il Vue che Nova carica è
 la build runtime-only, che non compilerebbe un template scritto come stringa, mentre la globale
@@ -358,3 +385,16 @@ anomalia. La procedura completa, con i riferimenti di Forestas, è in
   invece di unire: `'[]'::jsonb || '{"dem_data": …}'` dà `[{"dem_data": …}]`, e la chiave non
   esiste. Nel SQL che scrive in `properties` si parte da
   `CASE WHEN jsonb_typeof(properties) = 'object' THEN properties ELSE '{}'::jsonb END` (oc:8571).
+- **Una restrizione messa solo negli `authorizedTo*()` di una Resource senza policy non protegge.**
+  Nasconde i bottoni, ma detail, modifica e download restano aperti a chi conosce l'URL: serve una
+  policy registrata (oc:8700).
+- **Un'Action con `canRun()` salta l'autorizzazione della Resource e della policy.** Nova, in
+  `filterForExecution()`, usa solo il `canRun()`: la regola dei ruoli va ripetuta lì dentro, o un
+  POST all'Action passa anche per chi non vede il bottone (oc:8700).
+- **Chi ridefinisce un `authorizedTo*()` in una Resource del Catasto deve rifare due controlli.**
+  Il metodo ridefinito vince su quello del trait: vanno ripetuti sia il controllo del dominio
+  (`trailRegistryEnabled()`) sia `TrailRegistryPolicy::allows()` (oc:8700).
+- **Un `canSee` messo dallo shard sulla sezione «Catasto» resta, ma non basta a mostrarla.**
+  `injectMenuSectionItems()` ricostruisce la sezione e riporta il `canSee` dello shard, in AND con
+  la regola «almeno una voce visibile»: se la policy nega tutte le voci, la sezione sparisce anche
+  con un `canSee` che dice sì (oc:8700).
