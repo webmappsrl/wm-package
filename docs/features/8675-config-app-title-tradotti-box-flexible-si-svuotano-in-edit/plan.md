@@ -60,7 +60,7 @@ Casi che l'overview implica e che un dev si aspetta funzionino, ciascuno con il 
 - `serializeForForm(Flexible $field, $resource): array` — imposta una `NovaRequest` di form (update-fields) nel container, chiama `$field->resolve($resource)` e restituisce `json_decode(json_encode($field), true)`: il `json_encode` dell'**intero** campo, meta `layouts` compreso.
 - `translatableValuesByGroup(array $serialized, string $attribute): array<int, array<string,string>>` — per ogni gruppo di `$serialized['value']`, trova il campo `FlexibleTranslatable` e restituisce `[locale => value]` letto dai suoi `fields[*]` (`meta.locale` → `value`).
 
-- [ ] **Step 1: scrivi il test**
+- [x] **Step 1: scrivi il test**
 
 ```php
 it('espone al form il title di ciascun gruppo quando più gruppi usano FlexibleTranslatable', function () {
@@ -76,7 +76,7 @@ it('espone al form il title di ciascun gruppo quando più gruppi usano FlexibleT
 });
 ```
 
-- [ ] **Step 2: verifica che fallisca per il motivo giusto**
+- [x] **Step 2: verifica che fallisca per il motivo giusto**
 
 Run: `docker exec php-maphub vendor/bin/pest wm-package/tests/Feature/Nova/FlexibleTranslatableInFlexibleLayoutTest.php`
 Atteso: FAIL sulle `expect`, con valori `''` (oppure con il title dell'ultimo gruppo su entrambi).
@@ -92,14 +92,14 @@ riportato al dev prima di proseguire.
 
 **Interfacce:** consuma gli helper del task 1.
 
-- [ ] **Step 1: aggiungi il test sulla variante `richText`**
+- [x] **Step 1: aggiungi il test sulla variante `richText`**
 
 `it('espone al form il content rich text di ciascun gruppo')`: un `Flexible` di prova con un layout
 `info` che contiene direttamente `FlexibleTranslatable::richText('Content', [Trix::make('Content', 'content')])`,
 due gruppi con `content_it` diversi (`<p>Uno</p>`, `<p>Due</p>`), risolto su un `Fluent`/modello
 con quegli attributi; `expect` sul valore `it` di ciascun gruppo. Deve fallire come quello del task 1.
 
-- [ ] **Step 2: implementa `public function jsonSerialize(): array`**
+- [x] **Step 2: implementa `public function jsonSerialize(): array`**
 
 Chiama `parent::jsonSerialize()` e, se la chiave `fields` è un array, sostituisce ogni elemento
 `JsonSerializable` con il suo `jsonSerialize()`. Docblock in italiano che spiega il perché: i
@@ -108,12 +108,12 @@ sotto-campi sono condivisi fra i gruppi dal `clone` superficiale di `Layout::clo
 rimedio di `Layout::getResolvedValue`, un livello più in basso (oc:8675). Aggiorna il docblock di
 classe se cita il comportamento della serializzazione.
 
-- [ ] **Step 3: verifica**
+- [x] **Step 3: verifica**
 
 Run: `docker exec php-maphub vendor/bin/pest wm-package/tests/Feature/Nova/FlexibleTranslatableInFlexibleLayoutTest.php wm-package/tests/Feature/Nova/Fields/FlexibleTranslatableTest.php`
 Atteso: tutto PASS (oggi `FlexibleTranslatableTest` ha 25 test verdi).
 
-- [ ] **Step 4: commit (istruzione per il dev)**
+- [x] **Step 4: commit (istruzione per il dev)** — fatto nel commit unico `1749a745`
 
 ```bash
 git add src/Nova/Fields/FlexibleTranslatable.php tests/Feature/Nova/FlexibleTranslatableInFlexibleLayoutTest.php
@@ -131,7 +131,7 @@ git commit -m "fix(oc:8675): FlexibleTranslatable serializza subito i sotto-camp
 - `submitFromForm(Flexible $field, array $serialized, $resource, array $overrides = []): array` — costruisce la `NovaRequest` PUT come la invia il form (`[$attribute => [['layout' => …, 'key' => …, 'attributes' => ["{key}__{sub-attribute}" => value, …]], …]]`, prendendo layout, key, attributi e valori da `$serialized`; `$overrides` permette di cambiare un valore o aggiungere/riordinare gruppi), chiama `$field->fill($request, $resource)` (eseguendo la callback se ne restituisce una) e restituisce il JSON decodificato dell'attributo del resource. Il formato esatto delle chiavi va verificato in `Flexible::syncAndFillGroups` e `ScopedRequest::scopeFrom`.
 - `overlaysFlexible(): Flexible` — come `configHomeFlexible()`, con il resolver e i layout di `App::overlays`.
 
-- [ ] **Step 1: scrivi i test** (tutti con `serializeForForm` → `submitFromForm` senza modifiche, poi `expect` sul JSON salvato)
+- [x] **Step 1: scrivi i test** (tutti con `serializeForForm` → `submitFromForm` senza modifiche, poi `expect` sul JSON salvato)
 
 - `it('lascia identici i title di title, slug ed external_url dopo un salvataggio senza modifiche')` — un box per tipo, title diversi in `it`/`en`; `expect` uguale all'input. *(review focus 1)*
 - `it('lascia identici i title degli horizontal_scroll activities e poi_types')` — due box con title e almeno un item; `expect` su `HOME[i].title`.
@@ -142,13 +142,13 @@ git commit -m "fix(oc:8675): FlexibleTranslatable serializza subito i sotto-camp
 - `it('mantiene i due formati del title vuoto')` — svuotando tutte le lingue: chiave assente su `title`/`slug`, `"title" => []` su `horizontal_scroll`.
 - `it('lascia identiche le label degli overlays title')` — due overlay `title` con label diverse, `overlaysFlexible()`.
 
-- [ ] **Step 2: verifica**
+- [x] **Step 2: verifica**
 
 Run: `docker exec php-maphub vendor/bin/pest wm-package/tests/Feature/Nova/FlexibleTranslatableInFlexibleLayoutTest.php`
 Atteso: PASS. Controprova: con il task 2 annullato temporaneamente (`git stash` del solo file
 `FlexibleTranslatable.php`, poi `git stash pop`) almeno i test con più gruppi falliscono.
 
-- [ ] **Step 3: commit (istruzione per il dev)**
+- [x] **Step 3: commit (istruzione per il dev)** — fatto nel commit unico `1749a745`
 
 ```bash
 git add tests/Feature/Nova/FlexibleTranslatableInFlexibleLayoutTest.php
@@ -160,7 +160,7 @@ git commit -m "test(oc:8675): giro completo del form per i title di home e overl
 **File:**
 - Test: `wm-package/tests/Feature/Nova/FlexibleTranslatableInFlexibleLayoutTest.php`
 
-- [ ] **Step 1: scrivi i test**
+- [x] **Step 1: scrivi i test**
 
 - `it('tiene i title di due item horizontal scroll dopo il giro del form')` — box `horizontal_scroll` activities con due item e title item diversi; `expect` su `HOME[0].items[*].title`.
 - `it('tiene title e content di due righe info box dopo il giro del form')` — `config_detail` di un `EcPoi` non salvato (`HasConfigDetailPanel`, `ConfigDetailResolver`), layout `info` con due righe; `expect` su title e content di ciascuna riga.
@@ -168,7 +168,7 @@ git commit -m "test(oc:8675): giro completo del form per i title di home e overl
 Passano già prima del fix (controprova come nel task 3): il loro scopo è proteggere i Repeater
 dal fix nel campo.
 
-- [ ] **Step 2: verifica e commit**
+- [x] **Step 2: verifica e commit** — commit nel commit unico `1749a745`
 
 Run: come sopra. Atteso: PASS.
 
@@ -181,19 +181,19 @@ git commit -m "test(oc:8675): non regressione dei title nei Repeater"
 
 > ⚠️ L'implementazione ha deviato da questo task: [notes.md](notes.md#task-5-le-due-versioni-di-kongulov-suite-e-analisi-statica)
 
-- [ ] **Step 1: suite con la 2.1.7** (quella di maphub)
+- [x] **Step 1: suite con la 2.1.7** (quella di maphub)
 
 Run: `docker exec php-maphub vendor/bin/pest wm-package/tests/Feature/Nova/FlexibleTranslatableInFlexibleLayoutTest.php wm-package/tests/Feature/Nova/Fields/FlexibleTranslatableTest.php wm-package/tests/Feature/Nova/AppConfigOverlaysTitleLayoutTest.php wm-package/tests/Feature/Nova/AppConfigHomeHorizontalScrollTest.php wm-package/tests/Unit/Nova/AppConfigHomePoiTrackLayoutTest.php`
 Atteso: PASS. `ConfigHomeTitleBoxLegacyStringTest` dalla suite di maphub fallisce già oggi con
 `Target class [config] does not exist` (non dichiara `Tests\TestCase`): è preesistente, si annota
 in `notes.md` e non si corregge qui.
 
-- [ ] **Step 2: suite con la 2.2.5**, solo in locale
+- [x] **Step 2: suite con la 2.2.5**, solo in locale
 
 Run: `docker exec php-maphub composer require kongulov/nova-tab-translatable:2.2.5 --no-interaction --no-scripts`, poi lo stesso comando dello step 1.
 Atteso: PASS. Poi ripristino: `git -C /Users/rubensgarofalo/Sites/Webmapp/Laravel/maphub checkout composer.json composer.lock` e `docker exec php-maphub composer install --no-interaction --no-scripts`; controllo che `vendor/kongulov/nova-tab-translatable` sia di nuovo alla 2.1.7 e che `git status` di maphub non mostri `composer.*`.
 
-- [ ] **Step 3: PHPStan e Pint**
+- [x] **Step 3: PHPStan e Pint**
 
 Run: `docker exec php-maphub vendor/bin/phpstan analyse` (da maphub) e Pint solo sui file toccati:
 `docker exec php-maphub sh -c 'cd wm-package && vendor/bin/pint src/Nova/Fields/FlexibleTranslatable.php tests/Feature/Nova/FlexibleTranslatableInFlexibleLayoutTest.php'`.
@@ -203,17 +203,17 @@ Atteso: nessun errore nuovo sui file del diff.
 
 > ⚠️ L'implementazione ha deviato da questo task: [notes.md](notes.md#task-6-prova-a-mano-in-nova-locale)
 
-- [ ] **Step 1:** `http://localhost:8000/nova/resources/apps/3/edit`, tab Home: i title dei box si
+- [x] **Step 1:** `http://localhost:8000/nova/resources/apps/3/edit`, tab Home: i title dei box si
   vedono in tutte le lingue in cui sono salvati (il box `title` dell'app 3 ha il title legacy
   stringa). Prima salva l'attuale valore: `docker exec postgres-maphub psql -U maphub -d maphub -Atc "select config_home from apps where id=3"`.
-- [ ] **Step 2:** salva senza toccare nulla, rilancia la query: `config_home` identico, salvo la
+- [x] **Step 2:** salva senza toccare nulla, rilancia la query: `config_home` identico, salvo la
   conversione del legacy in oggetto. Stessa prova sulla tab degli overlays.
-- [ ] **Step 3:** esito (con eventuali differenze) in `notes.md`.
+- [x] **Step 3:** esito (con eventuali differenze) in `notes.md`.
 
 ### Task 7: documentazione del cantiere
 
-- [ ] `notes.md` con deviazioni, il test legacy che fallisce dalla suite del consumer, l'esito delle due versioni di kongulov e della prova a mano.
-- [ ] Commit (istruzione per il dev):
+- [x] `notes.md` con deviazioni, il test legacy che fallisce dalla suite del consumer, l'esito delle due versioni di kongulov e della prova a mano.
+- [x] Commit (istruzione per il dev): — fatto nel commit unico `1749a745`
 
 ```bash
 git add docs/features/8675-config-app-title-tradotti-box-flexible-si-svuotano-in-edit/

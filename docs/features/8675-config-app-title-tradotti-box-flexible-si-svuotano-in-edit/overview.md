@@ -41,39 +41,41 @@ aver già perso i title.
 
 ## Requisiti
 
-- [ ] Un test che oggi fallisce dimostra la causa: un Flexible con almeno due gruppi che usano
+- [x] Un test che oggi fallisce dimostra la causa: un Flexible con almeno due gruppi che usano
       `FlexibleTranslatable`, serializzato come lo serializza Nova, deve esporre i valori salvati
       di ciascun gruppo in ogni lingua. Il test fa il `json_encode` dell'**intero campo Flexible**,
       meta `layouts` compreso, come la risposta di Nova: chiamare solo `jsonSerialize()` sul gruppo
       non basta, perché i sotto-campi per lingua restano oggetti fino al `json_encode` finale. I
       due gruppi hanno valori diversi, e il test controlla il valore di ciascun gruppo, non solo
       che non sia vuoto.
-- [ ] Il fix sta in `FlexibleTranslatable` (wm-package), non nei resolver dei singoli box:
+- [x] Il fix sta in `FlexibleTranslatable` (wm-package), non nei resolver dei singoli box:
       `jsonSerialize()` sostituisce nel meta `fields` gli oggetti dei sotto-campi con la loro
       serializzazione. Nessun accesso a proprietà private del vendor, comportamento identico
       con la 2.1.7 e con la 2.2.5.
-- [ ] Coperte entrambe le varianti del campo: `simple` (title) e `richText` (content dell'info box).
-- [ ] Coperti i contenitori in cui il campo sta direttamente nel layout Flexible, e quindi è
+- [x] Coperte entrambe le varianti del campo: `simple` (title) e `richText` (content dell'info box).
+- [x] Coperti i contenitori in cui il campo sta direttamente nel layout Flexible, e quindi è
       colpito, ciascuno con un test di andata e ritorno che passa dal form
       (`resolve → jsonSerialize → fill → set`) con almeno due gruppi:
-  - [ ] box di `config_home`: `title`, `slug`, `external_url`, `horizontal_scroll` (activities e
+  - [x] box di `config_home`: `title`, `slug`, `external_url`, `horizontal_scroll` (activities e
         poi_types), tutti tramite `config_home_title_layout()`;
-  - [ ] layout `title` degli overlays (campo `Label`).
+  - [x] layout `title` degli overlays (campo `Label`).
 - [ ] Test di non regressione per i Repeater, dove il campo sta nelle righe: due righe con valori
       diversi escono intatte dal giro del form, prima e dopo il fix. Nova costruisce i campi di
       ogni riga con una nuova chiamata a `fields()` (`Repeatable::resolveFields`), quindi dalla
       lettura del codice i Repeater non condividono gli oggetti per lingua e non sono colpiti:
-  - [ ] `HorizontalScrollItemRepeatable` (title dell'item);
+  - [x] `HorizontalScrollItemRepeatable` (title dell'item);
   - [ ] `InfoBoxItemRepeatable` (title e content), dentro `config_detail` di Layer, EcTrack ed EcPoi.
-- [ ] Il formato salvato non cambia: il title resta un oggetto per lingua con le sole lingue
+        *Non spuntato: verificato solo su `EcPoi`. Layer ed EcTrack montano lo stesso pannello
+        (`HasConfigDetailPanel`), ma non hanno un test dedicato in questo lavoro.*
+- [x] Il formato salvato non cambia: il title resta un oggetto per lingua con le sole lingue
       valorizzate (`{"it":"…","en":"…"}`), il title stringa del vecchio formato continua a essere
       convertito come dopo oc:8488.
-- [ ] Il comportamento di un title vuoto resta quello di oggi, che non è uguale in tutti i box:
+- [x] Il comportamento di un title vuoto resta quello di oggi, che non è uguale in tutti i box:
       una lingua lasciata vuota non viene salvata; un title vuoto in tutte le lingue non scrive la
       chiave nei box generici (`ConfigHomeResolver.php:181-186`) e nella label degli overlays
       (`ConfigOverlaysResolver.php:74-78`), mentre negli `horizontal_scroll` scrive `"title": []`
       (`ConfigHomeResolver.php:586-605`). Questo ticket non li rende uguali.
-- [ ] I test nuovi passano con entrambe le versioni di `kongulov/nova-tab-translatable`: la 2.1.7
+- [x] I test nuovi passano con entrambe le versioni di `kongulov/nova-tab-translatable`: la 2.1.7
       dei consumer (fissata dal `composer.lock` di maphub, cioè quella di produzione) e la 2.2.5
       che il package installa con `^2.1`. I test del campo dichiarano `Tests\TestCase` e girano
       dalla suite di maphub, che usa già la 2.1.7. La 2.2.5 si installa solo in locale in maphub
@@ -82,7 +84,11 @@ aver già perso i title.
 - [ ] I test esistenti (`FlexibleTranslatableTest`, `ConfigHomeTitleBoxLegacyStringTest`,
       `AppConfigOverlaysTitleLayoutTest`, `AppConfigHomeHorizontalScrollTest`,
       `AppConfigHomePoiTrackLayoutTest`) restano verdi.
-- [ ] Prova a mano in Nova locale (maphub, DB copiato da dev.maphub il 05/10/2026): aperto l'edit
+      *Non spuntato: dalla suite di maphub `FlexibleTranslatableTest` e
+      `AppConfigOverlaysTitleLayoutTest` sono verdi; `ConfigHomeTitleBoxLegacyStringTest` e un test
+      di `AppConfigHomeHorizontalScrollTest` falliscono già senza il fix, e
+      `AppConfigHomePoiTrackLayoutTest` non gira dal consumer (vedi notes.md, «Bug trovati»).*
+- [x] Prova a mano in Nova locale (maphub, DB copiato da dev.maphub il 05/10/2026): aperto l'edit
       della config di un'app, i title si vedono in tutte le lingue; salvando senza toccarli,
       `config_home` resta identico.
 
