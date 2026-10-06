@@ -57,6 +57,7 @@ class TrailApplication extends MultiLineString
         'name',
         'geometry',
         'properties',
+        'rejection_reason',
     ];
 
     protected $casts = [
@@ -109,7 +110,7 @@ class TrailApplication extends MultiLineString
 
     /**
      * Il codice di cui mostrare la mappa: quello attivo, oppure, per
-     * un'istanza rifiutata, l'ultimo che ha avuto.
+     * un'istanza respinta, l'ultimo che ha avuto.
      */
     public function mapCode(): ?TrailRegistryCode
     {
@@ -118,7 +119,7 @@ class TrailApplication extends MultiLineString
 
     /**
      * La versione della mappa dell'istanza: quella del codice mostrato, piu'
-     * lo stato dell'istanza — «Approva» e «Rifiuta» cambiano l'istanza anche
+     * lo stato dell'istanza — «Approva» e «Respingi» cambiano l'istanza anche
      * quando il codice non cambia id (oc:8662).
      */
     public function mapVersion(): string

@@ -31,9 +31,15 @@ class ApproveTrailApplication extends Action
 {
     use InteractsWithQueue, Queueable;
 
+    /**
+     * Solo dal dettaglio: approvare vuol dire assegnare un codice guardando la
+     * mappa della singola istanza (oc:8567).
+     */
+    public $onlyOnDetail = true;
+
     public function name(): string
     {
-        return __('Approva');
+        return __('Approve');
     }
 
     public function handle(ActionFields $fields, Collection $models)
@@ -90,17 +96,17 @@ class ApproveTrailApplication extends Action
         }
 
         if ($approved === 0) {
-            return Action::danger(__('Nessuna istanza approvata: solo le istanze in istruttoria possono essere approvate.'));
+            return Action::danger(__('No application approved: only applications under review can be approved.'));
         }
 
         if ($refused > 0) {
-            return Action::message(__('Istanze approvate: :approved. Saltate perche\' non in istruttoria: :refused.', [
+            return Action::message(__('Applications approved: :approved. Skipped because not under review: :refused.', [
                 'approved' => $approved,
                 'refused' => $refused,
             ]));
         }
 
-        return Action::message(__('Istanze approvate.'));
+        return Action::message(__('Applications approved.'));
     }
 
     /**

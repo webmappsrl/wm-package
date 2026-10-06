@@ -1,6 +1,6 @@
 # TrailRegistry — Catasto Sentieri (dominio opzionale)
 
-> Ultimo aggiornamento: 2026-09-10 · ticket oc:8489
+> Ultimo aggiornamento: 2026-09-30 · ticket oc:8567
 
 ## In breve
 
@@ -261,6 +261,11 @@ php artisan migrate
 
 Il gate di CI va invocato con `--with=trail_registry`.
 
+Una colonna aggiunta a uno stub già pubblicato (come `rejection_reason`, oc:8567) non arriva da
+sola sui DB che hanno già la tabella: lo stub `create` esce con `hasTable` e la migration risulta
+già eseguita. Lì va aggiunta con un `ALTER`, e il gate non lo segnala: guarda i file, non le
+colonne, quando il file pubblicato è identico allo stub. È un limite noto.
+
 ## Interfaccia Nova
 
 Le tre Resource stanno nella sezione di menu **Catasto**. Chi le vede in Nova non è il package: è
@@ -288,7 +293,11 @@ modifica, cancellazione, Action) senza che lo shard debba ricordarsene.
   dell'istanza. La linea del profilo la indica il GeoJSON (`slopeChart` sulla feature del codice
   in esame), perché su una mappa con molte linee il componente condiviso non saprebbe sceglierla
   (oc:8662).
-- **Istanze** — il ciclo di accatastamento, con le azioni che ne fanno avanzare lo stato. Da qui
+- **Istanze** — il ciclo di accatastamento, con le azioni che ne fanno avanzare lo stato.
+  «Approva» e «Respingi» si fanno **solo dal dettaglio**, una istanza alla volta: sono decisioni
+  che si prendono guardando la singola domanda e la sua mappa. «Respingi» chiede una
+  **motivazione obbligatoria** (al massimo 2000 caratteri), che resta nel dettaglio in sola
+  lettura sulle istanze respinte ed è il testo destinato al richiedente (oc:8567). Da qui
   si sostituisce anche il numero prenotato, scegliendo in due tendine — il numero, poi la
   variante, con «nessuna variante» fra le opzioni della seconda: il gesto avviene mentre si
   guarda la mappa dell'istanza, che è il contesto su cui si decide (oc:8569).

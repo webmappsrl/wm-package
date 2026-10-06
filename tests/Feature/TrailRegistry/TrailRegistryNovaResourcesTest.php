@@ -206,6 +206,73 @@ it('il canRun delle tre action segue il ruolo oltre allo stato', function (strin
     'Editor' => ['Editor', true],
 ]);
 
+it('offre approva e respingi solo dal dettaglio, non dall elenco', function () {
+    $application = TrailApplicationModel::factory()->create([
+        'status' => TrailApplicationStatus::UnderReview,
+    ]);
+
+    // Si verificano le azioni che la Resource restituisce, non la proprieta':
+    // un ->showOnIndex() aggiunto in actions() la scavalcherebbe (oc:8567).
+    $actions = collect((new TrailApplicationResource($application))->actions(NovaRequest::create('/')))
+        ->filter(fn ($a) => in_array(class_basename($a), ['ApproveTrailApplication', 'RejectTrailApplication'], true));
+
+    expect($actions)->toHaveCount(2);
+
+    foreach ($actions as $action) {
+        // Ne' nel menu della selezione multipla, ne' nel menu della singola
+        // riga: la richiesta e' «solo aprendo l'istanza» (oc:8567).
+        expect($action->shownOnIndex())->toBeFalse()
+            ->and($action->shownOnTableRow())->toBeFalse()
+            ->and($action->shownOnDetail())->toBeTrue();
+    }
+});
+
+it('mostra la motivazione del respingimento solo sulle istanze respinte', function () {
+    $request = NovaRequest::create('/');
+
+    $reasonField = fn (TrailApplicationModel $application) => collect((new TrailApplicationResource($application))->fields($request))
+        ->first(fn ($f) => $f->attribute === 'rejection_reason');
+
+    $rejected = TrailApplicationModel::factory()->create([
+        'status' => TrailApplicationStatus::Rejected,
+        'rejection_reason' => 'Tracciato sovrapposto al sentiero 105',
+    ]);
+    $underReview = TrailApplicationModel::factory()->create([
+        'status' => TrailApplicationStatus::UnderReview,
+    ]);
+
+    expect($reasonField($rejected)->authorizedToSee($request))->toBeTrue()
+        ->and($reasonField($rejected)->isShownOnIndex($request, $rejected))->toBeFalse()
+        ->and($reasonField($underReview)->authorizedToSee($request))->toBeFalse();
+});
+
+it('ha le chiavi nuove delle azioni di istruttoria in it.json ed en.json', function () {
+    $keys = [
+        'Approve',
+        'Reject',
+        'Applications approved.',
+        'Applications rejected.',
+        'Applications approved: :approved. Skipped because not under review: :refused.',
+        'Applications rejected: :rejected. Skipped because not under review: :refused.',
+        'No application approved: only applications under review can be approved.',
+        'No application rejected: only applications under review can be rejected.',
+        'Rejection reason',
+        'Visible to the applicant: explain what to correct in the new application.',
+    ];
+
+    foreach (['it', 'en'] as $locale) {
+        $translations = json_decode(
+            file_get_contents(__DIR__."/../../../resources/lang/{$locale}.json"),
+            true,
+            flags: JSON_THROW_ON_ERROR,
+        );
+
+        foreach ($keys as $key) {
+            expect($translations)->toHaveKey($key);
+        }
+    }
+});
+
 it('non permette di cancellare un istanza', function () {
     $resource = new TrailApplicationResource(TrailApplicationModel::factory()->create());
 

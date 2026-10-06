@@ -482,5 +482,15 @@
     "Municipality": "Comune",
     "Admin level :level": "Livello amministrativo :level",
     "Source: :source": "Sorgente: :source",
-    "Location categories shown in the app and on the WordPress sites (track and POI detail, cards, search filters). Leave empty to show them all. The app detail only shows Region, Province and Municipality; cards show the last selected level. After saving, published files and the search index are regenerated in the background.": "Categorie di località mostrate nell'app e nei siti WordPress (dettaglio di tappe e POI, card, filtri di ricerca). Lascia vuoto per mostrarle tutte. Il dettaglio dell'app mostra solo Regione, Provincia e Comune; le card mostrano l'ultimo livello selezionato. Dopo il salvataggio, i file pubblicati e l'indice di ricerca vengono rigenerati in background."
+    "Location categories shown in the app and on the WordPress sites (track and POI detail, cards, search filters). Leave empty to show them all. The app detail only shows Region, Province and Municipality; cards show the last selected level. After saving, published files and the search index are regenerated in the background.": "Categorie di località mostrate nell'app e nei siti WordPress (dettaglio di tappe e POI, card, filtri di ricerca). Lascia vuoto per mostrarle tutte. Il dettaglio dell'app mostra solo Regione, Provincia e Comune; le card mostrano l'ultimo livello selezionato. Dopo il salvataggio, i file pubblicati e l'indice di ricerca vengono rigenerati in background.",
+    "Approve": "Approva",
+    "Reject": "Respingi",
+    "Applications approved.": "Istanze approvate.",
+    "Applications rejected.": "Istanze respinte.",
+    "Applications approved: :approved. Skipped because not under review: :refused.": "Istanze approvate: :approved. Saltate perché non in istruttoria: :refused.",
+    "Applications rejected: :rejected. Skipped because not under review: :refused.": "Istanze respinte: :rejected. Saltate perché non in istruttoria: :refused.",
+    "No application approved: only applications under review can be approved.": "Nessuna istanza approvata: solo le istanze in istruttoria possono essere approvate.",
+    "No application rejected: only applications under review can be rejected.": "Nessuna istanza respinta: solo le istanze in istruttoria possono essere respinte.",
+    "Rejection reason": "Motivazione del respingimento",
+    "Visible to the applicant: explain what to correct in the new application.": "Visibile al richiedente: spiega cosa correggere nella nuova domanda."
 }

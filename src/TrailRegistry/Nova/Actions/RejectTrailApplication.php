@@ -8,6 +8,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Laravel\Nova\Actions\Action;
 use Laravel\Nova\Fields\ActionFields;
+use Laravel\Nova\Fields\Textarea;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Wm\WmPackage\TrailRegistry\Enums\TrailApplicationStatus;
 use Wm\WmPackage\TrailRegistry\TrailRegistryService;
@@ -23,9 +24,15 @@ class RejectTrailApplication extends Action
 {
     use InteractsWithQueue, Queueable;
 
+    /**
+     * Solo dal dettaglio: la motivazione riguarda la singola domanda, e una
+     * frase copiata su piu' respingimenti non dice nulla a nessuno (oc:8567).
+     */
+    public $onlyOnDetail = true;
+
     public function name(): string
     {
-        return __('Respingi');
+        return __('Reject');
     }
 
     public function handle(ActionFields $fields, Collection $models)
@@ -51,33 +58,44 @@ class RejectTrailApplication extends Action
 
             $code = $application->activeCode;
 
-            DB::transaction(function () use ($application, $code, $service) {
+            DB::transaction(function () use ($application, $code, $service, $fields) {
                 if ($code !== null) {
                     $service->release($code, 'application_rejected', auth()->id());
                 }
 
-                $application->update(['status' => TrailApplicationStatus::Rejected]);
+                $application->update([
+                    'status' => TrailApplicationStatus::Rejected,
+                    'rejection_reason' => $fields->get('rejection_reason'),
+                ]);
             });
 
             $rejected++;
         }
 
         if ($rejected === 0) {
-            return Action::danger(__('Nessuna istanza respinta: solo le istanze in istruttoria possono essere respinte.'));
+            return Action::danger(__('No application rejected: only applications under review can be rejected.'));
         }
 
         if ($refused > 0) {
-            return Action::message(__('Istanze respinte: :rejected. Saltate perche\' non in istruttoria: :refused.', [
+            return Action::message(__('Applications rejected: :rejected. Skipped because not under review: :refused.', [
                 'rejected' => $rejected,
                 'refused' => $refused,
             ]));
         }
 
-        return Action::message(__('Istanze respinte.'));
+        return Action::message(__('Applications rejected.'));
     }
 
+    /**
+     * Obbligatoria: un respingimento senza motivo non dice al richiedente
+     * cosa correggere nella nuova domanda (oc:8567).
+     */
     public function fields(NovaRequest $request): array
     {
-        return [];
+        return [
+            Textarea::make(__('Rejection reason'), 'rejection_reason')
+                ->rules('required', 'max:2000')
+                ->help(__('Visible to the applicant: explain what to correct in the new application.')),
+        ];
     }
 }

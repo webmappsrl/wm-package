@@ -12,6 +12,7 @@ use Laravel\Nova\Fields\DateTime;
 use Laravel\Nova\Fields\Field;
 use Laravel\Nova\Fields\File;
 use Laravel\Nova\Fields\Text;
+use Laravel\Nova\Fields\Textarea;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Tabs\Tab;
 use Wm\WmPackage\Models\User;
@@ -76,7 +77,7 @@ class TrailApplication extends AbstractGeometryResource
     /**
      * Si modifica solo in istruttoria, e solo nei valori manuali del tab DEM
      * (vedi fieldsForUpdate): la traccia non cambia, quindi non cambiano
-     * settore e prefisso del codice gia' comunicato. Approvata o rifiutata,
+     * settore e prefisso del codice gia' comunicato. Approvata o respinta,
      * l'istanza e' uno storico (oc:8571).
      *
      * Ridefinisce il metodo del trait HidesWhenTrailRegistryDisabled, quindi
@@ -149,6 +150,14 @@ class TrailApplication extends AbstractGeometryResource
     public function fields(NovaRequest $request): array
     {
         $fields = $this->summaryFields($request);
+
+        // Solo sulle respinte, e in sola lettura: la scrive l'azione «Respingi»
+        // e un'istanza respinta non si modifica (oc:8567). Non in
+        // summaryFields(), che alimenta anche l'index.
+        $fields[] = Textarea::make(__('Rejection reason'), 'rejection_reason')
+            ->onlyOnDetail()
+            ->alwaysShow()
+            ->canSee(fn () => $this->resource->status === TrailApplicationStatus::Rejected);
 
         // Il DEM manca se il job alla creazione e' fallito o se la geometria
         // e' senza quote: lo si rilancia qui, e solo dove serve (oc:8571, oc:8660).
