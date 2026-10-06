@@ -142,6 +142,10 @@ un'immagine 1080×1920, con le coordinate in `StoryImageLayout`. I font sono ven
 dall'ambiente. Nessun rate-limit dedicato, solo la validazione dei 10MB sullo screenshot
 (oc:8183).
 
+La mappa la disegna `MapRenderService`: `render(UgcTrack …)` è un involucro del metodo generico
+`renderLayers()`, e l'immagine UGC è rimasta identica al pixel, fissata da un test di
+caratterizzazione sull'md5 del PNG (oc:8702).
+
 ### Preferiti sui layer
 
 Trait `Favoriteable` su `Layer`, mirror di `EcTrack`; endpoint
