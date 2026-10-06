@@ -34,6 +34,13 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
 
     public const DEFAULT_COLOR_HEX = '#FF0000';
 
+    /**
+     * Campo dell'indice di ricerca con il nome in tutte le lingue (oc:8681): lo scrive
+     * toSearchableArray(), lo dichiara config/wm-elasticsearch.php (con la stessa stringa, per non
+     * far dipendere la config dal modello) e lo legge ElasticsearchController::localizeSearchResults().
+     */
+    public const SEARCH_NAME_TRANSLATIONS_FIELD = 'name_translations';
+
     protected $table;
 
     protected $fillable = [
@@ -746,6 +753,9 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
                 ?? data_get($this->osmfeatures_data ?? null, 'properties.to')
                 ?? '',
             'name' => $this->getTranslation('name', 'it'),
+            // Tutte le lingue valorizzate: l'endpoint di ricerca le restituisce al posto di name, che
+            // resta l'italiano su cui si ordina (oc:8681, vedi ElasticsearchController::localizeSearchResults()).
+            self::SEARCH_NAME_TRANSLATIONS_FIELD => $this->getTranslations('name'),
             'taxonomyWheres' => $this->applyTaxonomyWhereDisplay([
                 'taxonomy_where' => $this->properties['taxonomy_where'] ?? [],
             ])['taxonomyWheres'] ?? [],

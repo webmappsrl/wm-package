@@ -44,6 +44,15 @@ return [
                             ],
                         ],
                     ],
+                    // Nome della traccia in tutte le lingue, che l'endpoint di ricerca restituisce al posto
+                    // di name (oc:8681). Solo `type: object`, senza dichiarare le lingue: in ogni indice
+                    // le lingue nascono da Elastic al primo documento che le contiene, come testo
+                    // ricercabile. Così il campo è identico negli indici esistenti, dove non è dichiarato,
+                    // e in quelli ricreati con scout:import. Il nome deve restare uguale a
+                    // EcTrack::SEARCH_NAME_TRANSLATIONS_FIELD (lo verifica WmElasticsearchMappingTest).
+                    'name_translations' => [
+                        'type' => 'object',
+                    ],
                     'start' => [
                         'type' => 'geo_point',
                     ],
