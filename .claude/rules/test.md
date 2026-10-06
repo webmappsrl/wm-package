@@ -37,3 +37,12 @@ Si applica quando scrivi o modifichi un test del package.
   `vendor/bin/pest tests/Unit/Services/EcTrackService --filter=<Classe>` (oc:8543).
 - Su `ArrayStore` `flush()` non libera i lock di `ShouldBeUnique`, che vivono in `$locks` e non in
   `$storage`: per ripartire da zero in un test usa `app('cache')->forgetDriver('redis')` (oc:8660).
+- I test del package non girano in nessuna CI: le testsuite dei consumer includono solo i loro
+  `tests/`, e la CI di wm-package fallisce a «Install dependencies» (al 06/10/2026 tutti gli ultimi
+  100 run, dal 23/06/2026: ricontrolla prima di contarci). Si lanciano a mano da un
+  consumer (`vendor/bin/pest wm-package/tests/...`), e lì il DB dipende dallo shard: maphub e
+  osm2cai2 non impostano `DB_DATABASE` in `phpunit.xml` e usano il DB del `.env`, forestas e
+  camminiditalia usano `forestas_testing`/`camminiditalia_testing`. Un test che usa tassonomie senza
+  crearle passa dove ci sono e fallisce dove mancano: crea nel test ciò che usa, con identifier
+  `prefisso-`.`uniqid()` dentro `DatabaseTransactions`, perché un identifier fisso già presente fa
+  scattare il controllo dei doppioni di `TaxonomyObserver` (oc:8675).

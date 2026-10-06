@@ -71,3 +71,9 @@ Si applica quando tocchi Resource, campi, action o card Nova del package.
   `vendor/laravel/nova/resources/js/views/Detail.vue` azzera `panels`, i campi si smontano e si
   rimontano. Lo stato di un componente — la vista di una mappa, dati caricati — si perde: ciò che
   deve sopravvivere va tenuto fuori dal componente (oc:8662).
+- Un campo che tiene altri campi come oggetti nel proprio meta (come `FlexibleTranslatable` con i
+  sotto-campi per lingua), messo in un layout Flexible, condivide quegli oggetti con gli altri
+  gruppi e con il template del layout (`Layout::cloneField()` fa un clone superficiale): nell'edit
+  i valori arrivano vuoti, perché la risposta di Nova serializza il campo due volte (`fields` e
+  `panels`) dopo il `resolve(true)` del template, oppure presi da un altro gruppo — i sotto-campi
+  vanno serializzati subito nel `jsonSerialize()` del campo (oc:8675).

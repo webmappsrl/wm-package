@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Wm\WmPackage\Nova\Fields;
 
 use Illuminate\Support\Str;
+use JsonSerializable;
 use Kongulov\NovaTabTranslatable\NovaTabTranslatable;
 use Laravel\Nova\Fields\Field;
 use Laravel\Nova\Fields\File;
@@ -19,7 +20,9 @@ use Wm\WmPackage\Nova\Fields\Concerns\HasEmbeddableRichText;
  * NovaTabTranslatable::createTranslatedField() assumes by default.
  *
  * Synced with kongulov/nova-tab-translatable v2.1.7 — re-check
- * createTranslatedField() on every vendor bump (composer.json pins ^2.1).
+ * createTranslatedField() on every vendor bump (composer.json pins ^2.1), and the
+ * `'fields' => $this->data` meta set in the parent constructor: jsonSerialize() below relies
+ * on it to serialize the per-locale sub-fields eagerly (oc:8675).
  *
  * Two storage modes, chosen via the named constructors:
  * - simple(): one JSON attribute nested by locale, e.g. `title: {it:.., en:..}`.
@@ -244,6 +247,35 @@ class FlexibleTranslatable extends NovaTabTranslatable
         $this->value = $this->richText
             ? $this->resolveRichTextValue($resource)
             : $this->resolveSimpleValue($resource);
+    }
+
+    /**
+     * Serializza subito i sotto-campi per lingua del meta `fields`, invece di lasciarli come
+     * oggetti fino al json_encode finale della risposta (oc:8675).
+     *
+     * Layout::cloneField() fa un clone superficiale e il meta `fields` punta a $this->data: i
+     * gruppi dello stesso layout, e il template del layout stesso, condividono gli stessi oggetti
+     * dei sotto-campi. Layout::getResolvedValue() serializza i campi del gruppo, ma di un livello
+     * solo. Senza questo override i sotto-campi arrivano al json_encode con i valori dell'ultimo
+     * gruppo risolto, oppure vuoti: la risposta di edit di Nova contiene il campo due volte (in
+     * `fields` e nei `panels`), e la seconda copia viene serializzata dopo il resolve(true) di
+     * Layout::jsonSerialize() del template, anche con un solo gruppo per layout.
+     * È lo stesso rimedio che whitecube applica ai campi del layout, un livello più in basso.
+     *
+     * @return array<string, mixed>
+     */
+    public function jsonSerialize(): array
+    {
+        $serialized = parent::jsonSerialize();
+
+        if (isset($serialized['fields']) && is_array($serialized['fields'])) {
+            $serialized['fields'] = array_map(
+                static fn ($field) => $field instanceof JsonSerializable ? $field->jsonSerialize() : $field,
+                $serialized['fields']
+            );
+        }
+
+        return $serialized;
     }
 
     /**

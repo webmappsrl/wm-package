@@ -29,6 +29,27 @@ patch al vendor (oc:8349).
 formato della request deve guardare il componente **reale**, non la parità del formato di
 storage (oc:8349).
 
+**Dentro un layout Flexible i sotto-campi per lingua sono condivisi fra i gruppi dello stesso
+layout e il template del layout.** `Layout::cloneField()` di whitecube fa un clone superficiale e
+il meta `fields` di kongulov punta a `$this->data`: gruppi e template usano gli stessi oggetti per
+`it`, `en`… `Layout::getResolvedValue()` serializza i campi del gruppo, ma di un livello solo, e i
+sotto-campi restano oggetti fino al `json_encode` finale. Lì succedono due cose:
+
+- con più gruppi dello stesso layout, ogni gruppo riceve i valori dell'ultimo gruppo risolto;
+- la risposta di edit di Nova contiene lo stesso oggetto campo due volte, in `fields` e dentro il
+  pannello in `panels` (`ResolvesFields::resolvePanelsFromFields()`), e la seconda copia viene
+  serializzata dopo il `resolve(true)` di `Layout::jsonSerialize()` del template: i sotto-campi
+  arrivano vuoti **anche con un solo gruppo per layout**.
+
+Il form mostra i title vuoti o sbagliati e al salvataggio li scrive così.
+`FlexibleTranslatable::jsonSerialize()` serializza subito i sotto-campi (oc:8675). Nei `Repeater`
+il problema non c'è: Nova costruisce i campi di ogni riga con una nuova chiamata a `fields()`.
+
+Un test su questo percorso serializza il campo come la risposta di Nova, cioè due volte nello
+stesso `json_encode` (`fields` e `panels`), e legge la copia dei pannelli; con almeno due gruppi
+dello stesso layout e valori diversi controlla anche la contaminazione fra gruppi. Un solo
+`json_encode` del campo non vede il caso con un gruppo per layout (oc:8675).
+
 ### Embed nel rich text
 
 La whitelist HTMLPurifier estende `iframe[src|...]` e `img[src|alt|width|height|title]`, con
@@ -140,3 +161,13 @@ quando vuota, non scritta come `"title": {}` (oc:8241).
 - Bug ancora aperto su un altro repo: `wm-core`/`FeaturesBoxComponent` stampa `{{title}}` senza
   la pipe `wmtrans`, a differenza del box `title`, quindi mostra l'oggetto non tradotto
   (oc:8241).
+- Il fix di oc:8488 convertiva il title stringa legacy in `getAttributesForItem()`, prima della
+  costruzione del form, e il suo test chiamava i metodi privati con un `Layout` senza campi: non
+  passava dal form e non poteva vedere i sotto-campi condivisi, introdotti con `798ead30` (#269)
+  il 07/09/2026 (oc:8675).
+- Scartata una protezione al salvataggio che rimettesse il title salvato quando arriva vuoto: nel
+  `config_home` i box non hanno un identificativo stabile (la chiave del gruppo è un `uniqid`
+  rigenerato a ogni apertura dell'edit), e un abbinamento per posizione e tipo sbaglierebbe quando
+  l'admin aggiunge, toglie o riordina box (oc:8675).
+- Scartato un `__clone` profondo dei sotto-campi: stanno in tre posti di kongulov, uno privato
+  (`translatedFieldsByLocale`), e la classe cambia fra la 2.1.7 dei consumer e la 2.2.5 (oc:8675).
