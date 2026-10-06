@@ -17,7 +17,7 @@ arriva dopo e non tocca più ciò che è già serializzato. Nessun accesso a pro
 kongulov, nessun cambiamento del formato salvato.
 
 **Stack:** wm-package (Laravel 12, Nova 5), whitecube/nova-flexible-content, kongulov/nova-tab-translatable
-2.1.7 (consumer) e 2.2.5 (CI del package), Pest.
+2.1.7 (consumer) e 2.2.5 (quella che `^2.1` installa nel package), Pest.
 
 **Spec:** [overview.md](overview.md)
 

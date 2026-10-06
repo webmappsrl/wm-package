@@ -97,12 +97,25 @@ Stessa prova sugli altri due consumer:
 | Suite | DB | Commit `82560101` | Versione corretta |
 |---|---|---|---|
 | maphub | sviluppo (`cycling`/`asphalt` presenti) | 12/12 | 12/12 |
-| forestas | `forestas_testing`, vuoto | 11/12 (0 item su 2) | 12/12 |
-| camminiditalia | `camminiditalia_testing`, vuoto | 11/12 (0 item su 2) | 12/12 |
+| forestas | `forestas_testing`, creato e migrato in locale per la prova, senza tassonomie | 11/12 (0 item su 2) | 12/12 |
+| camminiditalia | `camminiditalia_testing`, creato e migrato in locale per la prova, senza tassonomie | 11/12 (0 item su 2) | 12/12 |
 | osm2cai2 | sviluppo (`cycling`/`asphalt` presenti) | 12/12 | 12/12 |
 
 Su maphub e osm2cai2 la versione del commit passava solo perché le attività sono nel DB di
 sviluppo. In tutti i DB, dopo il test, non resta nessuna tassonomia `test-*`.
+
+Questi test non girano in nessuna CI: le testsuite dei consumer (`origin/main`) includono solo i
+loro `tests/`, e la CI di wm-package fallisce al passo «Install dependencies» («Your requirements could not be
+resolved», `laravel/framework 11.*`): al 06/10/2026 sono falliti tutti gli ultimi 100 run, dal
+23/06/2026, compresi quelli della #295 (passo controllato su un campione di 5 run). Si lanciano solo
+a mano da un consumer.
+
+Verifica sulle versioni di produzione (06/10/2026): ogni consumer portato su `origin/main` (maphub
+`fee64e4`, forestas `fb08652`, camminiditalia `493de00`, osm2cai2 `f482061`), con il proprio
+`composer.lock`, il submodule sul commit pushato `d837c0a8` e, per forestas e camminiditalia, il DB
+di test ricreato con le migration di `main`. Il file di test è identico a quello del commit
+pushato. Risultato: 12 su 12 su tutti e quattro; dopo il test nessuna tassonomia `test-*` resta nel
+DB. Poi ogni repo è stato rimesso sul suo branch e commit di partenza.
 
 ## Bug trovati
 

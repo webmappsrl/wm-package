@@ -10,6 +10,14 @@ sotto test.
 Il package ha una CI propria (`.github/workflows/run-tests.yml`) che gira su
 `Wm\WmPackage\Tests\TestCase`. I consumer hanno la loro suite, che gira su `Tests\TestCase`.
 
+**Al 06/10/2026 la CI del package non arriva ai test:** tutti gli ultimi 100 run, dal 23/06/2026,
+falliscono al passo «Install dependencies» («Your requirements could not be resolved»,
+`laravel/framework 11.*`). E le testsuite dei consumer includono solo i loro `tests/`, non
+`wm-package/tests`. Finché la CI non torna a girare, un test del package si verifica solo
+lanciandolo a mano da un consumer (`vendor/bin/pest wm-package/tests/...`), meglio da più di uno:
+maphub e osm2cai2 usano il DB del `.env`, forestas e camminiditalia i loro DB `*_testing`
+(oc:8675).
+
 **`Wm\WmPackage\Tests\` non è in `autoload-dev` dei consumer** (verificato su forestas, che
 registra solo `Tests\` e le factory del package). Conseguenza: un test del package che non
 dichiara esplicitamente `uses(Tests\TestCase::class)` **fallisce silenziosamente** se lanciato dal
