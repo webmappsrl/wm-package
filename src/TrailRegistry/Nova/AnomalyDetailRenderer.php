@@ -45,22 +45,22 @@ class AnomalyDetailRenderer
 
         $rows = match ($anomaly->type) {
             TrailRegistryAnomalyType::CodiceGiaAssegnato => [
-                [__('Codice'), static::code((string) ($context['code'] ?? ''))],
-                [__('Già assegnato a'), static::assignee($context)],
+                [__('Code'), static::code((string) ($context['code'] ?? ''))],
+                [__('Already assigned to'), static::assignee($context)],
             ],
             TrailRegistryAnomalyType::SettoreDiscordante => [
-                [__('Codice nei dati'), static::code((string) ($context['raw_code'] ?? ''))],
-                [__('Codice dalla geometria'), static::code((string) ($context['proposed_code'] ?? ''))],
+                [__('Code in the data'), static::code((string) ($context['raw_code'] ?? ''))],
+                [__('Code from the geometry'), static::code((string) ($context['proposed_code'] ?? ''))],
             ],
             TrailRegistryAnomalyType::GeometriaDuplicata => [
-                [__('Stessa traccia di'), static::twins($context)],
+                [__('Same track as'), static::twins($context)],
             ],
             TrailRegistryAnomalyType::CodiceIlleggibile => [
-                [__('Codice nei dati'), static::code((string) ($context['raw_code'] ?? ''))],
-                [__('Primo libero nel settore'), static::code((string) ($context['proposed_code'] ?? ''))],
+                [__('Code in the data'), static::code((string) ($context['raw_code'] ?? ''))],
+                [__('First free number in the sector'), static::code((string) ($context['proposed_code'] ?? ''))],
             ],
             TrailRegistryAnomalyType::FuoriDaOgniSettore => [
-                [__('Codice nei dati'), static::code((string) ($context['raw_code'] ?? ''))],
+                [__('Code in the data'), static::code((string) ($context['raw_code'] ?? ''))],
             ],
             // Nova costruisce i campi anche su un record vuoto, per ricavare
             // le colonne dell'elenco prima di avere le righe.
@@ -89,8 +89,8 @@ class AnomalyDetailRenderer
         }
 
         return [
-            [__('Tipo'), e($type)],
-            [__('Contesto'), e(json_encode($anomaly->context ?? [], JSON_UNESCAPED_UNICODE))],
+            [__('Type'), e($type)],
+            [__('Context'), e(json_encode($anomaly->context ?? [], JSON_UNESCAPED_UNICODE))],
         ];
     }
 
@@ -135,8 +135,8 @@ class AnomalyDetailRenderer
         $label = config('wm-package.features.trail_registry.source_label');
 
         return is_string($label) && trim($label) !== ''
-            ? __('Apri su :platform', ['platform' => $label])
-            : __('Apri la scheda sulla piattaforma di origine');
+            ? __('Open on :platform', ['platform' => $label])
+            : __('Open the record on the source platform');
     }
 
     /**
@@ -179,7 +179,7 @@ class AnomalyDetailRenderer
     protected static function code(string $code): string
     {
         return $code === ''
-            ? '<em>'.e(__('assente')).'</em>'
+            ? '<em>'.e(__('missing')).'</em>'
             : '<strong class="font-mono">'.e($code).'</strong>';
     }
 

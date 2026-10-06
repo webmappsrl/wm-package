@@ -62,7 +62,7 @@ class EcPoi extends AbstractEcResource
             $this->configDetailPanel(),
             MorphToMany::make(__('Taxonomy Poi Types'), 'taxonomyPoiTypes', TaxonomyPoiType::class)
                 ->display('name')
-                ->help(__('Tipologie di POI associate a questo punto di interesse')),
+                ->help(__('POI types associated with this point of interest')),
             PropertiesPanel::makeWithModel(__('Converted from UGC'), 'properties->ugc', $this, false),
             PropertiesPanel::makeWithModel('Form', 'properties->form', $this, false),
             BelongsToMany::make('EcTracks', 'ecTracks', EcTrack::class),

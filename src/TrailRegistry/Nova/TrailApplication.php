@@ -66,12 +66,12 @@ class TrailApplication extends AbstractGeometryResource
 
     public static function label(): string
     {
-        return __('Istanze');
+        return __('Applications');
     }
 
     public static function singularLabel(): string
     {
-        return __('Istanza');
+        return __('Application');
     }
 
     /**
@@ -113,13 +113,13 @@ class TrailApplication extends AbstractGeometryResource
     protected function summaryFields(NovaRequest $request): array
     {
         $fields = [
-            Text::make(__('Denominazione'), 'name')->sortable(),
+            Text::make(__('Designation'), 'name')->sortable(),
 
-            Text::make(__('Codice'), fn () => $this->activeCode?->code),
+            Text::make(__('Code'), fn () => $this->activeCode?->code),
 
-            Text::make(__('Stato istruttoria'), fn () => $this->status->value),
+            Text::make(__('Review status'), fn () => $this->status->value),
 
-            Text::make(__('Provenienza'), 'source'),
+            Text::make(__('Source'), 'source'),
         ];
 
         $userResource = static::resourceForModel(User::class);
@@ -128,10 +128,10 @@ class TrailApplication extends AbstractGeometryResource
         // risolve a runtime: se il consumer non ne monta nessuna, si ripiega
         // sul nome, invece di costruire un BelongsTo senza Resource.
         $fields[] = $userResource !== null
-            ? BelongsTo::make(__('Inserita da'), 'user', $userResource)->nullable()
-            : Text::make(__('Inserita da'), fn () => $this->user->name);
+            ? BelongsTo::make(__('Entered by'), 'user', $userResource)->nullable()
+            : Text::make(__('Entered by'), fn () => $this->user->name);
 
-        $fields[] = DateTime::make(__('Presentata il'), 'created_at')->sortable();
+        $fields[] = DateTime::make(__('Submitted on'), 'created_at')->sortable();
 
         return $fields;
     }
@@ -163,21 +163,21 @@ class TrailApplication extends AbstractGeometryResource
         // e' senza quote: lo si rilancia qui, e solo dove serve (oc:8571, oc:8660).
         $this->dispatchDemOnDetail($request);
 
-        $fields[] = TrailRegistryMap::make(__('Mappa'), 'geometry')->enableSlopeChart();
+        $fields[] = TrailRegistryMap::make(__('Map'), 'geometry')->enableSlopeChart();
 
-        $fields[] = Text::make(__('Legenda'), function () {
+        $fields[] = Text::make(__('Legend'), function () {
             $code = $this->resource->mapCode();
 
             return $code === null ? '' : MapLegendRenderer::render($code, TrailRegistryCodeModel::MAP_SUBJECT_APPLICATION);
         })->asHtml()->onlyOnDetail();
 
-        $fields[] = Text::make(__('File GPX/GeoJSON caricato'), function () {
+        $fields[] = Text::make(__('Uploaded GPX/GeoJSON file'), function () {
             $media = $this->resource->getFirstMedia(TrailApplicationModel::ORIGINAL_GEOMETRY_COLLECTION);
 
             return $media === null ? '—' : sprintf('<a class="link-default" href="%s">%s</a>', e($media->getUrl()), e($media->file_name));
         })->asHtml()->onlyOnDetail();
 
-        $fields[] = Tab::group(__('Dettagli'), [
+        $fields[] = Tab::group(__('Details'), [
             Tab::make(__('DEM'), $this->getDemTabFields()),
         ]);
 
@@ -219,12 +219,12 @@ class TrailApplication extends AbstractGeometryResource
     public function fieldsForCreate(NovaRequest $request): array
     {
         return [
-            Text::make(__('Denominazione'), 'name')->rules('required', 'max:255'),
+            Text::make(__('Designation'), 'name')->rules('required', 'max:255'),
 
-            File::make(__('Geometria (GPX o GeoJSON)'), 'geometry')
+            File::make(__('Geometry (GPX or GeoJSON)'), 'geometry')
                 ->acceptedTypes('.gpx,.geojson,.json,application/gpx+xml,application/geo+json,application/json,text/xml')
                 ->rules('required')
-                ->help(__('Il tracciato del sentiero: un GPX (traccia o rotta) oppure un GeoJSON con una o piu\' linee.'))
+                ->help(__('The trail route: a GPX (track or route) or a GeoJSON with one or more lines.'))
                 // Lo `store` callback estrae la geometria e la scrive
                 // sull'attributo; il file resta comunque conservato in
                 // `original_geometry` (vedi afterCreate()), come riferimento

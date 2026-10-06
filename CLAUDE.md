@@ -102,6 +102,7 @@ questo file, perché vanno lette sempre.
 | Dati DEM e valori manuali | le quattro sorgenti, la precedenza, il DEM su sentiero e istanza, le unità | [docs/knowledge/dati-dem-e-valori-manuali.md](docs/knowledge/dati-dem-e-valori-manuali.md) |
 | Località mostrate (`taxonomy_where`) | formato salvato, opzione "Località mostrate" per App, filtro in uscita, riallineamento, nomi delle where nelle 5 lingue | [docs/knowledge/localita-mostrate-taxonomy-where.md](docs/knowledge/localita-mostrate-taxonomy-where.md) |
 | Mappa del Catasto Sentieri | cosa disegna il PHP e cosa il Vue, segnavia, profilo, ricarica dopo un'Action | [docs/knowledge/mappa-del-catasto-sentieri.md](docs/knowledge/mappa-del-catasto-sentieri.md) |
+| Chiavi di traduzione | chiave in inglese e testo italiano nella voce, voci condivise fra shard, cosa Nova traduce da sé | [docs/knowledge/8672-chiavi-di-traduzione-in-inglese-nel-catasto-sentieri-wm-package-e-in-forestas.md](docs/knowledge/8672-chiavi-di-traduzione-in-inglese-nel-catasto-sentieri-wm-package-e-in-forestas.md) |
 
 ## Procedure
 

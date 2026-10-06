@@ -54,7 +54,7 @@ class AnomalyMapLegendRenderer
         $rows[] = self::area(
             'rgba(37, 99, 235, 1)',
             'rgba(37, 99, 235, 0.20)',
-            __('Settore in cui la traccia ricade'),
+            __('Sector the track falls in'),
         );
 
         if ($sectorCount > 1) {
@@ -62,8 +62,8 @@ class AnomalyMapLegendRenderer
                 'rgba(100, 116, 139, 1)',
                 'rgba(100, 116, 139, 0.15)',
                 $anomaly->type === TrailRegistryAnomalyType::SettoreDiscordante
-                    ? __('Altri settori: quelli attraversati e quello dichiarato dal codice')
-                    : __('Altri settori attraversati, con la percentuale di percorso'),
+                    ? __('Other sectors: those crossed and the one declared by the code')
+                    : __('Other sectors crossed, with the percentage of the route'),
             );
         }
 
