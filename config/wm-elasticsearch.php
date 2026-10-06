@@ -1,7 +1,5 @@
 <?php
 
-use Wm\WmPackage\Models\EcTrack;
-
 return [
     'host' => env('ELASTICSEARCH_PORT') && env('ELASTICSEARCH_SCHEME')
         ? env('ELASTICSEARCH_SCHEME').'://'.env('ELASTICSEARCH_HOST').':'.env('ELASTICSEARCH_PORT')
@@ -50,8 +48,9 @@ return [
                     // di name (oc:8681). Solo `type: object`, senza dichiarare le lingue: in ogni indice
                     // le lingue nascono da Elastic al primo documento che le contiene, come testo
                     // ricercabile. Così il campo è identico negli indici esistenti, dove non è dichiarato,
-                    // e in quelli ricreati con scout:import.
-                    EcTrack::SEARCH_NAME_TRANSLATIONS_FIELD => [
+                    // e in quelli ricreati con scout:import. Il nome deve restare uguale a
+                    // EcTrack::SEARCH_NAME_TRANSLATIONS_FIELD (lo verifica WmElasticsearchMappingTest).
+                    'name_translations' => [
                         'type' => 'object',
                     ],
                     'start' => [

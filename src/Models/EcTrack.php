@@ -36,8 +36,8 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
 
     /**
      * Campo dell'indice di ricerca con il nome in tutte le lingue (oc:8681): lo scrive
-     * toSearchableArray(), lo dichiara config/wm-elasticsearch.php e lo legge
-     * ElasticsearchController::localizeSearchResults().
+     * toSearchableArray(), lo dichiara config/wm-elasticsearch.php (con la stessa stringa, per non
+     * far dipendere la config dal modello) e lo legge ElasticsearchController::localizeSearchResults().
      */
     public const SEARCH_NAME_TRANSLATIONS_FIELD = 'name_translations';
 

@@ -19,7 +19,8 @@ docker exec -w /var/www/html/maphub/wm-package php-maphub vendor/bin/pest <file 
 ### Task 1: costante e test del mapping
 
 Dopo la review (vedi «Decisioni») il nome del campo non è più scritto a mano: `toSearchableArray()`
-e `config/wm-elasticsearch.php` usano la costante `EcTrack::SEARCH_NAME_TRANSLATIONS_FIELD`. Il test
+e `config/wm-elasticsearch.php` usano la costante `EcTrack::SEARCH_NAME_TRANSLATIONS_FIELD`
+**⚠️ Superato per la config (06/10/2026): vedi «Aggiornamento dopo la review interna»**. Il test
 sul mapping è passato da `tests/Unit/Models/EcTrackSearchableArrayTest.php` a
 `tests/Unit/Config/WmElasticsearchMappingTest.php` (Pest) e verifica anche che non ci sia `enabled`;
 in `EcTrackSearchableArrayTest.php` al suo posto c'è il caso nome `null`.
@@ -126,7 +127,8 @@ Nessuno.
 - Modifiche richieste dopo la review con wm-review-ticket (06/10/2026), tutte applicate: commento
   del config riscritto (le lingue nascono in modo dinamico in ogni indice); commento in `index()` su
   dove si formatta la risposta; docblock del metodo («sostituisce», non «restituisce»); costante
-  `EcTrack::SEARCH_NAME_TRANSLATIONS_FIELD` usata da modello, config e controller; metodo
+  `EcTrack::SEARCH_NAME_TRANSLATIONS_FIELD` usata da modello, config e controller
+  (**⚠️ superato per la config: vedi «Aggiornamento dopo la review interna»**); metodo
   `localizeSearchResults()` con la guardia su `hits`; test in Pest accanto a quello esistente sul
   controller, confronto sull'intera risposta, casi `name_translations` stringa e nome `null`; test
   del mapping in `tests/Unit/Config/`; correzione della verifica PHPStan.
@@ -145,3 +147,14 @@ Nessuno.
   «Loop» con l'app in inglese.
 - Gli altri shard ricevono il nome tradotto con «Reindicizza Scout» su ogni app, quando allineano il
   package; finché non lo lanciano, mostrano l'italiano come oggi.
+
+## Aggiornamento dopo la review interna (06/10/2026)
+
+- La config non usa più la costante: `config/wm-elasticsearch.php` dichiara `'name_translations'`
+  come stringa e non importa più `EcTrack`, così caricare la config non carica il modello. Questo
+  supera quanto scritto in «Task 1: costante e test del mapping» e in «Decisioni» sull'uso della
+  costante nella config: la costante resta in modello e controller. L'allineamento fra la stringa
+  della config e `EcTrack::SEARCH_NAME_TRANSLATIONS_FIELD` lo verifica
+  `tests/Unit/Config/WmElasticsearchMappingTest.php`, che legge la config usando la costante.
+  Test: 11 su 11 (`WmElasticsearchMappingTest`, `ElasticsearchControllerLocalizeSearchResultsTest`,
+  `EcTrackSearchableArrayTest`); Pint solo sui due file toccati.
