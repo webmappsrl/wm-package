@@ -59,6 +59,17 @@ mano con lo stesso identifier (oc:8486).
   `taxonomy_poi_types` era assente, il che rendeva ininfluente il fix ID nel flusso standard
   (oc:8041). `taxonomy_when` e `taxonomy_target` hanno tuttora `'job' => ''` (oc:8014).
 
+### Import GeoHub: campi JSON e `related_url` (oc:8679)
+
+- Le colonne json/jsonb di Geohub arrivano dal query builder come **testo**: un campo mappato in
+  `config/wm-geohub-import.php` come stringa semplice (`'campo' => 'campo'`) finisce in
+  `properties` come stringa, non come oggetto. Per convertirlo serve un transformer di
+  `DataTransformer` (`['field' => …, 'transformer' => [DataTransformer::class, '…']]`).
+- `related_url` di POI e tracce passa da `DataTransformer::relatedUrlToArray`. Quando non ci sono
+  link la chiave resta in `properties` con valore `null`, non sparisce.
+- Altri campi json delle tracce sono ancora copiati grezzi nel mapping, e non sono verificati:
+  vedi `config/wm-geohub-import.php`.
+
 ### Import da OSM
 
 - L'Action `ImportEcPoiFromOsm` è registrata di default in `EcPoi::actions()` con `canSee` **e**
@@ -178,6 +189,11 @@ minimale. `EcTrackRowProcessor` non è affetto, non usa `setTranslation` per il 
   sovrascriverlo (oc:8158).
 - `json_decode()` di una stringa malformata ritorna `null`, non `[]`: il `?? '{}'` copre solo la
   chiave assente, serve un cast esplicito prima del `foreach` (oc:8094).
+- `DataTransformer::jsonToArray` e `nullableJsonToArray` vanno in `TypeError` quando il JSON
+  decodificato non è un array (`"false"` → `array_filter(false)`): non usarli su campi che su
+  Geohub possono contenere scalari (oc:8679).
+- `DataTransformer::relatedUrlToArray` è una copia di `EcPoiRowProcessor::normalizeRelatedUrlToAssoc`
+  (import Excel): una modifica a una va fatta anche all'altra (oc:8679).
 - Un `LineString` con un solo punto fa fallire persino `ST_GeomFromWKB()` a livello Postgres: non
   si intercetta con una query PostGIS, serve parsare i byte (E)WKB in PHP (oc:8158).
 - `get_headers($url, 1)[0]` ritorna `false` su URL irraggiungibile, e

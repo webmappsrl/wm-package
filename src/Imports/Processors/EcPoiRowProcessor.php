@@ -334,6 +334,9 @@ final class EcPoiRowProcessor
     }
 
     /**
+     * Stessa logica di DataTransformer::relatedUrlToArray (import Geohub): se cambi una, cambia
+     * anche l'altra (oc:8679).
+     *
      * @return array<string, string>
      */
     private function normalizeRelatedUrlToAssoc(mixed $value): array
