@@ -46,3 +46,6 @@ Si applica quando scrivi o modifichi un test del package.
   crearle passa dove ci sono e fallisce dove mancano: crea nel test ciò che usa, con identifier
   `prefisso-`.`uniqid()` dentro `DatabaseTransactions`, perché un identifier fisso già presente fa
   scattare il controllo dei doppioni di `TaxonomyObserver` (oc:8675).
+- **Il test di caratterizzazione di `MapRenderService::render()` confronta l'md5 del PNG**: su
+  un'altra versione di GD o libpng può fallire senza che il disegno sia cambiato. Se succede,
+  verifica l'immagine a occhio prima di aggiornare l'hash (oc:8702).
