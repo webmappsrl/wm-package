@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\Request as HttpRequest;
 use Laravel\Nova\Fields\Trix;
 use Laravel\Nova\Http\Requests\NovaRequest;
@@ -11,11 +12,13 @@ use Tests\TestCase;
 use Whitecube\NovaFlexibleContent\Flexible;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcPoi;
+use Wm\WmPackage\Models\TaxonomyActivity;
+use Wm\WmPackage\Models\TaxonomyPoiType;
 use Wm\WmPackage\Nova\App as AppResource;
 use Wm\WmPackage\Nova\Fields\FlexibleTranslatable;
 use Wm\WmPackage\Nova\Traits\HasConfigDetailPanel;
 
-uses(TestCase::class);
+uses(TestCase::class, DatabaseTransactions::class);
 
 /**
  * Giro completo del form Nova per i campi FlexibleTranslatable che stanno direttamente in un
@@ -24,7 +27,9 @@ uses(TestCase::class);
  * sempre dal json_encode dell'INTERO campo Flexible, meta `layouts` compreso, come la risposta
  * di Nova: chiamare jsonSerialize() sul solo gruppo non riproduce il bug.
  *
- * Le App non vengono salvate: nessuna scrittura sul database.
+ * Le App non vengono salvate. Le attività e i tipi di POI usati dagli horizontal_scroll li crea il
+ * test, con identifier nuovi e dentro DatabaseTransactions: il resolver tiene un item solo se la
+ * tassonomia esiste, e il test non deve dipendere dai dati del DB dello shard su cui gira.
  */
 function flexibleLayoutAppField(App $model, string $attribute): Flexible
 {
@@ -39,6 +44,29 @@ function flexibleLayoutAppField(App $model, string $attribute): Flexible
     }
 
     throw new RuntimeException("{$attribute} field not found on App resource");
+}
+
+/**
+ * Crea un'attività con un identifier che non esiste in nessuno shard e restituisce il `res` da
+ * usare negli item degli horizontal_scroll activities.
+ */
+function flexibleLayoutActivity(string $name): string
+{
+    $identifier = 'test-activity-'.uniqid();
+    TaxonomyActivity::create(['identifier' => $identifier, 'name' => ['it' => $name]]);
+
+    return $identifier;
+}
+
+/**
+ * Come flexibleLayoutActivity(), per gli item degli horizontal_scroll poi_types.
+ */
+function flexibleLayoutPoiType(string $name): string
+{
+    $identifier = 'test-poi-type-'.uniqid();
+    TaxonomyPoiType::create(['identifier' => $identifier, 'name' => ['it' => $name]]);
+
+    return 'poi_type_'.$identifier;
 }
 
 /**
@@ -228,13 +256,17 @@ it('lascia identici i title di title, slug ed external_url dopo un salvataggio s
 });
 
 it('lascia identici i title degli horizontal_scroll activities e poi_types', function () {
+    $cycling = flexibleLayoutActivity('In bici');
+    $asphalt = flexibleLayoutActivity('Asfalto');
+    $square = flexibleLayoutPoiType('Piazze');
+
     $home = ['HOME' => [
         ['box_type' => 'horizontal_scroll', 'item_type' => 'activities', 'title' => ['it' => 'Attività', 'en' => 'Activities'],
-            'items' => [['title' => ['it' => 'In bici'], 'res' => 'cycling', 'image_url' => 'https://example.com/a.jpg']]],
+            'items' => [['title' => ['it' => 'In bici'], 'res' => $cycling, 'image_url' => 'https://example.com/a.jpg']]],
         ['box_type' => 'horizontal_scroll', 'item_type' => 'activities', 'title' => ['it' => 'Su strada', 'en' => 'On road'],
-            'items' => [['title' => ['it' => 'Asfalto'], 'res' => 'asphalt', 'image_url' => 'https://example.com/c.jpg']]],
+            'items' => [['title' => ['it' => 'Asfalto'], 'res' => $asphalt, 'image_url' => 'https://example.com/c.jpg']]],
         ['box_type' => 'horizontal_scroll', 'item_type' => 'poi_types', 'title' => ['it' => 'Luoghi', 'en' => 'Places'],
-            'items' => [['title' => ['it' => 'Piazze'], 'res' => 'poi_type_public-place', 'image_url' => 'https://example.com/b.jpg']]],
+            'items' => [['title' => ['it' => 'Piazze'], 'res' => $square, 'image_url' => 'https://example.com/b.jpg']]],
     ]];
 
     $stored = flexibleLayoutSaveUntouched('config_home', json_encode($home));
@@ -242,6 +274,8 @@ it('lascia identici i title degli horizontal_scroll activities e poi_types', fun
     expect($stored['HOME'][0]['title'])->toBe(['it' => 'Attività', 'en' => 'Activities']);
     expect($stored['HOME'][1]['title'])->toBe(['it' => 'Su strada', 'en' => 'On road']);
     expect($stored['HOME'][2]['title'])->toBe(['it' => 'Luoghi', 'en' => 'Places']);
+    expect(collect($stored['HOME'])->map(fn ($box) => array_column($box['items'], 'res'))->all())
+        ->toBe([[$cycling], [$asphalt], [$square]]);
 });
 
 it('converte il title legacy stringa e tiene intatto il gruppo accanto', function () {
@@ -306,11 +340,13 @@ it('mantiene i due formati del title vuoto', function () {
         return $group;
     }, $groups);
 
+    $cycling = flexibleLayoutActivity('In bici');
+
     $stored = flexibleLayoutSaveUntouched('config_home', json_encode(['HOME' => [
         ['box_type' => 'title', 'title' => ['it' => 'Da togliere']],
         ['box_type' => 'slug', 'title' => ['it' => 'Da togliere'], 'slug' => 'project'],
         ['box_type' => 'horizontal_scroll', 'item_type' => 'activities', 'title' => ['it' => 'Da togliere'],
-            'items' => [['title' => ['it' => 'In bici'], 'res' => 'cycling', 'image_url' => 'https://example.com/a.jpg']]],
+            'items' => [['title' => ['it' => 'In bici'], 'res' => $cycling, 'image_url' => 'https://example.com/a.jpg']]],
     ]]), $empty);
 
     expect($stored['HOME'][0])->not->toHaveKey('title');
@@ -331,16 +367,19 @@ it('lascia identiche le label degli overlays title', function () {
 });
 
 it('tiene i title di due item horizontal scroll dopo il giro del form', function () {
+    $cycling = flexibleLayoutActivity('In bici');
+    $asphalt = flexibleLayoutActivity('Su asfalto');
+
     $stored = flexibleLayoutSaveUntouched('config_home', json_encode(['HOME' => [
         ['box_type' => 'horizontal_scroll', 'item_type' => 'activities', 'title' => ['it' => 'Attività'], 'items' => [
-            ['title' => ['it' => 'In bici', 'en' => 'By bike'], 'res' => 'cycling', 'image_url' => 'https://example.com/a.jpg'],
-            ['title' => ['it' => 'Su asfalto', 'en' => 'On asphalt'], 'res' => 'asphalt', 'image_url' => 'https://example.com/b.jpg'],
+            ['title' => ['it' => 'In bici', 'en' => 'By bike'], 'res' => $cycling, 'image_url' => 'https://example.com/a.jpg'],
+            ['title' => ['it' => 'Su asfalto', 'en' => 'On asphalt'], 'res' => $asphalt, 'image_url' => 'https://example.com/b.jpg'],
         ]],
     ]]));
 
     $items = $stored['HOME'][0]['items'];
 
-    expect($items)->toHaveCount(2);
+    expect(array_column($items, 'res'))->toBe([$cycling, $asphalt]);
     expect($items[0]['title'])->toMatchArray(['it' => 'In bici', 'en' => 'By bike']);
     expect($items[1]['title'])->toMatchArray(['it' => 'Su asfalto', 'en' => 'On asphalt']);
 });

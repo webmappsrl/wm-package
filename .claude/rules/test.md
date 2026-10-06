@@ -37,3 +37,8 @@ Si applica quando scrivi o modifichi un test del package.
   `vendor/bin/pest tests/Unit/Services/EcTrackService --filter=<Classe>` (oc:8543).
 - Su `ArrayStore` `flush()` non libera i lock di `ShouldBeUnique`, che vivono in `$locks` e non in
   `$storage`: per ripartire da zero in un test usa `app('cache')->forgetDriver('redis')` (oc:8660).
+- Le suite di maphub e osm2cai2 girano sul DB di sviluppo, quelle di forestas e camminiditalia su un
+  DB di test vuoto: un test che usa tassonomie (o altri record) senza crearle passa sui primi e
+  fallisce sui secondi. Crea nel test ciò che usa, con identifier `prefisso-`.`uniqid()` dentro
+  `DatabaseTransactions` — un identifier fisso già presente fa scattare il controllo dei doppioni
+  di `TaxonomyObserver` (oc:8675).

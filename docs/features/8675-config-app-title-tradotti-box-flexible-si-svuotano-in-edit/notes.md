@@ -71,6 +71,39 @@ mostra i title vuoti (vedi task 1). La contaminazione fra due box dello stesso t
 test automatici, non da questa prova. Nell'`external_url` dell'app 3 l'URL inizia
 con uno spazio: è un dato inserito a mano, non legato al fix.
 
+### Primo ciclo di review sulla PR (06/10/2026)
+
+Il test «tiene i title di due item horizontal scroll dopo il giro del form» usava le attività
+`cycling` e `asphalt` senza crearle: il resolver tiene un item solo se trova la tassonomia
+(`ConfigHomeResolver.php:323-328`, `:397-404`). Su maphub passava perché le due attività sono nel
+DB di sviluppo; dalla suite di forestas (`forestas_testing`) falliva con 0 item invece di 2. Lo
+stesso valeva, senza farli fallire, per i test sugli `horizontal_scroll` e sui due formati del
+title vuoto.
+
+Corretto con lo schema già usato dagli altri test del package: il file gira in
+`DatabaseTransactions` e crea le tassonomie che usa, con identifier `test-activity-`/
+`test-poi-type-` più `uniqid()` (un identifier fisso già presente nel DB farebbe scattare il
+controllo dei doppioni di `TaxonomyObserver`, come succede ad `AppConfigHomeHorizontalScrollTest`
+con `hiking`). Verifica sul DB `wm_package` del postgres di maphub, senza tassonomie: la versione
+del commit `82560101` fallisce come su forestas (0 item su 2), quella corretta passa 12 su 12; da
+maphub passa 12 su 12; dopo il test nessuna tassonomia `test-*` resta nel DB. Stessa verifica
+dalla suite di forestas, su un `forestas_testing` appena migrato: la versione del commit fallisce
+con 0 item su 2 come nella review, quella corretta passa 12 su 12. Per lanciarla lì il submodule di
+forestas va portato sul branch e serve `composer update wm/wm-package`, perché il branch aggiunge
+la voce PSR-4 di `TranslationsBuilder` che l'autoload di forestas non conosceva.
+
+Stessa prova sugli altri due consumer:
+
+| Suite | DB | Commit `82560101` | Versione corretta |
+|---|---|---|---|
+| maphub | sviluppo (`cycling`/`asphalt` presenti) | 12/12 | 12/12 |
+| forestas | `forestas_testing`, vuoto | 11/12 (0 item su 2) | 12/12 |
+| camminiditalia | `camminiditalia_testing`, vuoto | 11/12 (0 item su 2) | 12/12 |
+| osm2cai2 | sviluppo (`cycling`/`asphalt` presenti) | 12/12 | 12/12 |
+
+Su maphub e osm2cai2 la versione del commit passava solo perché le attività sono nel DB di
+sviluppo. In tutti i DB, dopo il test, non resta nessuna tassonomia `test-*`.
+
 ## Bug trovati
 
 - `ConfigHomeTitleBoxLegacyStringTest` dalla suite di maphub fallisce con `Target class [config]

@@ -157,6 +157,8 @@ git commit -m "test(oc:8675): giro completo del form per i title di home e overl
 
 ### Task 4: non regressione dei Repeater
 
+> ⚠️ L'implementazione ha deviato da questo task: [notes.md](notes.md#primo-ciclo-di-review-sulla-pr-06102026)
+
 **File:**
 - Test: `wm-package/tests/Feature/Nova/FlexibleTranslatableInFlexibleLayoutTest.php`
 
