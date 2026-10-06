@@ -16,5 +16,15 @@
     "Municipality": "Commune",
     "Admin level :level": "Niveau administratif :level",
     "Source: :source": "Source : :source",
-    "Location categories shown in the app and on the WordPress sites (track and POI detail, cards, search filters). Leave empty to show them all. The app detail only shows Region, Province and Municipality; cards show the last selected level. After saving, published files and the search index are regenerated in the background.": "Catégories de localités affichées dans l'app et sur les sites WordPress (détail des étapes et des POI, cartes, filtres de recherche). Laisser vide pour toutes les afficher. Le détail de l'app n'affiche que Région, Province et Commune ; les cartes affichent le dernier niveau sélectionné. Après l'enregistrement, les fichiers publiés et l'index de recherche sont régénérés en arrière-plan."
+    "Location categories shown in the app and on the WordPress sites (track and POI detail, cards, search filters). Leave empty to show them all. The app detail only shows Region, Province and Municipality; cards show the last selected level. After saving, published files and the search index are regenerated in the background.": "Catégories de localités affichées dans l'app et sur les sites WordPress (détail des étapes et des POI, cartes, filtres de recherche). Laisser vide pour toutes les afficher. Le détail de l'app n'affiche que Région, Province et Commune ; les cartes affichent le dernier niveau sélectionné. Après l'enregistrement, les fichiers publiés et l'index de recherche sont régénérés en arrière-plan.",
+    "Approve": "Approuver",
+    "Reject": "Rejeter",
+    "Applications approved.": "Demandes approuvées.",
+    "Applications rejected.": "Demandes rejetées.",
+    "Applications approved: :approved. Skipped because not under review: :refused.": "Demandes approuvées : :approved. Ignorées car pas en cours d'instruction : :refused.",
+    "Applications rejected: :rejected. Skipped because not under review: :refused.": "Demandes rejetées : :rejected. Ignorées car pas en cours d'instruction : :refused.",
+    "No application approved: only applications under review can be approved.": "Aucune demande approuvée : seules les demandes en cours d'instruction peuvent être approuvées.",
+    "No application rejected: only applications under review can be rejected.": "Aucune demande rejetée : seules les demandes en cours d'instruction peuvent être rejetées.",
+    "Rejection reason": "Motif du rejet",
+    "Visible to the applicant: explain what to correct in the new application.": "Visible par le demandeur : explique ce qu'il faut corriger dans la nouvelle demande."
 }

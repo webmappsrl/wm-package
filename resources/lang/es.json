@@ -16,5 +16,15 @@
     "Municipality": "Municipio",
     "Admin level :level": "Nivel administrativo :level",
     "Source: :source": "Fuente: :source",
-    "Location categories shown in the app and on the WordPress sites (track and POI detail, cards, search filters). Leave empty to show them all. The app detail only shows Region, Province and Municipality; cards show the last selected level. After saving, published files and the search index are regenerated in the background.": "Categorías de localidades mostradas en la app y en los sitios WordPress (detalle de etapas y POI, tarjetas, filtros de búsqueda). Déjalo vacío para mostrarlas todas. El detalle de la app solo muestra Región, Provincia y Municipio; las tarjetas muestran el último nivel seleccionado. Tras guardar, los archivos publicados y el índice de búsqueda se regeneran en segundo plano."
+    "Location categories shown in the app and on the WordPress sites (track and POI detail, cards, search filters). Leave empty to show them all. The app detail only shows Region, Province and Municipality; cards show the last selected level. After saving, published files and the search index are regenerated in the background.": "Categorías de localidades mostradas en la app y en los sitios WordPress (detalle de etapas y POI, tarjetas, filtros de búsqueda). Déjalo vacío para mostrarlas todas. El detalle de la app solo muestra Región, Provincia y Municipio; las tarjetas muestran el último nivel seleccionado. Tras guardar, los archivos publicados y el índice de búsqueda se regeneran en segundo plano.",
+    "Approve": "Aprobar",
+    "Reject": "Rechazar",
+    "Applications approved.": "Solicitudes aprobadas.",
+    "Applications rejected.": "Solicitudes rechazadas.",
+    "Applications approved: :approved. Skipped because not under review: :refused.": "Solicitudes aprobadas: :approved. Omitidas porque no están en revisión: :refused.",
+    "Applications rejected: :rejected. Skipped because not under review: :refused.": "Solicitudes rechazadas: :rejected. Omitidas porque no están en revisión: :refused.",
+    "No application approved: only applications under review can be approved.": "Ninguna solicitud aprobada: solo se pueden aprobar las solicitudes en revisión.",
+    "No application rejected: only applications under review can be rejected.": "Ninguna solicitud rechazada: solo se pueden rechazar las solicitudes en revisión.",
+    "Rejection reason": "Motivo del rechazo",
+    "Visible to the applicant: explain what to correct in the new application.": "Visible para el solicitante: explica qué corregir en la nueva solicitud."
 }
