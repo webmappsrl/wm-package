@@ -102,6 +102,7 @@ questo file, perché vanno lette sempre.
 | Dati DEM e valori manuali | le quattro sorgenti, la precedenza, il DEM su sentiero e istanza, le unità | [docs/knowledge/dati-dem-e-valori-manuali.md](docs/knowledge/dati-dem-e-valori-manuali.md) |
 | Località mostrate (`taxonomy_where`) | formato salvato, opzione "Località mostrate" per App, filtro in uscita, riallineamento, nomi delle where nelle 5 lingue | [docs/knowledge/localita-mostrate-taxonomy-where.md](docs/knowledge/localita-mostrate-taxonomy-where.md) |
 | Mappa del Catasto Sentieri | cosa disegna il PHP e cosa il Vue, segnavia, profilo, ricarica dopo un'Action | [docs/knowledge/mappa-del-catasto-sentieri.md](docs/knowledge/mappa-del-catasto-sentieri.md) |
+| Nome delle tracce nella ricerca | `name` italiano nell'indice per l'ordinamento, `name_translations` per la lingua, sostituzione nell'API, perché non `name` come oggetto | [docs/knowledge/nome-delle-tracce-nella-ricerca.md](docs/knowledge/nome-delle-tracce-nella-ricerca.md) |
 
 ## Procedure
 
