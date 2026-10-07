@@ -37,18 +37,18 @@ il convertitore di descrizione e testo breve, però non basta: con `"false"` va 
 
 ## Requisiti
 
-- [ ] Una sola funzione di normalizzazione dei link, in un trait (`src/Traits/NormalizesRelatedUrl.php`,
+- [x] Una sola funzione di normalizzazione dei link, in un trait (`src/Traits/NormalizesRelatedUrl.php`,
       come `NormalizesHexColor`), usata da `DataTransformer` (import Geohub) e da
       `EcPoiRowProcessor` (import Excel). Regole: oggetto JSON → array `etichetta → url`
       scartando i valori non testuali; stringa JSON `"https:\/\/…"`, lista spezzata di caratteri
       ricomposta e lista WordPress `net7webmap_related_url` (solo url non vuoti) → `{url: url}`;
       stringa che inizia con `http://` o `https://` → `[url => url]`; spazi rimossi.
-- [ ] `DataTransformer::relatedUrlToArray` usa il trait e restituisce `null` quando non ci sono link.
-- [ ] In `config/wm-geohub-import.php` `related_url` di tracce (riga 397) e POI (riga 458) usa
+- [x] `DataTransformer::relatedUrlToArray` usa il trait e restituisce `null` quando non ci sono link.
+- [x] In `config/wm-geohub-import.php` `related_url` di tracce (riga 397) e POI (riga 458) usa
       `['field' => 'related_url', 'transformer' => [DataTransformer::class, 'relatedUrlToArray']]`.
-- [ ] Test unitari Pest (senza database) su `relatedUrlToArray` per i casi della tabella sopra, più
+- [x] Test unitari Pest (senza database) su `relatedUrlToArray` per i casi della tabella sopra, più
       un test che verifica il mapping di `related_url` in config per POI e tracce.
-- [ ] `jsonToArray` e `nullableJsonToArray` restano identici.
+- [x] `jsonToArray` e `nullableJsonToArray` restano identici.
 - [ ] Bump del submodule in maphub dopo il merge in wm-package.
 - [ ] (Da concordare con il tester) re-import di Itinera Romanica PLUS su Maphub dev con
       `php artisan wm:import-from-geohub` e verifica: 52 POI su 52 con link funzionante, nessun
