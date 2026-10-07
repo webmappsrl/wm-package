@@ -11,7 +11,7 @@ use Wm\WmPackage\Services\Models\UgcTrackCleanupService;
 
 class UgcTrack extends AbstractUgcResource
 {
-    public static $model = \Wm\WmPackage\Models\UgcTrack::class;
+    public static $model = UgcTrackModel::class;
 
     public static function label(): string
     {

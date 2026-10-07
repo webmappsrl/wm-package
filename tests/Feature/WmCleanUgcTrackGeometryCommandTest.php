@@ -5,9 +5,11 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Wm\WmPackage\Jobs\CleanUgcTrackGeometryJob;
+use Wm\WmPackage\Jobs\UpdateModelWithGeometryTaxonomyWhere;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\UgcTrack;
 use Wm\WmPackage\Models\User;
+use Wm\WmPackage\Services\Models\UgcTrackCleanupService;
 
 beforeEach(function () {
     config()->set('wm-package.ugc_track_max_accuracy_meters', 40.0);
@@ -70,11 +72,11 @@ it('il job riscrive la geometria pulita ed è idempotente', function () {
     Bus::fake();
     $track = legacyTrack($this->user->id, $this->app_->id);
 
-    (new CleanUgcTrackGeometryJob($track->id))->handle(app(\Wm\WmPackage\Services\Models\UgcTrackCleanupService::class));
+    (new CleanUgcTrackGeometryJob($track->id))->handle(app(UgcTrackCleanupService::class));
     expect(pointCount($track->id))->toBe(2);
-    expect(\Wm\WmPackage\Services\Models\UgcTrackCleanupService::make()->wouldChange($track->refresh()))->toBeFalse();
+    expect(UgcTrackCleanupService::make()->wouldChange($track->refresh()))->toBeFalse();
 
-    (new CleanUgcTrackGeometryJob($track->id))->handle(app(\Wm\WmPackage\Services\Models\UgcTrackCleanupService::class));
+    (new CleanUgcTrackGeometryJob($track->id))->handle(app(UgcTrackCleanupService::class));
     expect(pointCount($track->id))->toBe(2);
 });
 
@@ -104,13 +106,13 @@ it('non considera cambiata una traccia che differisce solo per gli arrotondament
     );
     $before = DB::selectOne('SELECT ST_AsEWKT(geometry::geometry) AS t FROM ugc_tracks WHERE id = ?', [$track->id])->t;
 
-    expect(\Wm\WmPackage\Services\Models\UgcTrackCleanupService::make()->wouldChange($track->refresh()))->toBeFalse();
+    expect(UgcTrackCleanupService::make()->wouldChange($track->refresh()))->toBeFalse();
 
     $this->artisan('wm:clean-ugc-track-geometry', ['--dry-run' => true])
         ->expectsOutputToContain('0 tracce cambierebbero')
         ->assertSuccessful();
 
-    (new CleanUgcTrackGeometryJob($track->id))->handle(app(\Wm\WmPackage\Services\Models\UgcTrackCleanupService::class));
+    (new CleanUgcTrackGeometryJob($track->id))->handle(app(UgcTrackCleanupService::class));
     $after = DB::selectOne('SELECT ST_AsEWKT(geometry::geometry) AS t FROM ugc_tracks WHERE id = ?', [$track->id])->t;
     expect($after)->toBe($before);
 });
@@ -119,10 +121,10 @@ it('il job, quando riscrive la geometria, accoda il ricalcolo delle località', 
     $track = legacyTrack($this->user->id, $this->app_->id);
     Bus::fake();
 
-    (new CleanUgcTrackGeometryJob($track->id))->handle(app(\Wm\WmPackage\Services\Models\UgcTrackCleanupService::class));
+    (new CleanUgcTrackGeometryJob($track->id))->handle(app(UgcTrackCleanupService::class));
 
     Bus::assertDispatched(
-        \Wm\WmPackage\Jobs\UpdateModelWithGeometryTaxonomyWhere::class,
+        UpdateModelWithGeometryTaxonomyWhere::class,
         fn ($job) => (fn () => $this->model)->call($job)->is($track)
     );
 });
@@ -131,12 +133,12 @@ it('il job, quando la geometria è già pulita, non accoda il ricalcolo delle lo
     // Bus finto già dalla prima esecuzione: il ricalcolo delle località chiamerebbe osmfeatures.
     Bus::fake();
     $track = legacyTrack($this->user->id, $this->app_->id);
-    (new CleanUgcTrackGeometryJob($track->id))->handle(app(\Wm\WmPackage\Services\Models\UgcTrackCleanupService::class));
+    (new CleanUgcTrackGeometryJob($track->id))->handle(app(UgcTrackCleanupService::class));
     Bus::fake();
 
-    (new CleanUgcTrackGeometryJob($track->id))->handle(app(\Wm\WmPackage\Services\Models\UgcTrackCleanupService::class));
+    (new CleanUgcTrackGeometryJob($track->id))->handle(app(UgcTrackCleanupService::class));
 
-    Bus::assertNotDispatched(\Wm\WmPackage\Jobs\UpdateModelWithGeometryTaxonomyWhere::class);
+    Bus::assertNotDispatched(UpdateModelWithGeometryTaxonomyWhere::class);
 });
 
 it('nel dry-run i km prima sono quelli della geometria salvata, non dei locations', function () {
