@@ -355,3 +355,51 @@ it('frames the focus bbox with the optional marginRatio instead of the default m
     $service->renderLayers([], [], $bbox, $app, 960, 960, 0.30);
     expect($requestedZooms[0])->toBe($wideZoom);
 });
+
+it('draws text labels centred on their coordinates, with an outline (oc:8703)', function () {
+    fakeSolidTiles('#ffffff');
+    $app = App::factory()->createQuietly();
+    $bbox = ['xmin' => 10.490, 'ymin' => 43.850, 'xmax' => 10.505, 'ymax' => 43.850];
+    $lon = (10.490 + 10.505) / 2;
+
+    $service = new MapRenderService;
+    $plain = $service->renderLayers([], [], $bbox, $app, 960, 960);
+    $labelled = $service->renderLayers([], [], $bbox, $app, 960, 960, null, [
+        ['lon' => $lon, 'lat' => 43.850, 'text' => 'TAPPA 03', 'color' => '#ff0000', 'size' => 40, 'outlineColor' => '#000000', 'outlineWidth' => 2],
+    ]);
+
+    // Without labels nothing changes; with a label some pixels around the centre turn red.
+    expect(rgbAt($plain, 480, 480))->toBe([255, 255, 255]);
+    $red = 0;
+    $black = 0;
+    for ($x = 380; $x < 580; $x++) {
+        for ($y = 455; $y < 505; $y++) {
+            $rgb = rgbAt($labelled, $x, $y);
+            $red += $rgb === [255, 0, 0] ? 1 : 0;
+            $black += $rgb === [0, 0, 0] ? 1 : 0;
+        }
+    }
+    expect($red)->toBeGreaterThan(50);
+    expect($black)->toBeGreaterThan(50);
+    // Far from the label the basemap is untouched.
+    expect(rgbAt($labelled, 100, 100))->toBe([255, 255, 255]);
+});
+
+it('skips a label that would overlap one already drawn (oc:8703)', function () {
+    fakeSolidTiles('#ffffff');
+    $app = App::factory()->createQuietly();
+    $bbox = ['xmin' => 10.490, 'ymin' => 43.850, 'xmax' => 10.505, 'ymax' => 43.850];
+    $lon = (10.490 + 10.505) / 2;
+    $label = fn (string $color) => ['lon' => $lon, 'lat' => 43.850, 'text' => 'TAPPA 03', 'color' => $color, 'size' => 40];
+
+    $image = (new MapRenderService)->renderLayers([], [], $bbox, $app, 960, 960, null, [$label('#ff0000'), $label('#0000ff')]);
+
+    // The second label, on the same spot, is not drawn: no blue pixels at all.
+    $blue = 0;
+    for ($x = 380; $x < 580; $x++) {
+        for ($y = 455; $y < 505; $y++) {
+            $blue += rgbAt($image, $x, $y) === [0, 0, 255] ? 1 : 0;
+        }
+    }
+    expect($blue)->toBe(0);
+});

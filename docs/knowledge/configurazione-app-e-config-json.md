@@ -146,6 +146,11 @@ La mappa la disegna `MapRenderService`: `render(UgcTrack …)` è un involucro d
 `renderLayers()`, e l'immagine UGC è rimasta identica al pixel, fissata da un test di
 caratterizzazione sull'md5 del PNG (oc:8702).
 
+`renderLayers()` accetta anche etichette di testo facoltative (`labels`: testo, lon/lat, colore,
+corpo, contorno, font), centrate sul punto e disegnate per ultime; un'etichetta che si
+sovrapporrebbe a una già disegnata si salta. Le usa l'immagine del cammino completato del
+passaporto in camminiditalia (oc:8703); chi non le passa ottiene la stessa immagine di prima.
+
 ### Preferiti sui layer
 
 Trait `Favoriteable` su `Layer`, mirror di `EcTrack`; endpoint

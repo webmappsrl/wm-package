@@ -115,6 +115,18 @@ class MapRenderService
 
     private const MARKER_BORDER_COLOR = '#ffffff';
 
+    /** Default label font size in px (oc:8703). */
+    private const LABEL_FONT_SIZE_PX = 28;
+
+    /** Default label text color (oc:8703). */
+    private const LABEL_COLOR = '#000000';
+
+    /** Default label outline color (oc:8703). */
+    private const LABEL_OUTLINE_COLOR = '#ffffff';
+
+    /** GD wants typographic points; Intervention converts px with the same factor (oc:8703). */
+    private const PIXELS_TO_POINTS = 0.75;
+
     /**
      * Background fill for any tile that failed to download — visually distinguishable from
      * a "real" tile without looking like a rendering bug (a neutral, muted color rather
@@ -161,16 +173,21 @@ class MapRenderService
      * Each marker: `lon`, `lat`, `type` (`start`|`end`), optionally `size` (disc diameter in
      * px, default 28), `ringWidth` (white ring in px on each side, default 4) and `color`
      * (disc color, default green for `start`, red for `end`).
+     * Each label (oc:8703): `lon`, `lat`, `text`, optionally `color` (default black), `size`
+     * (font size in px, default 28), `outlineColor` + `outlineWidth` (px, default white / 0),
+     * `font` (TTF path, default StoryImageLayout::FONT_BOLD); drawn last, centred on the point,
+     * in the given order: a label whose box would overlap one already drawn is skipped.
      *
      * @param  list<array{lineStrings: list<list<array{0: float, 1: float}>>, color: string, thickness: int, opacity: float, outlineColor?: string, outlineThickness?: int}>  $layers
      * @param  list<array{lon: float, lat: float, type: 'start'|'end', size?: int, ringWidth?: int, color?: string}>  $markers
      * @param  array{xmin: float, ymin: float, xmax: float, ymax: float}  $focusBbox
      * @param  ?float  $marginRatio  Margine aggiunto per lato a `$focusBbox`, come frazione del suo span;
      *                               null = BBOX_MARGIN_RATIO (il comportamento di render()).
+     * @param  list<array{lon: float, lat: float, text: string, color?: string, size?: int, outlineColor?: string, outlineWidth?: int, font?: string}>  $labels
      *
      * @throws RuntimeException if every single tile needed for the output window fails to download.
      */
-    public function renderLayers(array $layers, array $markers, array $focusBbox, App $app, int $width, int $height, ?float $marginRatio = null): InterventionImage
+    public function renderLayers(array $layers, array $markers, array $focusBbox, App $app, int $width, int $height, ?float $marginRatio = null, array $labels = []): InterventionImage
     {
         $tileUrlTemplate = $this->resolveTileUrlTemplate($app);
         $bbox = $this->padBbox($this->expandDegenerateBbox($focusBbox), $marginRatio ?? self::BBOX_MARGIN_RATIO);
@@ -199,6 +216,22 @@ class MapRenderService
                 (int) ($marker['size'] ?? self::MARKER_DIAMETER_PX),
                 (int) ($marker['ringWidth'] ?? self::MARKER_BORDER_PX)
             );
+        }
+
+        $drawn = [];
+        foreach ($labels as $label) {
+            $x = $this->lonToPixelX((float) $label['lon'], $zoom) - $windowLeft;
+            $y = $this->latToPixelY((float) $label['lat'], $zoom) - $windowTop;
+            $box = $this->labelBox($label, $x, $y);
+
+            foreach ($drawn as $other) {
+                if ($box[0] < $other[2] && $other[0] < $box[2] && $box[1] < $other[3] && $other[1] < $box[3]) {
+                    continue 2;
+                }
+            }
+
+            $this->drawLabel($canvas, $label, $x, $y);
+            $drawn[] = $box;
         }
 
         return $canvas;
@@ -542,6 +575,71 @@ class MapRenderService
         $canvas->circle($diameter, (int) round($x), (int) round($y), function ($draw) use ($color) {
             $draw->background($color);
         });
+    }
+
+    /**
+     * Box [x1, y1, x2, y2] of a label centred on the given pixel, outline included (oc:8703).
+     *
+     * @param  array{text: string, size?: int, outlineWidth?: int, font?: string}  $label
+     * @return array{0: float, 1: float, 2: float, 3: float}
+     */
+    private function labelBox(array $label, float $x, float $y): array
+    {
+        ['font' => $font, 'size' => $size, 'outline' => $outline] = $this->labelStyle($label);
+        $bbox = imagettfbbox($size * self::PIXELS_TO_POINTS, 0, $font, $label['text']);
+        $halfWidth = abs($bbox[2] - $bbox[0]) / 2 + $outline;
+        $halfHeight = abs($bbox[7] - $bbox[1]) / 2 + $outline;
+
+        return [$x - $halfWidth, $y - $halfHeight, $x + $halfWidth, $y + $halfHeight];
+    }
+
+    /**
+     * Draws a text label centred on the given pixel (oc:8703): the outline is the same text
+     * repeated in `outlineColor` at every offset within `outlineWidth`, then the text on top.
+     *
+     * @param  array{lon: float, lat: float, text: string, color?: string, size?: int, outlineColor?: string, outlineWidth?: int, font?: string}  $label
+     */
+    private function drawLabel(InterventionImage $canvas, array $label, float $x, float $y): void
+    {
+        ['font' => $font, 'size' => $size, 'outline' => $outline] = $this->labelStyle($label);
+        $write = function (string $color, int $dx, int $dy) use ($canvas, $label, $font, $size, $x, $y): void {
+            $canvas->text($label['text'], (int) round($x) + $dx, (int) round($y) + $dy, function ($text) use ($font, $size, $color) {
+                $text->file($font);
+                $text->size($size);
+                $text->color($color);
+                $text->align('center');
+                $text->valign('middle');
+            });
+        };
+
+        if ($outline > 0) {
+            $outlineColor = $label['outlineColor'] ?? self::LABEL_OUTLINE_COLOR;
+            for ($dx = -$outline; $dx <= $outline; $dx++) {
+                for ($dy = -$outline; $dy <= $outline; $dy++) {
+                    if ($dx !== 0 || $dy !== 0) {
+                        $write($outlineColor, $dx, $dy);
+                    }
+                }
+            }
+        }
+
+        $write($label['color'] ?? self::LABEL_COLOR, 0, 0);
+    }
+
+    /**
+     * Font, size and outline width of a label with their defaults, in one place so that the
+     * collision box always matches the drawn text (oc:8703).
+     *
+     * @param  array{size?: int, outlineWidth?: int, font?: string}  $label
+     * @return array{font: string, size: int, outline: int}
+     */
+    private function labelStyle(array $label): array
+    {
+        return [
+            'font' => $label['font'] ?? StoryImageLayout::FONT_BOLD,
+            'size' => (int) ($label['size'] ?? self::LABEL_FONT_SIZE_PX),
+            'outline' => (int) ($label['outlineWidth'] ?? 0),
+        ];
     }
 
     /**
