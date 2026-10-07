@@ -6,7 +6,17 @@
             <p class="loading-text">Caricamento mappa...</p>
         </div>
 
-        <div ref="mapContainer" class="map-container" :class="{ 'map-loading': isLoading }"></div>
+        <div class="map-wrapper">
+            <div ref="mapContainer" class="map-container" :class="{ 'map-loading': isLoading }"></div>
+
+            <div v-if="legend && legend.length" class="map-legend" data-test="map-legend">
+                <div v-for="(item, i) in legend" :key="i" class="map-legend-item">
+                    <span class="map-legend-sample"
+                        :style="{ borderTopColor: item.color, borderTopStyle: item.dash ? 'dashed' : 'solid' }"></span>
+                    <span class="map-legend-label">{{ item.label }}</span>
+                </div>
+            </div>
+        </div>
 
         <div v-if="enableSlopeChart && selectedTrackForChart" class="slope-chart-container">
             <SlopeChart ref="slopeChartRef" :track="selectedTrackForChart" @hover="onSlopeHover" />
@@ -102,6 +112,11 @@ export default {
         height: {
             type: Number,
             default: 500
+        },
+        /** Voci della legenda: [{ label, color, dash }]. Vuota = nessuna legenda. */
+        legend: {
+            type: Array,
+            default: () => []
         },
         showZoomControls: {
             type: Boolean,
@@ -325,7 +340,10 @@ export default {
             return new Style({
                 stroke: new Stroke({
                     color: featureProps.strokeColor || 'rgba(0, 0, 255, 1)',
-                    width: featureProps.strokeWidth || 3
+                    width: featureProps.strokeWidth || 3,
+                    // Tratteggio opzionale, es. [8, 8] per i tratti ricostruiti delle tracce UGC
+                    // (oc:8719). Senza la proprietà la linea resta continua come prima.
+                    lineDash: Array.isArray(featureProps.strokeDash) ? featureProps.strokeDash : undefined
                 }),
                 fill: new Fill({
                     color: featureProps.fillColor || 'rgba(0, 0, 255, 0.3)'
@@ -849,6 +867,48 @@ export default {
 
 .slope-chart-container {
     margin-top: 10px;
+}
+
+.map-wrapper {
+    position: relative;
+}
+
+/* Il riquadro non intercetta il drag fuori da sé: il wrapper non ha pointer-events propri. */
+.map-legend {
+    position: absolute;
+    left: 8px;
+    bottom: 8px;
+    z-index: 5;
+    max-width: 60%;
+    padding: 6px 8px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.9);
+    color: #1f2937;
+    font-size: 12px;
+    line-height: 1.3;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+.map-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.map-legend-item + .map-legend-item {
+    margin-top: 4px;
+}
+
+.map-legend-sample {
+    flex: 0 0 28px;
+    width: 28px;
+    height: 0;
+    border-top-width: 4px;
+}
+
+:global(.dark) .map-legend {
+    background: rgba(31, 41, 55, 0.9);
+    color: #f3f4f6;
 }
 
 .map-container {

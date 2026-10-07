@@ -2,6 +2,8 @@
 
 namespace Wm\WmPackage\Services\Models\StoryShare;
 
+use Wm\WmPackage\Services\Models\UgcTrackCleanupService;
+
 /**
  * Computes track statistics (duration, distance, ascent) server-side from the raw GPS
  * location log stored in `UgcTrack.properties['locations']` (oc:8183, third revision).
@@ -15,9 +17,10 @@ namespace Wm\WmPackage\Services\Models\StoryShare;
  *
  * Stateless: no dependency on any model, only on the raw `locations` array shape:
  * `[{time: int (ms epoch), latitude: float, longitude: float, altitude: float,
- *   altitudeAccuracy: float}, ...]`. Entries missing `latitude`/`longitude` are dropped
- * before any computation (defensive: a single malformed GPS sample must not corrupt the
- * whole distance/ascent sum by producing NaN/absurd jumps).
+ *   altitudeAccuracy: float}, ...]`. Entries are filtered through the same rules as
+ * `UgcTrackCleanupService` before any computation (defensive: a single malformed GPS sample
+ * must not corrupt the whole distance/ascent sum by producing NaN/absurd jumps, and points
+ * with excessive accuracy or at (0,0) must be excluded from statistics).
  */
 class TrackStatsService
 {
@@ -31,6 +34,17 @@ class TrackStatsService
      * share-image statistics display.
      */
     private const EARTH_RADIUS_M = 6371000;
+
+    private UgcTrackCleanupService $cleanup;
+
+    /**
+     * Le statistiche si calcolano sugli stessi punti della geometria pulita (oc:8719): senza,
+     * l'immagine condivisa mostrerebbe la distanza gonfiata dai punti da rete cellulare.
+     */
+    public function __construct(?UgcTrackCleanupService $cleanup = null)
+    {
+        $this->cleanup = $cleanup ?? UgcTrackCleanupService::make();
+    }
 
     /**
      * @param  array<int, mixed>  $locations  raw `properties['locations']` array of a
@@ -46,13 +60,7 @@ class TrackStatsService
      */
     public function compute(array $locations): array
     {
-        $points = array_values(array_filter(
-            $locations,
-            static fn ($location) => is_array($location)
-                && isset($location['latitude'], $location['longitude'])
-                && is_numeric($location['latitude'])
-                && is_numeric($location['longitude'])
-        ));
+        $points = $this->cleanup->keptLocations($locations);
 
         if (count($points) < 2) {
             // Empty array or a single GPS sample: no distance/duration/ascent can be
