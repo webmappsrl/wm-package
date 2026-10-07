@@ -162,10 +162,10 @@ it('chiede all operatore solo denominazione e geometria', function () {
         ->map(fn ($f) => $f->name)
         ->all();
 
-    expect($fields)->toContain('Denominazione', 'Geometria (GPX o GeoJSON)')
+    expect($fields)->toContain('Designation', 'Geometry (GPX or GeoJSON)')
         // Provenienza, Stato istruttoria e Inserita da li scrive la
         // piattaforma: un'istanza nata in Nova e' per definizione d'ufficio.
-        ->and($fields)->not->toContain('Provenienza', 'Stato istruttoria', 'Inserita da', 'Codice');
+        ->and($fields)->not->toContain('Source', 'Review status', 'Entered by', 'Code');
 });
 
 it('creando un istanza da Nova la piattaforma scrive provenienza stato e geometria', function () {

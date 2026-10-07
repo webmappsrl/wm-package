@@ -77,3 +77,7 @@ Si applica quando tocchi Resource, campi, action o card Nova del package.
   i valori arrivano vuoti, perché la risposta di Nova serializza il campo due volte (`fields` e
   `panels`) dopo il `resolve(true)` del template, oppure presi da un altro gruppo — i sotto-campi
   vanno serializzati subito nel `jsonSerialize()` del campo (oc:8675).
+- **Nova traduce da sé `$confirmButtonText`, `$cancelButtonText` e `$confirmText` delle Action**
+  (`Nova::__()`): una stringa italiana lì è una chiave di traduzione italiana, anche senza `__()`.
+  `Filter::name()` invece non traduce `$name`: per un nome traducibile si ridefinisce `name()` con
+  `__()` (oc:8672).

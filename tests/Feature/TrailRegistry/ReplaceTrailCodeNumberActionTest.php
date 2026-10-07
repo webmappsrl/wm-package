@@ -67,7 +67,7 @@ it('offre la variante zero e le lettere per un numero libero', function () {
 
     $options = (new ReplaceTrailCodeNumber)->variantOptions($request, 13);
 
-    expect($options['0'])->toBe(__('nessuna variante'))
+    expect($options['0'])->toBe(__('no variant'))
         ->and($options)->toHaveKey('A');
 });
 
@@ -113,7 +113,7 @@ it('popola la variante quando la richiesta porta resources invece di resourceId'
 
     $options = (new ReplaceTrailCodeNumber)->variantOptions($request, 13);
 
-    expect($options['0'])->toBe(__('nessuna variante'))
+    expect($options['0'])->toBe(__('no variant'))
         ->and($options)->toHaveKey('A');
 });
 

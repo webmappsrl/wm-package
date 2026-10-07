@@ -25,7 +25,7 @@ it('mostra la voce dei vicini solo quando ce n e almeno uno', function () {
         ['MULTILINESTRING Z((1 1 0, 2 2 0))', $code->ec_track_id],
     );
 
-    expect(MapLegendRenderer::render($code->fresh()))->not->toContain('Altri sentieri');
+    expect(MapLegendRenderer::render($code->fresh()))->not->toContain('Other trails');
 
     $vicino = TrailRegistryCode::findOrFail(makeCode([
         'status' => TrailCodeStatus::Assigned,
@@ -38,7 +38,7 @@ it('mostra la voce dei vicini solo quando ce n e almeno uno', function () {
         ['MULTILINESTRING Z((5 5 0, 6 6 0))', $vicino->ec_track_id],
     );
 
-    expect(MapLegendRenderer::render($code->fresh()))->toContain('Altri sentieri');
+    expect(MapLegendRenderer::render($code->fresh()))->toContain('Other trails');
 });
 
 it('non nomina il sentiero quando il codice e solo riservato', function () {
@@ -51,9 +51,9 @@ it('non nomina il sentiero quando il codice e solo riservato', function () {
 
     $html = MapLegendRenderer::render($code);
 
-    expect($html)->toContain('Settore da cui viene il prefisso')
-        ->and($html)->toContain('Traccia dell')
-        ->and($html)->not->toContain('Sentiero a cui il codice');
+    expect($html)->toContain('Sector the prefix comes from')
+        ->and($html)->toContain('Application track')
+        ->and($html)->not->toContain('Trail the code is assigned to');
 });
 
 it('spiega i segnavia presenti sulla mappa', function () {
@@ -64,10 +64,10 @@ it('spiega i segnavia presenti sulla mappa', function () {
 
     $html = MapLegendRenderer::render($code->fresh());
 
-    expect($html)->toContain('Numero di questo codice')
-        ->and($html)->toContain('Numero di un sentiero validato')
-        ->and($html)->not->toContain('Numero proposto da un')
-        ->and($html)->not->toContain('Numero liberato');
+    expect($html)->toContain('Number of this code')
+        ->and($html)->toContain('Number of a validated trail')
+        ->and($html)->not->toContain('Number proposed by another')
+        ->and($html)->not->toContain('Released number');
 });
 
 it('su un codice liberato spiega il numero barrato', function () {
@@ -77,8 +77,8 @@ it('su un codice liberato spiega il numero barrato', function () {
 
     $html = MapLegendRenderer::render($code->fresh());
 
-    expect($html)->toContain('Numero liberato')
-        ->and($html)->not->toContain('Numero di questo codice');
+    expect($html)->toContain('Released number')
+        ->and($html)->not->toContain('Number of this code');
 });
 
 it('dice di quale linea e il profilo altimetrico', function () {
@@ -87,6 +87,6 @@ it('dice di quale linea e il profilo altimetrico', function () {
 
     $html = MapLegendRenderer::render($code);
 
-    expect($html)->toContain('Profilo altimetrico')
-        ->and($html)->toContain('traccia dell');
+    expect($html)->toContain('Elevation profile')
+        ->and($html)->toContain('application track');
 });

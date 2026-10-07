@@ -178,12 +178,12 @@ it('con il modello sostituito da config la voce di menu resta e newModel usa que
     $menu = call_user_func(Nova::$mainMenuCallback, Request::create('/'));
 
     $catasto = collect($menu)->first(
-        fn ($section) => $section instanceof MenuSection && (string) $section->name === __('Catasto')
+        fn ($section) => $section instanceof MenuSection && (string) $section->name === __('Trail registry')
     );
 
     expect($catasto)->not->toBeNull();
     expect(collect($catasto->items)->map(fn ($item) => (string) $item->name)->all())
-        ->toBe([__('Registro dei codici')]);
+        ->toBe([__('Code registry')]);
 });
 
 it('se la sottoclasse cambia $model newModel usa quello, anche contro la config', function () {
@@ -197,7 +197,7 @@ it('il BelongsTo Istanza trova la Resource dello shard per uriKey anche con il m
     Nova::resources([ShardApplicationResource::class, ShardCodeResource::class]);
 
     $field = collect((new ShardCodeResource(new TrailRegistryCodeModel))->fields(NovaRequest::create('/')))
-        ->first(fn ($field) => $field->name === __('Istanza'));
+        ->first(fn ($field) => $field->name === __('Application'));
 
     expect($field->resourceClass)->toBe(ShardApplicationResource::class);
 });
