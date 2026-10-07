@@ -4,9 +4,12 @@ namespace Wm\WmPackage\Services\Import;
 
 use Carbon\Carbon;
 use Illuminate\Support\Str;
+use Wm\WmPackage\Traits\NormalizesRelatedUrl;
 
 class DataTransformer
 {
+    use NormalizesRelatedUrl;
+
     /**
      * Convert a JSON string to an array.
      */
@@ -65,59 +68,13 @@ class DataTransformer
     /**
      * Converte related_url di Geohub (testo: oggetto JSON, indirizzo, "[]", "false"...) in
      * etichetta → url; null quando non contiene link: la chiave resta in properties con valore
-     * null (oc:8679).
-     *
-     * Stessa logica di EcPoiRowProcessor::normalizeRelatedUrlToAssoc (import Excel): se cambi
-     * una, cambia anche l'altra.
+     * null (oc:8679). Le regole sono nel trait NormalizesRelatedUrl, condiviso con l'import Excel.
      */
     public function relatedUrlToArray($value): ?array
     {
         $normalized = $this->normalizeRelatedUrl($value);
 
         return $normalized === [] ? null : $normalized;
-    }
-
-    private function normalizeRelatedUrl(mixed $value): array
-    {
-        if ($value === null || $value === '') {
-            return [];
-        }
-        if (is_array($value)) {
-            $out = [];
-            foreach ($value as $k => $v) {
-                if (! (is_string($v) || is_numeric($v))) {
-                    continue;
-                }
-                if (is_string($k)) {
-                    $out[$k] = (string) $v;
-                } else {
-                    $s = (string) $v;
-                    if ($s !== '') {
-                        $out[$s] = $s;
-                    }
-                }
-            }
-
-            return $out;
-        }
-        if (! is_string($value)) {
-            return [];
-        }
-        $t = trim($value);
-        if ($t === '') {
-            return [];
-        }
-        if (str_starts_with($t, '{')) {
-            $d = json_decode($t, true);
-            if (is_array($d)) {
-                return $this->normalizeRelatedUrl($d);
-            }
-        }
-        if (str_starts_with($t, 'http://') || str_starts_with($t, 'https://')) {
-            return [$t => $t];
-        }
-
-        return [];
     }
 
     /**

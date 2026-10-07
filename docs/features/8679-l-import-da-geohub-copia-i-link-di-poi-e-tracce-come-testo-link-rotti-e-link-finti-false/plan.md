@@ -1,104 +1,102 @@
 > Ticket: oc:8679
 
+> Riscritto il 07/10/2026 dopo la review dell'overview. Il piano del primo ciclo (due copie della
+> logica, commento incrociato) è nella storia di git, al commit 5a327589. Come deciso allo scrum
+> del 07/10, il codice di quel commit si rifà secondo l'overview rivista, non si corregge.
+
 # Piano — L'import da Geohub copia i link di POI e tracce come testo
 
 Repo: **wm-package** (codice, test, documentazione), poi **maphub** (solo bump del submodule).
-Branch in entrambi: `feature/oc-8679-related-url-import-geohub`.
+Branch: `feature/oc-8679-related-url-import-geohub` in wm-package (già esistente, PR #299); lo
+stesso nome in maphub.
 I commit sono istruzioni per la dev: nessun `git commit`/`push` senza il suo sì esplicito.
 
 ## Task 1 — Test che falliscono (wm-package)
 
-File nuovo `tests/Unit/Services/Import/DataTransformerRelatedUrlTest.php` (Pest, nessun database).
-
-Casi su `(new DataTransformer)->relatedUrlToArray($input)`:
+File `tests/Unit/Services/Import/DataTransformerRelatedUrlTest.php` (Pest, nessun database).
+Restano i 10 casi del primo ciclo e il test sul mapping in config; si aggiungono i tre formati
+della review:
 
 | Input | Atteso |
 |---|---|
-| `'{"Ufficio turistico":"https://www.comune.levanto.sp.it/"}'` | `['Ufficio turistico' => 'https://www.comune.levanto.sp.it/']` |
-| `'false'` | `null` |
-| `'[]'` | `null` |
-| `null` | `null` |
-| `''` | `null` |
-| `'  https://www.esempio.it  '` | `['https://www.esempio.it' => 'https://www.esempio.it']` |
-| `'{"Sito": false, "Info": "https://a.it"}'` | `['Info' => 'https://a.it']` |
-| `'{"rotto'` | `null` (nessuna eccezione) |
-| `'www.comune.it'` | `null` |
-| `'{}'` | `null` |
+| `'"https:\/\/www.a.it\/"'` (stringa JSON) | `['https://www.a.it/' => 'https://www.a.it/']` |
+| `'["h","t","t","p","s",":","/","/","a",".","i","t"]'` (lista spezzata) | `['https://a.it' => 'https://a.it']` |
+| `'[{"net7webmap_related_url":"https://a.it"},{"net7webmap_related_url":""}]'` (WordPress) | `['https://a.it' => 'https://a.it']` |
+| `'[{"net7webmap_related_url":""}]'` (WordPress vuoto) | `null` |
 
-Più un test sul mapping:
-`config('wm-geohub-import.import_mapping.ec_poi.properties.mapping.related_url')` e
-`config('wm-geohub-import.import_mapping.ec_track.properties.mapping.related_url')` sono uguali a
-`['field' => 'related_url', 'transformer' => [DataTransformer::class, 'relatedUrlToArray']]`.
+Verifica: i tre casi nuovi falliscono con il codice attuale.
 
-Verifica: `vendor/bin/pest tests/Unit/Services/Import/DataTransformerRelatedUrlTest.php` → falliscono
-(metodo inesistente, mapping ancora stringa).
+## Task 2 — Trait `NormalizesRelatedUrl` (wm-package)
 
-## Task 2 — `DataTransformer::relatedUrlToArray` (wm-package)
+> ⚠️ L'implementazione ha deviato da questo task: [notes.md](notes.md#task-2--trait-normalizesrelatedurl)
 
-In `src/Services/Import/DataTransformer.php` aggiungere:
+File nuovo `src/Traits/NormalizesRelatedUrl.php`, sul modello di `NormalizesHexColor`:
+`protected function normalizeRelatedUrl(mixed $value): array`. Nessuna `const` nel trait (PHP 8.1).
 
-- `public function relatedUrlToArray($value): ?array` → chiama `normalizeRelatedUrl()` e
-  restituisce `null` se il risultato è `[]`;
-- `private function normalizeRelatedUrl(mixed $value): array` → stesse regole di
-  `EcPoiRowProcessor::normalizeRelatedUrlToAssoc` (righe 339-379): null/'' → `[]`; array → tiene
-  solo valori stringa/numerici, chiavi numeriche diventano `url => url`; stringa → `trim`, se
-  inizia con `{` decodifica e ricorre, se inizia con `http://`/`https://` → `[t => t]`, altrimenti
-  `[]`.
-- Commento PHPDoc: «Stessa logica di `EcPoiRowProcessor::normalizeRelatedUrlToAssoc`: se cambi
-  una, cambia anche l'altra (oc:8679).»
+Regole, in questo ordine:
 
-Nessuna modifica a `jsonToArray` e `nullableJsonToArray`.
+1. `null` o `''` → `[]`.
+2. Array:
+   - lista fatta solo di stringhe di un carattere → caratteri ricomposti, poi regola 3 sulla
+     stringa ottenuta. Va prima del punto successivo, che altrimenti produce
+     `{"h":"h","t":"t",…}`;
+   - altrimenti per ogni elemento: array con chiave `net7webmap_related_url` non vuota →
+     `url => url`; valore stringa/numerico con chiave stringa → `etichetta => url`; con chiave
+     numerica e non vuoto → `url => url`; il resto si scarta.
+3. Stringa, dopo `trim`:
+   - vuota → `[]`;
+   - inizia con `{`, `[` o `"` → `json_decode`; se il risultato è array o stringa si riapplicano
+     le regole, altrimenti `[]`;
+   - inizia con `http://` o `https://` → `[t => t]`;
+   - altrimenti `[]`.
 
-## Task 3 — Mapping in config (wm-package)
+## Task 3 — `DataTransformer` usa il trait (wm-package)
 
-In `config/wm-geohub-import.php`, riga 397 (`ec_track`) e riga 458 (`ec_poi`):
+In `src/Services/Import/DataTransformer.php`: `use NormalizesRelatedUrl;`, togliere il metodo
+privato `normalizeRelatedUrl` e il commento di rimando all'import Excel. `relatedUrlToArray($value): ?array`
+resta pubblico e restituisce `null` quando il trait restituisce `[]`.
 
-```php
-'related_url' => ['field' => 'related_url', 'transformer' => [DataTransformer::class, 'relatedUrlToArray']],
-```
-
-`DataTransformer` è già importato in testa al file (riga 15).
+Il mapping in `config/wm-geohub-import.php` (righe 397 e 458) è già quello giusto dal primo ciclo.
 
 Verifica: il test del Task 1 passa tutto.
 
-## Task 4 — Commento incrociato nell'import Excel (wm-package)
+## Task 4 — `EcPoiRowProcessor` usa il trait (wm-package)
 
-In `src/Imports/Processors/EcPoiRowProcessor.php`, sopra `normalizeRelatedUrlToAssoc` (riga 339),
-solo un commento: «Stessa logica di `DataTransformer::relatedUrlToArray` (import Geohub): se cambi
-una, cambia anche l'altra (oc:8679).» Nessuna modifica al codice.
+In `src/Imports/Processors/EcPoiRowProcessor.php`: `use NormalizesRelatedUrl;`, le chiamate a
+`normalizeRelatedUrlToAssoc` in `mergeRelatedUrl` diventano `normalizeRelatedUrl`, e il metodo
+privato `normalizeRelatedUrlToAssoc` (con il suo commento di rimando) si cancella: se restasse con
+lo stesso nome del metodo del trait, PHP userebbe in silenzio quello della classe.
+`mergeRelatedUrl` non cambia.
 
 ## Task 5 — Verifiche (wm-package)
 
-> ⚠️ L'implementazione ha deviato da questo task: [notes.md](notes.md#task-5--verifiche)
+Come nel primo ciclo (vedi `notes.md`): i test Pest del package non si lanciano da maphub.
 
-- `vendor/bin/pest tests/Unit/Services/Import/DataTransformerRelatedUrlTest.php tests/Unit/Imports/Processors/EcPoiRowProcessorTest.php`
-  (nel container `php-forestas`, o in quello di maphub se attivo);
+- i casi del Task 1 e il caso di `EcPoiRowProcessorTest` (`'https://example.com'` → assoc)
+  verificati con uno script PHP temporaneo nel container `php-maphub`;
 - `vendor/bin/pint` solo sui file toccati (`composer format` riformatta tutto il repo);
 - `vendor/bin/phpstan analyse` sui file toccati.
 
-Commit suggerito: `fix(oc:8679): import Geohub converte related_url di POI e tracce`.
+Commit suggerito: `fix(oc:8679): logica dei related_url in un trait condiviso, recupero dei formati Geohub`.
 
 ## Task 6 — Documentazione (wm-package)
 
-- `notes.md` del cantiere;
-- aggiornare `docs/knowledge/import-geohub-e-taxonomy.md` con la riga sulla conversione di
-  `related_url` (passa dal controllo `wm-context-guard`).
+- `notes.md` del cantiere: la review del 07/10 e cosa è cambiato rispetto al primo ciclo;
+- `docs/knowledge/import-geohub-e-taxonomy.md`: la riga sulla conversione di `related_url`
+  (passa dal controllo `wm-context-guard`).
 
 ## Task 7 — PR e bump (wm-package → maphub)
 
-1. PR di wm-package verso `develop`, merge.
+1. Push sul branch della PR #299 di wm-package (verso `develop`), review dell'overview e del codice, merge.
 2. In maphub: bump del puntatore `wm-package` al commit del merge, nessun'altra modifica.
-   Nessuna migration nuova, quindi `publish-missing-migrations` non serve (verificare con
-   `--dry-run`).
+   Nessuna migration nuova (verificare con `publish-missing-migrations --dry-run`).
    Commit suggerito: `fix(oc:8679): bump wm-package per conversione related_url import Geohub`.
 3. PR di maphub verso `develop`.
 
 ## Task 8 — Re-import su Maphub dev (da concordare con il tester)
 
-Prima di lanciarlo: il tester conferma che su dev non ci sono correzioni a mano su POI e tracce
-di Itinera Romanica PLUS (il re-import sostituisce `properties` per intero).
-
-- dopo il deploy, riavviare i worker Horizon: un worker già avviato usa ancora il mapping vecchio;
-- `php artisan wm:import-from-geohub app <id-geohub-app>` sullo shard dev;
-- verifica: 52 POI su 52 con link funzionante (es. Geohub 2554 → Maphub 325), nessun
-  `related_url` uguale a `"[]"`/`"false"` su POI e tracce (es. Geohub 2366 → Maphub 211 senza link).
+Invariato dal primo ciclo: il tester conferma che su dev non ci sono correzioni a mano su POI e
+tracce di Itinera Romanica PLUS; dopo il deploy si riavviano i worker Horizon;
+`php artisan wm:import-from-geohub app <id-geohub-app>`; verifica: 52 POI su 52 con link
+funzionante (es. Geohub 2554 → Maphub 325), nessun `"[]"`/`"false"` su POI e tracce (es. Geohub
+2366 → Maphub 211 senza link).

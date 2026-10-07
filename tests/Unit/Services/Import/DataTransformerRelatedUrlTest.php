@@ -18,6 +18,12 @@ it('converte related_url in etichetta → url, o null quando non ci sono link', 
     'valori non testuali scartati' => ['{"Sito": false, "Info": "https://a.it"}', ['Info' => 'https://a.it']],
     'JSON non valido' => ['{"rotto', null],
     'testo senza http' => ['www.comune.it', null],
+    'stringa JSON' => ['"https:\/\/www.a.it\/"', ['https://www.a.it/' => 'https://www.a.it/']],
+    'lista spezzata in caratteri' => ['["h","t","t","p","s",":","/","/","a",".","i","t"]', ['https://a.it' => 'https://a.it']],
+    'lista WordPress' => ['[{"net7webmap_related_url":"https://a.it"},{"net7webmap_related_url":""}]', ['https://a.it' => 'https://a.it']],
+    'lista WordPress vuota' => ['[{"net7webmap_related_url":""}]', null],
+    'lista spezzata sporca non ricostruibile (POI 39942)' => ['["hhttps:\/\/www.a.it\/poi\/1","t","t","p","s",":","\/","\/","w"]', null],
+    'lista di indirizzi' => ['["https://a.it"]', ['https://a.it' => 'https://a.it']],
 ]);
 
 it('mappa related_url di POI e tracce con relatedUrlToArray', function (string $model) {
