@@ -23,6 +23,7 @@ use Tymon\JWTAuth\Providers\LaravelServiceProvider;
 use Wm\WmPackage\Commands\WmBackfillGravatarAvatarsCommand;
 use Wm\WmPackage\Commands\WmBackupCommand;
 use Wm\WmPackage\Commands\WmBuildAppPoisGeojsonCommand;
+use Wm\WmPackage\Commands\WmCleanUgcTrackGeometryCommand;
 use Wm\WmPackage\Commands\WmDownloadDbBackupCommand;
 use Wm\WmPackage\Commands\WmGenerateIconsCommand;
 use Wm\WmPackage\Commands\WmGeneratePBFCommand;
@@ -245,6 +246,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
                 WmDownloadDbBackupCommand::class,
                 WmBuildAppPoisGeojsonCommand::class,
                 WmSyncUgcTaxonomyWhereCommand::class,
+                WmCleanUgcTrackGeometryCommand::class,
                 WmResyncTaxonomyWhereCommand::class,
                 WmBackfillGravatarAvatarsCommand::class,
                 WmRestoreDbCommand::class,

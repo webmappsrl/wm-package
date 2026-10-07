@@ -345,6 +345,25 @@ class FeatureCollectionMap extends Field
     }
 
     /**
+     * Legenda sovrapposta alla mappa, in basso a sinistra: una riga per voce.
+     * Ogni voce: label, color (colore CSS) e dash (true = linea tratteggiata, default false).
+     * Lista vuota = nessuna legenda.
+     *
+     * @param  array<int, array{label: string, color: string, dash?: bool}>  $items
+     * @return $this
+     */
+    public function legend(array $items): static
+    {
+        $legend = array_map(fn (array $item) => [
+            'label' => (string) $item['label'],
+            'color' => (string) $item['color'],
+            'dash' => (bool) ($item['dash'] ?? false),
+        ], array_values($items));
+
+        return $this->withMeta(['legend' => $legend]);
+    }
+
+    /**
      * Prepare the field for JSON serialization.
      *
      * @return array<string, mixed>

@@ -103,6 +103,7 @@ questo file, perché vanno lette sempre.
 | Località mostrate (`taxonomy_where`) | formato salvato, opzione "Località mostrate" per App, filtro in uscita, riallineamento, nomi delle where nelle 5 lingue | [docs/knowledge/localita-mostrate-taxonomy-where.md](docs/knowledge/localita-mostrate-taxonomy-where.md) |
 | Mappa del Catasto Sentieri | cosa disegna il PHP e cosa il Vue, segnavia, profilo, ricarica dopo un'Action | [docs/knowledge/mappa-del-catasto-sentieri.md](docs/knowledge/mappa-del-catasto-sentieri.md) |
 | Chiavi di traduzione | chiave in inglese e testo italiano nella voce, voci condivise fra shard, cosa Nova traduce da sé | [docs/knowledge/8672-chiavi-di-traduzione-in-inglese-nel-catasto-sentieri-wm-package-e-in-forestas.md](docs/knowledge/8672-chiavi-di-traduzione-in-inglese-nel-catasto-sentieri-wm-package-e-in-forestas.md) |
+| Pulizia GPS delle tracce UGC | quali punti si scartano (accuracy e distanza dal percorso), dove gira la pulizia, command per le tracce esistenti, perché niente filtro sui salti | [docs/knowledge/8719-pulizia-automatica-dei-punti-gps-errati-nelle-tracce-ugc.md](docs/knowledge/8719-pulizia-automatica-dei-punti-gps-errati-nelle-tracce-ugc.md) |
 
 ## Procedure
 

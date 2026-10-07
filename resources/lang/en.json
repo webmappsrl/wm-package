@@ -558,5 +558,11 @@
     "Two or more trails with the exact same track. Until it is known which one is right, none of them gets a number.": "Two or more trails with the exact same track. Until it is known which one is right, none of them gets a number.",
     "No valid number can be derived from the code field. Next to it, the first free number in the sector: it is a hint, not a decision — the right number is the one on the signage in the field.": "No valid number can be derived from the code field. Next to it, the first free number in the sector: it is a hint, not a decision — the right number is the one on the signage in the field.",
     "The geometry does not fall in any sector, so there is no prefix to compose the code with.": "The geometry does not fall in any sector, so there is no prefix to compose the code with.",
-    "Trail registry": "Trail registry"
+    "Trail registry": "Trail registry",
+    "GPS cleanup": "GPS cleanup",
+    "No points discarded": "No points discarded",
+    ":discarded of :total points discarded (max accuracy :accuracy m) · length :before km → :after km": ":discarded of :total points discarded (max accuracy :accuracy m) · length :before km → :after km",
+    "Reconstructed segment: :discarded points discarded in :minutes min (max accuracy :accuracy m)": "Reconstructed segment: :discarded points discarded in :minutes min (max accuracy :accuracy m)",
+    "Recorded track": "Recorded track",
+    "Reconstructed segment: GPS points discarded because inaccurate and far from the route": "Reconstructed segment: GPS points discarded because inaccurate and far from the route"
 }

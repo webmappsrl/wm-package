@@ -63,6 +63,7 @@ Il campo è automaticamente impostato come `onlyOnDetail()`.
 | `geojsonUrl(string $url)` | URL personalizzato per il GeoJSON | auto |
 | `withDemEnrichment(bool $enabled)` | Abilita arricchimento DEM | `false` |
 | `withPopupComponent(string $name)` | Componente popup personalizzato | `null` |
+| `legend(array $items)` | Legenda sovrapposta alla mappa in basso a sinistra; ogni voce è `['label' => string, 'color' => string CSS, 'dash' => bool]` (`dash` default `false`, `true` = linea tratteggiata). Lista vuota = nessuna legenda | nessuna |
 
 ### Esempio Completo
 
@@ -73,7 +74,11 @@ FeatureCollectionMap::make(__('Mappa'), 'geometry')
     ->mouseWheelZoom(true)
     ->dragPan(true)
     ->padding(30)
-    ->withDemEnrichment(),
+    ->withDemEnrichment()
+    ->legend([
+        ['label' => __('Recorded track'), 'color' => 'rgba(0, 0, 255, 1)'],
+        ['label' => __('Reconstructed segment'), 'color' => 'rgba(234, 88, 12, 1)', 'dash' => true],
+    ]),
 ```
 
 ---
@@ -230,6 +235,7 @@ class HikingRoute extends Model
 | `id` | int/string | ID univoco della feature | - |
 | `strokeColor` | string | Colore del bordo (CSS) | `'rgba(0, 0, 255, 1)'` |
 | `strokeWidth` | number | Spessore del bordo in pixel | `3` |
+| `strokeDash` | number[] | Tratteggio della linea (es. `[8, 8]`); assente = linea continua | - |
 | `fillColor` | string | Colore di riempimento (CSS) | `'rgba(0, 0, 255, 0.3)'` |
 
 ### Properties per Punti

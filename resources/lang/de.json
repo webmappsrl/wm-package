@@ -26,5 +26,11 @@
     "No application approved: only applications under review can be approved.": "Kein Antrag genehmigt: Nur Anträge in Prüfung können genehmigt werden.",
     "No application rejected: only applications under review can be rejected.": "Kein Antrag abgelehnt: Nur Anträge in Prüfung können abgelehnt werden.",
     "Rejection reason": "Ablehnungsgrund",
-    "Visible to the applicant: explain what to correct in the new application.": "Für den Antragsteller sichtbar: Erkläre, was im neuen Antrag zu korrigieren ist."
+    "Visible to the applicant: explain what to correct in the new application.": "Für den Antragsteller sichtbar: Erkläre, was im neuen Antrag zu korrigieren ist.",
+    "GPS cleanup": "GPS-Bereinigung",
+    "No points discarded": "Keine Punkte verworfen",
+    ":discarded of :total points discarded (max accuracy :accuracy m) · length :before km → :after km": ":discarded von :total Punkten verworfen (maximale Genauigkeit :accuracy m) · Länge :before km → :after km",
+    "Reconstructed segment: :discarded points discarded in :minutes min (max accuracy :accuracy m)": "Rekonstruierter Abschnitt: :discarded Punkte in :minutes Min. verworfen (maximale Genauigkeit :accuracy m)",
+    "Recorded track": "Aufgezeichnete Spur",
+    "Reconstructed segment: GPS points discarded because inaccurate and far from the route": "Rekonstruierter Abschnitt: GPS-Punkte verworfen, weil ungenau und weit von der Route entfernt"
 }
