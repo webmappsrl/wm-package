@@ -4,9 +4,12 @@ namespace Wm\WmPackage\Services\Import;
 
 use Carbon\Carbon;
 use Illuminate\Support\Str;
+use Wm\WmPackage\Traits\NormalizesRelatedUrl;
 
 class DataTransformer
 {
+    use NormalizesRelatedUrl;
+
     /**
      * Convert a JSON string to an array.
      */
@@ -60,6 +63,18 @@ class DataTransformer
 
         // Per altri tipi, restituisci null
         return null;
+    }
+
+    /**
+     * Converte related_url di Geohub (testo: oggetto JSON, indirizzo, "[]", "false"...) in
+     * etichetta → url; null quando non contiene link: la chiave resta in properties con valore
+     * null (oc:8679). Le regole sono nel trait NormalizesRelatedUrl, condiviso con l'import Excel.
+     */
+    public function relatedUrlToArray($value): ?array
+    {
+        $normalized = $this->normalizeRelatedUrl($value);
+
+        return $normalized === [] ? null : $normalized;
     }
 
     /**
