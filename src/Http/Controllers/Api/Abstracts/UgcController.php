@@ -11,6 +11,7 @@ use Wm\WmPackage\Http\Controllers\Controller;
 use Wm\WmPackage\Jobs\UpdateModelWithGeometryTaxonomyWhere;
 use Wm\WmPackage\Models\Abstracts\GeometryModel;
 use Wm\WmPackage\Services\GeometryComputationService;
+use Wm\WmPackage\Services\Models\UgcMediaHashService;
 
 abstract class UgcController extends Controller
 {
@@ -43,11 +44,41 @@ abstract class UgcController extends Controller
     {
         $validated = $this->validateGeojson($request);
 
-        $model = $this->fillModelWithRequest($this->getModelIstance($request), $request, $validated);
+        $existing = $this->findExistingByUuid($validated);
+        if ($existing) {
+            // Retry dell'app con lo stesso uuid (oc:8718): si aggiorna il record. Le properties
+            // ricevute vanno sopra quelle salvate, così restano le chiavi scritte dal server che
+            // l'app non conosce (es. layer_id calcolato).
+            $validated['properties'] = array_merge($existing->properties ?? [], $validated['properties']);
+        }
+
+        $model = $this->fillModelWithRequest($existing ?? $this->getModelIstance(), $request, $validated);
 
         $this->enrichUgcWithTaxonomyWhere($model);
 
         return response()->json(['id' => $model->id, 'message' => 'Created successfully'], 201);
+    }
+
+    /**
+     * UGC già salvato con lo stesso properties.uuid. L'uuid si legge dai dati validati: l'app manda
+     * un multipart con la feature in JSON nel campo `feature`, che `$request->input()` non decodifica.
+     * Con duplicati già presenti si prende il più vecchio, cioè il padre del command di
+     * normalizzazione (oc:8718).
+     */
+    protected function findExistingByUuid(array $validated): ?GeometryModel
+    {
+        $uuid = $validated['properties']['uuid'] ?? null;
+        if (! is_string($uuid) || $uuid === '') {
+            return null;
+        }
+
+        // Solo tra gli UGC dell'utente: l'uuid è pubblico nel link di condivisione
+        // (/share/ugc-track/{uuid}), e un retry legittimo arriva sempre dallo stesso utente.
+        return $this->getModelIstance()->newQuery()
+            ->where('properties->uuid', $uuid)
+            ->where('user_id', auth()->id())
+            ->orderBy('id')
+            ->first();
     }
 
     /**
@@ -124,11 +155,18 @@ abstract class UgcController extends Controller
             throw new Exception($message, 500);
         }
 
-        if ($request->has('images')) {
-            $model->addMultipleMediaFromRequest(['images'])
-                ->each(function ($fileAdder) {
-                    $fileAdder->toMediaCollection('default');
-                });
+        if ($request->hasFile('images')) {
+            $hashes = UgcMediaHashService::make();
+            foreach ((array) $request->file('images') as $file) {
+                $hash = $hashes->hashOfFile($file->getRealPath());
+                // Immagine già presente (retry dell'app): non si salva.
+                if ($hashes->findByContent($model, $hash)) {
+                    continue;
+                }
+                $model->addMedia($file)
+                    ->withCustomProperties([UgcMediaHashService::HASH_PROPERTY => $hash])
+                    ->toMediaCollection('default');
+            }
         }
 
         return $model;
