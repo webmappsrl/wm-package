@@ -2,6 +2,7 @@
 
 namespace Wm\WmPackage\Nova;
 
+use Laravel\Nova\Fields\Badge;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Wm\WmPackage\Models\UgcTrack as UgcTrackModel;
 use Wm\WmPackage\Nova\Actions\DownloadUgcTrackAction;
@@ -56,6 +57,7 @@ class UgcTrack extends AbstractUgcResource
 
         return [
             ...parent::fields($request),
+            $this->originField(),
             FeatureCollectionMap::make('Geometry', 'geometry')
                 ->hideFromIndex()
                 ->required()
@@ -72,6 +74,31 @@ class UgcTrack extends AbstractUgcResource
                 ->hideWhenUpdating(fn ($request, $resource) => $resource instanceof UgcTrackModel
                     && $cleanup->locationsOf($resource) !== null),
         ];
+    }
+
+    /**
+     * Badge «Origin» (oc:8747): registrata con l'app o importata da file, solo lettura,
+     * calcolata da properties già caricate (nessuna query).
+     */
+    protected function originField(): Badge
+    {
+        $recorded = __('Recorded');
+        $imported = __('Imported file');
+        $importedGpx = __('Imported file (GPX)');
+
+        return Badge::make(__('Origin'), 'ugc_origin', function () use ($recorded, $imported, $importedGpx) {
+            if (! $this->resource instanceof UgcTrackModel) {
+                return null;
+            }
+            if ($this->resource->origin() === 'recorded') {
+                return $recorded;
+            }
+
+            return isset(($this->resource->properties ?? [])['_gpxType']) ? $importedGpx : $imported;
+        })
+            ->map([$recorded => 'success', $imported => 'info', $importedGpx => 'info'])
+            ->onlyOnIndex()
+            ->showOnDetail();
     }
 
     /**

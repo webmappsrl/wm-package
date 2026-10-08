@@ -87,6 +87,33 @@ class UgcTrack extends MultiLineString implements UserOwnedModelInterface
         UgcTrack::observe(UgcTrackGeometryCleanupObserver::class);
     }
 
+    /**
+     * Origine della traccia (oc:8747): 'recorded' se registrata con l'app, 'imported' se
+     * caricata da file. Verificato sui dati reali:
+     * - l'uploader dell'app (wm-core modal-ugc-uploader) converte i GPX con @tmcw/togeojson,
+     *   che aggiunge properties._gpxType ("trk"/"rte"); KML e GeoJSON non hanno _gpxType né
+     *   distanceFilter (portano chiavi di stile come stroke, stroke-width);
+     * - le registrazioni dell'app hanno sempre properties.distanceFilter; dalla 3.1.7 hanno
+     *   anche properties.locations (le 3.1.2-3.1.6 hanno distanceFilter ma non locations).
+     * Regola: _gpxType presente → importata; altrimenti locations non vuoto o distanceFilter
+     * presente → registrata; altrimenti → importata (anche un GeoJSON caricato senza chiavi proprie).
+     * Limite noto: un GeoJSON esportato a sua volta da una registrazione dell'app può portare
+     * ancora locations/distanceFilter e risulta «registrata»: l'uploader non aggiunge alcun
+     * marcatore suo.
+     */
+    public function origin(): string
+    {
+        $properties = $this->properties ?? [];
+        if (isset($properties['_gpxType'])) {
+            return 'imported';
+        }
+        if (! empty($properties['locations']) && is_array($properties['locations'])) {
+            return 'recorded';
+        }
+
+        return isset($properties['distanceFilter']) ? 'recorded' : 'imported';
+    }
+
     public function author(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
