@@ -382,6 +382,30 @@ class FeatureCollectionMap extends Field
     }
 
     /**
+     * Margine attorno all'inquadratura iniziale della mappa, in frazione dell'extent per lato:
+     * 0.3 = la vista si allarga del 30% della larghezza e dell'altezza su ogni lato.
+     * Le feature con `properties.context === true` non entrano mai nel fit.
+     * Default 0 = inquadratura stretta come prima.
+     *
+     * @return $this
+     */
+    public function extentMargin(float $ratio): static
+    {
+        return $this->withMeta(['extentMargin' => max(0.0, $ratio)]);
+    }
+
+    /**
+     * Blocca lo zoom out oltre l'inquadratura iniziale: dopo il fit lo zoom raggiunto diventa
+     * il minimo della vista. Lo zoom in resta libero. Default spento.
+     *
+     * @return $this
+     */
+    public function lockZoomOut(bool $enabled = true): static
+    {
+        return $this->withMeta(['lockZoomOut' => $enabled]);
+    }
+
+    /**
      * Prepare the field for JSON serialization.
      *
      * @return array<string, mixed>
