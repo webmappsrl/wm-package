@@ -2,10 +2,13 @@
 
 declare(strict_types=1);
 
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\UgcTrack;
 use Wm\WmPackage\Models\User;
+use Wm\WmPackage\Services\Models\UgcDuplicatesService;
 
 beforeEach(function () {
     $this->app_ = App::factory()->createQuietly();
@@ -52,7 +55,7 @@ it('tratta come uguali geometrie che differiscono solo per arrotondamento', func
     dupTrack($this->user->id, $this->app_->id, 'g3');
     dupTrack($this->user->id, $this->app_->id, 'g3', [], 'MULTILINESTRING Z ((13.0000000001 43 10, 13.001 43.001 10))');
 
-    $groups = \Wm\WmPackage\Services\Models\UgcDuplicatesService::make()->groups(UgcTrack::class);
+    $groups = UgcDuplicatesService::make()->groups(UgcTrack::class);
 
     expect($groups->firstWhere('uuid', 'g3')['max_distance_m'])->toBeLessThan(1.0);
 });
@@ -100,13 +103,13 @@ it('non tocca i gruppi da verificare', function () {
 
 it('sposta i media delle copie sul padre scartando quelli con lo stesso contenuto', function () {
     config()->set('wm-package.shard_name', 'test_shard');
-    \Illuminate\Support\Facades\Storage::fake('s3');
-    \Illuminate\Support\Facades\Storage::fake('wmfe');
-    \Illuminate\Support\Facades\Storage::fake('public');
+    Storage::fake('s3');
+    Storage::fake('wmfe');
+    Storage::fake('public');
     config()->set('medialibrary.disk_name', 'public');
     $p = dupTrack($this->user->id, $this->app_->id, 'e5');
     $c = dupTrack($this->user->id, $this->app_->id, 'e5');
-    $file = fn ($s) => \Illuminate\Http\UploadedFile::fake()->image("i{$s}.jpg", 10 + ord($s) - ord('a'), 10);
+    $file = fn ($s) => UploadedFile::fake()->image("i{$s}.jpg", 10 + ord($s) - ord('a'), 10);
     $p->addMedia($file('a'))->toMediaCollection('default');
     $c->addMedia($file('a'))->toMediaCollection('default');
     $c->addMedia($file('b'))->toMediaCollection('default');
