@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\DB;
 use Wm\WmPackage\Jobs\CleanUgcTrackGeometryJob;
 use Wm\WmPackage\Models\UgcTrack;
 use Wm\WmPackage\Services\Models\UgcTrackCleanupService;
+use Wm\WmPackage\Services\Models\UgcTrackStatsService;
 
 class WmCleanUgcTrackGeometryCommand extends Command
 {
@@ -15,9 +16,9 @@ class WmCleanUgcTrackGeometryCommand extends Command
                             {--app-id= : Limita ai record con questo app_id}
                             {--queue=default : Coda su cui accodare i job}';
 
-    protected $description = 'Ricostruisce la geometria delle UgcTrack da properties.locations scartando i punti GPS inutilizzabili (oc:8719).';
+    protected $description = 'Ricostruisce la geometria delle UgcTrack da properties.locations e ne calcola properties.stats (oc:8719, oc:8742).';
 
-    public function handle(UgcTrackCleanupService $cleanup): int
+    public function handle(UgcTrackCleanupService $cleanup, UgcTrackStatsService $statsService): int
     {
         $dryRun = (bool) $this->option('dry-run');
         $queue = (string) $this->option('queue');
@@ -29,21 +30,27 @@ class WmCleanUgcTrackGeometryCommand extends Command
         }
 
         $rows = [];
-        $query->chunkById(200, function ($tracks) use ($cleanup, $dryRun, $queue, &$rows) {
+        $total = 0;
+        $withStats = 0;
+        $query->chunkById(200, function ($tracks) use ($cleanup, $statsService, $dryRun, $queue, &$rows, &$total, &$withStats) {
             foreach ($tracks as $track) {
-                if (! $cleanup->wouldChange($track)) {
-                    continue;
+                if ($cleanup->wouldChange($track)) {
+                    $summary = $cleanup->summary($cleanup->locationsOf($track) ?? []);
+                    $rows[] = [
+                        $track->id,
+                        $summary['discarded'].'/'.$summary['total'],
+                        // «Prima» è la geometria salvata, non i locations: le tracce col punto (0,0)
+                        // solo nella geometria devono mostrare la differenza reale.
+                        sprintf('%.1f', $this->storedLengthKm($track)),
+                        sprintf('%.1f', $summary['length_after_km']),
+                    ];
                 }
+                $total++;
 
-                $summary = $cleanup->summary($cleanup->locationsOf($track) ?? []);
-                $rows[] = [
-                    $track->id,
-                    $summary['discarded'].'/'.$summary['total'],
-                    // «Prima» è la geometria salvata, non i locations: le tracce col punto (0,0)
-                    // solo nella geometria devono mostrare la differenza reale.
-                    sprintf('%.1f', $this->storedLengthKm($track)),
-                    sprintf('%.1f', $summary['length_after_km']),
-                ];
+                // Solo nel dry-run: le tracce con meno di 2 punti tenuti non ricevono stats (il job lo toglie).
+                if ($dryRun && $statsService->localStats($cleanup->locationsOf($track) ?? []) !== null) {
+                    $withStats++;
+                }
 
                 if (! $dryRun) {
                     CleanUgcTrackGeometryJob::dispatch($track->id)->onQueue($queue);
@@ -53,8 +60,9 @@ class WmCleanUgcTrackGeometryCommand extends Command
 
         $this->table(['id', 'punti scartati/totale', 'km prima', 'km dopo'], $rows);
         $this->info($dryRun
-            ? count($rows).' tracce cambierebbero (dry-run, nessuna scrittura).'
-            : count($rows).' job accodati sulla coda '.$queue.'.');
+            ? count($rows).' tracce cambierebbero geometria; '.$withStats.' riceverebbero stats, '
+                .($total - $withStats).' con meno di 2 punti tenuti resterebbero senza (dry-run, nessuna scrittura).'
+            : $total.' job accodati sulla coda '.$queue.' ('.count($rows).' con geometria da ripulire).');
         $this->warn('Prima del run reale rivedi l\'elenco del dry-run su ogni progetto.');
 
         return self::SUCCESS;

@@ -18,6 +18,14 @@
             </div>
         </div>
 
+        <!-- oc:8742: dati tecnici sotto la mappa, sopra il profilo altimetrico -->
+        <dl v-if="technicalDataItems.length" class="map-technical-data" data-test="map-technical-data">
+            <div v-for="(row, i) in technicalDataItems" :key="i" class="map-technical-data-row">
+                <dt class="map-technical-data-label">{{ row.label }}</dt>
+                <dd class="map-technical-data-value">{{ row.value }}</dd>
+            </div>
+        </dl>
+
         <div v-if="enableSlopeChart && selectedTrackForChart" class="slope-chart-container">
             <SlopeChart ref="slopeChartRef" :track="selectedTrackForChart" @hover="onSlopeHover" />
         </div>
@@ -70,9 +78,10 @@
 </template>
 
 <script>
-import { ref, nextTick, onMounted, onUnmounted, watch } from 'vue';
+import { ref, computed, nextTick, onMounted, onUnmounted, watch } from 'vue';
 import SlopeChart from './SlopeChart.vue';
 import { findExplicitSlopeChartFeature, getSlopeChartTrackFromGeojson, toLineStringFeatureObject } from '../slope-chart/utils.mjs';
+import { technicalDataRows } from '../technical-data/utils.mjs';
 
 // OpenLayers imports
 import Map from 'ol/Map';
@@ -115,6 +124,11 @@ export default {
         },
         /** Voci della legenda: [{ label, color, dash }]. Vuota = nessuna legenda. */
         legend: {
+            type: Array,
+            default: () => []
+        },
+        /** Dati tecnici sotto la mappa: [{ label, value }], già formattati. Vuota = nessun blocco. */
+        technicalData: {
             type: Array,
             default: () => []
         },
@@ -194,6 +208,8 @@ export default {
         const popupData = ref({});
         const currentFeatureId = ref(null);
         const currentFeatureProperties = ref({});
+
+        const technicalDataItems = computed(() => technicalDataRows(props.technicalData));
 
         // Slope chart state
         const slopeChartRef = ref(null);
@@ -822,6 +838,7 @@ export default {
         return {
             // Props (for template)
             popupComponent: props.popupComponent,
+            technicalDataItems,
             enableScreenshot: props.enableScreenshot,
             // Refs
             keydownRoot,
@@ -909,6 +926,47 @@ export default {
 :global(.dark) .map-legend {
     background: rgba(31, 41, 55, 0.9);
     color: #f3f4f6;
+}
+
+/* Dati tecnici: griglia di righe etichetta/valore, stessi colori della legenda. */
+.map-technical-data {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 6px 16px;
+    margin: 10px 0 0;
+    padding: 8px 12px;
+    border-radius: 4px;
+    background: #f9fafb;
+    color: #1f2937;
+    font-size: 13px;
+    line-height: 1.3;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.map-technical-data-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.map-technical-data-label {
+    color: #6b7280;
+}
+
+.map-technical-data-value {
+    margin: 0;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+:global(.dark) .map-technical-data {
+    background: rgba(31, 41, 55, 0.9);
+    color: #f3f4f6;
+}
+
+:global(.dark) .map-technical-data-label {
+    color: #9ca3af;
 }
 
 .map-container {

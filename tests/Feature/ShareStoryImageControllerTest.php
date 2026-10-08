@@ -12,6 +12,7 @@ use Wm\WmPackage\Models\UgcTrack;
 use Wm\WmPackage\Models\User;
 use Wm\WmPackage\Services\Models\StoryShare\MapRenderService;
 use Wm\WmPackage\Services\Models\StoryShare\StoryShareImageService;
+use Wm\WmPackage\Services\Models\StoryShare\TrackStatsService;
 
 // Base TestCase (Wm\WmPackage\Tests\TestCase, with RefreshDatabase) is applied globally by
 // tests/Pest.php — no explicit uses() needed here.
@@ -255,6 +256,79 @@ it('computes statistics from properties.locations when present', function () {
     expect($snapshot['duration_seconds'])->toBe(60);
     expect($snapshot['ascent_meters'])->toBeGreaterThan(0);
     expect($snapshot['distance_km'])->toBeGreaterThan(0);
+});
+
+// ── oc:8742: numeri da properties.stats, TrackStatsService solo come ripiego ────
+
+/**
+ * Due punti a 1 minuto di distanza con 50 m di salita dalla quota GPS: un valore che
+ * properties.stats (dislivello dal DEM) non deve mai mostrare.
+ */
+function shareLocationsWithGpsAscent(): array
+{
+    return [
+        ['time' => 0, 'latitude' => 44.0, 'longitude' => 10.0, 'altitude' => 100, 'altitudeAccuracy' => 5],
+        ['time' => 60_000, 'latitude' => 44.01, 'longitude' => 10.0, 'altitude' => 150, 'altitudeAccuracy' => 5],
+    ];
+}
+
+it('passa all\'immagine i numeri di properties.stats, non quelli ricalcolati dalla quota GPS', function () {
+    $app = App::factory()->createQuietly();
+    $user = User::factory()->create(['app_id' => $app->id]);
+    $track = makeOwnedUgcTrack($user, $app, null, [
+        'locations' => shareLocationsWithGpsAscent(),
+        'stats' => ['distance' => 9.37, 'ascent' => 313, 'duration' => 165, 'avg_speed' => 3.4],
+    ]);
+
+    mockMapRenderService();
+    $this->mock(TrackStatsService::class, fn ($mock) => $mock->shouldNotReceive('compute'));
+    $received = null;
+    $this->mock(StoryShareImageService::class, function ($mock) use (&$received) {
+        $mock->shouldReceive('compose')
+            ->once()
+            ->andReturnUsing(function ($app, $map, array $stats) use (&$received) {
+                $received = $stats;
+
+                return Image::canvas(1080, 1920)->encode('png');
+            });
+    });
+    $this->actingAs($user, 'api');
+
+    postShareStoryImage(shareStoryImagePayload($track->properties['uuid']))->assertStatus(200);
+
+    expect($received)->toBe([
+        'duration_seconds' => 165 * 60,
+        'distance_km' => 9.37,
+        'ascent_meters' => 313.0,
+    ]);
+    expect($track->refresh()->properties['share_snapshot']['ascent_meters'])->toEqual(313.0);
+});
+
+it('senza properties.stats ripiega su TrackStatsService (quota GPS)', function () {
+    $app = App::factory()->createQuietly();
+    $user = User::factory()->create(['app_id' => $app->id]);
+    $track = makeOwnedUgcTrack($user, $app, null, ['locations' => shareLocationsWithGpsAscent()]);
+    expect($track->properties)->not->toHaveKey('stats');
+
+    mockMapRenderService();
+    $received = null;
+    $this->mock(StoryShareImageService::class, function ($mock) use (&$received) {
+        $mock->shouldReceive('compose')
+            ->once()
+            ->andReturnUsing(function ($app, $map, array $stats) use (&$received) {
+                $received = $stats;
+
+                return Image::canvas(1080, 1920)->encode('png');
+            });
+    });
+    $this->actingAs($user, 'api');
+
+    postShareStoryImage(shareStoryImagePayload($track->properties['uuid']))->assertStatus(200);
+
+    // Gli stessi valori che TrackStatsService calcola dai locations: 50 m dalla quota GPS.
+    expect($received)->toBe(app(TrackStatsService::class)->compute(shareLocationsWithGpsAscent()));
+    expect($received['ascent_meters'])->toBe(50.0);
+    expect($received['duration_seconds'])->toBe(60);
 });
 
 // ── failure of the rendering pipeline itself ────────────────────────────────────

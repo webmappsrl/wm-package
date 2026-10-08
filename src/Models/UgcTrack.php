@@ -80,10 +80,19 @@ class UgcTrack extends MultiLineString implements UserOwnedModelInterface
      * Mappa Nova: oltre alla geometria, i tratti ricostruiti al posto dei punti GPS scartati
      * (oc:8719), tratteggiati. I punti scartati non si disegnano: sono a chilometri dalla traccia
      * e allargherebbero la mappa.
+     *
+     * La linea della traccia porta `slopeChart: true` (meccanismo di oc:8662): con i tratti
+     * ricostruiti le linee sono più d'una e senza il segno il campo non mostrerebbe il profilo
+     * altimetrico (oc:8742).
      */
     public function getFeatureCollectionMap(): array
     {
         $collection = parent::getFeatureCollectionMap();
+        foreach ($collection['features'] ?? [] as $i => $feature) {
+            if (in_array($feature['geometry']['type'] ?? null, ['LineString', 'MultiLineString'], true)) {
+                $collection['features'][$i]['properties']['slopeChart'] = true;
+            }
+        }
         $cleanup = UgcTrackCleanupService::make();
         $locations = $cleanup->locationsOf($this);
 

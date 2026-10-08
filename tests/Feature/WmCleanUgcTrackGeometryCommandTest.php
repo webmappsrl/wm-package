@@ -6,10 +6,12 @@ use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Wm\WmPackage\Jobs\CleanUgcTrackGeometryJob;
 use Wm\WmPackage\Jobs\UpdateModelWithGeometryTaxonomyWhere;
+use Wm\WmPackage\Jobs\UpdateUgcTrackDemStatsJob;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\UgcTrack;
 use Wm\WmPackage\Models\User;
 use Wm\WmPackage\Services\Models\UgcTrackCleanupService;
+use Wm\WmPackage\Services\Models\UgcTrackStatsService;
 
 beforeEach(function () {
     config()->set('wm-package.ugc_track_max_accuracy_meters', 40.0);
@@ -200,4 +202,79 @@ it('nel dry-run i km prima sono la lunghezza in pianta, senza i dislivelli', fun
     $this->artisan('wm:clean-ugc-track-geometry', ['--dry-run' => true])
         ->expectsOutputToContain(sprintf('%.1f', $planarKm))
         ->assertSuccessful();
+});
+
+it('calcola stats anche per una traccia la cui geometria non cambia', function () {
+    Bus::fake([UpdateUgcTrackDemStatsJob::class, UpdateModelWithGeometryTaxonomyWhere::class]);
+    $locations = array_map(fn ($i) => ['time' => $i * 10_000, 'latitude' => 43.0 + $i * 0.00009, 'longitude' => 13.0, 'accuracy' => 5.0, 'altitude' => 100.0, 'speed' => 4.0], range(0, 10));
+    $track = UgcTrack::factory()->create(['user_id' => $this->user->id, 'app_id' => $this->app_->id, 'properties' => ['name' => 'pulita', 'locations' => $locations]]);
+    DB::update("UPDATE ugc_tracks SET properties = properties - 'stats' WHERE id = ?", [$track->id]);
+
+    (new CleanUgcTrackGeometryJob($track->id))->handle(UgcTrackCleanupService::make());
+
+    expect($track->fresh()->properties['stats']['distance'])->toBe(0.1);
+    Bus::assertDispatched(UpdateUgcTrackDemStatsJob::class);
+});
+
+it('conserva i valori DEM se la geometria non cambia', function () {
+    Bus::fake([UpdateUgcTrackDemStatsJob::class, UpdateModelWithGeometryTaxonomyWhere::class]);
+    $locations = array_map(fn ($i) => ['time' => $i * 10_000, 'latitude' => 43.0 + $i * 0.00009, 'longitude' => 13.0, 'accuracy' => 5.0, 'altitude' => 100.0, 'speed' => 4.0], range(0, 10));
+    $track = UgcTrack::factory()->create(['user_id' => $this->user->id, 'app_id' => $this->app_->id, 'properties' => ['name' => 'con dem', 'locations' => $locations]]);
+    $dem = json_encode(['ascent' => 313, 'descent' => 610, 'ele_min' => 1, 'ele_max' => 2, 'ele_from' => 1, 'ele_to' => 2]);
+    DB::update("UPDATE ugc_tracks SET properties = jsonb_set(properties, '{stats}', (properties->'stats') || ?::jsonb) WHERE id = ?", [$dem, $track->id]);
+    Bus::fake([UpdateUgcTrackDemStatsJob::class, UpdateModelWithGeometryTaxonomyWhere::class]);
+
+    (new CleanUgcTrackGeometryJob($track->id))->handle(UgcTrackCleanupService::make());
+
+    expect($track->fresh()->properties['stats']['ascent'])->toBe(313);
+    Bus::assertNotDispatched(UpdateUgcTrackDemStatsJob::class);
+});
+
+it('azzera i valori DEM e richiede il DEM se il job cambia la geometria, anche con DEM completo', function () {
+    Bus::fake([UpdateUgcTrackDemStatsJob::class, UpdateModelWithGeometryTaxonomyWhere::class]);
+    $track = legacyTrack($this->user->id, $this->app_->id);
+    // DEM completo salvato, ma calcolato sulla geometria grezza (con il punto sbagliato).
+    $dem = json_encode(['distance' => 99.0, 'ascent' => 313, 'descent' => 610, 'ele_min' => 1, 'ele_max' => 2, 'ele_from' => 1, 'ele_to' => 2]);
+    DB::update("UPDATE ugc_tracks SET properties = jsonb_set(properties, '{stats}', ?::jsonb) WHERE id = ?", [$dem, $track->id]);
+
+    (new CleanUgcTrackGeometryJob($track->id))->handle(UgcTrackCleanupService::make());
+
+    expect(pointCount($track->id))->toBe(2);
+    $stats = $track->fresh()->properties['stats'];
+    foreach (UgcTrackStatsService::DEM_KEYS as $key) {
+        expect($stats)->toHaveKey($key);
+        expect($stats[$key])->toBeNull("$key deve tornare null: è stato calcolato sulla geometria vecchia");
+    }
+    Bus::assertDispatched(
+        UpdateUgcTrackDemStatsJob::class,
+        fn ($job) => $job->ugcTrackId === $track->id && $job->computedAt === $stats['computed_at']
+    );
+});
+
+it('nel dry-run conta fra quelle che riceverebbero stats solo le tracce con almeno 2 punti tenuti', function () {
+    Bus::fake([UpdateUgcTrackDemStatsJob::class, UpdateModelWithGeometryTaxonomyWhere::class]);
+    legacyTrack($this->user->id, $this->app_->id);
+    // locations con un solo punto tenuto: il (0,0) si scarta sempre.
+    UgcTrack::withoutEvents(fn () => UgcTrack::factory()->create([
+        'user_id' => $this->user->id,
+        'app_id' => $this->app_->id,
+        'properties' => ['name' => 'un punto', 'locations' => [
+            ['time' => 0, 'latitude' => 43.0, 'longitude' => 13.0, 'accuracy' => 5.0, 'altitude' => 10.0],
+            ['time' => 1000, 'latitude' => 0, 'longitude' => 0, 'accuracy' => 5.0, 'altitude' => 10.0],
+        ]],
+    ]));
+
+    $this->artisan('wm:clean-ugc-track-geometry', ['--dry-run' => true])
+        ->expectsOutputToContain('1 riceverebbero stats, 1 con meno di 2 punti tenuti resterebbero senza')
+        ->assertSuccessful();
+});
+
+it('il command accoda il job per ogni traccia con locations, anche senza cambi di geometria', function () {
+    Bus::fake([CleanUgcTrackGeometryJob::class, UpdateUgcTrackDemStatsJob::class]);
+    $locations = array_map(fn ($i) => ['time' => $i * 10_000, 'latitude' => 43.0 + $i * 0.00009, 'longitude' => 13.0, 'accuracy' => 5.0, 'altitude' => 100.0], range(0, 10));
+    UgcTrack::factory()->create(['user_id' => $this->user->id, 'app_id' => $this->app_->id, 'properties' => ['name' => 'a', 'locations' => $locations]]);
+
+    $this->artisan('wm:clean-ugc-track-geometry')->assertSuccessful();
+
+    Bus::assertDispatchedTimes(CleanUgcTrackGeometryJob::class, 1);
 });

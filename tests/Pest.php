@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Laravel\Nova\Http\Requests\NovaRequest;
+use Wm\WmPackage\Jobs\UpdateUgcTrackDemStatsJob;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\User;
 use Wm\WmPackage\Services\RolesAndPermissionsService;
@@ -30,10 +31,19 @@ uses()->beforeEach(function () {
     // fake) dipenderebbe da un Redis reale solo per l'acquisizione del lock.
     config(['cache.stores.redis.driver' => 'array']);
 
+    // Questo Bus::fake sostituisce quello globale qui sotto: va ripetuto anche il job di oc:8742.
     Bus::fake([
         UpdateTrailApplicationDemJob::class,
+        UpdateUgcTrackDemStatsJob::class,
     ]);
 })->in('Feature/TrailRegistry');
+
+// oc:8742: ogni UgcTrack con locations accoda il calcolo DEM; nessun test deve uscire verso il
+// servizio. Chi vuole il job vero lo esegue a mano con EcTrackService finto. Attenzione: un
+// Bus::fake([...]) dentro un test sostituisce questo, e va ripetuto il job nella sua lista.
+uses()->beforeEach(function () {
+    Bus::fake([UpdateUgcTrackDemStatsJob::class]);
+})->in(__DIR__);
 
 /**
  * Crea un settore (riga taxonomy_wheres) con una geometria poligonale reale,

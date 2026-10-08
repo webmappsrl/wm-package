@@ -14,6 +14,7 @@ use Wm\WmPackage\Services\Models\StoryShare\MapRenderService;
 use Wm\WmPackage\Services\Models\StoryShare\StoryImageLayout;
 use Wm\WmPackage\Services\Models\StoryShare\StoryShareImageService;
 use Wm\WmPackage\Services\Models\StoryShare\TrackStatsService;
+use Wm\WmPackage\Services\Models\UgcTrackStatsService;
 
 /**
  * Compositing endpoint for the Instagram/Facebook Stories share image (oc:8183, third
@@ -96,7 +97,11 @@ class ShareStoryImageController extends Controller
         }
 
         try {
-            $stats = $statsService->compute($ugcTrack->properties['locations'] ?? []);
+            // oc:8742: stessi numeri di app e Nova; TrackStatsService solo per le tracce che non
+            // hanno ancora stats (prima del command sulle tracce esistenti).
+            $stats = is_array($ugcTrack->properties['stats'] ?? null)
+                ? UgcTrackStatsService::make()->forShareImage($ugcTrack->properties['stats'])
+                : $statsService->compute($ugcTrack->properties['locations'] ?? []);
             $mapImage = $mapRenderService->render($ugcTrack, $app, StoryImageLayout::MAP_WIDTH, StoryImageLayout::MAP_HEIGHT);
             $image = $compositingService->compose($app, $mapImage, $stats);
 

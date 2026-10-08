@@ -560,10 +560,14 @@
     "No valid number can be derived from the code field. Next to it, the first free number in the sector: it is a hint, not a decision — the right number is the one on the signage in the field.": "Dal campo del codice non si ricava un numero valido. Accanto, il primo numero libero del settore: è un’indicazione, non una decisione — il numero giusto è quello sulla segnaletica in campo.",
     "The geometry does not fall in any sector, so there is no prefix to compose the code with.": "La geometria non ricade in alcun settore, quindi non esiste un prefisso con cui comporre il codice.",
     "Trail registry": "Catasto",
-    "GPS cleanup": "Pulizia GPS",
-    "No points discarded": "Nessun punto scartato",
-    ":discarded of :total points discarded (max accuracy :accuracy m) · length :before km → :after km": ":discarded punti scartati su :total (accuracy massima :accuracy m) · lunghezza :before km → :after km",
     "Reconstructed segment: :discarded points discarded in :minutes min (max accuracy :accuracy m)": "Tratto ricostruito: :discarded punti scartati in :minutes min (accuracy massima :accuracy m)",
     "Recorded track": "Traccia registrata",
-    "Reconstructed segment: GPS points discarded because inaccurate and far from the route": "Tratto ricostruito: punti GPS scartati perché imprecisi e lontani dal percorso"
+    "Reconstructed segment: GPS points discarded because inaccurate and far from the route": "Tratto ricostruito: punti GPS scartati perché imprecisi e lontani dal percorso",
+    "Distance": "Distanza",
+    "Min elevation": "Quota minima",
+    "Max elevation": "Quota massima",
+    "Time": "Tempo",
+    "Moving time": "Tempo in movimento",
+    "Average speed": "Velocità media",
+    "Max speed": "Velocità massima"
 }
