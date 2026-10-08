@@ -38,5 +38,9 @@
     "Time": "Tiempo",
     "Moving time": "Tiempo en movimiento",
     "Average speed": "Velocidad media",
-    "Max speed": "Velocidad máxima"
+    "Max speed": "Velocidad máxima",
+    "Origin": "Origen",
+    "Recorded": "Grabada",
+    "Imported file": "Archivo importado",
+    "Imported file (GPX)": "Archivo importado (GPX)"
 }

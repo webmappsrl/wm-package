@@ -568,5 +568,9 @@
     "Time": "Time",
     "Moving time": "Moving time",
     "Average speed": "Average speed",
-    "Max speed": "Max speed"
+    "Max speed": "Max speed",
+    "Origin": "Origin",
+    "Recorded": "Recorded",
+    "Imported file": "Imported file",
+    "Imported file (GPX)": "Imported file (GPX)"
 }
