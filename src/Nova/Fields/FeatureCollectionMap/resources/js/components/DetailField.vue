@@ -7,6 +7,8 @@
                 :popup-component="field.popupComponent" :enable-screenshot="field.enableScreenshot === true"
                 :enable-slope-chart="field.enableSlopeChart === true" :legend="field.legend || []"
                 :technical-data="field.technicalData || []"
+                :extent-margin="Number(field.extentMargin) || 0"
+                :lock-zoom-out="field.lockZoomOut === true"
                 :resource-name="resourceName"
                 :resource-id="resourceId || (resource && resource.id && resource.id.value)"
                 @feature-click="handleFeatureClick" @map-ready="handleMapReady" @popup-open="handlePopupOpen"

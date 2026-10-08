@@ -34,14 +34,22 @@ class UgcTrack extends AbstractUgcResource
         if ($request->isResourceDetailRequest() && $this->resource instanceof UgcTrackModel) {
             $technicalData = $this->technicalDataRows();
             $locations = $cleanup->locationsOf($this->resource);
+            $gapRows = [];
             if ($locations !== null && $cleanup->gaps($locations) !== []) {
+                $gapRows[] = [
+                    'label' => __('Reconstructed segment: GPS points discarded because inaccurate and far from the route'),
+                    'color' => UgcTrackModel::RECONSTRUCTED_SEGMENT_COLOR,
+                    'dash' => true,
+                ];
+            }
+            // oc:8747: una riga per cammino mostrato come contesto; i nomi dei layer sono dati,
+            // non chiavi di traduzione.
+            $cammini = $this->resource->contextLegendItems();
+            if ($gapRows !== [] || $cammini !== []) {
                 $legend = [
                     ['label' => __('Recorded track'), 'color' => 'rgba(0, 0, 255, 1)', 'dash' => false],
-                    [
-                        'label' => __('Reconstructed segment: GPS points discarded because inaccurate and far from the route'),
-                        'color' => UgcTrackModel::RECONSTRUCTED_SEGMENT_COLOR,
-                        'dash' => true,
-                    ],
+                    ...$gapRows,
+                    ...$cammini,
                 ];
             }
         }
@@ -54,6 +62,10 @@ class UgcTrack extends AbstractUgcResource
                 ->legend($legend)
                 // oc:8742: dati tecnici di properties.stats sotto la mappa, come il profilo altimetrico.
                 ->technicalData($technicalData)
+                // oc:8747: vista un po' più larga della traccia, con i percorsi dell'App attorno
+                // come contesto, e niente zoom out oltre quella vista.
+                ->extentMargin(UgcTrackModel::MAP_EXTENT_MARGIN)
+                ->lockZoomOut()
                 // oc:8719: la geometria di una traccia registrata dall'app deriva da
                 // properties.locations e viene ricostruita a ogni salvataggio: un GPX caricato
                 // qui verrebbe sovrascritto in silenzio.
