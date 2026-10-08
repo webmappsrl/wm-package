@@ -364,6 +364,24 @@ class FeatureCollectionMap extends Field
     }
 
     /**
+     * Dati tecnici in un blocco sotto la mappa, sopra il profilo altimetrico: una riga per voce.
+     * Ogni voce: label e value, già formattati (unità comprese) da chi chiama.
+     * Lista vuota = nessun blocco.
+     *
+     * @param  array<int, array{label: string, value: string}>  $rows
+     * @return $this
+     */
+    public function technicalData(array $rows): static
+    {
+        $technicalData = array_map(fn (array $row) => [
+            'label' => (string) $row['label'],
+            'value' => (string) $row['value'],
+        ], array_values($rows));
+
+        return $this->withMeta(['technicalData' => $technicalData]);
+    }
+
+    /**
      * Prepare the field for JSON serialization.
      *
      * @return array<string, mixed>

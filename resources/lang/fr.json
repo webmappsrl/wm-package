@@ -27,10 +27,16 @@
     "No application rejected: only applications under review can be rejected.": "Aucune demande rejetée : seules les demandes en cours d'instruction peuvent être rejetées.",
     "Rejection reason": "Motif du rejet",
     "Visible to the applicant: explain what to correct in the new application.": "Visible par le demandeur : explique ce qu'il faut corriger dans la nouvelle demande.",
-    "GPS cleanup": "Nettoyage GPS",
-    "No points discarded": "Aucun point écarté",
-    ":discarded of :total points discarded (max accuracy :accuracy m) · length :before km → :after km": ":discarded points écartés sur :total (précision maximale :accuracy m) · longueur :before km → :after km",
     "Reconstructed segment: :discarded points discarded in :minutes min (max accuracy :accuracy m)": "Tronçon reconstruit : :discarded points écartés en :minutes min (précision maximale :accuracy m)",
     "Recorded track": "Trace enregistrée",
-    "Reconstructed segment: GPS points discarded because inaccurate and far from the route": "Tronçon reconstruit : points GPS écartés car imprécis et éloignés du parcours"
+    "Reconstructed segment: GPS points discarded because inaccurate and far from the route": "Tronçon reconstruit : points GPS écartés car imprécis et éloignés du parcours",
+    "Distance": "Distance",
+    "Ascent": "Montée",
+    "Descent": "Descente",
+    "Min elevation": "Altitude minimale",
+    "Max elevation": "Altitude maximale",
+    "Time": "Temps",
+    "Moving time": "Temps en mouvement",
+    "Average speed": "Vitesse moyenne",
+    "Max speed": "Vitesse maximale"
 }

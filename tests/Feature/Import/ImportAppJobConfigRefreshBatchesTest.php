@@ -259,6 +259,9 @@ it('does not queue an UpdateAppConfigJob while the layer batch of the same impor
  * Una riga fallita: batch "finito" ma con failed_jobs > 0.
  */
 it('reports the gate as unsafe once the layer batch has genuinely failed', function () {
+    // tests/Pest.php fa Bus::fake([UpdateUgcTrackDemStatsJob]) per tutta la suite (oc:8742): col
+    // fake Bus::findBatch() legge un repository finto e torna sempre null. Qui serve quello vero.
+    Bus::swap(Bus::getFacadeRoot()->dispatcher);
     $app = App::factory()->createQuietly();
 
     DB::table('job_batches')->insert([
@@ -283,6 +286,9 @@ it('reports the gate as unsafe once the layer batch has genuinely failed', funct
  * Simmetrico: una riga completata senza fallimenti riporta il gate come sicuro.
  */
 it('reports the gate as safe once the layer batch has genuinely completed successfully', function () {
+    // tests/Pest.php fa Bus::fake([UpdateUgcTrackDemStatsJob]) per tutta la suite (oc:8742): col
+    // fake Bus::findBatch() legge un repository finto e torna sempre null. Qui serve quello vero.
+    Bus::swap(Bus::getFacadeRoot()->dispatcher);
     $app = App::factory()->createQuietly();
 
     DB::table('job_batches')->insert([
@@ -308,6 +314,9 @@ it('reports the gate as safe once the layer batch has genuinely completed succes
  * "nessun fallimento finora", il batch deve essere davvero concluso.
  */
 it('reports the gate as unsafe while the layer batch row exists but has not finished yet', function () {
+    // tests/Pest.php fa Bus::fake([UpdateUgcTrackDemStatsJob]) per tutta la suite (oc:8742): col
+    // fake Bus::findBatch() legge un repository finto e torna sempre null. Qui serve quello vero.
+    Bus::swap(Bus::getFacadeRoot()->dispatcher);
     $app = App::factory()->createQuietly();
 
     DB::table('job_batches')->insert([

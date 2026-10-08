@@ -49,3 +49,7 @@ Si applica quando scrivi o modifichi un test del package.
 - **Il test di caratterizzazione di `MapRenderService::render()` confronta l'md5 del PNG**: su
   un'altra versione di GD o libpng può fallire senza che il disegno sia cambiato. Se succede,
   verifica l'immagine a occhio prima di aggiornare l'hash (oc:8702).
+- **Un `Bus::fake([...])` dentro un test sostituisce quello globale di `tests/Pest.php`**, che rende
+  finto `UpdateUgcTrackDemStatsJob`: se il test salva una UgcTrack con `locations` e la lista non
+  contiene quel job, il job gira davvero e chiama il servizio DEM esterno. Aggiungilo sempre alla
+  lista (oc:8742).

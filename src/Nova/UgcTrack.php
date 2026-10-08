@@ -2,7 +2,6 @@
 
 namespace Wm\WmPackage\Nova;
 
-use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Wm\WmPackage\Models\UgcTrack as UgcTrackModel;
 use Wm\WmPackage\Nova\Actions\DownloadUgcTrackAction;
@@ -27,10 +26,13 @@ class UgcTrack extends AbstractUgcResource
     {
         $cleanup = UgcTrackCleanupService::make();
 
-        // oc:8719: legenda sulla mappa solo se la traccia ha tratti ricostruiti da spiegare. Solo nel
-        // dettaglio: fields() gira per ogni riga dell'index e gaps() scorre tutti i punti.
+        // oc:8719: legenda sulla mappa solo se la traccia ha tratti ricostruiti da spiegare.
+        // oc:8742: dati tecnici sotto la mappa. Entrambi solo nel dettaglio: fields() gira per ogni
+        // riga dell'index e gaps() scorre tutti i punti.
         $legend = [];
+        $technicalData = [];
         if ($request->isResourceDetailRequest() && $this->resource instanceof UgcTrackModel) {
+            $technicalData = $this->technicalDataRows();
             $locations = $cleanup->locationsOf($this->resource);
             if ($locations !== null && $cleanup->gaps($locations) !== []) {
                 $legend = [
@@ -50,33 +52,45 @@ class UgcTrack extends AbstractUgcResource
                 ->hideFromIndex()
                 ->required()
                 ->legend($legend)
+                // oc:8742: dati tecnici di properties.stats sotto la mappa, come il profilo altimetrico.
+                ->technicalData($technicalData)
                 // oc:8719: la geometria di una traccia registrata dall'app deriva da
                 // properties.locations e viene ricostruita a ogni salvataggio: un GPX caricato
                 // qui verrebbe sovrascritto in silenzio.
                 ->hideWhenUpdating(fn ($request, $resource) => $resource instanceof UgcTrackModel
                     && $cleanup->locationsOf($resource) !== null),
-            Text::make(__('GPS cleanup'), function () use ($cleanup) {
-                $locations = $this->resource instanceof UgcTrackModel ? $cleanup->locationsOf($this->resource) : null;
-                if ($locations === null) {
-                    return null;
-                }
+        ];
+    }
 
-                $summary = $cleanup->summary($locations);
-                if ($summary['discarded'] === 0) {
-                    return __('No points discarded');
-                }
+    /**
+     * Righe dei dati tecnici (oc:8742) da properties.stats, gli stessi numeri dell'app.
+     * Separatore decimale della lingua corrente: punto in inglese, virgola in it/de/es/fr.
+     * Valore null → «—». Nessuna riga se la traccia non ha stats.
+     *
+     * @return list<array{label: string, value: string}>
+     */
+    private function technicalDataRows(): array
+    {
+        $stats = $this->resource->properties['stats'] ?? null;
+        if (! is_array($stats)) {
+            return [];
+        }
 
-                // Separatore decimale della lingua corrente: punto in inglese, virgola in it/de/es/fr.
-                $decimal = str_starts_with(app()->getLocale(), 'en') ? '.' : ',';
+        $decimal = str_starts_with(app()->getLocale(), 'en') ? '.' : ',';
+        $format = fn (string $key, int $decimals, string $unit) => is_numeric($stats[$key] ?? null)
+            ? number_format((float) $stats[$key], $decimals, $decimal, '').' '.$unit
+            : '—';
 
-                return __(':discarded of :total points discarded (max accuracy :accuracy m) · length :before km → :after km', [
-                    'discarded' => $summary['discarded'],
-                    'total' => $summary['total'],
-                    'accuracy' => (int) round($summary['max_discarded_accuracy']),
-                    'before' => number_format($summary['length_before_km'], 1, $decimal, ''),
-                    'after' => number_format($summary['length_after_km'], 1, $decimal, ''),
-                ]);
-            })->onlyOnDetail(),
+        return [
+            ['label' => __('Distance'), 'value' => $format('distance', 2, 'km')],
+            ['label' => __('Ascent'), 'value' => $format('ascent', 0, 'm')],
+            ['label' => __('Descent'), 'value' => $format('descent', 0, 'm')],
+            ['label' => __('Min elevation'), 'value' => $format('ele_min', 0, 'm')],
+            ['label' => __('Max elevation'), 'value' => $format('ele_max', 0, 'm')],
+            ['label' => __('Time'), 'value' => $format('duration', 0, 'min')],
+            ['label' => __('Moving time'), 'value' => $format('duration_moving', 0, 'min')],
+            ['label' => __('Average speed'), 'value' => $format('avg_speed', 1, 'km/h')],
+            ['label' => __('Max speed'), 'value' => $format('max_speed', 1, 'km/h')],
         ];
     }
 

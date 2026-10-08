@@ -1,0 +1,32 @@
+{
+    "description": "Due punti, uno con coordinate (0,0) scartato: restano meno di 2 punti tenuti, quindi nessun dato (null).",
+    "params": {
+        "max_accuracy": 40,
+        "max_deviation": 50,
+        "max_speed_percentile": 95,
+        "moving_min_speed": 1
+    },
+    "locations": [
+        {
+            "time": 0,
+            "latitude": 43,
+            "longitude": 13,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 4
+        },
+        {
+            "time": 10000,
+            "latitude": 0,
+            "longitude": 0,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 4
+        }
+    ],
+    "expected_kept": [
+        true,
+        false
+    ],
+    "expected": null
+}

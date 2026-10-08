@@ -1,0 +1,65 @@
+{
+    "description": "Il terzo punto ha accuracy 45 (sospetto) ed è a circa 81 m dal segmento fra il secondo e il quarto punto (le sue ancore): scartato, con il suo speed di 50 km/h. Il secondo e il quarto formano un unico tratto di 100 m in 60 s.",
+    "params": {
+        "max_accuracy": 40,
+        "max_deviation": 50,
+        "max_speed_percentile": 95,
+        "moving_min_speed": 1
+    },
+    "locations": [
+        {
+            "time": 0,
+            "latitude": 43.0,
+            "longitude": 13.0,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 6
+        },
+        {
+            "time": 30000,
+            "latitude": 43.00045,
+            "longitude": 13.0,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 6
+        },
+        {
+            "time": 60000,
+            "latitude": 43.0009,
+            "longitude": 13.001,
+            "accuracy": 45,
+            "altitude": 100,
+            "speed": 50
+        },
+        {
+            "time": 90000,
+            "latitude": 43.00135,
+            "longitude": 13.0,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 6
+        },
+        {
+            "time": 120000,
+            "latitude": 43.0018,
+            "longitude": 13.0,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 6
+        }
+    ],
+    "expected_kept": [
+        true,
+        true,
+        false,
+        true,
+        true
+    ],
+    "expected": {
+        "distance": 0.2,
+        "duration": 2,
+        "duration_moving": 2,
+        "avg_speed": 6.0,
+        "max_speed": 6.0
+    }
+}

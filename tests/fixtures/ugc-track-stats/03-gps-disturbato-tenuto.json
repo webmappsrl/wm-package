@@ -1,0 +1,128 @@
+{
+    "description": "Un punto con accuracy 45 m (sospetto ma sulla linea, quindi tenuto) salta 30 m in 1 s: i due tratti che lo toccano non entrano nella media, che resta 3,6.",
+    "params": {
+        "max_accuracy": 40,
+        "max_deviation": 50,
+        "max_speed_percentile": 95,
+        "moving_min_speed": 1
+    },
+    "locations": [
+        {
+            "time": 0,
+            "latitude": 43,
+            "longitude": 13,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 4
+        },
+        {
+            "time": 10000,
+            "latitude": 43.00008993216059,
+            "longitude": 13,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 4
+        },
+        {
+            "time": 20000,
+            "latitude": 43.00017986432118,
+            "longitude": 13,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 4
+        },
+        {
+            "time": 30000,
+            "latitude": 43.000269796481774,
+            "longitude": 13,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 4
+        },
+        {
+            "time": 40000,
+            "latitude": 43.000359728642366,
+            "longitude": 13,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 4
+        },
+        {
+            "time": 50000,
+            "latitude": 43.00044966080296,
+            "longitude": 13,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 4
+        },
+        {
+            "time": 51000,
+            "latitude": 43.00071945728474,
+            "longitude": 13,
+            "accuracy": 45,
+            "altitude": 100,
+            "speed": 0
+        },
+        {
+            "time": 61000,
+            "latitude": 43.00080938944533,
+            "longitude": 13,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 4
+        },
+        {
+            "time": 71000,
+            "latitude": 43.00089932160592,
+            "longitude": 13,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 4
+        },
+        {
+            "time": 81000,
+            "latitude": 43.00098925376651,
+            "longitude": 13,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 4
+        },
+        {
+            "time": 91000,
+            "latitude": 43.001079185927104,
+            "longitude": 13,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 4
+        },
+        {
+            "time": 101000,
+            "latitude": 43.001169118087695,
+            "longitude": 13,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 4
+        }
+    ],
+    "expected_kept": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+    ],
+    "expected": {
+        "distance": 0.13,
+        "duration": 2,
+        "duration_moving": 2,
+        "avg_speed": 3.6,
+        "max_speed": 4.0
+    }
+}

@@ -75,6 +75,20 @@ it('aggiunge alla mappa un tratto tratteggiato per ogni sequenza di punti scarta
     expect($dashed[0]['properties']['tooltip'])->toContain('7857');
 });
 
+it('segna la linea della traccia per il profilo altimetrico anche con i tratti ricostruiti', function () {
+    $features = trackWithLocations($this->user->id, $this->app_->id)->getFeatureCollectionMap()['features'];
+
+    $track = array_values(array_filter($features, fn ($f) => ! isset($f['properties']['strokeDash'])));
+    $dashed = array_values(array_filter($features, fn ($f) => isset($f['properties']['strokeDash'])));
+
+    expect($track)->toHaveCount(1);
+    expect($track[0]['properties']['slopeChart'] ?? null)->toBeTrue();
+    expect($dashed)->not->toBeEmpty();
+    foreach ($dashed as $segment) {
+        expect($segment['properties'])->not->toHaveKey('slopeChart');
+    }
+});
+
 it('non aggiunge tratti per una traccia senza locations', function () {
     $track = UgcTrack::factory()->create(['user_id' => $this->user->id, 'app_id' => $this->app_->id, 'properties' => ['name' => 'senza']]);
 
@@ -82,28 +96,6 @@ it('non aggiunge tratti per una traccia senza locations', function () {
 
     expect($dashed)->toBe([]);
 });
-
-function cleanupSummaryText(UgcTrack $track): ?string
-{
-    $request = NovaRequest::create('/nova-api/ugc-tracks/'.$track->id, 'GET');
-    $resource = new UgcTrackResource($track->fresh());
-    $field = $resource->detailFields($request)->first(fn ($field) => $field->name === __('GPS cleanup'));
-    $field->resolveForDisplay($track->fresh());
-
-    return $field->value;
-}
-
-it('nel riepilogo usa il separatore decimale della lingua corrente', function (string $locale, string $expected) {
-    $this->actingAs($this->user);
-    $track = trackWithLocations($this->user->id, $this->app_->id);
-    app()->setLocale($locale);
-
-    expect(cleanupSummaryText($track))->toContain($expected);
-})->with([
-    'inglese: punto' => ['en', 'km → 0.0 km'],
-    'italiano: virgola' => ['it', 'km → 0,0 km'],
-    'tedesco: virgola' => ['de', 'km → 0,0 km'],
-]);
 
 function geometryFieldLegend(UgcTrack $track, string $requestClass = ResourceDetailRequest::class): ?array
 {
@@ -148,4 +140,85 @@ it('nell\'index non calcola la legenda, perché fields() gira per ogni riga', fu
 
     expect(geometryFieldLegend($track, ResourceDetailRequest::class))->toHaveCount(2);
     expect(geometryFieldLegend($track, ResourceIndexRequest::class) ?? [])->toBe([]);
+});
+
+function geometryFieldMeta(UgcTrack $track, string $key, string $requestClass = ResourceDetailRequest::class): mixed
+{
+    $request = $requestClass::create('/nova-api/ugc-tracks/'.$track->id, 'GET');
+    $field = (new UgcTrackResource($track->fresh()))
+        ->availableFields($request)
+        ->first(fn ($field) => $field->attribute === 'geometry');
+
+    return $field->meta[$key] ?? null;
+}
+
+/** Traccia con uno stats scritto a mano (saveQuietly: l'observer lo ricalcolerebbe). */
+function trackWithStats(int $userId, int $appId, array $stats): UgcTrack
+{
+    $track = UgcTrack::factory()->create(['user_id' => $userId, 'app_id' => $appId, 'properties' => ['name' => 'con stats']]);
+    $track->properties = ['name' => 'con stats', 'stats' => $stats];
+    $track->saveQuietly();
+
+    return $track;
+}
+
+it('sotto la mappa del dettaglio mostra i dati tecnici di stats, formattati nella lingua corrente', function (string $locale, array $expected) {
+    $this->actingAs($this->user);
+    $track = trackWithStats($this->user->id, $this->app_->id, [
+        'distance' => 9.37, 'ascent' => 313, 'descent' => 610, 'ele_min' => 935, 'ele_max' => 1456,
+        'ele_from' => 1236, 'ele_to' => 939, 'duration' => 165, 'duration_moving' => 144,
+        'avg_speed' => 3.4, 'max_speed' => 6.5, 'computed_at' => '2026-10-08T11:42:47Z',
+    ]);
+    app()->setLocale($locale);
+
+    $rows = geometryFieldMeta($track, 'technicalData');
+
+    expect(array_column($rows, 'value', 'label'))->toBe($expected);
+})->with([
+    'inglese: punto' => ['en', [
+        'Distance' => '9.37 km', 'Ascent' => '313 m', 'Descent' => '610 m',
+        'Min elevation' => '935 m', 'Max elevation' => '1456 m', 'Time' => '165 min',
+        'Moving time' => '144 min', 'Average speed' => '3.4 km/h', 'Max speed' => '6.5 km/h',
+    ]],
+    'italiano: virgola' => ['it', [
+        'Distanza' => '9,37 km', 'Salita' => '313 m', 'Discesa' => '610 m',
+        'Quota minima' => '935 m', 'Quota massima' => '1456 m', 'Tempo' => '165 min',
+        'Tempo in movimento' => '144 min', 'Velocità media' => '3,4 km/h', 'Velocità massima' => '6,5 km/h',
+    ]],
+]);
+
+it('nei dati tecnici un valore null diventa un trattino', function () {
+    $this->actingAs($this->user);
+    $track = trackWithStats($this->user->id, $this->app_->id, [
+        'distance' => 0.5, 'ascent' => null, 'descent' => null, 'ele_min' => null, 'ele_max' => null,
+        'ele_from' => null, 'ele_to' => null, 'duration' => null, 'duration_moving' => null,
+        'avg_speed' => null, 'max_speed' => null, 'computed_at' => '2026-10-08T11:42:47Z',
+    ]);
+    app()->setLocale('en');
+
+    $values = array_column(geometryFieldMeta($track, 'technicalData'), 'value', 'label');
+
+    expect($values['Distance'])->toBe('0.50 km');
+    expect($values['Ascent'])->toBe('—');
+    expect($values['Average speed'])->toBe('—');
+});
+
+it('senza stats, o nell\'index, non mostra i dati tecnici', function () {
+    $this->actingAs($this->user);
+    $senza = UgcTrack::factory()->create(['user_id' => $this->user->id, 'app_id' => $this->app_->id, 'properties' => ['name' => 'senza']]);
+    $con = trackWithStats($this->user->id, $this->app_->id, ['distance' => 1.0]);
+
+    expect(geometryFieldMeta($senza, 'technicalData') ?? [])->toBe([]);
+    expect(geometryFieldMeta($con, 'technicalData', ResourceIndexRequest::class) ?? [])->toBe([]);
+});
+
+it('non ha più i campi testo «GPS cleanup» e «Technical data»', function () {
+    $this->actingAs($this->user);
+    $track = trackWithLocations($this->user->id, $this->app_->id);
+
+    $request = NovaRequest::create('/nova-api/ugc-tracks/'.$track->id, 'GET');
+    $names = (new UgcTrackResource($track->fresh()))->detailFields($request)->map(fn ($field) => $field->name)->all();
+
+    expect($names)->not->toContain('GPS cleanup');
+    expect($names)->not->toContain('Technical data');
 });

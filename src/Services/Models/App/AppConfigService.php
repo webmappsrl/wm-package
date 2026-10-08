@@ -15,6 +15,8 @@ use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Services\IconSvgService;
 use Wm\WmPackage\Services\Models\MediaService;
+use Wm\WmPackage\Services\Models\UgcTrackCleanupService;
+use Wm\WmPackage\Services\Models\UgcTrackStatsService;
 use Wm\WmPackage\Services\StorageService;
 
 class AppConfigService extends AppBaseService
@@ -932,6 +934,18 @@ class AppConfigService extends AppBaseService
             if ((bool) $this->app->geolocation_record_enable) {
                 $data['GEOLOCATION']['record']['enable'] = (bool) $this->app->geolocation_record_enable;
             }
+        }
+        // oc:8742: parametri del calcolo dei dati tecnici, perché l'app calcoli le tracce non
+        // ancora sincronizzate con le stesse regole del server.
+        if (isset($data['GEOLOCATION']['record'])) {
+            $stats = UgcTrackStatsService::make();
+            $cleanup = UgcTrackCleanupService::make();
+            $data['GEOLOCATION']['record']['stats'] = [
+                'max_accuracy' => $cleanup->maxAccuracyMeters(),
+                'max_deviation' => $cleanup->maxDeviationMeters(),
+                'max_speed_percentile' => $stats->maxSpeedPercentile(),
+                'moving_min_speed' => $stats->movingMinSpeedKmh(),
+            ];
         }
         if ($this->app->gps_accuracy_default) {
             $data['GEOLOCATION']['gps_accuracy_default'] = $this->app->gps_accuracy_default;
