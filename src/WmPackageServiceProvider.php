@@ -25,6 +25,7 @@ use Wm\WmPackage\Commands\WmBackupCommand;
 use Wm\WmPackage\Commands\WmBuildAppPoisGeojsonCommand;
 use Wm\WmPackage\Commands\WmCleanUgcTrackGeometryCommand;
 use Wm\WmPackage\Commands\WmDownloadDbBackupCommand;
+use Wm\WmPackage\Commands\WmFixDuplicatedUgcCommand;
 use Wm\WmPackage\Commands\WmGenerateIconsCommand;
 use Wm\WmPackage\Commands\WmGeneratePBFCommand;
 use Wm\WmPackage\Commands\WmImportEcPoiFromOsmCommand;
@@ -247,6 +248,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
                 WmBuildAppPoisGeojsonCommand::class,
                 WmSyncUgcTaxonomyWhereCommand::class,
                 WmCleanUgcTrackGeometryCommand::class,
+                WmFixDuplicatedUgcCommand::class,
                 WmResyncTaxonomyWhereCommand::class,
                 WmBackfillGravatarAvatarsCommand::class,
                 WmRestoreDbCommand::class,
