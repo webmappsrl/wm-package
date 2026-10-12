@@ -370,8 +370,8 @@ it('sul settore discordante disegna sia il settore vero sia quello dichiarato da
     $anomaly = TrailRegistryAnomaly::where('ec_track_id', $track->id)->firstOrFail();
     $tooltips = array_column(array_column($anomaly->getFeatureCollectionMap()['features'], 'properties'), 'tooltip');
 
-    expect($tooltips)->toContain('Settore ZNUB3 — dichiarato dal codice');
-    expect(implode(' | ', $tooltips))->toContain('Settore ZNUB5');
+    expect($tooltips)->toContain('Sector ZNUB3 — declared by the code');
+    expect(implode(' | ', $tooltips))->toContain('Sector ZNUB5');
 });
 
 it('distingue i gemelli per colore e spessore, non potendo distinguerli per posizione', function () {

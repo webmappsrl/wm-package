@@ -84,7 +84,7 @@ trait ComposesTrailRegistryMap
             [$sectorId],
         );
 
-        $tooltip = __('Settore').' '.($row === null ? '' : (string) $row->full_code);
+        $tooltip = __('Sector').' '.($row === null ? '' : (string) $row->full_code);
 
         if ($percentage !== null) {
             $tooltip .= ' ('.number_format($percentage, 1, ',', '.').'%)';

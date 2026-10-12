@@ -1,0 +1,65 @@
+{
+    "description": "Punti buoni (accuracy 5) alternati a sospetti (accuracy 41 e 60) che stanno sul percorso, quindi tenuti: ogni tratto ha un estremo con accuracy > 40, nessun tratto ha GPS buono e avg_speed è null; il resto si calcola. Tutti i punti sospetti non si può: senza un punto buono non c'è ancora destra e il primo sospetto, senza ancora sinistra, verrebbe scartato (regola (a)).",
+    "params": {
+        "max_accuracy": 40,
+        "max_deviation": 50,
+        "max_speed_percentile": 95,
+        "moving_min_speed": 1
+    },
+    "locations": [
+        {
+            "time": 0,
+            "latitude": 43.0,
+            "longitude": 13.0,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 6
+        },
+        {
+            "time": 30000,
+            "latitude": 43.00045,
+            "longitude": 13.0,
+            "accuracy": 41,
+            "altitude": 100,
+            "speed": 6
+        },
+        {
+            "time": 60000,
+            "latitude": 43.0009,
+            "longitude": 13.0,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 6
+        },
+        {
+            "time": 90000,
+            "latitude": 43.00135,
+            "longitude": 13.0,
+            "accuracy": 60,
+            "altitude": 100,
+            "speed": 6
+        },
+        {
+            "time": 120000,
+            "latitude": 43.0018,
+            "longitude": 13.0,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 6
+        }
+    ],
+    "expected_kept": [
+        true,
+        true,
+        true,
+        true,
+        true
+    ],
+    "expected": {
+        "distance": 0.2,
+        "duration": 2,
+        "duration_moving": 2,
+        "avg_speed": null,
+        "max_speed": 6.0
+    }
+}

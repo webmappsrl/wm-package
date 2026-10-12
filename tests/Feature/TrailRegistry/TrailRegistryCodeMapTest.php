@@ -48,8 +48,8 @@ it('mostra il settore, il sentiero e l istanza quando ci sono tutti', function (
     $tooltips = array_map(fn (array $f) => $f['properties']['tooltip'], $collection['features']);
 
     expect($tooltips[0])->toContain('ZNUB5')
-        ->and($tooltips[1])->toContain('Sentiero')
-        ->and($tooltips[2])->toContain('Istanza');
+        ->and($tooltips[1])->toContain('Trail')
+        ->and($tooltips[2])->toContain('Application');
 });
 
 it('su un codice riservato mostra settore e istanza, non il sentiero', function () {
@@ -68,7 +68,7 @@ it('su un codice riservato mostra settore e istanza, non il sentiero', function 
 
     $tooltips = array_map(fn (array $f) => $f['properties']['tooltip'], $features);
 
-    expect(implode(' ', $tooltips))->not->toContain('Sentiero');
+    expect(implode(' ', $tooltips))->not->toContain('Trail');
 });
 
 it('non compone una feature per una geometria assente', function () {
@@ -156,9 +156,9 @@ it('mostra anche gli altri settori attraversati, con la percentuale', function (
 
     expect($chosen['properties']['tooltip'])->toContain('ZNUB5')
         ->and($chosen['properties']['tooltip'])->toContain('%')
-        ->and($chosen['properties']['tooltip'])->toContain('scelto')
+        ->and($chosen['properties']['tooltip'])->toContain('chosen')
         ->and($other['properties']['tooltip'])->toContain('ZNUB9')
-        ->and($other['properties']['tooltip'])->not->toContain('scelto');
+        ->and($other['properties']['tooltip'])->not->toContain('chosen');
 
     // Lo scelto e' marcato, l'altro e' in grigio ma comunque visibile.
     expect($chosen['properties']['strokeWidth'])->toBeGreaterThan($other['properties']['strokeWidth']);
@@ -265,7 +265,7 @@ it('disegna i vicini del settore con numero e variante, sotto la traccia in esam
     $indiceSentiero = null;
 
     foreach ($collection['features'] as $i => $f) {
-        if (str_contains($f['properties']['tooltip'] ?? '', 'Sentiero ZNUB562')) {
+        if (str_contains($f['properties']['tooltip'] ?? '', 'Trail ZNUB562')) {
             $indiceSentiero = $i;
         }
     }
@@ -342,7 +342,7 @@ it('marca il sentiero come codice in esame quando c e, con numero stato e profil
             'slopeChart' => true,
             'subjectKind' => 'track',
         ])
-        ->and($correnti[0]['properties']['tooltip'])->toContain('Sentiero');
+        ->and($correnti[0]['properties']['tooltip'])->toContain('Trail');
 });
 
 it('senza sentiero marca la traccia dell istanza come codice in esame', function () {

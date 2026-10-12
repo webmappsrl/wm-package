@@ -239,6 +239,6 @@ class ImportTaxonomyWhereGeohubSourceTest extends TestCase
 
         $row = collect($response['modal']->payload['rows'])->firstWhere('id', (string) $corsicaId);
         $this->assertNotNull($row);
-        $this->assertStringContainsString('già importata', $row['label']);
+        $this->assertStringContainsString(__('already imported'), $row['label']);
     }
 }

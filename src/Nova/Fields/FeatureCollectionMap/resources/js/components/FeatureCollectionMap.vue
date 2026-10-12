@@ -6,7 +6,25 @@
             <p class="loading-text">Caricamento mappa...</p>
         </div>
 
-        <div ref="mapContainer" class="map-container" :class="{ 'map-loading': isLoading }"></div>
+        <div class="map-wrapper">
+            <div ref="mapContainer" class="map-container" :class="{ 'map-loading': isLoading }"></div>
+
+            <div v-if="legend && legend.length" class="map-legend" data-test="map-legend">
+                <div v-for="(item, i) in legend" :key="i" class="map-legend-item">
+                    <span class="map-legend-sample"
+                        :style="{ borderTopColor: item.color, borderTopStyle: item.dash ? 'dashed' : 'solid' }"></span>
+                    <span class="map-legend-label">{{ item.label }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- oc:8742: dati tecnici sotto la mappa, sopra il profilo altimetrico -->
+        <dl v-if="technicalDataItems.length" class="map-technical-data" data-test="map-technical-data">
+            <div v-for="(row, i) in technicalDataItems" :key="i" class="map-technical-data-row">
+                <dt class="map-technical-data-label">{{ row.label }}</dt>
+                <dd class="map-technical-data-value">{{ row.value }}</dd>
+            </div>
+        </dl>
 
         <div v-if="enableSlopeChart && selectedTrackForChart" class="slope-chart-container">
             <SlopeChart ref="slopeChartRef" :track="selectedTrackForChart" @hover="onSlopeHover" />
@@ -60,9 +78,12 @@
 </template>
 
 <script>
-import { ref, nextTick, onMounted, onUnmounted, watch } from 'vue';
+import { ref, computed, nextTick, onMounted, onUnmounted, watch } from 'vue';
 import SlopeChart from './SlopeChart.vue';
 import { findExplicitSlopeChartFeature, getSlopeChartTrackFromGeojson, toLineStringFeatureObject } from '../slope-chart/utils.mjs';
+import { technicalDataRows } from '../technical-data/utils.mjs';
+import { expandExtent, featuresForFit } from '../map-fit/utils.mjs';
+import { lineLabelFeatures, lineStyleSpec } from '../line-style/utils.mjs';
 
 // OpenLayers imports
 import Map from 'ol/Map';
@@ -75,7 +96,7 @@ import GeoJSON from 'ol/format/GeoJSON';
 import Overlay from 'ol/Overlay';
 import Feature from 'ol/Feature';
 import Point from 'ol/geom/Point';
-import { Style, Fill, Stroke, Circle as CircleStyle } from 'ol/style';
+import { Style, Fill, Stroke, Text, Circle as CircleStyle } from 'ol/style';
 import { fromLonLat, toLonLat } from 'ol/proj';
 import { defaults as defaultControls } from 'ol/control';
 import { defaults as defaultInteractions } from 'ol/interaction';
@@ -103,6 +124,16 @@ export default {
             type: Number,
             default: 500
         },
+        /** Voci della legenda: [{ label, color, dash }]. Vuota = nessuna legenda. */
+        legend: {
+            type: Array,
+            default: () => []
+        },
+        /** Dati tecnici sotto la mappa: [{ label, value }], già formattati. Vuota = nessun blocco. */
+        technicalData: {
+            type: Array,
+            default: () => []
+        },
         showZoomControls: {
             type: Boolean,
             default: true
@@ -118,6 +149,16 @@ export default {
         padding: {
             type: Number,
             default: 50
+        },
+        /** Margine attorno all'inquadratura iniziale, in frazione dell'extent per lato (0.3 = 30%). 0 = come prima (oc:8747). */
+        extentMargin: {
+            type: Number,
+            default: 0
+        },
+        /** Dopo l'inquadratura iniziale impedisce di allontanarsi oltre quella vista; lo zoom in resta libero (oc:8747). */
+        lockZoomOut: {
+            type: Boolean,
+            default: false
         },
         resourceName: {
             type: String,
@@ -180,6 +221,8 @@ export default {
         const currentFeatureId = ref(null);
         const currentFeatureProperties = ref({});
 
+        const technicalDataItems = computed(() => technicalDataRows(props.technicalData));
+
         // Slope chart state
         const slopeChartRef = ref(null);
         const selectedTrackForChart = ref(null);
@@ -193,6 +236,12 @@ export default {
         let hasFitted = false;
 
         const hoverMarkerSource = ref(null);
+
+        // Layer delle etichette lungo le linee (oc:8747): escluso dalla ricerca delle feature
+        // sotto il mouse, così tooltip, clic e profilo vedono solo le linee vere.
+        const labelSource = ref(null);
+        let labelLayer = null;
+        const isHitLayer = (layer) => layer !== labelLayer;
         const hoverMarkerFeature = ref(null);
 
         const setDefaultTrackForChartFromGeojson = (data) => {
@@ -322,16 +371,35 @@ export default {
                 }
             }
 
+            // Colori, tratteggio (oc:8719) e gruppo di disegno (oc:8747): vedi lineStyleSpec.
+            // Le etichette lungo le linee stanno su labelLayer, non qui.
+            const spec = lineStyleSpec(featureProps);
             return new Style({
                 stroke: new Stroke({
-                    color: featureProps.strokeColor || 'rgba(0, 0, 255, 1)',
-                    width: featureProps.strokeWidth || 3
+                    color: spec.strokeColor,
+                    width: spec.strokeWidth,
+                    lineDash: spec.lineDash
                 }),
                 fill: new Fill({
-                    color: featureProps.fillColor || 'rgba(0, 0, 255, 0.3)'
-                })
+                    color: spec.fillColor
+                }),
+                zIndex: spec.zIndex
             });
         };
+
+        // Etichetta lungo la linea, come i nomi delle strade OSM (oc:8747): testo nel colore della
+        // linea con alone bianco, solo dove ci sta (overflow false) e senza pieghe brusche.
+        const getLineLabelStyle = (feature) => new Style({
+            text: new Text({
+                text: feature.get('labelText'),
+                placement: 'line',
+                overflow: false,
+                maxAngle: Math.PI / 4,
+                font: 'bold 12px sans-serif',
+                fill: new Fill({ color: feature.get('labelColor') }),
+                stroke: new Stroke({ color: 'rgba(255, 255, 255, 0.95)', width: 3 })
+            })
+        });
 
         const applyGeoJSONData = (data) => {
             if (!vectorSource.value || !map.value) {
@@ -357,23 +425,23 @@ export default {
             vectorSource.value.clear();
             vectorSource.value.addFeatures(features);
 
+            // Etichette su feature separate, fuori da fit, tooltip, popup e profilo (oc:8747).
+            if (labelSource.value) {
+                labelSource.value.clear();
+                labelSource.value.addFeatures(format.readFeatures(
+                    { type: 'FeatureCollection', features: lineLabelFeatures(data) },
+                    { featureProjection: 'EPSG:3857' }
+                ));
+            }
+
             const reloaded = hasFitted;
 
             if (features.length > 0 && !(props.preserveViewOnReload && reloaded)) {
-                const lineStringFeatures = features.filter(feature => {
-                    const geometry = feature.getGeometry();
-                    if (!geometry) {
-                        return false;
-                    }
-                    const geometryType = geometry.getType();
-                    return geometryType === 'LineString' || geometryType === 'MultiLineString';
-                });
-
-                const featuresForExtent = lineStringFeatures.length > 0 ? lineStringFeatures : features;
-
+                // Le feature `context: true` sono sfondo e non entrano nel fit; fra le altre si
+                // preferiscono le linee. extentMargin allarga la vista attorno al risultato (oc:8747).
                 const tempSource = new VectorSource();
-                tempSource.addFeatures(featuresForExtent);
-                const extent = tempSource.getExtent();
+                tempSource.addFeatures(featuresForFit(features));
+                const extent = expandExtent(tempSource.getExtent(), props.extentMargin);
 
                 const view = map.value.getView();
 
@@ -400,8 +468,13 @@ export default {
                     const zoom = Math.log2(maxResolution / resolution);
                     const maxZoom = Math.min(view.getMaxZoom() || 17, 17);
 
+                    const fittedZoom = Math.min(Math.max(zoom, 0), maxZoom);
                     view.setCenter(center);
-                    view.setZoom(Math.min(Math.max(zoom, 0), maxZoom));
+                    view.setZoom(fittedZoom);
+                    if (props.lockZoomOut) {
+                        // Non ci si allontana oltre l'inquadratura iniziale (oc:8747).
+                        view.setMinZoom(fittedZoom);
+                    }
                 }
             }
 
@@ -516,7 +589,7 @@ export default {
         // Handle map click
         const handleClick = (event) => {
             const pixel = event.pixel;
-            const features = map.value.getFeaturesAtPixel(pixel);
+            const features = map.value.getFeaturesAtPixel(pixel, { layerFilter: isHitLayer });
 
             if (features && features.length > 0) {
                 const feature = features[0];
@@ -534,7 +607,7 @@ export default {
             const feature = map.value.forEachFeatureAtPixel(
                 pixel,
                 (f) => f,
-                { hitTolerance: 6 }
+                { hitTolerance: 6, layerFilter: isHitLayer }
             );
 
             if (feature) {
@@ -573,7 +646,7 @@ export default {
                         ? !!map.value.forEachFeatureAtPixel(
                             pixel,
                             (f) => (f.get('slopeChart') === true ? f : undefined),
-                            { hitTolerance: 6 },
+                            { hitTolerance: 6, layerFilter: isHitLayer },
                         )
                         : (type === 'LineString' || type === 'MultiLineString');
                     if (onChartLine) {
@@ -717,6 +790,15 @@ export default {
                 zIndex: 10
             });
 
+            // Etichette delle linee (oc:8747): layer proprio sopra tutto, con declutter solo qui.
+            labelSource.value = new VectorSource();
+            labelLayer = new VectorLayer({
+                source: labelSource.value,
+                style: getLineLabelStyle,
+                declutter: true,
+                zIndex: 20
+            });
+
             hoverMarkerSource.value = new VectorSource();
             const hoverMarkerLayer = new VectorLayer({
                 source: hoverMarkerSource.value,
@@ -742,7 +824,8 @@ export default {
                         source: new OSM()
                     }),
                     hoverMarkerLayer,
-                    vectorLayer
+                    vectorLayer,
+                    labelLayer
                 ],
                 view: new View({
                     center: fromLonLat([12.5, 42.5]),
@@ -804,6 +887,7 @@ export default {
         return {
             // Props (for template)
             popupComponent: props.popupComponent,
+            technicalDataItems,
             enableScreenshot: props.enableScreenshot,
             // Refs
             keydownRoot,
@@ -849,6 +933,89 @@ export default {
 
 .slope-chart-container {
     margin-top: 10px;
+}
+
+.map-wrapper {
+    position: relative;
+}
+
+/* Il riquadro non intercetta il drag fuori da sé: il wrapper non ha pointer-events propri. */
+.map-legend {
+    position: absolute;
+    left: 8px;
+    bottom: 8px;
+    z-index: 5;
+    max-width: 60%;
+    padding: 6px 8px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.9);
+    color: #1f2937;
+    font-size: 12px;
+    line-height: 1.3;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+.map-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.map-legend-item + .map-legend-item {
+    margin-top: 4px;
+}
+
+.map-legend-sample {
+    flex: 0 0 28px;
+    width: 28px;
+    height: 0;
+    border-top-width: 4px;
+}
+
+:global(.dark) .map-legend {
+    background: rgba(31, 41, 55, 0.9);
+    color: #f3f4f6;
+}
+
+/* Dati tecnici: griglia di righe etichetta/valore, stessi colori della legenda. */
+.map-technical-data {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 6px 16px;
+    margin: 10px 0 0;
+    padding: 8px 12px;
+    border-radius: 4px;
+    background: #f9fafb;
+    color: #1f2937;
+    font-size: 13px;
+    line-height: 1.3;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.map-technical-data-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.map-technical-data-label {
+    color: #6b7280;
+}
+
+.map-technical-data-value {
+    margin: 0;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+:global(.dark) .map-technical-data {
+    background: rgba(31, 41, 55, 0.9);
+    color: #f3f4f6;
+}
+
+:global(.dark) .map-technical-data-label {
+    color: #9ca3af;
 }
 
 .map-container {

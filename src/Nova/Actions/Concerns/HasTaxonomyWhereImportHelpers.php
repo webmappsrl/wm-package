@@ -133,7 +133,7 @@ trait HasTaxonomyWhereImportHelpers
             $label = $label.' — '.$row->identifier;
 
             if (in_array((string) $row->id, $importedGeohubIds, true)) {
-                $label .= ' ('.__('già importata').')';
+                $label .= ' ('.__('already imported').')';
             }
 
             $payload[] = [

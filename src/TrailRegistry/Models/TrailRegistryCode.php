@@ -276,7 +276,7 @@ class TrailRegistryCode extends Model
         $geometrySource = $this->trackGeometrySource();
 
         if ($geometrySource === null) {
-            $chosen = $this->sectorFeature($novaPath, $this->taxonomy_where_id, null, true, __('scelto'));
+            $chosen = $this->sectorFeature($novaPath, $this->taxonomy_where_id, null, true, __('chosen'));
 
             return $chosen === null ? [] : [$chosen];
         }
@@ -303,7 +303,7 @@ class TrailRegistryCode extends Model
                 (int) $row->id,
                 $row->percentuale === null ? null : (float) $row->percentuale,
                 $isChosen,
-                $isChosen ? __('scelto') : null,
+                $isChosen ? __('chosen') : null,
             );
 
             if ($feature === null) {
@@ -330,7 +330,7 @@ class TrailRegistryCode extends Model
         );
 
         if ($chosenIsThere === []) {
-            $fallback = $this->sectorFeature($novaPath, $this->taxonomy_where_id, null, true, __('scelto'));
+            $fallback = $this->sectorFeature($novaPath, $this->taxonomy_where_id, null, true, __('chosen'));
 
             if ($fallback !== null) {
                 $features[] = $fallback;
@@ -411,7 +411,7 @@ class TrailRegistryCode extends Model
                     'label' => $this->sector.$label,
                     // Validato o proposto: il componente Vue ne ricava lo stile del segnavia (oc:8662).
                     'codeStatus' => (string) $row->status,
-                    'tooltip' => __('Sentiero').' '.$this->fullCode.$label,
+                    'tooltip' => __('Trail').' '.$this->fullCode.$label,
                     'strokeColor' => 'rgba(100, 116, 139, 0.9)',
                     'strokeWidth' => 2,
                     'link' => url($novaPath.'/resources/'.static::novaUriKey('trail_registry_code').'/'.$row->id),
@@ -443,7 +443,7 @@ class TrailRegistryCode extends Model
             'type' => 'Feature',
             'geometry' => $geometry,
             'properties' => [
-                'tooltip' => __('Sentiero').' '.$this->code,
+                'tooltip' => __('Trail').' '.$this->code,
                 'strokeColor' => 'rgba(22, 163, 74, 1)',
                 'strokeWidth' => 4,
                 'link' => url($novaPath.'/resources/'.static::novaUriKey('ec_track').'/'.$this->ec_track_id),
@@ -473,7 +473,7 @@ class TrailRegistryCode extends Model
             'type' => 'Feature',
             'geometry' => $geometry,
             'properties' => [
-                'tooltip' => __('Istanza').' #'.$this->trail_application_id,
+                'tooltip' => __('Application').' #'.$this->trail_application_id,
                 'strokeColor' => 'rgba(234, 88, 12, 1)',
                 'strokeWidth' => 3,
                 'strokeDashArray' => [6, 6],

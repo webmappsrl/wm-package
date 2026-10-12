@@ -50,7 +50,7 @@ class TaxonomyWhere extends AbstractTaxonomyResource
 
                 return ! is_null($model->geometry);
             })->onlyOnIndex(),
-            PropertiesPanel::makeWithModel(__('Proprietà'), 'properties', $this, false)
+            PropertiesPanel::makeWithModel(__('Properties'), 'properties', $this, false)
                 ->collapsible(),
         ];
     }

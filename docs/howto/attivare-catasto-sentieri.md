@@ -91,10 +91,14 @@ dominio acceso, cercando le Resource per uriKey con `Nova::resourceForKey()`. Un
 lo shard non ha registrato la Resource con quella chiave. Riferimento Forestas — `app/Providers/NovaServiceProvider.php`:
 
 ```php
-MenuSection::make(__('Catasto'), [
+MenuSection::make(__('Trail registry'), [
     // le voci del dominio le inietta il package, non questa dichiarazione
 ]),
 ```
+
+La chiave dev'essere **esattamente `Trail registry`**: il package ritrova la sezione confrontando
+il nome con `__('Trail registry')`. Con una chiave diversa, in italiano non si vede nulla (tutte e
+due diventano «Catasto»), ma in inglese il menu mostra due sezioni (oc:8672).
 
 Su Forestas (oc:8539): `app/Providers/NovaServiceProvider.php`, sezione di menu «Catasto» già
 dichiarata e vuota, sottoclassi in `app/Nova/TrailRegistryCode.php`, `app/Nova/TrailApplication.php`

@@ -23,7 +23,9 @@ use Tymon\JWTAuth\Providers\LaravelServiceProvider;
 use Wm\WmPackage\Commands\WmBackfillGravatarAvatarsCommand;
 use Wm\WmPackage\Commands\WmBackupCommand;
 use Wm\WmPackage\Commands\WmBuildAppPoisGeojsonCommand;
+use Wm\WmPackage\Commands\WmCleanUgcTrackGeometryCommand;
 use Wm\WmPackage\Commands\WmDownloadDbBackupCommand;
+use Wm\WmPackage\Commands\WmFixDuplicatedUgcCommand;
 use Wm\WmPackage\Commands\WmGenerateIconsCommand;
 use Wm\WmPackage\Commands\WmGeneratePBFCommand;
 use Wm\WmPackage\Commands\WmImportEcPoiFromOsmCommand;
@@ -245,6 +247,8 @@ class WmPackageServiceProvider extends PackageServiceProvider
                 WmDownloadDbBackupCommand::class,
                 WmBuildAppPoisGeojsonCommand::class,
                 WmSyncUgcTaxonomyWhereCommand::class,
+                WmCleanUgcTrackGeometryCommand::class,
+                WmFixDuplicatedUgcCommand::class,
                 WmResyncTaxonomyWhereCommand::class,
                 WmBackfillGravatarAvatarsCommand::class,
                 WmRestoreDbCommand::class,
@@ -462,9 +466,9 @@ class WmPackageServiceProvider extends PackageServiceProvider
     protected function trailRegistryMenuItems(): array
     {
         $items = [
-            ['trail-applications', __('Istanze')],
-            ['trail-registry-codes', __('Registro dei codici')],
-            ['trail-registry-anomalies', __('Anomalie')],
+            ['trail-applications', __('Applications')],
+            ['trail-registry-codes', __('Code registry')],
+            ['trail-registry-anomalies', __('Anomalies')],
         ];
 
         return collect($items)
@@ -804,7 +808,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
                 $menuItems = $this->injectMenuSectionItems($menuItems, __('Tools'), $toolsItems, 'briefcase');
 
                 if (FeaturesService::isEnabled('trail_registry')) {
-                    $menuItems = $this->injectMenuSectionItems($menuItems, __('Catasto'), $this->trailRegistryMenuItems(), 'map');
+                    $menuItems = $this->injectMenuSectionItems($menuItems, __('Trail registry'), $this->trailRegistryMenuItems(), 'map');
                 }
 
                 return $menuItems;
@@ -841,7 +845,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
 
                     // Stessa regola di injectMenuSectionItems() (oc:8700):
                     // senza voci visibili la sezione non si mostra.
-                    $menuItems[] = MenuSection::make(__('Catasto'), $catastoItems)
+                    $menuItems[] = MenuSection::make(__('Trail registry'), $catastoItems)
                         ->icon('map')
                         ->collapsedByDefault()
                         ->canSee($this->visibleWhenAnyItemIs($catastoItems, null));

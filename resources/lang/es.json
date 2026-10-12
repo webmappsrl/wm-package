@@ -26,5 +26,21 @@
     "No application approved: only applications under review can be approved.": "Ninguna solicitud aprobada: solo se pueden aprobar las solicitudes en revisión.",
     "No application rejected: only applications under review can be rejected.": "Ninguna solicitud rechazada: solo se pueden rechazar las solicitudes en revisión.",
     "Rejection reason": "Motivo del rechazo",
-    "Visible to the applicant: explain what to correct in the new application.": "Visible para el solicitante: explica qué corregir en la nueva solicitud."
+    "Visible to the applicant: explain what to correct in the new application.": "Visible para el solicitante: explica qué corregir en la nueva solicitud.",
+    "Reconstructed segment: :discarded points discarded in :minutes min (max accuracy :accuracy m)": "Tramo reconstruido: :discarded puntos descartados en :minutes min (precisión máxima :accuracy m)",
+    "Recorded track": "Traza registrada",
+    "Reconstructed segment: GPS points discarded because inaccurate and far from the route": "Tramo reconstruido: puntos GPS descartados por imprecisos y alejados del recorrido",
+    "Distance": "Distancia",
+    "Ascent": "Subida",
+    "Descent": "Bajada",
+    "Min elevation": "Altitud mínima",
+    "Max elevation": "Altitud máxima",
+    "Time": "Tiempo",
+    "Moving time": "Tiempo en movimiento",
+    "Average speed": "Velocidad media",
+    "Max speed": "Velocidad máxima",
+    "Origin": "Origen",
+    "Recorded": "Grabada",
+    "Imported file": "Archivo importado",
+    "Imported file (GPX)": "Archivo importado (GPX)"
 }

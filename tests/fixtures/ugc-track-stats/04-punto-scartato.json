@@ -1,0 +1,371 @@
+{
+    "description": "38 punti buoni (10 m ogni 10 s) con in mezzo un punto accuracy 3000 a circa 50 km (scartato) e un picco speed 890 sul punto 20, ignorato dal percentile 95.",
+    "params": {
+        "max_accuracy": 40,
+        "max_deviation": 50,
+        "max_speed_percentile": 95,
+        "moving_min_speed": 1
+    },
+    "locations": [
+        {
+            "time": 0,
+            "latitude": 43,
+            "longitude": 13,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 4
+        },
+        {
+            "time": 10000,
+            "latitude": 43.00008993216059,
+            "longitude": 13,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 4
+        },
+        {
+            "time": 20000,
+            "latitude": 43.00017986432118,
+            "longitude": 13,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 4
+        },
+        {
+            "time": 30000,
+            "latitude": 43.000269796481774,
+            "longitude": 13,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 4
+        },
+        {
+            "time": 40000,
+            "latitude": 43.000359728642366,
+            "longitude": 13,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 4
+        },
+        {
+            "time": 50000,
+            "latitude": 43.00044966080296,
+            "longitude": 13,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 4
+        },
+        {
+            "time": 60000,
+            "latitude": 43.00053959296355,
+            "longitude": 13,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 4
+        },
+        {
+            "time": 70000,
+            "latitude": 43.00062952512414,
+            "longitude": 13,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 4
+        },
+        {
+            "time": 80000,
+            "latitude": 43.00071945728474,
+            "longitude": 13,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 4
+        },
+        {
+            "time": 90000,
+            "latitude": 43.00080938944533,
+            "longitude": 13,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 4
+        },
+        {
+            "time": 100000,
+            "latitude": 43.00089932160592,
+            "longitude": 13,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 4
+        },
+        {
+            "time": 105000,
+            "latitude": 43.45,
+            "longitude": 13,
+            "accuracy": 3000,
+            "altitude": 100,
+            "speed": 4
+        },
+        {
+            "time": 110000,
+            "latitude": 43.00098925376651,
+            "longitude": 13,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 4
+        },
+        {
+            "time": 120000,
+            "latitude": 43.001079185927104,
+            "longitude": 13,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 4
+        },
+        {
+            "time": 130000,
+            "latitude": 43.001169118087695,
+            "longitude": 13,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 4
+        },
+        {
+            "time": 140000,
+            "latitude": 43.00125905024829,
+            "longitude": 13,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 4
+        },
+        {
+            "time": 150000,
+            "latitude": 43.00134898240888,
+            "longitude": 13,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 4
+        },
+        {
+            "time": 160000,
+            "latitude": 43.00143891456947,
+            "longitude": 13,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 4
+        },
+        {
+            "time": 170000,
+            "latitude": 43.00152884673006,
+            "longitude": 13,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 4
+        },
+        {
+            "time": 180000,
+            "latitude": 43.00161877889065,
+            "longitude": 13,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 4
+        },
+        {
+            "time": 190000,
+            "latitude": 43.00170871105124,
+            "longitude": 13,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 4
+        },
+        {
+            "time": 200000,
+            "latitude": 43.001798643211835,
+            "longitude": 13,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 890
+        },
+        {
+            "time": 210000,
+            "latitude": 43.001888575372426,
+            "longitude": 13,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 4
+        },
+        {
+            "time": 220000,
+            "latitude": 43.001978507533025,
+            "longitude": 13,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 4
+        },
+        {
+            "time": 230000,
+            "latitude": 43.002068439693616,
+            "longitude": 13,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 4
+        },
+        {
+            "time": 240000,
+            "latitude": 43.00215837185421,
+            "longitude": 13,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 4
+        },
+        {
+            "time": 250000,
+            "latitude": 43.0022483040148,
+            "longitude": 13,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 4
+        },
+        {
+            "time": 260000,
+            "latitude": 43.00233823617539,
+            "longitude": 13,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 4
+        },
+        {
+            "time": 270000,
+            "latitude": 43.00242816833598,
+            "longitude": 13,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 4
+        },
+        {
+            "time": 280000,
+            "latitude": 43.00251810049657,
+            "longitude": 13,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 4
+        },
+        {
+            "time": 290000,
+            "latitude": 43.002608032657164,
+            "longitude": 13,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 4
+        },
+        {
+            "time": 300000,
+            "latitude": 43.002697964817756,
+            "longitude": 13,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 4
+        },
+        {
+            "time": 310000,
+            "latitude": 43.00278789697835,
+            "longitude": 13,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 4
+        },
+        {
+            "time": 320000,
+            "latitude": 43.00287782913894,
+            "longitude": 13,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 4
+        },
+        {
+            "time": 330000,
+            "latitude": 43.00296776129953,
+            "longitude": 13,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 4
+        },
+        {
+            "time": 340000,
+            "latitude": 43.00305769346012,
+            "longitude": 13,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 4
+        },
+        {
+            "time": 350000,
+            "latitude": 43.00314762562071,
+            "longitude": 13,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 4
+        },
+        {
+            "time": 360000,
+            "latitude": 43.003237557781304,
+            "longitude": 13,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 4
+        },
+        {
+            "time": 370000,
+            "latitude": 43.0033274899419,
+            "longitude": 13,
+            "accuracy": 5,
+            "altitude": 100,
+            "speed": 4
+        }
+    ],
+    "expected_kept": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+    ],
+    "expected": {
+        "distance": 0.37,
+        "duration": 6,
+        "duration_moving": 6,
+        "avg_speed": 3.6,
+        "max_speed": 4.0
+    }
+}

@@ -173,7 +173,7 @@ class TrailRegistryAnomaly extends Model
                 (int) $row->id,
                 $row->percentuale === null ? null : (float) $row->percentuale,
                 $prevalent,
-                $prevalent ? __('dalla geometria') : null,
+                $prevalent ? __('from the geometry') : null,
             );
 
             if ($feature !== null) {
@@ -236,7 +236,7 @@ class TrailRegistryAnomaly extends Model
             return null;
         }
 
-        return $this->sectorFeature($novaPath, (int) $row->id, null, false, __('dichiarato dal codice'));
+        return $this->sectorFeature($novaPath, (int) $row->id, null, false, __('declared by the code'));
     }
 
     /**

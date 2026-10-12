@@ -138,12 +138,12 @@ class TrailRegistryCode extends Resource
 
     public static function label(): string
     {
-        return __('Registro dei codici');
+        return __('Code registry');
     }
 
     public static function singularLabel(): string
     {
-        return __('Codice del registro');
+        return __('Registry code');
     }
 
     /**
@@ -171,20 +171,20 @@ class TrailRegistryCode extends Resource
     {
         $fields = [
             // Niente ->sortable(): non c'e' una colonna `code` su cui ordinare.
-            Text::make(__('Codice'), fn () => $this->code),
+            Text::make(__('Code'), fn () => $this->code),
 
             // Il nome del sentiero se assegnato, altrimenti quello
             // dell'istanza: l'unico appiglio leggibile in un elenco di codici.
-            Text::make(__('Denominazione'), fn () => $this->denomination),
+            Text::make(__('Designation'), fn () => $this->denomination),
 
-            Text::make(__('Stato'), fn () => $this->status->value),
+            Text::make(__('Status'), fn () => $this->status->value),
 
             // Prima cosa che l'index rende visibile: quali codici sono letti
             // da un campo, quali dedotti da un nome, quali proposti d'ufficio.
-            Text::make(__('Provenienza'), fn () => $this->origin->value),
+            Text::make(__('Source'), fn () => $this->origin->value),
 
             BelongsTo::make(
-                __('Istanza'),
+                __('Application'),
                 'application',
                 static::resourceForKey(TrailApplication::uriKey(), TrailApplication::class),
             )->nullable(),
@@ -196,19 +196,19 @@ class TrailRegistryCode extends Resource
         );
 
         if ($trackResource !== null) {
-            $fields[] = BelongsTo::make(__('Sentiero'), 'ecTrack', $trackResource)->nullable();
+            $fields[] = BelongsTo::make(__('Trail'), 'ecTrack', $trackResource)->nullable();
         }
 
         // Le sei colonne scomposte hanno senso solo nella scheda del singolo
         // codice. La variante si mostra per il suo valore reale, `0` incluso:
         // l'omissione riguarda il codice in uscita.
         $fields = array_merge($fields, [
-            Text::make(__('Regione'), 'region')->onlyOnDetail(),
-            Text::make(__('Provincia'), 'province')->onlyOnDetail(),
+            Text::make(__('Region'), 'region')->onlyOnDetail(),
+            Text::make(__('Province'), 'province')->onlyOnDetail(),
             Text::make(__('Area'), 'area')->onlyOnDetail(),
-            Text::make(__('Settore'), 'sector')->onlyOnDetail(),
-            Number::make(__('Numero'), 'number')->onlyOnDetail(),
-            Text::make(__('Variante'), 'variant')->onlyOnDetail(),
+            Text::make(__('Sector'), 'sector')->onlyOnDetail(),
+            Number::make(__('Number'), 'number')->onlyOnDetail(),
+            Text::make(__('Variant'), 'variant')->onlyOnDetail(),
         ]);
 
         $whereResource = static::resourceForModel(
@@ -217,7 +217,7 @@ class TrailRegistryCode extends Resource
         );
 
         if ($whereResource !== null) {
-            $fields[] = BelongsTo::make(__('Settore di riferimento'), 'taxonomyWhere', $whereResource)
+            $fields[] = BelongsTo::make(__('Reference sector'), 'taxonomyWhere', $whereResource)
                 ->nullable()
                 ->onlyOnDetail();
         }
@@ -226,17 +226,17 @@ class TrailRegistryCode extends Resource
         // d'occhio perche' quel codice ha quel prefisso e a chi appartiene.
         // La rotta del campo risale al modello dall'elenco delle Resource di
         // Nova, quindi non serve dichiarare l'endpoint a mano.
-        $fields[] = TrailRegistryMap::make(__('Mappa'), 'geometry')->enableSlopeChart();
+        $fields[] = TrailRegistryMap::make(__('Map'), 'geometry')->enableSlopeChart();
 
         // La legenda e' HTML statico accanto alla mappa, non un componente
         // dentro di essa: vedi MapLegendRenderer per il perche'.
         $fields[] = Text::make(
-            __('Legenda'),
+            __('Legend'),
             fn () => MapLegendRenderer::render($this->resource),
         )->asHtml()->onlyOnDetail();
 
         $fields[] = Text::make(
-            __('Storia dei cambi di stato'),
+            __('Status change history'),
             fn () => CodeHistoryRenderer::render($this->resource),
         )->asHtml()->onlyOnDetail();
 

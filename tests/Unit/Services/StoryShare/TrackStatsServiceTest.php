@@ -107,3 +107,17 @@ it('drops malformed location entries missing latitude/longitude instead of crash
 
     expect($result['distance_km'] * 1000)->toEqualWithDelta($expectedMeters, 1.0);
 });
+
+it('ignora i punti con accuracy oltre la soglia di pulizia e il punto (0,0) (oc:8719)', function () {
+    config()->set('wm-package.ugc_track_max_accuracy_meters', 40.0);
+
+    $result = (new TrackStatsService)->compute([
+        ['time' => 0, 'latitude' => 44.0, 'longitude' => 10.0, 'accuracy' => 5],
+        ['time' => 500, 'latitude' => 0.0, 'longitude' => 0.0, 'accuracy' => 5],
+        ['time' => 1000, 'latitude' => 45.0, 'longitude' => 10.0, 'accuracy' => 3000],
+        ['time' => 2000, 'latitude' => 44.0, 'longitude' => 10.0, 'accuracy' => 5],
+    ]);
+
+    expect($result['distance_km'])->toEqualWithDelta(0.0, 0.0001);
+    expect($result['duration_seconds'])->toBe(2);
+});

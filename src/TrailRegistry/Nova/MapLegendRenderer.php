@@ -28,11 +28,11 @@ class MapLegendRenderer
      * @var array<string, array{0: string, 1: string, 2: string}>
      */
     protected const ENTRIES = [
-        'sector' => ['rgba(37, 99, 235, 1)', 'rgba(37, 99, 235, 0.20)', 'Settore da cui viene il prefisso'],
-        'other_sectors' => ['rgba(100, 116, 139, 1)', 'rgba(100, 116, 139, 0.15)', 'Altri settori attraversati, con la percentuale di percorso'],
-        'neighbours' => ['rgba(100, 116, 139, 0.9)', '', 'Altri sentieri del settore, con numero e variante'],
-        'track' => ['rgba(22, 163, 74, 1)', '', 'Sentiero a cui il codice e\' assegnato'],
-        'application' => ['rgba(234, 88, 12, 1)', '', 'Traccia dell\'istanza da cui il codice e\' nato'],
+        'sector' => ['rgba(37, 99, 235, 1)', 'rgba(37, 99, 235, 0.20)', 'Sector the prefix comes from'],
+        'other_sectors' => ['rgba(100, 116, 139, 1)', 'rgba(100, 116, 139, 0.15)', 'Other sectors crossed, with the percentage of the route'],
+        'neighbours' => ['rgba(100, 116, 139, 0.9)', '', 'Other trails in the sector, with number and variant'],
+        'track' => ['rgba(22, 163, 74, 1)', '', 'Trail the code is assigned to'],
+        'application' => ['rgba(234, 88, 12, 1)', '', 'Application track the code originated from'],
     ];
 
     /**
@@ -92,13 +92,13 @@ class MapLegendRenderer
             $rows[] = sprintf(
                 '<li style="margin:0 0 6px 0;list-style:none">%s</li>',
                 e(($subjectFeature['properties']['subjectKind'] ?? '') === 'track'
-                    ? __('Profilo altimetrico sotto la mappa: del sentiero')
-                    : __('Profilo altimetrico sotto la mappa: della traccia dell\'istanza')),
+                    ? __('Elevation profile below the map: of the trail')
+                    : __('Elevation profile below the map: of the application track')),
             );
         }
 
         if ($rows === []) {
-            return '<p>'.e(__('Nessuna geometria da mostrare per questo codice.')).'</p>';
+            return '<p>'.e(__('No geometry to show for this code.')).'</p>';
         }
 
         return '<ul style="margin:0;padding:0;font-size:0.875rem">'.implode('', $rows).'</ul>';
@@ -112,10 +112,10 @@ class MapLegendRenderer
      * @var array<string, array{0: string|null, 1: string, 2: bool, 3: string}>
      */
     protected const SIGNS = [
-        'current' => ['rgba(234, 88, 12, 1)', 'rgba(234, 88, 12, 1)', false, 'Numero di questo codice'],
-        'released' => ['rgba(148, 163, 184, 1)', 'rgba(148, 163, 184, 1)', true, 'Numero liberato: non appartiene piu\' a questa istanza'],
-        'assigned' => ['rgba(220, 38, 38, 1)', 'rgba(220, 38, 38, 1)', false, 'Numero di un sentiero validato'],
-        'reserved' => [null, 'rgba(220, 38, 38, 1)', false, 'Numero proposto da un\'altra istanza'],
+        'current' => ['rgba(234, 88, 12, 1)', 'rgba(234, 88, 12, 1)', false, 'Number of this code'],
+        'released' => ['rgba(148, 163, 184, 1)', 'rgba(148, 163, 184, 1)', true, 'Released number: no longer belongs to this application'],
+        'assigned' => ['rgba(220, 38, 38, 1)', 'rgba(220, 38, 38, 1)', false, 'Number of a validated trail'],
+        'reserved' => [null, 'rgba(220, 38, 38, 1)', false, 'Number proposed by another application'],
     ];
 
     /**

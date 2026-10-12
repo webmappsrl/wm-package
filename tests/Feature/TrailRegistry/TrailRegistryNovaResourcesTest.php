@@ -32,7 +32,7 @@ it('mostra nel registro le cinque colonne decise', function () {
         ->map(fn ($f) => $f->name)
         ->all();
 
-    expect($fields)->toContain('Codice', 'Denominazione', 'Stato', 'Istanza', 'Sentiero');
+    expect($fields)->toContain('Code', 'Designation', 'Status', 'Application', 'Trail');
 });
 
 it('non espone piu dal registro la action che sostituisce il numero', function () {
@@ -144,12 +144,12 @@ it('mostra nell elenco delle istanze le sei colonne decise', function () {
         ->all();
 
     expect($fields)->toBe([
-        'Denominazione',
-        'Codice',
-        'Stato istruttoria',
-        'Provenienza',
-        'Inserita da',
-        'Presentata il',
+        'Designation',
+        'Code',
+        'Review status',
+        'Source',
+        'Entered by',
+        'Submitted on',
     ]);
 });
 

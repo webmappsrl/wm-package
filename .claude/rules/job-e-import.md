@@ -41,3 +41,8 @@ Si applica quando tocchi job, comandi artisan, import o servizi del package.
   `Dispatcher` e non da `PendingDispatch`, dove vive il controllo. Per non accodare due volte una
   catena prendi un lock esplicito prima del dispatch, come `MultiLineString::acquireDemLock()`
   (oc:8660).
+- `ST_Length(geom::geography)` su una geometria 3D conta anche i dislivelli: per una lunghezza in
+  pianta usa `ST_Length(ST_Force2D(geom::geometry)::geography)` (oc:8719).
+- Per confrontare una geometria UGC salvata con una ricostruita non usare `ST_Equals`, che è
+  esatto e la dà diversa per differenze di arrotondamento: usa `ST_HausdorffDistance` con la
+  tolleranza `UgcTrackCleanupService::SAME_GEOMETRY_TOLERANCE_DEGREES` (oc:8719).

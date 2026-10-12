@@ -59,6 +59,23 @@ mano con lo stesso identifier (oc:8486).
   `taxonomy_poi_types` era assente, il che rendeva ininfluente il fix ID nel flusso standard
   (oc:8041). `taxonomy_when` e `taxonomy_target` hanno tuttora `'job' => ''` (oc:8014).
 
+### Import GeoHub: campi JSON e `related_url` (oc:8679)
+
+- Le colonne json/jsonb di Geohub arrivano dal query builder come **testo**: un campo mappato in
+  `config/wm-geohub-import.php` come stringa semplice (`'campo' => 'campo'`) finisce in
+  `properties` come stringa, non come oggetto. Per convertirlo serve un transformer di
+  `DataTransformer` (`['field' => …, 'transformer' => [DataTransformer::class, '…']]`).
+- `related_url` di POI e tracce passa da `DataTransformer::relatedUrlToArray`. Quando non ci sono
+  link la chiave resta in `properties` con valore `null`, non sparisce.
+- Le regole stanno nel trait `NormalizesRelatedUrl`, condiviso con l'import Excel
+  (`EcPoiRowProcessor`): oggetto JSON, indirizzo semplice e i tre formati trovati sui POI di Geohub
+  prod — stringa JSON `"https:\/\/…"`, lista spezzata in caratteri, lista WordPress
+  `[{"net7webmap_related_url":…}]`. Un elemento di lista senza etichetta vale solo se inizia con
+  `http(s)://`: così una lista spezzata sporca come quella del POI 39942 dà `null` e non un link
+  per ogni carattere (oc:8679).
+- Altri campi json delle tracce sono ancora copiati grezzi nel mapping, e non sono verificati:
+  vedi `config/wm-geohub-import.php`.
+
 ### Import da OSM
 
 - L'Action `ImportEcPoiFromOsm` è registrata di default in `EcPoi::actions()` con `canSee` **e**
@@ -116,6 +133,11 @@ minimale. `EcTrackRowProcessor` non è affetto, non usa `setTranslation` per il 
 
 ## Come ci siamo arrivati
 
+- **Due copie della logica di `related_url`** (oc:8679, superata): nel primo ciclo
+  `DataTransformer::relatedUrlToArray` copiava `EcPoiRowProcessor::normalizeRelatedUrlToAssoc`, con
+  un commento incrociato, per non toccare l'import Excel. La review dell'overview l'ha scartata:
+  nel package non c'erano altre logiche copiate, e per i normalizzatori il modello è un trait
+  condiviso (`NormalizesHexColor`).
 - `handleGeohub()` chiamava `syncTracksTaxonomyWhere()` in modo sincrono subito dopo il dispatch
   asincrono dei job di geometria, come fanno ancora gli altri due handler: è una race condition —
   la sync trova sempre geometrie vuote e riporta "0 tracks". Corretto solo per GeoHub con
@@ -178,6 +200,9 @@ minimale. `EcTrackRowProcessor` non è affetto, non usa `setTranslation` per il 
   sovrascriverlo (oc:8158).
 - `json_decode()` di una stringa malformata ritorna `null`, non `[]`: il `?? '{}'` copre solo la
   chiave assente, serve un cast esplicito prima del `foreach` (oc:8094).
+- `DataTransformer::jsonToArray` e `nullableJsonToArray` vanno in `TypeError` quando il JSON
+  decodificato non è un array (`"false"` → `array_filter(false)`): non usarli su campi che su
+  Geohub possono contenere scalari (oc:8679).
 - Un `LineString` con un solo punto fa fallire persino `ST_GeomFromWKB()` a livello Postgres: non
   si intercetta con una query PostGIS, serve parsare i byte (E)WKB in PHP (oc:8158).
 - `get_headers($url, 1)[0]` ritorna `false` su URL irraggiungibile, e

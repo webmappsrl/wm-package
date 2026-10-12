@@ -51,7 +51,7 @@ it('il campo Tipo mostra l etichetta dello shard senza leggere ->value su una st
     $anomaly = new TrailRegistryAnomaly(['type' => 'shard_tipo_esempio']);
 
     $field = collect((new AnomalyResource($anomaly))->fields(resolve(NovaRequest::class)))
-        ->first(fn ($field) => $field->name === 'Tipo');
+        ->first(fn ($field) => $field->name === 'Type');
 
     $field->resolveForDisplay($anomaly);
 
@@ -66,7 +66,7 @@ it('un tipo sconosciuto regge anche i campi dell index', function () {
     // per l'index e li risolve per la visualizzazione.
     $fields = (new AnomalyResource($anomaly))->indexFields($request);
 
-    expect($fields->first(fn ($field) => $field->name === 'Tipo')->value)->toBe('tipo_rimosso');
+    expect($fields->first(fn ($field) => $field->name === 'Type')->value)->toBe('tipo_rimosso');
 });
 
 it('il titolo di un tipo dello shard usa la sua etichetta', function () {

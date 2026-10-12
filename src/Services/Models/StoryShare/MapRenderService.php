@@ -105,6 +105,28 @@ class MapRenderService
 
     private const TRACK_LINE_THICKNESS_PX = 7;
 
+    private const MARKER_START_COLOR = '#2e7d32';
+
+    private const MARKER_END_COLOR = '#c62828';
+
+    private const MARKER_DIAMETER_PX = 28;
+
+    private const MARKER_BORDER_PX = 4;
+
+    private const MARKER_BORDER_COLOR = '#ffffff';
+
+    /** Default label font size in px (oc:8703). */
+    private const LABEL_FONT_SIZE_PX = 28;
+
+    /** Default label text color (oc:8703). */
+    private const LABEL_COLOR = '#000000';
+
+    /** Default label outline color (oc:8703). */
+    private const LABEL_OUTLINE_COLOR = '#ffffff';
+
+    /** GD wants typographic points; Intervention converts px with the same factor (oc:8703). */
+    private const PIXELS_TO_POINTS = 0.75;
+
     /**
      * Background fill for any tile that failed to download — visually distinguishable from
      * a "real" tile without looking like a rendering bug (a neutral, muted color rather
@@ -113,14 +135,62 @@ class MapRenderService
     private const TILE_FALLBACK_COLOR = '#cfcac2';
 
     /**
+     * Renders the track's own polyline on the basemap (single orange layer, no markers,
+     * framed on the track's own bbox): thin wrapper over {@see renderLayers()}.
+     *
      * @throws RuntimeException if the track has no usable geometry, or if every single tile
      *                          needed for the output window fails to download.
      */
     public function render(UgcTrack $ugcTrack, App $app, int $width, int $height): InterventionImage
     {
-        $tileUrlTemplate = $this->resolveTileUrlTemplate($app);
         $geometry = $this->extractGeometry($ugcTrack);
-        $bbox = $this->padBbox($this->expandDegenerateBbox($geometry['bbox']));
+
+        return $this->renderLayers(
+            [
+                [
+                    'lineStrings' => $geometry['lineStrings'],
+                    'color' => self::TRACK_LINE_COLOR,
+                    'thickness' => self::TRACK_LINE_THICKNESS_PX,
+                    'opacity' => 1.0,
+                ],
+            ],
+            [],
+            $geometry['bbox'],
+            $app,
+            $width,
+            $height
+        );
+    }
+
+    /**
+     * Renders a basemap with several polyline layers (drawn in the given order, so later
+     * layers sit on top) and optional start/end markers, framed on `$focusBbox` — which is
+     * independent from the layers' own extent (e.g. a long route drawn thin, framing only
+     * the walked stage).
+     *
+     * Each layer: `lineStrings` (lists of [lon, lat]), `color`, `thickness` in px, `opacity`
+     * in [0, 1], optionally `outlineColor` + `outlineThickness` (px of border on each side).
+     * Each marker: `lon`, `lat`, `type` (`start`|`end`), optionally `size` (disc diameter in
+     * px, default 28), `ringWidth` (white ring in px on each side, default 4) and `color`
+     * (disc color, default green for `start`, red for `end`).
+     * Each label (oc:8703): `lon`, `lat`, `text`, optionally `color` (default black), `size`
+     * (font size in px, default 28), `outlineColor` + `outlineWidth` (px, default white / 0),
+     * `font` (TTF path, default StoryImageLayout::FONT_BOLD); drawn last, centred on the point,
+     * in the given order: a label whose box would overlap one already drawn is skipped.
+     *
+     * @param  list<array{lineStrings: list<list<array{0: float, 1: float}>>, color: string, thickness: int, opacity: float, outlineColor?: string, outlineThickness?: int}>  $layers
+     * @param  list<array{lon: float, lat: float, type: 'start'|'end', size?: int, ringWidth?: int, color?: string}>  $markers
+     * @param  array{xmin: float, ymin: float, xmax: float, ymax: float}  $focusBbox
+     * @param  ?float  $marginRatio  Margine aggiunto per lato a `$focusBbox`, come frazione del suo span;
+     *                               null = BBOX_MARGIN_RATIO (il comportamento di render()).
+     * @param  list<array{lon: float, lat: float, text: string, color?: string, size?: int, outlineColor?: string, outlineWidth?: int, font?: string}>  $labels
+     *
+     * @throws RuntimeException if every single tile needed for the output window fails to download.
+     */
+    public function renderLayers(array $layers, array $markers, array $focusBbox, App $app, int $width, int $height, ?float $marginRatio = null, array $labels = []): InterventionImage
+    {
+        $tileUrlTemplate = $this->resolveTileUrlTemplate($app);
+        $bbox = $this->padBbox($this->expandDegenerateBbox($focusBbox), $marginRatio ?? self::BBOX_MARGIN_RATIO);
         $zoom = $this->fitZoom($bbox, $width, $height);
 
         $centerLon = ($bbox['xmin'] + $bbox['xmax']) / 2;
@@ -133,7 +203,36 @@ class MapRenderService
 
         $canvas = $this->buildTileCanvas($tileUrlTemplate, $zoom, $windowLeft, $windowTop, $width, $height);
 
-        $this->drawTrack($canvas, $geometry['lineStrings'], $zoom, $windowLeft, $windowTop);
+        foreach ($layers as $layer) {
+            $this->drawLayer($canvas, $layer, $zoom, $windowLeft, $windowTop);
+        }
+
+        foreach ($markers as $marker) {
+            $this->drawMarker(
+                $canvas,
+                $this->lonToPixelX((float) $marker['lon'], $zoom) - $windowLeft,
+                $this->latToPixelY((float) $marker['lat'], $zoom) - $windowTop,
+                $marker['color'] ?? ($marker['type'] === 'end' ? self::MARKER_END_COLOR : self::MARKER_START_COLOR),
+                (int) ($marker['size'] ?? self::MARKER_DIAMETER_PX),
+                (int) ($marker['ringWidth'] ?? self::MARKER_BORDER_PX)
+            );
+        }
+
+        $drawn = [];
+        foreach ($labels as $label) {
+            $x = $this->lonToPixelX((float) $label['lon'], $zoom) - $windowLeft;
+            $y = $this->latToPixelY((float) $label['lat'], $zoom) - $windowTop;
+            $box = $this->labelBox($label, $x, $y);
+
+            foreach ($drawn as $other) {
+                if ($box[0] < $other[2] && $other[0] < $box[2] && $box[1] < $other[3] && $other[1] < $box[3]) {
+                    continue 2;
+                }
+            }
+
+            $this->drawLabel($canvas, $label, $x, $y);
+            $drawn[] = $box;
+        }
 
         return $canvas;
     }
@@ -277,13 +376,15 @@ class MapRenderService
     }
 
     /**
+     * Allarga il bbox di `$ratio` del suo span per lato.
+     *
      * @param  array{xmin: float, ymin: float, xmax: float, ymax: float}  $bbox
      * @return array{xmin: float, ymin: float, xmax: float, ymax: float}
      */
-    private function padBbox(array $bbox): array
+    private function padBbox(array $bbox, float $ratio = self::BBOX_MARGIN_RATIO): array
     {
-        $lonMargin = ($bbox['xmax'] - $bbox['xmin']) * self::BBOX_MARGIN_RATIO;
-        $latMargin = ($bbox['ymax'] - $bbox['ymin']) * self::BBOX_MARGIN_RATIO;
+        $lonMargin = ($bbox['xmax'] - $bbox['xmin']) * $ratio;
+        $latMargin = ($bbox['ymax'] - $bbox['ymin']) * $ratio;
 
         return [
             'xmin' => $bbox['xmin'] - $lonMargin,
@@ -432,9 +533,119 @@ class MapRenderService
     }
 
     /**
+     * Draws one layer (optional outline first, then the line itself). With `opacity` < 1 GD
+     * cannot alpha-blend lines, so the layer is drawn opaque on a copy of the canvas and the
+     * copy is merged back with `imagecopymerge`: where the line is, the result is
+     * `opacity * line + (1 - opacity) * background`; elsewhere the pixels are unchanged.
+     *
+     * @param  array{lineStrings: list<list<array{0: float, 1: float}>>, color: string, thickness: int, opacity: float, outlineColor?: string, outlineThickness?: int}  $layer
+     */
+    private function drawLayer(InterventionImage $canvas, array $layer, int $zoom, float $windowLeft, float $windowTop): void
+    {
+        $opacity = max(0.0, min(1.0, (float) $layer['opacity']));
+
+        if ($opacity <= 0.0) {
+            return;
+        }
+
+        $target = $opacity < 1.0 ? clone $canvas : $canvas;
+
+        $outlineThickness = (int) ($layer['outlineThickness'] ?? 0);
+
+        if (! empty($layer['outlineColor']) && $outlineThickness > 0) {
+            $this->drawTrack($target, $layer['lineStrings'], $zoom, $windowLeft, $windowTop, $layer['outlineColor'], $layer['thickness'] + 2 * $outlineThickness);
+        }
+
+        $this->drawTrack($target, $layer['lineStrings'], $zoom, $windowLeft, $windowTop, $layer['color'], $layer['thickness']);
+
+        if ($target !== $canvas) {
+            imagecopymerge($canvas->getCore(), $target->getCore(), 0, 0, 0, 0, $canvas->width(), $canvas->height(), (int) round($opacity * 100));
+        }
+    }
+
+    /**
+     * Draws a round start/end marker (colored disc of `$diameter` px with a white ring of
+     * `$ringWidth` px on each side) centered on the given pixel.
+     */
+    private function drawMarker(InterventionImage $canvas, float $x, float $y, string $color, int $diameter, int $ringWidth): void
+    {
+        $canvas->circle($diameter + 2 * $ringWidth, (int) round($x), (int) round($y), function ($draw) {
+            $draw->background(self::MARKER_BORDER_COLOR);
+        });
+        $canvas->circle($diameter, (int) round($x), (int) round($y), function ($draw) use ($color) {
+            $draw->background($color);
+        });
+    }
+
+    /**
+     * Box [x1, y1, x2, y2] of a label centred on the given pixel, outline included (oc:8703).
+     *
+     * @param  array{text: string, size?: int, outlineWidth?: int, font?: string}  $label
+     * @return array{0: float, 1: float, 2: float, 3: float}
+     */
+    private function labelBox(array $label, float $x, float $y): array
+    {
+        ['font' => $font, 'size' => $size, 'outline' => $outline] = $this->labelStyle($label);
+        $bbox = imagettfbbox($size * self::PIXELS_TO_POINTS, 0, $font, $label['text']);
+        $halfWidth = abs($bbox[2] - $bbox[0]) / 2 + $outline;
+        $halfHeight = abs($bbox[7] - $bbox[1]) / 2 + $outline;
+
+        return [$x - $halfWidth, $y - $halfHeight, $x + $halfWidth, $y + $halfHeight];
+    }
+
+    /**
+     * Draws a text label centred on the given pixel (oc:8703): the outline is the same text
+     * repeated in `outlineColor` at every offset within `outlineWidth`, then the text on top.
+     *
+     * @param  array{lon: float, lat: float, text: string, color?: string, size?: int, outlineColor?: string, outlineWidth?: int, font?: string}  $label
+     */
+    private function drawLabel(InterventionImage $canvas, array $label, float $x, float $y): void
+    {
+        ['font' => $font, 'size' => $size, 'outline' => $outline] = $this->labelStyle($label);
+        $write = function (string $color, int $dx, int $dy) use ($canvas, $label, $font, $size, $x, $y): void {
+            $canvas->text($label['text'], (int) round($x) + $dx, (int) round($y) + $dy, function ($text) use ($font, $size, $color) {
+                $text->file($font);
+                $text->size($size);
+                $text->color($color);
+                $text->align('center');
+                $text->valign('middle');
+            });
+        };
+
+        if ($outline > 0) {
+            $outlineColor = $label['outlineColor'] ?? self::LABEL_OUTLINE_COLOR;
+            for ($dx = -$outline; $dx <= $outline; $dx++) {
+                for ($dy = -$outline; $dy <= $outline; $dy++) {
+                    if ($dx !== 0 || $dy !== 0) {
+                        $write($outlineColor, $dx, $dy);
+                    }
+                }
+            }
+        }
+
+        $write($label['color'] ?? self::LABEL_COLOR, 0, 0);
+    }
+
+    /**
+     * Font, size and outline width of a label with their defaults, in one place so that the
+     * collision box always matches the drawn text (oc:8703).
+     *
+     * @param  array{size?: int, outlineWidth?: int, font?: string}  $label
+     * @return array{font: string, size: int, outline: int}
+     */
+    private function labelStyle(array $label): array
+    {
+        return [
+            'font' => $label['font'] ?? StoryImageLayout::FONT_BOLD,
+            'size' => (int) ($label['size'] ?? self::LABEL_FONT_SIZE_PX),
+            'outline' => (int) ($label['outlineWidth'] ?? 0),
+        ];
+    }
+
+    /**
      * @param  array<int, array<int, array{0: float, 1: float}>>  $lineStrings
      */
-    private function drawTrack(InterventionImage $canvas, array $lineStrings, int $zoom, float $windowLeft, float $windowTop): void
+    private function drawTrack(InterventionImage $canvas, array $lineStrings, int $zoom, float $windowLeft, float $windowTop, string $color, int $thickness): void
     {
         foreach ($lineStrings as $lineString) {
             $pixels = array_map(
@@ -452,8 +663,8 @@ class MapRenderService
                     $pixels[$i - 1][1],
                     $pixels[$i][0],
                     $pixels[$i][1],
-                    self::TRACK_LINE_COLOR,
-                    self::TRACK_LINE_THICKNESS_PX
+                    $color,
+                    $thickness
                 );
             }
         }

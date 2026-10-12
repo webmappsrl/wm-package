@@ -1,5 +1,7 @@
 <?php
 
+use Wm\WmPackage\Services\Models\UgcTrackCleanupService;
+use Wm\WmPackage\Services\Models\UgcTrackStatsService;
 use Wm\WmPackage\TrailRegistry\Commands\TrailRegistryNormalizeCommand;
 use Wm\WmPackage\TrailRegistry\Models\TrailApplication;
 use Wm\WmPackage\TrailRegistry\Models\TrailRegistryAnomaly;
@@ -13,6 +15,18 @@ return [
     'analytics_shard_name' => env('ANALYTICS_SHARD_NAME'),
     'route_filter_analytics_enabled' => env('ROUTE_FILTER_ANALYTICS_ENABLED', false),
     'layer_user_presence_distance_meters' => env('LAYER_USER_PRESENCE_DISTANCE_METERS', 50),
+    // oc:8719: un punto GPS di una traccia UGC con accuracy oltre questa soglia (metri) è sospetto
+    // quando la geometria viene ricostruita da properties.locations. Vuota o <= 0: vale il default.
+    'ugc_track_max_accuracy_meters' => (float) env('UGC_TRACK_MAX_ACCURACY_METERS', UgcTrackCleanupService::DEFAULT_MAX_ACCURACY_METERS),
+    // oc:8719: un punto sospetto si scarta solo se dista più di questi metri dal tratto fra il punto
+    // tenuto precedente e il primo punto buono successivo. Vuota o <= 0: vale il default.
+    'ugc_track_max_deviation_meters' => (float) env('UGC_TRACK_MAX_DEVIATION_METERS', UgcTrackCleanupService::DEFAULT_MAX_DEVIATION_METERS),
+    // oc:8742: percentile del campo speed dei punti tenuti usato come velocità massima di una
+    // traccia UGC. Vuota, <= 0 o > 100: vale il default.
+    'ugc_track_max_speed_percentile' => (float) env('UGC_TRACK_MAX_SPEED_PERCENTILE', UgcTrackStatsService::DEFAULT_MAX_SPEED_PERCENTILE),
+    // oc:8742: un tratto fra due punti conta come movimento se la sua velocità (km/h) è almeno
+    // questa. Vuota o <= 0: vale il default.
+    'ugc_track_moving_min_speed_kmh' => (float) env('UGC_TRACK_MOVING_MIN_SPEED_KMH', UgcTrackStatsService::DEFAULT_MOVING_MIN_SPEED_KMH),
     // oc:8637: mostra nome, cognome e link alla scheda Nova dell'utente sul marker live della mappa
     // del layer. Default false (marker anonimo, come da oc:8586): ogni shard lo accende dal proprio
     // .env. Con il flag acceso l'identità è visibile a ogni utente che supera il gate Nova del

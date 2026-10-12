@@ -64,7 +64,7 @@ it('a dominio spento non mette alcuna sezione Catasto nel menu', function () {
 
     $menu = buildMainMenu();
 
-    expect(findMenuSection($menu, __('Catasto')))->toBeNull();
+    expect(findMenuSection($menu, __('Trail registry')))->toBeNull();
 });
 
 it('a dominio acceso mette la sezione Catasto con le sue voci', function () {
@@ -72,13 +72,13 @@ it('a dominio acceso mette la sezione Catasto con le sue voci', function () {
 
     $menu = buildMainMenu();
 
-    $catasto = findMenuSection($menu, __('Catasto'));
+    $catasto = findMenuSection($menu, __('Trail registry'));
 
     expect($catasto)->not->toBeNull();
 
     $labels = collect($catasto->items)->map(fn ($item) => (string) $item->name)->all();
 
-    expect($labels)->toEqualCanonicalizing([__('Istanze'), __('Registro dei codici'), __('Anomalie')]);
+    expect($labels)->toEqualCanonicalizing([__('Applications'), __('Code registry'), __('Anomalies')]);
 });
 
 it('non rompe la sezione Tools gia iniettata dallo stesso meccanismo', function () {
@@ -127,7 +127,7 @@ it('senza menu dello shard nasconde Catasto se la policy nega tutte le voci', fu
     config(['wm-package.features.trail_registry.enabled' => true]);
     Gate::before(fn ($user = null) => false);
 
-    $catasto = findMenuSection(buildMainMenuWithoutShardCallback(), __('Catasto'));
+    $catasto = findMenuSection(buildMainMenuWithoutShardCallback(), __('Trail registry'));
 
     expect($catasto)->not->toBeNull()
         ->and($catasto->authorizedToSee(Request::create('/')))->toBeFalse();
@@ -137,7 +137,7 @@ it('senza menu dello shard mostra Catasto se almeno una voce e visibile', functi
     config(['wm-package.features.trail_registry.enabled' => true]);
     Gate::before(fn ($user = null) => true);
 
-    $catasto = findMenuSection(buildMainMenuWithoutShardCallback(), __('Catasto'));
+    $catasto = findMenuSection(buildMainMenuWithoutShardCallback(), __('Trail registry'));
 
     expect($catasto->authorizedToSee(Request::create('/')))->toBeTrue();
 });

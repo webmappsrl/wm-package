@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Wm\WmPackage\Imports\AbstractExcelSpreadsheetImporter;
 use Wm\WmPackage\Imports\Concerns\NormalizesSpreadsheetInput;
 use Wm\WmPackage\Models\TaxonomyPoiType;
+use Wm\WmPackage\Traits\NormalizesRelatedUrl;
 
 /**
  * Applica una "riga dati" EcPoi al modello (stessa logica per import Excel e GeoJSON).
@@ -15,6 +16,7 @@ use Wm\WmPackage\Models\TaxonomyPoiType;
  */
 final class EcPoiRowProcessor
 {
+    use NormalizesRelatedUrl;
     use NormalizesSpreadsheetInput;
 
     /**
@@ -278,26 +280,26 @@ final class EcPoiRowProcessor
     private function mergeRelatedUrl(mixed $incoming, mixed $existing): array
     {
         if (is_array($incoming)) {
-            return $this->normalizeRelatedUrlToAssoc($incoming);
+            return $this->normalizeRelatedUrl($incoming);
         }
 
         $incoming = is_scalar($incoming) ? (string) $incoming : '';
         $incoming = trim($incoming);
         if ($incoming === '') {
-            return $this->normalizeRelatedUrlToAssoc($existing);
+            return $this->normalizeRelatedUrl($existing);
         }
 
         $decoded = $this->tryJsonDecode($incoming);
         if (is_array($decoded) && $decoded !== []) {
-            return $this->normalizeRelatedUrlToAssoc($decoded);
+            return $this->normalizeRelatedUrl($decoded);
         }
 
         $newUrls = $this->splitCsvIdentifiers($incoming);
         if ($newUrls === []) {
-            return $this->normalizeRelatedUrlToAssoc($existing);
+            return $this->normalizeRelatedUrl($existing);
         }
 
-        $existingAssoc = $this->normalizeRelatedUrlToAssoc($existing);
+        $existingAssoc = $this->normalizeRelatedUrl($existing);
         $keys = array_keys($existingAssoc);
 
         if ($keys === []) {
@@ -331,51 +333,5 @@ final class EcPoiRowProcessor
         }
 
         return $out;
-    }
-
-    /**
-     * @return array<string, string>
-     */
-    private function normalizeRelatedUrlToAssoc(mixed $value): array
-    {
-        if ($value === null || $value === '') {
-            return [];
-        }
-        if (is_array($value)) {
-            $out = [];
-            foreach ($value as $k => $v) {
-                if (! (is_string($v) || is_numeric($v))) {
-                    continue;
-                }
-                if (is_string($k)) {
-                    $out[$k] = (string) $v;
-                } else {
-                    $s = (string) $v;
-                    if ($s !== '') {
-                        $out[$s] = $s;
-                    }
-                }
-            }
-
-            return $out;
-        }
-        if (! is_string($value)) {
-            return [];
-        }
-        $t = trim($value);
-        if ($t === '') {
-            return [];
-        }
-        if (str_starts_with($t, '{')) {
-            $d = json_decode($t, true);
-            if (is_array($d)) {
-                return $this->normalizeRelatedUrlToAssoc($d);
-            }
-        }
-        if (str_starts_with($t, 'http://') || str_starts_with($t, 'https://')) {
-            return [$t => $t];
-        }
-
-        return [];
     }
 }

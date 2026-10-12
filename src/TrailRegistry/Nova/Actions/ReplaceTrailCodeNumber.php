@@ -43,7 +43,7 @@ class ReplaceTrailCodeNumber extends Action
 
     public function name(): string
     {
-        return __('Sostituisci numero');
+        return __('Replace number');
     }
 
     public function handle(ActionFields $fields, Collection $models)
@@ -55,7 +55,7 @@ class ReplaceTrailCodeNumber extends Action
         $code = $application?->activeCode;
 
         if ($code === null) {
-            return Action::danger(__('Questa istanza non ha un codice attivo da sostituire.'));
+            return Action::danger(__('This application has no active code to replace.'));
         }
 
         try {
@@ -69,17 +69,17 @@ class ReplaceTrailCodeNumber extends Action
             return Action::danger($e->getMessage());
         }
 
-        return Action::message(__('Numero sostituito.'));
+        return Action::message(__('Number replaced.'));
     }
 
     public function fields(NovaRequest $request): array
     {
         return [
-            Select::make(__('Numero'), 'number')
+            Select::make(__('Number'), 'number')
                 ->options($this->numberOptions($request))
                 ->rules('required'),
 
-            Select::make(__('Variante'), 'variant')
+            Select::make(__('Variant'), 'variant')
                 ->dependsOn('number', function (Select $field, NovaRequest $request, $formData) {
                     $field->options($this->variantOptions($request, $formData->integer('number')));
                 })
@@ -141,7 +141,7 @@ class ReplaceTrailCodeNumber extends Action
 
         return collect(app(TrailRegistryService::class)->availableVariants($code->fullCode, $number))
             ->mapWithKeys(fn (string $variant) => [
-                $variant => $variant === '0' ? __('nessuna variante') : $variant,
+                $variant => $variant === '0' ? __('no variant') : $variant,
             ])
             ->all();
     }

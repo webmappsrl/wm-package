@@ -48,9 +48,18 @@ class UpdateModelWithGeometryTaxonomyWhere implements ShouldQueue
             return;
         }
 
-        $properties = $this->model->properties;
+        // Si rilegge il modello dal DB subito prima di salvare: durante la chiamata HTTP un altro
+        // job può aver scritto in properties (per le UgcTrack, le chiavi DEM di stats scritte da
+        // UpdateUgcTrackDemStatsJob, oc:8742). Salvare la copia letta a inizio job le
+        // azzererebbe, e saveQuietly() non riattiva l'observer che le rimetterebbe in coda.
+        $fresh = $this->model->newQuery()->whereKey($this->model->getKey())->first();
+        if (! $fresh instanceof GeometryModel) {
+            return;
+        }
+
+        $properties = $fresh->properties;
         $properties['taxonomy_where'] = $mapped;
-        $this->model->properties = $properties;
-        $this->model->saveQuietly();
+        $fresh->properties = $properties;
+        $fresh->saveQuietly();
     }
 }

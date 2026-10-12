@@ -345,6 +345,67 @@ class FeatureCollectionMap extends Field
     }
 
     /**
+     * Legenda sovrapposta alla mappa, in basso a sinistra: una riga per voce.
+     * Ogni voce: label, color (colore CSS) e dash (true = linea tratteggiata, default false).
+     * Lista vuota = nessuna legenda.
+     *
+     * @param  array<int, array{label: string, color: string, dash?: bool}>  $items
+     * @return $this
+     */
+    public function legend(array $items): static
+    {
+        $legend = array_map(fn (array $item) => [
+            'label' => (string) $item['label'],
+            'color' => (string) $item['color'],
+            'dash' => (bool) ($item['dash'] ?? false),
+        ], array_values($items));
+
+        return $this->withMeta(['legend' => $legend]);
+    }
+
+    /**
+     * Dati tecnici in un blocco sotto la mappa, sopra il profilo altimetrico: una riga per voce.
+     * Ogni voce: label e value, già formattati (unità comprese) da chi chiama.
+     * Lista vuota = nessun blocco.
+     *
+     * @param  array<int, array{label: string, value: string}>  $rows
+     * @return $this
+     */
+    public function technicalData(array $rows): static
+    {
+        $technicalData = array_map(fn (array $row) => [
+            'label' => (string) $row['label'],
+            'value' => (string) $row['value'],
+        ], array_values($rows));
+
+        return $this->withMeta(['technicalData' => $technicalData]);
+    }
+
+    /**
+     * Margine attorno all'inquadratura iniziale della mappa, in frazione dell'extent per lato:
+     * 0.3 = la vista si allarga del 30% della larghezza e dell'altezza su ogni lato.
+     * Le feature con `properties.context === true` non entrano mai nel fit.
+     * Default 0 = inquadratura stretta come prima.
+     *
+     * @return $this
+     */
+    public function extentMargin(float $ratio): static
+    {
+        return $this->withMeta(['extentMargin' => max(0.0, $ratio)]);
+    }
+
+    /**
+     * Blocca lo zoom out oltre l'inquadratura iniziale: dopo il fit lo zoom raggiunto diventa
+     * il minimo della vista. Lo zoom in resta libero. Default spento.
+     *
+     * @return $this
+     */
+    public function lockZoomOut(bool $enabled = true): static
+    {
+        return $this->withMeta(['lockZoomOut' => $enabled]);
+    }
+
+    /**
      * Prepare the field for JSON serialization.
      *
      * @return array<string, mixed>
