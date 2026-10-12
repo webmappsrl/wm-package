@@ -38,3 +38,10 @@ Si applica quando tocchi modelli, trait, observer o enum del package.
   lingua (`['it' => $nome]`) (oc:8588).
 - Assegnare `[]` a un attributo tradotto salva nella colonna il testo `"[]"`, non `"{}"`: chi
   legge la colonna in SQL deve trattare `NULL`, `''`, `'[]'` e `'{}'` come vuoti (oc:8588).
+- Non mettere un oggetto in `name` (o in un altro campo già dichiarato testo) in
+  `EcTrack::toSearchableArray()`: gli indici esistenti lo rifiutano e, con `scout.queue` a `false`, il
+  salvataggio della traccia in Nova va in errore fino a `scout:import` — per un dato nuovo si
+  aggiunge un campo, come `name_translations` (oc:8681).
+- «Reindicizza Scout» (`ReindexAppScoutAction`) riscrive i documenti nell'indice esistente con
+  `searchable()` e non applica un mapping cambiato: per cambiare il tipo di un campo serve
+  `scout:import`, che crea un indice nuovo e sposta l'alias (oc:8681).

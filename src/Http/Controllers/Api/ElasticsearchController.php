@@ -235,7 +235,8 @@ class ElasticsearchController extends Controller
             $query->where('taxonomyActivities', $taxonomyActivities);
         }
 
-        // results are formatted in wm-package/src/ElasticSearch/HitsIteratorAggregate.php
+        // HitsIteratorAggregate riduce gli hit al loro _source; il nome nella lingua dell'utente lo
+        // sistema localizeSearchResults() prima del return
         // return collect($query->orderBy('name.keyword', 'asc')->take(10000)->get()['hits'])->pluck('name');
         $results = $query->orderBy('name.keyword', 'asc')->take(10000)->get();
 
@@ -247,7 +248,40 @@ class ElasticsearchController extends Controller
             $resultsArray['aggregations'] = $this->normalizeAggregations($resultsArray['aggregations']);
         }
 
-        return $resultsArray;
+        return self::localizeSearchResults($resultsArray);
+    }
+
+    /**
+     * Sostituisce in ogni risultato name con il nome in tutte le lingue (oc:8681).
+     *
+     * Nell'indice name resta di proposito la stringa italiana, su cui si ordina (name.keyword); le
+     * lingue stanno nel campo EcTrack::SEARCH_NAME_TRANSLATIONS_FIELD. Qui quel campo, se è un array
+     * non vuoto, prende il posto di name: il frontend (wm-core, search-box con il pipe wmtrans) riceve
+     * così un oggetto per lingua, come da Geohub, e mostra la lingua dell'utente. Un risultato senza
+     * il campo (indice non ancora reindicizzato) mantiene il name di oggi. Il campo non resta mai
+     * nella risposta, e una risposta senza hits resta com'è.
+     *
+     * @param  array<string, mixed>  $results
+     * @return array<string, mixed>
+     */
+    public static function localizeSearchResults(array $results): array
+    {
+        if (! isset($results['hits']) || ! is_array($results['hits'])) {
+            return $results;
+        }
+
+        $field = EcTrack::SEARCH_NAME_TRANSLATIONS_FIELD;
+        $results['hits'] = array_map(function (array $hit) use ($field): array {
+            $translations = $hit[$field] ?? null;
+            if (is_array($translations) && $translations !== []) {
+                $hit['name'] = $translations;
+            }
+            unset($hit[$field]);
+
+            return $hit;
+        }, $results['hits']);
+
+        return $results;
     }
 
     /**

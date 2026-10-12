@@ -34,4 +34,37 @@ class EcTrackSearchableArrayTest extends TestCase
 
         $this->assertSame(300, $track->toSearchableArray()['ascent']);
     }
+
+    public function test_name_translations_contains_all_filled_languages()
+    {
+        $track = EcTrack::factory()->createQuietly([
+            'osmid' => null,
+            'name' => ['it' => 'V6 – Anello di Vecchiano', 'en' => 'V6 - Loop of Vecchiano', 'fr' => ''],
+        ]);
+
+        $array = $track->toSearchableArray();
+
+        // name_translations serve all'API per mostrare il nome nella lingua dell'utente (oc:8681);
+        // name resta l'italiano, su cui si ordina.
+        $this->assertSame(
+            ['it' => 'V6 – Anello di Vecchiano', 'en' => 'V6 - Loop of Vecchiano'],
+            $array[EcTrack::SEARCH_NAME_TRANSLATIONS_FIELD]
+        );
+        $this->assertSame('V6 – Anello di Vecchiano', $array['name']);
+    }
+
+    public function test_name_translations_is_empty_when_the_name_is_empty()
+    {
+        $track = EcTrack::factory()->createQuietly(['osmid' => null, 'name' => []]);
+
+        $this->assertSame([], $track->toSearchableArray()[EcTrack::SEARCH_NAME_TRANSLATIONS_FIELD]);
+    }
+
+    public function test_name_translations_is_empty_when_the_name_is_null()
+    {
+        $track = EcTrack::factory()->createQuietly(['osmid' => null]);
+        $track->setRawAttributes(array_merge($track->getAttributes(), ['name' => null]));
+
+        $this->assertSame([], $track->toSearchableArray()[EcTrack::SEARCH_NAME_TRANSLATIONS_FIELD]);
+    }
 }
