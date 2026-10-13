@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
+use Laravel\Nova\Fields\Heading;
 use Wm\WmPackage\Jobs\MatchUgcTrackToEcTracksJob;
 use Wm\WmPackage\Jobs\UpdateUgcTrackDemStatsJob;
 use Wm\WmPackage\Models\App;
@@ -170,12 +171,12 @@ it('il filtro propone solo i layer attraversati da almeno una UgcTrack', functio
 });
 
 it('il tab della risorsa Nova App espone i due parametri di corrispondenza con i limiti', function () {
-    $fields = $this->callPrivateMethod(new \Wm\WmPackage\Nova\App($this->app_), 'ugc_tab');
+    $fields = $this->callPrivateMethod(new Wm\WmPackage\Nova\App($this->app_), 'ugc_tab');
 
-    expect(collect($fields)->first())->toBeInstanceOf(\Laravel\Nova\Fields\Heading::class);
+    expect(collect($fields)->first())->toBeInstanceOf(Heading::class);
     expect(collect($fields)->first()->asHtml)->toBeTrue();
 
-    $byAttr = collect($fields)->filter(fn ($f) => ! $f instanceof \Laravel\Nova\Fields\Heading)->keyBy('attribute');
+    $byAttr = collect($fields)->filter(fn ($f) => ! $f instanceof Heading)->keyBy('attribute');
     expect($byAttr->keys()->all())->toBe([
         'properties->'.UgcTrackMatchingService::SEGMENT_LENGTH_KEY,
         'properties->'.UgcTrackMatchingService::MAX_DISTANCE_KEY,

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\DB;
 use Wm\WmPackage\Models\App;
+use Wm\WmPackage\Models\Layer;
+use Wm\WmPackage\Models\UgcTrack;
 use Wm\WmPackage\Models\UgcTrackMatchingRun;
 use Wm\WmPackage\Models\User;
 use Wm\WmPackage\Services\Models\UgcTrackMatchingService;
@@ -113,14 +115,14 @@ it('elenca come da calcolare le tracce senza stato, fallite o con parametri vecc
 });
 
 it('ricava i layer attraversati via layerables, ignorando i layer inesistenti', function () {
-    $layer = \Wm\WmPackage\Models\Layer::factory()->createQuietly(['app_id' => $this->app_->id]);
+    $layer = Layer::factory()->createQuietly(['app_id' => $this->app_->id]);
     $ec = matchingEcTrack($this->app_->id, 'MULTILINESTRING((11 44, 11 44.018))');
     matchingAttachToLayer($layer->id, $ec);
     matchingAttachToLayer(999999, $ec);
     $ugc = matchingUgcTrack($this->user->id, $this->app_->id, 'MULTILINESTRING((11.00025 44, 11.00025 44.009))');
     $this->service->matchUgcTrack($ugc);
 
-    expect(\Wm\WmPackage\Models\UgcTrack::find($ugc)->matchedLayerIds())->toBe([$layer->id]);
+    expect(UgcTrack::find($ugc)->matchedLayerIds())->toBe([$layer->id]);
 });
 
 it('i totali di segmenti per EcTrack coincidono con total_segments, anche per EcTrack non toccate e fatte di più pezzi', function () {

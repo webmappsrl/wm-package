@@ -2,6 +2,7 @@
 
 namespace Wm\WmPackage\Nova\Support;
 
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Laravel\Nova\Nova;
 use Wm\WmPackage\Models\EcTrack;
@@ -92,12 +93,12 @@ class UgcTrackMatchesHtml
      * Valore aggregato per layer: due query in tutto, qualunque sia il numero di layer (le EcTrack
      * dei layer da layerables, poi i totali di segmenti di tutte con una sola query).
      *
-     * @param  \Illuminate\Support\Collection<int, object>  $rows  righe di corrispondenza della traccia
+     * @param  Collection<int, object>  $rows  righe di corrispondenza della traccia
      * @param  array<int, int>  $layerIds  layer esistenti fra quelli attraversati
      * @param  array{segment_length_meters:int, max_distance_meters:int}  $params  parametri attuali della App
      * @return array<int, array{matched:int, total:int}> layer_id => aggregato
      */
-    private static function layerAggregates(UgcTrack $track, \Illuminate\Support\Collection $rows, array $layerIds, array $params): array
+    private static function layerAggregates(UgcTrack $track, Collection $rows, array $layerIds, array $params): array
     {
         if ($layerIds === []) {
             return [];

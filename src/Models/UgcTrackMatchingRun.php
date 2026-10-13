@@ -3,6 +3,7 @@
 namespace Wm\WmPackage\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 
 /**
  * Stato del calcolo di corrispondenza di una UgcTrack (oc:8773).
@@ -11,7 +12,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property ?string $error
  * @property ?int $segment_length_meters
  * @property ?int $max_distance_meters
- * @property \Illuminate\Support\Carbon $computed_at
+ * @property Carbon $computed_at
  */
 class UgcTrackMatchingRun extends Model
 {
