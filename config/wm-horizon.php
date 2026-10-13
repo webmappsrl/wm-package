@@ -237,6 +237,20 @@ return [
             'timeout' => 120,
             'nice' => 0,
         ],
+        // Corrispondenza UgcTrack ↔ EcTrack (oc:8773): coda separata, un ricalcolo di massa non
+        // ritarda mail, DEM e import.
+        'supervisor-ugc-track-matching' => [
+            'connection' => 'redis',
+            'queue' => ['ugc-track-matching'],
+            'balance' => 'simple',
+            'maxProcesses' => 2,
+            'maxTime' => 3600,
+            'maxJobs' => 1000,
+            'memory' => 256,
+            'tries' => 3, // con timeout 85 < retry_after 90 della connessione redis
+            'timeout' => 85,
+            'nice' => 0,
+        ],
     ],
 
     'environments' => [

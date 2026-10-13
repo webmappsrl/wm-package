@@ -105,6 +105,17 @@ return [
     'default_layer_mode' => env('DEFAULT_LAYER_MODE', 'auto'),
 
     /*
+    | Corrispondenza (matching) fra UgcTrack ed EcTrack per segmenti (oc:8773). Default dei parametri per App: ogni
+    | App li può sovrascrivere da Nova (properties ugc_track_matching_*). Cast espliciti: env()
+    | restituisce stringhe.
+    */
+    'ugc_track_matching' => [
+        'segment_length_meters' => (int) env('UGC_TRACK_MATCHING_SEGMENT_LENGTH_METERS', 400),
+        'max_distance_meters' => (int) env('UGC_TRACK_MATCHING_MAX_DISTANCE_METERS', 50),
+        'queue' => env('UGC_TRACK_MATCHING_QUEUE', 'ugc-track-matching'),
+    ],
+
+    /*
     | Chiavi di un array di attributi (es. properties->attributes di un Layer,
     | o di un altro modello in futuro) che un consumer considera riservate a
     | un uso interno e mai da esporre pubblicamente (config.json, endpoint

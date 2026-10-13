@@ -12,9 +12,17 @@
     "App Store link (iOS)": "App Store link (iOS)",
     "App name on the stores (App Store and Playstore).": "App name on the stores (App Store and Playstore).",
     "Android Certificate SHA-256": "Android Certificate SHA-256",
+    "Each EC track is split into segments of this length, and its match is the share of segments touched by the UGC track (e.g. 30 segments out of 40 = 75%). A lower value gives a more precise match but makes the computation slower.": "Each EC track is split into segments of this length, and its match is the share of segments touched by the UGC track (e.g. 30 segments out of 40 = 75%). A lower value gives a more precise match but makes the computation slower.",
+    "An EC track segment counts as covered if the UGC track passes within this distance. A higher value tolerates inaccurate GPS and small deviations, but may also count nearby or parallel EC tracks that were not actually covered.": "An EC track segment counts as covered if the UGC track passes within this distance. A higher value tolerates inaccurate GPS and small deviations, but may also count nearby or parallel EC tracks that were not actually covered.",
+    "Matching failed": "Matching failed",
+    "Matching in progress: reload the page shortly": "Matching in progress: reload the page shortly",
+    "EcTracks crossed outside any layer": "EC tracks crossed outside any layer",
+    "Layer crossed by the track": "Layer crossed by the track",
+    "Layers crossed by the track": "Layers crossed by the track",
     "SHA-256 signing certificate fingerprint(s) (format XX:XX:...), used to build the Android assetlinks.json entry for the QR code deep link feature. Separate multiple fingerprints with a comma (e.g. upload key + Play Store signing key).": "SHA-256 signing certificate fingerprint(s) (format XX:XX:...), used to build the Android assetlinks.json entry for the QR code deep link feature. Separate multiple fingerprints with a comma (e.g. upload key + Play Store signing key).",
     "Apple Team ID": "Apple Team ID",
     "Apple Developer Team ID used to build the appID in apple-app-site-association for the QR code deep link feature. Leave empty to use Webmapp's default team.": "Apple Developer Team ID used to build the appID in apple-app-site-association for the QR code deep link feature. Leave empty to use Webmapp's default team.",
+    "The track does not cross any EcTrack": "The UGC track does not cross any EC track",
     "Website URL": "Website URL",
     "Custom domain used to build QR code deep link URLs (Track/Poi). Leave empty to use the default {app_id}.{APP_NAME}.webmapp.it domain.": "Custom domain used to build QR code deep link URLs (Track/Poi). Leave empty to use the default {app_id}.{APP_NAME}.webmapp.it domain.",
     "Native App Deep Link": "Native App Deep Link",
@@ -572,5 +580,9 @@
     "Origin": "Origin",
     "Recorded": "Recorded",
     "Imported file": "Imported file",
-    "Imported file (GPX)": "Imported file (GPX)"
+    "Imported file (GPX)": "Imported file (GPX)",
+    "UGC TRACK MATCHING WITH EC TRACKS": "UGC TRACK MATCHING WITH EC TRACKS",
+    "Every UGC track is compared with the EC tracks of the app to know which EC tracks, and therefore which layers, it crossed. Each EC track is split into fixed-length segments: a segment counts as covered if the UGC track passes within the given distance. Changing these values recomputes all the UGC tracks of the app.": "Every UGC track is compared with the EC tracks of the app to know which EC tracks, and therefore which layers, it crossed. Each EC track is split into fixed-length segments: a segment counts as covered if the UGC track passes within the given distance. Changing these values recomputes all the UGC tracks of the app.",
+    "EC track segment length (m)": "EC track segment length (m)",
+    "Maximum distance from the UGC track (m)": "Maximum distance from the UGC track (m)"
 }

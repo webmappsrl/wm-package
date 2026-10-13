@@ -57,7 +57,9 @@ Tutto gira **dentro il container `php-forestas`**, da `wm-package/`.
 - **`composer format` (Pint) senza scope riformatta l'intero repo.** Controlla sempre
   `git status` dopo, e scarta i file fuori dal lavoro in corso.
 - **Le traduzioni del package stanno in `resources/lang/*.json`**, non in `lang/`: scritte altrove
-  vengono silenziosamente ignorate.
+  vengono silenziosamente ignorate. I file PHP di traduzione (`validation.php`) stanno invece in
+  `resources/lang-php/{locale}/`: messi in `resources/lang/` fanno vincere le voci JSON del package
+  su quelle dello shard (oc:8773).
 - **Ogni nuovo campo Nova custom con build CSS porta il proprio `postcss.config.js`**
   (`module.exports = {}`), altrimenti `npm run prod` risale alla root del consumer e fallisce con
   `ERR_REQUIRE_ESM`. Il `dist` è versionato: ricompilalo dalla sorgente e verifica che il diff non
@@ -106,6 +108,7 @@ questo file, perché vanno lette sempre.
 | Chiavi di traduzione | chiave in inglese e testo italiano nella voce, voci condivise fra shard, cosa Nova traduce da sé | [docs/knowledge/8672-chiavi-di-traduzione-in-inglese-nel-catasto-sentieri-wm-package-e-in-forestas.md](docs/knowledge/8672-chiavi-di-traduzione-in-inglese-nel-catasto-sentieri-wm-package-e-in-forestas.md) |
 | Pulizia GPS delle tracce UGC | quali punti si scartano (accuracy e distanza dal percorso), dove gira la pulizia, command per le tracce esistenti, perché niente filtro sui salti | [docs/knowledge/8719-pulizia-automatica-dei-punti-gps-errati-nelle-tracce-ugc.md](docs/knowledge/8719-pulizia-automatica-dei-punti-gps-errati-nelle-tracce-ugc.md) |
 | Dati tecnici delle tracce UGC | `properties.stats`: distanza, dislivello e quote dal DEM, tempo totale ed effettivo, velocità media e massima sui punti tenuti; specifica che l'app replica e casi condivisi | [docs/knowledge/dati-tecnici-delle-tracce-ugc.md](docs/knowledge/dati-tecnici-delle-tracce-ugc.md) |
+| Corrispondenza UGC track ↔ EC track | segmenti delle EC track percorsi da ogni UGC track, layer ricavati, parametri per App, quando si ricalcola, perché niente `layer_id` sulle UGC track | [docs/knowledge/8773-associazione-delle-ugctrack-a-piu-cammini-tappe-invece-che-a-un-solo-layer.md](docs/knowledge/8773-associazione-delle-ugctrack-a-piu-cammini-tappe-invece-che-a-un-solo-layer.md) |
 | Duplicati UGC e retry dell'app | store che aggiorna per uuid, foto deduplicate per sha256, command `wm:fix-duplicated-ugc` e archivio | [docs/knowledge/duplicati-ugc-e-retry-dell-app.md](docs/knowledge/duplicati-ugc-e-retry-dell-app.md) |
 | Aggiornare wm-package su osm2cai2 | cosa cambia per osm2cai2 al bump del submodule e cosa controllare prima del command dei duplicati | [docs/knowledge/aggiornare-wm-package-su-osm2cai2.md](docs/knowledge/aggiornare-wm-package-su-osm2cai2.md) |
 

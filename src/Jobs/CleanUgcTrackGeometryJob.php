@@ -17,7 +17,7 @@ use Wm\WmPackage\Services\Models\UgcTrackStatsService;
  * geometria; riscrive stats (computed_at nuovo) e richiede il DEM solo dove manca (oc:8742).
  *
  * Se la geometria cambia accoda il ricalcolo delle località (`taxonomy_where`), che dipendono da
- * lei. Il cammino (`layer_id`) invece non si ricalcola: è fuori scope.
+ * lei, e il calcolo di corrispondenza per segmenti (oc:8773).
  */
 class CleanUgcTrackGeometryJob implements ShouldQueue
 {
@@ -50,6 +50,8 @@ class CleanUgcTrackGeometryJob implements ShouldQueue
 
         if ($updated > 0 && ($fresh = $track->fresh()) !== null) {
             UpdateModelWithGeometryTaxonomyWhere::dispatch($fresh);
+            // oc:8773: l'UPDATE SQL qui sopra non fa scattare gli observer.
+            MatchUgcTrackToEcTracksJob::dispatch($fresh->id);
         }
 
         $this->syncStats($track->fresh() ?? $track, $updated > 0);

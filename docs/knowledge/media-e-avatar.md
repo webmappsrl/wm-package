@@ -20,12 +20,16 @@ anche senza toccarlo. `singleMediaRules()` valida solo i file effettivamente car
 
 I messaggi di validazione di una rule imbustata in un field Nova non hanno un canale diretto: si
 passa dalla convenzione Laravel `validation.custom.<attribute>.<rule>` in
-`resources/lang/{locale}/validation.php`, che va registrata con
-`$this->loadTranslationsFrom(__DIR__.'/../resources/lang')` (**senza namespace**) in
+`resources/lang-php/{locale}/validation.php`, che va registrata con
+`$this->loadTranslationsFrom(__DIR__.'/../resources/lang-php')` (**senza namespace**) in
 `WmPackageServiceProvider::boot()` — diverso da `loadJsonTranslationsFrom()`, già presente per le
 stringhe `__('...')`, che è un gruppo separato. Laravel non sostituisce `:min_width`/`:min_height`
 nel messaggio di `dimensions` (nessun `replaceDimensions` nel replacer): le soglie vanno scritte
-a mano nel messaggio (oc:8247).
+a mano nel messaggio (oc:8247). La cartella è separata da `resources/lang/` perché Laravel rilegge
+i `*.json` anche da ogni path PHP registrato senza namespace, dopo la `lang/` dello shard: con la
+cartella dei JSON le voci del package vincevano su quelle dello shard (oc:8773). Il namespace
+(`wm-package::validation...`) non è praticabile: Ebess chiama `Validator::make()` senza messaggi e
+Laravel cerca `validation.custom.*` solo nel gruppo globale.
 
 Il messaggio custom **non è mostrabile nel toast di Nova**: per gli errori 422 il core mostra
 sempre la stringa fissa "There was a problem submitting the form.", non personalizzabile senza

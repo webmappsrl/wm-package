@@ -15,7 +15,7 @@ protezione nasce un duplicato.
   multipart con la feature in JSON nel campo `feature`, che `$request->input()` non vede;
 - se lo trova (il più vecchio, se ce ne sono già più d'uno) lo **aggiorna** e risponde 201 con il
   suo id; le properties ricevute vanno **sopra** quelle salvate, quindi le chiavi che l'app non
-  manda (per esempio `layer_id` assegnato dal server) restano;
+  manda (per esempio `layer_id` assegnato dal server a un UgcPoi) restano;
 - le foto si salvano solo se il loro sha256 è diverso da quello delle foto già associate (store ed
   edit); l'hash sta in `custom_properties.sha256` del media, e per i media vecchi si calcola al
   volo. Un file illeggibile conta come "diverso" e si logga sul canale `ugc`.
@@ -53,7 +53,9 @@ Ogni gruppo e ogni lancio vanno nel canale di log `duplicated-ugc`.
 - **Unire le properties invece di sostituirle** (oc:8718): sulle tracce di camminiditalia il
   `layer_id` lo scrive sempre il server (nessuna traccia ha `form.layer_id`) e l'app non lo
   rimanda; sostituendo, ogni retry cancellerebbe il cammino, anche quello corretto a mano
-  (traccia 321, oc:8466).
+  (traccia 321, oc:8466). *Per le UgcTrack superato da oc:8773: il server non scrive più
+  `layer_id` sulle tracce (vedi [Corrispondenza UGC track ↔ EC track](8773-associazione-delle-ugctrack-a-piu-cammini-tappe-invece-che-a-un-solo-layer.md)); la regola di unione resta valida per
+  le altre properties e per gli UgcPoi.*
 - **Foto confrontate per contenuto** (oc:8718): l'app rimanda gli stessi byte con nomi
   posizionali (`image_0.jpg`, …), quindi il nome non serve. Sui dati reali 14 foto su 39 delle
   copie erano identiche a quelle del padre.

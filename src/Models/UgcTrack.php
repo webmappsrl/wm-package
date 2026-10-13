@@ -3,12 +3,17 @@
 namespace Wm\WmPackage\Models;
 
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Wm\WmPackage\Jobs\MatchUgcTrackToEcTracksJob;
 use Wm\WmPackage\Models\Abstracts\MultiLineString;
 use Wm\WmPackage\Models\Interfaces\UserOwnedModelInterface;
 use Wm\WmPackage\Observers\UgcObserver;
 use Wm\WmPackage\Observers\UgcTrackGeometryCleanupObserver;
 use Wm\WmPackage\Services\Models\UgcTrackCleanupService;
+use Wm\WmPackage\Services\Models\UgcTrackMatchingService;
 use Wm\WmPackage\Traits\OwnedByUserModel;
 use Wm\WmPackage\Traits\TaxonomyAbleModel;
 use Wm\WmPackage\Traits\TaxonomyWhereAbleModel;
@@ -60,6 +65,14 @@ class UgcTrack extends MultiLineString implements UserOwnedModelInterface
      * contesto, così i cammini cercati sono quelli che la vista iniziale mostra.
      */
     public const MAP_EXTENT_MARGIN = 0.3;
+
+    /**
+     * Quanto dura il lock del rilancio del calcolo di corrispondenza all'apertura del dettaglio
+     * (oc:8773): una traccia il cui calcolo fallisce si riaccoda al massimo una volta in questo
+     * intervallo, non a ogni apertura. Basta che superi l'attesa tipica in coda più il calcolo
+     * (pochi secondi); finché il job non parte lo rende comunque unico ShouldBeUniqueUntilProcessing.
+     */
+    public const MATCHING_LOCK_SECONDS = 300;
 
     /** Tetto delle EcTrack di contesto sulla mappa Nova (oc:8747). */
     public const CONTEXT_TRACKS_LIMIT = 200;
@@ -117,6 +130,98 @@ class UgcTrack extends MultiLineString implements UserOwnedModelInterface
     public function author(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /**
+     * Segmenti di EcTrack corrispondenti a questa traccia (oc:8773).
+     *
+     * @return HasMany<UgcTrackEcTrackMatch, $this>
+     */
+    public function ecTrackMatches(): HasMany
+    {
+        return $this->hasMany(UgcTrackEcTrackMatch::class);
+    }
+
+    /**
+     * Stato del calcolo di corrispondenza (oc:8773): null se non è mai stato fatto.
+     *
+     * @return HasOne<UgcTrackMatchingRun, $this>
+     */
+    public function matchingRun(): HasOne
+    {
+        return $this->hasOne(UgcTrackMatchingRun::class);
+    }
+
+    /**
+     * Serve (ri)calcolare la corrispondenza (oc:8773): stato assente, fallito, oppure calcolato con
+     * segmento o distanza massima diversi dai parametri attuali della App. Stessa regola di
+     * UgcTrackMatchingService::unmatchedUgcTrackIdsQuery(). Chi ha già letto stato e parametri
+     * (il campo Nova) usa runNeedsMatching() e non rifà le query.
+     */
+    public function matchingNeeded(): bool
+    {
+        return self::runNeedsMatching(
+            $this->matchingRun()->first(),
+            UgcTrackMatchingService::make()->params((int) $this->app_id),
+        );
+    }
+
+    /**
+     * La regola di matchingNeeded() su stato e parametri già letti.
+     *
+     * @param  array{segment_length_meters:int, max_distance_meters:int}  $params
+     */
+    public static function runNeedsMatching(?UgcTrackMatchingRun $run, array $params): bool
+    {
+        if ($run === null || $run->status === UgcTrackMatchingRun::STATUS_FAILED) {
+            return true;
+        }
+
+        return (int) $run->segment_length_meters !== $params['segment_length_meters']
+            || (int) $run->max_distance_meters !== $params['max_distance_meters'];
+    }
+
+    /**
+     * Accoda il calcolo di corrispondenza se serve (oc:8773), come
+     * MultiLineString::dispatchDemIfMissing() per il DEM: lo chiama il dettaglio Nova. Il lock
+     * su Redis evita di riaccodare a ogni apertura mentre il job è in coda o è appena fallito.
+     * Con $needed già calcolato dal chiamante non rilegge stato e parametri.
+     * Ritorna true se ha accodato.
+     *
+     * Con il driver di coda `sync` il calcolo gira dentro la richiesta Nova del dettaglio, e
+     * un'eccezione del calcolo arriva fino alla pagina: il meccanismo presuppone una coda vera
+     * (camminiditalia usa Horizon su redis).
+     */
+    public function dispatchMatchingIfNeeded(?bool $needed = null): bool
+    {
+        if (! ($needed ?? $this->matchingNeeded())) {
+            return false;
+        }
+        if (! Cache::store('redis')->add('ugc-track-matching-lock:'.$this->getKey(), true, self::MATCHING_LOCK_SECONDS)) {
+            return false;
+        }
+        MatchUgcTrackToEcTracksJob::dispatch((int) $this->getKey());
+
+        return true;
+    }
+
+    /**
+     * Id dei layer attraversati (oc:8773), ricavati dalla corrispondenza per segmenti e da layerables;
+     * le righe di layerables che puntano a layer cancellati sono ignorate.
+     *
+     * @return array<int, int>
+     */
+    public function matchedLayerIds(): array
+    {
+        return DB::table('ugc_track_ec_track_matches as m')
+            ->join('layerables as lb', function ($join) {
+                $join->on('lb.layerable_id', '=', 'm.ec_track_id')
+                    ->where('lb.layerable_type', UgcTrackMatchingService::make()->ecTrackMorphClass());
+            })
+            ->join('layers as l', 'l.id', '=', 'lb.layer_id')
+            ->where('m.ugc_track_id', $this->id)
+            ->distinct()->orderBy('lb.layer_id')
+            ->pluck('lb.layer_id')->map(fn ($id) => (int) $id)->all();
     }
 
     /**

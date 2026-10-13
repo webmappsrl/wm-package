@@ -30,6 +30,7 @@ use Wm\WmPackage\Commands\WmGenerateIconsCommand;
 use Wm\WmPackage\Commands\WmGeneratePBFCommand;
 use Wm\WmPackage\Commands\WmImportEcPoiFromOsmCommand;
 use Wm\WmPackage\Commands\WmImportFromGeohubCommand;
+use Wm\WmPackage\Commands\WmMatchUgcTracksCommand;
 use Wm\WmPackage\Commands\WmPackageCommand;
 use Wm\WmPackage\Commands\WmPackagePublishMigrationCommand;
 use Wm\WmPackage\Commands\WmPackagePublishMissingMigrationsCommand;
@@ -114,7 +115,12 @@ class WmPackageServiceProvider extends PackageServiceProvider
     {
         parent::boot();
         $this->loadJsonTranslationsFrom(__DIR__.'/../resources/lang');
-        $this->loadTranslationsFrom(__DIR__.'/../resources/lang');
+        // File PHP di traduzione (es. validation.php di oc:8247) senza namespace: il resolver dei
+        // messaggi di validazione cerca `validation.custom.*` solo nel gruppo globale. Stanno in
+        // una cartella senza JSON perché `FileLoader::loadJsonPaths()` rilegge i `*.json` anche
+        // da ogni path PHP registrato, dopo la `lang/` dello shard: con `resources/lang` qui le
+        // voci JSON del package vincevano su quelle dello shard (oc:8773).
+        $this->loadTranslationsFrom(__DIR__.'/../resources/lang-php');
 
         $packageDirPath = $this->package->basePath('/../');
 
@@ -248,6 +254,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
                 WmBuildAppPoisGeojsonCommand::class,
                 WmSyncUgcTaxonomyWhereCommand::class,
                 WmCleanUgcTrackGeometryCommand::class,
+                WmMatchUgcTracksCommand::class,
                 WmFixDuplicatedUgcCommand::class,
                 WmResyncTaxonomyWhereCommand::class,
                 WmBackfillGravatarAvatarsCommand::class,
