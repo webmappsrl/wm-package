@@ -2,6 +2,7 @@
 
 namespace Wm\WmPackage\Observers;
 
+use Wm\WmPackage\Jobs\MatchUgcTrackToEcTracksJob;
 use Wm\WmPackage\Jobs\UpdateUgcTrackDemStatsJob;
 use Wm\WmPackage\Models\UgcTrack;
 use Wm\WmPackage\Services\Models\UgcTrackCleanupService;
@@ -43,6 +44,12 @@ class UgcTrackGeometryCleanupObserver
      */
     public function saved(UgcTrack $track): void
     {
+        // oc:8773: corrispondenza per segmenti, dopo il commit, su traccia nuova o con geometria
+        // cambiata (compreso il retry dell'app che aggiorna per uuid, oc:8718).
+        if ($track->wasRecentlyCreated || $track->wasChanged('geometry')) {
+            MatchUgcTrackToEcTracksJob::dispatch($track->id)->afterCommit();
+        }
+
         $stats = $track->properties['stats'] ?? null;
         if (! is_array($stats) || ! ($track->wasRecentlyCreated || $track->wasChanged('properties'))) {
             return;

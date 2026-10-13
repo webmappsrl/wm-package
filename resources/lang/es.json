@@ -42,5 +42,17 @@
     "Origin": "Origen",
     "Recorded": "Grabada",
     "Imported file": "Archivo importado",
-    "Imported file (GPX)": "Archivo importado (GPX)"
+    "Imported file (GPX)": "Archivo importado (GPX)",
+    "Layers crossed by the track": "Capas atravesadas por la traza",
+    "Layer crossed by the track": "Capa atravesada por la traza",
+    "EcTracks crossed outside any layer": "EC track atravesadas fuera de toda capa",
+    "The track does not cross any EcTrack": "La UGC track no atraviesa ninguna EC track",
+    "Matching in progress: reload the page shortly": "Cálculo de la correspondencia en curso: vuelve a cargar la página en breve",
+    "Matching failed": "Error en el cálculo de la correspondencia",
+    "Each EC track is split into segments of this length, and its match is the share of segments touched by the UGC track (e.g. 30 segments out of 40 = 75%). A lower value gives a more precise match but makes the computation slower.": "Cada EC track se divide en segmentos de esta longitud, y su correspondencia es la proporción de segmentos tocados por la UGC track (p. ej. 30 segmentos de 40 = 75 %). Un valor más bajo da una correspondencia más precisa, pero hace el cálculo más lento.",
+    "An EC track segment counts as covered if the UGC track passes within this distance. A higher value tolerates inaccurate GPS and small deviations, but may also count nearby or parallel EC tracks that were not actually covered.": "Un segmento de EC track se considera recorrido si la UGC track pasa a esta distancia o menos. Un valor más alto tolera un GPS impreciso y pequeñas desviaciones, pero puede contar también EC tracks cercanas o paralelas que en realidad no se recorrieron.",
+    "UGC TRACK MATCHING WITH EC TRACKS": "CORRESPONDENCIA ENTRE UGC TRACK Y EC TRACK",
+    "Every UGC track is compared with the EC tracks of the app to know which EC tracks, and therefore which layers, it crossed. Each EC track is split into fixed-length segments: a segment counts as covered if the UGC track passes within the given distance. Changing these values recomputes all the UGC tracks of the app.": "Cada UGC track se compara con las EC track de la app para saber qué EC track, y por tanto qué capas, ha atravesado. Cada EC track se divide en segmentos de longitud fija: un segmento cuenta como recorrido si la UGC track pasa dentro de la distancia indicada. Cambiar estos valores recalcula todas las UGC track de la app.",
+    "EC track segment length (m)": "Longitud del segmento de la EC track (m)",
+    "Maximum distance from the UGC track (m)": "Distancia máxima de la UGC track (m)"
 }

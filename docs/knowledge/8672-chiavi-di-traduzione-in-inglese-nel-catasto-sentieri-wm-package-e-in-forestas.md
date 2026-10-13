@@ -5,7 +5,9 @@
 - Le chiavi di `__()` sono in inglese. In `resources/lang/en.json` la voce ripete la chiave, in
   `resources/lang/it.json` porta il testo italiano. Dall'oc:8672 vale anche per il Catasto Sentieri.
 - Le voci del package arrivano a ogni shard che lo monta: Laravel unisce `resources/lang/` del
-  package e `lang/` dello shard, e a parità di chiave vince lo shard. Una chiave generica tradotta
+  package e `lang/` dello shard, e a parità di chiave vince lo shard. Lo garantisce
+  `tests/Feature/TranslationPrecedenceTest.php`: dall'oc:8247 all'oc:8773 vinceva il package,
+  perché `resources/lang/` era registrata anche come path PHP (ora i PHP stanno in `resources/lang-php/`). Una chiave generica tradotta
   per un dominio (`Details`, `Detail`, `Status`, `Source`) cambia il testo anche nelle altre
   schermate che la usavano senza voce.
 - Nessuno dei due errori produce un messaggio: una chiave italiana compare in italiano con

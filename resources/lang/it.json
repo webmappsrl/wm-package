@@ -12,9 +12,17 @@
     "App Store link (iOS)": "Link App Store (iOS)",
     "App name on the stores (App Store and Playstore).": "Nome dell'app sugli store (App Store e Play Store).",
     "Android Certificate SHA-256": "Certificato Android SHA-256",
+    "Each EC track is split into segments of this length, and its match is the share of segments touched by the UGC track (e.g. 30 segments out of 40 = 75%). A lower value gives a more precise match but makes the computation slower.": "Ogni EC track viene divisa in segmenti di questa lunghezza, e la sua corrispondenza è la quota di segmenti toccati dalla UGC track (es. 30 segmenti su 40 = 75%). Un valore più basso dà una corrispondenza più precisa, ma rende il calcolo più lento.",
+    "An EC track segment counts as covered if the UGC track passes within this distance. A higher value tolerates inaccurate GPS and small deviations, but may also count nearby or parallel EC tracks that were not actually covered.": "Un segmento di EC track conta come percorso se la UGC track passa entro questa distanza. Un valore più alto tollera il GPS impreciso e le piccole deviazioni, ma rischia di contare anche EC track vicine o parallele che non sono state percorse.",
+    "Matching failed": "Calcolo della corrispondenza fallito",
+    "Matching in progress: reload the page shortly": "Calcolo della corrispondenza in corso: ricarica la pagina tra poco",
+    "EcTracks crossed outside any layer": "EC track attraversate fuori da ogni layer",
+    "Layer crossed by the track": "Layer attraversato dalla traccia",
+    "Layers crossed by the track": "Layer attraversati dalla traccia",
     "SHA-256 signing certificate fingerprint(s) (format XX:XX:...), used to build the Android assetlinks.json entry for the QR code deep link feature. Separate multiple fingerprints with a comma (e.g. upload key + Play Store signing key).": "Impronta/e del certificato di firma SHA-256 (formato XX:XX:...), usate per costruire la voce assetlinks.json Android per la funzionalità di deep link tramite QR code. Separa più impronte con una virgola (es. chiave di upload + chiave di firma Play Store).",
     "Apple Team ID": "Apple Team ID",
     "Apple Developer Team ID used to build the appID in apple-app-site-association for the QR code deep link feature. Leave empty to use Webmapp's default team.": "Apple Developer Team ID usato per costruire l'appID in apple-app-site-association per la funzionalità di deep link tramite QR code. Lascia vuoto per usare il team di default di Webmapp.",
+    "The track does not cross any EcTrack": "La UGC track non attraversa nessuna EC track",
     "Website URL": "URL del sito web",
     "Custom domain used to build QR code deep link URLs (Track/Poi). Leave empty to use the default {app_id}.{APP_NAME}.webmapp.it domain.": "Dominio personalizzato usato per costruire gli URL di deep link del QR code (Traccia/POI). Lascia vuoto per usare il dominio predefinito {app_id}.{APP_NAME}.webmapp.it.",
     "Native App Deep Link": "Deep Link App Nativa",
@@ -573,5 +581,9 @@
     "Origin": "Origine",
     "Recorded": "Registrata",
     "Imported file": "File importato",
-    "Imported file (GPX)": "File importato (GPX)"
+    "Imported file (GPX)": "File importato (GPX)",
+    "UGC TRACK MATCHING WITH EC TRACKS": "CORRISPONDENZA FRA UGC TRACK ED EC TRACK",
+    "Every UGC track is compared with the EC tracks of the app to know which EC tracks, and therefore which layers, it crossed. Each EC track is split into fixed-length segments: a segment counts as covered if the UGC track passes within the given distance. Changing these values recomputes all the UGC tracks of the app.": "Ogni UGC track viene confrontata con le EC track dell'app, per sapere quali EC track, e quindi quali layer, ha attraversato. Ogni EC track è divisa in segmenti di lunghezza fissa: un segmento conta come percorso se la UGC track passa entro la distanza indicata. Cambiare questi valori ricalcola tutte le UGC track dell'app.",
+    "EC track segment length (m)": "Lunghezza del segmento della EC track (m)",
+    "Maximum distance from the UGC track (m)": "Distanza massima dalla UGC track (m)"
 }

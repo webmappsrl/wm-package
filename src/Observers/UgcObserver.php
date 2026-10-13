@@ -27,6 +27,13 @@ class UgcObserver extends AbstractAuthorableObserver
             return;
         }
 
+        // oc:8773: una UgcTrack attraversa più layer, quindi non ha un layer_id singolo; i layer si
+        // ricavano dalla corrispondenza per segmenti (UgcTrackMatchingService). Gli UgcPoi restano
+        // invariati.
+        if ($model instanceof UgcTrack) {
+            return;
+        }
+
         $this->populateLayerId($model);
     }
 

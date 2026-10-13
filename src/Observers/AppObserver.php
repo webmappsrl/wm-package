@@ -4,10 +4,12 @@ namespace Wm\WmPackage\Observers;
 
 use Illuminate\Support\Facades\Log;
 use Throwable;
+use Wm\WmPackage\Jobs\RematchAppUgcTracksJob;
 use Wm\WmPackage\Jobs\SyncWellKnownRegistryJob;
 use Wm\WmPackage\Jobs\TaxonomyWhere\RegenerateTaxonomyWhereOutputsJob;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Services\Models\App\AppConfigService;
+use Wm\WmPackage\Services\Models\UgcTrackMatchingService;
 use Wm\WmPackage\Services\TaxonomyWhereDisplayService;
 
 class AppObserver extends AbstractObserver
@@ -39,6 +41,30 @@ class AppObserver extends AbstractObserver
         }
 
         $this->regenerateTaxonomyWhereOutputsIfChanged($app);
+        $this->rematchUgcTracksIfChanged($app);
+    }
+
+    /**
+     * Un cambio di segmento o distanza massima della corrispondenza (oc:8773) ricalcola le UgcTrack dell'App:
+     * un solo job per App, anche se cambiano entrambi i parametri.
+     */
+    private function rematchUgcTracksIfChanged(App $app): void
+    {
+        if (! $app->wasChanged('properties')) {
+            return;
+        }
+
+        $before = $app->getOriginal('properties');
+        $before = is_array($before) ? $before : (json_decode((string) $before, true) ?: []);
+        $after = $app->properties ?? [];
+
+        foreach ([UgcTrackMatchingService::SEGMENT_LENGTH_KEY, UgcTrackMatchingService::MAX_DISTANCE_KEY] as $key) {
+            if (($before[$key] ?? null) != ($after[$key] ?? null)) {
+                RematchAppUgcTracksJob::dispatch($app->id)->afterCommit();
+
+                return;
+            }
+        }
     }
 
     /**

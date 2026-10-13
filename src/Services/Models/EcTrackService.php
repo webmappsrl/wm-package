@@ -11,6 +11,7 @@ use InvalidArgumentException;
 use Throwable;
 use Wm\WmPackage\Facades\OsmClient;
 use Wm\WmPackage\Http\Clients\DemClient;
+use Wm\WmPackage\Jobs\MatchEcTrackToUgcTracksJob;
 use Wm\WmPackage\Jobs\Pbf\GenerateEcTrackPBFBatch;
 use Wm\WmPackage\Jobs\TaxonomyWhere\SyncModelTaxonomyWhereJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrack3DDemJob;
@@ -177,6 +178,11 @@ class EcTrackService extends BaseService
             $properties['osm_data'] = $osmData;
             $track->properties = $properties;
             $track->saveQuietly();
+
+            // saveQuietly() salta gli observer: se la geometria è cambiata la corrispondenza con le UgcTrack (oc:8773) va ricalcolata a mano.
+            if ($track->wasChanged('geometry')) {
+                $this->dispatchUgcTrackMatching($track);
+            }
 
             $result['success'] = true;
         } catch (Exception $e) {
@@ -354,6 +360,16 @@ class EcTrackService extends BaseService
         $chain[] = new UpdateEcTrackOrderRelatedPoi($track);
 
         Bus::chain($chain)->dispatch();
+        $this->dispatchUgcTrackMatching($track);
+    }
+
+    /**
+     * Ricalcolo della corrispondenza fra questa EcTrack e le UgcTrack (oc:8773), accodato fuori dalla
+     * catena: un job della catena che fallisce (DEM, PBF) non deve lasciare la corrispondenza vecchia.
+     */
+    public function dispatchUgcTrackMatching(EcTrack $track): void
+    {
+        MatchEcTrackToUgcTracksJob::dispatch($track->id)->afterCommit();
     }
 
     /**
@@ -528,8 +544,11 @@ class EcTrackService extends BaseService
 
         // Prima la catena, poi l'indice: un errore di Elasticsearch non deve impedire il
         // ricalcolo né arrivare a Nova come errore su un'inversione già scritta.
-        DB::afterCommit(function () use ($track, $jobs) {
+        DB::afterCommit(function () use ($track, $jobs, $geometry) {
             Bus::chain($jobs)->dispatch();
+            if ($geometry) {
+                $this->dispatchUgcTrackMatching($track);
+            }
             $this->reindexForSearch($track);
         });
 
@@ -614,6 +633,7 @@ class EcTrackService extends BaseService
 
     public function updateDataChain(EcTrack $track)
     {
+        $geometryChanged = false;
         $chain = [];
         if (isset($track->properties['osmid']) && $track->properties['osmid']) {
             $chain[] = new UpdateEcTrackFromOsmJob($track);
@@ -631,11 +651,16 @@ class EcTrackService extends BaseService
             // una seconda in parallelo che si sovrascriverebbe properties (oc:8660).
             $track->acquireDemLock();
             array_push($chain, ...$this->geometryDependentJobs($track));
+            $geometryChanged = true;
         }
 
         array_push($chain, ...$this->publicationJobs($track));
 
         Bus::chain($chain)->dispatch();
+
+        if ($geometryChanged) {
+            $this->dispatchUgcTrackMatching($track);
+        }
     }
 
     // IT GETS data from ec TRACK and compute the proper order filling outputData['related_pois_order'] array

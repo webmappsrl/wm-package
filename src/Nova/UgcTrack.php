@@ -3,10 +3,13 @@
 namespace Wm\WmPackage\Nova;
 
 use Laravel\Nova\Fields\Badge;
+use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Wm\WmPackage\Models\UgcTrack as UgcTrackModel;
 use Wm\WmPackage\Nova\Actions\DownloadUgcTrackAction;
 use Wm\WmPackage\Nova\Fields\FeatureCollectionMap\src\FeatureCollectionMap;
+use Wm\WmPackage\Nova\Filters\UgcTrackLayerFilter;
+use Wm\WmPackage\Nova\Support\UgcTrackMatchesHtml;
 use Wm\WmPackage\Services\Models\UgcTrackCleanupService;
 
 class UgcTrack extends AbstractUgcResource
@@ -73,6 +76,20 @@ class UgcTrack extends AbstractUgcResource
                 // qui verrebbe sovrascritto in silenzio.
                 ->hideWhenUpdating(fn ($request, $resource) => $resource instanceof UgcTrackModel
                     && $cleanup->locationsOf($resource) !== null),
+            // oc:8773: layer ed EcTrack attraversati, solo nel dettaglio (fa query).
+            Text::make(__('Layers crossed by the track'), fn () => $this->resource instanceof UgcTrackModel
+                ? UgcTrackMatchesHtml::render($this->resource)
+                : null)
+                ->asHtml()
+                ->onlyOnDetail(),
+        ];
+    }
+
+    public function filters(NovaRequest $request): array
+    {
+        return [
+            ...parent::filters($request),
+            new UgcTrackLayerFilter,
         ];
     }
 

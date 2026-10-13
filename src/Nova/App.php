@@ -49,6 +49,7 @@ use Wm\WmPackage\Nova\Flexible\ConfigHome\HorizontalScrollPoiTrackRepeaterJsonPr
 use Wm\WmPackage\Nova\Flexible\ConfigHome\HorizontalScrollRepeaterJsonPreset;
 use Wm\WmPackage\Nova\Flexible\Resolvers\ConfigHomeResolver;
 use Wm\WmPackage\Nova\Flexible\Resolvers\ConfigOverlaysResolver;
+use Wm\WmPackage\Services\Models\UgcTrackMatchingService;
 use Wm\WmPackage\Services\RolesAndPermissionsService;
 use Wm\WmPackage\Services\TaxonomyWhereDisplayService;
 use Wm\WmPackage\Support\ImportedAppProperties;
@@ -109,6 +110,7 @@ class App extends Resource
                 Tab::make('searchable', $this->searchable_tab()),
                 Tab::make('analytics', $this->analytics_tab()),
                 Tab::make('overlays', $this->overlays_tab()),
+                Tab::make('UGC', $this->ugc_tab()),
             ]),
 
             // TODO: implement fields
@@ -277,6 +279,36 @@ class App extends Resource
                 ->default(false)
                 ->hideFromIndex()
                 ->help(__('Shows a button in layer details to copy the wm-layer-map web component snippet')),
+        ];
+    }
+
+    /** Parametri della corrispondenza fra UgcTrack ed EcTrack per segmenti (oc:8773). */
+    protected function ugc_tab(): array
+    {
+        return [
+            // CORRISPONDENZA FRA UGC TRACK ED EC TRACK
+            Heading::make(
+                '<h2><strong>'.e(__('UGC TRACK MATCHING WITH EC TRACKS')).'</strong></h2>'
+                .'<p>'.e(__('Every UGC track is compared with the EC tracks of the app to know which EC tracks, and therefore which layers, it crossed. Each EC track is split into fixed-length segments: a segment counts as covered if the UGC track passes within the given distance. Changing these values recomputes all the UGC tracks of the app.')).'</p>'
+            )->asHtml()->hideFromIndex(),
+            Number::make(__('EC track segment length (m)'), 'properties->'.UgcTrackMatchingService::SEGMENT_LENGTH_KEY)
+                ->min(UgcTrackMatchingService::SEGMENT_LENGTH_MIN)
+                ->max(UgcTrackMatchingService::SEGMENT_LENGTH_MAX)
+                ->step(1)
+                ->nullable()
+                ->rules('nullable', 'integer', 'between:'.UgcTrackMatchingService::SEGMENT_LENGTH_MIN.','.UgcTrackMatchingService::SEGMENT_LENGTH_MAX)
+                ->placeholder((string) config('wm-package.ugc_track_matching.segment_length_meters'))
+                ->hideFromIndex()
+                ->help(__('Each EC track is split into segments of this length, and its match is the share of segments touched by the UGC track (e.g. 30 segments out of 40 = 75%). A lower value gives a more precise match but makes the computation slower.')),
+            Number::make(__('Maximum distance from the UGC track (m)'), 'properties->'.UgcTrackMatchingService::MAX_DISTANCE_KEY)
+                ->min(UgcTrackMatchingService::MAX_DISTANCE_MIN)
+                ->max(UgcTrackMatchingService::MAX_DISTANCE_MAX)
+                ->step(1)
+                ->nullable()
+                ->rules('nullable', 'integer', 'between:'.UgcTrackMatchingService::MAX_DISTANCE_MIN.','.UgcTrackMatchingService::MAX_DISTANCE_MAX)
+                ->placeholder((string) config('wm-package.ugc_track_matching.max_distance_meters'))
+                ->hideFromIndex()
+                ->help(__('An EC track segment counts as covered if the UGC track passes within this distance. A higher value tolerates inaccurate GPS and small deviations, but may also count nearby or parallel EC tracks that were not actually covered.')),
         ];
     }
 
