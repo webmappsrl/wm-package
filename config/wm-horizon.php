@@ -287,6 +287,9 @@ return [
                 'balanceMaxShift' => 1,
                 'balanceCooldown' => 3,
             ],
+            // oc:8773: Horizon avvia solo i supervisor elencati per l'ambiente, non basta la
+            // definizione in defaults. Senza questa voce la coda ugc-track-matching non gira.
+            'supervisor-ugc-track-matching' => [],
         ],
         'local' => [
             'supervisor-default' => [
@@ -305,6 +308,9 @@ return [
                 'maxProcesses' => 1,
                 'balance' => 'simple',
             ],
+            // oc:8773: Horizon avvia solo i supervisor elencati per l'ambiente, non basta la
+            // definizione in defaults. Senza questa voce la coda ugc-track-matching non gira.
+            'supervisor-ugc-track-matching' => [],
         ],
         'staging' => [
             'supervisor-default' => [
@@ -335,6 +341,9 @@ return [
                 'balanceMaxShift' => 1,
                 'balanceCooldown' => 3,
             ],
+            // oc:8773: Horizon avvia solo i supervisor elencati per l'ambiente, non basta la
+            // definizione in defaults. Senza questa voce la coda ugc-track-matching non gira.
+            'supervisor-ugc-track-matching' => [],
         ],
     ],
 ];
