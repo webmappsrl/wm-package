@@ -34,7 +34,7 @@ class ContextTrackBandsService extends BaseService
      * @param  int|null  $nearUgcTrackId  se c'è, solo i pezzi di tappa entro la tolleranza da quella
      *                                    UgcTrack: le porzioni che la traccia tocca davvero
      * @return list<array{ec_track_id: int, cammini: list<int>, rank: int, n: int, geometry: array}>|null geometry è una
-     *                                                                                MultiLineString; null = calcolo non riuscito
+     *                                                                                                    MultiLineString; null = calcolo non riuscito
      */
     public function bands(array $camminoByEcTrack, int $maxDistanceMeters, ?int $nearUgcTrackId = null): ?array
     {
