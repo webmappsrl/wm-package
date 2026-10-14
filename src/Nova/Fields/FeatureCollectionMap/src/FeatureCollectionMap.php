@@ -406,6 +406,17 @@ class FeatureCollectionMap extends Field
     }
 
     /**
+     * Tooltip con tutte le linee sotto il mouse, una per riga e senza doppioni, invece della sola
+     * linea più in alto (oc:8776). Serve dove una linea ne copre altre. Default spento.
+     *
+     * @return $this
+     */
+    public function stackedTooltip(bool $enabled = true): static
+    {
+        return $this->withMeta(['stackedTooltip' => $enabled]);
+    }
+
+    /**
      * Prepare the field for JSON serialization.
      *
      * @return array<string, mixed>

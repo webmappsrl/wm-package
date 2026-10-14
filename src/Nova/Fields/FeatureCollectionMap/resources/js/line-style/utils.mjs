@@ -27,6 +27,71 @@ export function lineStyleSpec(props) {
 }
 
 /**
+ * Stili di una linea alla `resolution` data (oc:8776), ciascuno col proprio `zIndex`.
+ * - Senza `zoomedOutStyle`, o sotto la sua `minResolution`: lo stile di sempre, `[lineStyleSpec]`,
+ *   con sotto il contorno se la feature ha `casing: {color, width}` (a ogni zoom, senza tratteggio).
+ * - Da `minResolution` in su (mappa vista da lontano): `zoomedOutStyle` sostituisce colore,
+ *   spessore e gruppo di disegno e toglie il tratteggio; con `dashColors` la linea si divide in
+ *   segmenti lunghi `dashLength` pixel, un colore dopo l'altro (i cammini che passano su un
+ *   tratto condiviso).
+ * - `onlyZoomedOut: true`: la feature esiste solo da lontano (i tratti condivisi dai cammini).
+ *
+ * @param {Record<string, any>} props
+ * @param {number} resolution unità della proiezione per pixel, come la passa OpenLayers
+ * @returns {Array<{strokeColor: string, strokeWidth: number, lineDash: number[]|undefined, fillColor: string, zIndex: number|undefined, lineDashOffset?: number, lineCap?: string}>}
+ */
+export function lineStyles(props, resolution) {
+    const p = props && typeof props === 'object' ? props : {};
+    const z = p.zoomedOutStyle;
+    const zoomedOut = z !== null && typeof z === 'object'
+        && typeof z.minResolution === 'number'
+        && typeof resolution === 'number'
+        && resolution >= z.minResolution;
+
+    if (!zoomedOut) {
+        if (p.onlyZoomedOut === true) {
+            return [];
+        }
+        const line = lineStyleSpec(p);
+        const c = p.casing;
+        if (c !== null && typeof c === 'object' && typeof c.width === 'number') {
+            return [{ ...line, strokeColor: c.color, strokeWidth: c.width, lineDash: undefined }, line];
+        }
+        return [line];
+    }
+
+    const base = lineStyleSpec(p);
+    const spec = {
+        ...base,
+        strokeColor: z.strokeColor || base.strokeColor,
+        strokeWidth: z.strokeWidth || base.strokeWidth,
+        lineDash: undefined,
+        zIndex: typeof z.zIndex === 'number' ? z.zIndex : base.zIndex,
+    };
+    const colors = Array.isArray(z.dashColors) ? z.dashColors : [];
+    if (colors.length === 1) {
+        return [{ ...spec, strokeColor: colors[0] }];
+    }
+    if (colors.length > 1 && typeof z.dashLength === 'number' && z.dashLength > 0) {
+        // Il colore i occupa il segmento i di ogni gruppo di n: tutti sulla stessa geometria,
+        // quindi i segmenti non possono sfasarsi. Con il trattino [L, (n−1)L] il segmento i
+        // inizia a i·L quando lo spostamento è (n − i)·L. Estremità piatte: con quelle tonde
+        // ogni segmento invaderebbe il vicino di mezza larghezza di linea.
+        const n = colors.length;
+        const length = z.dashLength;
+        return colors.map((color, i) => ({
+            ...spec,
+            strokeColor: color,
+            lineDash: [length, length * (n - 1)],
+            lineDashOffset: ((n - i) % n) * length,
+            lineCap: 'butt',
+        }));
+    }
+
+    return [spec];
+}
+
+/**
  * Feature solo-etichetta (oc:8747) per le linee con `properties.lineLabel` non vuota: stessa
  * geometria, nessun'altra proprietà (niente tooltip, link, slopeChart), testo nel colore della
  * linea. Vanno su un layer separato con declutter, escluso dalla ricerca delle feature sotto

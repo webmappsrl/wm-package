@@ -64,22 +64,22 @@ it('lascia il campo geometria modificabile se la traccia non ha locations', func
     expect(updateFieldAttributes($track))->toContain('geometry');
 });
 
-it('aggiunge alla mappa un tratto tratteggiato per ogni sequenza di punti scartati', function () {
+it('aggiunge alla mappa un tratto ricostruito, continuo, per ogni sequenza di punti scartati', function () {
     $collection = trackWithLocations($this->user->id, $this->app_->id)->getFeatureCollectionMap();
 
-    $dashed = array_values(array_filter($collection['features'], fn ($f) => isset($f['properties']['strokeDash'])));
+    $dashed = array_values(array_filter($collection['features'], fn ($f) => ($f['properties']['strokeColor'] ?? null) === UgcTrack::RECONSTRUCTED_SEGMENT_COLOR));
 
     expect($dashed)->toHaveCount(1);
     expect($dashed[0]['geometry'])->toBe(['type' => 'LineString', 'coordinates' => [[13.0, 43.0], [13.0, 43.0001]]]);
-    expect($dashed[0]['properties']['strokeDash'])->toBe([8, 8]);
+    expect($dashed[0]['properties'])->not->toHaveKey('strokeDash');
     expect($dashed[0]['properties']['tooltip'])->toContain('7857');
 });
 
 it('segna la linea della traccia per il profilo altimetrico anche con i tratti ricostruiti', function () {
     $features = trackWithLocations($this->user->id, $this->app_->id)->getFeatureCollectionMap()['features'];
 
-    $track = array_values(array_filter($features, fn ($f) => ! isset($f['properties']['strokeDash'])));
-    $dashed = array_values(array_filter($features, fn ($f) => isset($f['properties']['strokeDash'])));
+    $track = array_values(array_filter($features, fn ($f) => ($f['properties']['slopeChart'] ?? false) === true));
+    $dashed = array_values(array_filter($features, fn ($f) => ($f['properties']['strokeColor'] ?? null) === UgcTrack::RECONSTRUCTED_SEGMENT_COLOR));
 
     expect($track)->toHaveCount(1);
     expect($track[0]['properties']['slopeChart'] ?? null)->toBeTrue();
@@ -92,7 +92,7 @@ it('segna la linea della traccia per il profilo altimetrico anche con i tratti r
 it('non aggiunge tratti per una traccia senza locations', function () {
     $track = UgcTrack::factory()->create(['user_id' => $this->user->id, 'app_id' => $this->app_->id, 'properties' => ['name' => 'senza']]);
 
-    $dashed = array_filter($track->getFeatureCollectionMap()['features'], fn ($f) => isset($f['properties']['strokeDash']));
+    $dashed = array_filter($track->getFeatureCollectionMap()['features'], fn ($f) => ($f['properties']['strokeColor'] ?? null) === UgcTrack::RECONSTRUCTED_SEGMENT_COLOR);
 
     expect($dashed)->toBe([]);
 });
@@ -115,7 +115,7 @@ it('sulla mappa del dettaglio mostra la legenda se ci sono tratti ricostruiti', 
     expect($legend)->toHaveCount(2);
     expect($legend[0])->toBe(['label' => __('Recorded track'), 'color' => 'rgba(0, 0, 255, 1)', 'dash' => false]);
     expect($legend[1]['color'])->toBe(UgcTrack::RECONSTRUCTED_SEGMENT_COLOR);
-    expect($legend[1]['dash'])->toBeTrue();
+    expect($legend[1]['dash'])->toBeFalse();
 });
 
 it('sulla mappa del dettaglio non mostra la legenda senza locations o senza tratti ricostruiti', function () {

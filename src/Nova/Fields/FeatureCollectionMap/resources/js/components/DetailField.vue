@@ -9,6 +9,7 @@
                 :technical-data="field.technicalData || []"
                 :extent-margin="Number(field.extentMargin) || 0"
                 :lock-zoom-out="field.lockZoomOut === true"
+                :stacked-tooltip="field.stackedTooltip === true"
                 :resource-name="resourceName"
                 :resource-id="resourceId || (resource && resource.id && resource.id.value)"
                 @feature-click="handleFeatureClick" @map-ready="handleMapReady" @popup-open="handlePopupOpen"

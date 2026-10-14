@@ -12,6 +12,7 @@ use Wm\WmPackage\Models\Abstracts\MultiLineString;
 use Wm\WmPackage\Models\Interfaces\UserOwnedModelInterface;
 use Wm\WmPackage\Observers\UgcObserver;
 use Wm\WmPackage\Observers\UgcTrackGeometryCleanupObserver;
+use Wm\WmPackage\Services\Models\ContextTrackBandsService;
 use Wm\WmPackage\Services\Models\UgcTrackCleanupService;
 use Wm\WmPackage\Services\Models\UgcTrackMatchingService;
 use Wm\WmPackage\Traits\OwnedByUserModel;
@@ -34,10 +35,52 @@ class UgcTrack extends MultiLineString implements UserOwnedModelInterface
 {
     use OwnedByUserModel, TaxonomyAbleModel, TaxonomyWhereAbleModel;
 
-    /** Colore e tratteggio dei tratti ricostruiti sulla mappa (oc:8719), usati anche dalla legenda Nova. */
+    /**
+     * Colore dei tratti ricostruiti sulla mappa (oc:8719), usato anche dalla legenda Nova.
+     * Linea continua dal oc:8776: la legenda non cambia con lo zoom.
+     */
     public const RECONSTRUCTED_SEGMENT_COLOR = 'rgba(234, 88, 12, 1)';
 
-    public const RECONSTRUCTED_SEGMENT_DASH = [8, 8];
+    /** Colore della traccia registrata sulla mappa, lo stesso della legenda Nova. */
+    public const TRACK_COLOR = 'rgba(0, 0, 255, 1)';
+
+    /**
+     * Traccia sulla mappa con le tappe di contesto (oc:8776): sempre la stessa misura, a ogni
+     * zoom, TRACK_WIDTH su un contorno bianco largo TRACK_CASING_WIDTH, che la stacca dai colori
+     * dei cammini. Vale anche per i tratti ricostruiti.
+     */
+    public const TRACK_WIDTH = 1.5;
+
+    public const TRACK_CASING_WIDTH = 2.5;
+
+    public const TRACK_CASING_COLOR = 'rgba(255, 255, 255, 1)';
+
+    /**
+     * Tappe di contesto larghe CONTEXT_STAGE_WIDTH (oc:8776): accanto alla traccia, più sottile,
+     * restano 1,25px per lato del colore della tappa.
+     */
+    public const CONTEXT_STAGE_WIDTH = 5;
+
+    /**
+     * Le tappe toccate si disegnano intere larghe CONTEXT_THIN_WIDTH, meno della traccia, e
+     * CONTEXT_STAGE_WIDTH solo nei pezzi che la traccia tocca (oc:8776): una tappa incrociata per
+     * poche centinaia di metri non si colora piena per tutti i suoi chilometri.
+     */
+    public const CONTEXT_THIN_WIDTH = 1.5;
+
+    /** Pezzi di tappa toccati dalla traccia (oc:8776): 2,25px di colore per lato accanto alla traccia. */
+    public const CONTEXT_TOUCHED_WIDTH = 7;
+
+    /**
+     * Mappa vista da lontano (oc:8776): quando la tolleranza della corrispondenza (oc:8773) sta in
+     * ZOOMED_OUT_TOLERANCE_PIXELS, linee distanti meno di quella finiscono sugli stessi pixel, e
+     * non si capisce più quali cammini passano lì. Sui tratti condivisi da più cammini si posa
+     * allora sulla tappa un pezzo di sé stessa, a segmenti di ZOOMED_OUT_DASH_LENGTH pixel nei
+     * colori di quei cammini. Avvicinandosi le linee si separano da sole e quel pezzo sparisce.
+     */
+    public const ZOOMED_OUT_TOLERANCE_PIXELS = 5;
+
+    public const ZOOMED_OUT_DASH_LENGTH = 8;
 
     /**
      * Colori delle EcTrack di contesto sulla mappa Nova (oc:8747), uno per cammino (layer).
@@ -269,16 +312,125 @@ class UgcTrack extends MultiLineString implements UserOwnedModelInterface
         // oc:8747: i percorsi dell'App che passano nella zona, come contesto. In testa alla
         // collection: il campo disegna le feature nell'ordine ricevuto, e così la traccia UGC
         // resta sopra, anche per il tooltip al passaggio del mouse.
-        $context = $this->layerContextFeatures();
-        if ($context !== []) {
-            $collection['features'] = [...$context, ...($collection['features'] ?? [])];
+        // oc:8776: la traccia, sottile con un contorno bianco; le tappe sottili, piene solo nei pezzi
+        // che la traccia tocca, e da lontano a segmenti dove su quei pezzi passano più cammini.
+        // Se quel calcolo non riesce, le tappe restano piene. L'ordine lo danno gli zIndex.
+        $maxDistance = $this->matchingMaxDistance($this->computedMatchingRun());
+        $minResolution = $maxDistance !== null ? $this->zoomedOutMinResolution($maxDistance) : null;
+        $portions = $maxDistance !== null ? $this->touchedPortionFeatures($minResolution, $maxDistance) : null;
+        $context = $this->layerContextFeatures(thin: $portions !== null);
+        if ($context === []) {
+            return $collection;
         }
+        $context = [...$context, ...($portions ?? [])];
+
+        foreach ($collection['features'] ?? [] as $i => $feature) {
+            $isTrack = ($feature['properties']['slopeChart'] ?? false) === true;
+            $isReconstructed = ($feature['properties']['strokeColor'] ?? null) === self::RECONSTRUCTED_SEGMENT_COLOR;
+            if ($isTrack || $isReconstructed) {
+                $collection['features'][$i]['properties']['strokeColor'] = $isTrack ? self::TRACK_COLOR : self::RECONSTRUCTED_SEGMENT_COLOR;
+                $collection['features'][$i]['properties']['strokeWidth'] = self::TRACK_WIDTH;
+                $collection['features'][$i]['properties']['casing'] = ['color' => self::TRACK_CASING_COLOR, 'width' => self::TRACK_CASING_WIDTH];
+            }
+            // Nel tooltip, fra le tappe, «Traccia registrata» come in legenda e non il nome dato
+            // dall'utente, che non dice cosa sia quella linea.
+            if ($isTrack) {
+                $collection['features'][$i]['properties']['tooltip'] = __('Recorded track');
+            }
+            // Nel tooltip con tutte le linee: prima la traccia, poi i tratti ricostruiti, poi le tappe.
+            if ($isTrack || $isReconstructed) {
+                $collection['features'][$i]['properties']['tooltipOrder'] = $isTrack ? 0 : 1;
+            }
+        }
+        $collection['features'] = [...$context, ...($collection['features'] ?? [])];
 
         return $collection;
     }
 
     /**
-     * Tratti ricostruiti al posto dei punti GPS scartati (oc:8719).
+     * Resolution OpenLayers (unità EPSG:3857 per pixel) da cui la mappa è «vista da lontano»
+     * (oc:8776): quando la tolleranza della corrispondenza sta in ZOOMED_OUT_TOLERANCE_PIXELS.
+     * Un'unità EPSG:3857 vale cos(latitudine) metri a terra: la soglia si divide per quel valore.
+     * Null se la traccia non ha geometria.
+     */
+    public function zoomedOutMinResolution(int $maxDistanceMeters): ?float
+    {
+        $lat = DB::selectOne(
+            'SELECT ST_Y(ST_Centroid(geometry::geometry)) AS lat FROM ugc_tracks WHERE id = ? AND geometry IS NOT NULL',
+            [$this->getKey()]
+        )?->lat;
+        if ($lat === null) {
+            return null;
+        }
+
+        return $maxDistanceMeters / self::ZOOMED_OUT_TOLERANCE_PIXELS / max(cos(deg2rad((float) $lat)), 0.01);
+    }
+
+    /** Riga `computed` della corrispondenza (oc:8773), o null: con `failed` le righe vecchie non valgono. */
+    private function computedMatchingRun(): ?object
+    {
+        return DB::table('ugc_track_matching_runs')
+            ->where('ugc_track_id', $this->getKey())
+            ->where('status', 'computed')
+            ->first();
+    }
+
+    /** Tolleranza della corrispondenza: quella del calcolo fatto, altrimenti quella dell'App. */
+    private function matchingMaxDistance(?object $run): ?int
+    {
+        if ($run !== null) {
+            return (int) $run->max_distance_meters;
+        }
+
+        return $this->app_id ? UgcTrackMatchingService::make()->params((int) $this->app_id)['max_distance_meters'] : null;
+    }
+
+    /** Colore CSS rgba con opacità 1 (oc:8776): le linee vicine non devono mescolarsi. */
+    private static function opaque(string $rgba): string
+    {
+        return preg_replace('/,\s*[\d.]+\)$/', ', 1)', $rgba);
+    }
+
+    /**
+     * Righe di contesto mostrate sulla mappa (oc:8776): con la corrispondenza `computed` di oc:8773
+     * solo le EcTrack toccate dalla traccia; senza, tutte quelle della zona (layerContextRows()),
+     * perché non si sa ancora quali sono toccate. Feature, legenda e tratti condivisi usano
+     * queste, quindi vedono le stesse tappe.
+     *
+     * @return list<object>
+     */
+    private function contextRows(bool $withGeometry): array
+    {
+        $rows = $this->layerContextRows($withGeometry);
+        $traversed = $rows === [] ? null : $this->traversedEcTrackIds();
+        if ($traversed === null) {
+            return $rows;
+        }
+
+        return array_values(array_filter($rows, fn ($row) => in_array((int) $row->id, $traversed, true)));
+    }
+
+    /**
+     * Id delle EcTrack toccate dalla traccia secondo la corrispondenza `computed` (oc:8773), o
+     * null se la corrispondenza non c'è.
+     *
+     * @return list<int>|null
+     */
+    private function traversedEcTrackIds(): ?array
+    {
+        if ($this->computedMatchingRun() === null) {
+            return null;
+        }
+
+        return DB::table('ugc_track_ec_track_matches')
+            ->where('ugc_track_id', $this->getKey())
+            ->pluck('ec_track_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+    }
+
+    /**
+     * Tratti ricostruiti al posto dei punti GPS scartati (oc:8719), continui dal oc:8776.
      */
     private function addReconstructedSegments(array $collection, UgcTrackCleanupService $cleanup, array $locations): array
     {
@@ -295,7 +447,6 @@ class UgcTrack extends MultiLineString implements UserOwnedModelInterface
                 'properties' => [
                     'strokeColor' => self::RECONSTRUCTED_SEGMENT_COLOR,
                     'strokeWidth' => 4,
-                    'strokeDash' => self::RECONSTRUCTED_SEGMENT_DASH,
                     'tooltip' => __('Reconstructed segment: :discarded points discarded in :minutes min (max accuracy :accuracy m)', [
                         'discarded' => $gap['discarded'],
                         'minutes' => (int) ceil($gap['seconds'] / 60),
@@ -319,17 +470,21 @@ class UgcTrack extends MultiLineString implements UserOwnedModelInterface
      * Una sola query PostGIS, al massimo CONTEXT_TRACKS_LIMIT tracce, geometrie 2D.
      * Una EcTrack in più layer dell'App compare una volta, con i nomi dei layer uniti nel tooltip.
      * Le feature portano `context: true` (il fit iniziale del campo le ignora e le disegna sotto),
-     * `lineLabel` col nome della EcTrack (scritto lungo la linea nel suo colore) e niente `slopeChart`.
+     * niente `slopeChart` e niente `lineLabel`: dal oc:8776 il nome della tappa sta solo nel
+     * tooltip, scritto lungo la linea copriva la mappa.
      * Nessuna feature se la UGC non ha App o geometria.
+     * Con la corrispondenza calcolata (oc:8773) solo le tappe toccate dalla traccia (oc:8776),
+     * larghe CONTEXT_STAGE_WIDTH, o CONTEXT_THIN_WIDTH con $thin quando i pezzi toccati si
+     * disegnano a parte (touchedPortionFeatures()).
      *
      * Gira solo dalla route del campo, cioè quando la mappa del dettaglio chiede il GeoJSON:
      * l'index non la chiama.
      *
      * @return list<array<string, mixed>>
      */
-    public function layerContextFeatures(): array
+    public function layerContextFeatures(bool $thin = false): array
     {
-        $rows = $this->layerContextRows(withGeometry: true);
+        $rows = $this->contextRows(withGeometry: true);
 
         // Colore per cammino, assegnato su questa mappa: con più layer per traccia vale quello
         // con id più basso (color_layer_id).
@@ -337,32 +492,120 @@ class UgcTrack extends MultiLineString implements UserOwnedModelInterface
 
         $features = [];
         foreach ($rows as $row) {
-            $layerNames = array_map(
-                fn (?string $raw) => (new Layer)->setRawAttributes(['name' => $raw], true)->getStringName(),
-                json_decode($row->layer_names, true) ?: []
-            );
-            $layerLabel = implode(', ', array_filter($layerNames));
-            // Stessa regola di fallback del nome layer (lingua corrente → it → en → prima).
-            $trackName = (new Layer)->setRawAttributes(['name' => $row->track_name], true)->getStringName();
+            [$layerLabel, $trackName] = $this->contextNames($row);
+
+            $properties = [
+                // Niente `id`: il campo indicizza le feature per id e quello di una EcTrack
+                // potrebbe coincidere con quello della traccia UGC.
+                'strokeColor' => $colors[(int) $row->color_layer_id],
+                'strokeWidth' => $thin ? self::CONTEXT_THIN_WIDTH : self::CONTEXT_STAGE_WIDTH,
+                'tooltip' => $layerLabel.' — '.$trackName,
+                'context' => true,
+            ];
 
             $features[] = [
                 'type' => 'Feature',
                 'geometry' => json_decode($row->geojson, true),
+                'properties' => $properties,
+            ];
+        }
+
+        return $features;
+    }
+
+    /**
+     * Pezzi di tappa toccati dalla traccia (oc:8776): le porzioni delle tappe entro la tolleranza
+     * della corrispondenza dalla traccia (ContextTrackBandsService), larghe CONTEXT_TOUCHED_WIDTH
+     * nel colore del cammino, a ogni zoom, sopra le tappe sottili. Da lontano, dove su un pezzo
+     * passano più cammini, quello del primo si colora a segmenti nei colori di tutti (dashColors).
+     * Null se il calcolo non riesce; lista vuota senza tappe.
+     *
+     * @return list<array<string, mixed>>|null
+     */
+    private function touchedPortionFeatures(?float $minResolution, int $maxDistance): ?array
+    {
+        $rows = $this->contextRows(withGeometry: true);
+        $byId = [];
+        foreach ($rows as $row) {
+            $byId[(int) $row->id] = $row;
+        }
+        $colors = self::contextTrackColors(array_map(fn ($row) => (int) $row->color_layer_id, $rows));
+        $layerNames = [];
+        foreach ($rows as $row) {
+            $layerNames[(int) $row->color_layer_id] ??= (new Layer)->setRawAttributes(['name' => $row->color_layer_name], true)->getStringName();
+        }
+
+        if ($byId === []) {
+            return [];
+        }
+        $bands = ContextTrackBandsService::make()->bands(
+            array_map(fn ($row) => (int) $row->color_layer_id, $byId),
+            $maxDistance,
+            (int) $this->getKey()
+        );
+        if ($bands === null) {
+            return null;
+        }
+
+        $features = [];
+        foreach ($bands as $band) {
+            $row = $byId[$band['ec_track_id']];
+            [$layerLabel, $trackName] = $this->contextNames($row);
+            $features[] = [
+                'type' => 'Feature',
+                'geometry' => $band['geometry'],
                 'properties' => [
-                    // Niente `id`: il campo indicizza le feature per id e quello di una EcTrack
-                    // potrebbe coincidere con quello della traccia UGC.
                     'strokeColor' => $colors[(int) $row->color_layer_id],
-                    'strokeWidth' => 3,
-                    // Nome della tappa (EcTrack) scritto lungo la linea, dove ci sta: il cammino
-                    // si riconosce dal colore e dalla legenda.
-                    'lineLabel' => $trackName,
+                    'strokeWidth' => self::CONTEXT_TOUCHED_WIDTH,
                     'tooltip' => $layerLabel.' — '.$trackName,
                     'context' => true,
+                ],
+            ];
+            if ($minResolution === null || $band['rank'] !== 0 || $band['n'] < 2) {
+                continue;
+            }
+            $others = array_map(fn (int $layerId) => $layerNames[$layerId], array_slice($band['cammini'], 1));
+            $features[] = [
+                'type' => 'Feature',
+                'geometry' => $band['geometry'],
+                'properties' => [
+                    'strokeColor' => self::opaque($colors[(int) $row->color_layer_id]),
+                    'strokeWidth' => self::CONTEXT_TOUCHED_WIDTH,
+                    'tooltip' => implode("\n", [$layerLabel.' — '.$trackName, ...$others]),
+                    'context' => true,
+                    'onlyZoomedOut' => true,
+                    'zoomedOutStyle' => [
+                        'minResolution' => $minResolution,
+                        'strokeWidth' => self::CONTEXT_TOUCHED_WIDTH,
+                        // Sopra le tappe (zIndex -1) e sotto la traccia (0).
+                        'zIndex' => -0.5,
+                        'dashColors' => array_map(fn (int $layerId) => self::opaque($colors[$layerId]), $band['cammini']),
+                        'dashLength' => self::ZOOMED_OUT_DASH_LENGTH,
+                    ],
                 ],
             ];
         }
 
         return $features;
+    }
+
+    /**
+     * Nomi di layer e tappa di una riga di contesto, con la regola di fallback del nome layer
+     * (lingua corrente → it → en → prima).
+     *
+     * @return array{0: string, 1: string}
+     */
+    private function contextNames(object $row): array
+    {
+        $layerNames = array_map(
+            fn (?string $raw) => (new Layer)->setRawAttributes(['name' => $raw], true)->getStringName(),
+            json_decode($row->layer_names, true) ?: []
+        );
+
+        return [
+            implode(', ', array_filter($layerNames)),
+            (new Layer)->setRawAttributes(['name' => $row->track_name], true)->getStringName(),
+        ];
     }
 
     /**
@@ -377,7 +620,7 @@ class UgcTrack extends MultiLineString implements UserOwnedModelInterface
      */
     public function contextLegendItems(): array
     {
-        $rows = $this->layerContextRows(withGeometry: false);
+        $rows = $this->contextRows(withGeometry: false);
         $colors = self::contextTrackColors(array_map(fn ($row) => (int) $row->color_layer_id, $rows));
 
         $names = [];

@@ -83,7 +83,8 @@ import SlopeChart from './SlopeChart.vue';
 import { findExplicitSlopeChartFeature, getSlopeChartTrackFromGeojson, toLineStringFeatureObject } from '../slope-chart/utils.mjs';
 import { technicalDataRows } from '../technical-data/utils.mjs';
 import { expandExtent, featuresForFit } from '../map-fit/utils.mjs';
-import { lineLabelFeatures, lineStyleSpec } from '../line-style/utils.mjs';
+import { lineLabelFeatures, lineStyles } from '../line-style/utils.mjs';
+import { stackedTooltipText } from '../tooltip/utils.mjs';
 
 // OpenLayers imports
 import Map from 'ol/Map';
@@ -157,6 +158,11 @@ export default {
         },
         /** Dopo l'inquadratura iniziale impedisce di allontanarsi oltre quella vista; lo zoom in resta libero (oc:8747). */
         lockZoomOut: {
+            type: Boolean,
+            default: false
+        },
+        /** Tooltip con tutte le linee sotto il mouse, una per riga, non solo la prima (oc:8776). */
+        stackedTooltip: {
             type: Boolean,
             default: false
         },
@@ -371,20 +377,26 @@ export default {
                 }
             }
 
-            // Colori, tratteggio (oc:8719) e gruppo di disegno (oc:8747): vedi lineStyleSpec.
+            // Colori, tratteggio (oc:8719), gruppo di disegno (oc:8747) e stile da lontano
+            // (oc:8776): vedi lineStyles. Un solo stile = lo stesso oggetto di sempre.
+            // Lo zIndex dello stile ordina il disegno fra feature diverse dello stesso layer:
+            // i cammini stanno sotto la traccia. Un elenco vuoto non
+            // disegna la feature e la toglie dalla ricerca sotto il mouse.
             // Le etichette lungo le linee stanno su labelLayer, non qui.
-            const spec = lineStyleSpec(featureProps);
-            return new Style({
+            const styles = lineStyles(featureProps, resolution).map((spec) => new Style({
                 stroke: new Stroke({
                     color: spec.strokeColor,
                     width: spec.strokeWidth,
-                    lineDash: spec.lineDash
+                    lineDash: spec.lineDash,
+                    lineDashOffset: spec.lineDashOffset,
+                    lineCap: spec.lineCap
                 }),
                 fill: new Fill({
                     color: spec.fillColor
                 }),
                 zIndex: spec.zIndex
-            });
+            }));
+            return styles.length === 1 ? styles[0] : styles;
         };
 
         // Etichetta lungo la linea, come i nomi delle strade OSM (oc:8747): testo nel colore della
@@ -620,8 +632,13 @@ export default {
                     map.value.getTargetElement().style.cursor = 'default';
                 }
 
-                // Mostra sempre il tooltip se presente, indipendentemente dal link
-                const tooltip = featureProps.tooltip || featureProps.name;
+                // Mostra sempre il tooltip se presente, indipendentemente dal link.
+                // Con stackedTooltip (oc:8776) il testo raccoglie tutte le linee sotto il mouse;
+                // cursore, link e profilo restano legati alla prima, come sempre.
+                const tooltip = props.stackedTooltip
+                    ? stackedTooltipText(map.value.getFeaturesAtPixel(pixel, { hitTolerance: 6, layerFilter: isHitLayer })
+                        .map((f) => f.getProperties()))
+                    : (featureProps.tooltip || featureProps.name);
 
                 if (tooltip && tooltipOverlay.value) {
                     tooltipText.value = tooltip;
@@ -1032,7 +1049,8 @@ export default {
     padding: 4px 8px;
     border-radius: 4px;
     font-size: 12px;
-    white-space: nowrap;
+    /* pre: come nowrap, ma va a capo sui \n del tooltip con tutte le linee (oc:8776). */
+    white-space: pre;
     pointer-events: none;
     z-index: 100;
 }

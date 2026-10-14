@@ -66,6 +66,7 @@ Il campo è automaticamente impostato come `onlyOnDetail()`.
 | `legend(array $items)` | Legenda sovrapposta alla mappa in basso a sinistra; ogni voce è `['label' => string, 'color' => string CSS, 'dash' => bool]` (`dash` default `false`, `true` = linea tratteggiata). Lista vuota = nessuna legenda | nessuna |
 | `extentMargin(float $ratio)` | Allarga l'inquadratura iniziale di `$ratio` per lato (0.3 = 30% di larghezza e altezza). Le feature con `context: true` non entrano mai nel fit | `0` |
 | `lockZoomOut(bool $enabled)` | Dopo l'inquadratura iniziale non si può allontanare la vista oltre quella; lo zoom in resta libero | `false` |
+| `stackedTooltip(bool $enabled)` | Tooltip con tutte le linee sotto il mouse, una per riga e senza doppioni, invece della sola più in alto; prima le feature con `tooltipOrder` (oc:8776) | `false` |
 
 ### Esempio Completo
 
@@ -79,7 +80,7 @@ FeatureCollectionMap::make(__('Mappa'), 'geometry')
     ->withDemEnrichment()
     ->legend([
         ['label' => __('Recorded track'), 'color' => 'rgba(0, 0, 255, 1)'],
-        ['label' => __('Reconstructed segment'), 'color' => 'rgba(234, 88, 12, 1)', 'dash' => true],
+        ['label' => __('Reconstructed segment'), 'color' => 'rgba(234, 88, 12, 1)', 'dash' => false],
     ]),
 ```
 
@@ -240,6 +241,10 @@ class HikingRoute extends Model
 | `strokeDash` | number[] | Tratteggio della linea (es. `[8, 8]`); assente = linea continua | - |
 | `lineLabel` | string | Testo lungo la linea, nel colore della linea, su un layer separato con declutter (le etichette sovrapposte si scartano); non riceve tooltip né clic | - |
 | `context` | bool | `true` = feature di sfondo: esclusa dal fit iniziale e disegnata sotto le altre | - |
+| `tooltipOrder` | number | Posizione della riga nel tooltip di `stackedTooltip()`: prima le feature che ce l'hanno, in ordine crescente, poi le altre (oc:8776) | - |
+| `casing` | object | Contorno sotto la linea, a ogni zoom e senza tratteggio: `{color, width}` (oc:8776) | - |
+| `zoomedOutStyle` | object | Stile da lontano (oc:8776), da `minResolution` (unità EPSG:3857 per pixel) in su: `strokeColor`, `strokeWidth`, `zIndex` sostituiscono quelli normali e il tratteggio si toglie; `dashColors` (con `dashLength` in pixel) divide la linea in segmenti della stessa lunghezza, un colore dopo l'altro. Assente = stile di sempre | - |
+| `onlyZoomedOut` | bool | `true` = la feature si disegna solo da lontano, da `zoomedOutStyle.minResolution` in su (oc:8776) | `false` |
 | `fillColor` | string | Colore di riempimento (CSS) | `'rgba(0, 0, 255, 0.3)'` |
 
 ### Properties per Punti

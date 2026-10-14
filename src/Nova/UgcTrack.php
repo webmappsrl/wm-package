@@ -43,7 +43,7 @@ class UgcTrack extends AbstractUgcResource
                 $gapRows[] = [
                     'label' => __('Reconstructed segment: GPS points discarded because inaccurate and far from the route'),
                     'color' => UgcTrackModel::RECONSTRUCTED_SEGMENT_COLOR,
-                    'dash' => true,
+                    'dash' => false,
                 ];
             }
             // oc:8747: una riga per cammino mostrato come contesto; i nomi dei layer sono dati,
@@ -51,7 +51,7 @@ class UgcTrack extends AbstractUgcResource
             $cammini = $this->resource->contextLegendItems();
             if ($gapRows !== [] || $cammini !== []) {
                 $legend = [
-                    ['label' => __('Recorded track'), 'color' => 'rgba(0, 0, 255, 1)', 'dash' => false],
+                    ['label' => __('Recorded track'), 'color' => UgcTrackModel::TRACK_COLOR, 'dash' => false],
                     ...$gapRows,
                     ...$cammini,
                 ];
@@ -71,6 +71,8 @@ class UgcTrack extends AbstractUgcResource
                 // come contesto, e niente zoom out oltre quella vista.
                 ->extentMargin(UgcTrackModel::MAP_EXTENT_MARGIN)
                 ->lockZoomOut()
+                // oc:8776: dove la traccia segue una tappa, il tooltip dice anche quale.
+                ->stackedTooltip()
                 // oc:8719: la geometria di una traccia registrata dall'app deriva da
                 // properties.locations e viene ricostruita a ogni salvataggio: un GPX caricato
                 // qui verrebbe sovrascritto in silenzio.
