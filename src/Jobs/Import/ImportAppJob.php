@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Wm\WmPackage\Jobs\BuildAppPoisGeojsonJob;
 use Wm\WmPackage\Jobs\TaxonomyWhere\SyncTaxonomyWhereJob;
 use Wm\WmPackage\Jobs\UpdateAppConfigHomeLayerIdsJob;
 use Wm\WmPackage\Jobs\UpdateAppConfigJob;
@@ -54,6 +55,15 @@ class ImportAppJob extends BaseImportJob
         'ec_track',
         'taxonomy_activity',
         'taxonomy_poi_types',
+    ];
+
+    /**
+     * Batch EC che a fine import lanciano dispatchAfterEcImportBatch() (oc:8487, oc:8677).
+     */
+    private const POST_IMPORT_ENTITY_KEYS = [
+        'ec_poi',
+        'ec_track',
+        'ec_media',
     ];
 
     protected function getModelKey(): string
@@ -503,14 +513,45 @@ class ImportAppJob extends BaseImportJob
         // EcTrackService::createDataChain() non scattano mai e il contenuto importato resta
         // senza taxonomy_where finché non viene ricalcolato manualmente. Aggancia il ricalcolo
         // bulk (SyncTaxonomyWhereJob copre sia EcTrack sia EcPoi) al completamento del batch
-        // di import EC dedicato, non al singolo save.
-        if (in_array($entityModelKey, ['ec_poi', 'ec_track'], true)) {
+        // di import EC dedicato, non al singolo save. Per lo stesso motivo pois.geojson non si
+        // rigenera da solo, nemmeno dopo le immagini dei POI (oc:8677): vedi
+        // dispatchAfterEcImportBatch().
+        if (in_array($entityModelKey, self::POST_IMPORT_ENTITY_KEYS, true)) {
             $batch->allowFailures()->finally(
-                static function (Batch $batch): void {
-                    SyncTaxonomyWhereJob::dispatch();
+                static function (Batch $batch) use ($entityModelKey, $appId): void {
+                    ImportAppJob::dispatchAfterEcImportBatch($entityModelKey, $appId);
                 }
             );
         }
+    }
+
+    /**
+     * Lavori da fare a fine batch di import EC (oc:8677):
+     * - POI: ricalcolo delle località e poi pois.geojson, che le usa (App::getAllPoisGeojson()).
+     *   Se il ricalcolo fallisce (su dev è già andato in timeout) la catena si ferma: il catch
+     *   rigenera comunque il file, con le località di prima ma con nome e testo di ricerca;
+     * - tracce: solo il ricalcolo delle località;
+     * - immagini: pois.geojson, che contiene le immagini dei POI e il cui batch gira in parallelo.
+     * Senza, l'API continua a servire il file salvato prima dell'import.
+     *
+     * Pubblico e statico perché lo chiama la closure del finally() del batch, che viene
+     * serializzata: non fa parte dell'API del package.
+     *
+     * @internal
+     */
+    public static function dispatchAfterEcImportBatch(string $entityModelKey, int $appId): void
+    {
+        match ($entityModelKey) {
+            'ec_poi' => Bus::chain([
+                new SyncTaxonomyWhereJob,
+                new BuildAppPoisGeojsonJob($appId),
+            ])->catch(static function () use ($appId): void {
+                BuildAppPoisGeojsonJob::dispatch($appId);
+            })->dispatch(),
+            'ec_track' => SyncTaxonomyWhereJob::dispatch(),
+            'ec_media' => BuildAppPoisGeojsonJob::dispatch($appId),
+            default => null,
+        };
     }
 
     private static function layerBatchCacheKey(int $appId): string

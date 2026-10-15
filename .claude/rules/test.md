@@ -21,8 +21,10 @@ Si applica quando scrivi o modifichi un test del package.
 - `Bus::fake()` non impedisce l'acquisizione del lock di un job `ShouldBeUnique`: gira in
   `PendingDispatch::shouldDispatch()`, prima che il Dispatcher fake sostituisca quello vero. Se il
   job ha `uniqueVia()` su Redis (es. `UpdateAppConfigJob`, `BuildAppPoisGeojsonJob`), un test sotto
-  `Bus::fake()` dipende comunque da Redis reale. Dal oc:8660 lo store `redis` è `array` per
-  tutta la suite (`tests/TestCase.php`): un override locale non serve più (oc:8564).
+  `Bus::fake()` dipende comunque da Redis reale. Il `TestCase` del package mette lo store `redis`
+  su `array` per tutta la suite (`tests/TestCase.php`, oc:8660), ma da un consumer vale il
+  `TestCase` del consumer, che non lo fa: lì serve nel `setUp()`
+  `config(['cache.stores.redis.driver' => 'array'])` (oc:8564, oc:8677).
 - `Bus::fake()` non onora `afterCommit()`: sotto fake un job accodato dopo il commit parte subito,
   anche se la transazione va in rollback. Si verifica `$job->afterCommit === true`, non lo scarto
   (oc:8571).

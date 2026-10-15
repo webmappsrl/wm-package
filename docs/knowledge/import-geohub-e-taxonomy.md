@@ -76,6 +76,17 @@ mano con lo stesso identifier (oc:8486).
 - Altri campi json delle tracce sono ancora copiati grezzi nel mapping, e non sono verificati:
   vedi `config/wm-geohub-import.php`.
 
+### Import GeoHub: cosa resta degli observer (oc:8677)
+
+L'import salva con `persistQuietly()`, senza eventi Eloquent. Della logica degli observer applica
+solo la regola su `properties.name` (`AbstractObserver::syncNameIntoProperties()`, la stessa che
+usa `AbstractObserver::saving()`): su ogni modello con `name` traducibile copia le traduzioni in
+`properties.name`. A differenza dell'import Excel (sezione «Import Excel»), qui la regola non è
+duplicata. Il resto che gli observer farebbero si recupera a fine batch (vedi
+`dispatchAfterEcImportBatch()`). Le colonne dell'app (`poi_searchables`, `track_searchables` e le
+altre in comune con Geohub) le copia `ImportAppJob::transformData()` per nome di colonna, senza
+passare dal mapping `fields` del config.
+
 ### Import da OSM
 
 - L'Action `ImportEcPoiFromOsm` è registrata di default in `EcPoi::actions()` con `canSee` **e**
@@ -103,9 +114,11 @@ Il meccanismo è agganciato in più punti, tutti generalizzati a entrambi i mode
   UGC resta sul vecchio meccanismo.
 - Azione Nova unica bulk `SyncEcTaxonomyWhereAction` (sostituisce `SyncTracksTaxonomyWhereAction`),
   dispatch in coda.
-- L'hook automatico su `ImportAppJob::attachBatchCompletionCallback()` per i batch `ec_poi`/`ec_track`
-  — risolve la causa per cui i contenuti importati restavano senza `taxonomy_where`
-  (`persistQuietly()` disabilita gli observer durante l'import).
+- L'hook automatico a fine batch di import (`ImportAppJob::attachBatchCompletionCallback()`, che
+  chiama `dispatchAfterEcImportBatch()`) — risolve la causa per cui i contenuti importati restavano
+  senza `taxonomy_where` (`persistQuietly()` disabilita gli observer durante l'import). Per i POI il
+  ricalcolo è in catena prima di `BuildAppPoisGeojsonJob`, con un `catch` che rigenera il file anche
+  se il ricalcolo fallisce; il batch delle immagini rigenera solo il file (oc:8677).
 
 **Due comportamenti diversi sul "non trovo nulla in locale", a seconda del path** (oc:8487,
 ripresa 2026-09-23) — `syncTaxonomyWhere()` ha un terzo parametro `?bool $preserveOnNoMatch =

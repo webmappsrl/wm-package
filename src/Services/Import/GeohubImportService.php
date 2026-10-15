@@ -22,6 +22,7 @@ use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Models\TaxonomyActivity;
 use Wm\WmPackage\Models\Tile;
 use Wm\WmPackage\Models\User;
+use Wm\WmPackage\Observers\AbstractObserver;
 use Wm\WmPackage\Services\RolesAndPermissionsService;
 use Wm\WmPackage\Services\StorageService;
 
@@ -296,12 +297,18 @@ class GeohubImportService
     }
 
     /**
-     * Save a model without dispatching Eloquent events (avoids triggering observers — e.g.
-     * PBF regeneration — during a Geohub import), temporarily disabling the event dispatcher
-     * around saveQuietly() so nothing else listening on the model's events fires either.
+     * Salva un modello senza eventi Eloquent, per non far partire gli observer durante l'import
+     * da Geohub (per esempio la rigenerazione dei PBF): il dispatcher degli eventi è spento
+     * intorno a saveQuietly(), così non scatta nemmeno altro in ascolto sugli eventi del modello.
+     *
+     * Gli observer restano spenti, ma la regola su `properties.name` di AbstractObserver::saving()
+     * si applica comunque: senza, i modelli importati restano senza nome nei dati letti dall'app
+     * (oc:8677).
      */
     private function persistQuietly(Model $model): void
     {
+        AbstractObserver::syncNameIntoProperties($model);
+
         $model::unsetEventDispatcher();
         $model->saveQuietly();
         $model::setEventDispatcher(app('events'));

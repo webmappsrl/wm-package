@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
@@ -252,9 +253,11 @@ class App extends Model implements HasMedia
         if (Schema::hasColumn((new EcPoi)->getTable(), 'global')) {
             $query->where('global', true);
         }
-        $appPois = $query->get();
+        // taxonomyPoiTypes caricati insieme: li legge getSearchableString() per ogni POI (oc:8677).
+        $appPois = $query->with('taxonomyPoiTypes')->get();
 
         if (count($appPois) > 0) {
+            /** @var EcPoi $poi */
             foreach ($appPois as $poi) {
                 try {
                     // Verifica che il POI abbia una geometria valida
@@ -269,6 +272,11 @@ class App extends Model implements HasMedia
                             $poi->addTaxonomyPoiTypes()
                         );
                         $item['properties']['taxonomyIdentifiers'] = $taxonomiesidentifiers;
+
+                        // Campi su cui cerca l'app (wm-core store/features/ec/utils.ts), calcolati
+                        // qui e non salvati: dipendono da poi_searchables di questa app (oc:8677).
+                        $item['properties']['name'] = $poi->getTranslations('name');
+                        $item['properties']['searchable'] = $this->searchableForPoi($poi);
 
                         // Verifica che il geojson sia valido e non null
                         if ($item && isset($item['geometry']) && $item['geometry'] !== null) {
@@ -288,6 +296,21 @@ class App extends Model implements HasMedia
         }
 
         return $pois;
+    }
+
+    /**
+     * Testo di ricerca di un POI per questa app. Un errore lascia la ricerca vuota invece di
+     * arrivare al catch di getAllPoisGeojson(), che scarterebbe il POI dal file (oc:8677).
+     */
+    protected function searchableForPoi(EcPoi $poi): string
+    {
+        try {
+            return $poi->getSearchableString($this);
+        } catch (\Throwable $e) {
+            Log::warning("Testo di ricerca non calcolato per il POI {$poi->id}, in pois.geojson resta vuoto: ".$e->getMessage());
+
+            return '';
+        }
     }
 
     public function BuildPoisGeojson()
