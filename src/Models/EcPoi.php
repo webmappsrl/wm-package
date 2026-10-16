@@ -6,7 +6,6 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
-use Illuminate\Support\Facades\App;
 use Spatie\Translatable\HasTranslations;
 use Wm\WmPackage\Models\Abstracts\Point;
 use Wm\WmPackage\Models\Interfaces\LayerRelatedModel;
@@ -103,8 +102,7 @@ class EcPoi extends Point implements LayerRelatedModel
 
     public function app(): BelongsTo
     {
-        // Fully qualified to avoid clashing with the `Illuminate\Support\Facades\App` import above.
-        return $this->belongsTo(\Wm\WmPackage\Models\App::class);
+        return $this->belongsTo(App::class);
     }
 
     public function taxonomyActivities(): MorphToMany
@@ -332,38 +330,99 @@ class EcPoi extends Point implements LayerRelatedModel
     //     return $array;
     // }
 
-    public function getSearchableString($app_id = 0)
+    /**
+     * Testo su cui l'app cerca i POI (`properties.searchable` di pois.geojson). Segue la regola
+     * di Geohub: `poi_searchables` dell'app sceglie i campi, una lista vuota o non valida vuol
+     * dire tutti. Descrizione ed estratto stanno in `properties`, gli accenti restano leggibili e
+     * i campi vuoti non aggiungono nulla (oc:8677).
+     */
+    public function getSearchableString(?App $app = null): string
     {
-        $string = '';
-        $searchables = '';
-        if ($app_id) {
-            $app = App::find($app_id);
-            $searchables = json_decode($app->poi_searchables);
-        }
+        $searchables = $this->poiSearchablesOf($app);
+        $includes = fn (string $field): bool => $searchables === [] || in_array($field, $searchables, true);
 
-        if (empty($searchables) || (in_array('name', $searchables) && ! empty($this->name))) {
-            $string .= str_replace('"', '', json_encode($this->getTranslations('name'))).' ';
+        $parts = [];
+        if ($includes('name')) {
+            $parts[] = $this->searchableTranslations($this->getTranslations('name'));
         }
-        if (empty($searchables) || (in_array('description', $searchables) && ! empty($this->description))) {
-            $description = str_replace('"', '', json_encode($this->getTranslations('description')));
-            $description = str_replace('\\', '', $description);
-            $string .= strip_tags($description).' ';
+        foreach (['description', 'excerpt'] as $field) {
+            if ($includes($field)) {
+                $parts[] = $this->searchableTranslations($this->properties[$field] ?? null, true);
+            }
         }
-        if (empty($searchables) || (in_array('excerpt', $searchables) && ! empty($this->excerpt))) {
-            $excerpt = str_replace('"', '', json_encode($this->getTranslations('excerpt')));
-            $excerpt = str_replace('\\', '', $excerpt);
-            $string .= strip_tags($excerpt).' ';
+        if ($includes('osmid') && ! empty($this->osmid)) {
+            $parts[] = (string) $this->osmid;
         }
-        if (empty($searchables) || (in_array('osmid', $searchables) && ! empty($this->osmid))) {
-            $string .= $this->osmid.' ';
-        }
-        if (empty($searchables) || (in_array('taxonomyPoiTypes', $searchables) && ! empty($this->taxonomyPoiTypes))) {
+        if ($includes('taxonomyPoiTypes')) {
+            /** @var TaxonomyPoiType $tax */
             foreach ($this->taxonomyPoiTypes as $tax) {
-                $string .= str_replace('"', '', json_encode($tax->getTranslations('name'))).' ';
+                $parts[] = $this->searchableTranslations($tax->getTranslations('name'));
             }
         }
 
-        return html_entity_decode($string);
+        $parts = array_filter($parts, fn (string $part): bool => $part !== '');
+
+        return trim(implode(' ', $parts));
+    }
+
+    /**
+     * Campi scelti in `poi_searchables`; [] vuol dire tutti (anche senza app o con un valore che
+     * non è una lista di stringhe).
+     *
+     * @return array<int, string>
+     */
+    private function poiSearchablesOf(?App $app): array
+    {
+        $value = $app?->poi_searchables;
+        if (is_string($value)) {
+            $value = json_decode($value, true);
+        }
+        if (! is_array($value) || ! array_is_list($value)) {
+            return [];
+        }
+        foreach ($value as $field) {
+            if (! is_string($field)) {
+                return [];
+            }
+        }
+
+        return $value;
+    }
+
+    /**
+     * Traduzioni nel formato di Geohub (`{it:Testo,en:Text}`), senza escape degli accenti.
+     */
+    private function searchableTranslations(mixed $translations, bool $stripTags = false): string
+    {
+        if (is_string($translations)) {
+            $translations = ['it' => $translations];
+        }
+        if (! is_array($translations)) {
+            return '';
+        }
+        $translations = array_filter($translations, fn ($text): bool => is_string($text) && trim($text) !== '');
+        if ($translations === []) {
+            return '';
+        }
+        // Prima le entità (&nbsp;, &lt;b&gt;), poi i tag sostituiti da uno spazio (strip_tags
+        // incollerebbe «Uno</p><p>Due»), infine gli spazi, compreso lo spazio non separabile, in uno
+        // solo: a capo escapati diventerebbero lettere spurie ("rnLa" su Geohub) una volta tolti i
+        // backslash (oc:8677).
+        $translations = array_map(
+            function (string $text) use ($stripTags): string {
+                $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                if ($stripTags) {
+                    $text = (string) preg_replace('/<[^>]*>/', ' ', $text);
+                }
+
+                return trim((string) preg_replace('/[\s\x{00A0}]+/u', ' ', $text));
+            },
+            $translations
+        );
+
+        $json = json_encode($translations, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+        return str_replace(['"', '\\'], '', (string) $json);
     }
 
     public function array_filter_recursive($array)

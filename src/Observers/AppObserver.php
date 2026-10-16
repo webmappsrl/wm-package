@@ -4,6 +4,7 @@ namespace Wm\WmPackage\Observers;
 
 use Illuminate\Support\Facades\Log;
 use Throwable;
+use Wm\WmPackage\Jobs\BuildAppPoisGeojsonJob;
 use Wm\WmPackage\Jobs\RematchAppUgcTracksJob;
 use Wm\WmPackage\Jobs\SyncWellKnownRegistryJob;
 use Wm\WmPackage\Jobs\TaxonomyWhere\RegenerateTaxonomyWhereOutputsJob;
@@ -42,6 +43,18 @@ class AppObserver extends AbstractObserver
 
         $this->regenerateTaxonomyWhereOutputsIfChanged($app);
         $this->rematchUgcTracksIfChanged($app);
+        $this->rebuildPoisGeojsonIfSearchablesChanged($app);
+    }
+
+    /**
+     * properties.searchable di pois.geojson dipende da «POI Search In» e si calcola solo quando
+     * si genera il file: senza rigenerarlo, il cambio in Nova non avrebbe effetto (oc:8677).
+     */
+    private function rebuildPoisGeojsonIfSearchablesChanged(App $app): void
+    {
+        if ($app->wasChanged('poi_searchables')) {
+            BuildAppPoisGeojsonJob::dispatch($app->id);
+        }
     }
 
     /**
