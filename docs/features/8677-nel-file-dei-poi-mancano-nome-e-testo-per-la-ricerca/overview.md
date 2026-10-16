@@ -9,9 +9,11 @@ Interventi in wm-package:
 1. **L'import da Geohub scrive `properties.name` come un salvataggio normale.** Il salvataggio
    silenzioso dell'import (`persistQuietly`) applica la stessa regola di
    `AbstractObserver::saving`: su ogni modello con `name` traducibile copia
-   `getTranslations('name')` in `properties.name`. Vale per tutti i modelli importati (POI,
-   tracce, layer, tassonomie), non solo per i POI. La regola è definita in un punto solo e la usano
-   sia l'observer sia l'import da Geohub.
+   `getTranslations('name')` in `properties.name`. Vale per POI, tracce e tassonomie importati,
+   non solo per i POI. Non per i layer: `Layer::save()` (`src/Models/Layer.php:308-317`) riscrive
+   `properties.name` con la stringa nella lingua corrente dopo la regola, quindi un layer importato
+   resta come prima (i layer non sono in `pois.geojson`, per wm-core non cambia nulla). La regola è
+   definita in un punto solo e la usano sia l'observer sia l'import da Geohub.
 2. **`pois.geojson` contiene `name` e `searchable` per ogni POI.** `App::getAllPoisGeojson()`
    aggiunge alle properties di ogni POI `name` (`getTranslations('name')`) e `searchable` (da
    `EcPoi::getSearchableString()` per l'app che genera il file), calcolati mentre genera il file,
@@ -77,9 +79,9 @@ Obiettivo del ticket: l'import da Geohub produce dati corretti, anche per il con
 
 ## Requisiti
 
-- [x] Un modello salvato dall'import con `persistQuietly` che ha `name` traducibile ha
-      `properties.name` uguale a `getTranslations('name')`, come dopo un salvataggio da Nova
-      (POI e tracce).
+- [x] Un POI o una traccia salvati dall'import con `persistQuietly` hanno `properties.name`
+      uguale a `getTranslations('name')`, come dopo un salvataggio da Nova (i layer no: vedi
+      «Cosa cambia», punto 1).
 - [x] La regola che copia `name` in `properties.name` è definita in un punto solo e la usano sia
       `AbstractObserver::saving` sia l'import da Geohub.
 - [x] In `pois.geojson` ogni POI ha `properties.name` come oggetto tradotto (`{lang: testo}`) e

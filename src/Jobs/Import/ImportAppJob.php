@@ -571,6 +571,10 @@ class ImportAppJob extends BaseImportJob
      * pois.geojson e non dal ricalcolo delle località: timeout e tentativi esauriti portano il
      * job fallito, gli altri errori lo hanno nello stack (oc:8677).
      *
+     * ATTENZIONE: il FQCN `ImportAppJob::failureCameFromPoisBuild` è richiamato dalla closure del
+     * catch della catena, serializzata nel payload di SyncTaxonomyWhereJob: spostarlo o
+     * rinominarlo rompe in silenzio le catene in volo al momento del deploy.
+     *
      * @internal
      */
     public static function failureCameFromPoisBuild(Throwable $e): bool

@@ -4,6 +4,7 @@ namespace Wm\WmPackage\Tests\Feature\Import;
 
 use Illuminate\Bus\Batch;
 use Illuminate\Contracts\Queue\Job;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Queue\TimeoutExceededException;
 use Illuminate\Support\Facades\Bus;
 use Mockery;
@@ -11,6 +12,8 @@ use Tests\TestCase;
 use Wm\WmPackage\Jobs\BuildAppPoisGeojsonJob;
 use Wm\WmPackage\Jobs\Import\ImportAppJob;
 use Wm\WmPackage\Jobs\TaxonomyWhere\SyncTaxonomyWhereJob;
+use Wm\WmPackage\Models\App;
+use Wm\WmPackage\Services\StorageService;
 
 /**
  * oc:8677: l'import salva senza observer, quindi a fine import dei POI pois.geojson va rigenerato
@@ -18,6 +21,8 @@ use Wm\WmPackage\Jobs\TaxonomyWhere\SyncTaxonomyWhereJob;
  */
 class ImportAppJobPoisGeojsonRebuildTest extends TestCase
 {
+    use DatabaseTransactions;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -65,6 +70,32 @@ class ImportAppJobPoisGeojsonRebuildTest extends TestCase
         $job = Mockery::mock(Job::class);
         $job->shouldReceive('resolveName')->andReturn(BuildAppPoisGeojsonJob::class);
         $sync->invokeChainCatchCallbacks(TimeoutExceededException::forJob($job));
+
+        Bus::assertNotDispatched(BuildAppPoisGeojsonJob::class);
+    }
+
+    public function test_se_il_build_della_catena_va_in_errore_non_ne_lancia_un_secondo(): void
+    {
+        // Un errore vero del build (qui lo storage): l'eccezione non porta il job, lo riconosce
+        // il frame BuildAppPoisGeojsonJob->handle() nello stack.
+        $app = App::factory()->createQuietly();
+        $storage = Mockery::mock(StorageService::class);
+        // L'eccezione va creata dentro la chiamata: lo stack si fissa alla creazione, non al throw.
+        $storage->shouldReceive('storePois')->andReturnUsing(
+            fn () => throw new \RuntimeException('storage non raggiungibile')
+        );
+        $this->app->instance(StorageService::class, $storage);
+
+        $errore = null;
+        try {
+            (new BuildAppPoisGeojsonJob($app->id))->handle();
+        } catch (\RuntimeException $e) {
+            $errore = $e;
+        }
+        $this->assertNotNull($errore);
+
+        ImportAppJob::dispatchAfterEcImportBatch('ec_poi', $app->id);
+        Bus::dispatched(SyncTaxonomyWhereJob::class)->first()->invokeChainCatchCallbacks($errore);
 
         Bus::assertNotDispatched(BuildAppPoisGeojsonJob::class);
     }

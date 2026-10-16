@@ -71,6 +71,13 @@
   cambierebbe il comportamento per tutti i chiamanti del job.
 - Il commento sul `finally()` avverte che il nome `ImportAppJob::dispatchAfterEcImportBatch` è
   serializzato nei batch, come già per `finalizeAppImport()`.
+- Dopo il secondo giro della seconda review: test del ramo sullo stack di
+  `failureCameFromPoisBuild()` con un errore vero dentro `BuildAppPoisGeojsonJob::handle()` (lo
+  storage in errore); verificato che fallisce se il ramo restituisce sempre `false`. Nel test
+  l'eccezione va creata dentro la chiamata (`andReturnUsing`), non passata già pronta
+  (`andThrow(new …)`): in PHP lo stack si fissa quando l'eccezione viene creata. Aggiunto al
+  docblock di `failureCameFromPoisBuild()` l'avvertimento sul nome serializzato nella closure del
+  `catch`.
 - Test aggiunti dopo la seconda review: il `catch` con il timeout del build e con quello del
   ricalcolo; il `finally()` del batch delle immagini, invocato da
   `attachBatchCompletionCallback()`; `searchable` nel file che rispetta `poi_searchables`.
@@ -110,7 +117,8 @@
   con un `@var` sulla variabile del ciclo, che toglie anche errori preesistenti nello stesso
   ciclo. Restano errori preesistenti in quei file (PHPDoc non validi, tipi Eloquent generici).
 - Dopo la seconda review interna (16/10/2026), da maphub: test della feature e test vicini
-  dell'import (`ImportEcPoiJobTaxonomySyncTest`, `ImportAppJobTaxonomyScopingTest`), 30/30;
+  dell'import (`ImportEcPoiJobTaxonomySyncTest`, `ImportAppJobTaxonomyScopingTest`), 30/30, e
+  31/31 dopo il test sul ramo dello stack;
   PHPStan del package su `ImportAppJob.php`: nessun errore sulle righe modificate.
 - Prova completa in ambiente di sviluppo locale (16/10/2026), con il codice di questo branch:
   restore del database a prima dell'import, import dell'app 28 da Geohub, webapp collegata al
@@ -122,6 +130,12 @@
   dell'overview).
 
 ## Bug trovati
+
+- In review: la regola su `properties.name` non ha effetto sui layer importati,
+  perché `Layer::save()` (`src/Models/Layer.php:308-317`) riscrive `properties.name` con
+  `$this->name`, la stringa nella lingua corrente, dopo `persistQuietly`. Da Nova l'ordine è
+  inverso (prima `save()`, poi l'observer). Lasciato così: i layer non sono in `pois.geojson` e
+  per wm-core non cambia nulla; overview corretta.
 
 - `EcPoi::getSearchableString($app_id)` andava in errore con qualsiasi app: importava la facade
   `App` invece del modello. Leggeva descrizione ed estratto da colonne che in wm-package non
