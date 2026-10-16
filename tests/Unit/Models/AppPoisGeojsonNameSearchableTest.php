@@ -81,6 +81,19 @@ class AppPoisGeojsonNameSearchableTest extends TestCase
         }
     }
 
+    public function test_searchable_del_file_rispetta_poi_searchables_dell_app(): void
+    {
+        $app = App::factory()->createQuietly(['poi_searchables' => '["name"]']);
+        $poi = $this->makePoi($app, ['it' => 'Pieve '.uniqid()], [
+            'description' => ['it' => 'Descrizione da non cercare'],
+        ]);
+
+        $properties = $this->propertiesById($app);
+
+        $this->assertStringContainsString('Pieve', $properties[$poi->id]['searchable']);
+        $this->assertStringNotContainsString('Descrizione da non cercare', $properties[$poi->id]['searchable']);
+    }
+
     public function test_name_senza_lingue_nulle(): void
     {
         $app = App::factory()->createQuietly(['poi_searchables' => '[]']);

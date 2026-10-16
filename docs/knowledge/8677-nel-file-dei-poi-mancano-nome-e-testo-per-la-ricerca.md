@@ -25,6 +25,9 @@ cancellazione di un POI (`EcPoiObserver`), al cambio dei tipi di un POI
 Geohub dei POI e delle immagini (`ImportAppJob::dispatchAfterEcImportBatch()`), dopo il ricalcolo
 delle località (`RegenerateTaxonomyWhereOutputsJob`), con l'action Nova e con il comando
 `wm:build-pois-geojson`. Finché non si rigenera, l'API serve il file già salvato sullo storage.
+Il job tiene il lock di unicità fino a fine esecuzione: un build della stessa app lanciato mentre
+ne gira un altro viene scartato senza errori. A fine import, se fallisce il ricalcolo delle
+località il file si rigenera comunque; se fallisce il build, non ne parte un secondo.
 
 I temi dei POI non sono fra i campi di ricerca, come su Geohub.
 

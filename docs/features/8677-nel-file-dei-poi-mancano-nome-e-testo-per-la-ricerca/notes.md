@@ -13,9 +13,9 @@
 
 ### Task 2 getsearchablestring corretto
 
-- I test creano le App senza `native_app_deep_link_enabled`: nessuna migration di maphub né del
-  package crea quella colonna, e i test girano dal consumer; il default della factory non attiva
-  il deep link.
+- I test creano le App senza `native_app_deep_link_enabled`, che non è una colonna ma una chiave
+  di `App.properties` (`App::isNativeAppDeepLinkEnabled()`): la factory non la imposta, quindi il
+  deep link resta spento e i test non scrivono sul registro condiviso.
 - Prima dell'encode JSON gli spazi (a capo compresi) di ogni traduzione diventano uno spazio
   solo. Senza, gli a capo escapati diventano lettere spurie quando si tolgono i backslash: nel
   `pois.geojson` di Geohub compare `rnLa chiesa…` al posto di `La chiesa…`.
@@ -59,6 +59,21 @@
   `MaxAttemptsExceededException`): senza `catch` il file restava quello vecchio.
 - Dopo la review: anche il batch delle immagini (`ec_media`) rigenera il file a fine import,
   perché gira in parallelo a quello dei POI e il file contiene le immagini dei POI.
+- Dopo la seconda review: il `catch` della catena non rilancia il build se a fallire è il build
+  stesso, ma solo se è fallito il ricalcolo delle località
+  (`ImportAppJob::failureCameFromPoisBuild()`: il job dell'eccezione per timeout e tentativi
+  esauriti, lo stack per gli altri errori). Prima un build fallito ne lanciava un secondo, con
+  l'errore doppio nei log.
+- Il lock di `BuildAppPoisGeojsonJob` (`ShouldBeUnique`, tenuto fino a fine esecuzione) può far
+  scartare in silenzio il build di fine import se in quel momento ne gira un altro della stessa
+  app (batch delle immagini, `TaxonomyPoiTypeablesObserver`): il file resta quello del build in
+  corso. Documentato nel docblock; non si passa a `ShouldBeUniqueUntilProcessing`, che
+  cambierebbe il comportamento per tutti i chiamanti del job.
+- Il commento sul `finally()` avverte che il nome `ImportAppJob::dispatchAfterEcImportBatch` è
+  serializzato nei batch, come già per `finalizeAppImport()`.
+- Test aggiunti dopo la seconda review: il `catch` con il timeout del build e con quello del
+  ricalcolo; il `finally()` del batch delle immagini, invocato da
+  `attachBatchCompletionCallback()`; `searchable` nel file che rispetta `poi_searchables`.
 - `dispatchAfterEcImportBatch()` resta pubblico e statico perché lo chiama la closure del
   `finally()` del batch, che viene serializzata; è marcato `@internal`. Le chiavi dei batch che lo
   usano stanno in `POST_IMPORT_ENTITY_KEYS`.
@@ -94,6 +109,9 @@
   che c'erano (`getTranslations()` su un `Model` generico, `App.php` ed `EcPoi.php`) sono corretti
   con un `@var` sulla variabile del ciclo, che toglie anche errori preesistenti nello stesso
   ciclo. Restano errori preesistenti in quei file (PHPDoc non validi, tipi Eloquent generici).
+- Dopo la seconda review interna (16/10/2026), da maphub: test della feature e test vicini
+  dell'import (`ImportEcPoiJobTaxonomySyncTest`, `ImportAppJobTaxonomyScopingTest`), 30/30;
+  PHPStan del package su `ImportAppJob.php`: nessun errore sulle righe modificate.
 - Prova completa in ambiente di sviluppo locale (16/10/2026), con il codice di questo branch:
   restore del database a prima dell'import, import dell'app 28 da Geohub, webapp collegata al
   backend locale. Esito positivo: a fine import il ricalcolo delle località e poi la
@@ -124,6 +142,11 @@
 - Review formale con `wm-review-ticket` (15/10/2026): un bloccante (il file non si rigenerava se
   falliva il ricalcolo delle località) e undici cleanup. Corretti il bloccante e i cleanup che
   restano dentro il ticket; due vanno in follow-up perché escono dal ticket (sotto).
+- Seconda review interna (16/10/2026): nessun bloccante. Corretti il `catch` della catena, la
+  nota su `native_app_deep_link_enabled`, l'avvertimento sul nome serializzato e due test
+  mancanti; documentato il lock di unicità del build. Lasciati: il setup ripetuto nei test,
+  `"name": []` nel file per un POI senza nome (innocuo per wm-core), `html_entity_decode` dopo
+  `strip_tags` (comportamento già esistente).
 - Verifiche dei rischi fatte in sola lettura su dev.maphub, prod.maphub, cammini, camminidev,
   wm.osm2cai e uat.osm2cai il 15/10/2026. cai.osm2cai e dev.osm2cai non verificati: host key SSH
   cambiata.

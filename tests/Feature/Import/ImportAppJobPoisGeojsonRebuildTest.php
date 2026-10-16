@@ -2,7 +2,11 @@
 
 namespace Wm\WmPackage\Tests\Feature\Import;
 
+use Illuminate\Bus\Batch;
+use Illuminate\Contracts\Queue\Job;
+use Illuminate\Queue\TimeoutExceededException;
 use Illuminate\Support\Facades\Bus;
+use Mockery;
 use Tests\TestCase;
 use Wm\WmPackage\Jobs\BuildAppPoisGeojsonJob;
 use Wm\WmPackage\Jobs\Import\ImportAppJob;
@@ -46,6 +50,46 @@ class ImportAppJobPoisGeojsonRebuildTest extends TestCase
         Bus::assertNotDispatched(BuildAppPoisGeojsonJob::class);
 
         $sync->invokeChainCatchCallbacks(new \RuntimeException('timeout'));
+
+        Bus::assertDispatched(
+            BuildAppPoisGeojsonJob::class,
+            fn (BuildAppPoisGeojsonJob $job) => $job->uniqueId() === 'build_pois_geojson_42'
+        );
+    }
+
+    public function test_se_fallisce_il_build_della_catena_non_ne_lancia_un_secondo(): void
+    {
+        ImportAppJob::dispatchAfterEcImportBatch('ec_poi', 42);
+        $sync = Bus::dispatched(SyncTaxonomyWhereJob::class)->first();
+
+        $job = Mockery::mock(Job::class);
+        $job->shouldReceive('resolveName')->andReturn(BuildAppPoisGeojsonJob::class);
+        $sync->invokeChainCatchCallbacks(TimeoutExceededException::forJob($job));
+
+        Bus::assertNotDispatched(BuildAppPoisGeojsonJob::class);
+    }
+
+    public function test_se_il_ricalcolo_va_in_timeout_il_file_si_rigenera(): void
+    {
+        ImportAppJob::dispatchAfterEcImportBatch('ec_poi', 42);
+        $sync = Bus::dispatched(SyncTaxonomyWhereJob::class)->first();
+
+        $job = Mockery::mock(Job::class);
+        $job->shouldReceive('resolveName')->andReturn(SyncTaxonomyWhereJob::class);
+        $sync->invokeChainCatchCallbacks(TimeoutExceededException::forJob($job));
+
+        Bus::assertDispatched(BuildAppPoisGeojsonJob::class);
+    }
+
+    public function test_il_batch_delle_immagini_aggancia_la_rigenerazione_a_fine_import(): void
+    {
+        $batch = Bus::batch([]);
+        $method = new \ReflectionMethod(ImportAppJob::class, 'attachBatchCompletionCallback');
+        $method->invoke(new ImportAppJob(28), $batch, 'ec_media', 42);
+
+        foreach ($batch->finallyCallbacks() as $callback) {
+            $callback(Mockery::mock(Batch::class));
+        }
 
         Bus::assertDispatched(
             BuildAppPoisGeojsonJob::class,

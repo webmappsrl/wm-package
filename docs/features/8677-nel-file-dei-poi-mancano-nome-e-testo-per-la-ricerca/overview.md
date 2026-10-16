@@ -145,6 +145,13 @@ dev.osm2cai non sono stati verificati: la loro host key SSH risulta cambiata.
   (`src/Models/App.php:269-272`). `getSearchableString` riceve l'app come oggetto e legge i tipi di
   POI caricati insieme ai POI (`with('taxonomyPoiTypes')`, `App.php:257`): nessuna query in più per
   POI. L'app più grande verificata ha 4323 POI (osm2cai app 3).
+- **Build di fine import scartato dal lock**: `BuildAppPoisGeojsonJob` è `ShouldBeUnique` per
+  app, con il lock tenuto fino a fine esecuzione. Se quando parte quello di fine import ne sta
+  già girando un altro della stessa app (batch delle immagini, `TaxonomyPoiTypeablesObserver`),
+  viene scartato senza errori e il file resta quello del build in corso. Il ricalcolo delle
+  località dura minuti e i build durante l'import sono brevi, quindi la sovrapposizione è rara.
+  Mitigazione: documentato nel codice; non si passa a `ShouldBeUniqueUntilProcessing`, che
+  cambierebbe il comportamento per tutti i chiamanti del job.
 - **Rollback**: il revert del codice non toglie `properties.name` scritto nel frattempo dagli
   import, che per wm-core è innocuo; i file già generati perdono `searchable` alla rigenerazione
   successiva, e le copie già scaricate sui dispositivi restano finché l'app non riscarica il file.
