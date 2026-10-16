@@ -23,8 +23,8 @@ Interventi in wm-package:
      `Illuminate\Support\Facades\App` e non il modello, quindi `App::find()` lancia
      `BadMethodCallException: Method Illuminate\Foundation\Application::find does not exist`;
    - descrizione ed estratto li legge dalle colonne, ma in wm-package stanno in `properties`:
-     sul POI locale 122 il risultato è `{it:La Santona} [] [] …`, senza descrizione e con due
-     `[]`;
+     su un POI con la descrizione in `properties` il risultato è `{it:<nome>} [] [] …`, senza
+     descrizione e con due `[]`;
    - `json_encode` senza `JSON_UNESCAPED_UNICODE` scrive `Localit\u00e0`, e la ricerca di
      «Località» non lo trova.
 

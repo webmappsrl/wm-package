@@ -13,8 +13,9 @@
 
 ### Task 2 getsearchablestring corretto
 
-- I test creano le App senza `native_app_deep_link_enabled`: la colonna non esiste nel database
-  di maphub su cui girano i test, e il default della factory non attiva il deep link.
+- I test creano le App senza `native_app_deep_link_enabled`: nessuna migration di maphub né del
+  package crea quella colonna, e i test girano dal consumer; il default della factory non attiva
+  il deep link.
 - Prima dell'encode JSON gli spazi (a capo compresi) di ogni traduzione diventano uno spazio
   solo. Senza, gli a capo escapati diventano lettere spurie quando si tolgono i backslash: nel
   `pois.geojson` di Geohub compare `rnLa chiesa…` al posto di `La chiesa…`.
@@ -45,8 +46,8 @@
 
 ### Task 4 rigenerare poisgeojson al cambio di poi_searchables
 
-- Il test usa `Bus::fake()` senza lista e non imposta `native_app_deep_link_enabled` (colonna
-  assente nel database di maphub, vedi Task 2).
+- Il test usa `Bus::fake()` senza lista e non imposta `native_app_deep_link_enabled` (vedi
+  Task 2).
 - Tolta la condizione `! $app->wasRecentlyCreated`: `wasChanged()` è già falso in creazione, e
   la condizione bloccava anche gli aggiornamenti fatti sulla stessa istanza appena creata.
 
@@ -84,14 +85,21 @@
 - Dopo le correzioni della review, da maphub
   (`docker exec php-maphub vendor/bin/pest wm-package/tests/...`): test nuovi e test esistenti
   vicini al codice toccato (import Geohub, `ImportAppJob`, `TaxonomyWhere`, import UGC POI),
-  64/64. `tests/Feature/Import/ImportUgcTrackJobTest.php` è escluso: fallisce per la tabella
-  `ugc_track_matching_runs` mancante nel database di maphub (vedi Follow-up).
+  64/64. `tests/Feature/Import/ImportUgcTrackJobTest.php` è escluso: usa la tabella
+  `ugc_track_matching_runs`, la cui migration (stub di oc:8773) non è ancora pubblicata in
+  `database/migrations/` di maphub (vedi Follow-up).
 - Pint lanciato solo sui file toccati.
 - PHPStan di maphub (quello della CI, che non analizza `wm-package/`): 0 errori.
 - PHPStan del package sui soli file toccati: nessun errore sulle righe modificate. I due errori
   che c'erano (`getTranslations()` su un `Model` generico, `App.php` ed `EcPoi.php`) sono corretti
   con un `@var` sulla variabile del ciclo, che toglie anche errori preesistenti nello stesso
   ciclo. Restano errori preesistenti in quei file (PHPDoc non validi, tipi Eloquent generici).
+- Prova completa in ambiente di sviluppo locale (16/10/2026), con il codice di questo branch:
+  restore del database a prima dell'import, import dell'app 28 da Geohub, webapp collegata al
+  backend locale. Esito positivo: a fine import il ricalcolo delle località e poi la
+  rigenerazione di `pois.geojson`; nel file ogni POI ha `name` e `searchable`; dalla webapp la
+  ricerca trova i POI per nome (anche con accenti), per descrizione e per tipo di POI; il cambio di
+  «POI Search In» rigenera il file e cambia i risultati. Non sostituisce la verifica sul dev.
 - Da fare dal dev: verifica sul dev dopo restore e nuovo import (requisito «Verifica sul dev»
   dell'overview).
 
@@ -133,6 +141,11 @@
 - Spostare la regola su `properties.name` da un metodo statico di `AbstractObserver` a un trait
   sul modello, che l'observer e l'import chiamano: da fare insieme agli altri salvataggi
   silenziosi del primo follow-up.
-- `tests/Feature/Import/ImportUgcTrackJobTest.php` fallisce sul database di maphub per la tabella
-  `ugc_track_matching_runs` mancante (migration di oc:8773 non ancora pubblicata in maphub): non
-  legato a questo lavoro.
+- `tests/Feature/Import/ImportUgcTrackJobTest.php` non passa da maphub finché la migration di
+  `ugc_track_matching_runs` (stub di oc:8773) non è pubblicata in maphub: non legato a questo
+  lavoro.
+- `GET /api/v1/app/{id}/pois.geojson` va in errore: la route (`routes/api.php:239`) chiama il
+  parametro `{id}`, mentre `AppAPIController::pois(App $app)` si aspetta il binding del modello e
+  riceve un `App` vuoto, quindi `getPoisGeojson(null)`. La route v2 (`routes/api.php:249`) usa
+  `{app}`. Le app leggono il file dallo storage e non da questa route. Da aprire come ticket a
+  parte.
