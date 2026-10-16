@@ -32,6 +32,13 @@
   `properties.description` stringa, dati legacy) entra nel testo come `{it:…}`: meglio includerla
   che perderla, la ricerca è per sottostringa.
 
+- Terza review interna (16/10/2026): le entità HTML si decodificano per prime, dentro
+  `searchableTranslations()`, prima di togliere i tag e di normalizzare gli spazi (compreso lo
+  spazio non separabile U+00A0). Prima `&nbsp;` diventava U+00A0 dopo la normalizzazione, e una
+  ricerca di più parole con lo spazio normale non trovava quel punto del testo; `&lt;b&gt;`
+  tornava `<b>`. I tag ora diventano uno spazio invece di sparire: `strip_tags` trasformava
+  «Uno</p><p>Due» in «UnoDue». Due test nuovi.
+
 ### Task 3 name e searchable in poisgeojson
 
 - `tests/Unit/Models/AppGetAllPoisGeojsonGlobalTest.php` non si può lanciare da maphub: estende
@@ -118,7 +125,7 @@
   ciclo. Restano errori preesistenti in quei file (PHPDoc non validi, tipi Eloquent generici).
 - Dopo la seconda review interna (16/10/2026), da maphub: test della feature e test vicini
   dell'import (`ImportEcPoiJobTaxonomySyncTest`, `ImportAppJobTaxonomyScopingTest`), 30/30, e
-  31/31 dopo il test sul ramo dello stack;
+  31/31 dopo il test sul ramo dello stack, 33/33 dopo i test su entità HTML e tag adiacenti;
   PHPStan del package su `ImportAppJob.php`: nessun errore sulle righe modificate.
 - Prova completa in ambiente di sviluppo locale (16/10/2026), con il codice di questo branch:
   restore del database a prima dell'import, import dell'app 28 da Geohub, webapp collegata al
@@ -159,8 +166,9 @@
 - Seconda review interna (16/10/2026): nessun bloccante. Corretti il `catch` della catena, la
   nota su `native_app_deep_link_enabled`, l'avvertimento sul nome serializzato e due test
   mancanti; documentato il lock di unicità del build. Lasciati: il setup ripetuto nei test,
-  `"name": []` nel file per un POI senza nome (innocuo per wm-core), `html_entity_decode` dopo
-  `strip_tags` (comportamento già esistente).
+  `"name": []` nel file per un POI senza nome (innocuo per wm-core). L'ordine fra
+  `html_entity_decode` e `strip_tags`, prima lasciato perché già esistente, è stato corretto
+  nella terza review (Task 2).
 - Verifiche dei rischi fatte in sola lettura su dev.maphub, prod.maphub, cammini, camminidev,
   wm.osm2cai e uat.osm2cai il 15/10/2026. cai.osm2cai e dev.osm2cai non verificati: host key SSH
   cambiata.

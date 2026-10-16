@@ -362,7 +362,7 @@ class EcPoi extends Point implements LayerRelatedModel
 
         $parts = array_filter($parts, fn (string $part): bool => $part !== '');
 
-        return trim(html_entity_decode(implode(' ', $parts)));
+        return trim(implode(' ', $parts));
     }
 
     /**
@@ -404,10 +404,19 @@ class EcPoi extends Point implements LayerRelatedModel
         if ($translations === []) {
             return '';
         }
-        // A capo e tag non servono alla ricerca: a capo escapati diventerebbero lettere spurie
-        // ("rnLa" su Geohub) una volta tolti i backslash.
+        // Prima le entità (&nbsp;, &lt;b&gt;), poi i tag sostituiti da uno spazio (strip_tags
+        // incollerebbe «Uno</p><p>Due»), infine gli spazi, compreso lo spazio non separabile, in uno
+        // solo: a capo escapati diventerebbero lettere spurie ("rnLa" su Geohub) una volta tolti i
+        // backslash (oc:8677).
         $translations = array_map(
-            fn (string $text): string => trim((string) preg_replace('/\s+/u', ' ', $stripTags ? strip_tags($text) : $text)),
+            function (string $text) use ($stripTags): string {
+                $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                if ($stripTags) {
+                    $text = (string) preg_replace('/<[^>]*>/', ' ', $text);
+                }
+
+                return trim((string) preg_replace('/[\s\x{00A0}]+/u', ' ', $text));
+            },
             $translations
         );
 

@@ -105,6 +105,33 @@ class EcPoiSearchableStringTest extends TestCase
         $this->assertStringNotContainsString('\\u00e9', $searchable);
     }
 
+    public function test_nbsp_e_entita_html_diventano_testo_cercabile(): void
+    {
+        $app = $this->makeApp('[]');
+        $poi = $this->makePoi($app, ['it' => 'Pieve'], [
+            'description' => ['it' => '<p>Torre&nbsp;campanaria &lt;b&gt;antica&lt;/b&gt;</p>'],
+        ]);
+
+        $searchable = $poi->getSearchableString($app);
+
+        $this->assertStringContainsString('Torre campanaria', $searchable);
+        $this->assertStringNotContainsString("\u{00A0}", $searchable);
+        $this->assertStringNotContainsString('<b>', $searchable);
+    }
+
+    public function test_tag_adiacenti_non_incollano_le_parole(): void
+    {
+        $app = $this->makeApp('[]');
+        $poi = $this->makePoi($app, ['it' => 'Pieve'], [
+            'description' => ['it' => '<p>Uno</p><p>Due</p>'],
+        ]);
+
+        $searchable = $poi->getSearchableString($app);
+
+        $this->assertStringContainsString('Uno Due', $searchable);
+        $this->assertStringNotContainsString('UnoDue', $searchable);
+    }
+
     public function test_campi_vuoti_non_aggiungono_parentesi(): void
     {
         $app = $this->makeApp('[]');

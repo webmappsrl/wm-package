@@ -79,14 +79,14 @@ mano con lo stesso identifier (oc:8486).
 ### Import GeoHub: cosa resta degli observer (oc:8677)
 
 L'import salva con `persistQuietly()`, senza eventi Eloquent. Della logica degli observer applica
-solo la regola su `properties.name` (`AbstractObserver::syncNameIntoProperties()`, la stessa che
-usa `AbstractObserver::saving()`): su ogni modello con `name` traducibile copia le traduzioni in
+solo la regola su `properties.name` (`AbstractObserver::syncNameIntoProperties()`, la stessa che usa
+`AbstractObserver::saving()`): su ogni modello con `name` traducibile copia le traduzioni in
 `properties.name`. Sui layer l'effetto si perde: `Layer::save()` riscrive `properties.name` con la
-stringa nella lingua corrente subito dopo, come faceva già prima. A differenza dell'import Excel (sezione «Import Excel»), qui la regola non è
-duplicata. Il resto che gli observer farebbero si recupera a fine batch (vedi
-`dispatchAfterEcImportBatch()`). Le colonne dell'app (`poi_searchables`, `track_searchables` e le
-altre in comune con Geohub) le copia `ImportAppJob::transformData()` per nome di colonna, senza
-passare dal mapping `fields` del config.
+stringa nella lingua corrente subito dopo, come faceva già prima. A differenza dell'import Excel
+(sezione «Import Excel»), qui la regola non è duplicata. Il resto che gli observer farebbero si
+recupera a fine batch (vedi `dispatchAfterEcImportBatch()`). Le colonne dell'app (`poi_searchables`,
+`track_searchables` e le altre in comune con Geohub) le copia `ImportAppJob::transformData()` per
+nome di colonna, senza passare dal mapping `fields` del config.
 
 ### Import da OSM
 

@@ -16,7 +16,8 @@ I due campi li aggiunge `App::getAllPoisGeojson()` mentre genera il file, e non 
   `excerpt`, `osmid`, `taxonomyPoiTypes`; una lista vuota, o un valore che non è una lista di
   stringhe, vuol dire tutti. Descrizione ed estratto si leggono da `properties`. Ogni campo è
   scritto nel formato di Geohub (`{it:Testo,en:Text}`, senza virgolette), con gli accenti leggibili,
-  senza tag HTML e senza a capo; i campi vuoti non aggiungono nulla. Se il calcolo fallisce il POI
+  le entità HTML decodificate (`&nbsp;` è uno spazio), i tag sostituiti da uno spazio e senza a
+  capo; i campi vuoti non aggiungono nulla. Se il calcolo fallisce il POI
   resta nel file con `searchable` vuoto e un warning nel log (`App::searchableForPoi()`).
 
 Il file si rigenera con `BuildAppPoisGeojsonJob` (unico per app): al salvataggio e alla
