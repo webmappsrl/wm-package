@@ -32,7 +32,9 @@ Interventi in wm-package:
 
    Il metodo riceve l'app come oggetto (`?App`, non l'id: nessuna query per POI), legge descrizione ed
    estratto da `properties` come `EcTrack::getSearchableString()` (`src/Models/EcTrack.php:776-810`),
-   salta i campi vuoti e mantiene gli accenti. Con `poi_searchables` vuoto, o con un valore che
+   salta i campi vuoti e mantiene gli accenti. Decodifica le entità HTML (`&nbsp;` diventa uno
+   spazio normale) e sostituisce i tag con uno spazio, così «Uno</p><p>Due» resta due parole.
+   Con `poi_searchables` vuoto, o con un valore che
    non è una lista di stringhe, include tutti i campi (nome, descrizione, estratto, osmid, tipi di
    POI), come fa oggi Geohub.
 4. **`pois.geojson` si rigenera quando serve.**
