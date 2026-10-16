@@ -169,6 +169,10 @@
   `"name": []` nel file per un POI senza nome (innocuo per wm-core). L'ordine fra
   `html_entity_decode` e `strip_tags`, prima lasciato perché già esistente, è stato corretto
   nella terza review (Task 2).
+- Review interna finale (16/10/2026) su `2fb8ba02`: APPROVATO, nessun bloccante né cleanup aperto.
+  Il revisore ha rilanciato in proprio i test della feature e quelli vicini dell'import (33/33) e
+  PHPStan del package sui 6 file di `src/` modificati (nessun errore sulle righe della feature).
+  Restano da fare dal dev: push, PR verso `develop` e verifica sul dev rifacendo l'import.
 - Verifiche dei rischi fatte in sola lettura su dev.maphub, prod.maphub, cammini, camminidev,
   wm.osm2cai e uat.osm2cai il 15/10/2026. cai.osm2cai e dev.osm2cai non verificati: host key SSH
   cambiata.
@@ -177,8 +181,10 @@
 
 - Limite noto della terza review: le entità si decodificano prima di togliere i tag, quindi un
   `&lt;` usato come segno di minore in una descrizione («quota &lt; 500 m … `<br>`») diventa `<`
-  e la regola dei tag toglie il testo fino al `>` successivo. Caso ipotetico, non corretto; se
-  servisse, si decodificano `&lt;` e `&gt;` dopo aver tolto i tag.
+  e la regola dei tag toglie il testo fino al `>` successivo. Caso ipotetico, non corretto. Non
+  basta decodificare `&lt;` e `&gt;` dopo aver tolto i tag: un `&lt;b&gt;` tornerebbe `<b>`
+  letterale nel testo di ricerca, e `test_nbsp_e_entita_html_diventano_testo_cercabile` fallirebbe.
+  Una correzione dovrebbe distinguere i tag scritti come entità dal segno di minore.
 
 - Applicare la regola su `properties.name` agli altri salvataggi silenziosi:
   `src/Nova/Actions/BulkEditAction.php:128`, `src/Nova/Actions/ConvertUgcPoiToEcPoi.php:70`,
