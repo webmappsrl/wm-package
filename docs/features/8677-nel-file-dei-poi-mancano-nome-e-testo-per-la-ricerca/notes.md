@@ -175,6 +175,11 @@
 
 ## Follow-up
 
+- Limite noto della terza review: le entità si decodificano prima di togliere i tag, quindi un
+  `&lt;` usato come segno di minore in una descrizione («quota &lt; 500 m … `<br>`») diventa `<`
+  e la regola dei tag toglie il testo fino al `>` successivo. Caso ipotetico, non corretto; se
+  servisse, si decodificano `&lt;` e `&gt;` dopo aver tolto i tag.
+
 - Applicare la regola su `properties.name` agli altri salvataggi silenziosi:
   `src/Nova/Actions/BulkEditAction.php:128`, `src/Nova/Actions/ConvertUgcPoiToEcPoi.php:70`,
   `src/Imports/EcPoiFromSpreadsheet.php:104`, `src/Imports/EcTrackFromSpreadsheet.php:47`.
