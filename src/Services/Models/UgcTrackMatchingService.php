@@ -226,6 +226,22 @@ class UgcTrackMatchingService extends BaseService
      * `:max_distance` metri anche vicino ai poli e all'antimeridiano.
      * La segmentazione delle EcTrack (parts/lens/counted/totals) è in segmentCtes(), condivisa
      * con totalSegmentsForEcTracks().
+     *
+     * Tratti dritti lunghi (oc:8165). Dove il GPS non ha registrato, fra due punti consecutivi
+     * resta un segmento dritto (oc:8719 sceglie di tenerlo). Un tratto più lungo della lunghezza
+     * di segmento non è un percorso: marca solo il primo e l'ultimo segmento che incontra, non
+     * quelli in mezzo. Due rami, uniti dall'INSERT:
+     * - `grouped` apre un gruppo nuovo a ogni tratto lungo, e `up` raggruppa anche per quello:
+     *   il tratto lungo non entra più in nessuna linea, e per tutto il resto pezzi e costo
+     *   restano quelli di prima;
+     * - `long_pick` tiene i soli segmenti **in cui cade uno dei due capi del tratto**, entro la
+     *   distanza massima. Il mezzo del tratto non esiste: della linea dritta si sa solo che agli
+     *   estremi la persona c'era. Una tappa attraversata di traverso, lontana da entrambi i capi,
+     *   non prende quindi nulla — prima ne prendeva due, i più vicini al punto di attraversamento,
+     *   e quel 10% si sommava poi ai segmenti percorsi davvero.
+     * Le prestazioni reggono perché i tratti lunghi sono pochissimi (214 su 399.290 nei dati di
+     * camminiditalia): il percorso normale resta a pezzi di CHUNK_VERTICES vertici, e andare
+     * per singolo lato costerebbe 305 s contro 16,9 s a parità di risultato.
      */
     private function insertSql(string $ugcSource, string $ecSource): string
     {
@@ -243,17 +259,41 @@ class UgcTrackMatchingService extends BaseService
                 FROM u, LATERAL ST_Dump(ST_Force2D(u.geometry::geometry)) lp,
                      LATERAL ST_DumpPoints(lp.geom) pp
             ),
+            edges AS (
+                SELECT p.id, p.app_id, p.part, p.k, p.geom,
+                       LAG(p.geom) OVER (PARTITION BY p.id, p.part ORDER BY p.k) AS prev_geom,
+                       ST_Distance(
+                           p.geom::geography,
+                           LAG(p.geom) OVER (PARTITION BY p.id, p.part ORDER BY p.k)::geography
+                       ) AS d
+                FROM pts p
+            ),
+            grouped AS (
+                SELECT e.id, e.app_id, e.part, e.k, e.geom,
+                       SUM(CASE WHEN e.d > :seg THEN 1 ELSE 0 END) OVER (
+                           PARTITION BY e.id, e.part ORDER BY e.k ROWS UNBOUNDED PRECEDING
+                       ) AS grp
+                FROM edges e
+            ),
+            long_edges AS (
+                SELECT e.id, e.app_id, e.part, e.k,
+                       ST_MakeLine(e.prev_geom, e.geom)::geography AS g,
+                       e.prev_geom::geography AS a,
+                       e.geom::geography AS b
+                FROM edges e
+                WHERE e.d > :seg
+            ),
             up AS MATERIALIZED (
                 SELECT x.id, x.app_id, x.g, _ST_Expand(x.g, :max_distance) AS ge FROM (
                     SELECT p.id, p.app_id, ST_MakeLine(p.geom ORDER BY p.k)::geography AS g
-                    FROM pts p
+                    FROM grouped p
                     CROSS JOIN LATERAL (VALUES
                         ((p.k - 1) / {$chunk}),
                         (CASE WHEN p.k > 1 AND (p.k - 1) % {$chunk} = 0 THEN (p.k - 1) / {$chunk} - 1 END)
                     ) c(chunk)
                     WHERE c.chunk IS NOT NULL
-                    GROUP BY p.id, p.app_id, p.part, c.chunk
-                    HAVING COUNT(*) > 1 OR c.chunk = 0
+                    GROUP BY p.id, p.app_id, p.part, p.grp, c.chunk
+                    HAVING COUNT(*) > 1
                 ) x
             ),
             {$segmentCtes},
@@ -261,14 +301,26 @@ class UgcTrackMatchingService extends BaseService
                 SELECT c.id, c.offs + i AS idx,
                        ST_LineSubstring(c.l::geography, i * :seg / c.len, LEAST((i + 1) * :seg / c.len, 1)) AS s
                 FROM counted c CROSS JOIN LATERAL generate_series(0, c.n - 1) AS i
+            ),
+            long_pick AS (
+                SELECT DISTINCT le.id AS ugc_id, le.app_id, s.id AS ec_id, s.idx
+                FROM long_edges le
+                JOIN segs s ON (s.s && _ST_Expand(le.a, :max_distance) AND ST_DWithin(s.s, le.a, :max_distance))
+                            OR (s.s && _ST_Expand(le.b, :max_distance) AND ST_DWithin(s.s, le.b, :max_distance))
+            ),
+            hits AS (
+                SELECT up.id AS ugc_id, up.app_id, s.id AS ec_id, s.idx
+                FROM segs s
+                JOIN up ON s.s && up.ge AND ST_DWithin(s.s, up.g, :max_distance)
+                UNION
+                SELECT lp.ugc_id, lp.app_id, lp.ec_id, lp.idx FROM long_pick lp
             )
             INSERT INTO ugc_track_ec_track_matches
                 (ugc_track_id, ec_track_id, app_id, matched_segments, total_segments, segment_length_meters, max_distance_meters, created_at, updated_at)
-            SELECT up.id, s.id, up.app_id, jsonb_agg(DISTINCT s.idx ORDER BY s.idx), tt.total, :seg, :max_distance, NOW(), NOW()
-            FROM segs s
-            JOIN totals tt ON tt.id = s.id
-            JOIN up ON s.s && up.ge AND ST_DWithin(s.s, up.g, :max_distance)
-            GROUP BY up.id, s.id, up.app_id, tt.total
+            SELECT h.ugc_id, h.ec_id, h.app_id, jsonb_agg(DISTINCT h.idx ORDER BY h.idx), tt.total, :seg, :max_distance, NOW(), NOW()
+            FROM hits h
+            JOIN totals tt ON tt.id = h.ec_id
+            GROUP BY h.ugc_id, h.ec_id, h.app_id, tt.total
             ON CONFLICT (ugc_track_id, ec_track_id) DO UPDATE SET
                 app_id = EXCLUDED.app_id,
                 matched_segments = EXCLUDED.matched_segments,
@@ -285,6 +337,14 @@ class UgcTrackMatchingService extends BaseService
      * zero esclusi), `counted` (segmenti del pezzo, CEIL(len / :seg), e indice del primo
      * segmento del pezzo), `totals` (segmenti della EcTrack). Unica definizione per il calcolo
      * delle righe e per i totali delle EcTrack non toccate: le due query non possono divergere.
+     *
+     * Limite noto, non corretto (oc:8165): i segmenti sono di :seg esatti e l'avanzo finale
+     * diventa un segmento a sé, anche di pochi metri. Siccome la copertura si misura
+     * **contando** i segmenti e non la loro lunghezza, quell'avanzo pesa quanto un segmento
+     * intero — su camminiditalia 153 tappe su 1262 ne hanno uno sotto i 50 m, una di 0,0 m, e
+     * su una tappa da cinque segmenti vale il 20%. Chi percorre tutta la tappa tranne l'ultimo
+     * metro si ferma all'80%. Si correggerebbe dividendo in parti uguali (`ROUND` invece di
+     * `CEIL`), al prezzo di ricalcolare tutte le corrispondenze esistenti.
      */
     private function segmentCtes(): string
     {

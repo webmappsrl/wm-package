@@ -32,7 +32,7 @@ beforeEach(function () {
     matchingAttachToLayer($this->layerA->id, $this->ec);
     matchingAttachToLayer($this->layerB->id, $this->ec);
     matchingAttachToLayer(999999, $this->ec); // riga orfana: layer inesistente (layerables non ha FK)
-    $this->ugc = matchingUgcTrack($this->user->id, $this->app_->id, 'MULTILINESTRING((11.00025 44, 11.00025 44.009))');
+    $this->ugc = matchingUgcTrack($this->user->id, $this->app_->id, 'MULTILINESTRING((11.00025 44, 11.00025 44.003, 11.00025 44.006, 11.00025 44.009))');
     UgcTrackMatchingService::make()->matchUgcTrack($this->ugc);
 });
 

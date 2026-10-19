@@ -11,6 +11,16 @@ percorso, e i layer si ricavano da lì passando per `layerables`.
   corto, anche di pochi millimetri, e conta come gli altri.
 - **Corrispondenza.** Un segmento è percorso se la UGC track passa entro la distanza massima
   (`ST_DWithin` su geography, sul segmento come linea continua). Solo EC track della stessa App.
+- **Un tratto dritto più lungo della lunghezza di segmento vale solo per i suoi due capi**
+  (oc:8165): marca i segmenti che stanno entro la distanza massima dal punto in cui il segnale
+  si è perso e da quello in cui è tornato, e nient'altro. Del mezzo non si sa niente, e una EC
+  track attraversata di traverso — lontana da entrambi i capi — non prende nulla.
+- **L'ultimo segmento di una EC track può essere lunghissimamente più corto degli altri**, perché
+  i segmenti sono di lunghezza fissa e l'avanzo diventa un segmento a sé. Siccome la copertura
+  si misura contando i segmenti e non la loro lunghezza, quell'avanzo pesa quanto un segmento
+  intero: su camminiditalia 153 EC track su 1262 ne hanno uno sotto i 50 m, una di 0,0 m, e su
+  una EC track da cinque segmenti vale il 20%. Limite noto, non corretto (oc:8165): si
+  risolverebbe dividendo in parti uguali, al prezzo di ricalcolare tutte le corrispondenze.
 - **Dati.** `ugc_track_ec_track_matches`: una riga per coppia con `matched_segments` (indici),
   `total_segments` e i parametri usati. `ugc_track_matching_runs`: esito dell'ultimo calcolo di
   ogni UGC track (`computed`/`failed`), anche quando non c'è nessuna corrispondenza.
@@ -44,6 +54,16 @@ percorso, e i layer si ricavano da lì passando per `layerables`.
   geometrie intere richiedeva 95 s su una traccia da 20.000 punti; così ~3 s, con risultati
   identici. `_ST_Expand` è interna a PostGIS ma è quella che `ST_DWithin` usa sull'indice, e
   non esiste un'alternativa pubblica per geography.
+- **Il limite sui tratti lunghi non si applica lato per lato** (oc:8165): misurato sulla UGC
+  track 297, confrontare ogni singolo lato con i segmenti costa **305 s contro 16,9 s**, a
+  parità di risultato. I tratti più lunghi di un segmento sono pochissimi — 214 su 399.290 nei
+  dati di camminiditalia — quindi il percorso normale resta a pezzi da 64 vertici (spezzati
+  anche dove c'è un tratto lungo) e solo quei pochi si guardano uno per uno.
+- **Il limite sta qui e non nel passaporto** (oc:8165): i segmenti percorsi non li legge solo
+  chi certifica una tappa, ma anche la mappa della UGC track in Nova (oc:8776). Una linea
+  dritta di chilometri che "tocca" una tappa è un dato sbagliato per chiunque la legga, non una
+  politica di un consumer. Dal consumer, poi, non si potrebbe nemmeno applicare: arrivano gli
+  indici dei segmenti, non il tratto che li ha toccati.
 - **Timeout 85 s, `retryUntil` e `uniqueFor`** (oc:8773): il `retry_after` di Redis nei consumer
   è 90 s; un timeout più lungo rimetteva in coda il job mentre girava.
 - **`failed()` non sovrascrive un calcolo riuscito partito dopo l'accodamento** (oc:8773): è

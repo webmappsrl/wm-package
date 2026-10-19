@@ -2,6 +2,7 @@
 
 namespace Wm\WmPackage\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -144,30 +145,60 @@ class UgcTrack extends MultiLineString implements UserOwnedModelInterface
     }
 
     /**
-     * Origine della traccia (oc:8747): 'recorded' se registrata con l'app, 'imported' se
-     * caricata da file. Verificato sui dati reali:
-     * - l'uploader dell'app (wm-core modal-ugc-uploader) converte i GPX con @tmcw/togeojson,
-     *   che aggiunge properties._gpxType ("trk"/"rte"); KML e GeoJSON non hanno _gpxType né
-     *   distanceFilter (portano chiavi di stile come stroke, stroke-width);
-     * - le registrazioni dell'app hanno sempre properties.distanceFilter; dalla 3.1.7 hanno
-     *   anche properties.locations (le 3.1.2-3.1.6 hanno distanceFilter ma non locations).
-     * Regola: _gpxType presente → importata; altrimenti locations non vuoto o distanceFilter
-     * presente → registrata; altrimenti → importata (anche un GeoJSON caricato senza chiavi proprie).
-     * Limite noto: un GeoJSON esportato a sua volta da una registrazione dell'app può portare
-     * ancora locations/distanceFilter e risulta «registrata»: l'uploader non aggiunge alcun
-     * marcatore suo.
+     * Origine della traccia (oc:8747, rivista in oc:8165): 'recorded' se registrata con l'app,
+     * 'imported' se caricata da file. Nell'ordine:
+     * - properties.import è il campo esplicito che l'app scrive sulle tracce importate
+     *   (oc:8764, wm-core): quando c'è, decide da solo, anche sopra locations — un GeoJSON
+     *   esportato da una registrazione e ricaricato porta ancora i punti grezzi del file;
+     * - properties._gpxType lo aggiunge @tmcw/togeojson convertendo un GPX ("trk"/"rte"); KML e
+     *   GeoJSON non ce l'hanno (portano chiavi di stile come stroke, stroke-width);
+     * - properties.locations sono i punti grezzi del GPS: solo una registrazione li ha.
+     * In mancanza di tutti e tre la traccia è importata.
+     *
+     * Perché properties.distanceFilter non vale più (oc:8165): è un'impostazione del GPS, e resta
+     * valorizzata anche su un dato importato, quindi non prova una registrazione. Il prezzo è noto
+     * e accettato: le registrazioni fatte con le versioni 3.1.2-3.1.6 dell'app hanno
+     * distanceFilter ma non locations (i punti grezzi arrivano dalla 3.1.7), e da qui in avanti
+     * risultano importate — su camminiditalia sono 20 tracce su 267. Senza i punti grezzi una
+     * traccia non si può dire registrata, ed è la regola che il passaporto (oc:8165) usa per
+     * decidere che cosa certifica un percorso.
      */
     public function origin(): string
     {
         $properties = $this->properties ?? [];
+        if (isset($properties['import'])) {
+            return 'imported';
+        }
         if (isset($properties['_gpxType'])) {
             return 'imported';
         }
-        if (! empty($properties['locations']) && is_array($properties['locations'])) {
-            return 'recorded';
-        }
 
-        return isset($properties['distanceFilter']) ? 'recorded' : 'imported';
+        return ! empty($properties['locations']) && is_array($properties['locations'])
+            ? 'recorded'
+            : 'imported';
+    }
+
+    /**
+     * Le sole tracce registrate, in SQL (oc:8165). Stessa regola di origin(), espressa come
+     * condizione invece che in PHP: serve a chi filtra molte tracce senza caricarle, perché
+     * `properties` porta con sé anche i punti grezzi. `UgcTrackOriginTest` verifica che le due
+     * forme diano lo stesso esito sugli stessi casi — se tocchi una, tocca l'altra.
+     *
+     * Usa `jsonb_exists()` e non l'operatore `?`: quest'ultimo, passando da PDO, va raddoppiato
+     * per non essere preso per un segnaposto, e il raddoppio si comporta in modo diverso a
+     * seconda che la query abbia o no altri binding. La funzione non ha questo problema.
+     *
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
+    public function scopeRecorded(Builder $query): Builder
+    {
+        $table = $query->getModel()->getTable();
+
+        return $query->whereRaw("NOT jsonb_exists({$table}.properties, 'import')")
+            ->whereRaw("NOT jsonb_exists({$table}.properties, '_gpxType')")
+            ->whereRaw("jsonb_typeof({$table}.properties -> 'locations') = 'array'")
+            ->whereRaw("jsonb_array_length({$table}.properties -> 'locations') > 0");
     }
 
     public function author(): BelongsTo
