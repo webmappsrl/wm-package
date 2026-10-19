@@ -20,7 +20,7 @@ beforeEach(function () {
 
 it('salva i segmenti corrispondenti a una traccia parallela entro la distanza massima', function () {
     $ec = matchingEcTrack($this->app_->id, 'MULTILINESTRING((11 44, 11 44.018))');
-    $ugc = matchingUgcTrack($this->user->id, $this->app_->id, 'MULTILINESTRING((11.00025 44, 11.00025 44.009))');
+    $ugc = matchingUgcTrack($this->user->id, $this->app_->id, 'MULTILINESTRING((11.00025 44, 11.00025 44.003, 11.00025 44.006, 11.00025 44.009))');
 
     $this->service->matchUgcTrack($ugc);
 
@@ -45,7 +45,7 @@ it('non salva righe per una traccia lontana ma registra il calcolo', function ()
 it('ignora le EcTrack di un\'altra App', function () {
     $other = App::factory()->createQuietly();
     $ec = matchingEcTrack($other->id, 'MULTILINESTRING((11 44, 11 44.018))');
-    $ugc = matchingUgcTrack($this->user->id, $this->app_->id, 'MULTILINESTRING((11.00025 44, 11.00025 44.009))');
+    $ugc = matchingUgcTrack($this->user->id, $this->app_->id, 'MULTILINESTRING((11.00025 44, 11.00025 44.003, 11.00025 44.006, 11.00025 44.009))');
 
     $this->service->matchUgcTrack($ugc);
 
@@ -89,7 +89,7 @@ it('usa i parametri della App quando sono impostati', function () {
 });
 
 it('ricalcola una EcTrack contro le UgcTrack vicine anche se non avevano righe', function () {
-    $ugc = matchingUgcTrack($this->user->id, $this->app_->id, 'MULTILINESTRING((11.00025 44, 11.00025 44.009))');
+    $ugc = matchingUgcTrack($this->user->id, $this->app_->id, 'MULTILINESTRING((11.00025 44, 11.00025 44.003, 11.00025 44.006, 11.00025 44.009))');
     $this->service->matchUgcTrack($ugc); // nessuna EcTrack ancora: zero righe
     $ec = matchingEcTrack($this->app_->id, 'MULTILINESTRING((11 44, 11 44.018))');
 
@@ -119,7 +119,7 @@ it('ricava i layer attraversati via layerables, ignorando i layer inesistenti', 
     $ec = matchingEcTrack($this->app_->id, 'MULTILINESTRING((11 44, 11 44.018))');
     matchingAttachToLayer($layer->id, $ec);
     matchingAttachToLayer(999999, $ec);
-    $ugc = matchingUgcTrack($this->user->id, $this->app_->id, 'MULTILINESTRING((11.00025 44, 11.00025 44.009))');
+    $ugc = matchingUgcTrack($this->user->id, $this->app_->id, 'MULTILINESTRING((11.00025 44, 11.00025 44.003, 11.00025 44.006, 11.00025 44.009))');
     $this->service->matchUgcTrack($ugc);
 
     expect(UgcTrack::find($ugc)->matchedLayerIds())->toBe([$layer->id]);
@@ -128,7 +128,7 @@ it('ricava i layer attraversati via layerables, ignorando i layer inesistenti', 
 it('i totali di segmenti per EcTrack coincidono con total_segments, anche per EcTrack non toccate e fatte di più pezzi', function () {
     $touched = matchingEcTrack($this->app_->id, 'MULTILINESTRING((11 44, 11 44.018))');
     $untouched = matchingEcTrack($this->app_->id, 'MULTILINESTRING((12 44, 12 44.0071),(12 44.0100, 12 44.0171))');
-    $ugc = matchingUgcTrack($this->user->id, $this->app_->id, 'MULTILINESTRING((11.00025 44, 11.00025 44.009))');
+    $ugc = matchingUgcTrack($this->user->id, $this->app_->id, 'MULTILINESTRING((11.00025 44, 11.00025 44.003, 11.00025 44.006, 11.00025 44.009))');
     $this->service->matchUgcTrack($ugc);
 
     $totals = $this->service->totalSegmentsForEcTracks([$touched, $untouched, 999999], $this->app_->id);
@@ -148,13 +148,12 @@ it('i totali di segmenti usano i parametri attuali della App', function () {
     expect($this->service->totalSegmentsForEcTracks([$ec], $this->app_->id))->toBe([$ec => 3]);
 });
 
-it('trova un segmento corrispondente solo al lato a cavallo fra due pezzi della UgcTrack', function () {
+it('il lato a cavallo fra due pezzi della UgcTrack viene comunque considerato', function () {
     // EcTrack ~1190 m verso nord: segmenti 0 (0-400 m), 1 (400-800 m), 2 (800-1190 m).
     $ec = matchingEcTrack($this->app_->id, 'MULTILINESTRING((11 44, 11 44.0107))');
     // UgcTrack: i primi CHUNK_VERTICES vertici a ~800 m a est, poi un salto a ~800 m a ovest.
-    // Nessun vertice è entro la distanza massima: la EcTrack la attraversa solo il lato fra il vertice
-    // CHUNK_VERTICES e il successivo, cioè l'ultimo lato del primo pezzo, a lat 44.0054 (~600 m,
-    // segmento 1).
+    // Il lato che attraversa la EcTrack è l'ultimo del primo pezzo: serve a verificare che la
+    // divisione in pezzi da CHUNK_VERTICES vertici non perda il lato a cavallo fra due pezzi.
     $n = UgcTrackMatchingService::CHUNK_VERTICES;
     $points = [];
     for ($i = 1; $i <= $n; $i++) {
@@ -168,5 +167,8 @@ it('trova un segmento corrispondente solo al lato a cavallo fra due pezzi della 
     $this->service->matchUgcTrack($ugc);
 
     expect(count($points))->toBeGreaterThan($n);
-    expect(matchedSegments($ugc, $ec))->toBe([1]);
+    // Quel lato è lungo ~1600 m, quindi dal oc:8165 vale solo per i suoi due capi — che però
+    // stanno a ~800 m dalla EcTrack, lontani da entrambi. La tappa viene attraversata di
+    // traverso e non si prende nulla: prima si prendeva il segmento 1, dove la linea la taglia.
+    expect(matchedSegments($ugc, $ec))->toBeNull();
 });
