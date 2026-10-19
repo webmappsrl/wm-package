@@ -7,32 +7,34 @@
 verso l'esterno che nessuno può annullare, ed è già successo (oc:8251).
 
 Il database invece è al sicuro da entrambi i lati, e non serve disciplina per quello:
-`phpunit.xml.dist` del package punta a `DB_DATABASE=wm_package`, e `phpunit.xml` di `forestas` a
-`forestas_testing`. Se un giorno crei un `phpunit.xml` locale nel package, ricordati che ha la
-precedenza sul `.dist`: senza le righe `DB_*` la protezione sparisce. È già successo una volta su
-`forestas`, quando quelle righe erano commentate, e il dev ha dovuto fare un restore del database
-di sviluppo (oc:8182).
+`phpunit.xml.dist` del package punta a `DB_DATABASE=wm_package`, e ogni shard punta al proprio DB
+di test. Se un giorno crei un `phpunit.xml` locale nel package, ricordati che ha la precedenza sul
+`.dist`: senza le righe `DB_*` la protezione sparisce. È già successo su uno shard, quando quelle
+righe erano commentate, e il dev ha dovuto fare un restore del database di sviluppo (oc:8182).
 
 ## Cos'è questo repo
 
 Package Laravel/Nova (`wm/wm-package`) condiviso dai progetti Webmapp, montato dai consumer come
-repository locale via Composer (forestas, maphub, camminiditalia, osm2cai2…). Fornisce modelli EC
+repository locale via Composer. Fornisce modelli EC
 e UGC, risorse e campi Nova, import da GeoHub/OSM, analytics PostHog e i domini opzionali.
 
 `composer.json` dichiara PHP `>8.1`, `laravel/framework` `^10 || ^11 || ^12 || ^13`,
-`laravel/nova` `^5.0`. Il DB è PostgreSQL con PostGIS. L'ambiente di sviluppo di riferimento è il
-Docker di `forestas` (container `php-forestas`, PHP 8.4, Laravel 12).
+`laravel/nova` `^5.0`. Il DB è PostgreSQL con PostGIS. Il package non ha un ambiente proprio: si
+sviluppa dentro il Docker dello shard in cui il submodule è montato. Quale sia lo shard corrente
+lo dice `SHARD_NAME` nel suo `.env` (`config/wm-package.php`, fallback su `APP_NAME`).
 
 **Il package è usato da più consumer con branch diversi.** Prima di dare per scontato che una
 funzionalità esista ovunque, controlla: alcuni fix vivono solo su un branch cliente.
 
 ## Comandi
 
-Tutto gira **dentro il container `php-forestas`**, da `wm-package/`.
+Tutto gira **dentro il container PHP dello shard** in cui il submodule è montato, da `wm-package/`.
+Lo shard è quello di `SHARD_NAME`; il nome del suo container non si ricava dalla variabile (ogni
+shard lo chiama a modo suo) e sta nel `CLAUDE.md` dello shard.
 
 | Cosa | Comando |
 |---|---|
-| Entrare nel container | `docker exec -it php-forestas bash` |
+| Entrare nel container | `docker exec -it <container-php-dello-shard> bash` |
 | Test (vedi la regola in cima) | `composer test` → `vendor/bin/pest` |
 | Test con coverage | `composer test-coverage` |
 | PHPStan | `composer analyse` |
@@ -45,9 +47,9 @@ Tutto gira **dentro il container `php-forestas`**, da `wm-package/`.
 
 - **Una modifica che attraversa package e consumer si merge prima qui.** Il consumer poi bumpa il
   puntatore del submodule e applica la propria parte nello stesso commit. L'ordine invertito rompe
-  cose che non sembrano collegate — in `maphub` è già successo: un `canSee()` che chiamava un
-  metodo non ancora presente nel package ha tolto il menu Nova a tutti gli Editor. La regola, vista
-  dal lato del consumer, sta nel `CLAUDE.md` di `maphub`.
+  cose che non sembrano collegate: su uno shard un `canSee()` che chiamava un metodo non ancora
+  presente nel package ha tolto il menu Nova a tutti gli utenti di un ruolo. La regola speculare,
+  vista dal lato dello shard, va nel `CLAUDE.md` di quello shard.
 
 - **PHP minimo `>8.1`: mai `const` dentro un trait.** Le costanti nei trait esistono solo da 8.2 —
   su un consumer a 8.1 è un Fatal Error al primo autoload, non un bug silenzioso. Vanno sulla
@@ -126,7 +128,7 @@ Per attivare il Catasto Sentieri su uno shard: [docs/howto/attivare-catasto-sent
 
 | Lavoro | Ticket | In breve |
 |---|---|---|
-| `withoutInternalConfigKeys()` — esclusione generica di chiavi interne da config.json/`layer()` | oc:8463 | Nuovo helper globale (`src/helpers.php`) + config `internal_attribute_keys` (vuota di default, popolata dal consumer, mai dal pacchetto): rimuove da un array `properties->attributes` le chiavi che un consumer dichiara riservate a uso interno, senza che wm-package ne conosca il significato (camminiditalia la usa per `shape_discontinuous`, un flag di discontinuità del cammino). Applicato in due canali con nesting diverso: `AppConfigService::config_section_map()` (`$item['attributes']`, appiattito) e `AppController::layer()` (`$json['properties']['attributes']`, annidato). `docs/features/8463-routeshape-discontinuo-come-lineare/` |
+| `withoutInternalConfigKeys()` — esclusione generica di chiavi interne da config.json/`layer()` | oc:8463 | Nuovo helper globale (`src/helpers.php`) + config `internal_attribute_keys` (vuota di default, popolata dal consumer, mai dal pacchetto): rimuove da un array `properties->attributes` le chiavi che un consumer dichiara riservate a uso interno, senza che wm-package ne conosca il significato. Applicato in due canali con nesting diverso: `AppConfigService::config_section_map()` (`$item['attributes']`, appiattito) e `AppController::layer()` (`$json['properties']['attributes']`, annidato). `docs/features/8463-routeshape-discontinuo-come-lineare/` |
 
 ## Convenzioni e documentazione
 
