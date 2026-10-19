@@ -5,10 +5,13 @@ namespace Wm\WmPackage\Jobs\Import;
 use Illuminate\Bus\Batch;
 use Illuminate\Bus\PendingBatch;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Queue\MaxAttemptsExceededException;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Throwable;
+use Wm\WmPackage\Jobs\BuildAppPoisGeojsonJob;
 use Wm\WmPackage\Jobs\TaxonomyWhere\SyncTaxonomyWhereJob;
 use Wm\WmPackage\Jobs\UpdateAppConfigHomeLayerIdsJob;
 use Wm\WmPackage\Jobs\UpdateAppConfigJob;
@@ -54,6 +57,15 @@ class ImportAppJob extends BaseImportJob
         'ec_track',
         'taxonomy_activity',
         'taxonomy_poi_types',
+    ];
+
+    /**
+     * Batch EC che a fine import lanciano dispatchAfterEcImportBatch() (oc:8487, oc:8677).
+     */
+    private const POST_IMPORT_ENTITY_KEYS = [
+        'ec_poi',
+        'ec_track',
+        'ec_media',
     ];
 
     protected function getModelKey(): string
@@ -503,14 +515,75 @@ class ImportAppJob extends BaseImportJob
         // EcTrackService::createDataChain() non scattano mai e il contenuto importato resta
         // senza taxonomy_where finché non viene ricalcolato manualmente. Aggancia il ricalcolo
         // bulk (SyncTaxonomyWhereJob copre sia EcTrack sia EcPoi) al completamento del batch
-        // di import EC dedicato, non al singolo save.
-        if (in_array($entityModelKey, ['ec_poi', 'ec_track'], true)) {
+        // di import EC dedicato, non al singolo save. Per lo stesso motivo pois.geojson non si
+        // rigenera da solo, nemmeno dopo le immagini dei POI (oc:8677): vedi
+        // dispatchAfterEcImportBatch(). ATTENZIONE, come per finalizeAppImport() sopra: il FQCN
+        // `ImportAppJob::dispatchAfterEcImportBatch` è serializzato nel finally() dei batch;
+        // spostarlo o rinominarlo rompe in silenzio i batch EC in volo al momento del deploy.
+        if (in_array($entityModelKey, self::POST_IMPORT_ENTITY_KEYS, true)) {
             $batch->allowFailures()->finally(
-                static function (Batch $batch): void {
-                    SyncTaxonomyWhereJob::dispatch();
+                static function (Batch $batch) use ($entityModelKey, $appId): void {
+                    ImportAppJob::dispatchAfterEcImportBatch($entityModelKey, $appId);
                 }
             );
         }
+    }
+
+    /**
+     * Lavori da fare a fine batch di import EC (oc:8677):
+     * - POI: ricalcolo delle località e poi pois.geojson, che le usa (App::getAllPoisGeojson()).
+     *   Se fallisce il ricalcolo (su dev è già andato in timeout) la catena si ferma: il catch
+     *   rigenera comunque il file, con le località di prima ma con nome e testo di ricerca. Se a
+     *   fallire è il build stesso, il catch non ne lancia un secondo;
+     * - tracce: solo il ricalcolo delle località;
+     * - immagini: pois.geojson, che contiene le immagini dei POI e il cui batch gira in parallelo.
+     * Senza, l'API continua a servire il file salvato prima dell'import.
+     *
+     * BuildAppPoisGeojsonJob è ShouldBeUnique per app, con il lock tenuto fino alla fine
+     * dell'esecuzione: se quando parte quello di fine import ne sta già girando un altro della
+     * stessa app (per esempio dal batch delle immagini o da TaxonomyPoiTypeablesObserver), il
+     * nuovo viene scartato senza errori e il file resta quello del build in corso.
+     *
+     * Pubblico e statico perché lo chiama la closure del finally() del batch, che viene
+     * serializzata: non fa parte dell'API del package.
+     *
+     * @internal
+     */
+    public static function dispatchAfterEcImportBatch(string $entityModelKey, int $appId): void
+    {
+        match ($entityModelKey) {
+            'ec_poi' => Bus::chain([
+                new SyncTaxonomyWhereJob,
+                new BuildAppPoisGeojsonJob($appId),
+            ])->catch(static function (Throwable $e) use ($appId): void {
+                if (! ImportAppJob::failureCameFromPoisBuild($e)) {
+                    BuildAppPoisGeojsonJob::dispatch($appId);
+                }
+            })->dispatch(),
+            'ec_track' => SyncTaxonomyWhereJob::dispatch(),
+            'ec_media' => BuildAppPoisGeojsonJob::dispatch($appId),
+            default => null,
+        };
+    }
+
+    /**
+     * True se l'errore arrivato al catch della catena di fine import viene dal build di
+     * pois.geojson e non dal ricalcolo delle località: timeout e tentativi esauriti portano il
+     * job fallito, gli altri errori lo hanno nello stack (oc:8677).
+     *
+     * ATTENZIONE: il FQCN `ImportAppJob::failureCameFromPoisBuild` è richiamato dalla closure del
+     * catch della catena, serializzata nel payload di SyncTaxonomyWhereJob: spostarlo o
+     * rinominarlo rompe in silenzio le catene in volo al momento del deploy.
+     *
+     * @internal
+     */
+    public static function failureCameFromPoisBuild(Throwable $e): bool
+    {
+        if ($e instanceof MaxAttemptsExceededException && isset($e->job)) {
+            return $e->job->resolveName() === BuildAppPoisGeojsonJob::class;
+        }
+
+        return str_contains($e->getTraceAsString(), BuildAppPoisGeojsonJob::class);
     }
 
     private static function layerBatchCacheKey(int $appId): string
