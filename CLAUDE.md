@@ -96,7 +96,8 @@ questo file, perché vanno lette sempre.
 | Import GeoHub, OSM e tassonomie | le tre sorgenti, identifier, pivot, transazioni | [docs/knowledge/import-geohub-e-taxonomy.md](docs/knowledge/import-geohub-e-taxonomy.md) |
 | Campi Flexible e Translatable | `config_home`/`config_detail`, embed nel WYSIWYG | [docs/knowledge/campi-flexible-e-translatable.md](docs/knowledge/campi-flexible-e-translatable.md) |
 | Autorizzazione e ruoli | policy, super-admin, impersonation, throttle login | [docs/knowledge/autorizzazione-e-ruoli.md](docs/knowledge/autorizzazione-e-ruoli.md) |
-| App e `config.json` | theme, deep link, story share, preferiti, asset | [docs/knowledge/configurazione-app-e-config-json.md](docs/knowledge/configurazione-app-e-config-json.md) |
+| App e `config.json` | theme, story share, preferiti, asset | [docs/knowledge/configurazione-app-e-config-json.md](docs/knowledge/configurazione-app-e-config-json.md) |
+| Link e QR code verso l'app | deep link su Track/Poi e well-known registry, link unico `/app/{id}/open` che porta allo store, all'app o alla webapp a seconda del dispositivo, perché niente Apache né universal link su iOS | [docs/knowledge/link-e-qr-code-verso-l-app.md](docs/knowledge/link-e-qr-code-verso-l-app.md) |
 | Media, upload e avatar | validazione dei campi media, conversion avatar | [docs/knowledge/media-e-avatar.md](docs/knowledge/media-e-avatar.md) |
 | Layer e associazione contenuti | modalità auto/manuale, `poi_mode`, pivot `layerables` | [docs/knowledge/layer-e-associazione-contenuti.md](docs/knowledge/layer-e-associazione-contenuti.md) |
 | Campi Nova custom e build | toolchain, Tailwind, componenti condivisi, `dist` | [docs/knowledge/campi-nova-custom-e-build.md](docs/knowledge/campi-nova-custom-e-build.md) |

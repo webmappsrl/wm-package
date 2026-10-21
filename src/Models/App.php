@@ -2,6 +2,8 @@
 
 namespace Wm\WmPackage\Models;
 
+use chillerlan\QRCode\Output\QRGdImagePNG;
+use chillerlan\QRCode\Output\QROutputInterface;
 use chillerlan\QRCode\QRCode;
 use chillerlan\QRCode\QROptions;
 use Illuminate\Database\Eloquent\Model;
@@ -31,6 +33,12 @@ class App extends Model implements HasMedia
     use HasPackageFactory, HasTranslations, InteractsWithMedia, TaxonomyAbleModel;
 
     protected $guarded = [];
+
+    /** Lato minimo, in pixel, del PNG del QR dell'App scaricabile da Nova (oc:8803). */
+    public const APP_OPEN_QR_PNG_MIN_SIZE = 1024;
+
+    /** Stile dei pulsanti di download nei riquadri dei QR in Nova. */
+    private const QR_BUTTON_STYLE = 'display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:8px;background:#19b7a1;color:#ffffff;padding:8px 20px;font-size:14px;font-weight:600;text-decoration:none;';
 
     public array $translatable = ['welcome', 'tiles_label', 'overlays_label', 'data_label', 'pois_data_label', 'tracks_data_label', 'page_project', 'page_privacy', 'page_disclaimer', 'page_credits', 'filter_activity_label', 'filter_layer_label', 'filter_poi_type_label', 'filter_track_duration_label', 'filter_track_distance_label', 'social_share_text'];
 
@@ -609,30 +617,48 @@ class App extends Model implements HasMedia
         }
 
         $url = $this->getDeepLinkUrl($type, $id);
-
-        $options = new QROptions;
-        $options->outputBase64 = false;
-        $svg = (new QRCode($options))->render($url);
-        $base64 = base64_encode($svg);
-
-        $escapedUrl = e($url);
+        $base64 = base64_encode($this->renderQrSvg($url));
         $downloadName = e("{$type}-{$id}-qrcode.svg");
-        $copyButtonHtml = $this->renderDeepLinkCopyButton($url);
+        $buttonStyle = self::QR_BUTTON_STYLE;
 
-        return <<<HTML
-            <div class="wm-deep-link-qr" style="width:100%;box-sizing:border-box;padding:16px;border-radius:12px;border:1px solid #e5e7eb;background:#f9fafb;">
-                <div style="display:flex;flex-direction:column;align-items:center;gap:12px;max-width:480px;width:100%;margin:0 auto;text-align:center;">
-                    <div style="border-radius:8px;border:1px solid #e5e7eb;background:#ffffff;padding:8px;box-shadow:0 1px 2px rgba(0,0,0,0.05);">
-                        <img src="data:image/svg+xml;base64,{$base64}" width="140" height="140" alt="QR Code" style="display:block;" />
-                    </div>
+        $actionsHtml = <<<HTML
                     <a
                         href="data:image/svg+xml;base64,{$base64}"
                         download="{$downloadName}"
-                        style="display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:8px;background:#19b7a1;color:#ffffff;padding:8px 20px;font-size:14px;font-weight:600;text-decoration:none;"
+                        style="{$buttonStyle}"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3v9m0 0l-3.5-3.5M10 12l3.5-3.5M4 14.5v1a1.5 1.5 0 001.5 1.5h9a1.5 1.5 0 001.5-1.5v-1"/></svg>
                         Download QR
                     </a>
+            HTML;
+
+        return $this->renderQrCodeCard('wm-deep-link-qr', $url, $base64, $actionsHtml);
+    }
+
+    /**
+     * SVG grezzo di un QR code: stesse opzioni per il QR dei deep link e per quello dell'App.
+     */
+    private function renderQrSvg(string $url): string
+    {
+        return (new QRCode(new QROptions(['outputBase64' => false])))->render($url);
+    }
+
+    /**
+     * Riquadro comune ai QR mostrati in Nova: anteprima, azioni di download passate dal
+     * chiamante, link in chiaro con il pulsante di copia.
+     */
+    private function renderQrCodeCard(string $cssClass, string $url, string $svgBase64, string $actionsHtml): string
+    {
+        $escapedUrl = e($url);
+        $copyButtonHtml = $this->renderCopyLinkButton($url);
+
+        return <<<HTML
+            <div class="{$cssClass}" style="width:100%;box-sizing:border-box;padding:16px;border-radius:12px;border:1px solid #e5e7eb;background:#f9fafb;">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:12px;max-width:480px;width:100%;margin:0 auto;text-align:center;">
+                    <div style="border-radius:8px;border:1px solid #e5e7eb;background:#ffffff;padding:8px;box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+                        <img src="data:image/svg+xml;base64,{$svgBase64}" width="140" height="140" alt="QR Code" style="display:block;" />
+                    </div>
+            {$actionsHtml}
                     <div style="display:flex;align-items:center;gap:8px;width:100%;">
                         <input
                             type="text"
@@ -649,11 +675,11 @@ class App extends Model implements HasMedia
     }
 
     /**
-     * Renders a "Copy link" button (clipboard JS + execCommand fallback) for the
-     * deep link URL, matching the pattern already used for the Layer web component
+     * Renders a "Copy link" button (clipboard JS + execCommand fallback) for the URL
+     * shown under a QR code, matching the pattern already used for the Layer web component
      * copy button (see Nova\Layer::renderLayerWebComponentCopyButton()).
      */
-    private function renderDeepLinkCopyButton(string $url): string
+    private function renderCopyLinkButton(string $url): string
     {
         $urlJson = json_encode($url, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT);
         $defaultLabelJson = json_encode((string) __('Copy link'), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT);
@@ -711,6 +737,90 @@ JS;
                 {$buttonLabel}
             </button>
             HTML;
+    }
+
+    /**
+     * Vero se l'App ha almeno un link a uno store: senza, il QR dell'App non si mostra.
+     */
+    public function hasStoreLinks(): bool
+    {
+        return ! empty($this->ios_store_link) || ! empty($this->android_store_link);
+    }
+
+    /**
+     * Link unico dell'App (oc:8803), codificato nel QR code: il backend manda allo store, all'app
+     * o alla webapp a seconda del dispositivo (vedi AppOpenController).
+     */
+    public function getAppOpenUrl(): string
+    {
+        return route('wm.app-open', ['app' => $this->id]);
+    }
+
+    /**
+     * Indirizzo della webapp dell'App, sullo stesso dominio dei deep link: è dove il link
+     * unico manda chi non è su iOS né su Android.
+     */
+    public function getWebappUrl(): string
+    {
+        return 'https://'.$this->getDeepLinkDomain();
+    }
+
+    public function renderAppOpenQrCodeSvg(): string
+    {
+        return $this->renderQrSvg($this->getAppOpenUrl());
+    }
+
+    /**
+     * PNG del QR dell'App con lato di almeno APP_OPEN_QR_PNG_MIN_SIZE px, per chi non può
+     * usare l'SVG.
+     */
+    public function renderAppOpenQrCodePng(): string
+    {
+        $url = $this->getAppOpenUrl();
+
+        // In php-qrcode 5.0 la classe di output vale solo con outputType CUSTOM, deprecato
+        // senza sostituto (chillerlan/php-qrcode#223): sparirà con la versione che legge solo
+        // outputInterface.
+        $settings = [
+            'outputType' => QROutputInterface::CUSTOM, // @phpstan-ignore classConstant.deprecated
+            'outputInterface' => QRGdImagePNG::class,
+            'outputBase64' => false,
+        ];
+
+        // Il lato del PNG è moduli × scale: la scala si ricava dai moduli, zona di rispetto compresa.
+        $modules = (new QRCode(new QROptions($settings)))->addByteSegment($url)->getQRMatrix()->getSize();
+        $settings['scale'] = (int) ceil(self::APP_OPEN_QR_PNG_MIN_SIZE / $modules);
+
+        return (new QRCode(new QROptions($settings)))->render($url);
+    }
+
+    /**
+     * Markup del QR dell'App per il tab Release di Nova: anteprima, link copiabile e
+     * download in SVG e PNG. Null senza link agli store, così il campo si nasconde.
+     */
+    public function renderAppOpenQrCodeHtml(): ?string
+    {
+        if (! $this->hasStoreLinks()) {
+            return null;
+        }
+
+        $svgBase64 = base64_encode($this->renderAppOpenQrCodeSvg());
+        $pngBase64 = base64_encode($this->renderAppOpenQrCodePng());
+        $fileBase = $this->sku ?: "app-{$this->id}";
+        $svgName = e("{$fileBase}-qrcode.svg");
+        $pngName = e("{$fileBase}-qrcode.png");
+        $svgLabel = e(__('Download SVG'));
+        $pngLabel = e(__('Download PNG'));
+        $buttonStyle = self::QR_BUTTON_STYLE;
+
+        $actionsHtml = <<<HTML
+                    <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:8px;">
+                        <a href="data:image/svg+xml;base64,{$svgBase64}" download="{$svgName}" style="{$buttonStyle}">{$svgLabel}</a>
+                        <a href="data:image/png;base64,{$pngBase64}" download="{$pngName}" style="{$buttonStyle}">{$pngLabel}</a>
+                    </div>
+            HTML;
+
+        return $this->renderQrCodeCard('wm-app-open-qr', $this->getAppOpenUrl(), $svgBase64, $actionsHtml);
     }
 
     public function unique_multidim_array($array, $key)

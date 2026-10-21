@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Wm\WmPackage\Http\Controllers\AppOpenController;
 use Wm\WmPackage\Http\Controllers\DownloadDbController;
 use Wm\WmPackage\Http\Controllers\ExportDownloadController;
 use Wm\WmPackage\Http\Controllers\ImportController;
@@ -33,6 +34,17 @@ Route::get('/user-ranking/{app}/{user}', [RankingController::class, 'showUserRan
  * app — see ShareUgcTrackController.
  */
 Route::get('/share/ugc-track/{uuid}', [ShareUgcTrackController::class, 'show'])->name('share.ugc-track');
+
+/*
+ * Link unico dell'App (oc:8803), codificato nei QR code stampati: App Store, app o Google Play,
+ * webapp a seconda del dispositivo — vedi AppOpenController. Senza il gruppo `web`: è
+ * traffico anonimo (scansioni, anteprime dei link, crawler) e una sessione scriverebbe una
+ * riga per ogni passaggio.
+ */
+Route::get('/app/{app}/open', AppOpenController::class)
+    ->whereNumber('app')
+    ->withoutMiddleware('web')
+    ->name('wm.app-open');
 
 // TODO: Use A middleware to switch the language
 // Route::get('language/{locale}', function ($locale) {
