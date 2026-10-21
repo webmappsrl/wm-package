@@ -1,7 +1,8 @@
 # App, `config.json` e funzioni di prodotto
 
 Cosa finisce nel `config.json` che il frontend consuma, e le scelte che lo governano: theme,
-deep link, condivisione social, preferiti, asset.
+condivisione social, preferiti, asset. Deep link e QR verso l'app hanno una pagina a sé:
+[link-e-qr-code-verso-l-app.md](link-e-qr-code-verso-l-app.md).
 
 ## Stato attuale
 
@@ -98,35 +99,8 @@ Restano orfane ma inerti le colonne DB `apps.primary_color`, `font_family_header
 
 ### Deep link, QR e well-known registry
 
-- QR e deep link su Track/Poi sono un **Nova Field** (`Text::make(...)->asHtml()`), non un'Action:
-  un'Action richiederebbe di gestire due contesti di richiesta diversi e un endpoint da eseguire,
-  mentre il field si autopopola al caricamento del dettaglio. Accanto al QR c'è il bottone copia
-  (`App::renderDeepLinkCopyButton()`, stesso schema clipboard di
-  `Layer::renderLayerWebComponentCopyButton()`).
-- Bundle identifier delle entry well-known: riusa `sku` su `App`, già usato da
-  `AppVersionService`.
-- **Team ID Apple e fingerprint Android sono campi Nova per-app**, non env:
-  `properties->apple_team_id` (default da `config('wm-package.deep_link.apple_team_id')`) e
-  `properties->android_cert_sha256`, che supporta **più fingerprint separate da virgola** —
-  `WellKnownRegistryService::parseFingerprints()` le splitta. Nessun override via env per questa
-  feature.
-- `App::getDeepLinkDomain()`: priorità `website_url` (per-app), poi
-  `{app_id}.{config('app.name')}.webmapp.it`. Usa `config('app.name')`, mai un letterale, per non
-  far collidere due installazioni con App `id=1` sullo stesso registry; e mai `env()` diretto nel
-  modello, che si romperebbe con config caching in produzione.
-- Il path scope di `apple-app-site-association` è `*`, l'intero dominio, non `/map*`.
-- Il registry è aggiornato via disco SFTP dedicato (`well_known_registry`,
-  `league/flysystem-sftp-v3`) con download → merge → upload, auth via password **o** chiave
-  privata, mai entrambe. `env('WELLKNOWN_SFTP_PORT', 22)` restituisce una **stringa** una volta
-  valorizzata in `.env` (il default int vale solo a chiave assente), e `SftpConnectionProvider`
-  richiede `int`: serve il cast.
-- La sync è asincrona (`SyncWellKnownRegistryJob`, 3 tentativi, backoff 30/90/300s) e il job
-  prende **primitivi**, non un'istanza `App`: per l'azione `remove` da `deleting()` la riga non
-  esiste più quando il job gira. `AppObserver::saved()`/`deleting()` avvolgono il dispatch in
-  try/catch — è un side-effect best-effort che non deve mai far fare rollback alla transazione di
-  Nova.
-- Nessun locking distribuito: azione a bassa frequenza, mitigata da backup timestampato e
-  validazione JSON prima dell'upload (oc:8251).
+Spostati in [link-e-qr-code-verso-l-app.md](link-e-qr-code-verso-l-app.md), insieme al link unico
+dell'App (oc:8803).
 
 ### Condivisione su Instagram/Facebook Stories
 
@@ -207,16 +181,10 @@ risposte leggere (oc:8176).
   decisione esplicita del dev. Il consumo CSS reale non è stato il criterio decisivo finale su
   cosa esporre in Nova. Se in futuro servisse più spazio per il brand, la scelta corretta sarebbe
   `light`/`dark` (50/63 consumatori), non riciclare ruoli semantici (oc:8367).
-- `FRONTEND_URL` (env, per l'intera installazione) è stato rimosso: ridondante con `website_url`,
-  già per-app (oc:8251).
 - Una prima versione di `ShareStoryImageController` derivava l'app da una relazione
   `User belongsTo App` via `users.app_id` — nel farlo si è scoperto che quella colonna non viene
   mai popolata dal flusso di signup live. Bug preesistente e reale, segnalato come indipendente,
   non risolto (oc:8183).
-- `EcPoi` non aveva la relazione `app()`, a differenza di `EcTrack`. È stata aggiunta con il nome
-  completo `\Wm\WmPackage\Models\App::class` — non è stile: un "optimize imports" automatico l'ha
-  già semplificata una volta in `App::class`, che risolve silenziosamente alla Facade e rompe la
-  relazione a runtime. Guardato da un test dedicato (oc:8251).
 
 ## Il `config.json` dopo un import da GeoHub (oc:8488)
 

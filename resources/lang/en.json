@@ -584,5 +584,14 @@
     "UGC TRACK MATCHING WITH EC TRACKS": "UGC TRACK MATCHING WITH EC TRACKS",
     "Every UGC track is compared with the EC tracks of the app to know which EC tracks, and therefore which layers, it crossed. Each EC track is split into fixed-length segments: a segment counts as covered if the UGC track passes within the given distance. Changing these values recomputes all the UGC tracks of the app.": "Every UGC track is compared with the EC tracks of the app to know which EC tracks, and therefore which layers, it crossed. Each EC track is split into fixed-length segments: a segment counts as covered if the UGC track passes within the given distance. Changing these values recomputes all the UGC tracks of the app.",
     "EC track segment length (m)": "EC track segment length (m)",
-    "Maximum distance from the UGC track (m)": "Maximum distance from the UGC track (m)"
+    "Maximum distance from the UGC track (m)": "Maximum distance from the UGC track (m)",
+    "App download QR code": "App download QR code",
+    "Single link and QR code to download the app: App Store on iOS, the app or Google Play on Android, the web app elsewhere.": "Single link and QR code to download the app: App Store on iOS, the app or Google Play on Android, the web app elsewhere.",
+    "Download SVG": "Download SVG",
+    "Download PNG": "Download PNG",
+    "Open the app": "Open the app",
+    "Download the app": "Download the app",
+    "Not yet available for :platform": "Not yet available for :platform",
+    "The app is not currently available on the stores, please try again later.": "The app is not currently available on the stores, please try again later.",
+    "Open the web app": "Open the web app"
 }

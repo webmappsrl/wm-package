@@ -846,6 +846,12 @@ class App extends Resource
         ];
     }
 
+    private function appModel(): ModelsApp
+    {
+        /** @var ModelsApp */
+        return $this->resource;
+    }
+
     protected function app_release_data_tab(): array
     {
         return [
@@ -867,6 +873,11 @@ class App extends Resource
             Text::make(__('App Store link (iOS)'), 'ios_store_link')
                 ->hideFromIndex()
                 ->help(__('Link to the app on the App Store')),
+            Text::make(__('App download QR code'), 'app_open_qr_code', fn () => $this->appModel()->renderAppOpenQrCodeHtml())
+                ->asHtml()
+                ->onlyOnDetail()
+                ->canSee(fn () => $this->appModel()->hasStoreLinks())
+                ->help(__('Single link and QR code to download the app: App Store on iOS, the app or Google Play on Android, the web app elsewhere.')),
             Images::make(__('Icon'), 'icon')
                 ->singleMediaRules(['image', 'mimes:png', 'dimensions:min_width=1024,min_height=1024,ratio=1/1'])
                 ->help(__('Required size is :widthx:heightpx', ['width' => 1024, 'height' => 1024]))
