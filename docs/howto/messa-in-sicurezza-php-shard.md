@@ -2,6 +2,11 @@
 
 > Nata con oc:8833 (PHP2Shell, CVE-2026-109618/109619, ottobre 2026). La sequenza vale per
 > qualunque falla del motore PHP: è scritta per essere rieseguita alla prossima CVE.
+>
+> **⚠️ I valori numerici e i percorsi citati sono l'esempio di forestas (oc:8833), non la
+> regola**: i limiti di upload si misurano sui dati del proprio shard, le versioni PHP dipendono
+> dalla CVE del momento, e il Dockerfile sorgente va individuato shard per shard. Ciò che è
+> prescrittivo è la sequenza, non i numeri.
 
 Versioni minime per PHP2Shell: **8.4.27** (FPM degli shard), **8.3.36** (WordPress),
 8.2.35 / 8.5.12 per gli altri rami. La falla sta nel motore: lo shard è esposto anche se il suo
@@ -60,8 +65,10 @@ Nel pool FPM (`www.conf`), via `php_admin_*` così l'applicazione non può sovra
 
 - `php_admin_flag[session.upload_progress.enabled] = off` — feature quasi mai usata, è stata il
   vettore di una delle due CVE di PHP2Shell;
-- `upload_max_filesize` / `post_max_size` commisurati ai flussi reali dello shard (misurare il
-  file più grosso in storage/MinIO prima di scegliere; su oc:8833: 32M/64M);
+- `upload_max_filesize` / `post_max_size` commisurati ai flussi reali dello shard: **misurare il
+  file più grosso in storage/MinIO del proprio shard prima di scegliere** — su forestas
+  (oc:8833) la misura ha dato un massimo di 16,7MB e i limiti sono stati fissati a 32M/64M, ma
+  sono i valori di quello shard, non un default da copiare;
 - `memory_limit` resta finito (la mitigazione d'emergenza `-1` vale solo in attesa di patch, da
   rimuovere a patch fatta).
 
