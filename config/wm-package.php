@@ -10,7 +10,7 @@ use Wm\WmPackage\TrailRegistry\Models\TrailRegistryCodeEvent;
 
 // config for Wm/WmPackage
 return [
-    'version' => '1.5.0', // x-release-please-version
+    'version' => '1.6.0', // x-release-please-version
     'shard_name' => env('SHARD_NAME', env('APP_NAME')),
     'analytics_shard_name' => env('ANALYTICS_SHARD_NAME'),
     'route_filter_analytics_enabled' => env('ROUTE_FILTER_ANALYTICS_ENABLED', false),
