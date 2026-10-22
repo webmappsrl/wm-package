@@ -3,10 +3,11 @@
 > Nata con oc:8833 (PHP2Shell, CVE-2026-109618/109619, ottobre 2026). La sequenza vale per
 > qualunque falla del motore PHP: è scritta per essere rieseguita alla prossima CVE.
 >
-> **⚠️ I valori numerici e i percorsi citati sono l'esempio di forestas (oc:8833), non la
-> regola**: i limiti di upload si misurano sui dati del proprio shard, le versioni PHP dipendono
-> dalla CVE del momento, e il Dockerfile sorgente va individuato shard per shard. Ciò che è
-> prescrittivo è la sequenza, non i numeri.
+> **⚠️ I percorsi citati sono l'esempio di forestas (oc:8833)**; per i limiti di upload esiste un
+> default di partenza condiviso (vedi «Pulizia di configurazione»), ma la misura sul proprio
+> shard resta obbligatoria, le versioni PHP dipendono dalla CVE del momento, e il Dockerfile
+> sorgente va individuato shard per shard. Ciò che è prescrittivo è la sequenza; i numeri sono un
+> punto di partenza, da confermare con la misura sul proprio shard.
 
 Versioni minime per PHP2Shell: **8.4.27** (FPM degli shard), **8.3.36** (WordPress),
 8.2.35 / 8.5.12 per gli altri rami. La falla sta nel motore: lo shard è esposto anche se il suo
@@ -58,6 +59,8 @@ condivisa — finché non succede, questo controllo va rifatto a ogni shard.
 4. **Riavvia tutti i container** che usano l'immagine (FPM, worker Horizon, init).
 5. **La verifica è sempre `php -v` dentro il container** (e per i valori di configurazione
    `php-fpm -tt`), mai l'esito della build.
+6. **Il pin non si aggiorna da solo**: a ogni CVE del motore il bump è manuale, shard per shard
+   (camminiditalia è rimasto su `php:8.4.3-fpm` da febbraio 2025 fino a PHP2Shell, oc:8836).
 
 ## Pulizia di configurazione (riduzione permanente della superficie)
 
@@ -66,9 +69,11 @@ Nel pool FPM (`www.conf`), via `php_admin_*` così l'applicazione non può sovra
 - `php_admin_flag[session.upload_progress.enabled] = off` — feature quasi mai usata, è stata il
   vettore di una delle due CVE di PHP2Shell;
 - `upload_max_filesize` / `post_max_size` commisurati ai flussi reali dello shard: **misurare il
-  file più grosso in storage/MinIO del proprio shard prima di scegliere** — su forestas
-  (oc:8833) la misura ha dato un massimo di 16,7MB e i limiti sono stati fissati a 32M/64M, ma
-  sono i valori di quello shard, non un default da copiare;
+  file più grosso in storage/MinIO del proprio shard prima di scegliere**. Default di partenza:
+  **32M / 128M** (oc:8836), costruito sul massimo misurato finora fra gli shard già fatti —
+  forestas 16,7MB (oc:8833), camminiditalia 19,9MB — con `post_max_size` largo perché un POST
+  UGC può portare più foto in una richiesta. La misura resta obbligatoria: se sul proprio shard
+  dà di più, si usa il valore maggiore **e si aggiorna questo default**;
 - `memory_limit` resta finito (la mitigazione d'emergenza `-1` vale solo in attesa di patch, da
   rimuovere a patch fatta).
 
