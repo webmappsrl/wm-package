@@ -9,9 +9,11 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Wm\WmPackage\Models\App;
+use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\FeatureCollection;
 use Wm\WmPackage\Models\Layer;
+use Wm\WmPackage\Models\TaxonomyPoiType;
 use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Services\IconSvgService;
 use Wm\WmPackage\Services\Models\MediaService;
@@ -347,6 +349,40 @@ class AppConfigService extends AppBaseService
         );
     }
 
+    /**
+     * Opzioni del filtro dei tipi di POI: i tipi dei POI mostrati sulla mappa
+     * (App::globalEcPois()), di chiunque sia il POI. Filtrare per proprietario dell'App toglieva
+     * i tipi dei POI passati ai gestori dei layer (oc:8911).
+     *
+     * @return array<int, array{identifier: string, name: mixed, id: int, icon_name: ?string}>
+     */
+    private function poiTypeFilterOptions(): array
+    {
+        try {
+            // Query builder senza modello: `name` resta il JSON grezzo di tutte le traduzioni,
+            // che il frontend vuole per intero (il modello lo tradurrebbe in una lingua sola).
+            $poiTypes = DB::table((new TaxonomyPoiType)->getTable())
+                ->select(['id', 'identifier', 'name', 'icon'])
+                ->whereIn('id', DB::table('taxonomy_poi_typeables')
+                    ->select('taxonomy_poi_type_id')
+                    ->where('taxonomy_poi_typeable_type', (new EcPoi)->getMorphClass())
+                    ->whereIn('taxonomy_poi_typeable_id', $this->app->globalEcPois()->select('ec_pois.id')))
+                ->orderBy('name')
+                ->get();
+        } catch (Exception $e) {
+            Log::error('Error fetching poi types: '.$e->getMessage());
+
+            return [];
+        }
+
+        return $poiTypes->map(fn (object $poiType): array => [
+            'identifier' => 'poi_type_'.$poiType->identifier,
+            'name' => json_decode($poiType->name, true),
+            'id' => $poiType->id,
+            'icon_name' => $poiType->icon,
+        ])->all();
+    }
+
     private function config_section_map(): array
     {
         $data = [];
@@ -627,28 +663,7 @@ class AppConfigService extends AppBaseService
 
         //  Poi type Filter
         if ($this->app->filter_poi_type) {
-            $app_user_id = $this->app->user_id;
-            $options = [];
-            $poi_types = [];
-            try {
-                // TODO removed a.color and a.icon from taxonomy_poi_types because it does not exists in the database. Check if needed
-                $poi_types = DB::select("SELECT distinct a.id, a.identifier, a.name, a.icon from taxonomy_poi_typeables as txa inner join ec_pois as t on t.id=txa.taxonomy_poi_typeable_id inner join taxonomy_poi_types as a on a.id=taxonomy_poi_type_id where txa.taxonomy_poi_typeable_type='App\Models\EcPoi' and t.user_id=$app_user_id ORDER BY a.name ASC;");
-            } catch (Exception $e) {
-                Log::error('Error fetching poi types: '.$e->getMessage());
-            }
-
-            foreach ($poi_types as $poi_type) {
-                $a = [
-                    'identifier' => 'poi_type_'.$poi_type->identifier,
-                    'name' => json_decode($poi_type->name, true),
-                    'id' => $poi_type->id,
-                    'icon_name' => $poi_type->icon,
-                ];
-                // if ($poi_type->color) {
-                //     $a['color'] = $poi_type->color;
-                // }
-                array_push($options, $a);
-            }
+            $options = $this->poiTypeFilterOptions();
 
             $data['MAP']['filters']['poi_types'] = [
                 'type' => 'select',

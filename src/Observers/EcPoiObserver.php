@@ -3,10 +3,10 @@
 namespace Wm\WmPackage\Observers;
 
 use Symfony\Component\HttpKernel\Exception\HttpException;
-use Wm\WmPackage\Jobs\BuildAppPoisGeojsonJob;
 use Wm\WmPackage\Jobs\Layer\SyncAutoLayerAfterPoiTaxonomyChangeJob;
 use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Models\Layer;
+use Wm\WmPackage\Services\AppPoiOutputsService;
 use Wm\WmPackage\Services\Models\EcPoiService;
 use Wm\WmPackage\Services\Models\EcTrackService;
 use Wm\WmPackage\Services\StorageService;
@@ -36,7 +36,7 @@ class EcPoiObserver extends AbstractEcObserver
     {
         $app = $ecPoi->app;
         if ($app) {
-            BuildAppPoisGeojsonJob::dispatch($app->id);
+            AppPoiOutputsService::make()->dispatchRegeneration($app->id);
         }
     }
 
@@ -64,7 +64,12 @@ class EcPoiObserver extends AbstractEcObserver
         // UserService::make()->assigUserAppIdIfNeeded(null, null, $ecPoi->app_id);
         $app = $ecPoi->app;
         if ($app) {
-            BuildAppPoisGeojsonJob::dispatch($app->id);
+            // Il filtro dei tipi di POI cambia solo se il POI entra o esce dalla mappa
+            // dell'App; i tipi li segue TaxonomyPoiTypeablesObserver (oc:8911).
+            AppPoiOutputsService::make()->dispatchRegeneration(
+                $app->id,
+                withConfig: $ecPoi->wasRecentlyCreated || $ecPoi->wasChanged(['global', 'app_id'])
+            );
         }
     }
 
