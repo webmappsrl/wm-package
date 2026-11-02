@@ -66,6 +66,42 @@ davvero (vedi `tests/Feature/LayerMediaObserverTest.php`, stesso workaround già
 `tests/Unit/Models/EcPoiAppRelationTest.php` per `BuildAppPoisGeojsonJob`). La CI del package
 (`run-tests.yml`) non provisiona un servizio Redis — solo Postgres.
 
+### Filtro dei tipi di POI (`MAP.filters.poi_types`)
+
+Il filtro (presente solo se `filter_poi_type` è acceso sull'App) elenca i tipi distinti dei POI
+che la mappa mostra: quelli di `App::globalEcPois()`, cioè `app_id` dell'App e `global = true`
+(tutti i POI dell'App se la colonna `global` non esiste). È lo stesso metodo che usa
+`getAllPoisGeojson()` per `pois.geojson`, così filtro e mappa non possono divergere. Il gemello
+`MAP.filters.poi_type` (app precedenti alla .45) ha le stesse opzioni. Il frontend (`wm-core`)
+mostra una voce solo se sulla mappa ha almeno un POI (oc:8911).
+
+`pois.geojson` e config si rigenerano da un punto solo, `AppPoiOutputsService::dispatchRegeneration()`,
+chiamato da `TaxonomyPoiTypeablesObserver` (collegamento o rimozione di un tipo) e da
+`EcPoiObserver::saved`/`deleted`. Al salvataggio di un POI la config si rigenera solo se il POI è
+nuovo o se cambiano `global` o `app_id`: sono gli unici cambi del POI che toccano il filtro. Le
+regole del servizio (oc:8911):
+
+- entrambi i job vanno in coda con `->afterCommit()`: con `after_commit = false` sulla coda Redis
+  dei consumer, un worker veloce leggerebbe i dati prima del commit della transazione Nova;
+- la config non va in coda finché `ImportAppJob::layerBatchIsPublishReady()` è falso: durante
+  l'import Geohub dei layer dell'App, e anche dopo un batch layer fallito o annullato finché scade
+  il segnale in cache (6 ore). L'import collega i tipi con gli eventi attivi, e la config va
+  scritta solo a layer batch integro (oc:8488). Salvare l'App in Nova la rigenera comunque.
+
+Limite noto: il lock di `UpdateAppConfigJob` resta preso fino alla fine dell'esecuzione, quindi
+una modifica che arriva mentre il job sta già costruendo la config viene scartata; la config si
+riallinea alla modifica successiva. Stesso limite di `BuildAppPoisGeojsonJob` (oc:8911).
+
+Debito noto (oc:8911):
+- il ramo `poi_type` di `AppController::getFeaturesByAppAndTerm`
+  (`/api/app/webapp/{app}/taxonomies/poi_type/{term_id}`) cerca ancora i POI con `user_id` del
+  proprietario dell'App. Nessun frontend lo chiama (`webmapp-app`, `wm-webapp`, `wm-elements`,
+  `wm-layer-map`); non è escluso che lo usi qualche backend;
+- la modifica in blocco di `global` (`BulkEditAction`) salva con `saveQuietly()`: non rigenera né
+  la config né `pois.geojson`;
+- su Laravel 11 (carg) un rollback della transazione dopo il dispatch non libera il lock unico del
+  job, che resta preso fino a `uniqueFor`; da Laravel 12 lo libera `Queue::enqueueUsing()`.
+
 ### Theme
 
 Lo storage resta `properties->theme->*` in **snake_case** (`primary_color`, `secondary_color`,
