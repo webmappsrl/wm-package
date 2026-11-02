@@ -251,16 +251,28 @@ class App extends Model implements HasMedia
         }
     }
 
-    public function getAllPoisGeojson()
+    /**
+     * I POI dell'App mostrati sulla mappa: quelli con `global = true`. Se la colonna `global`
+     * non esiste restituisce tutti i POI dell'App.
+     *
+     * È il criterio unico per il file dei POI (`getAllPoisGeojson()`) e per il filtro dei tipi
+     * di POI della config: mappa e filtro non devono divergere (oc:8911).
+     */
+    public function globalEcPois(): HasMany
     {
-        $pois = [];
-
-        // Usa la relazione diretta come per le tracks
-        // Se la colonna 'global' esiste, filtra solo i POI globali, altrimenti restituisce tutti i POI
         $query = $this->ecPois();
         if (Schema::hasColumn((new EcPoi)->getTable(), 'global')) {
             $query->where('global', true);
         }
+
+        return $query;
+    }
+
+    public function getAllPoisGeojson()
+    {
+        $pois = [];
+
+        $query = $this->globalEcPois();
         // taxonomyPoiTypes caricati insieme: li legge getSearchableString() per ogni POI (oc:8677).
         $appPois = $query->with('taxonomyPoiTypes')->get();
 

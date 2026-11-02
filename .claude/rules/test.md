@@ -55,3 +55,9 @@ Si applica quando scrivi o modifichi un test del package.
   finto `UpdateUgcTrackDemStatsJob`: se il test salva una UgcTrack con `locations` e la lista non
   contiene quel job, il job gira davvero e chiama il servizio DEM esterno. Aggiungilo sempre alla
   lista (oc:8742).
+- In un test Pest **non usare `$this->app` né `$this->options` come proprietà tue**: sono
+  l'applicazione di Testbench e le opzioni di Pest, e sovrascriverle rompe il teardown o dà un
+  `TypeError` (oc:8911).
+- **`wasRecentlyCreated` resta `true` sull'istanza creata nel test**, anche con
+  `createQuietly()`: un test che verifica cosa succede al salvataggio di un modello esistente deve
+  salvare `$model->fresh()`, come avviene in Nova (oc:8911).

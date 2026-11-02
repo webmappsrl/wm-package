@@ -2,9 +2,9 @@
 
 namespace Wm\WmPackage\Observers;
 
-use Wm\WmPackage\Jobs\BuildAppPoisGeojsonJob;
 use Wm\WmPackage\Models\TaxonomyPoiTypeable;
 use Wm\WmPackage\Services\AppIconsService;
+use Wm\WmPackage\Services\AppPoiOutputsService;
 use Wm\WmPackage\Services\Models\LayerService;
 
 class TaxonomyPoiTypeablesObserver
@@ -31,7 +31,7 @@ class TaxonomyPoiTypeablesObserver
             if ($relatedModel && isset($relatedModel->app)) {
                 $appId = $relatedModel->app->id;
                 $appIconsService->writeIconsOnAws($appId);
-                BuildAppPoisGeojsonJob::dispatch($appId);
+                AppPoiOutputsService::make()->dispatchRegeneration($appId);
             }
         }
     }
