@@ -263,7 +263,7 @@ function richiestaConRuolo(string $role, string $requestClass = NovaRequest::cla
 }
 
 /**
- * Crea una tassonomia, un suo termine e una traccia (oc:8910). Usato dai test del legame
+ * Crea una tassonomia, un suo termine e una traccia (oc:8910). Usato dai test della relazione
  * `taxonomy_termables` e del suo observer. Senza argomenti crea sempre gli stessi identifier;
  * con gli argomenti si possono avere più tassonomie e più termini sulla stessa traccia: la tassonomia
  * si riusa se esiste già, e passando `$track` non se ne crea un'altra.
@@ -287,7 +287,7 @@ function seedVocabularyTermAndTrack(
     $track ??= EcTrack::factory()->createQuietly();
 
     // La tassonomia va accesa sull'app della traccia: `termsForSearch()` indicizza solo le
-    // tassonomie accese, e senza questo passo `terms` esce vuoto anche con i legami scritti.
+    // tassonomie accese, e senza questo passo `terms` esce vuoto anche con le relazioni scritte.
     if ($track->app_id !== null) {
         $taxonomy->apps()->syncWithoutDetaching([$track->app_id]);
     }

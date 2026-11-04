@@ -13,10 +13,14 @@ Nasce come copia del componente di `IconSelect`, con due aggiunte che lì mancav
 
 ## Compilare
 
-Serve `laravel-nova-devtool`, che sta nel repository privato di Nova: occorrono le credenziali.
+Serve `laravel-nova-devtool`, che sta nel repository privato di Nova: le credenziali sono quelle
+di `auth.json` nella root dello shard, e Composer le prende da `COMPOSER_AUTH`. Il `composer.json`
+qui vincola `laravel/nova` a `5.7.6`: la licenza non copre le release più recenti, e senza vincolo
+l'installazione muore con un HTTP 402. Si lancia nel container, che ha PHP 8.4 — sull'host, a 7.4,
+`nova-devtool` non è nemmeno installabile.
 
 ```bash
-cd src/Nova/Fields/ChoiceField
+cd src/Nova/Fields/Choice
 composer install        # porta laravel/nova-devtool in vendor/
 npm install
 npm run prod            # scrive dist/
@@ -29,14 +33,13 @@ Due trappole del repo, già applicate qui e da non perdere:
 - `webpack` pinnato **esatto** a `5.103.0`: la 5.111 non compila, perché `laravel-mix@6` cerca
   `webpack/lib/SizeFormatHelpers`, rimosso in mezzo (oc:8568).
 
-## Dopo la prima build riuscita
+## Com'è messo insieme
 
-Finché `dist/` non esiste, `Choice` usa il componente storico `icon-select`, che è già
-compilato: così nessuna pagina si rompe, ma le due aggiunte qui sopra non sono attive. A build
-fatta servono due passi:
+Tutto il campo sta in questa cartella: `Choice.php`, `FieldServiceProvider.php`, i sorgenti Vue e
+il `dist/`, che è versionato come per gli altri campi. Cartella e namespace combaciano
+(`Wm\WmPackage\Nova\Fields\Choice`), quindi la regola PSR-4 di base del package basta da sola e
+in `composer.json` non c'è nessuna voce dedicata — come per `TrackColor`.
 
-1. in `src/Nova/Fields/Choice.php`, `public $component = 'choice';`
-2. in `src/WmPackageServiceProvider.php`, registrare
-   `Wm\WmPackage\Nova\Fields\ChoiceFieldServiceProvider`.
-
-Il `dist/` va versionato, come per gli altri campi del package.
+Il provider è registrato in `src/WmPackageServiceProvider.php` e `Choice::$component` vale
+`choice`. Lo usa anche `IconSelect`, che estende `Choice` e non dichiara un componente suo: il
+vecchio bundle `icon-select` resta compilato ma non è più quello che disegna i campi.

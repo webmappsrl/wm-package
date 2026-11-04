@@ -7,7 +7,7 @@ use Laravel\Nova\Tabs\TabsGroup;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Models\TaxonomyWhere;
-use Wm\WmPackage\Nova\Fields\Choice;
+use Wm\WmPackage\Nova\Fields\Choice\Choice;
 use Wm\WmPackage\Nova\Layer as LayerResource;
 
 /**

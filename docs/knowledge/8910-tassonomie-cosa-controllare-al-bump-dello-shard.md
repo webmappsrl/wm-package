@@ -32,8 +32,8 @@ zone, e in `LayerService` è una sottoquery per tassonomia, non un `whereIn` uni
 (`src/Services/Models/LayerService.php`).
 
 **Niente `composer update` e niente build.** Non è stata aggiunta nessuna voce PSR-4 nuova — il
-`ChoiceFieldServiceProvider` sta fuori dalla cartella del campo apposta — e i `dist` dei campi Nova
-sono versionati.
+campo `Choice` sta in una cartella il cui nome combacia con il namespace, quindi la regola di base
+del package lo copre — e i `dist` dei campi Nova sono versionati, compreso quello di `Choice`.
 
 **Reindex più ampio.** `SyncAutoLayerAfterTrackTaxonomyChangeJob` reindicizza sia le tracce che
 entrano nel layer sia quelle che ne escono, perché `properties.layers` delle uscite va corretto. Su

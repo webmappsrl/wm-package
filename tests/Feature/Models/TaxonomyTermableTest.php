@@ -6,7 +6,7 @@ use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\TaxonomyTerm;
 
-it('copia la tassonomia sul legame al salvataggio', function () {
+it('copia la tassonomia sulla relazione al salvataggio', function () {
     [$taxonomy, $term, $track] = seedVocabularyTermAndTrack();
     $track->taxonomyTerms()->attach($term->id);
 
@@ -22,7 +22,7 @@ it('lascia parent_id nullo quando si associa una tassonomia direttamente', funct
         ->toBeNull();
 });
 
-it('ignora un parent_id passato a mano sul legame', function () {
+it('ignora un parent_id passato a mano sulla relazione', function () {
     [$taxonomy, $term, $track] = seedVocabularyTermAndTrack();
     $track->taxonomyTerms()->attach($term->id, ['parent_id' => 999999]);
 
@@ -90,7 +90,7 @@ it('rilegge con ecTracks() ciò che taxonomyTerms() ha scritto, senza righe a ma
         ->and($track->taxonomyTerms()->pluck('taxonomy_terms.id')->all())->toBe([$term->id]);
 });
 
-it('riscrive la copia della tassonomia sui legami quando il termine cambia tassonomia', function () {
+it('riscrive la copia della tassonomia sulle relazioni quando il termine cambia tassonomia', function () {
     [$taxonomy, $term, $track] = seedVocabularyTermAndTrack();
     [, , $track2] = seedVocabularyTermAndTrack('hiking-difficulty', 'altro-termine');
     $track->taxonomyTerms()->attach($term->id);
@@ -108,7 +108,7 @@ it('riscrive la copia della tassonomia sui legami quando il termine cambia tasso
         ->and(DB::table('taxonomy_termables')->where('parent_id', $taxonomy->id)->count())->toBe(1);
 });
 
-it('non riscrive i legami se il termine cambia solo altri campi', function () {
+it('non riscrive le relazioni se il termine cambia solo altri campi', function () {
     [$taxonomy, $term, $track] = seedVocabularyTermAndTrack();
     $track->taxonomyTerms()->attach($term->id);
     DB::table('taxonomy_termables')->where('taxonomy_term_id', $term->id)->update(['parent_id' => 424242]);

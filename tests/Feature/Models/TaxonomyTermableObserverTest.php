@@ -39,7 +39,7 @@ function fakeScoutEngine(bool $failing = false): object
     return $engine;
 }
 
-it('reindicizza il contenuto giusto quando nasce un legame (coda)', function () {
+it('reindicizza il contenuto giusto quando nasce una relazione (coda)', function () {
     config(['scout.queue' => true]);
     [, $term, $track] = seedVocabularyTermAndTrack();
     $other = EcTrack::factory()->createQuietly();
@@ -51,7 +51,7 @@ it('reindicizza il contenuto giusto quando nasce un legame (coda)', function () 
     Queue::assertNotPushed(MakeSearchable::class, fn ($job) => $job->models->first()->is($other));
 });
 
-it('reindicizza anche quando cambia solo il properties del legame', function () {
+it('reindicizza anche quando cambia solo il properties della relazione', function () {
     config(['scout.queue' => true]);
     [, $term, $track] = seedVocabularyTermAndTrack();
     $track->taxonomyTerms()->attach($term->id);
@@ -62,7 +62,7 @@ it('reindicizza anche quando cambia solo il properties del legame', function () 
     Queue::assertPushed(MakeSearchable::class, fn ($job) => $job->models->count() === 1 && $job->models->first()->is($track));
 });
 
-it('reindicizza quando un legame viene tolto', function () {
+it('reindicizza quando una relazione viene tolta', function () {
     config(['scout.queue' => true]);
     [, $term, $track] = seedVocabularyTermAndTrack();
     $track->taxonomyTerms()->attach($term->id);

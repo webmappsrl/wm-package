@@ -146,9 +146,12 @@ peso», e «vocabolario è nato adesso, non è neanche codice committato».
   in più è mostrare l'icona accanto alla voce e nascondersi in base a un altro campo: si chiama
   `Choice`, e `IconSelect` ora lo estende invece di duplicarlo.
 
-- **Il `ChoiceFieldServiceProvider` sta fuori dalla cartella del campo.** Metterlo dentro avrebbe
-  richiesto una voce PSR-4 nuova nel `composer.json`, cioè un `composer update` su ogni shard al
-  bump. Fuori ricade nel namespace già dichiarato e non costa niente a nessuno.
+- **Il provider stava fuori dalla cartella del campo, ed era sbagliato.** Il motivo scritto allora
+  — che metterlo dentro avrebbe richiesto una voce PSR-4 nuova — non regge: `TrackColor` ha il suo
+  dentro e nessuna voce, perché cartella e namespace combaciano e la regola di base del package
+  basta. Il 4 novembre il campo è stato raccolto tutto in `src/Nova/Fields/Choice/`, cartella
+  chiamata come le altre (il nome del campo, senza suffisso `Field`): `Choice.php`,
+  `FieldServiceProvider.php`, i sorgenti Vue e il `dist/`.
 
 - **Filtri del Layer: OR dentro una tassonomia, AND fra tassonomie diverse.** Proposto dal dev
   («tutti i valori di una tassonomia sono in OR, fra una tassonomia e l'altra in AND, corretto?»)
@@ -196,3 +199,23 @@ peso», e «vocabolario è nato adesso, non è neanche codice committato».
 - **`App::taxonomies()` è un nome generico su un modello che tutti gli shard estendono**: da
   cercare nei loro repo prima del bump. Vedi
   [docs/knowledge/8910-tassonomie-cosa-controllare-al-bump-dello-shard.md](../../knowledge/8910-tassonomie-cosa-controllare-al-bump-dello-shard.md).
+
+## 4 novembre — la build di `Choice` si poteva fare
+
+Il follow-up qui sopra dava la build per non eseguibile «senza `laravel-nova-devtool` dal repo
+privato Nova». Le credenziali però ci sono già: `auth.json` nella root dello shard ha l'`http-basic`
+per `nova.laravel.com`, e Composer le legge da `COMPOSER_AUTH`.
+
+- **Due ostacoli veri, nessuno dei due insormontabile.** Il PHP dell'host è 7.4 e `nova-devtool`
+  vuole `^8.1`: si lancia nel container, che ha PHP 8.4, Node 20 e npm 9. E `composer install`
+  moriva con un HTTP 402 — «Your license is not allowed to download this release» — perché
+  risolveva `laravel/nova` 5.11.1: lo shard è fermo a 5.7.6 e la licenza arriva lì. Vincolata
+  quella versione nel `composer.json` del campo, l'installazione passa.
+- **`dist/` compilato**: 14.5 KiB, con Vue esterno come vuole la trappola oc:7546. `Choice` ora
+  dichiara `$component = 'choice'`, il provider è registrato, e `IconSelect` — che estende
+  `Choice` senza dichiarare un componente suo — passa anche lui al bundle nuovo. Il test
+  `ActivitiesAsTaxonomyTest` asseriva `icon-select`: aggiornato.
+- **Il campo è stato raccolto tutto in una cartella**, `src/Nova/Fields/Choice/`, chiamata come le
+  altre: il nome del campo, senza il suffisso `Field` che nessun altro campo del package usa.
+  Dentro ci sono classe, provider, sorgenti Vue e `dist/`. Nessuna voce PSR-4 in `composer.json`,
+  perché cartella e namespace combaciano.

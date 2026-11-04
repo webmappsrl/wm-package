@@ -1,6 +1,6 @@
 <?php
 
-namespace Wm\WmPackage\Nova\Fields;
+namespace Wm\WmPackage\Nova\Fields\Choice;
 
 use Closure;
 use Laravel\Nova\Fields\Field;
@@ -22,12 +22,12 @@ use Laravel\Nova\Http\Requests\NovaRequest;
  * l'hanno tutti, ma come callback da scrivere, e senza il rifiuto al salvataggio.
  *
  * Non sa niente di nessun modello: riceve opzioni `{value, label, svg?}` e restituisce i valori
- * scelti. Chi la usa decide da dove vengono le opzioni e dove finiscono i valori — un
+ * scelti. Chi la usa decide da dove vengono le opzioni e dove finiscono i valori — una
  * tassonomia di `taxonomy_terms`, una tassonomia con la sua tabella, o altro ancora.
  *
- * Il componente che la disegna è ancora quello storico di `IconSelect`, che infatti la estende
- * per scegliere il nome di un'icona: il passaggio a `choice` avviene quando la nuova build è
- * compilata (vedi `ChoiceField/README.md`).
+ * Il componente che la disegna sta in questa stessa cartella, compilato in `dist/` e
+ * registrato da `FieldServiceProvider`. Lo usa anche `IconSelect`, che estende questa classe per
+ * scegliere il nome di un'icona e non dichiara un componente suo.
  */
 class Choice extends Field
 {
@@ -35,7 +35,7 @@ class Choice extends Field
     // visibilità condizionata resterebbe lettera morta.
     use SupportsDependentFields;
 
-    public $component = 'icon-select';
+    public $component = 'choice';
 
     /**
      * Le opzioni. `value` è una stringa: la ricerca del componente lavora su stringhe.

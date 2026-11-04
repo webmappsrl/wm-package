@@ -3,7 +3,7 @@
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\TaxonomyTerm;
 
-it('indicizza i termini raggruppati per tassonomia con il properties del legame', function () {
+it('indicizza i termini raggruppati per tassonomia con il properties della relazione', function () {
     [, $physical, $track] = seedVocabularyTermAndTrack('accepted-disabilities', 'disability-physical');
     [, $sensory] = seedVocabularyTermAndTrack('accepted-disabilities', 'disability-sensory', $track);
     [, $hiking] = seedVocabularyTermAndTrack('hiking-difficulty', 'hiking-difficulty-e', $track);

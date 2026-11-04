@@ -4,7 +4,7 @@ namespace Wm\WmPackage\Nova\Fields\IconSelect;
 
 use Illuminate\Support\Facades\Log;
 use Wm\WmPackage\Helpers\GlobalFileHelper;
-use Wm\WmPackage\Nova\Fields\Choice;
+use Wm\WmPackage\Nova\Fields\Choice\Choice;
 use Wm\WmPackage\Services\IconSvgService;
 
 /**

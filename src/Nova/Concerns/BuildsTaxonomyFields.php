@@ -9,7 +9,7 @@ use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Tabs\Tab;
 use Laravel\Nova\Tabs\TabsGroup;
 use Wm\WmPackage\Models\TaxonomyTerm;
-use Wm\WmPackage\Nova\Fields\Choice;
+use Wm\WmPackage\Nova\Fields\Choice\Choice;
 use Wm\WmPackage\Services\IconSvgService;
 
 /**

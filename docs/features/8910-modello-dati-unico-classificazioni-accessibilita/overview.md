@@ -285,9 +285,9 @@ Trovato mentre la mappa di un layer restava vuota. `AnalyticsService::__construc
 ### Cosa resta da fare prima del merge
 
 - **Build di due componenti Vue**, non eseguibile sulla macchina di sviluppo senza
-  `laravel-nova-devtool` dal repo privato Nova: `ChoiceField/` (annuncio del cambio valore, che è
-  ciò che fa funzionare `visibleWhen` nel browser) e `FeatureCollectionMap` (legenda condizionata).
-  Istruzioni in `src/Nova/Fields/ChoiceField/README.md`.
+  `laravel-nova-devtool` dal repo privato Nova: `FeatureCollectionMap` (legenda condizionata).
+  Quella di `Choice` è stata fatta il 4 novembre — istruzioni in
+  `src/Nova/Fields/Choice/README.md`.
 - **Cosa controllare su camminiditalia e maphub** prima del bump:
   [docs/knowledge/8910-tassonomie-cosa-controllare-al-bump-dello-shard.md](../../knowledge/8910-tassonomie-cosa-controllare-al-bump-dello-shard.md).
 
@@ -297,7 +297,7 @@ Trovato mentre la mappa di un layer restava vuota. `AnalyticsService::__construc
 |---|---|
 | `database/migrations/zz_2026_11_03_000003_create_app_taxonomy_term_table.php.stub` | nuovo |
 | `src/Nova/Concerns/BuildsTaxonomyFields.php` | nuovo: la sezione a tab, usata da EC e Layer |
-| `src/Nova/Fields/Choice.php` + `ChoiceField/` + `ChoiceFieldServiceProvider.php` | nuovo campo con icona; il provider sta fuori dalla cartella per non aggiungere voci PSR-4 |
+| `src/Nova/Fields/Choice/` | nuovo campo con icona: classe, provider, sorgenti Vue e `dist/`, tutto nella stessa cartella |
 | `src/Nova/AbstractTaxonomyTermsResource.php` | nuovo: vista per tassonomia |
 | `src/Nova/Menu/TaxonomyTermsMenu.php` | nuovo: voci di menu automatiche |
 | `src/Commands/WmMakeTaxonomyResourceCommand.php` | nuovo: `wm:make-taxonomy-resource` |
