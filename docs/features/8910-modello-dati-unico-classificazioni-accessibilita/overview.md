@@ -369,3 +369,81 @@ d'uso. Resta solo il costo di serializzarle tutte nella pagina.
 - [x] In `tests/Pest.php`, `class_alias` anche per `App\Nova\User`, e
       `seedVocabularyTermAndTrack()` accende la tassonomia sull'app della traccia: l'indice porta
       solo le tassonomie accese, quindi senza quello `termsForSearch()` esce vuoto.
+
+---
+
+## Aggiornamento del 4 novembre, sera — cosa è cambiato rispetto a sopra
+
+Le righe qui sotto **prevalgono** su quelle sopra dove le contraddicono.
+
+### Una tassonomia dichiara a quali contenuti si applica
+
+Ribalta il modo in cui le tassonomie arrivavano sulle schede. Prima la sezione la componeva lo
+shard, e quali tassonomie comparissero dipendeva solo dall'accensione per app.
+
+- [x] **La sezione la compone il package**, in `EcTrack::fields()` e `EcPoi::fields()`, sopra i
+      Blocchi Dettaglio: è codice che vale per ogni shard, e lo shard la eredita invece di
+      inserirla. `taxonomySectionFields()` la restituisce come array, vuoto se non c'è niente da
+      mostrare; `keepOnlyTaxonomySection()` serve a chi sovrascrive `fields()` e scarta i
+      `TabsGroup` ereditati, che altrimenti porterebbe via anche questa.
+- [x] **L'accensione per app dice *dove* una tassonomia esiste, non *a cosa* si applica.** Senza
+      la seconda domanda, portando la sezione sui POI, «Difficoltà di accessibilità» sarebbe
+      comparsa sulla scheda di un POI. La risposta sta sul pivot, `app_taxonomy_term.models`, e
+      non sulla tassonomia: la stessa tassonomia, condivisa fra app, può valere sulle EC Track di
+      una e sugli EC Poi di un'altra. `null` vuol dire tutti i contenuti.
+- [x] Si sceglie dalla scheda dell'App, tab «Tassonomie», con due elenchi: «Tassonomie EC Track»
+      e «Tassonomie EC Poi». Scrivono la stessa tabella, quindi passano da
+      `App::syncTaxonomiesForModel()` invece di fare un `sync()` per campo, che si
+      cancellerebbero a vicenda.
+- [x] Sui **Layer** l'ambito non si applica: lì le tassonomie sono filtri che scelgono i
+      contenuti, e un layer può raccogliere sia tracce sia POI.
+- [x] Su un contenuto **in creazione**, che non ha ancora un'app, non si guarda quale app ma
+      l'ambito vale lo stesso. Una tassonomia che nessuna app accende resta visibile, così il
+      form di un'app nuova non nasce vuoto.
+- [x] Su Forestas tutte e undici sono accese sulle sole EC Track.
+
+### Cambiare le accensioni fa reindicizzare
+
+- [x] `terms`, nel documento di una traccia, porta solo le tassonomie accese su quell'app:
+      accenderne o spegnerne una cambia ogni documento senza che nessun contenuto venga salvato,
+      e **nessuno reindicizzava**. L'indice restava indietro fino al prossimo salvataggio di
+      ciascuna traccia. Ora c'è `ReindexAppContentsJob`, unico per app e `afterCommit`.
+- [x] Il job porta con sé la firma delle accensioni di prima e la riconfronta quando gira: i due
+      campi del tab scrivono uno dopo l'altro, e il primo lascia uno stato intermedio che sembra
+      un cambiamento. Senza, un salvataggio qualunque della scheda App avrebbe reindicizzato
+      tutto.
+- [x] `enableTaxonomiesForModel()`, che usano i comandi di allineamento, non accoda: l'import
+      reindicizza a fine batch.
+
+### Il campo `Choice` è compilato
+
+- [x] La build era data per non eseguibile: le credenziali di Nova sono in `auth.json`, e gli
+      ostacoli erano il PHP 7.4 dell'host (si compila nel container) e `laravel/nova` 5.11.1, che
+      la licenza non copre — il `composer.json` del campo vincola la 5.7.6.
+- [x] Il campo sta tutto in `src/Nova/Fields/Choice/`, chiamata come le altre cartelle: il nome
+      del campo, senza suffisso. Nessuna voce PSR-4, perché cartella e namespace combaciano. Il
+      motivo per cui il provider stava fuori era sbagliato.
+- [x] `IconSelect`, che estende `Choice` e non dichiara un componente suo, usa il bundle nuovo.
+
+### Salvare una tassonomia da Nova andava in errore
+
+- [x] `TaxonomyTerm::FAMILY_IDENTIFIER_FORMAT` non esiste — la costante si chiama
+      `TAXONOMY_IDENTIFIER_FORMAT` — e il riferimento era rimasto da una rinomina. Scattava nella
+      validazione dell'identifier, cioè a **ogni** salvataggio di una tassonomia dalla scheda.
+- [x] I test non lo prendevano perché estraggono le `rules` e le danno a `Validator`: quella
+      strada non costruisce la Resource come fa Nova. Ora ogni Resource toccata ha un test che
+      fa la richiesta del browser, e quelle del package stanno qui, non nello shard.
+
+### Elasticsearch
+
+- [x] Le due dynamic template del campo `terms` erano già nel config: mancava applicarle, e un
+      mapping cambiato vuole `scout:import`. Fatto su forestas, `terms.*.identifier` è passato da
+      `text` a `keyword`. **Aggiungere una tassonomia non richiede `scout:import`**: il campo
+      nasce da sé già con il tipo giusto, perché la template vale anche per i campi nuovi.
+
+### Gergo
+
+- [x] Tolto «vocabolario» dal modello nuovo — costante, metodi, chiavi di traduzione — dove
+      restava dal nome vecchio. Resta dove nomina il vocabolario di Drupal, che è il nome giusto.
+- [x] Identificatori in inglese: `ricalcoloLayer*()`, `importaConFruibilita()`, `campoDelTab()` e
+      una cinquantina di variabili.
