@@ -251,23 +251,35 @@ non ci sarebbe un valore su cui decidere.
 
 ## A quali contenuti si applica una tassonomia
 
-L'accensione per app dice **dove** una tassonomia esiste, non **a cosa** si applica: sono due
-domande diverse, e con la sola prima «Difficoltà di accessibilità» comparirebbe anche sulla
-scheda di un POI, dove non vuole dire niente.
-
-Una tassonomia lo dichiara in `properties->models`, con i nomi brevi dei modelli:
+L'accensione per app dice **dove** una tassonomia esiste; **a cosa** si applica è un'altra
+domanda, e la risposta sta sulla stessa riga: la colonna `models` del pivot `app_taxonomy_term`.
 
 ```json
-{"models": ["EcTrack"]}
+["EcTrack"]
 ```
 
-Senza la chiave vale per tutti i contenuti, così le tassonomie già create non cambiano
-comportamento. Il filtro è in `BuildsTaxonomyFields::taxonomyAppliesHere()` e riguarda solo le
-schede dei contenuti: **su un Layer non si applica**, perché lì le tassonomie sono filtri che
-scelgono i contenuti, e un layer può raccogliere sia tracce sia POI.
+Sta sul pivot e non sulla tassonomia perché la stessa tassonomia, condivisa fra più app, può
+valere sulle EC Track di una e sugli EC Poi di un'altra. `null` o `[]` vuol dire tutti i
+contenuti, che è anche il valore con cui nasce una riga scritta da un `sync()` qualunque: le
+accensioni già esistenti non cambiano comportamento.
+
+Si imposta dalla scheda dell'App, tab «Tassonomie», con due elenchi — «Tassonomie EC Track» e
+«Tassonomie EC Poi». Una tassonomia scelta in tutti e due vale per entrambi e il pivot torna a
+`null`; tolta da tutti e due, la riga sparisce e la tassonomia è spenta. I due campi scrivono la
+stessa tabella, quindi non fanno un `sync()` per campo — il secondo cancellerebbe il primo — ma
+passano da `App::syncTaxonomiesForModel()`, che tocca solo il proprio modello.
+
+In lettura il filtro è lo scope `TaxonomyTerm::forAppAndModel()`, usato da
+`BuildsTaxonomyFields`. Due casi da conoscere:
+
+- **Su un Layer non si applica.** Lì le tassonomie sono filtri che scelgono i contenuti, e un
+  layer può raccogliere sia tracce sia POI.
+- **Su un contenuto in creazione**, che non ha ancora un'app, non si guarda *quale* app, ma
+  l'ambito vale lo stesso: una tassonomia che nessuna app accende resta visibile, così il form
+  di un'app nuova non nasce vuoto.
 
 Riguarda ciò che si vede e si compila in Nova, non il dato: un termine già attaccato a un POI
-resta attaccato e continua a finire nell'indice. La chiave non è un vincolo di integrità.
+resta attaccato e continua a finire nell'indice. Non è un vincolo di integrità.
 
 ## Quali tassonomie vede un'app
 

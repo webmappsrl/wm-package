@@ -254,41 +254,16 @@ trait BuildsTaxonomyFields
      *
      * @return array<string, array<int, Field>>
      */
-    /**
-     * La tassonomia riguarda il contenuto di questa scheda.
-     *
-     * L'accensione per app dice *dove* una tassonomia esiste, non *a cosa* si applica: senza
-     * questo, «Difficoltà di accessibilità» comparirebbe anche sulla scheda di un POI, dove non
-     * vuole dire niente. Una tassonomia lo dichiara in `properties->models`, con i nomi brevi
-     * dei modelli (`["EcTrack"]`, `["EcPoi"]`, o entrambi); senza la chiave vale per tutti,
-     * così le tassonomie che esistono già non cambiano comportamento.
-     *
-     * Su un Layer non si filtra: lì le tassonomie sono filtri che scelgono i contenuti, e un
-     * layer può raccogliere sia tracce sia POI.
-     */
-    protected function taxonomyAppliesHere(TaxonomyTerm $taxonomy): bool
-    {
-        if ($this->taxonomyFieldsAreFilters()) {
-            return true;
-        }
-
-        $models = data_get($taxonomy->properties, 'models');
-        if (! is_array($models) || $models === []) {
-            return true;
-        }
-
-        return in_array(class_basename($this->resource), array_map('strval', $models), true);
-    }
-
     public function makeTermFieldsByTab(string $default = 'General'): array
     {
-        $taxonomies = TaxonomyTerm::query()
-            ->taxonomies()
-            ->forApp($this->resource->app_id ?? null)
-            ->orderBy('sort_order')
-            ->orderBy('id')
-            ->get()
-            ->filter(fn (TaxonomyTerm $taxonomy) => $this->taxonomyAppliesHere($taxonomy));
+        // Su un Layer non si guarda a quale contenuto si applica una tassonomia: lì sono filtri
+        // che scelgono i contenuti, e un layer può raccogliere sia tracce sia POI.
+        $query = TaxonomyTerm::query()->taxonomies();
+        $query = $this->taxonomyFieldsAreFilters()
+            ? $query->forApp($this->resource->app_id ?? null)
+            : $query->forAppAndModel($this->resource->app_id ?? null, class_basename($this->resource));
+
+        $taxonomies = $query->orderBy('sort_order')->orderBy('id')->get();
 
         $byTab = [];
         foreach ($taxonomies as $taxonomy) {

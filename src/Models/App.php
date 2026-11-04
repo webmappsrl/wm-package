@@ -96,7 +96,76 @@ class App extends Model implements HasMedia
      */
     public function taxonomies(): BelongsToMany
     {
-        return $this->belongsToMany(TaxonomyTerm::class, 'app_taxonomy_term');
+        return $this->belongsToMany(TaxonomyTerm::class, 'app_taxonomy_term')
+            // A quali contenuti si applica, in questa app: null vuol dire tutti (oc:8910).
+            ->withPivot('models');
+    }
+
+    /**
+     * Accende le tassonomie per un tipo di contenuto, lasciando stare gli altri (oc:8910).
+     *
+     * I due elenchi della scheda — tassonomie sui sentieri, sui POI — scrivono la stessa tabella:
+     * un `sync()` per elenco cancellerebbe quello che ha scritto l'altro. Qui ogni chiamata
+     * aggiunge o toglie il proprio modello da `models`, e la riga sparisce quando non resta
+     * nessun contenuto.
+     *
+     * @param  string  $model  Il nome breve del modello: `EcTrack`, `EcPoi`.
+     * @param  array<int, int>  $taxonomyIds
+     */
+    public function syncTaxonomiesForModel(string $model, array $taxonomyIds): void
+    {
+        $current = $this->taxonomies()->get()
+            ->mapWithKeys(function (TaxonomyTerm $taxonomy) {
+                $models = $taxonomy->pivot->models ?? null;
+                $models = is_string($models) ? json_decode($models, true) : $models;
+
+                return [$taxonomy->id => is_array($models) ? $models : []];
+            });
+
+        // Un elenco vuoto nel pivot vuol dire «tutti i contenuti»: va esploso prima di togliere
+        // questo modello, altrimenti togliendolo si direbbe «tutti» invece che «gli altri».
+        $everyModel = ['EcTrack', 'EcPoi'];
+        $wanted = [];
+        foreach ($current as $taxonomyId => $models) {
+            $models = $models === [] ? $everyModel : $models;
+            $models = array_values(array_diff($models, [$model]));
+            if ($models !== []) {
+                $wanted[$taxonomyId] = $models;
+            }
+        }
+        foreach ($taxonomyIds as $taxonomyId) {
+            $wanted[$taxonomyId] = array_values(array_unique([...($wanted[$taxonomyId] ?? []), $model]));
+        }
+
+        $this->taxonomies()->sync(
+            collect($wanted)
+                // Accesa per tutti i contenuti: `models` nullo, che è il valore che significa
+                // «tutti» e che una tassonomia creata fuori da qui porta già.
+                ->map(fn (array $models) => ['models' => count($models) === count($everyModel) ? null : json_encode($models)])
+                ->all()
+        );
+    }
+
+    /**
+     * Accende per un tipo di contenuto le tassonomie che non ci sono, senza toccare le altre.
+     *
+     * È quello che serve a un comando di allineamento: `syncTaxonomiesForModel()` riscriverebbe
+     * l'ambito di tutte, cancellando ciò che qualcuno ha scelto dalla scheda dell'app.
+     *
+     * @param  string  $model  Il nome breve del modello: `EcTrack`, `EcPoi`.
+     * @param  array<int, int>  $taxonomyIds
+     */
+    public function enableTaxonomiesForModel(string $model, array $taxonomyIds): void
+    {
+        $already = $this->taxonomies()->pluck('taxonomy_terms.id')->all();
+        $missing = array_values(array_diff($taxonomyIds, $already));
+        if ($missing === []) {
+            return;
+        }
+
+        $this->taxonomies()->attach(
+            collect($missing)->mapWithKeys(fn (int $id) => [$id => ['models' => json_encode([$model])]])->all()
+        );
     }
 
     public function layers()

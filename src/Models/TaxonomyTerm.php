@@ -162,6 +162,35 @@ class TaxonomyTerm extends Model
         return $query->whereHas('apps', fn (Builder $apps) => $apps->where('apps.id', $appId));
     }
 
+    /**
+     * Le tassonomie accese in un'app e valide per un certo contenuto (oc:8910).
+     *
+     * L'accensione dice *dove* una tassonomia esiste, l'ambito *a cosa* si applica, e l'ambito
+     * sta sul pivot perché la stessa tassonomia, condivisa fra app, può valere sui sentieri di
+     * una e sui POI di un'altra. `models` nullo o vuoto vuol dire tutti i contenuti.
+     *
+     * @param  string  $model  Il nome breve del modello: `EcTrack`, `EcPoi`.
+     */
+    public function scopeForAppAndModel(Builder $query, ?int $appId, string $model): Builder
+    {
+        $covers = fn (Builder $apps) => $apps->where(function (Builder $scope) use ($model) {
+            // `models` nullo o vuoto vuol dire tutti i contenuti.
+            $scope->whereNull('app_taxonomy_term.models')
+                ->orWhereRaw("app_taxonomy_term.models = '[]'::jsonb")
+                ->orWhereRaw('app_taxonomy_term.models @> ?', [json_encode([$model])]);
+        });
+
+        // Un contenuto appena aperto in creazione non ha ancora un'app: lì non si guarda quale,
+        // ma l'ambito vale lo stesso, altrimenti su un EC Poi nuovo comparirebbero tassonomie
+        // accese per le sole EC Track. Una tassonomia che nessuna app accende resta visibile:
+        // il form di un'app nuova non deve nascere vuoto.
+        if ($appId === null) {
+            return $query->where(fn (Builder $q) => $q->whereDoesntHave('apps')->orWhereHas('apps', $covers));
+        }
+
+        return $query->whereHas('apps', fn (Builder $apps) => $covers($apps->where('apps.id', $appId)));
+    }
+
     public function ecTracks(): MorphToMany
     {
         // Il modello della traccia è quello configurato dallo shard (come in TaxonomyWhere e Layer).

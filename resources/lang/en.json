@@ -622,5 +622,7 @@
     "The identifier of a taxonomy must be lowercase letters, digits and hyphens, with colons allowed.": "The identifier of a taxonomy must be lowercase letters, digits and hyphens, with colons allowed.",
     "System taxonomy": "System taxonomy",
     "A system taxonomy is enabled in every new app.": "A system taxonomy is enabled in every new app.",
-    "Only the taxonomies enabled here appear on this app contents.": "Only the taxonomies enabled here appear on this app contents."
+    "EC Track taxonomies": "EC Track taxonomies",
+    "EC Poi taxonomies": "EC Poi taxonomies",
+    "Only the taxonomies enabled here appear on these contents of this app.": "Only the taxonomies enabled here appear on these contents of this app."
 }

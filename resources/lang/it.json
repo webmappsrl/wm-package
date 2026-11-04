@@ -623,5 +623,7 @@
     "The identifier of a taxonomy must be lowercase letters, digits and hyphens, with colons allowed.": "L'identifier di una tassonomia deve essere fatto di lettere minuscole, cifre e trattini, con i due punti ammessi.",
     "System taxonomy": "Tassonomia di sistema",
     "A system taxonomy is enabled in every new app.": "Una tassonomia di sistema è accesa in ogni app nuova.",
-    "Only the taxonomies enabled here appear on this app contents.": "Solo le tassonomie accese qui compaiono sui contenuti di questa app."
+    "EC Track taxonomies": "Tassonomie EC Track",
+    "EC Poi taxonomies": "Tassonomie EC Poi",
+    "Only the taxonomies enabled here appear on these contents of this app.": "Solo le tassonomie accese qui compaiono su questi contenuti di questa app."
 }

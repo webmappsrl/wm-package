@@ -175,26 +175,78 @@ it('scrive la tassonomia sulla relazione del Layer, cosi il filtro per famiglia 
         ->value('parent_id'))->toBe($this->routeType->id);
 });
 
-it('accende e spegne le tassonomie dalla scheda di un App', function () {
+it('accende le tassonomie per tipo di contenuto dalla scheda di un App', function () {
     $other = TaxonomyTerm::create([
         'identifier' => 'surface-type-'.uniqid(),
         'name' => ['it' => 'Fondo'],
     ]);
 
+    // La stessa tassonomia sulle EC Track di quest'app, l'altra solo sugli EC Poi.
     $this->actingAs($this->user)
         ->putJson("/nova-api/apps/{$this->testApp->id}", [
-            'sku' => $this->testApp->sku,
-            'name' => 'App di prova',
-            'default_language' => 'it',
-            'start_end_icons_min_zoom' => 10,
-            'ref_on_track_min_zoom' => 10,
-            'taxonomies' => json_encode([$other->id]),
+            ...appPayload($this->testApp),
+            'taxonomies_ec_track' => json_encode([$this->routeType->id]),
+            'taxonomies_ec_poi' => json_encode([$other->id]),
         ])
         ->assertOk();
 
-    expect($this->testApp->fresh()->taxonomies()->pluck('taxonomy_terms.id')->all())
-        ->toBe([$other->id]);
+    $models = $this->testApp->fresh()->taxonomies()->get()
+        ->mapWithKeys(fn ($t) => [$t->identifier => json_decode((string) $t->pivot->models, true)]);
+
+    expect($models[$this->routeType->identifier])->toBe(['EcTrack'])
+        ->and($models[$other->identifier])->toBe(['EcPoi']);
 });
+
+it('una tassonomia scelta in tutti e due gli elenchi vale per entrambi', function () {
+    $this->actingAs($this->user)
+        ->putJson("/nova-api/apps/{$this->testApp->id}", [
+            ...appPayload($this->testApp),
+            'taxonomies_ec_track' => json_encode([$this->routeType->id]),
+            'taxonomies_ec_poi' => json_encode([$this->routeType->id]),
+        ])
+        ->assertOk();
+
+    // «Tutti i contenuti» si scrive come `models` nullo, che è anche il valore che porta una
+    // tassonomia accesa da fuori: una sola rappresentazione, non due.
+    expect($this->testApp->fresh()->taxonomies()->first()->pivot->models)->toBeNull();
+});
+
+it('togliere una tassonomia da un elenco la lascia nell\'altro', function () {
+    $this->testApp->syncTaxonomiesForModel('EcTrack', [$this->routeType->id]);
+    $this->testApp->syncTaxonomiesForModel('EcPoi', [$this->routeType->id]);
+
+    // Resta accesa, ma solo sugli EC Poi.
+    $this->testApp->syncTaxonomiesForModel('EcTrack', []);
+
+    $pivot = $this->testApp->fresh()->taxonomies()->first()->pivot;
+    expect(json_decode((string) $pivot->models, true))->toBe(['EcPoi']);
+});
+
+it('toglierla da tutti e due gli elenchi la spegne', function () {
+    // Nel beforeEach è accesa per tutti i contenuti: qui la si restringe alle EC Track.
+    $this->testApp->syncTaxonomiesForModel('EcTrack', [$this->routeType->id]);
+    $this->testApp->syncTaxonomiesForModel('EcPoi', []);
+
+    $this->testApp->syncTaxonomiesForModel('EcTrack', []);
+
+    expect($this->testApp->fresh()->taxonomies()->count())->toBe(0);
+});
+
+/**
+ * I campi che la scheda di un'App chiede comunque, oltre a quello che il test sta provando.
+ *
+ * @return array<string, mixed>
+ */
+function appPayload(App $app): array
+{
+    return [
+        'sku' => $app->sku,
+        'name' => 'App di prova',
+        'default_language' => 'it',
+        'start_end_icons_min_zoom' => 10,
+        'ref_on_track_min_zoom' => 10,
+    ];
+}
 
 it('salva il tipo percorso sulla scheda di un sentiero', function () {
     $track = EcTrack::factory()->createQuietly([
@@ -258,9 +310,11 @@ it('salva il tipo percorso anche sulla scheda di un POI', function () {
         ->toBe([$this->trail->id]);
 });
 
-it('una tassonomia per le sole tracce non compare sulla scheda di un POI', function () {
-    // L'accensione per app dice dove una tassonomia esiste, non a cosa si applica.
-    $this->routeType->update(['properties' => ['models' => ['EcTrack']]]);
+it('una tassonomia accesa sulle sole EC Track non compare sulla scheda di un EC Poi', function () {
+    // L'accensione per app dice dove una tassonomia esiste, l'ambito a cosa si applica.
+    // Nel beforeEach è accesa per tutti i contenuti: qui la si restringe alle EC Track.
+    $this->testApp->syncTaxonomiesForModel('EcTrack', [$this->routeType->id]);
+    $this->testApp->syncTaxonomiesForModel('EcPoi', []);
 
     $track = EcTrack::factory()->createQuietly([
         'app_id' => $this->testApp->id, 'user_id' => $this->user->id, 'properties' => [],
@@ -274,7 +328,7 @@ it('una tassonomia per le sole tracce non compare sulla scheda di un POI', funct
         ->and(taxonomyAttributesOf(new PackageEcPoiResource($poi)))->not->toContain($this->termAttribute);
 });
 
-it('senza la chiave una tassonomia vale per tracce e POI', function () {
+it('accesa per tutti i contenuti, una tassonomia vale per EC Track e EC Poi', function () {
     $track = EcTrack::factory()->createQuietly([
         'app_id' => $this->testApp->id, 'user_id' => $this->user->id, 'properties' => [],
     ]);
@@ -287,10 +341,10 @@ it('senza la chiave una tassonomia vale per tracce e POI', function () {
         ->and(taxonomyAttributesOf(new PackageEcPoiResource($poi)))->toContain($this->termAttribute);
 });
 
-it('su un Layer la tassonomia resta anche se vale per le sole tracce', function () {
+it('su un Layer la tassonomia resta anche se è accesa sulle sole EC Track', function () {
     // Lì le tassonomie sono filtri che scelgono i contenuti, e un layer può raccoglierne di
     // tipi diversi: limitarle al modello della scheda non avrebbe senso.
-    $this->routeType->update(['properties' => ['models' => ['EcTrack']]]);
+    $this->testApp->syncTaxonomiesForModel('EcTrack', [$this->routeType->id]);
     $layer = Layer::factory()->createQuietly(['app_id' => $this->testApp->id]);
 
     expect(taxonomyAttributesOf(new PackageLayerResource($layer)))->toContain($this->termAttribute);
