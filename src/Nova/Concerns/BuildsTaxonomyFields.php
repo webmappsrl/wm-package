@@ -53,7 +53,63 @@ trait BuildsTaxonomyFields
      * L'attributo distingue questo gruppo dagli altri della pagina: senza, Nova sovrapporrebbe
      * due `Tab::group` nella stessa scheda.
      */
+    /**
+     * La chiave della sezione, con cui uno shard la riconosce fra i campi ereditati.
+     *
+     * Serve a chi ricompone `fields()` scartando i `TabsGroup` del package per rimetterli a modo
+     * suo: senza un modo di distinguerla, la sezione sparirebbe dalla scheda. Metodo e non
+     * costante perché il PHP minimo del package è 8.1, dove le costanti nei trait non esistono.
+     */
+    public static function taxonomySectionKey(): string
+    {
+        return 'taxonomies';
+    }
+
+    /**
+     * I campi ereditati senza i `TabsGroup` del package, ma con la sezione delle tassonomie.
+     *
+     * Serve a uno shard che sovrascrive `fields()` per ricomporre le sezioni a modo suo: il
+     * filtro ovvio — scartare ogni `TabsGroup` — porta via anche le tassonomie, che il package
+     * mette già nel punto giusto. Qui la sezione resta dov'è, le altre se ne vanno.
+     *
+     * @param  array<int, mixed>  $fields
+     * @return array<int, mixed>
+     */
+    public function keepOnlyTaxonomySection(array $fields): array
+    {
+        return array_values(array_filter(
+            $fields,
+            fn ($field) => ! ($field instanceof TabsGroup)
+                || ($field->attribute ?? null) === self::taxonomySectionKey()
+        ));
+    }
+
+    /**
+     * La sezione, come elemento di un array di campi: vuota se non c'è niente da mostrare.
+     *
+     * È la forma con cui la compongono le Resource EC del package, dove uno shard può non avere
+     * nessuna tassonomia accesa: un `Tab::group` senza tab lascerebbe in pagina un'intestazione
+     * che non apre niente.
+     *
+     * @return array<int, TabsGroup>
+     */
+    public function taxonomySectionFields(string $label = 'Taxonomies', string $default = 'General'): array
+    {
+        return $this->taxonomyTabs($default) === [] ? [] : [$this->makeTaxonomySection($label, $default)];
+    }
+
     public function makeTaxonomySection(string $label = 'Taxonomies', string $default = 'General'): TabsGroup
+    {
+        return Tab::group(__($label), $this->taxonomyTabs($default), self::taxonomySectionKey());
+    }
+
+    /**
+     * I tab della sezione: uno per ogni `properties->tab` dichiarato dalle tassonomie, più
+     * quelli che lo shard aggiunge con `taxonomyTabExtraFields()`.
+     *
+     * @return array<int, Tab>
+     */
+    protected function taxonomyTabs(string $default = 'General'): array
     {
         $byTab = $this->makeTermFieldsByTab($default);
 
@@ -87,7 +143,7 @@ trait BuildsTaxonomyFields
             }
         }
 
-        return Tab::group(__($label), $tabs, 'taxonomies');
+        return $tabs;
     }
 
     /**
@@ -198,6 +254,32 @@ trait BuildsTaxonomyFields
      *
      * @return array<string, array<int, Field>>
      */
+    /**
+     * La tassonomia riguarda il contenuto di questa scheda.
+     *
+     * L'accensione per app dice *dove* una tassonomia esiste, non *a cosa* si applica: senza
+     * questo, «Difficoltà di accessibilità» comparirebbe anche sulla scheda di un POI, dove non
+     * vuole dire niente. Una tassonomia lo dichiara in `properties->models`, con i nomi brevi
+     * dei modelli (`["EcTrack"]`, `["EcPoi"]`, o entrambi); senza la chiave vale per tutti,
+     * così le tassonomie che esistono già non cambiano comportamento.
+     *
+     * Su un Layer non si filtra: lì le tassonomie sono filtri che scelgono i contenuti, e un
+     * layer può raccogliere sia tracce sia POI.
+     */
+    protected function taxonomyAppliesHere(TaxonomyTerm $taxonomy): bool
+    {
+        if ($this->taxonomyFieldsAreFilters()) {
+            return true;
+        }
+
+        $models = data_get($taxonomy->properties, 'models');
+        if (! is_array($models) || $models === []) {
+            return true;
+        }
+
+        return in_array(class_basename($this->resource), array_map('strval', $models), true);
+    }
+
     public function makeTermFieldsByTab(string $default = 'General'): array
     {
         $taxonomies = TaxonomyTerm::query()
@@ -205,7 +287,8 @@ trait BuildsTaxonomyFields
             ->forApp($this->resource->app_id ?? null)
             ->orderBy('sort_order')
             ->orderBy('id')
-            ->get();
+            ->get()
+            ->filter(fn (TaxonomyTerm $taxonomy) => $this->taxonomyAppliesHere($taxonomy));
 
         $byTab = [];
         foreach ($taxonomies as $taxonomy) {

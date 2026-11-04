@@ -249,6 +249,26 @@ campo resta visibile: in compilazione non deve sparire un dato che si sta insere
 tassonomia sorgente non è fra quelle mostrate in quella scheda, la dipendenza non si applica —
 non ci sarebbe un valore su cui decidere.
 
+## A quali contenuti si applica una tassonomia
+
+L'accensione per app dice **dove** una tassonomia esiste, non **a cosa** si applica: sono due
+domande diverse, e con la sola prima «Difficoltà di accessibilità» comparirebbe anche sulla
+scheda di un POI, dove non vuole dire niente.
+
+Una tassonomia lo dichiara in `properties->models`, con i nomi brevi dei modelli:
+
+```json
+{"models": ["EcTrack"]}
+```
+
+Senza la chiave vale per tutti i contenuti, così le tassonomie già create non cambiano
+comportamento. Il filtro è in `BuildsTaxonomyFields::taxonomyAppliesHere()` e riguarda solo le
+schede dei contenuti: **su un Layer non si applica**, perché lì le tassonomie sono filtri che
+scelgono i contenuti, e un layer può raccogliere sia tracce sia POI.
+
+Riguarda ciò che si vede e si compila in Nova, non il dato: un termine già attaccato a un POI
+resta attaccato e continua a finire nell'indice. La chiave non è un vincolo di integrità.
+
 ## Quali tassonomie vede un'app
 
 Una tassonomia è accesa o spenta **per app**, nel pivot `app_taxonomy_term`: una riga vuol dire
