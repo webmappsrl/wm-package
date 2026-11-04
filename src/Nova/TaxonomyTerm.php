@@ -107,8 +107,9 @@ class TaxonomyTerm extends AbstractTaxonomyResource
                 ->sortable()
                 ->required()
                 ->rules('required', function (string $attribute, mixed $value, \Closure $fail) use ($request) {
-                    // Il formato vale per i tassonomie (vedi TaxonomyTermModel::FAMILY_IDENTIFIER_FORMAT).
-                    if ($this->isCreatingVocabulary($request) && ! preg_match(TaxonomyTermModel::FAMILY_IDENTIFIER_FORMAT, (string) $value)) {
+                    // Il formato vale per le tassonomie, non per i termini
+                    // (vedi TaxonomyTermModel::VOCABULARY_IDENTIFIER_FORMAT).
+                    if ($this->isCreatingVocabulary($request) && ! preg_match(TaxonomyTermModel::VOCABULARY_IDENTIFIER_FORMAT, (string) $value)) {
                         $fail(__('The identifier of a vocabulary must be lowercase letters, digits and hyphens, with colons allowed.'));
                     }
                 })

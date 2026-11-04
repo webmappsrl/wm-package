@@ -9,14 +9,15 @@ use Laravel\Nova\Contracts\QueryBuilder;
 use Laravel\Nova\Fields\Field;
 use Laravel\Nova\Fields\MultiSelect as NativeMultiSelect;
 use Laravel\Nova\Fields\Select;
+use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\CreateResourceRequest;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Http\Requests\UpdateResourceRequest;
 use Laravel\Nova\Query\Builder;
-use Outl1ne\MultiselectField\Multiselect;
 use Wm\WmPackage\Models\EcTrack as EcTrackModel;
 use Wm\WmPackage\Models\TaxonomyTerm;
 use Wm\WmPackage\Nova\EcTrack;
+use Wm\WmPackage\Nova\Fields\Choice\Choice;
 use Wm\WmPackage\Nova\TaxonomyTerm as TaxonomyTermResource;
 
 uses(DatabaseTransactions::class);
@@ -49,29 +50,49 @@ function ecTrackResource(): EcTrack
     return new EcTrack(new EcTrackModel);
 }
 
-it('genera una Select per una tassonomia a scelta singola', function () {
+/**
+ * Il campo con cui si sceglie, fra i due che ogni tassonomia produce.
+ *
+ * `makeTermFieldsForTaxonomies()` ne restituisce due per tassonomia: un testo con l'icona, che si
+ * vede solo sul dettaglio, e il `Choice` del form. Prendere `[0]` darebbe il primo, che non si
+ * compila e il cui `fill()` restituisce null.
+ */
+function campoFormTassonomia(array $identifiers): Choice
+{
+    return collect(ecTrackResource()->makeTermFieldsForTaxonomies($identifiers))
+        ->first(fn ($field) => $field instanceof Choice);
+}
+
+it('genera due campi per tassonomia: il testo del dettaglio e il Choice del form', function () {
     makeFamilyWithTerms('accessibility-difficulty', true, ['diff-a' => 1]);
 
     $fields = ecTrackResource()->makeTermFieldsForTaxonomies(['accessibility-difficulty']);
 
-    expect($fields)->toHaveCount(1)
-        ->and($fields[0])->toBeInstanceOf(Select::class);
+    // Il campo del form mostrerebbe gli id sul dettaglio: lì va un testo con nome e icona.
+    expect($fields)->toHaveCount(2)
+        ->and($fields[0])->toBeInstanceOf(Text::class)
+        ->and($fields[1])->toBeInstanceOf(Choice::class)
+        // Niente Select nativa: il Choice disegna l'icona accanto all'etichetta.
+        ->and($fields[1])->not->toBeInstanceOf(Select::class)
+        // A scelta singola il Choice non è multiplo.
+        ->and($fields[1]->jsonSerialize()['multiple'] ?? false)->toBeFalse();
 });
 
-it('usa il Multiselect di Outl1ne e mai quello nativo per una tassonomia a scelta multipla', function () {
+it('una tassonomia a scelta multipla produce un Choice multiplo, mai una MultiSelect nativa', function () {
     makeFamilyWithTerms('accepted-disabilities', false, ['dis-a' => 1]);
 
-    $field = ecTrackResource()->makeTermFieldsForTaxonomies(['accepted-disabilities'])[0];
+    $field = campoFormTassonomia(['accepted-disabilities']);
 
-    expect($field)->toBeInstanceOf(Multiselect::class)
-        ->and($field)->not->toBeInstanceOf(NativeMultiSelect::class);
-})->skip(fn () => ! class_exists(Multiselect::class), 'outl1ne/nova-multiselect-field non installato in wm-package/vendor: serve composer install');
+    expect($field)->toBeInstanceOf(Choice::class)
+        ->and($field)->not->toBeInstanceOf(NativeMultiSelect::class)
+        ->and($field->jsonSerialize()['multiple'] ?? false)->toBeTrue();
+});
 
 it('ordina le opzioni per sort_order e non per id o per nome', function () {
     // Creati in ordine diverso da quello della scala: T < E < EE.
     makeFamilyWithTerms('hiking-difficulty', true, ['diff-ee' => 3, 'diff-t' => 1, 'diff-e' => 2]);
 
-    $field = ecTrackResource()->makeTermFieldsForTaxonomies(['hiking-difficulty'])[0];
+    $field = campoFormTassonomia(['hiking-difficulty']);
     $labels = collect($field->jsonSerialize()['options'])->pluck('label')->all();
 
     expect($labels)->toBe(['DIFF-T', 'DIFF-E', 'DIFF-EE']);
@@ -82,7 +103,8 @@ it('salta un identifier di tassonomia che non esiste', function () {
 
     $fields = ecTrackResource()->makeTermFieldsForTaxonomies(['non-esiste', 'exists']);
 
-    expect($fields)->toHaveCount(1);
+    // Due campi, e sono quelli dell'unica tassonomia che esiste.
+    expect($fields)->toHaveCount(2);
 });
 
 it('salva il termine scelto e toglie solo quelli della propria tassonomia', function () {
@@ -92,7 +114,7 @@ it('salva il termine scelto e toglie solo quelli della propria tassonomia', func
     $track->taxonomyTerms()->attach(TaxonomyTerm::where('identifier', 'other-a')->value('id'));
     $track->taxonomyTerms()->attach(TaxonomyTerm::where('identifier', 'single-a')->value('id'));
 
-    $field = ecTrackResource()->makeTermFieldsForTaxonomies(['single'])[0];
+    $field = campoFormTassonomia(['single']);
     $b = TaxonomyTerm::where('identifier', 'single-b')->value('id');
 
     $callback = $field->fill(NovaRequest::create('/', 'PUT', [$field->attribute => $b]), $track);
@@ -110,7 +132,7 @@ it('svuota la propria tassonomia quando non si sceglie nulla', function () {
     $track = EcTrackModel::factory()->createQuietly();
     $track->taxonomyTerms()->attach(TaxonomyTerm::whereIn('identifier', ['single-a', 'other-a'])->pluck('id'));
 
-    $field = ecTrackResource()->makeTermFieldsForTaxonomies(['single'])[0];
+    $field = campoFormTassonomia(['single']);
     ($field->fill(NovaRequest::create('/', 'PUT', [$field->attribute => '']), $track))();
 
     $track->unsetRelation('taxonomyTerms');
@@ -122,7 +144,7 @@ it('ignora un id che non appartiene alla tassonomia del campo', function () {
     makeFamilyWithTerms('single', true, ['single-a' => 1]);
     makeFamilyWithTerms('other', true, ['other-a' => 1]);
     $track = EcTrackModel::factory()->createQuietly();
-    $field = ecTrackResource()->makeTermFieldsForTaxonomies(['single'])[0];
+    $field = campoFormTassonomia(['single']);
     $foreign = TaxonomyTerm::where('identifier', 'other-a')->value('id');
 
     ($field->fill(NovaRequest::create('/', 'PUT', [$field->attribute => $foreign]), $track))();
@@ -134,21 +156,21 @@ it('ignora un id che non appartiene alla tassonomia del campo', function () {
 it('salva più termini su una tassonomia a scelta multipla', function () {
     makeFamilyWithTerms('multi', false, ['multi-a' => 1, 'multi-b' => 2]);
     $track = EcTrackModel::factory()->createQuietly();
-    $field = ecTrackResource()->makeTermFieldsForTaxonomies(['multi'])[0];
+    $field = campoFormTassonomia(['multi']);
     $ids = TaxonomyTerm::whereIn('identifier', ['multi-a', 'multi-b'])->pluck('id')->all();
 
     ($field->fill(NovaRequest::create('/', 'PUT', [$field->attribute => json_encode($ids)]), $track))();
 
     $track->unsetRelation('taxonomyTerms');
     expect($track->terms('multi'))->toHaveCount(2);
-})->skip(fn () => ! class_exists(Multiselect::class), 'outl1ne/nova-multiselect-field non installato in wm-package/vendor: serve composer install');
+});
 
 it('mostra il termine già assegnato', function () {
     makeFamilyWithTerms('single', true, ['single-a' => 1, 'single-b' => 2]);
     $track = EcTrackModel::factory()->createQuietly();
     $b = TaxonomyTerm::where('identifier', 'single-b')->value('id');
     $track->taxonomyTerms()->attach($b);
-    $field = ecTrackResource()->makeTermFieldsForTaxonomies(['single'])[0];
+    $field = campoFormTassonomia(['single']);
 
     $field->resolve($track->fresh());
 
