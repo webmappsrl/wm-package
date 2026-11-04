@@ -13,9 +13,11 @@ class GeoJsonService extends BaseService
             $properties['id'] = $model->id;
 
             // Merge accessibility columns (if present) into GeoJSON properties.
-            // and exposed flatly in `properties`.
+            // and exposed flatly in `properties`. Un modello di shard che porta colonne proprie
+            // le dichiara con geojsonFlatProperties(); senza il metodo non cambia nulla.
             $properties = [
                 ...$properties,
+                ...(method_exists($model, 'geojsonFlatProperties') ? $model->geojsonFlatProperties() : []),
             ];
 
             // Verifica che il modello abbia una geometria valida

@@ -17,7 +17,9 @@
               <g v-html="item.svg"></g>
             </svg>
             <!-- Font Awesome Icon (fallback) -->
-            <i v-else :class="[iconClass, item.icon]" class="mr-1"></i>
+            <i v-else-if="item.icon" :class="[iconClass, item.icon]" class="mr-1"></i>
+            <!-- Senza icona resta lo spazio: le voci restano allineate fra loro -->
+            <span v-else class="w-4 h-4 mr-1 flex-shrink-0" aria-hidden="true"></span>
             <span>{{ item.label }}</span>
             <button type="button" @click="removeItem(item)" class="ml-1 text-primary-600 hover:text-primary-800">
               ×
@@ -39,7 +41,8 @@
                 <g v-html="option.svg"></g>
               </svg>
               <!-- Font Awesome Icon (fallback) -->
-              <i v-else :class="[iconClass, option.icon]" class="mr-2"></i>
+              <i v-else-if="option.icon" :class="[iconClass, option.icon]" class="mr-2"></i>
+              <span v-else class="w-5 h-5 mr-2 flex-shrink-0" aria-hidden="true"></span>
               <span>{{ option.label }}</span>
             </div>
           </div>
@@ -137,6 +140,19 @@ export default {
       formData.append(this.fieldAttribute, this.formValue)
     },
 
+    /**
+     * Annuncia il nuovo valore a Nova. Senza questo i campi dichiarati con dependsOn() non si
+     * aggiornano: Nova ricostruisce i dipendenti solo quando il campo sorgente lo comunica
+     * (vedi il mixin FormField di Nova, handleChange).
+     */
+    annunciaCambio() {
+      this.value = this.formValue
+      if (this.field) {
+        this.emitFieldValueChange(this.fieldAttribute, this.value)
+        this.$emit('field-changed')
+      }
+    },
+
     filterOptions() {
       if (!this.searchQuery) {
         this.filteredOptions = this.options
@@ -165,12 +181,12 @@ export default {
 
       this.searchQuery = ''
       this.filteredOptions = this.options
-      this.value = this.formValue
+      this.annunciaCambio()
     },
 
     removeItem(item) {
       this.selectedItems = this.selectedItems.filter(selected => selected.value !== item.value)
-      this.value = this.formValue
+      this.annunciaCambio()
     },
 
     handleKeydown(event) {

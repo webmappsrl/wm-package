@@ -30,6 +30,7 @@ use Wm\WmPackage\Commands\WmGenerateIconsCommand;
 use Wm\WmPackage\Commands\WmGeneratePBFCommand;
 use Wm\WmPackage\Commands\WmImportEcPoiFromOsmCommand;
 use Wm\WmPackage\Commands\WmImportFromGeohubCommand;
+use Wm\WmPackage\Commands\WmMakeTaxonomyResourceCommand;
 use Wm\WmPackage\Commands\WmMatchUgcTracksCommand;
 use Wm\WmPackage\Commands\WmPackageCommand;
 use Wm\WmPackage\Commands\WmPackagePublishMigrationCommand;
@@ -263,6 +264,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
                 WmPackagePublishMigrationCommand::class,
                 WmPackagePublishMissingMigrationsCommand::class,
                 WmImportEcPoiFromOsmCommand::class,
+                WmMakeTaxonomyResourceCommand::class,
             ])
             ->hasViews();
     }

@@ -370,10 +370,12 @@ class Layer extends Polygon
         $trackIds = $this->ecTracks()->pluck($tableName.'.id')->toArray();
         $taxonomyIds = $this->taxonomyActivities->pluck('id')->toArray();
         $whereIds = $this->taxonomyWheres->pluck('id')->toArray();
+        $termIds = $this->taxonomyTerms->pluck('id')->toArray();
 
-        // Fallback in lettura: in auto, ricostruisce i trackIds da taxonomy activities/wheres
-        // quando il pivot layerables e' vuoto o non ancora riallineato.
-        if ($this->isAutoTrackMode() && (! empty($taxonomyIds) || ! empty($whereIds)) && empty($trackIds)) {
+        // Fallback in lettura: in auto, ricostruisce i trackIds dai filtri del layer — attività,
+        // zone, termini di classificazione — quando il pivot layerables e' vuoto o non ancora
+        // riallineato.
+        if ($this->isAutoTrackMode() && (! empty($taxonomyIds) || ! empty($whereIds) || ! empty($termIds)) && empty($trackIds)) {
             $ecTrackModelClass = config('wm-package.ec_track_model', 'Wm\WmPackage\Models\EcTrack');
             $appIds = array_values(array_unique(array_filter([
                 $this->app_id,
@@ -386,6 +388,10 @@ class Layer extends Polygon
 
                 if (! empty($taxonomyIds) && method_exists($ecTrackModelClass, 'taxonomyActivities')) {
                     $fallbackQuery->whereHas('taxonomyActivities', fn ($q) => $q->whereIn('taxonomy_activities.id', $taxonomyIds));
+                }
+
+                if (! empty($termIds) && method_exists($ecTrackModelClass, 'taxonomyTerms')) {
+                    $fallbackQuery->whereHas('taxonomyTerms', fn ($q) => $q->whereIn('taxonomy_terms.id', $termIds));
                 }
 
                 if (! empty($whereIds)) {

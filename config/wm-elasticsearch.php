@@ -15,6 +15,25 @@ return [
     'indices' => [
         'mappings' => [
             'default' => [
+                'dynamic_templates' => [
+                    [
+                        'terms_identifier_as_keyword' => [
+                            'path_match' => 'terms.*.identifier',
+                            'mapping' => ['type' => 'keyword'],
+                        ],
+                    ],
+                    // Il properties del legame resta in _source ma non è indicizzato: chiavi libere con
+                    // tipi diversi fra legami farebbero rifiutare il documento a Elastic, e con
+                    // scout.queue a false l'errore finirebbe solo nel log (il sentiero sparirebbe dalle
+                    // ricerche). Per filtrare su una chiave si dichiara quella chiave (es. long) nel
+                    // mapping, con un scout:import.
+                    [
+                        'terms_pivot_properties_not_indexed' => [
+                            'path_match' => 'terms.*.pivot_properties',
+                            'mapping' => ['type' => 'object', 'enabled' => false],
+                        ],
+                    ],
+                ],
                 'properties' => [
                     'id' => [
                         'type' => 'keyword',
@@ -87,6 +106,14 @@ return [
                     'taxonomyIcons' => [
                         'type' => 'object',
                         'enabled' => false,
+                    ],
+                    // Termini del modello unico di classificazione (oc:8910), un sotto-array per famiglia:
+                    // terms.<famiglia>[] con identifier (keyword, da dynamic_templates), name e
+                    // pivot_properties (il properties del legame, non indicizzato: vedi dynamic_templates).
+                    // Le famiglie nascono da Elastic al primo documento.
+                    // Un mapping cambiato non si applica con il reindex normale: serve scout:import (oc:8681).
+                    'terms' => [
+                        'type' => 'object',
                     ],
                 ],
             ],

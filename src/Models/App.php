@@ -8,6 +8,7 @@ use chillerlan\QRCode\QRCode;
 use chillerlan\QRCode\QROptions;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -86,6 +87,16 @@ class App extends Model implements HasMedia
     {
         // FK esplicita: la colonna è user_id, non l'inferita author_id (oc:8242).
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /**
+     * I tassonomie di classificazione accesi in questa app (oc:8910).
+     *
+     * @return BelongsToMany<TaxonomyTerm, $this>
+     */
+    public function taxonomies(): BelongsToMany
+    {
+        return $this->belongsToMany(TaxonomyTerm::class, 'app_taxonomy_term');
     }
 
     public function layers()

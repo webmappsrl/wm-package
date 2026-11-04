@@ -116,6 +116,7 @@ questo file, perché vanno lette sempre.
 | Mappa della UGC track | traccia a misura fissa, solo tappe toccate, più larghe dove la traccia passa, segmenti alternati da lontano, tooltip con tutte le linee | [docs/knowledge/8776-mappa-della-ugc-track-in-nova-tracce-e-tappe-sovrapposte-leggibili.md](docs/knowledge/8776-mappa-della-ugc-track-in-nova-tracce-e-tappe-sovrapposte-leggibili.md) |
 | Duplicati UGC e retry dell'app | store che aggiorna per uuid, foto deduplicate per sha256, command `wm:fix-duplicated-ugc` e archivio | [docs/knowledge/duplicati-ugc-e-retry-dell-app.md](docs/knowledge/duplicati-ugc-e-retry-dell-app.md) |
 | Ricerca dei POI nell'app | `name` e `searchable` in `pois.geojson`, «POI Search In», quando si rigenera il file, perché come Geohub | [docs/knowledge/8677-nel-file-dei-poi-mancano-nome-e-testo-per-la-ricerca.md](docs/knowledge/8677-nel-file-dei-poi-mancano-nome-e-testo-per-la-ricerca.md) |
+| Tassonomie al bump di uno shard | tre migration obbligatorie (senza, la scheda Layer va in errore), sezione «Filtri» al posto di «Activities», OR dentro una tassonomia e AND fra tassonomie, cosa controllare prima sul proprio repo | [docs/knowledge/8910-tassonomie-cosa-controllare-al-bump-dello-shard.md](docs/knowledge/8910-tassonomie-cosa-controllare-al-bump-dello-shard.md) |
 | Aggiornare wm-package su osm2cai2 | cosa cambia per osm2cai2 al bump del submodule e cosa controllare prima del command dei duplicati | [docs/knowledge/aggiornare-wm-package-su-osm2cai2.md](docs/knowledge/aggiornare-wm-package-su-osm2cai2.md) |
 
 ## Procedure

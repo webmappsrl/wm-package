@@ -5,7 +5,10 @@ use Illuminate\Support\Facades\DB;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Wm\WmPackage\Jobs\UpdateUgcTrackDemStatsJob;
 use Wm\WmPackage\Models\App;
+use Wm\WmPackage\Models\EcTrack;
+use Wm\WmPackage\Models\TaxonomyTerm;
 use Wm\WmPackage\Models\User;
+use Wm\WmPackage\Nova\AbstractUserResource;
 use Wm\WmPackage\Services\RolesAndPermissionsService;
 use Wm\WmPackage\Tests\TestCase;
 use Wm\WmPackage\TrailRegistry\Enums\TrailCodeStatus;
@@ -18,6 +21,13 @@ use Wm\WmPackage\TrailRegistry\Jobs\UpdateTrailApplicationDemJob;
 // dall'ordine di esecuzione.
 if (! class_exists('App\\Models\\User')) {
     class_alias(User::class, 'App\\Models\\User');
+}
+
+// Stesso motivo sul lato Nova: `Nova\Layer` dichiara `BelongsTo` verso `App\Nova\User`, la
+// Resource dello shard. Senza alias, costruire i campi di quella Resource nella suite del
+// package muore con «Class App\Nova\User not found» (oc:8910).
+if (! class_exists('App\\Nova\\User')) {
+    class_alias(AbstractUserResource::class, 'App\\Nova\\User');
 }
 
 uses(TestCase::class)->in(__DIR__);
@@ -250,4 +260,37 @@ function richiestaConRuolo(string $role, string $requestClass = NovaRequest::cla
     $request->setUserResolver(fn () => $user);
 
     return $request;
+}
+
+/**
+ * Crea una tassonomia, un suo termine e una traccia (oc:8910). Usato dai test del legame
+ * `taxonomy_termables` e del suo observer. Senza argomenti crea sempre gli stessi identifier;
+ * con gli argomenti si possono avere più tassonomie e più termini sulla stessa traccia: la tassonomia
+ * si riusa se esiste già, e passando `$track` non se ne crea un'altra.
+ *
+ * @return array{0: TaxonomyTerm, 1: TaxonomyTerm, 2: EcTrack}
+ */
+function seedVocabularyTermAndTrack(
+    string $taxonomyIdentifier = 'hiking-difficulty',
+    string $termIdentifier = 'hiking-difficulty-e',
+    ?EcTrack $track = null
+): array {
+    $taxonomy = TaxonomyTerm::firstOrCreate(
+        ['identifier' => $taxonomyIdentifier],
+        ['name' => ['it' => $taxonomyIdentifier]]
+    );
+    $term = TaxonomyTerm::create([
+        'identifier' => $termIdentifier,
+        'parent_id' => $taxonomy->id,
+        'name' => ['it' => $termIdentifier],
+    ]);
+    $track ??= EcTrack::factory()->createQuietly();
+
+    // La tassonomia va accesa sull'app della traccia: `termsForSearch()` indicizza solo le
+    // tassonomie accese, e senza questo passo `terms` esce vuoto anche con i legami scritti.
+    if ($track->app_id !== null) {
+        $taxonomy->apps()->syncWithoutDetaching([$track->app_id]);
+    }
+
+    return [$taxonomy, $term, $track];
 }

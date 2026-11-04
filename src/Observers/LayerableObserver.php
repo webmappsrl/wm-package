@@ -52,6 +52,14 @@ class LayerableObserver
             $relatedTypeClass === $ecTrackModelClass
             || str_contains($relatedTypeClass, '\EcPoi')
         ) {
+            // Il contenuto o il layer possono non esistere piu': il legame sopravvive alla
+            // cancellazione di cio' che collega, e l'observer scatta lo stesso. Senza questa
+            // guardia `updateLayerIdsPropertyOnLayeredFeature()` riceve null e il job muore con
+            // un TypeError, lasciando il ricalcolo a meta' (oc:8910).
+            if ($layerable->model === null || $layerable->layer === null) {
+                return;
+            }
+
             $this->layerService->updateLayerIdsPropertyOnLayeredFeature($layerable->model, [$layerable->layer->id], $add);
             $this->layerService->updateLayerGeometryWithJob($layerable->layer);
 

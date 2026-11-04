@@ -305,13 +305,15 @@ class LayerService extends BaseService
 
         $layerTaxonomyIds = $layer->taxonomyActivities->pluck('id')->toArray();
         $layerWhereIds = $layer->taxonomyWheres->pluck('id')->filter()->toArray();
+        // Terzo criterio, come attività e zone: i termini del modello unico (oc:8910).
+        $layerTermIds = $layer->taxonomyTerms->pluck('id')->toArray();
 
         $layerAppIds = [
             $layer->app_id,
             ...$layer->associatedApps->pluck('id')->toArray(),
         ];
 
-        if (empty($layerAppIds) || (empty($layerTaxonomyIds) && empty($layerWhereIds))) {
+        if (empty($layerAppIds) || (empty($layerTaxonomyIds) && empty($layerWhereIds) && empty($layerTermIds))) {
             $layer->ecTracks()->sync([]);
 
             return;
@@ -340,6 +342,22 @@ class LayerService extends BaseService
             )
                 ->whereIn('taxonomy_activityables.taxonomy_activityable_type', $trackMorphTypes)
                 ->whereIn('taxonomy_activityables.taxonomy_activity_id', $layerTaxonomyIds);
+        }
+
+        // Filtro per termine: una sottoquery per ogni tassonomia, non una sola per tutti i
+        // termini. La regola è OR dentro la stessa tassonomia e AND fra tassonomie diverse —
+        // «(sentiero o cammino) e (difficoltà BC)» — la stessa che vale fra attività e zone.
+        // Con un unico `whereIn` sarebbe un OR globale, e due filtri di tassonomie diverse si
+        // comporterebbero al contrario degli altri criteri (oc:8910).
+        foreach ($layer->taxonomyTerms->groupBy('parent_id') as $termIdsOfTaxonomy) {
+            $ids = $termIdsOfTaxonomy->pluck('id')->all();
+            $query->whereExists(function ($sub) use ($ids, $trackTable, $trackMorphTypes) {
+                $sub->select(DB::raw(1))
+                    ->from('taxonomy_termables')
+                    ->whereColumn('taxonomy_termables.termable_id', "{$trackTable}.id")
+                    ->whereIn('taxonomy_termables.termable_type', $trackMorphTypes)
+                    ->whereIn('taxonomy_termables.taxonomy_term_id', $ids);
+            });
         }
 
         // Filter by TaxonomyWhere via ST_Intersects (se presenti)
@@ -371,6 +389,7 @@ class LayerService extends BaseService
             'track_count' => count($trackIds),
             'taxonomy_ids' => $layerTaxonomyIds,
             'where_ids' => $layerWhereIds,
+            'term_ids' => $layerTermIds,
         ]);
     }
 
@@ -387,13 +406,15 @@ class LayerService extends BaseService
 
         $layerTaxonomyIds = $layer->taxonomyActivities->pluck('id')->toArray();
         $layerWhereIds = $layer->taxonomyWheres->pluck('id')->filter()->toArray();
+        // Terzo criterio, come attività e zone: i termini del modello unico (oc:8910).
+        $layerTermIds = $layer->taxonomyTerms->pluck('id')->toArray();
 
         $layerAppIds = [
             $layer->app_id,
             ...$layer->associatedApps->pluck('id')->toArray(),
         ];
 
-        if (empty($layerAppIds) || (empty($layerTaxonomyIds) && empty($layerWhereIds))) {
+        if (empty($layerAppIds) || (empty($layerTaxonomyIds) && empty($layerWhereIds) && empty($layerTermIds))) {
             $layer->ecPois()->sync([]);
 
             return;
@@ -422,6 +443,22 @@ class LayerService extends BaseService
             )
                 ->whereIn('taxonomy_activityables.taxonomy_activityable_type', $poiMorphTypes)
                 ->whereIn('taxonomy_activityables.taxonomy_activity_id', $layerTaxonomyIds);
+        }
+
+        // Filtro per termine: una sottoquery per ogni tassonomia, non una sola per tutti i
+        // termini. La regola è OR dentro la stessa tassonomia e AND fra tassonomie diverse —
+        // «(sentiero o cammino) e (difficoltà BC)» — la stessa che vale fra attività e zone.
+        // Con un unico `whereIn` sarebbe un OR globale, e due filtri di tassonomie diverse si
+        // comporterebbero al contrario degli altri criteri (oc:8910).
+        foreach ($layer->taxonomyTerms->groupBy('parent_id') as $termIdsOfTaxonomy) {
+            $ids = $termIdsOfTaxonomy->pluck('id')->all();
+            $query->whereExists(function ($sub) use ($ids, $poiTable, $poiMorphTypes) {
+                $sub->select(DB::raw(1))
+                    ->from('taxonomy_termables')
+                    ->whereColumn('taxonomy_termables.termable_id', "{$poiTable}.id")
+                    ->whereIn('taxonomy_termables.termable_type', $poiMorphTypes)
+                    ->whereIn('taxonomy_termables.taxonomy_term_id', $ids);
+            });
         }
 
         // Filter by TaxonomyWhere via ST_Intersects (se presenti)

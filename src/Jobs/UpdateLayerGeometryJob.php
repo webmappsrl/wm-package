@@ -3,6 +3,7 @@
 namespace Wm\WmPackage\Jobs;
 
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Cache\Store;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\QueryException;
@@ -77,6 +78,24 @@ class UpdateLayerGeometryJob implements ShouldBeUnique, ShouldQueue
     public function uniqueId(): string
     {
         return 'update_layer_geometry_'.$this->layer->id;
+    }
+
+    /**
+     * Il lock di unicità si prende su Redis, non sul database (oc:8910).
+     *
+     * Con il lock su `cache_locks`, `DatabaseLock::acquire()` tenta un INSERT e ripiega su un
+     * UPDATE nello stesso try/catch: se la riga esiste già, il primo INSERT fallisce e su
+     * PostgreSQL aborta la transazione in corso. Il job si accoda dentro la transazione del
+     * salvataggio Nova di un layer, quindi da lì in poi ogni query del salvataggio muore con
+     * «current transaction is aborted» e il form non si salva — il `catch` su 25P02 in
+     * `dispatchDebounced()` non basta, perché l'errore non è quello del dispatch ma di tutto
+     * ciò che viene dopo. Stesso rimedio di `BuildAppPoisGeojsonJob`.
+     *
+     * @return Store
+     */
+    public function uniqueVia()
+    {
+        return Cache::store('redis');
     }
 
     /**
