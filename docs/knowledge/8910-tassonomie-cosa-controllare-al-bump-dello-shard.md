@@ -60,6 +60,22 @@ pivot salvati con quel morph type non vengono trovati.
 **Trait `TaxonomyAbleModel` sul modello EC track dello shard.** Senza, la relazione dei termini non
 esiste e i campi delle classificazioni non si risolvono.
 
+**`REDIS_CLIENT` nel `.env`.** Quattro job sul percorso del salvataggio Nova —
+`UpdateLayerGeometryJob`, i due `SyncAutoLayerAfter…TaxonomyChangeJob` e
+`ReindexEcTrackSearchableJob` — prendono il lock di unicità con `uniqueVia()` su Redis, invece che
+sul database: dentro la transazione di Nova il lock su `cache_locks` faceva uscire
+`SQLSTATE[25P02]` al secondo salvataggio. Il prezzo è che adesso quei job vogliono un client Redis
+funzionante. L'immagine PHP di forestas non ha l'estensione `phpredis`, e il suo `.env` imposta
+`REDIS_CLIENT=predis`, che è una libreria PHP pura: uno shard che non la imposta eredita il
+default `phpredis` e, senza l'estensione, il primo salvataggio di un layer o di una traccia muore
+con `Class "Redis" not found`. Verificato su UAT di forestas il 4 novembre: estensione assente,
+`REDIS_CLIENT=predis`, quindi a posto.
+
+**Tassonomie accese per tipo di contenuto.** `app_taxonomy_term` ha la colonna `models`: dice se
+una tassonomia vale sulle EC Track, sugli EC Poi o su entrambi, e si sceglie dalla scheda dell'App
+con due elenchi. `null` vuol dire tutti i contenuti, quindi un'accensione scritta da un comando
+dello shard con un `sync()` qualunque continua a comportarsi come prima.
+
 ## Perché così
 
 - **Pivot con unicità e due soli livelli** (`unique(taxonomy_term_id, termable_type, termable_id)`,
