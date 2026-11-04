@@ -58,7 +58,7 @@ Per i **termini** non c'è quel vincolo: lì l'identifier è un valore, non una 
 
 | Colonna | Significato |
 |---|---|
-| `type` | Dice **chi interpreta il `properties` della relazione**. Un tassonomia con `type = activity` sa che lì dentro stanno le durate; una tassonomia di difficoltà non ha `type` e non ha nulla da interpretare. Nullable. |
+| `type` | Dice **chi interpreta il `properties` della relazione**. Una tassonomia con `type = activity` sa che lì dentro stanno le durate; una tassonomia di difficoltà non ha `type` e non ha nulla da interpretare. Nullable. |
 | `single_choice` | Vale suli tassonomie: se vero, di quella tassonomia se ne sceglie un solo termine. Nova mostra una `Select` invece del `Multiselect`; l'import scrive una relazione solo. **Non è un vincolo del database**: la regola la fanno rispettare Nova e l'import, non lo schema. |
 | `sort_order` | Ordine dei termini dentro la tassonomia (smallint, default 0). Serve alle scale ordinali (T < E < EE < EEA): senza, l'ordine dipende dall'`id`. `children()` ordina per `sort_order` e poi per `id`. |
 | `icon` | Percorso o nome dell'icona, come nelle altre tassonomie. Nullable. |
@@ -108,7 +108,7 @@ escono per `sort_order` e poi per `id`, quindi `term()` prende il primo di quell
 
 La relazione carica anche il **padre** di ogni termine (`with('parent')`): chi serializza i termini
 di un contenuto (API, Nova) se lo ritrova annidato nell'output. Inoltre, se un termine viene
-**spostato sotto un'altro tassonomia o cancellato**, i contenuti legati restano nell'indice con il
+**spostato sotto un'altra tassonomia o cancellato**, i contenuti legati restano nell'indice con il
 raggruppamento vecchio finché non vengono risalvati: dopo quelle operazioni serve un reindex (la
 cancellazione passa dal `cascadeOnDelete` del database, che non fa scattare nessun observer).
 
@@ -124,7 +124,7 @@ cancellazione passa dal `cascadeOnDelete` del database, che non fa scattare ness
 }
 ```
 
-Il tassonomia si legge dal padre vivo del termine, non dalla copia `parent_id` del pivot.
+La tassonomia si legge dal padre vivo del termine, non dalla copia `parent_id` del pivot.
 
 ### Il `properties` della relazione non è indicizzato
 
@@ -155,7 +155,7 @@ L'`identifier` di ogni termine è indicizzato come `keyword` (dynamic template
 La Resource `TaxonomyTerm` crea tassonomie e termini. Sul dettaglio di un contenuto,
 `AbstractEcResource::makeTermFieldsForTaxonomies(array $taxonomyIdentifiers)` (nessuna Resource del
 package lo chiama, lo usa lo shard) genera **una select per tassonomia**:
-`Multiselect` di Outl1ne per i tassonomie normali, `Select` a scelta singola per quelle con
+`Choice` multiplo per le tassonomie normali, `Choice` a scelta singola per quelle con
 `single_choice`. Mai il `MultiSelect` nativo di Nova (oc:8588). Il pacchetto
 `outl1ne/nova-multiselect-field` deve essere installato.
 
@@ -164,9 +164,9 @@ Nell'elenco dei termini, dove tassonomie e termini convivono nella stessa tabell
 - la colonna **Nome** mostra il nome tradotto più l'identifier
   (`Wm\WmPackage\Support\TaxonomyTermLabel`, con fallback sull'italiano quando la lingua
   corrente non è tradotta), ed è anche il titolo della riga: senza, la lista e la tendina
-  «Tassonomieo» mostrerebbero solo chiavi in inglese;
-- due filtri: **Tipo** (`TaxonomyTermKindFilter`, tassonomie o termini) e **Tassonomieo**
-  (`TermsByTaxonomyFilter`, l'elenco dei tassonomie letto dal database, quindi una tassonomia
+  «Tipo» mostrerebbero solo chiavi in inglese;
+- due filtri: **Tipo** (`TaxonomyTermKindFilter`, tassonomie o termini) e **Tipo**
+  (`TermsByTaxonomyFilter`, l'elenco delle tassonomie letto dal database, quindi una tassonomia
   nuova compare da sola).
 
 Sul dettaglio di un **termine** ci sono le liste dei contenuti collegati, EC Tracks ed EC Pois.
@@ -192,7 +192,7 @@ class TaxonomyWarning extends AbstractTaxonomyTermsResource
 ```
 
 Da quell'unica riga arrivano: l'elenco ristretto ai termini di quella tassonomia, la creazione già
-dentro la tassonomia (il campo «Tassonomieo» diventa nascosto e precompilato), l'etichetta e il titolo
+dentro la tassonomia (il campo «Tipo» diventa nascosto e precompilato), l'etichetta e il titolo
 presi dal nome della tassonomia, e l'identifier libero dal formato stretto che vale solo per le
 tassonomie. L'`uriKey` è quello che Nova deriva dal nome della classe: si ridefinisce per
 conservare un indirizzo già in uso. Se la tassonomia non esiste ancora, l'elenco è vuoto — non è
@@ -201,7 +201,7 @@ l'elenco di tutti i termini.
 La classe non si scrive nemmeno a mano:
 
 ```bash
-php artisan wm:make-term-vocabulary-resource warnings --uri-key=taxonomy-warnings
+php artisan wm:make-taxonomy-resource warnings --uri-key=taxonomy-warnings
 ```
 
 scrive `app/Nova/Warnings.php` (il nome si cambia con `--class=`, una classe già esistente si
@@ -224,12 +224,12 @@ la voce segue la lingua attiva e ricade sull'italiano dove la traduzione manca, 
 mai senza titolo.
 
 **Quando non serve:** una tassonomia che si gestisce bene dall'elenco unico, che ha i filtri Tipo
-e Tassonomieo. Una Resource per ciascuna delle dodici scale di difficoltà sarebbe dodici voci di
+e Tipo. Una Resource per ciascuna delle dodici scale di difficoltà sarebbe dodici voci di
 menu per niente.
 
-## Un tassonomia che dipende da un'altra
+## Una tassonomia che dipende da un'altra
 
-Un tassonomia può avere senso solo quando un'altro tassonomia ha certi termini scelti. La regola si
+Una tassonomia può avere senso solo quando un'altro tassonomia ha certi termini scelti. La regola si
 dichiara nei dati, in `properties` della tassonomia dipendente, e la applica il package: nessuno
 shard scrive codice.
 
@@ -251,8 +251,8 @@ non ci sarebbe un valore su cui decidere.
 
 ## Quali tassonomie vede un'app
 
-Un tassonomia è acceso o spento **per app**, nel pivot `app_taxonomy_term`: una riga vuol dire
-acceso, non esiste uno stato «spento» da scrivere. Ci vanno solo i tassonomie — un termine segue
+Una tassonomia è accesa o spenta **per app**, nel pivot `app_taxonomy_term`: una riga vuol dire
+acceso, non esiste uno stato «spento» da scrivere. Ci vanno solo le tassonomie — un termine segue
 il suo, così la stessa informazione non può divergere in due posti.
 
 Chi accende cosa dipende da `is_system`:
@@ -262,7 +262,7 @@ Chi accende cosa dipende da `is_system`:
 | Di sistema (`is_system = true`, portato dal package) | acceso (`AppObserver::created()`) | si può spegnere |
 | Custom (creato in uno shard) | spento | si accende nelle app che lo vogliono |
 
-Così una tassonomia creato per un'app non compare mai da solo in un'altra, che è il problema per
+Così una tassonomia creata per un'app non compare mai da sola in un'altra, che è il problema per
 cui la relazione esiste. Lo stesso tassonomia acceso in tutte le app di uno shard è, di fatto, un
 tassonomia di shard: la differenza sta in quante righe ha, non in com'è fatto.
 
@@ -270,12 +270,12 @@ tassonomia di shard: la differenza sta in quante righe ha, non in com'è fatto.
 un'app decide in un posto solo quali classificazioni vedranno i suoi contenuti. La scheda del
 tassonomia mostra in sola lettura dove è acceso.
 
-**Dove agisce il filtro:** nel tab delle classificazioni di un contenuto (solo i tassonomie
+**Dove agisce il filtro:** nel tab delle classificazioni di un contenuto (solo le tassonomie
 accesi nella sua app) e in `termsForSearch()`, cioè nell'indice Elasticsearch — una tassonomia
 spento non deve finire nell'indice, altrimenti l'app ci filtra sopra. Un contenuto che non ha
 ancora un'app, in creazione, non filtra niente: il form nascerebbe senza classificazioni.
 
-**Negli shard:** i tassonomie creati da un comando dello shard sono custom, quindi vanno accesi.
+**Negli shard:** le tassonomie create da un comando dello shard sono custom, quindi vanno accese.
 Il comando di Forestas lo fa da sé (`syncWithoutDetaching` su tutte le app dello shard).
 
 ## Un campo solo per tutte le classificazioni

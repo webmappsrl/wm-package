@@ -44,8 +44,8 @@ trait BuildsTaxonomyFields
      * La sezione delle classificazioni, con un tab per ogni gruppo dichiarato dai dati (oc:8910).
      *
      * La struttura non la scrive nessuno shard: i tab nascono da `properties->tab` dei
-     * tassonomie, nell'ordine in cui i tassonomie compaiono (`sort_order`, poi `id`). Un
-     * tassonomia nuovo entra nel suo tab da sé, e spostarlo è una modifica alla riga.
+     * tassonomie, nell'ordine in cui le tassonomie compaiono (`sort_order`, poi `id`). Un
+     * tassonomia nuova entra nel suo tab da sé, e spostarla è una modifica alla riga.
      *
      * Uno shard che deve aggiungere campi propri a un tab — punteggi, valori calcolati —
      * ridefinisce `taxonomyTabExtraFields()`.
@@ -91,9 +91,9 @@ trait BuildsTaxonomyFields
     }
 
     /**
-     * Campi che uno shard aggiunge a un tab delle classificazioni, oltre ai tassonomie.
+     * Campi che uno shard aggiunge a un tab delle classificazioni, oltre alle tassonomie.
      *
-     * La chiave è la stessa che i tassonomie scrivono in `properties->tab`. Un tab nominato qui
+     * La chiave è la stessa che le tassonomie scrivono in `properties->tab`. Un tab nominato qui
      * e da nessuna tassonomia esiste lo stesso: è il modo per avere un tab di soli campi propri.
      *
      * @return array<string, array<int, Field>>
@@ -148,52 +148,52 @@ trait BuildsTaxonomyFields
             return '—';
         }
 
-        $voci = data_get($resource->properties, 'taxonomy_where');
-        if (! is_array($voci) || $voci === []) {
+        $entries = data_get($resource->properties, 'taxonomy_where');
+        if (! is_array($entries) || $entries === []) {
             return '—';
         }
 
         $locale = app()->getLocale();
-        $parti = [];
-        foreach ($voci as $voce) {
-            if (is_string($voce)) {
-                $parti[] = $voce;
+        $parts = [];
+        foreach ($entries as $entry) {
+            if (is_string($entry)) {
+                $parts[] = $entry;
 
                 continue;
             }
-            if (! is_array($voce)) {
+            if (! is_array($entry)) {
                 continue;
             }
 
-            $nome = $voce[$locale] ?? null;
-            if (! is_string($nome) || $nome === '') {
-                $nome = collect($voce)->except('_source')->filter(fn ($v) => is_string($v) && $v !== '')->first();
+            $name = $entry[$locale] ?? null;
+            if (! is_string($name) || $name === '') {
+                $name = collect($entry)->except('_source')->filter(fn ($v) => is_string($v) && $v !== '')->first();
             }
-            if (is_string($nome) && $nome !== '') {
-                $parti[] = $nome;
+            if (is_string($name) && $name !== '') {
+                $parts[] = $name;
             }
         }
 
-        if ($parti === []) {
+        if ($parts === []) {
             return '—';
         }
 
         return implode('', array_map(
-            fn (string $nome) => '<span style="display:inline-flex;align-items:center;margin-right:.9em">'.e($nome).'</span>',
-            $parti
+            fn (string $name) => '<span style="display:inline-flex;align-items:center;margin-right:.9em">'.e($name).'</span>',
+            $parts
         ));
     }
 
     /**
-     * I campi dei tassonomie, raggruppati per il tab in cui ciascuno dice di voler stare
+     * I campi delle tassonomie, raggruppati per il tab in cui ciascuno dice di voler stare
      * (oc:8910).
      *
      * Il tab si dichiara nei dati, in `properties->tab` della tassonomia: una stringa che è anche
      * la chiave di traduzione dell'intestazione («Inclusivity», «Classifications»). Senza quella
      * chiave la tassonomia finisce nel tab di default. Così nessuno shard tiene un elenco di
-     * identifier nel codice per decidere dove va cosa, e una tassonomia nuovo si colloca da sé.
+     * identifier nel codice per decidere dove va cosa, e una tassonomia nuova si colloca da sé.
      *
-     * Torna una mappa chiave-tab => campi, nell'ordine in cui i tassonomie compaiono: lo shard
+     * Torna una mappa chiave-tab => campi, nell'ordine in cui le tassonomie compaiono: lo shard
      * costruisce i Tab e può aggiungere i propri campi dove vuole.
      *
      * @return array<string, array<int, Field>>
@@ -216,7 +216,7 @@ trait BuildsTaxonomyFields
 
         $fields = array_map(fn (array $identifiers) => $this->makeTermFieldsForTaxonomies($identifiers), $byTab);
 
-        // Le tassonomie che vivono ancora in tabelle proprie si presentano come i tassonomie, e
+        // Le tassonomie che vivono ancora in tabelle proprie si presentano come le tassonomie, e
         // vanno in cima al loro tab: le Attività aprono il tab «Attività», e le scale di
         // difficoltà che dipendono da loro seguono.
         foreach ($this->makeLegacyTaxonomyFieldsByTab($default) as $tab => $legacy) {
@@ -388,7 +388,7 @@ trait BuildsTaxonomyFields
 
     public function makeTermFieldsForTaxonomies(array $taxonomyIdentifiers): array
     {
-        // Solo i tassonomie accesi nell'app di questo contenuto (oc:8910). Un contenuto appena
+        // Solo le tassonomie accese nell'app di questo contenuto (oc:8910). Un contenuto appena
         // aperto in creazione non ha ancora un'app: lì non si filtra, altrimenti il form
         // nascerebbe senza classificazioni.
         $taxonomies = TaxonomyTerm::query()
@@ -446,7 +446,7 @@ trait BuildsTaxonomyFields
                         $decoded = json_decode($selected, true);
                         $selected = is_array($decoded) ? $decoded : explode(',', $selected);
                     }
-                    // Solo id che sono davvero termini di questo tassonomia.
+                    // Solo id che sono davvero termini di questa tassonomia.
                     $selected = collect((array) $selected)
                         ->filter(fn ($id) => $id !== null && $id !== '' && array_key_exists((int) $id, $options))
                         ->map(fn ($id) => (int) $id)

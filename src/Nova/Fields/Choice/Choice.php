@@ -14,7 +14,7 @@ use Laravel\Nova\Http\Requests\NovaRequest;
  * Si chiama così perché la cardinalità non è una sua caratteristica ma una configurazione:
  * `->multiple(true|false)`. Nova e Outl1ne hanno due classi distinte, una per la scelta singola
  * e una per la multipla, e chi costruisce il campo deve saperlo in anticipo; qui il dato lo
- * decide — per i tassonomie è `single_choice` della loro riga — e se domani cambia non cambia
+ * decide — per le tassonomie è `single_choice` della loro riga — e se domani cambia non cambia
  * una riga di codice. «Scelta» non dice né una né molte, ed è il punto.
  *
  * Cosa aggiunge agli altri due: l'icona accanto all'opzione, che nessuno dei due mostra, e

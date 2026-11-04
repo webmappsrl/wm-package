@@ -85,7 +85,7 @@ abstract class AbstractEcResource extends AbstractGeometryResource
     /**
      * Un campo per tassonomia di termini (oc:8910), da mettere nel dettaglio di un contenuto.
      *
-     * Tassonomieo a scelta singola: Select. Altrimenti il Multiselect di Outl1ne, mai il
+     * Tipo a scelta singola: Select. Altrimenti il Multiselect di Outl1ne, mai il
      * MultiSelect nativo di Nova (la <select multiple> del browser, oc:8588). Le opzioni sono i
      * termini della tassonomia ordinati per sort_order, perché le scale sono ordinali. Un
      * identifier che non corrisponde a nessuna tassonomia viene saltato.

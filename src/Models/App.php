@@ -90,7 +90,7 @@ class App extends Model implements HasMedia
     }
 
     /**
-     * I tassonomie di classificazione accesi in questa app (oc:8910).
+     * Le tassonomie di classificazione accese in questa app (oc:8910).
      *
      * @return BelongsToMany<TaxonomyTerm, $this>
      */

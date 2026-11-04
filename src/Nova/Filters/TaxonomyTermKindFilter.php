@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 use Laravel\Nova\Filters\Filter;
 
 /**
- * Separa i tassonomie dai termini (oc:8910): nella stessa tabella convivono le due cose, e senza
+ * Separa le tassonomie dai termini (oc:8910): nella stessa tabella convivono le due cose, e senza
  * questo filtro l'elenco le mescola.
  */
 class TaxonomyTermKindFilter extends Filter
@@ -20,7 +20,7 @@ class TaxonomyTermKindFilter extends Filter
 
     public function apply(Request $request, $query, $value)
     {
-        return $value === 'vocabularies'
+        return $value === 'taxonomies'
             ? $query->whereNull('parent_id')
             : $query->whereNotNull('parent_id');
     }
@@ -28,7 +28,7 @@ class TaxonomyTermKindFilter extends Filter
     public function options(Request $request): array
     {
         return [
-            __('Taxonomies') => 'vocabularies',
+            __('Taxonomies') => 'taxonomies',
             __('Terms') => 'terms',
         ];
     }

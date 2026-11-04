@@ -22,8 +22,8 @@ use Wm\WmPackage\Nova\Filters\TermsByTaxonomyFilter;
 use Wm\WmPackage\Support\TaxonomyTermLabel;
 
 /**
- * Tassonomie e termini del modello unico di classificazione (oc:8910). Senza «Tassonomieo» la riga è
- * un tassonomia, con «Tassonomieo» è un termine di quelil tassonomia: da qui se ne crea una nuova senza
+ * Tassonomie e termini del modello unico di classificazione (oc:8910). Senza «Tipo» la riga è
+ * una tassonomia, con «Tipo» è un termine di quelil tassonomia: da qui se ne crea una nuova senza
  * passare dal codice.
  */
 class TaxonomyTerm extends AbstractTaxonomyResource
@@ -37,7 +37,7 @@ class TaxonomyTerm extends AbstractTaxonomyResource
     /**
      * Titolo della riga: il nome tradotto più l'identifier.
      *
-     * Con il solo identifier la tendina «Tassonomieo» e i risultati della ricerca mostrano chiavi in
+     * Con il solo identifier la tendina «Tipo» e i risultati della ricerca mostrano chiavi in
      * inglese, e capire di quale classificazione si tratti richiede di aprire la riga.
      */
     public function title(): string
@@ -70,12 +70,12 @@ class TaxonomyTerm extends AbstractTaxonomyResource
     }
 
     /**
-     * La riga in lavorazione è un tassonomia?
+     * La riga in lavorazione è una tassonomia?
      *
-     * Vale per le regole dell'identifier, più strette per i tassonomie. Una Resource ristretta a
+     * Vale per le regole dell'identifier, più strette per le tassonomie. Una Resource ristretta a
      * una soil tassonomia (AbstractTaxonomyTermsResource) qui crea sempre termini e risponde `false`.
      */
-    protected function isCreatingVocabulary(NovaRequest $request): bool
+    protected function isCreatingTaxonomy(NovaRequest $request): bool
     {
         return ! $request->input('parent');
     }
@@ -89,7 +89,7 @@ class TaxonomyTerm extends AbstractTaxonomyResource
                 ->sortable()
                 ->relatableQueryUsing(function (NovaRequest $request, Builder $query) {
                     $query->whereNull('parent_id');
-                    // Un tassonomia non può essere padre di sé stessa.
+                    // Una tassonomia non può essere padre di sé stessa.
                     if ($request->resourceId) {
                         $query->whereKeyNot($request->resourceId);
                     }
@@ -98,24 +98,24 @@ class TaxonomyTerm extends AbstractTaxonomyResource
                     return [function (string $attribute, mixed $value, \Closure $fail) use ($request) {
                         $id = $request->resourceId;
                         if ($value && $id && TaxonomyTermModel::where('parent_id', $id)->exists()) {
-                            $fail(__('This vocabulary already has terms: it cannot be moved under another vocabulary.'));
+                            $fail(__('This taxonomy already has terms: it cannot be moved under another taxonomy.'));
                         }
                     }];
                 })
-                ->help(__('Leave empty to create a new vocabulary.')),
+                ->help(__('Leave empty to create a new taxonomy.')),
             Text::make(__('Identifier'), 'identifier')
                 ->sortable()
                 ->required()
                 ->rules('required', function (string $attribute, mixed $value, \Closure $fail) use ($request) {
                     // Il formato vale per le tassonomie, non per i termini
-                    // (vedi TaxonomyTermModel::VOCABULARY_IDENTIFIER_FORMAT).
-                    if ($this->isCreatingVocabulary($request) && ! preg_match(TaxonomyTermModel::VOCABULARY_IDENTIFIER_FORMAT, (string) $value)) {
-                        $fail(__('The identifier of a vocabulary must be lowercase letters, digits and hyphens, with colons allowed.'));
+                    // (vedi TaxonomyTermModel::TAXONOMY_IDENTIFIER_FORMAT).
+                    if ($this->isCreatingTaxonomy($request) && ! preg_match(TaxonomyTermModel::TAXONOMY_IDENTIFIER_FORMAT, (string) $value)) {
+                        $fail(__('The identifier of a taxonomy must be lowercase letters, digits and hyphens, with colons allowed.'));
                     }
                 })
                 ->creationRules('unique:taxonomy_terms,identifier')
                 ->updateRules('unique:taxonomy_terms,identifier,{{resourceId}}')
-                ->help(__('For a vocabulary: lowercase letters, digits and hyphens, with colons allowed (e.g. hiking-difficulty). No dots: Elasticsearch would split them into nested objects.')),
+                ->help(__('For a taxonomy: lowercase letters, digits and hyphens, with colons allowed (e.g. hiking-difficulty). No dots: Elasticsearch would split them into nested objects.')),
             // Il nome vive dentro NovaTabTranslatable, che non compare in elenco: senza questa
             // colonna la lista mostra solo identifier in inglese.
             Text::make(__('Name'), fn () => $this->resource->exists ? TaxonomyTermLabel::for($this->resource) : null)
@@ -125,10 +125,10 @@ class TaxonomyTerm extends AbstractTaxonomyResource
                 Textarea::make(__('Description'), 'description'),
                 Textarea::make(__('Excerpt'), 'excerpt'),
             ])->hideFromIndex(),
-            // Acceso o spento, app per app (oc:8910). Solo sui tassonomie: un termine segue
+            // Acceso o spento, app per app (oc:8910). Solo sulle tassonomie: un termine segue
             // il suo. Di sistema vuol dire portato dal package: nasce acceso in ogni app nuova.
             Boolean::make(__('System taxonomy'), 'is_system')
-                ->help(__('A system vocabulary is enabled in every new app.'))
+                ->help(__('A system taxonomy is enabled in every new app.'))
                 ->canSee(fn () => $this->resource->exists === false || $this->resource->isTaxonomy())
                 ->hideFromIndex(),
             // Dove è acceso, in sola lettura: si accende e si spegne dalla scheda dell'app,
@@ -146,11 +146,11 @@ class TaxonomyTerm extends AbstractTaxonomyResource
                 ->sortable()
                 ->help(__('Terms are listed by this number, lowest first: use it for ordinal scales.')),
             Boolean::make(__('Single choice'), 'single_choice')
-                ->help(__('For a vocabulary: a content can have only one term of this vocabulary.')),
+                ->help(__('For a taxonomy: a content can have only one term of this taxonomy.')),
             Code::make(__('Properties'), 'properties')->json(),
 
-            // I contenuti che portano questo termine. Il legame è sul termine, non sulla
-            // tassonomia: su un tassonomia le due liste sono vuote per costruzione, e si nascondono.
+            // I contenuti che portano questo termine. La relazione è sul termine, non sulla
+            // tassonomia: su una tassonomia le due liste sono vuote per costruzione, e si nascondono.
             MorphToMany::make(__('EC Tracks'), 'ecTracks', $this->ecTrackResource())
                 ->display('name')
                 ->collapsedByDefault()

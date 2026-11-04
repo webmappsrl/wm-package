@@ -270,7 +270,7 @@ function richiestaConRuolo(string $role, string $requestClass = NovaRequest::cla
  *
  * @return array{0: TaxonomyTerm, 1: TaxonomyTerm, 2: EcTrack}
  */
-function seedVocabularyTermAndTrack(
+function seedTaxonomyTermAndTrack(
     string $taxonomyIdentifier = 'hiking-difficulty',
     string $termIdentifier = 'hiking-difficulty-e',
     ?EcTrack $track = null

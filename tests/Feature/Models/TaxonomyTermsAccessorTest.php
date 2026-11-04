@@ -10,10 +10,10 @@ use Wm\WmPackage\Models\TaxonomyTerm;
  */
 function trackWithTermsInThreeFamilies(): EcTrack
 {
-    [, $physical, $track] = seedVocabularyTermAndTrack('accepted-disabilities', 'disability-physical');
-    [, $sensory] = seedVocabularyTermAndTrack('accepted-disabilities', 'disability-sensory', $track);
-    [, $hiking] = seedVocabularyTermAndTrack('hiking-difficulty', 'hiking-difficulty-e', $track);
-    [, $access] = seedVocabularyTermAndTrack('accessibility-difficulty', 'accessibility-difficulty-low', $track);
+    [, $physical, $track] = seedTaxonomyTermAndTrack('accepted-disabilities', 'disability-physical');
+    [, $sensory] = seedTaxonomyTermAndTrack('accepted-disabilities', 'disability-sensory', $track);
+    [, $hiking] = seedTaxonomyTermAndTrack('hiking-difficulty', 'hiking-difficulty-e', $track);
+    [, $access] = seedTaxonomyTermAndTrack('accessibility-difficulty', 'accessibility-difficulty-low', $track);
 
     $track->taxonomyTerms()->attach([$physical->id, $sensory->id, $hiking->id, $access->id]);
 
@@ -61,8 +61,8 @@ it('carica la relazione una volta sola anche se non era caricata', function () {
 
 it('non fa query su una lista di tracce caricata insieme', function () {
     $tracks = collect(range(1, 4))->map(function ($i) {
-        [, $term, $track] = seedVocabularyTermAndTrack('hiking-difficulty', "hiking-difficulty-$i");
-        [, $disability] = seedVocabularyTermAndTrack('accepted-disabilities', "disability-$i", $track);
+        [, $term, $track] = seedTaxonomyTermAndTrack('hiking-difficulty', "hiking-difficulty-$i");
+        [, $disability] = seedTaxonomyTermAndTrack('accepted-disabilities', "disability-$i", $track);
         $track->taxonomyTerms()->attach([$term->id, $disability->id]);
 
         return $track->id;
@@ -86,7 +86,7 @@ it('non fa query su una lista di tracce caricata insieme', function () {
 });
 
 it('non restituisce una tassonomia attaccata direttamente come termine di sé stessa', function () {
-    [$taxonomy, $term, $track] = seedVocabularyTermAndTrack();
+    [$taxonomy, $term, $track] = seedTaxonomyTermAndTrack();
     $track->taxonomyTerms()->attach([$taxonomy->id, $term->id]);
     $track = $track->fresh();
 
@@ -94,7 +94,7 @@ it('non restituisce una tassonomia attaccata direttamente come termine di sé st
 });
 
 it('segue la tassonomia attuale del termine se viene spostato dopo l\'attach', function () {
-    [, $term, $track] = seedVocabularyTermAndTrack();
+    [, $term, $track] = seedTaxonomyTermAndTrack();
     $track->taxonomyTerms()->attach($term->id);
     $other = TaxonomyTerm::create(['identifier' => 'altra', 'name' => ['it' => 'Altra']]);
     $term->update(['parent_id' => $other->id]);
@@ -105,7 +105,7 @@ it('segue la tassonomia attuale del termine se viene spostato dopo l\'attach', f
 });
 
 it('restituisce i termini per sort_order e poi per id, non nell\'ordine di inserimento', function () {
-    [$taxonomy, , $track] = seedVocabularyTermAndTrack('hiking-difficulty', 'hiking-difficulty-ee');
+    [$taxonomy, , $track] = seedTaxonomyTermAndTrack('hiking-difficulty', 'hiking-difficulty-ee');
     $make = fn (string $identifier, int $sortOrder) => TaxonomyTerm::create([
         'identifier' => $identifier,
         'parent_id' => $taxonomy->id,

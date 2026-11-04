@@ -25,18 +25,18 @@ it('assegna al layer i POI che hanno il termine, senza rompersi sul ramo dei POI
         'configuration' => ['poi_mode' => 'auto', 'track_mode' => 'auto'],
     ]);
 
-    $tassonomia = TaxonomyTerm::create(['identifier' => 'poi-kind-'.uniqid(), 'name' => ['it' => 'Tipo punto']]);
-    $termine = TaxonomyTerm::create([
+    $taxonomy = TaxonomyTerm::create(['identifier' => 'poi-kind-'.uniqid(), 'name' => ['it' => 'Tipo punto']]);
+    $term = TaxonomyTerm::create([
         'identifier' => 'poi-kind-fountain-'.uniqid(),
-        'parent_id' => $tassonomia->id,
+        'parent_id' => $taxonomy->id,
         'name' => ['it' => 'Fontana'],
     ]);
 
     // La factory del package scrive `properties` con `json_encode()`, cioè una stringa, mentre
     // il modello la casta ad array: qui si passa l'array, come fa il codice vero.
     $poi = EcPoi::factory()->createQuietly(['app_id' => $app->id, 'properties' => []]);
-    $poi->taxonomyTerms()->attach($termine->id);
-    $layer->taxonomyTerms()->attach($termine->id);
+    $poi->taxonomyTerms()->attach($term->id);
+    $layer->taxonomyTerms()->attach($term->id);
 
     app(LayerService::class)->assignPoisByTaxonomy($layer->fresh());
 
@@ -53,20 +53,20 @@ it('non assegna un POI che il termine non ce l ha', function () {
         'configuration' => ['poi_mode' => 'auto', 'track_mode' => 'auto'],
     ]);
 
-    $tassonomia = TaxonomyTerm::create(['identifier' => 'poi-kind-'.uniqid(), 'name' => ['it' => 'Tipo punto']]);
-    $termine = TaxonomyTerm::create([
+    $taxonomy = TaxonomyTerm::create(['identifier' => 'poi-kind-'.uniqid(), 'name' => ['it' => 'Tipo punto']]);
+    $term = TaxonomyTerm::create([
         'identifier' => 'poi-kind-shelter-'.uniqid(),
-        'parent_id' => $tassonomia->id,
+        'parent_id' => $taxonomy->id,
         'name' => ['it' => 'Rifugio'],
     ]);
 
-    $estraneo = EcPoi::factory()->createQuietly(['app_id' => $app->id, 'properties' => []]);
-    $layer->taxonomyTerms()->attach($termine->id);
+    $foreign = EcPoi::factory()->createQuietly(['app_id' => $app->id, 'properties' => []]);
+    $layer->taxonomyTerms()->attach($term->id);
 
     app(LayerService::class)->assignPoisByTaxonomy($layer->fresh());
 
     expect(DB::table('layerables')
         ->where('layer_id', $layer->id)
-        ->where('layerable_id', $estraneo->id)
+        ->where('layerable_id', $foreign->id)
         ->exists())->toBeFalse();
 });

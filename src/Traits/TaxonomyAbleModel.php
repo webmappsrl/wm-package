@@ -47,8 +47,8 @@ trait TaxonomyAbleModel
     }
 
     /**
-     * Termini del modello unico di classificazione (oc:8910). using() serve perché il legame
-     * copi il tassonomia su parent_id al salvataggio. with('parent') porta con i termini anche la
+     * Termini del modello unico di classificazione (oc:8910). using() serve perché la relazione
+     * copi la tassonomia su parent_id al salvataggio. with('parent') porta con i termini anche la
      * loro tassonomia, così terms() e term() ricavano l'identifier senza interrogare il database.
      * I termini escono per sort_order e poi per id: le scale sono ordinali (T < E < EE < EEA) e
      * term() prende il primo di questo ordine.
@@ -66,13 +66,13 @@ trait TaxonomyAbleModel
     }
 
     /**
-     * Termini di un tassonomia (oc:8910). Non interroga il database: filtra la collection già
+     * Termini di una tassonomia (oc:8910). Non interroga il database: filtra la collection già
      * caricata di taxonomyTerms (caricata qui una volta sola se manca), leggendo l'identifier
-     * del tassonomia dal padre caricato con ogni termine. Una sola fonte: la gerarchia viva.
+     * della tassonomia dal padre caricato con ogni termine. Una sola fonte: la gerarchia viva.
      *
-     * Due casi restituiscono una collection vuota senza segnalare nulla: un tassonomia attaccata
+     * Due casi restituiscono una collection vuota senza segnalare nulla: una tassonomia attaccata
      * direttamente al contenuto non è un termine di sé stessa e non compare mai; un identifier
-     * che non esiste (un refuso) è indistinguibile da un tassonomia senza termini, perché
+     * che non esiste (un refuso) è indistinguibile da una tassonomia senza termini, perché
      * verificarlo costerebbe una query.
      *
      * @return Collection<int, TaxonomyTerm>
@@ -85,7 +85,7 @@ trait TaxonomyAbleModel
     }
 
     /**
-     * Il termine di un tassonomia a scelta singola; se ce n'è più d'uno, il primo.
+     * Il termine di una tassonomia a scelta singola; se ce n'è più d'uno, il primo.
      */
     public function term(string $taxonomyIdentifier): ?TaxonomyTerm
     {

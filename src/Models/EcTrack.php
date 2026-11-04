@@ -776,16 +776,16 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
 
     /**
      * Termini del modello unico di classificazione, raggruppati per identifier della tassonomia
-     * (oc:8910). Ogni voce porta identifier, name (tutte le lingue) e il properties del legame
+     * (oc:8910). Ogni voce porta identifier, name (tutte le lingue) e il properties della relazione
      * come pivot_properties: i dati si filtrano da Elasticsearch, non da SQL, quindi senza
-     * questo campo il properties del legame sarebbe irraggiungibile.
+     * questo campo il properties della relazione sarebbe irraggiungibile.
      *
-     * Il tassonomia si legge dal padre vivo (parent->identifier), la stessa fonte di terms(), e
+     * La tassonomia si legge dal padre vivo (parent->identifier), la stessa fonte di terms(), e
      * non dalla copia parent_id del pivot: un termine spostato sotto un altro tassonomia finisce
      * sotto quello nuovo. I padri sono già caricati da taxonomyTerms(), nessuna query in più. Un
      * tassonomia attaccato direttamente non ha padre e non compare.
      *
-     * Escono solo i tassonomie accesi nell'app di questo contenuto (oc:8910): una tassonomia
+     * Escono solo le tassonomie accese nell'app di questo contenuto (oc:8910): una tassonomia
      * spento non deve comparire nell'indice, altrimenti l'app lo userebbe per filtrare.
      *
      * @return array<string, list<array{identifier: string, name: array, pivot_properties: array}>>

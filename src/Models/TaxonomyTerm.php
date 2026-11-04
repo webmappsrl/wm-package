@@ -23,13 +23,13 @@ class TaxonomyTerm extends Model
 
     /**
      * Formato dell'identifier di una tassonomia: kebab-case (minuscole, cifre, trattini) più i due
-     * punti dell'import (`sardegnasentieri:tid:123`). Vale solo per i tassonomie, perché il loro
+     * punti dell'import (`sardegnasentieri:tid:123`). Vale solo per le tassonomie, perché il loro
      * identifier è la chiave sotto cui termsForSearch() raggruppa i termini nell'indice, e un
      * punto in una chiave Elasticsearch la espande in oggetti annidati. Per un termine
      * l'identifier è un valore: lì un punto non rompe niente e non si impone nulla.
      * `\z` e non `$`: in PCRE il `$` accetta anche un a capo finale.
      */
-    public const VOCABULARY_IDENTIFIER_FORMAT = '/^[a-z0-9]+(?:[-:][a-z0-9]+)*\z/';
+    public const TAXONOMY_IDENTIFIER_FORMAT = '/^[a-z0-9]+(?:[-:][a-z0-9]+)*\z/';
 
     public array $translatable = ['name', 'description', 'excerpt'];
 
@@ -60,14 +60,14 @@ class TaxonomyTerm extends Model
                 // Senza identifier ci pensa il NOT NULL del database.
                 && $term->identifier !== null
                 && ($term->isDirty('identifier') || ! $term->exists || $term->isDirty('parent_id'))
-                && ! preg_match(self::VOCABULARY_IDENTIFIER_FORMAT, (string) $term->identifier)) {
+                && ! preg_match(self::TAXONOMY_IDENTIFIER_FORMAT, (string) $term->identifier)) {
                 throw new InvalidArgumentException(
                     "L'identifier di una tassonomia deve essere in kebab-case (minuscole, cifre, trattini, due punti): \"{$term->identifier}\"."
                 );
             }
 
             // La gerarchia è a due livelli: il padre deve essere una tassonomia, altrimenti
-            // parent_id sul legame smette di significare «la tassonomia». Il controllo scatta
+            // parent_id sulla relazione smette di significare «la tassonomia». Il controllo scatta
             // solo quando parent_id cambia.
             if ($term->parent_id === null || ! $term->isDirty('parent_id')) {
                 return;
@@ -83,7 +83,7 @@ class TaxonomyTerm extends Model
                 );
             }
 
-            // Un tassonomia che ha già figli non può diventare figlia: i suoi figli sarebbero nipoti.
+            // Una tassonomia che ha già figli non può diventare figlia: i suoi figli sarebbero nipoti.
             if ($term->exists && self::query()->where('parent_id', $term->getKey())->exists()) {
                 throw new InvalidArgumentException(
                     "Il termine {$term->getKey()} è una tassonomia con figli: non può avere un padre."
@@ -91,11 +91,11 @@ class TaxonomyTerm extends Model
             }
         });
 
-        // La copia della tassonomia sui legami (taxonomy_termables.parent_id) si scrive alla nascita
-        // del legame: se il termine cambia tassonomia va riscritta, altrimenti un filtro per tassonomia
-        // sulla sola tabella dei legami restituisce i contenuti della tassonomia vecchia. Update
-        // diretto e non per modelli, perché i legami possono essere molti: per questo non scatta
-        // l'observer del legame e i contenuti non vengono reindicizzati (serve un reindex).
+        // La copia della tassonomia sulle relazioni (taxonomy_termables.parent_id) si scrive alla nascita
+        // della relazione: se il termine cambia tassonomia va riscritta, altrimenti un filtro per tassonomia
+        // sulla sola tabella delle relazioni restituisce i contenuti della tassonomia vecchia. Update
+        // diretto e non per modelli, perché le relazioni possono essere molte: per questo non scatta
+        // l'observer della relazione e i contenuti non vengono reindicizzati (serve un reindex).
         static::updated(function (self $term) {
             if ($term->wasChanged('parent_id')) {
                 DB::table('taxonomy_termables')
@@ -132,10 +132,10 @@ class TaxonomyTerm extends Model
     }
 
     /**
-     * Le app in cui questo tassonomia è acceso (oc:8910).
+     * Le app in cui questa tassonomia è accesa (oc:8910).
      *
      * Una riga del pivot vuol dire acceso: non esiste uno stato «spento» scritto da qualche
-     * parte, si toglie la riga. Il legame vive sul tassonomia; un termine lo eredita dal suo.
+     * parte, si toglie la riga. La relazione vive sulla tassonomia; un termine la eredita dalla sua.
      *
      * @return BelongsToMany<App, $this>
      */
@@ -145,7 +145,7 @@ class TaxonomyTerm extends Model
     }
 
     /**
-     * I tassonomie accesi in un'app.
+     * Le tassonomie accese in un'app.
      *
      * Senza app (un contenuto che non è ancora stato salvato, un comando fuori contesto) non si
      * filtra niente: nascondere tutto in creazione farebbe sparire i campi mentre si compila.

@@ -101,7 +101,7 @@ class App extends Resource
                 Tab::make('Release', $this->app_release_data_tab()),
                 Tab::make('home', $this->home_tab()),
                 Tab::make('translations', $this->translations_tab()),
-                Tab::make(__('Taxonomies'), $this->vocabularies_tab()),
+                Tab::make(__('Taxonomies'), $this->taxonomies_tab()),
                 Tab::make('map', $this->map_tab()),
                 Tab::make('pois', $this->pois_tab()),
                 Tab::make('theme', $this->theme_tab()),
@@ -121,15 +121,15 @@ class App extends Resource
     }
 
     /**
-     * I tassonomie di classificazione accesi in questa app (oc:8910).
+     * Le tassonomie di classificazione accese in questa app (oc:8910).
      *
-     * Si configura da qui, non dalla scheda del tassonomia: chi mette in piedi un'app decide
+     * Si configura da qui, non dalla scheda della tassonomia: chi mette in piedi un'app decide
      * in un posto solo quali classificazioni vedranno i suoi contenuti. Quelli di sistema
      * arrivano accesi alla nascita dell'app e si possono spegnere; gli altri si accendono qui.
      *
      * @return array<int, Field>
      */
-    protected function vocabularies_tab(): array
+    protected function taxonomies_tab(): array
     {
         $options = TaxonomyTerm::query()
             ->taxonomies()
@@ -144,7 +144,7 @@ class App extends Resource
         return [
             Multiselect::make(__('Taxonomies'), 'taxonomies')
                 ->options($options)
-                ->help(__('Only the vocabularies enabled here appear on this app contents.'))
+                ->help(__('Only the taxonomies enabled here appear on this app contents.'))
                 ->resolveUsing(fn () => $this->resource->exists
                     ? $this->resource->taxonomies()->pluck('taxonomy_terms.id')->all()
                     : [])

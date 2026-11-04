@@ -41,7 +41,7 @@ function fakeScoutEngine(bool $failing = false): object
 
 it('reindicizza il contenuto giusto quando nasce una relazione (coda)', function () {
     config(['scout.queue' => true]);
-    [, $term, $track] = seedVocabularyTermAndTrack();
+    [, $term, $track] = seedTaxonomyTermAndTrack();
     $other = EcTrack::factory()->createQuietly();
     Queue::fake();
 
@@ -53,7 +53,7 @@ it('reindicizza il contenuto giusto quando nasce una relazione (coda)', function
 
 it('reindicizza anche quando cambia solo il properties della relazione', function () {
     config(['scout.queue' => true]);
-    [, $term, $track] = seedVocabularyTermAndTrack();
+    [, $term, $track] = seedTaxonomyTermAndTrack();
     $track->taxonomyTerms()->attach($term->id);
     Queue::fake();
 
@@ -64,7 +64,7 @@ it('reindicizza anche quando cambia solo il properties della relazione', functio
 
 it('reindicizza quando una relazione viene tolta', function () {
     config(['scout.queue' => true]);
-    [, $term, $track] = seedVocabularyTermAndTrack();
+    [, $term, $track] = seedTaxonomyTermAndTrack();
     $track->taxonomyTerms()->attach($term->id);
     Queue::fake();
 
@@ -75,7 +75,7 @@ it('reindicizza quando una relazione viene tolta', function () {
 
 it('non spinge niente per un modello non Searchable', function () {
     config(['scout.queue' => true]);
-    [, $term] = seedVocabularyTermAndTrack();
+    [, $term] = seedTaxonomyTermAndTrack();
     $layer = Layer::factory()->createQuietly();
     Queue::fake();
 
@@ -86,7 +86,7 @@ it('non spinge niente per un modello non Searchable', function () {
 
 it('passa il contenuto giusto all\'engine nel percorso sincrono', function () {
     config(['scout.queue' => false]);
-    [, $term, $track] = seedVocabularyTermAndTrack();
+    [, $term, $track] = seedTaxonomyTermAndTrack();
     $engine = fakeScoutEngine();
 
     $track->taxonomyTerms()->attach($term->id);
@@ -97,7 +97,7 @@ it('passa il contenuto giusto all\'engine nel percorso sincrono', function () {
 
 it('non interrompe attach se l\'indicizzazione fallisce, e registra l\'errore', function () {
     config(['scout.queue' => false]);
-    [$taxonomy, $term, $track] = seedVocabularyTermAndTrack();
+    [$taxonomy, $term, $track] = seedTaxonomyTermAndTrack();
     fakeScoutEngine(failing: true);
     Log::spy();
 
@@ -109,7 +109,7 @@ it('non interrompe attach se l\'indicizzazione fallisce, e registra l\'errore', 
 
 it('rispetta withoutSyncingToSearch: niente reindex mentre il sync e\' disabilitato', function () {
     config(['scout.queue' => false]);
-    [, $term, $track] = seedVocabularyTermAndTrack();
+    [, $term, $track] = seedTaxonomyTermAndTrack();
     $engine = fakeScoutEngine();
 
     EcTrack::withoutSyncingToSearch(fn () => $track->taxonomyTerms()->attach($term->id));

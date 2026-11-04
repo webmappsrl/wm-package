@@ -27,7 +27,7 @@ function ecTrackZonesField(EcTrack $track): ?Field
     return $reflection->invoke($resource, 'General')['General'][0] ?? null;
 }
 
-function ecTrackConZone(array $taxonomyWhere): EcTrack
+function ecTrackWithZones(array $taxonomyWhere): EcTrack
 {
     $app = App::factory()->createQuietly();
 
@@ -39,20 +39,20 @@ function ecTrackConZone(array $taxonomyWhere): EcTrack
 }
 
 it('mostra le TaxonomyWhere scritte nelle properties, nella lingua corrente', function () {
-    $track = ecTrackConZone([
+    $track = ecTrackWithZones([
         ['it' => 'Nuoro', 'en' => 'Nuoro province', '_source' => 'osmfeatures'],
         ['it' => 'Area T (Centrale)', 'en' => 'Area T', '_source' => 'geohub_conf_32'],
     ]);
 
     app()->setLocale('it');
-    $campo = ecTrackZonesField($track);
-    $campo->resolve($track);
-    $italiano = strip_tags((string) $campo->value);
+    $field = ecTrackZonesField($track);
+    $field->resolve($track);
+    $italiano = strip_tags((string) $field->value);
 
     app()->setLocale('en');
-    $campo = ecTrackZonesField($track);
-    $campo->resolve($track);
-    $inglese = strip_tags((string) $campo->value);
+    $field = ecTrackZonesField($track);
+    $field->resolve($track);
+    $inglese = strip_tags((string) $field->value);
 
     expect($italiano)->toContain('Area T (Centrale)')
         ->and($italiano)->toContain('Nuoro')
@@ -61,34 +61,34 @@ it('mostra le TaxonomyWhere scritte nelle properties, nella lingua corrente', fu
 });
 
 it('ripiega sulla prima lingua valorizzata quando manca quella corrente', function () {
-    $track = ecTrackConZone([['en' => 'Only english', '_source' => 'osmfeatures']]);
+    $track = ecTrackWithZones([['en' => 'Only english', '_source' => 'osmfeatures']]);
 
-    $campo = ecTrackZonesField($track);
-    $campo->resolve($track);
+    $field = ecTrackZonesField($track);
+    $field->resolve($track);
 
-    expect(strip_tags((string) $campo->value))->toContain('Only english');
+    expect(strip_tags((string) $field->value))->toContain('Only english');
 });
 
 it('mostra un trattino quando il calcolo non ha trovato nulla', function () {
-    $campo = ecTrackZonesField($track = ecTrackConZone([]));
-    $campo->resolve($track);
+    $field = ecTrackZonesField($track = ecTrackWithZones([]));
+    $field->resolve($track);
 
-    expect(strip_tags((string) $campo->value))->toBe('—');
+    expect(strip_tags((string) $field->value))->toBe('—');
 });
 
 it('non espone _source come se fosse un nome', function () {
-    $track = ecTrackConZone([['it' => 'Sardegna', '_source' => 'osmfeatures']]);
+    $track = ecTrackWithZones([['it' => 'Sardegna', '_source' => 'osmfeatures']]);
 
-    $campo = ecTrackZonesField($track);
-    $campo->resolve($track);
+    $field = ecTrackZonesField($track);
+    $field->resolve($track);
 
-    expect(strip_tags((string) $campo->value))->not->toContain('osmfeatures');
+    expect(strip_tags((string) $field->value))->not->toContain('osmfeatures');
 });
 
 it('esiste solo in lettura: non compare nei form', function () {
-    $campo = ecTrackZonesField(ecTrackConZone([]));
+    $field = ecTrackZonesField(ecTrackWithZones([]));
 
-    expect($campo->showOnUpdate)->toBeFalse()
-        ->and($campo->showOnCreation)->toBeFalse()
-        ->and($campo->showOnDetail)->toBeTrue();
+    expect($field->showOnUpdate)->toBeFalse()
+        ->and($field->showOnCreation)->toBeFalse()
+        ->and($field->showOnDetail)->toBeTrue();
 });

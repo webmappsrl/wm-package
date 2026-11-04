@@ -65,10 +65,10 @@ it('non lascia le zone come campo a sé fuori dalla sezione', function () {
     $resource = new LayerResource($layer);
     $request = NovaRequest::create('/nova-api/layers/'.$layer->id, 'GET');
 
-    $fuori = collect($resource->fields($request))
+    $outside = collect($resource->fields($request))
         ->first(fn ($field) => $field instanceof MorphToMany && $field->attribute === 'taxonomyWheres');
 
-    expect($fuori)->toBeNull();
+    expect($outside)->toBeNull();
 });
 
 it('sta nel tab di default, insieme agli altri criteri con cui si definisce un layer', function () {
@@ -76,11 +76,11 @@ it('sta nel tab di default, insieme agli altri criteri con cui si definisce un l
 
     $zone = collect($fields)->search(fn ($f) => $f instanceof Choice && $f->attribute === 'legacy_taxonomy_wheres');
     // «Attività» apre il tab successivo: le zone devono venire prima.
-    $attivita = collect($fields)->search(fn ($f) => $f instanceof Choice && $f->attribute === 'legacy_taxonomy_activities');
+    $activity = collect($fields)->search(fn ($f) => $f instanceof Choice && $f->attribute === 'legacy_taxonomy_activities');
 
     expect($zone)->not->toBeFalse();
 
-    if ($attivita !== false) {
-        expect($zone)->toBeLessThan($attivita);
+    if ($activity !== false) {
+        expect($zone)->toBeLessThan($activity);
     }
 });

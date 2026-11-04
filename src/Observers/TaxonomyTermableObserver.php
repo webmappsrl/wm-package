@@ -47,7 +47,7 @@ class TaxonomyTermableObserver
             // Con scout.queue a false l'indicizzazione e' sincrona e gira dentro attach():
             // un Elasticsearch irraggiungibile non deve lasciare le relazioni scritte a meta'.
             // Un indice non aggiornato si rimedia con un reindex.
-            Log::error('Reindex dopo la modifica di una relazione di tassonomia fallito', [
+            Log::error('Reindex fallito dopo la modifica di una relazione di tassonomia', [
                 'termable_type' => $termable->termable_type,
                 'termable_id' => $termable->termable_id,
                 'taxonomy_term_id' => $termable->taxonomy_term_id,

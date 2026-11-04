@@ -39,7 +39,7 @@ class WmMakeTaxonomyResourceCommand extends Command
             return self::FAILURE;
         }
 
-        // Il tassonomia assente non è un errore: la Resource può nascere prima della riga, e in
+        // La tassonomia assente non è un errore: la Resource può nascere prima della riga, e in
         // quel caso il suo elenco resta vuoto finché la tassonomia non c'è.
         $taxonomy = TaxonomyTerm::query()->taxonomies()->where('identifier', $identifier)->first();
         if ($taxonomy === null) {

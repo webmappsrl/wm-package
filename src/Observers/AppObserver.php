@@ -30,10 +30,10 @@ class AppObserver extends AbstractObserver
     }
 
     /**
-     * Un'app nuova nasce con tutti i tassonomie di sistema accesi (oc:8910).
+     * Un'app nuova nasce con tutte le tassonomie di sistema accese (oc:8910).
      *
      * Quelli di sistema vengono dal package e hanno senso ovunque: chi crea un'app non deve
-     * accenderli a mano, e può spegnerli dopo. I tassonomie creati da uno shard non si
+     * accenderle a mano, e può spegnerle dopo. Le tassonomie create da uno shard non si
      * accendono da soli: comparirebbero in app che non li hanno chiesti.
      */
     public function created(App $app)

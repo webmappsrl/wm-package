@@ -10,8 +10,8 @@ use Wm\WmPackage\Support\TaxonomyTermLabel;
 /**
  * Mostra i soli termini di una tassonomia (oc:8910).
  *
- * L'elenco dei tassonomie si legge dal database: una tassonomia creata da Nova compare nel filtro
- * senza toccare codice. I tassonomie stesse restano fuori dal risultato, perché il filtro guarda
+ * L'elenco delle tassonomie si legge dal database: una tassonomia creata da Nova compare nel filtro
+ * senza toccare codice. Le tassonomie stesse restano fuori dal risultato, perché il filtro guarda
  * `parent_id`.
  */
 class TermsByTaxonomyFilter extends Filter

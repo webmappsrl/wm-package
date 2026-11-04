@@ -7,7 +7,7 @@ use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\TaxonomyTerm;
 
 it('copia la tassonomia sulla relazione al salvataggio', function () {
-    [$taxonomy, $term, $track] = seedVocabularyTermAndTrack();
+    [$taxonomy, $term, $track] = seedTaxonomyTermAndTrack();
     $track->taxonomyTerms()->attach($term->id);
 
     expect(DB::table('taxonomy_termables')->where('taxonomy_term_id', $term->id)->value('parent_id'))
@@ -15,7 +15,7 @@ it('copia la tassonomia sulla relazione al salvataggio', function () {
 });
 
 it('lascia parent_id nullo quando si associa una tassonomia direttamente', function () {
-    [$taxonomy, , $track] = seedVocabularyTermAndTrack();
+    [$taxonomy, , $track] = seedTaxonomyTermAndTrack();
     $track->taxonomyTerms()->attach($taxonomy->id);
 
     expect(DB::table('taxonomy_termables')->where('taxonomy_term_id', $taxonomy->id)->value('parent_id'))
@@ -23,7 +23,7 @@ it('lascia parent_id nullo quando si associa una tassonomia direttamente', funct
 });
 
 it('ignora un parent_id passato a mano sulla relazione', function () {
-    [$taxonomy, $term, $track] = seedVocabularyTermAndTrack();
+    [$taxonomy, $term, $track] = seedTaxonomyTermAndTrack();
     $track->taxonomyTerms()->attach($term->id, ['parent_id' => 999999]);
 
     expect(DB::table('taxonomy_termables')->where('taxonomy_term_id', $term->id)->value('parent_id'))
@@ -31,7 +31,7 @@ it('ignora un parent_id passato a mano sulla relazione', function () {
 });
 
 it('rifiuta un termine il cui padre non è una tassonomia', function () {
-    [$taxonomy, $term] = seedVocabularyTermAndTrack();
+    [$taxonomy, $term] = seedTaxonomyTermAndTrack();
     expect(fn () => TaxonomyTerm::create([
         'identifier' => 'nipote', 'parent_id' => $term->id, 'name' => ['it' => 'Nipote'],
     ]))->toThrow(InvalidArgumentException::class);
@@ -39,7 +39,7 @@ it('rifiuta un termine il cui padre non è una tassonomia', function () {
 
 it('legge i modelli associati da ecTracks() ed ecPois()', function () {
     config(['wm-package.ec_track_model' => EcTrack::class]);
-    [, $term, $track] = seedVocabularyTermAndTrack();
+    [, $term, $track] = seedTaxonomyTermAndTrack();
     $poi = EcPoi::factory()->createQuietly();
 
     DB::table('taxonomy_termables')->insert([
@@ -54,7 +54,7 @@ it('legge i modelli associati da ecTracks() ed ecPois()', function () {
 });
 
 it('rifiuta di assegnare un padre a una tassonomia che ha già figli', function () {
-    [$taxonomy, $term] = seedVocabularyTermAndTrack();
+    [$taxonomy, $term] = seedTaxonomyTermAndTrack();
     $other = TaxonomyTerm::create(['identifier' => 'altra', 'name' => ['it' => 'Altra']]);
 
     $taxonomy->parent_id = $other->id;
@@ -63,14 +63,14 @@ it('rifiuta di assegnare un padre a una tassonomia che ha già figli', function 
 });
 
 it('rifiuta un termine che è padre di sé stesso', function () {
-    [, $term] = seedVocabularyTermAndTrack();
+    [, $term] = seedTaxonomyTermAndTrack();
     $term->parent_id = $term->id;
 
     expect(fn () => $term->save())->toThrow(InvalidArgumentException::class);
 });
 
 it('accetta di spostare un termine sotto un\'altro tassonomia', function () {
-    [, $term] = seedVocabularyTermAndTrack();
+    [, $term] = seedTaxonomyTermAndTrack();
     $other = TaxonomyTerm::create(['identifier' => 'altra', 'name' => ['it' => 'Altra']]);
 
     $term->update(['parent_id' => $other->id]);
@@ -80,7 +80,7 @@ it('accetta di spostare un termine sotto un\'altro tassonomia', function () {
 
 it('rilegge con ecTracks() ciò che taxonomyTerms() ha scritto, senza righe a mano', function () {
     config(['wm-package.ec_track_model' => EcTrack::class]);
-    [, $term, $track] = seedVocabularyTermAndTrack();
+    [, $term, $track] = seedTaxonomyTermAndTrack();
     $track->taxonomyTerms()->attach($term->id);
 
     $found = $term->ecTracks()->get();
@@ -91,8 +91,8 @@ it('rilegge con ecTracks() ciò che taxonomyTerms() ha scritto, senza righe a ma
 });
 
 it('riscrive la copia della tassonomia sulle relazioni quando il termine cambia tassonomia', function () {
-    [$taxonomy, $term, $track] = seedVocabularyTermAndTrack();
-    [, , $track2] = seedVocabularyTermAndTrack('hiking-difficulty', 'altro-termine');
+    [$taxonomy, $term, $track] = seedTaxonomyTermAndTrack();
+    [, , $track2] = seedTaxonomyTermAndTrack('hiking-difficulty', 'altro-termine');
     $track->taxonomyTerms()->attach($term->id);
     $track2->taxonomyTerms()->attach($term->id);
     $untouched = TaxonomyTerm::create(['identifier' => 'resta', 'parent_id' => $taxonomy->id, 'name' => ['it' => 'Resta']]);
@@ -109,7 +109,7 @@ it('riscrive la copia della tassonomia sulle relazioni quando il termine cambia 
 });
 
 it('non riscrive le relazioni se il termine cambia solo altri campi', function () {
-    [$taxonomy, $term, $track] = seedVocabularyTermAndTrack();
+    [$taxonomy, $term, $track] = seedTaxonomyTermAndTrack();
     $track->taxonomyTerms()->attach($term->id);
     DB::table('taxonomy_termables')->where('taxonomy_term_id', $term->id)->update(['parent_id' => 424242]);
 
@@ -120,7 +120,7 @@ it('non riscrive le relazioni se il termine cambia solo altri campi', function (
 
 it('non reindicizza i contenuti quando il termine cambia tassonomia', function () {
     config(['scout.queue' => true]);
-    [, $term, $track] = seedVocabularyTermAndTrack();
+    [, $term, $track] = seedTaxonomyTermAndTrack();
     $track->taxonomyTerms()->attach($term->id);
     $other = TaxonomyTerm::create(['identifier' => 'altra', 'name' => ['it' => 'Altra']]);
     Queue::fake();

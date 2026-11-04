@@ -29,7 +29,7 @@ abstract class AbstractTaxonomyTermsResource extends TaxonomyTerm
     abstract public static function taxonomyIdentifier(): string;
 
     /**
-     * Il tassonomia di questa Resource, o `null` se non è ancora stata creata.
+     * La tassonomia di questa Resource, o `null` se non è ancora stata creata.
      *
      * Si rilegge a ogni chiamata, e sono poche per richiesta: una memoria statica
      * sopravvivrebbe alla richiesta, e in un worker di coda — o fra due test — terrebbe l'id di
@@ -61,14 +61,14 @@ abstract class AbstractTaxonomyTermsResource extends TaxonomyTerm
      */
     public static function indexQuery(NovaRequest $request, $query)
     {
-        // Tassonomieo non ancora creata: l'elenco è vuoto, non è l'elenco di tutti i termini.
+        // Tipo non ancora creata: l'elenco è vuoto, non è l'elenco di tutti i termini.
         return $query->where('parent_id', static::taxonomy()?->id ?? 0);
     }
 
     /**
-     * Qui si creano termini, mai tassonomie: l'identifier non segue il formato dei tassonomie.
+     * Qui si creano termini, mai tassonomie: l'identifier non segue il formato delle tassonomie.
      */
-    protected function isCreatingVocabulary(NovaRequest $request): bool
+    protected function isCreatingTaxonomy(NovaRequest $request): bool
     {
         return false;
     }
@@ -77,7 +77,7 @@ abstract class AbstractTaxonomyTermsResource extends TaxonomyTerm
     {
         $fields = [];
         foreach (parent::fields($request) as $field) {
-            // Il tassonomia non si sceglie: è quella della Resource, e si scrive da sé.
+            // La tassonomia non si sceglie: è quella della Resource, e si scrive da sé.
             if ($field instanceof BelongsTo && $field->attribute === 'parent') {
                 $fields[] = Hidden::make(__('Taxonomy'), 'parent_id')
                     ->default(fn () => static::taxonomy()?->id);
