@@ -71,6 +71,16 @@ default `phpredis` e, senza l'estensione, il primo salvataggio di un layer o di 
 con `Class "Redis" not found`. Verificato su UAT di forestas il 4 novembre: estensione assente,
 `REDIS_CLIENT=predis`, quindi a posto.
 
+**`scout:import` dopo il bump, non il reindex normale.** `config/wm-elasticsearch.php` dichiara
+due dynamic template per il campo `terms`: `terms.*.identifier` come `keyword`, così ci si filtra
+per valore esatto, e `terms.*.pivot_properties` con `enabled: false`, perché quel JSON ha chiavi
+libere e due tassonomie che usassero la stessa chiave con tipi diversi farebbero **rifiutare il
+documento** — con `scout.queue` a `false` l'errore risale fino al salvataggio in Nova. Un indice
+creato prima non le ha, e un mapping cambiato non si applica con «Reindicizza Scout»: serve
+`php artisan scout:import "<modello EC track>"`, che crea un indice nuovo e sposta l'alias
+(oc:8681). Su forestas è stato fatto il 4 novembre: un solo indice, un solo alias, `identifier`
+passato da `text` a `keyword`.
+
 **Tassonomie accese per tipo di contenuto.** `app_taxonomy_term` ha la colonna `models`: dice se
 una tassonomia vale sulle EC Track, sugli EC Poi o su entrambi, e si sceglie dalla scheda dell'App
 con due elenchi. `null` vuol dire tutti i contenuti, quindi un'accensione scritta da un comando
