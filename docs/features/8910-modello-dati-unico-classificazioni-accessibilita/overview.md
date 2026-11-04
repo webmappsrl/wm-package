@@ -85,7 +85,7 @@ Che il bisogno sia reale lo dicono i dati della sorgente: su 755 nodi Drupal con
       contrario e l'ha cambiata in call il 29/10. La fanno rispettare Nova, che per una tassonomia
       `single_choice` mostra una select singola, e l'import, che scrive una relazione solo. Un indice
       unique parziale non sarebbe nemmeno esprimibile: il predicato non può leggere la tabella
-      dele tassonomie (PostgreSQL risponde `cannot use subquery in index predicate`, verificato).
+      delle tassonomie (PostgreSQL risponde `cannot use subquery in index predicate`, verificato).
 - [ ] Il modello `TaxonomyTerm` espone `children()`, `parent()` e la relazione polimorfa verso i
       contenuti.
 - [ ] I modelli che usano le tassonomie espongono **un solo metodo generico** per leggere i
@@ -307,3 +307,65 @@ Trovato mentre la mappa di un layer restava vuota. `AnalyticsService::__construc
 | `src/Observers/AppObserver.php` | accende le tassonomie di sistema su un'App nuova |
 | `src/Services/PostHog/AnalyticsService.php` | `isConfigured()` e cast della config |
 | `config/wm-package.php` | `legacy_taxonomies` |
+
+---
+
+## Aggiornamento del 4 novembre — cosa è cambiato rispetto a sopra
+
+Le righe qui sotto **prevalgono** su quelle sopra dove le contraddicono.
+
+### Le zone entrano nella sezione, dopo tutto
+
+Sopra c'è scritto che «le zone geografiche restano fuori dalla sezione: su maphub sono circa 490
+righe e un campo a scelta multipla con quei numeri non è usabile». La motivazione è caduta: il
+campo `icon-select` filtra man mano che si scrive, quindi il numero di opzioni non è un problema
+d'uso. Resta solo il costo di serializzarle tutte nella pagina.
+
+- [x] Su un **Layer** le zone sono un filtro scrivibile a scelta multipla, dichiarato in
+      `legacyTaxonomies()` accanto alle attività: entrambe vivono in una tabella propria e il
+      meccanismo delle legacy serve esattamente a farle comparire come le altre tassonomie.
+      `Layer::legacyTaxonomies()` aggiunge la voce `wheres` a quelle del trait, con l'alias
+      `packageLegacyTaxonomies`.
+- [x] Su un **contenuto** sono in **sola lettura**, perché non si scelgono: le calcola la geometria.
+      `makeComputedWheresField()` le mostra come testo, leggendole da `properties.taxonomy_where`
+      — dove l'Action le scrive con `jsonb_set`, già tradotte, con `_admin_level` e `_source` e
+      senza id. Il pivot `taxonomy_whereables` per le EC e gli UGC oggi è di fatto vuoto.
+- [x] Il vecchio pannello `MorphToMany::make('Taxonomy Where', …)`, che stava fuori dalla sezione,
+      è stato tolto.
+- [x] Che il dato di un contenuto viva in un JSON denormalizzato invece che nel pivot è un debito
+      a sé: **oc:8920**, «TaxonomyWhere per UGC ed EC su `taxonomy_whereables` invece che in
+      `properties.taxonomy_where`».
+
+### L'etichetta della sezione
+
+- [x] Il default era «Classifications». Ora è «Tassonomie» (`Taxonomies`), con la voce nei JSON
+      del package.
+
+### Correzioni trovate collaudando
+
+- [x] `LayerService::assignPoisByTaxonomy()`: il blocco dei termini usava `$trackTable` e
+      `$trackMorphTypes`, le variabili del ramo delle tracce. Ogni salvataggio delle zone di un
+      Layer moriva con «Undefined variable $trackTable», perché ci passa
+      `TaxonomyWhereablesObserver`.
+- [x] I quattro job unici sul percorso del salvataggio Nova — `UpdateLayerGeometryJob`,
+      `SyncAutoLayerAfterTrackTaxonomyChangeJob`, `SyncAutoLayerAfterPoiTaxonomyChangeJob`,
+      `ReindexEcTrackSearchableJob` — prendevano il lock di unicità su `cache_locks`, cioè sul
+      database, **dentro** la transazione del salvataggio: la seconda volta la transazione era già
+      abortita e usciva `SQLSTATE[25P02]`. Il `catch` che c'era in `dispatchDebounced()` non
+      bastava. Ora `uniqueVia()` restituisce `Cache::store('redis')`.
+- [x] `LayerableObserver` non reggeva una riga di pivot il cui contenuto o layer era stato
+      cancellato — la relazione sopravvive a ciò che collega — e moriva con un `TypeError`
+      lasciando il ricalcolo a metà. Ora esce prima.
+- [x] `Layer::taxonomyTerms()` era un override nudo, senza `using(TaxonomyTermable::class)`: il
+      `saving` del pivot non scattava e `parent_id` restava nullo, quindi il filtro per famiglia
+      non vedeva quelle righe. L'override è stato tolto e vale quello di `TaxonomyAbleModel`.
+
+### Test del package: come si lanciano, e due cose che mancavano
+
+- [x] Vanno lanciati **dal package**, non da uno shard, anche se girano nel container dello shard:
+      usano `Wm\WmPackage\Tests\TestCase`.
+- [x] `phpunit.xml.dist` dichiara `EC_TRACK_MODEL`, senza la quale la suite non risolve
+      `App\Models\EcTrack` e i test dei layer falliscono con `Class not found`.
+- [x] In `tests/Pest.php`, `class_alias` anche per `App\Nova\User`, e
+      `seedVocabularyTermAndTrack()` accende la tassonomia sull'app della traccia: l'indice porta
+      solo le tassonomie accese, quindi senza quello `termsForSearch()` esce vuoto.
