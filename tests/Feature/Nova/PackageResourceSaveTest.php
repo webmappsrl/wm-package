@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Tabs\TabsGroup;
 use Tests\TestCase;
+use Wm\WmPackage\Jobs\App\ReindexAppContentsJob;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Models\EcTrack;
@@ -369,3 +371,50 @@ function taxonomyAttributesOf(object $resource): array
 
     return $attributes;
 }
+
+it('cambiare le tassonomie accese fa reindicizzare i contenuti dell\'app', function () {
+    // `terms`, nel documento di una traccia, porta solo le tassonomie accese sull'app: senza un
+    // reindex l'indice resta indietro, e la ricerca filtra su una classificazione che in Nova
+    // non c'è più.
+    Bus::fake();
+
+    $this->actingAs($this->user)
+        ->putJson("/nova-api/apps/{$this->testApp->id}", [
+            ...appPayload($this->testApp),
+            'taxonomies_ec_track' => json_encode([$this->routeType->id]),
+            'taxonomies_ec_poi' => json_encode([]),
+        ])
+        ->assertOk();
+
+    Bus::assertDispatched(
+        ReindexAppContentsJob::class,
+        fn (ReindexAppContentsJob $job) => $job->appId === $this->testApp->id
+    );
+});
+
+it('salvare l\'app senza cambiare le tassonomie non fa reindicizzare niente', function () {
+    // Il tab ha due campi che scrivono uno dopo l'altro: il primo lascia uno stato intermedio
+    // che sembra un cambiamento. Il job parte lo stesso, ma porta con sé la firma di prima e,
+    // girando dopo il commit, si accorge che lo stato definitivo è identico ed esce.
+    $before = ReindexAppContentsJob::taxonomiesSignature($this->testApp);
+
+    $this->actingAs($this->user)
+        ->putJson("/nova-api/apps/{$this->testApp->id}", [
+            ...appPayload($this->testApp),
+            'taxonomies_ec_track' => json_encode([$this->routeType->id]),
+            'taxonomies_ec_poi' => json_encode([$this->routeType->id]),
+        ])
+        ->assertOk();
+
+    expect(ReindexAppContentsJob::taxonomiesSignature($this->testApp->fresh()))->toBe($before);
+});
+
+it('la firma cambia quando cambia l\'ambito, non solo l\'accensione', function () {
+    $before = ReindexAppContentsJob::taxonomiesSignature($this->testApp);
+
+    // Resta accesa, ma solo sulle EC Track: per l'indice è un cambiamento, perché `terms`
+    // dipende da quali tassonomie valgono per quel contenuto.
+    $this->testApp->syncTaxonomiesForModel('EcPoi', []);
+
+    expect(ReindexAppContentsJob::taxonomiesSignature($this->testApp->fresh()))->not->toBe($before);
+});

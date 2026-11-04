@@ -17,6 +17,7 @@ use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\Translatable\HasTranslations;
 use Whitecube\NovaFlexibleContent\Value\FlexibleCast;
+use Wm\WmPackage\Jobs\App\ReindexAppContentsJob;
 use Wm\WmPackage\Observers\AppObserver;
 use Wm\WmPackage\Services\StorageService;
 use Wm\WmPackage\Traits\HasPackageFactory;
@@ -114,6 +115,7 @@ class App extends Model implements HasMedia
      */
     public function syncTaxonomiesForModel(string $model, array $taxonomyIds): void
     {
+        $before = ReindexAppContentsJob::taxonomiesSignature($this);
         $current = $this->taxonomies()->get()
             ->mapWithKeys(function (TaxonomyTerm $taxonomy) {
                 $models = $taxonomy->pivot->models ?? null;
@@ -137,13 +139,38 @@ class App extends Model implements HasMedia
             $wanted[$taxonomyId] = array_values(array_unique([...($wanted[$taxonomyId] ?? []), $model]));
         }
 
-        $this->taxonomies()->sync(
+        $changes = $this->taxonomies()->sync(
             collect($wanted)
                 // Accesa per tutti i contenuti: `models` nullo, che è il valore che significa
                 // «tutti» e che una tassonomia creata fuori da qui porta già.
                 ->map(fn (array $models) => ['models' => count($models) === count($everyModel) ? null : json_encode($models)])
                 ->all()
         );
+
+        $this->reindexContentsIfTaxonomiesChanged($changes, $before);
+    }
+
+    /**
+     * Accoda il reindex dei contenuti se le tassonomie accese sono cambiate (oc:8910).
+     *
+     * `terms`, nel documento di una traccia, porta solo le tassonomie accese sull'app: accenderne
+     * o spegnerne una cambia ogni documento senza che nessun contenuto venga salvato. Senza
+     * questo, l'indice resta indietro fino al prossimo salvataggio di ciascuna traccia.
+     *
+     * Il tab ha due campi che scrivono uno dopo l'altro, quindi qui si vede anche uno stato
+     * intermedio che non è un cambiamento vero: la firma di prima viaggia con il job, che la
+     * riconfronta dopo il commit, quando lo stato è definitivo.
+     *
+     * @param  array{attached?: array<int, mixed>, detached?: array<int, mixed>, updated?: array<int, mixed>}  $changes
+     */
+    protected function reindexContentsIfTaxonomiesChanged(array $changes, ?string $before = null): void
+    {
+        $touched = count($changes['attached'] ?? []) + count($changes['detached'] ?? []) + count($changes['updated'] ?? []);
+        if ($touched === 0 || ! $this->exists) {
+            return;
+        }
+
+        ReindexAppContentsJob::dispatch($this->id, $before)->afterCommit();
     }
 
     /**
@@ -151,6 +178,10 @@ class App extends Model implements HasMedia
      *
      * È quello che serve a un comando di allineamento: `syncTaxonomiesForModel()` riscriverebbe
      * l'ambito di tutte, cancellando ciò che qualcuno ha scelto dalla scheda dell'app.
+     *
+     * Non accoda il reindex, al contrario della scheda: un comando sa cosa fare dopo — l'import
+     * reindicizza a fine batch — e un reindex in mezzo all'allineamento sarebbe comunque
+     * rifatto. Il reindex automatico serve dove nessuno lo lancia, cioè dall'interfaccia.
      *
      * @param  string  $model  Il nome breve del modello: `EcTrack`, `EcPoi`.
      * @param  array<int, int>  $taxonomyIds
@@ -166,6 +197,7 @@ class App extends Model implements HasMedia
         $this->taxonomies()->attach(
             collect($missing)->mapWithKeys(fn (int $id) => [$id => ['models' => json_encode([$model])]])->all()
         );
+
     }
 
     public function layers()

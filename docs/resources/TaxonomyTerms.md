@@ -281,6 +281,22 @@ In lettura il filtro è lo scope `TaxonomyTerm::forAppAndModel()`, usato da
 Riguarda ciò che si vede e si compila in Nova, non il dato: un termine già attaccato a un POI
 resta attaccato e continua a finire nell'indice. Non è un vincolo di integrità.
 
+**Cambiare le accensioni fa reindicizzare.** `terms`, nel documento di una traccia, porta solo le
+tassonomie accese su quell'app: accenderne o spegnerne una, o cambiarne l'ambito, cambia ogni
+documento senza che nessun contenuto venga salvato. Senza un reindex l'indice resterebbe indietro
+fino al prossimo salvataggio di ciascuna traccia, e la ricerca continuerebbe a filtrare su una
+classificazione che in Nova non c'è più. Se ne occupa `ReindexAppContentsJob`, accodato da
+`App::syncTaxonomiesForModel()`, unico per app e `afterCommit`.
+
+Il job porta con sé la firma delle accensioni di prima del salvataggio e la riconfronta quando
+gira: il tab ha due campi che scrivono la stessa tabella uno dopo l'altro, e il primo lascia uno
+stato intermedio che sembra un cambiamento anche quando il risultato finale è identico. Girando
+dopo il commit, il job vede lo stato definitivo ed esce senza fare niente.
+
+`enableTaxonomiesForModel()`, che usano i comandi di allineamento, **non** accoda: un comando sa
+cosa fare dopo — l'import reindicizza a fine batch — e un reindex in mezzo all'allineamento
+sarebbe comunque rifatto.
+
 ## Quali tassonomie vede un'app
 
 Una tassonomia è accesa o spenta **per app**, nel pivot `app_taxonomy_term`: una riga vuol dire
