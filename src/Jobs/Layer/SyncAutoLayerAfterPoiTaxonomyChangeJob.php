@@ -3,11 +3,13 @@
 namespace Wm\WmPackage\Jobs\Layer;
 
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Cache\Store;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Wm\WmPackage\Jobs\BuildAppPoisGeojsonJob;
 use Wm\WmPackage\Models\EcPoi;
@@ -29,6 +31,22 @@ class SyncAutoLayerAfterPoiTaxonomyChangeJob implements ShouldBeUnique, ShouldQu
         public ?int $poiId = null
     ) {
         $this->onQueue('default');
+    }
+
+    /**
+     * Il lock di unicità si prende su Redis, non sul database (oc:8910).
+     *
+     * Questo job si accoda dentro la transazione del salvataggio Nova di un contenuto. Con il
+     * lock su `cache_locks`, `DatabaseLock::acquire()` tenta un INSERT e, se la riga esiste
+     * già, PostgreSQL aborta la transazione: da lì in poi ogni query del salvataggio muore con
+     * «current transaction is aborted» e il form non si salva. Stesso rimedio di
+     * `BuildAppPoisGeojsonJob`.
+     *
+     * @return Store
+     */
+    public function uniqueVia()
+    {
+        return Cache::store('redis');
     }
 
     public function uniqueId(): string

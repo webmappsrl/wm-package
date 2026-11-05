@@ -11,25 +11,32 @@ use Kongulov\NovaTabTranslatable\NovaTabTranslatable;
 use Laravel\Nova\Fields\BelongsTo;
 use Laravel\Nova\Fields\Boolean;
 use Laravel\Nova\Fields\ID;
-use Laravel\Nova\Fields\MorphToMany;
 use Laravel\Nova\Fields\Number;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Panel;
+use Wm\WmPackage\Jobs\Layer\SyncAutoLayerAfterPoiTaxonomyChangeJob;
+use Wm\WmPackage\Jobs\Layer\SyncAutoLayerAfterTrackTaxonomyChangeJob;
 use Wm\WmPackage\Models\Layer as LayerModel;
+use Wm\WmPackage\Models\TaxonomyWhere as TaxonomyWhereModel;
 use Wm\WmPackage\Nova\Actions\AddLayersToConfigHomeAction;
 use Wm\WmPackage\Nova\Actions\ExecuteEcTrackDataChainAction;
 use Wm\WmPackage\Nova\Cards\ApiLinksCard\LayerApiLinksCard;
 use Wm\WmPackage\Nova\Cards\LayerAnalytics\LayerAnalyticsCard;
+use Wm\WmPackage\Nova\Concerns\BuildsTaxonomyFields;
 use Wm\WmPackage\Nova\Fields\FeatureCollectionMap\src\FeatureCollectionMap;
 use Wm\WmPackage\Nova\Fields\LayerFeatures\LayerFeatures;
 use Wm\WmPackage\Nova\Fields\PropertiesPanel;
 use Wm\WmPackage\Nova\Filters\AppFilter;
 use Wm\WmPackage\Nova\Traits\HasConfigDetailPanel;
 use Wm\WmPackage\Nova\Traits\MultiPolygonResourceTrait;
+use Wm\WmPackage\Services\PostHog\AnalyticsService;
 
 class Layer extends AbstractGeometryResource
 {
+    use BuildsTaxonomyFields {
+        legacyTaxonomies as protected packageLegacyTaxonomies;
+    }
     use HasConfigDetailPanel;
     use MultiPolygonResourceTrait {
         fields as protected fieldsTrait;
@@ -82,6 +89,73 @@ class Layer extends AbstractGeometryResource
         'name',
     ];
 
+    /**
+     * Su un layer i termini scelgono i contenuti, non li descrivono: scelta sempre multipla e
+     * nessuna dipendenza fra tassonomie (oc:8910).
+     */
+    protected function taxonomyFieldsAreFilters(): bool
+    {
+        return true;
+    }
+
+    /**
+     * Cambiati i filtri, il layer va ripopolato subito (oc:8910).
+     *
+     * `LayerObserver` non se ne accorgerebbe: i termini si scrivono dopo il salvataggio del
+     * modello, quindi il layer non risulta cambiato. I job sono quelli che già girano quando un
+     * contenuto cambia tassonomia — riassegnano i contenuti, riallineano `properties.layers`,
+     * rigenerano i PBF e fanno reindicizzare: in coda, perché su un layer grande non è lavoro da
+     * richiesta.
+     *
+     * Le due modalità si guardano separatamente: un layer può avere le tracce in automatico e i
+     * POI a mano, o il contrario. Guardando solo `isAutoTrackMode()`, un layer con i soli POI in
+     * automatico non faceva partire niente, e i suoi POI restavano quelli di prima a tempo
+     * indeterminato.
+     */
+    protected function afterTaxonomyFieldsSaved(mixed $model): void
+    {
+        if (! $model instanceof LayerModel) {
+            return;
+        }
+
+        if ($model->isAutoTrackMode()) {
+            SyncAutoLayerAfterTrackTaxonomyChangeJob::dispatch($model->id);
+        }
+
+        if ($model->isAutoPoiMode()) {
+            SyncAutoLayerAfterPoiTaxonomyChangeJob::dispatch($model->id);
+        }
+    }
+
+    /**
+     * Le zone sono un filtro del layer come gli altri (oc:8910).
+     *
+     * `LayerService` le tratta già allo stesso modo di attività e termini — in AND con loro,
+     * «i cammini che attraversano questa zona» — ma il campo stava fuori dalla sezione, e la
+     * frase che spiega la regola non le copriva. Qui diventano una tassonomia storica come le
+     * attività: stessa select multipla, stesso tab di default, stesso salvataggio.
+     *
+     * Vale solo sul layer. Sulla scheda di un contenuto le zone restano in sola lettura, perché
+     * lì sono calcolate dalla geometria: su un layer sono una scelta.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    protected function legacyTaxonomies(): array
+    {
+        return [
+            ...$this->packageLegacyTaxonomies(),
+            [
+                'key' => 'wheres',
+                'relation' => 'taxonomyWheres',
+                'model' => TaxonomyWhereModel::class,
+                'label' => 'Zones',
+                'tab' => 'General',
+                'single_choice' => false,
+                'hidden' => [],
+            ],
+        ];
+    }
+
     public function fields(NovaRequest $request): array
     {
         return [
@@ -131,11 +205,18 @@ class Layer extends AbstractGeometryResource
                 ->singleMediaRules(['mimes:png,webp', 'dimensions:ratio=1/1']),
             PropertiesPanel::makeWithModel(__('Properties'), 'properties', $this, true)->collapsible(),
             $this->configDetailPanel(),
-            MorphToMany::make(__('Activities'), 'taxonomyActivities', TaxonomyActivity::class),
-            MorphToMany::make('Taxonomy Where', 'taxonomyWheres', TaxonomyWhere::class)
-                ->actions(fn () => []),
+            // Le attività non hanno più un pannello a sé: sono un filtro come gli altri, dentro
+            // la sezione qui sotto.
+            // I filtri per tassonomia, organizzati come nella scheda di un contenuto (oc:8910).
+            // Qui però scelgono: una traccia entra nel layer se soddisfa tutti i filtri
+            // impostati, e dentro un filtro le basta uno dei valori scelti.
+            $this->makeTaxonomySection(__('Filters')),
             Panel::make(__('Map'), [
-                FeatureCollectionMap::make(__('Geometry'), 'geometry')->onlyOnDetail(),
+                FeatureCollectionMap::make(__('Geometry'), 'geometry')
+                    ->onlyOnDetail()
+                    // Senza PostHog non ci sono posizioni da mostrare: niente marker e niente
+                    // legenda che li annuncia (oc:8910).
+                    ->withMeta(['showLiveUserPositions' => app(AnalyticsService::class)->isConfigured()]),
             ]),
             Panel::make('Ec Tracks', [
                 LayerFeatures::make(__('tracks'), $this->resource, config('wm-package.ec_track_model', 'Wm\WmPackage\Models\EcTrack'))

@@ -1,5 +1,6 @@
 <?php
 
+use Wm\WmPackage\Models\TaxonomyActivity;
 use Wm\WmPackage\Services\Models\UgcTrackCleanupService;
 use Wm\WmPackage\Services\Models\UgcTrackStatsService;
 use Wm\WmPackage\TrailRegistry\Commands\TrailRegistryNormalizeCommand;
@@ -103,6 +104,31 @@ return [
     'ec_track_model' => env('EC_TRACK_MODEL', 'App\Models\EcTrack'),
     'ec_poi_track_pivot_table' => env('EC_POI_TRACK_PIVOT_TABLE', 'ec_poi_ec_track'),
     'default_layer_mode' => env('DEFAULT_LAYER_MODE', 'auto'),
+
+    /*
+    | Le tassonomie che vivono ancora in tabelle proprie, descritte come se fossero tassonomie del
+    | modello unico (oc:8910). Serve a mostrarle nella scheda di un contenuto con lo stesso campo
+    | dei tassonomie — stessa icona, stesso modo di scegliere — finché non confluiscono in
+    | `taxonomy_terms`. Le tre informazioni che per una tassonomia sono una riga di tabella (nome,
+    | tab, scelta singola) qui si dichiarano, perché quelle tabelle non le hanno.
+    |
+    | `relation` è il metodo del modello EC; `label` è la chiave di traduzione dell'etichetta.
+    | Uno shard può aggiungerne o toglierne senza toccare il package.
+    */
+    'legacy_taxonomies' => [
+        [
+            'key' => 'activities',
+            'relation' => 'taxonomyActivities',
+            'model' => TaxonomyActivity::class,
+            'label' => 'Activities',
+            'tab' => 'Activities',
+            'single_choice' => false,
+            // Righe che esistono in tabella ma non si offrono in scelta: restano perché altro
+            // codice le usa — i layer associano le tracce con `whereHas('taxonomyActivities')`
+            // (`Layer::…`), quindi cancellarle spegnerebbe i layer che le nominano.
+            'hidden' => [],
+        ],
+    ],
 
     /*
     | Corrispondenza (matching) fra UgcTrack ed EcTrack per segmenti (oc:8773). Default dei parametri per App: ogni

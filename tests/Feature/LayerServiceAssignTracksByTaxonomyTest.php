@@ -38,7 +38,9 @@ class LayerServiceAssignTracksByTaxonomyTest extends TestCase
         // Tassonomia sul layer.
         DB::table('taxonomy_activityables')->insert([
             'taxonomy_activity_id' => $taxonomyId,
-            'taxonomy_activityable_type' => Layer::class,
+            // Il morphMap del package mappa i Layer su `App\Models\Layer`: scrivere qui il nome
+            // di classe reale produce una riga che la relazione non rilegge.
+            'taxonomy_activityable_type' => (new Layer)->getMorphClass(),
             'taxonomy_activityable_id' => $layer->id,
             'duration_forward' => 0,
             'duration_backward' => 0,
@@ -85,7 +87,9 @@ class LayerServiceAssignTracksByTaxonomyTest extends TestCase
 
         DB::table('taxonomy_activityables')->insert([
             'taxonomy_activity_id' => $taxonomyId,
-            'taxonomy_activityable_type' => Layer::class,
+            // Il morphMap del package mappa i Layer su `App\Models\Layer`: scrivere qui il nome
+            // di classe reale produce una riga che la relazione non rilegge.
+            'taxonomy_activityable_type' => (new Layer)->getMorphClass(),
             'taxonomy_activityable_id' => $layer->id,
             'duration_forward' => 0,
             'duration_backward' => 0,

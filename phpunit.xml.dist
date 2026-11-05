@@ -30,5 +30,8 @@
       <env name="DB_PASSWORD" value="wm_package"/>
       <env name="DB_DATABASE" value="wm_package"/>
       <env name="DB_HOST" value="db"/>
+      <!-- Il default del config è `App\Models\EcTrack`, la classe dello shard: nella suite del
+           package non esiste, e ogni relazione che la risolve muore con «Class not found». -->
+      <env name="EC_TRACK_MODEL" value="Wm\WmPackage\Models\EcTrack"/>
   </php>
 </phpunit>

@@ -40,8 +40,8 @@ class LayerObserver extends AbstractObserver
             $this->regenerateAssociatedFeatureCollections($layer);
         }
 
-        // Se il layer ha tassonomie di attività associate, assegna automaticamente le track e i POI
-        if ($this->hasTaxonomyActivitiesChanged($layer)) {
+        // Se il layer ha filtri per tassonomia, assegna automaticamente le track e i POI
+        if ($this->hasTaxonomyActivitiesChanged($layer) || $this->hasTaxonomyTermsChanged($layer)) {
             $this->layerService->assignTracksByTaxonomy($layer);
             $this->layerService->assignPoisByTaxonomy($layer);
         }
@@ -90,6 +90,27 @@ class LayerObserver extends AbstractObserver
 
         // Se le tassonomie di attività sono cambiate
         return $layer->wasChanged() && $layer->taxonomyActivities()->count() > 0;
+    }
+
+    /**
+     * Il layer filtra per termini di classificazione (oc:8910).
+     *
+     * Come per le attività: alla creazione basta che ce ne siano, dopo si guarda se il salvataggio
+     * ha cambiato qualcosa. I termini si scrivono dopo il salvataggio del modello, quindi la
+     * Resource accoda comunque il ricalcolo quando la scelta cambia: questo è il caso in cui il
+     * layer viene toccato da altrove.
+     */
+    private function hasTaxonomyTermsChanged(Layer $layer): bool
+    {
+        if (! method_exists($layer, 'taxonomyTerms')) {
+            return false;
+        }
+
+        if ($layer->wasRecentlyCreated) {
+            return $layer->taxonomyTerms()->count() > 0;
+        }
+
+        return $layer->wasChanged() && $layer->taxonomyTerms()->count() > 0;
     }
 
     private function updateAppConf(Layer $layer): void

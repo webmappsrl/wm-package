@@ -71,9 +71,20 @@ class AnalyticsService
 
     public function __construct()
     {
-        $this->host = rtrim(config('services.posthog.host'), '/');
+        // Cast prima di rtrim: senza PostHog configurato `host` è null, e il TypeError del
+        // costruttore si porta dietro chi lo istanzia — la mappa di un Layer chiede qui le
+        // posizioni recenti, e in uno shard senza analytics restava senza geometria (oc:8910).
+        $this->host = rtrim((string) config('services.posthog.host'), '/');
         $this->projectId = (string) config('services.posthog.project_id');
         $this->apiKey = (string) config('services.posthog.personal_api_key');
+    }
+
+    /**
+     * PostHog è configurato: senza host, progetto o chiave non c'è niente da interrogare.
+     */
+    public function isConfigured(): bool
+    {
+        return $this->host !== '' && $this->projectId !== '' && $this->apiKey !== '';
     }
 
     // -------------------------------------------------------------------------
@@ -464,6 +475,10 @@ SQL;
         // lo stesso layer dentro i 90s di TTL leggerebbe/scriverebbe la stessa entry di una chiamata
         // a 30 minuti, restituendo posizioni calcolate per la finestra sbagliata (bug latente,
         // oggi inerte perché l'unico chiamante usa sempre il default).
+        if (! $this->isConfigured()) {
+            return [];
+        }
+
         $cacheKey = "posthog:userMoved:{$layer->id}:recent_positions:{$minutesWindow}";
 
         try {

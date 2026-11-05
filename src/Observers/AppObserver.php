@@ -9,6 +9,7 @@ use Wm\WmPackage\Jobs\RematchAppUgcTracksJob;
 use Wm\WmPackage\Jobs\SyncWellKnownRegistryJob;
 use Wm\WmPackage\Jobs\TaxonomyWhere\RegenerateTaxonomyWhereOutputsJob;
 use Wm\WmPackage\Models\App;
+use Wm\WmPackage\Models\TaxonomyTerm;
 use Wm\WmPackage\Services\Models\App\AppConfigService;
 use Wm\WmPackage\Services\Models\UgcTrackMatchingService;
 use Wm\WmPackage\Services\TaxonomyWhereDisplayService;
@@ -26,6 +27,26 @@ class AppObserver extends AbstractObserver
         $json = json_encode(json_decode($app->external_overlays));
 
         $app->external_overlays = $json;
+    }
+
+    /**
+     * Un'app nuova nasce con tutte le tassonomie di sistema accese (oc:8910).
+     *
+     * Quelli di sistema vengono dal package e hanno senso ovunque: chi crea un'app non deve
+     * accenderle a mano, e può spegnerle dopo. Le tassonomie create da uno shard non si
+     * accendono da soli: comparirebbero in app che non li hanno chiesti.
+     */
+    public function created(App $app)
+    {
+        $taxonomies = TaxonomyTerm::query()
+            ->taxonomies()
+            ->where('is_system', true)
+            ->pluck('id')
+            ->all();
+
+        if ($taxonomies !== []) {
+            $app->taxonomies()->syncWithoutDetaching($taxonomies);
+        }
     }
 
     public function saved(App $app)

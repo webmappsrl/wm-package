@@ -8,6 +8,7 @@ use chillerlan\QRCode\QRCode;
 use chillerlan\QRCode\QROptions;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -16,6 +17,7 @@ use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\Translatable\HasTranslations;
 use Whitecube\NovaFlexibleContent\Value\FlexibleCast;
+use Wm\WmPackage\Jobs\App\ReindexAppContentsJob;
 use Wm\WmPackage\Observers\AppObserver;
 use Wm\WmPackage\Services\StorageService;
 use Wm\WmPackage\Traits\HasPackageFactory;
@@ -86,6 +88,116 @@ class App extends Model implements HasMedia
     {
         // FK esplicita: la colonna è user_id, non l'inferita author_id (oc:8242).
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /**
+     * Le tassonomie di classificazione accese in questa app (oc:8910).
+     *
+     * @return BelongsToMany<TaxonomyTerm, $this>
+     */
+    public function taxonomies(): BelongsToMany
+    {
+        return $this->belongsToMany(TaxonomyTerm::class, 'app_taxonomy_term')
+            // A quali contenuti si applica, in questa app: null vuol dire tutti (oc:8910).
+            ->withPivot('models');
+    }
+
+    /**
+     * Accende le tassonomie per un tipo di contenuto, lasciando stare gli altri (oc:8910).
+     *
+     * I due elenchi della scheda — tassonomie sui sentieri, sui POI — scrivono la stessa tabella:
+     * un `sync()` per elenco cancellerebbe quello che ha scritto l'altro. Qui ogni chiamata
+     * aggiunge o toglie il proprio modello da `models`, e la riga sparisce quando non resta
+     * nessun contenuto.
+     *
+     * @param  string  $model  Il nome breve del modello: `EcTrack`, `EcPoi`.
+     * @param  array<int, int>  $taxonomyIds
+     */
+    public function syncTaxonomiesForModel(string $model, array $taxonomyIds): void
+    {
+        $before = ReindexAppContentsJob::taxonomiesSignature($this);
+        $current = $this->taxonomies()->get()
+            ->mapWithKeys(function (TaxonomyTerm $taxonomy) {
+                $models = $taxonomy->pivot->models ?? null;
+                $models = is_string($models) ? json_decode($models, true) : $models;
+
+                return [$taxonomy->id => is_array($models) ? $models : []];
+            });
+
+        // Un elenco vuoto nel pivot vuol dire «tutti i contenuti»: va esploso prima di togliere
+        // questo modello, altrimenti togliendolo si direbbe «tutti» invece che «gli altri».
+        $everyModel = ['EcTrack', 'EcPoi'];
+        $wanted = [];
+        foreach ($current as $taxonomyId => $models) {
+            $models = $models === [] ? $everyModel : $models;
+            $models = array_values(array_diff($models, [$model]));
+            if ($models !== []) {
+                $wanted[$taxonomyId] = $models;
+            }
+        }
+        foreach ($taxonomyIds as $taxonomyId) {
+            $wanted[$taxonomyId] = array_values(array_unique([...($wanted[$taxonomyId] ?? []), $model]));
+        }
+
+        $changes = $this->taxonomies()->sync(
+            collect($wanted)
+                // Accesa per tutti i contenuti: `models` nullo, che è il valore che significa
+                // «tutti» e che una tassonomia creata fuori da qui porta già.
+                ->map(fn (array $models) => ['models' => count($models) === count($everyModel) ? null : json_encode($models)])
+                ->all()
+        );
+
+        $this->reindexContentsIfTaxonomiesChanged($changes, $before);
+    }
+
+    /**
+     * Accoda il reindex dei contenuti se le tassonomie accese sono cambiate (oc:8910).
+     *
+     * `terms`, nel documento di una traccia, porta solo le tassonomie accese sull'app: accenderne
+     * o spegnerne una cambia ogni documento senza che nessun contenuto venga salvato. Senza
+     * questo, l'indice resta indietro fino al prossimo salvataggio di ciascuna traccia.
+     *
+     * Il tab ha due campi che scrivono uno dopo l'altro, quindi qui si vede anche uno stato
+     * intermedio che non è un cambiamento vero: la firma di prima viaggia con il job, che la
+     * riconfronta dopo il commit, quando lo stato è definitivo.
+     *
+     * @param  array{attached?: array<int, mixed>, detached?: array<int, mixed>, updated?: array<int, mixed>}  $changes
+     */
+    protected function reindexContentsIfTaxonomiesChanged(array $changes, ?string $before = null): void
+    {
+        $touched = count($changes['attached'] ?? []) + count($changes['detached'] ?? []) + count($changes['updated'] ?? []);
+        if ($touched === 0 || ! $this->exists) {
+            return;
+        }
+
+        ReindexAppContentsJob::dispatch($this->id, $before)->afterCommit();
+    }
+
+    /**
+     * Accende per un tipo di contenuto le tassonomie che non ci sono, senza toccare le altre.
+     *
+     * È quello che serve a un comando di allineamento: `syncTaxonomiesForModel()` riscriverebbe
+     * l'ambito di tutte, cancellando ciò che qualcuno ha scelto dalla scheda dell'app.
+     *
+     * Non accoda il reindex, al contrario della scheda: un comando sa cosa fare dopo — l'import
+     * reindicizza a fine batch — e un reindex in mezzo all'allineamento sarebbe comunque
+     * rifatto. Il reindex automatico serve dove nessuno lo lancia, cioè dall'interfaccia.
+     *
+     * @param  string  $model  Il nome breve del modello: `EcTrack`, `EcPoi`.
+     * @param  array<int, int>  $taxonomyIds
+     */
+    public function enableTaxonomiesForModel(string $model, array $taxonomyIds): void
+    {
+        $already = $this->taxonomies()->pluck('taxonomy_terms.id')->all();
+        $missing = array_values(array_diff($taxonomyIds, $already));
+        if ($missing === []) {
+            return;
+        }
+
+        $this->taxonomies()->attach(
+            collect($missing)->mapWithKeys(fn (int $id) => [$id => ['models' => json_encode([$model])]])->all()
+        );
+
     }
 
     public function layers()
@@ -274,7 +386,12 @@ class App extends Model implements HasMedia
 
         $query = $this->globalEcPois();
         // taxonomyPoiTypes caricati insieme: li legge getSearchableString() per ogni POI (oc:8677).
-        $appPois = $query->with('taxonomyPoiTypes')->get();
+        // taxonomyTerms per i filtri del modello unico (oc:8910), con la loro tassonomia.
+        $with = ['taxonomyPoiTypes'];
+        if (method_exists(new EcPoi, 'taxonomyTerms')) {
+            $with[] = 'taxonomyTerms';
+        }
+        $appPois = $query->with($with)->get();
 
         if (count($appPois) > 0) {
             /** @var EcPoi $poi */
@@ -289,7 +406,14 @@ class App extends Model implements HasMedia
                             $poi->taxonomyActivities()->pluck('identifier')->toArray(),
                             $poi->addPrefix($poi->taxonomyWhens()->pluck('identifier')->toArray(), 'when'),
                             $poi->addPrefix($poi->taxonomyTargets()->pluck('identifier')->toArray(), 'who'),
-                            $poi->addTaxonomyPoiTypes()
+                            $poi->addTaxonomyPoiTypes(),
+                            // I termini del modello unico (oc:8910). Senza, una tassonomia accesa
+                            // sui POI si vedrebbe in Nova ma non filtrerebbe niente a frontend:
+                            // l'app non interroga le API per i POI, filtra questo file su
+                            // `taxonomyIdentifiers`, e un identifier che non c'è non esiste.
+                            method_exists($poi, 'taxonomyTerms')
+                                ? $poi->taxonomyTerms->pluck('identifier')->filter()->values()->all()
+                                : [],
                         );
                         $item['properties']['taxonomyIdentifiers'] = $taxonomiesidentifiers;
 
