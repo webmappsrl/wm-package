@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.6.1](https://github.com/webmappsrl/wm-package/compare/v1.6.0...v1.6.1) (2026-11-05)
+
+
+### Bug Fixes
+
+* **oc:8910:** i filtri dei layer in un punto solo, e le correzioni della review ([#316](https://github.com/webmappsrl/wm-package/issues/316)) ([9618dc6](https://github.com/webmappsrl/wm-package/commit/9618dc6f0a75d59d5cfcf4212463e4a93c391769))
+* **oc:8911:** filtro tipi POI della config sui POI mostrati sulla mappa ([#314](https://github.com/webmappsrl/wm-package/issues/314)) ([9871f20](https://github.com/webmappsrl/wm-package/commit/9871f2008fb1f49800ee6564ecc4bbabaebdb89e))
+
 ## [1.6.0](https://github.com/webmappsrl/wm-package/compare/v1.5.0...v1.6.0) (2026-10-22)
 
 
