@@ -34,7 +34,6 @@ function taxonomyWithTerms(): array
     return [$taxonomy, $trail];
 }
 
-
 it('rifiuta di togliere la tassonomia a un termine collegato a dei contenuti (oc:8910)', function () {
     // La seconda porta: stessa corruzione, ma con un salvataggio invece di una cancellazione.
     [$taxonomy, $trail] = taxonomyWithTerms();
