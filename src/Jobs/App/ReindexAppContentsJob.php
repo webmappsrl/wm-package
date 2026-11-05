@@ -39,6 +39,18 @@ class ReindexAppContentsJob implements ShouldBeUnique, ShouldQueue
     /** Il reindex regge una ripetizione: riscrive gli stessi documenti. */
     public int $tries = 2;
 
+    /**
+     * Scadenza del lock, come negli altri job unici del package.
+     *
+     * Senza, `UniqueLock::acquire()` legge `$job->uniqueFor ?? 0` e con 0 prende un lock Redis
+     * senza TTL: un worker che muore a metà — un `horizon:terminate` durante un deploy, un
+     * riavvio del container — lo lascerebbe lì per sempre, e da quel momento nessun reindex di
+     * quell'app verrebbe più accodato, in silenzio. Mezz'ora come `BuildAppPoisGeojsonJob` e
+     * `RegenerateTaxonomyWhereOutputsJob`: questo job reindicizza tutte le tracce dell'app, non
+     * è lavoro da dieci minuti.
+     */
+    public int $uniqueFor = 1800;
+
     public function __construct(public int $appId, public ?string $signatureBefore = null) {}
 
     /**

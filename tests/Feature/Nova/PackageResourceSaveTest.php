@@ -418,3 +418,55 @@ it('la firma cambia quando cambia l\'ambito, non solo l\'accensione', function (
 
     expect(ReindexAppContentsJob::taxonomiesSignature($this->testApp->fresh()))->not->toBe($before);
 });
+
+it('il lock del reindex scade, così un worker interrotto non lo blocca per sempre (oc:8910)', function () {
+    // `UniqueLock::acquire()` legge `$job->uniqueFor ?? 0`, e con 0 il lock Redis nasce senza
+    // TTL: un worker che muore a metà lo lascerebbe lì, e nessun reindex di quell'app verrebbe
+    // più accodato. Gli altri job unici del package dichiarano tutti una scadenza.
+    $job = new ReindexAppContentsJob($this->testApp->id);
+
+    expect($job->uniqueFor)->toBeGreaterThan(0)
+        ->and($job->uniqueId())->toBe('reindex_app_contents_'.$this->testApp->id);
+});
+
+it('su una tassonomia a scelta singola ne tiene una sola, anche da una richiesta a mano (oc:8910)', function () {
+    // Il campo nel browser è a scelta singola, ma il vincolo si ferma lì: non c'è nulla nel
+    // database, e una richiesta costruita a mano manderebbe due id. «La difficoltà di
+    // accessibilità è una sola per sentiero» cadrebbe senza che niente lo segnali.
+    $track = EcTrack::factory()->createQuietly([
+        'app_id' => $this->testApp->id,
+        'user_id' => $this->user->id,
+        'osmid' => null,
+    ]);
+
+    $this->actingAs($this->user)
+        ->putJson("/nova-api/ec-tracks/{$track->id}", [
+            'app' => $this->testApp->id,
+            'user' => $this->user->id,
+            $this->termAttribute => $this->trail->id.','.$this->walk->id,
+        ])
+        ->assertOk();
+
+    expect($track->fresh()->terms($this->routeType->identifier)->pluck('id')->all())
+        ->toBe([$this->trail->id]);
+});
+
+it('su una tassonomia a scelta multipla li tiene tutti (oc:8910)', function () {
+    $this->routeType->update(['single_choice' => false]);
+    $track = EcTrack::factory()->createQuietly([
+        'app_id' => $this->testApp->id,
+        'user_id' => $this->user->id,
+        'osmid' => null,
+    ]);
+
+    $this->actingAs($this->user)
+        ->putJson("/nova-api/ec-tracks/{$track->id}", [
+            'app' => $this->testApp->id,
+            'user' => $this->user->id,
+            $this->termAttribute => $this->trail->id.','.$this->walk->id,
+        ])
+        ->assertOk();
+
+    expect($track->fresh()->terms($this->routeType->identifier)->pluck('id')->sort()->values()->all())
+        ->toBe(collect([$this->trail->id, $this->walk->id])->sort()->values()->all());
+});

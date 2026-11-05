@@ -15,6 +15,7 @@ use Laravel\Nova\Fields\Number;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Panel;
+use Wm\WmPackage\Jobs\Layer\SyncAutoLayerAfterPoiTaxonomyChangeJob;
 use Wm\WmPackage\Jobs\Layer\SyncAutoLayerAfterTrackTaxonomyChangeJob;
 use Wm\WmPackage\Models\Layer as LayerModel;
 use Wm\WmPackage\Models\TaxonomyWhere as TaxonomyWhereModel;
@@ -101,14 +102,28 @@ class Layer extends AbstractGeometryResource
      * Cambiati i filtri, il layer va ripopolato subito (oc:8910).
      *
      * `LayerObserver` non se ne accorgerebbe: i termini si scrivono dopo il salvataggio del
-     * modello, quindi il layer non risulta cambiato. Il job è quello che già gira quando una
-     * traccia cambia tassonomia — riassegna le tracce, riallinea `properties.layers`, rigenera
-     * i PBF e fa reindicizzare: in coda, perché su un layer grande non è lavoro da richiesta.
+     * modello, quindi il layer non risulta cambiato. I job sono quelli che già girano quando un
+     * contenuto cambia tassonomia — riassegnano i contenuti, riallineano `properties.layers`,
+     * rigenerano i PBF e fanno reindicizzare: in coda, perché su un layer grande non è lavoro da
+     * richiesta.
+     *
+     * Le due modalità si guardano separatamente: un layer può avere le tracce in automatico e i
+     * POI a mano, o il contrario. Guardando solo `isAutoTrackMode()`, un layer con i soli POI in
+     * automatico non faceva partire niente, e i suoi POI restavano quelli di prima a tempo
+     * indeterminato.
      */
     protected function afterTaxonomyFieldsSaved(mixed $model): void
     {
-        if ($model instanceof LayerModel && $model->isAutoTrackMode()) {
+        if (! $model instanceof LayerModel) {
+            return;
+        }
+
+        if ($model->isAutoTrackMode()) {
             SyncAutoLayerAfterTrackTaxonomyChangeJob::dispatch($model->id);
+        }
+
+        if ($model->isAutoPoiMode()) {
+            SyncAutoLayerAfterPoiTaxonomyChangeJob::dispatch($model->id);
         }
     }
 

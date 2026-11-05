@@ -66,10 +66,25 @@ class TaxonomyTerm extends Model
                 );
             }
 
+            if (! $term->isDirty('parent_id')) {
+                return;
+            }
+
+            // Un termine già collegato a qualcosa non può restare senza padre: diventerebbe una
+            // tassonomia, e le sue relazioni resterebbero con la copia di una tassonomia che per
+            // lui non vale più — invisibili ai filtri, che raggruppano proprio per quella copia.
+            // È la stessa corruzione che la chiave esterna impedisce in cancellazione, raggiunta
+            // però con un salvataggio (oc:8910).
+            if ($term->parent_id === null && $term->exists && $term->getOriginal('parent_id') !== null
+                && DB::table('taxonomy_termables')->where('taxonomy_term_id', $term->getKey())->exists()) {
+                throw new InvalidArgumentException(
+                    "Il termine {$term->getKey()} è collegato a dei contenuti: non può restare senza tassonomia."
+                );
+            }
+
             // La gerarchia è a due livelli: il padre deve essere una tassonomia, altrimenti
-            // parent_id sulla relazione smette di significare «la tassonomia». Il controllo scatta
-            // solo quando parent_id cambia.
-            if ($term->parent_id === null || ! $term->isDirty('parent_id')) {
+            // parent_id sulla relazione smette di significare «la tassonomia».
+            if ($term->parent_id === null) {
                 return;
             }
 

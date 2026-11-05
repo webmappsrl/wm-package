@@ -82,7 +82,15 @@ class EcPoiObserver extends AbstractEcObserver
         }
 
         $taxonomyIds = $ecPoi->taxonomyActivities()->pluck('taxonomy_activities.id')->toArray();
-        if (empty($taxonomyIds)) {
+        // Anche i termini di classificazione sono un filtro dei layer (oc:8910), come già sulle
+        // tracce in `EcTrackObserver`: `LayerService::assignPoisByTaxonomy()` li applica, quindi
+        // un POI che cambia un termine deve svegliare i layer che filtrano per quel termine.
+        // Senza, il layer resta con i POI vecchi finché qualcuno non risalva il layer.
+        $termIds = method_exists($ecPoi, 'taxonomyTerms')
+            ? $ecPoi->taxonomyTerms()->pluck('taxonomy_terms.id')->toArray()
+            : [];
+
+        if (empty($taxonomyIds) && empty($termIds)) {
             return;
         }
 
@@ -91,7 +99,14 @@ class EcPoiObserver extends AbstractEcObserver
                 $query->where('app_id', $ecPoi->app_id)
                     ->orWhereHas('associatedApps', fn ($q) => $q->where('apps.id', $ecPoi->app_id));
             })
-            ->whereHas('taxonomyActivities', fn ($query) => $query->whereIn('taxonomy_activities.id', $taxonomyIds))
+            ->where(function ($query) use ($taxonomyIds, $termIds) {
+                if (! empty($taxonomyIds)) {
+                    $query->orWhereHas('taxonomyActivities', fn ($q) => $q->whereIn('taxonomy_activities.id', $taxonomyIds));
+                }
+                if (! empty($termIds)) {
+                    $query->orWhereHas('taxonomyTerms', fn ($q) => $q->whereIn('taxonomy_terms.id', $termIds));
+                }
+            })
             ->get()
             ->filter(fn (Layer $layer) => $layer->isAutoPoiMode());
         $debounceAt = now()->addSeconds($this->getDebounceDelaySeconds());

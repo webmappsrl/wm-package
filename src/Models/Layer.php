@@ -16,6 +16,7 @@ use Wm\WmPackage\Jobs\FeatureCollection\GenerateFeatureCollectionJob;
 use Wm\WmPackage\Models\Abstracts\Polygon;
 use Wm\WmPackage\Nova\Fields\FeatureCollectionMap\src\FeatureCollectionMapTrait;
 use Wm\WmPackage\Observers\LayerObserver;
+use Wm\WmPackage\Services\Models\LayerService;
 use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Services\PostHog\AnalyticsService;
 use Wm\WmPackage\Traits\HasPackageFactory;
@@ -368,58 +369,21 @@ class Layer extends Polygon
         $novaResourceName = 'ec-tracks';
         $tableName = config('wm-package.ec_track_table', 'ec_tracks');
         $trackIds = $this->ecTracks()->pluck($tableName.'.id')->toArray();
-        $taxonomyIds = $this->taxonomyActivities->pluck('id')->toArray();
-        $whereIds = $this->taxonomyWheres->pluck('id')->toArray();
-        $termIds = $this->taxonomyTerms->pluck('id')->toArray();
 
-        // Fallback in lettura: in auto, ricostruisce i trackIds dai filtri del layer — attività,
-        // zone, termini di classificazione — quando il pivot layerables e' vuoto o non ancora
-        // riallineato.
-        if ($this->isAutoTrackMode() && (! empty($taxonomyIds) || ! empty($whereIds) || ! empty($termIds)) && empty($trackIds)) {
-            $ecTrackModelClass = config('wm-package.ec_track_model', 'Wm\WmPackage\Models\EcTrack');
-            $appIds = array_values(array_unique(array_filter([
-                $this->app_id,
-                ...$this->associatedApps->pluck('id')->toArray(),
-            ])));
-
-            if (! empty($appIds)) {
-                $fallbackQuery = $ecTrackModelClass::query()
-                    ->whereIn('app_id', $appIds);
-
-                if (! empty($taxonomyIds) && method_exists($ecTrackModelClass, 'taxonomyActivities')) {
-                    $fallbackQuery->whereHas('taxonomyActivities', fn ($q) => $q->whereIn('taxonomy_activities.id', $taxonomyIds));
-                }
-
-                if (! empty($termIds) && method_exists($ecTrackModelClass, 'taxonomyTerms')) {
-                    $fallbackQuery->whereHas('taxonomyTerms', fn ($q) => $q->whereIn('taxonomy_terms.id', $termIds));
-                }
-
-                if (! empty($whereIds)) {
-                    $trackTable = (new $ecTrackModelClass)->getTable();
-                    $fallbackQuery->whereExists(function ($q) use ($whereIds, $trackTable) {
-                        $q->select(DB::raw(1))
-                            ->from('taxonomy_wheres')
-                            ->whereIn('taxonomy_wheres.id', $whereIds)
-                            ->whereNotNull('taxonomy_wheres.geometry')
-                            ->whereRaw("ST_Intersects({$trackTable}.geometry::geometry, taxonomy_wheres.geometry::geometry)");
-                    });
-                }
-
-                $trackIds = $fallbackQuery->pluck('id')->toArray();
-
-                // Mantiene coerente il pivot, così il dettaglio delle track riflette gli stessi layer.
-                if (! empty($trackIds)) {
-                    $now = now();
-                    $syncPayload = [];
-                    foreach ($trackIds as $trackId) {
-                        $syncPayload[$trackId] = [
-                            'created_at' => $now,
-                            'updated_at' => $now,
-                        ];
-                    }
-                    $this->ecTracks()->sync($syncPayload);
-                }
-            }
+        // Fallback in lettura: in auto, quando `layerables` non è ancora stato riempito — subito
+        // dopo aver salvato i filtri, o dopo un reset, prima che il job di ricalcolo passi — la
+        // mappa non resta vuota: le tracce si ricavano dai filtri del layer.
+        //
+        // Le chiede a `LayerService`, che è dove la regola dei filtri è scritta. Prima questo
+        // blocco la riscriveva, e le due versioni divergevano: teneva tutti i termini in un
+        // `whereIn` unico, cioè in OR fra tassonomie diverse, e mostrava più tracce di quante il
+        // layer ne avrebbe avute. Non scrive nel pivot, al contrario di prima: questa è una
+        // lettura, e il `sync()` che stava qui faceva scattare `LayerableObserver` riga per riga
+        // — `properties.layers` riscritto, un job di geometria e una catena PBF per ogni traccia,
+        // dentro una GET. Il pivot lo riempie il ricalcolo, che parte già al salvataggio dei
+        // filtri (oc:8910).
+        if ($this->isAutoTrackMode() && empty($trackIds)) {
+            $trackIds = app(LayerService::class)->trackIdsMatchingLayerFilters($this);
         }
 
         if (! empty($trackIds)) {

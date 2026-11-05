@@ -190,10 +190,20 @@ class LayerService extends BaseService
         UpdateLayerGeometryJob::dispatch($layer);
     }
 
+    /**
+     * I termini contano come filtro quanto le zone e le attività (oc:8910).
+     *
+     * Senza di loro un layer del modello unico — che le attività non le ha più — risulta senza
+     * filtri, e `updateLayersPropertyOnLayeredFeature()` interpreta «senza filtri» come «non
+     * possiede nessun contenuto»: salta il ramo che aggiunge e lascia correre quello che rimuove,
+     * togliendo l'id del layer da `properties.layers` di tutte le tracce. È ciò che leggono l'app
+     * e le API, quindi il layer sparisce di lì pur avendo le sue tracce nel pivot.
+     */
     private function hasValidAutoModeFilter(Layer $layer): bool
     {
         return ! empty($layer->properties['taxonomy_where'] ?? [])
-            || $layer->taxonomyActivities->isNotEmpty();
+            || $layer->taxonomyActivities->isNotEmpty()
+            || $layer->taxonomyTerms->isNotEmpty();
     }
 
     /**
@@ -303,6 +313,42 @@ class LayerService extends BaseService
             return;
         }
 
+        $trackIds = $this->trackIdsMatchingLayerFilters($layer);
+
+        $now = now();
+        $syncPayload = [];
+        foreach ($trackIds as $trackId) {
+            $syncPayload[$trackId] = [
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+        }
+
+        $layer->ecTracks()->sync($syncPayload);
+
+        Log::info('Track sincronizzate automaticamente al layer', [
+            'layer_id' => $layer->id,
+            'track_count' => count($trackIds),
+        ]);
+    }
+
+    /**
+     * Gli id delle tracce che soddisfano i filtri del layer, senza scrivere niente.
+     *
+     * È l'unico posto dove la regola dei filtri è scritta: la compone una volta e la usano sia
+     * `assignTracksByTaxonomy()`, che con questi id riempie `layerables`, sia la mappa della
+     * scheda Nova, che li legge quando il pivot non è ancora stato riempito. Prima erano due
+     * implementazioni, e divergevano: quella della mappa teneva tutti i termini in un `whereIn`
+     * unico, cioè in OR fra tassonomie diverse, e mostrava più tracce di quante il layer ne
+     * avrebbe avute (oc:8910).
+     *
+     * La regola, per tutti e tre i criteri: in AND fra criteri diversi, in OR dentro lo stesso —
+     * «(sentiero o cammino) e (difficoltà BC) e (in questa zona)».
+     *
+     * @return array<int, int>
+     */
+    public function trackIdsMatchingLayerFilters(Layer $layer): array
+    {
         $layerTaxonomyIds = $layer->taxonomyActivities->pluck('id')->toArray();
         $layerWhereIds = $layer->taxonomyWheres->pluck('id')->filter()->toArray();
         // Terzo criterio, come attività e zone: i termini del modello unico (oc:8910).
@@ -313,10 +359,9 @@ class LayerService extends BaseService
             ...$layer->associatedApps->pluck('id')->toArray(),
         ];
 
+        // Nessun filtro: il layer non possiede nessuna traccia.
         if (empty($layerAppIds) || (empty($layerTaxonomyIds) && empty($layerWhereIds) && empty($layerTermIds))) {
-            $layer->ecTracks()->sync([]);
-
-            return;
+            return [];
         }
 
         $ecTrackModelClass = config('wm-package.ec_track_model', 'App\Models\EcTrack');
@@ -371,26 +416,7 @@ class LayerService extends BaseService
             });
         }
 
-        $trackIds = $query->distinct()->pluck("{$trackTable}.id")->toArray();
-
-        $now = now();
-        $syncPayload = [];
-        foreach ($trackIds as $trackId) {
-            $syncPayload[$trackId] = [
-                'created_at' => $now,
-                'updated_at' => $now,
-            ];
-        }
-
-        $layer->ecTracks()->sync($syncPayload);
-
-        Log::info('Track sincronizzate automaticamente al layer', [
-            'layer_id' => $layer->id,
-            'track_count' => count($trackIds),
-            'taxonomy_ids' => $layerTaxonomyIds,
-            'where_ids' => $layerWhereIds,
-            'term_ids' => $layerTermIds,
-        ]);
+        return array_map('intval', $query->distinct()->pluck("{$trackTable}.id")->toArray());
     }
 
     /**

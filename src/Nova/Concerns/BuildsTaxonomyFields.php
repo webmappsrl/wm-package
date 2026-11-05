@@ -310,7 +310,10 @@ trait BuildsTaxonomyFields
             $tab = is_string($taxonomy['tab'] ?? null) && $taxonomy['tab'] !== '' ? $taxonomy['tab'] : $default;
             $label = __($taxonomy['label'] ?? $relation);
             $attribute = 'legacy_taxonomy_'.($taxonomy['key'] ?? $relation);
-            $singleChoice = (bool) ($taxonomy['single_choice'] ?? false);
+            // In modalità filtro la scelta è sempre multipla, come per le tassonomie del modello
+            // unico: su un layer «sentieri o cammini» deve essere possibile anche se la
+            // tassonomia, su un contenuto, è a scelta singola.
+            $singleChoice = ! $this->taxonomyFieldsAreFilters() && (bool) ($taxonomy['single_choice'] ?? false);
 
             $rows = $model::query()
                 ->whereNotIn('identifier', (array) ($taxonomy['hidden'] ?? []))
@@ -340,10 +343,16 @@ trait BuildsTaxonomyFields
                 ->resolveUsing(fn ($value, $resource) => $resource->exists
                     ? $resource->{$relation}()->pluck($resource->{$relation}()->getRelated()->getTable().'.id')->implode(',')
                     : '')
-                ->fillUsing(function (NovaRequest $request, $model, $attr, $requestAttribute) use ($relation, $options) {
+                ->fillUsing(function (NovaRequest $request, $model, $attr, $requestAttribute) use ($relation, $options, $singleChoice) {
                     $selected = self::idsFromInput($request->input($requestAttribute));
                     $allowed = array_map(fn (array $o) => (int) $o['value'], $options);
                     $selected = array_values(array_intersect($selected, $allowed));
+
+                    // Come per le tassonomie del modello unico: a scelta singola se ne tiene una
+                    // sola, perché il vincolo sta nel campo del browser e non nel database.
+                    if ($singleChoice) {
+                        $selected = array_slice($selected, 0, 1);
+                    }
 
                     // Dopo il salvataggio: su un contenuto nuovo l'id non esiste ancora.
                     return function () use ($model, $relation, $selected, $allowed) {
@@ -504,11 +513,20 @@ trait BuildsTaxonomyFields
                         $decoded = json_decode($selected, true);
                         $selected = is_array($decoded) ? $decoded : explode(',', $selected);
                     }
-                    // Solo id che sono davvero termini di questa tassonomia.
+                    // Solo id che sono davvero termini di questa tassonomia, e su una tassonomia
+                    // a scelta singola uno solo: il campo nel browser lo impedisce già, ma una
+                    // richiesta fuori dall'interfaccia no, e la cardinalità non ha un vincolo nel
+                    // database. Senza il taglio, «la difficoltà di accessibilità è una sola per
+                    // sentiero» — il punto che la call ha fissato — cadrebbe senza che niente lo
+                    // segnali: `term()` mostrerebbe il primo per `sort_order` e il secondo grado
+                    // resterebbe invisibile in Nova ma presente nell'indice (oc:8910).
+                    $singleChoice = ! $this->taxonomyFieldsAreFilters() && $taxonomy->single_choice;
+
                     $selected = collect((array) $selected)
                         ->filter(fn ($id) => $id !== null && $id !== '' && array_key_exists((int) $id, $options))
                         ->map(fn ($id) => (int) $id)
                         ->unique()
+                        ->when($singleChoice, fn ($ids) => $ids->take(1))
                         ->values()
                         ->all();
 

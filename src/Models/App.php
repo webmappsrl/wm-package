@@ -374,7 +374,12 @@ class App extends Model implements HasMedia
             $query->where('global', true);
         }
         // taxonomyPoiTypes caricati insieme: li legge getSearchableString() per ogni POI (oc:8677).
-        $appPois = $query->with('taxonomyPoiTypes')->get();
+        // taxonomyTerms per i filtri del modello unico (oc:8910), con la loro tassonomia.
+        $with = ['taxonomyPoiTypes'];
+        if (method_exists(new EcPoi, 'taxonomyTerms')) {
+            $with[] = 'taxonomyTerms';
+        }
+        $appPois = $query->with($with)->get();
 
         if (count($appPois) > 0) {
             /** @var EcPoi $poi */
@@ -389,7 +394,14 @@ class App extends Model implements HasMedia
                             $poi->taxonomyActivities()->pluck('identifier')->toArray(),
                             $poi->addPrefix($poi->taxonomyWhens()->pluck('identifier')->toArray(), 'when'),
                             $poi->addPrefix($poi->taxonomyTargets()->pluck('identifier')->toArray(), 'who'),
-                            $poi->addTaxonomyPoiTypes()
+                            $poi->addTaxonomyPoiTypes(),
+                            // I termini del modello unico (oc:8910). Senza, una tassonomia accesa
+                            // sui POI si vedrebbe in Nova ma non filtrerebbe niente a frontend:
+                            // l'app non interroga le API per i POI, filtra questo file su
+                            // `taxonomyIdentifiers`, e un identifier che non c'è non esiste.
+                            method_exists($poi, 'taxonomyTerms')
+                                ? $poi->taxonomyTerms->pluck('identifier')->filter()->values()->all()
+                                : [],
                         );
                         $item['properties']['taxonomyIdentifiers'] = $taxonomiesidentifiers;
 

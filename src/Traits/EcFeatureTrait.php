@@ -47,5 +47,24 @@ trait EcFeatureTrait
                     $query->whereIn('taxonomy_activities.id', $ids); // whereIn = LOGIC OPERATOR OR
                 });
         }
+
+        // ## TAXONOMY TERM - relation (oc:8910)
+        // Una condizione per tassonomia, non una sola su tutti i termini: dentro la stessa
+        // tassonomia i termini sono in OR, fra tassonomie diverse in AND — «(sentiero o cammino)
+        // e (difficoltà BC)» — la stessa regola di `LayerService::assignTracksByTaxonomy()`.
+        // Senza questo blocco un layer del modello unico, che le attività non le ha più, vede
+        // tutte le tracce dell'app: è questa query a dire quali può contenere.
+        if (method_exists($this, 'taxonomyTerms')) {
+            foreach ($layer->taxonomyTerms->groupBy('parent_id') as $parentId => $termsOfTaxonomy) {
+                if ($parentId === null || $parentId === '') {
+                    continue;
+                }
+
+                $termIds = $termsOfTaxonomy->pluck('id')->toArray();
+                $query->whereHas('taxonomyTerms', function ($query) use ($termIds) {
+                    $query->whereIn('taxonomy_terms.id', $termIds);
+                });
+            }
+        }
     }
 }

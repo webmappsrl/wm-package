@@ -23,7 +23,7 @@ use Wm\WmPackage\Support\TaxonomyTermLabel;
 
 /**
  * Tassonomie e termini del modello unico di classificazione (oc:8910). Senza «Tipo» la riga è
- * una tassonomia, con «Tipo» è un termine di quelil tassonomia: da qui se ne crea una nuova senza
+ * una tassonomia, con «Tipo» è un termine di quella tassonomia: da qui se ne crea una nuova senza
  * passare dal codice.
  */
 class TaxonomyTerm extends AbstractTaxonomyResource

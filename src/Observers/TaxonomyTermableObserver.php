@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\Log;
 use Laravel\Scout\ModelObserver;
 use Laravel\Scout\Searchable;
+use Wm\WmPackage\Jobs\BuildAppPoisGeojsonJob;
+use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Models\TaxonomyTermable;
 
 /**
@@ -29,7 +31,21 @@ class TaxonomyTermableObserver
         // termable_type contiene l'alias del morphMap, non il nome della classe.
         $class = Relation::getMorphedModel($termable->termable_type) ?? $termable->termable_type;
 
-        if (! class_exists($class) || ! in_array(Searchable::class, class_uses_recursive($class), true)) {
+        if (! class_exists($class)) {
+            return;
+        }
+
+        // `EcPoi` non è Searchable, e il suo «reindice» è un altro: l'app non interroga le API
+        // per i POI, legge `pois.geojson`, dove i filtri si risolvono su
+        // `taxonomyIdentifiers`. Senza rigenerare quel file un termine cambiato in Nova non
+        // arriva mai a frontend (oc:8043, oc:8910).
+        if (is_a($class, EcPoi::class, true)) {
+            $this->rebuildPoisGeojson($class, (int) $termable->termable_id);
+
+            return;
+        }
+
+        if (! in_array(Searchable::class, class_uses_recursive($class), true)) {
             return;
         }
 
@@ -53,6 +69,25 @@ class TaxonomyTermableObserver
                 'taxonomy_term_id' => $termable->taxonomy_term_id,
                 'error' => $e->getMessage(),
             ]);
+        }
+    }
+
+    /**
+     * Riscrive `pois.geojson` dell'app a cui il POI appartiene.
+     *
+     * Il job è unico per app e in coda, quindi un import che scrive molte relazioni accoda una
+     * rigenerazione sola e la richiesta non la aspetta. `withoutSyncingToSearch()` non lo
+     * silenzia, perché non passa da Scout: un import che non la vuole la evita scrivendo le
+     * relazioni senza eventi, come fa già per le attività.
+     *
+     * @param  class-string  $class
+     */
+    private function rebuildPoisGeojson(string $class, int $poiId): void
+    {
+        $appId = $class::query()->whereKey($poiId)->value('app_id');
+
+        if ($appId !== null) {
+            BuildAppPoisGeojsonJob::dispatch((int) $appId);
         }
     }
 }
