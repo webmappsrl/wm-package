@@ -3,49 +3,19 @@
 namespace Wm\WmPackage\Nova\Fields\IconSelect;
 
 use Illuminate\Support\Facades\Log;
-use Laravel\Nova\Fields\Field;
 use Wm\WmPackage\Helpers\GlobalFileHelper;
+use Wm\WmPackage\Nova\Fields\Choice\Choice;
 use Wm\WmPackage\Services\IconSvgService;
 
-class IconSelect extends Field
+/**
+ * La select con cui si sceglie il nome di un'icona.
+ *
+ * È un caso particolare di `Choice`: le opzioni sono le icone del file dello shard e il
+ * valore salvato è il nome dell'icona. Tutto il resto — scelta multipla, ricerca, visibilità
+ * legata a un altro campo — viene da lì.
+ */
+class IconSelect extends Choice
 {
-    /**
-     * The field's component.
-     *
-     * @var string
-     */
-    public $component = 'icon-select';
-
-    /**
-     * Set the available icon options for the select field.
-     *
-     * @return $this
-     */
-    public function options(array $options)
-    {
-        return $this->withMeta(['options' => $options]);
-    }
-
-    /**
-     * Set the placeholder text for the search input.
-     *
-     * @return $this
-     */
-    public function searchPlaceholder(string $placeholder)
-    {
-        return $this->withMeta(['searchPlaceholder' => $placeholder]);
-    }
-
-    /**
-     * Set whether the field allows multiple selections.
-     *
-     * @return $this
-     */
-    public function multiple(bool $multiple = true)
-    {
-        return $this->withMeta(['multiple' => $multiple]);
-    }
-
     /**
      * Set the maximum number of items that can be selected.
      *

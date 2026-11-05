@@ -766,11 +766,56 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
             'ascent' => (int) ($this->classifyField($this, 'ascent')['currentValue'] ?? 0),
             'taxonomyActivities' => $ecTrackService->getTaxonomyArray($this->taxonomyActivities),
             'taxonomyIcons' => $ecTrackService->getTaxonomyIcons($this),
+            'terms' => $this->termsForSearch(),
             'layers' => $this->layers->pluck('id')->toArray(),
             'searchable' => $this->getSearchableString(),
         ];
 
         return $arr;
+    }
+
+    /**
+     * Termini del modello unico di classificazione, raggruppati per identifier della tassonomia
+     * (oc:8910). Ogni voce porta identifier, name (tutte le lingue) e il properties della relazione
+     * come pivot_properties: i dati si filtrano da Elasticsearch, non da SQL, quindi senza
+     * questo campo il properties della relazione sarebbe irraggiungibile.
+     *
+     * La tassonomia si legge dal padre vivo (parent->identifier), la stessa fonte di terms(), e
+     * non dalla copia parent_id del pivot: un termine spostato sotto un altro tassonomia finisce
+     * sotto quello nuovo. I padri sono già caricati da taxonomyTerms(), nessuna query in più. Un
+     * tassonomia attaccato direttamente non ha padre e non compare.
+     *
+     * Escono solo le tassonomie accese nell'app di questo contenuto (oc:8910): una tassonomia
+     * spento non deve comparire nell'indice, altrimenti l'app lo userebbe per filtrare.
+     *
+     * @return array<string, list<array{identifier: string, name: array, pivot_properties: array}>>
+     */
+    protected function termsForSearch(): array
+    {
+        $grouped = [];
+
+        // Una query sola per il contenuto, non una per termine.
+        $enabled = $this->app_id === null
+            ? null
+            : TaxonomyTerm::query()->taxonomies()->forApp($this->app_id)->pluck('id')->all();
+
+        foreach ($this->taxonomyTerms as $term) {
+            $taxonomyIdentifier = $term->parent?->identifier;
+            if ($taxonomyIdentifier === null) {
+                continue;
+            }
+            if ($enabled !== null && ! in_array((int) $term->parent->id, $enabled, true)) {
+                continue;
+            }
+
+            $grouped[$taxonomyIdentifier][] = [
+                'identifier' => $term->identifier,
+                'name' => $term->getTranslations('name'),
+                'pivot_properties' => $term->pivot->properties ?? [],
+            ];
+        }
+
+        return $grouped;
     }
 
     public function getSearchableString(): string

@@ -65,6 +65,10 @@ class EcTrack extends AbstractEcResource
 
         return [
             ...$this->fieldsTrait($request),
+            // Le tassonomie del modello unico, sopra i Blocchi Dettaglio: valgono per ogni
+            // shard, quindi la sezione la compone il package e lo shard la eredita. Chi vuole
+            // aggiungerci campi propri usa `taxonomyTabExtraFields()` (oc:8910).
+            ...$this->taxonomySectionFields(),
             $this->configDetailPanel(),
             Tab::group(__('Details'), [
                 Tab::make(__('Info'), $this->getInfoTabFields()),

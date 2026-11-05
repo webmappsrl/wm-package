@@ -190,10 +190,20 @@ class LayerService extends BaseService
         UpdateLayerGeometryJob::dispatch($layer);
     }
 
+    /**
+     * I termini contano come filtro quanto le zone e le attività (oc:8910).
+     *
+     * Senza di loro un layer del modello unico — che le attività non le ha più — risulta senza
+     * filtri, e `updateLayersPropertyOnLayeredFeature()` interpreta «senza filtri» come «non
+     * possiede nessun contenuto»: salta il ramo che aggiunge e lascia correre quello che rimuove,
+     * togliendo l'id del layer da `properties.layers` di tutte le tracce. È ciò che leggono l'app
+     * e le API, quindi il layer sparisce di lì pur avendo le sue tracce nel pivot.
+     */
     private function hasValidAutoModeFilter(Layer $layer): bool
     {
         return ! empty($layer->properties['taxonomy_where'] ?? [])
-            || $layer->taxonomyActivities->isNotEmpty();
+            || $layer->taxonomyActivities->isNotEmpty()
+            || $layer->taxonomyTerms->isNotEmpty();
     }
 
     /**
@@ -303,18 +313,55 @@ class LayerService extends BaseService
             return;
         }
 
+        $trackIds = $this->trackIdsMatchingLayerFilters($layer);
+
+        $now = now();
+        $syncPayload = [];
+        foreach ($trackIds as $trackId) {
+            $syncPayload[$trackId] = [
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+        }
+
+        $layer->ecTracks()->sync($syncPayload);
+
+        Log::info('Track sincronizzate automaticamente al layer', [
+            'layer_id' => $layer->id,
+            'track_count' => count($trackIds),
+        ]);
+    }
+
+    /**
+     * Gli id delle tracce che soddisfano i filtri del layer, senza scrivere niente.
+     *
+     * È l'unico posto dove la regola dei filtri è scritta: la compone una volta e la usano sia
+     * `assignTracksByTaxonomy()`, che con questi id riempie `layerables`, sia la mappa della
+     * scheda Nova, che li legge quando il pivot non è ancora stato riempito. Prima erano due
+     * implementazioni, e divergevano: quella della mappa teneva tutti i termini in un `whereIn`
+     * unico, cioè in OR fra tassonomie diverse, e mostrava più tracce di quante il layer ne
+     * avrebbe avute (oc:8910).
+     *
+     * La regola, per tutti e tre i criteri: in AND fra criteri diversi, in OR dentro lo stesso —
+     * «(sentiero o cammino) e (difficoltà BC) e (in questa zona)».
+     *
+     * @return array<int, int>
+     */
+    public function trackIdsMatchingLayerFilters(Layer $layer): array
+    {
         $layerTaxonomyIds = $layer->taxonomyActivities->pluck('id')->toArray();
         $layerWhereIds = $layer->taxonomyWheres->pluck('id')->filter()->toArray();
+        // Terzo criterio, come attività e zone: i termini del modello unico (oc:8910).
+        $layerTermIds = $layer->taxonomyTerms->pluck('id')->toArray();
 
         $layerAppIds = [
             $layer->app_id,
             ...$layer->associatedApps->pluck('id')->toArray(),
         ];
 
-        if (empty($layerAppIds) || (empty($layerTaxonomyIds) && empty($layerWhereIds))) {
-            $layer->ecTracks()->sync([]);
-
-            return;
+        // Nessun filtro: il layer non possiede nessuna traccia.
+        if (empty($layerAppIds) || (empty($layerTaxonomyIds) && empty($layerWhereIds) && empty($layerTermIds))) {
+            return [];
         }
 
         $ecTrackModelClass = config('wm-package.ec_track_model', 'App\Models\EcTrack');
@@ -342,6 +389,22 @@ class LayerService extends BaseService
                 ->whereIn('taxonomy_activityables.taxonomy_activity_id', $layerTaxonomyIds);
         }
 
+        // Filtro per termine: una sottoquery per ogni tassonomia, non una sola per tutti i
+        // termini. La regola è OR dentro la stessa tassonomia e AND fra tassonomie diverse —
+        // «(sentiero o cammino) e (difficoltà BC)» — la stessa che vale fra attività e zone.
+        // Con un unico `whereIn` sarebbe un OR globale, e due filtri di tassonomie diverse si
+        // comporterebbero al contrario degli altri criteri (oc:8910).
+        foreach ($layer->taxonomyTerms->groupBy('parent_id') as $termIdsOfTaxonomy) {
+            $ids = $termIdsOfTaxonomy->pluck('id')->all();
+            $query->whereExists(function ($sub) use ($ids, $trackTable, $trackMorphTypes) {
+                $sub->select(DB::raw(1))
+                    ->from('taxonomy_termables')
+                    ->whereColumn('taxonomy_termables.termable_id', "{$trackTable}.id")
+                    ->whereIn('taxonomy_termables.termable_type', $trackMorphTypes)
+                    ->whereIn('taxonomy_termables.taxonomy_term_id', $ids);
+            });
+        }
+
         // Filter by TaxonomyWhere via ST_Intersects (se presenti)
         if (! empty($layerWhereIds)) {
             $query->whereExists(function ($sub) use ($layerWhereIds, $trackTable) {
@@ -353,25 +416,7 @@ class LayerService extends BaseService
             });
         }
 
-        $trackIds = $query->distinct()->pluck("{$trackTable}.id")->toArray();
-
-        $now = now();
-        $syncPayload = [];
-        foreach ($trackIds as $trackId) {
-            $syncPayload[$trackId] = [
-                'created_at' => $now,
-                'updated_at' => $now,
-            ];
-        }
-
-        $layer->ecTracks()->sync($syncPayload);
-
-        Log::info('Track sincronizzate automaticamente al layer', [
-            'layer_id' => $layer->id,
-            'track_count' => count($trackIds),
-            'taxonomy_ids' => $layerTaxonomyIds,
-            'where_ids' => $layerWhereIds,
-        ]);
+        return array_map('intval', $query->distinct()->pluck("{$trackTable}.id")->toArray());
     }
 
     /**
@@ -387,13 +432,15 @@ class LayerService extends BaseService
 
         $layerTaxonomyIds = $layer->taxonomyActivities->pluck('id')->toArray();
         $layerWhereIds = $layer->taxonomyWheres->pluck('id')->filter()->toArray();
+        // Terzo criterio, come attività e zone: i termini del modello unico (oc:8910).
+        $layerTermIds = $layer->taxonomyTerms->pluck('id')->toArray();
 
         $layerAppIds = [
             $layer->app_id,
             ...$layer->associatedApps->pluck('id')->toArray(),
         ];
 
-        if (empty($layerAppIds) || (empty($layerTaxonomyIds) && empty($layerWhereIds))) {
+        if (empty($layerAppIds) || (empty($layerTaxonomyIds) && empty($layerWhereIds) && empty($layerTermIds))) {
             $layer->ecPois()->sync([]);
 
             return;
@@ -422,6 +469,22 @@ class LayerService extends BaseService
             )
                 ->whereIn('taxonomy_activityables.taxonomy_activityable_type', $poiMorphTypes)
                 ->whereIn('taxonomy_activityables.taxonomy_activity_id', $layerTaxonomyIds);
+        }
+
+        // Filtro per termine: una sottoquery per ogni tassonomia, non una sola per tutti i
+        // termini. La regola è OR dentro la stessa tassonomia e AND fra tassonomie diverse —
+        // «(sentiero o cammino) e (difficoltà BC)» — la stessa che vale fra attività e zone.
+        // Con un unico `whereIn` sarebbe un OR globale, e due filtri di tassonomie diverse si
+        // comporterebbero al contrario degli altri criteri (oc:8910).
+        foreach ($layer->taxonomyTerms->groupBy('parent_id') as $termIdsOfTaxonomy) {
+            $ids = $termIdsOfTaxonomy->pluck('id')->all();
+            $query->whereExists(function ($sub) use ($ids, $poiTable, $poiMorphTypes) {
+                $sub->select(DB::raw(1))
+                    ->from('taxonomy_termables')
+                    ->whereColumn('taxonomy_termables.termable_id', "{$poiTable}.id")
+                    ->whereIn('taxonomy_termables.termable_type', $poiMorphTypes)
+                    ->whereIn('taxonomy_termables.taxonomy_term_id', $ids);
+            });
         }
 
         // Filter by TaxonomyWhere via ST_Intersects (se presenti)

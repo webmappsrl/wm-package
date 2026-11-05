@@ -16,11 +16,15 @@ use Laravel\Nova\Fields\Textarea;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Tabs\Tab;
 use Laravel\Nova\Tabs\Tabs;
+use Outl1ne\MultiselectField\Multiselect;
+use Wm\WmPackage\Nova\Concerns\BuildsTaxonomyFields;
 use Wm\WmPackage\Nova\Filters\FeaturesByLayerFilter;
 use Wm\WmPackage\Services\StorageService;
 
 abstract class AbstractEcResource extends AbstractGeometryResource
 {
+    use BuildsTaxonomyFields;
+
     /**
      * Build an "index" query for the given resource.
      *
@@ -78,6 +82,21 @@ abstract class AbstractEcResource extends AbstractGeometryResource
         ];
     }
 
+    /**
+     * Un campo per tassonomia di termini (oc:8910), da mettere nel dettaglio di un contenuto.
+     *
+     * Tipo a scelta singola: Select. Altrimenti il Multiselect di Outl1ne, mai il
+     * MultiSelect nativo di Nova (la <select multiple> del browser, oc:8588). Le opzioni sono i
+     * termini della tassonomia ordinati per sort_order, perché le scale sono ordinali. Un
+     * identifier che non corrisponde a nessuna tassonomia viene saltato.
+     *
+     * Il campo non è una colonna: legge i termini con terms() e li scrive su taxonomy_termables
+     * dopo il salvataggio, toccando solo la propria tassonomia e solo termini della tassonomia.
+     * Funziona da solo: nessuna Resource del package lo chiama, lo usa lo shard.
+     *
+     * @param  array<int, string>  $taxonomyIdentifiers
+     * @return array<int, Field>
+     */
     /**
      * Shared Accessibility fields for EC resources (EcPoi, EcTrack).
      *

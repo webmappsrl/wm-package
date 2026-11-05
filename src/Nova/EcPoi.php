@@ -59,6 +59,9 @@ class EcPoi extends AbstractEcResource
                 ->readonly(fn ($request) => $this->resource->getMedia()->isEmpty())
                 ->help(__('Show the feature image on the track map instead of the category icon. Only has effect if the POI has an image.'))
                 ->showOnIndex(),
+            // Le tassonomie del modello unico, sopra i Blocchi Dettaglio: valgono per ogni
+            // shard, quindi la sezione la compone il package e lo shard la eredita (oc:8910).
+            ...$this->taxonomySectionFields(),
             $this->configDetailPanel(),
             MorphToMany::make(__('Taxonomy Poi Types'), 'taxonomyPoiTypes', TaxonomyPoiType::class)
                 ->display('name')

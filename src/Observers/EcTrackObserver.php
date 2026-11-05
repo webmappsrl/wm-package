@@ -123,7 +123,14 @@ class EcTrackObserver extends AbstractEcObserver
         }
 
         $taxonomyIds = $ecTrack->taxonomyActivities()->pluck('taxonomy_activities.id')->toArray();
-        if (empty($taxonomyIds)) {
+        // Anche i termini di classificazione sono un filtro dei layer (oc:8910): una traccia
+        // che cambia un termine deve svegliare i layer che filtrano per quel termine, come
+        // già fa con le attività.
+        $termIds = method_exists($ecTrack, 'taxonomyTerms')
+            ? $ecTrack->taxonomyTerms()->pluck('taxonomy_terms.id')->toArray()
+            : [];
+
+        if (empty($taxonomyIds) && empty($termIds)) {
             return;
         }
 
@@ -132,7 +139,14 @@ class EcTrackObserver extends AbstractEcObserver
                 $query->where('app_id', $ecTrack->app_id)
                     ->orWhereHas('associatedApps', fn ($q) => $q->where('apps.id', $ecTrack->app_id));
             })
-            ->whereHas('taxonomyActivities', fn ($query) => $query->whereIn('taxonomy_activities.id', $taxonomyIds))
+            ->where(function ($query) use ($taxonomyIds, $termIds) {
+                if (! empty($taxonomyIds)) {
+                    $query->orWhereHas('taxonomyActivities', fn ($q) => $q->whereIn('taxonomy_activities.id', $taxonomyIds));
+                }
+                if (! empty($termIds)) {
+                    $query->orWhereHas('taxonomyTerms', fn ($q) => $q->whereIn('taxonomy_terms.id', $termIds));
+                }
+            })
             ->get()
             ->filter(fn (Layer $layer) => $layer->isAutoTrackMode());
         $debounceAt = now()->addSeconds($this->getDebounceDelaySeconds());

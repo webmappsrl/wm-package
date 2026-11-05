@@ -31,6 +31,7 @@ use Wm\WmPackage\Models\FeatureCollection as FeatureCollectionModel;
 use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Models\TaxonomyActivity as TaxonomyActivityModel;
 use Wm\WmPackage\Models\TaxonomyPoiType as TaxonomyPoiTypeModel;
+use Wm\WmPackage\Models\TaxonomyTerm;
 use Wm\WmPackage\Models\Tile;
 use Wm\WmPackage\Nova\Actions\BuildAppPoisGeojsonAction;
 use Wm\WmPackage\Nova\Actions\ExecuteEcTrackDataChainAction;
@@ -53,6 +54,7 @@ use Wm\WmPackage\Services\Models\UgcTrackMatchingService;
 use Wm\WmPackage\Services\RolesAndPermissionsService;
 use Wm\WmPackage\Services\TaxonomyWhereDisplayService;
 use Wm\WmPackage\Support\ImportedAppProperties;
+use Wm\WmPackage\Support\TaxonomyTermLabel;
 
 class App extends Resource
 {
@@ -99,6 +101,7 @@ class App extends Resource
                 Tab::make('Release', $this->app_release_data_tab()),
                 Tab::make('home', $this->home_tab()),
                 Tab::make('translations', $this->translations_tab()),
+                Tab::make(__('Taxonomies'), $this->taxonomies_tab()),
                 Tab::make('map', $this->map_tab()),
                 Tab::make('pois', $this->pois_tab()),
                 Tab::make('theme', $this->theme_tab()),
@@ -115,6 +118,88 @@ class App extends Resource
 
             // TODO: implement fields
         ];
+    }
+
+    /**
+     * Le tassonomie di classificazione accese in questa app (oc:8910).
+     *
+     * Si configura da qui, non dalla scheda della tassonomia: chi mette in piedi un'app decide
+     * in un posto solo quali classificazioni vedranno i suoi contenuti. Quelli di sistema
+     * arrivano accesi alla nascita dell'app e si possono spegnere; gli altri si accendono qui.
+     *
+     * @return array<int, Field>
+     */
+    protected function taxonomies_tab(): array
+    {
+        $options = TaxonomyTerm::query()
+            ->taxonomies()
+            ->orderBy('is_system', 'desc')
+            ->orderBy('id')
+            ->get()
+            ->mapWithKeys(fn (TaxonomyTerm $v) => [
+                $v->id => TaxonomyTermLabel::for($v).($v->is_system ? ' — '.__('System taxonomy') : ''),
+            ])
+            ->all();
+
+        // Un elenco per tipo di contenuto, e non uno solo, perché l'accensione e l'ambito sono
+        // due domande diverse: la stessa tassonomia, condivisa fra app, può valere sulle EC
+        // Track di una e sui EC Poi di un'altra. Una tassonomia scelta in tutti e due vale per
+        // entrambi; sui Layer, dove le tassonomie sono filtri, valgono comunque tutte (oc:8910).
+        return [
+            $this->taxonomiesForModelField(__('EC Track taxonomies'), 'taxonomies_ec_track', 'EcTrack', $options),
+            $this->taxonomiesForModelField(__('EC Poi taxonomies'), 'taxonomies_ec_poi', 'EcPoi', $options),
+        ];
+    }
+
+    /**
+     * L'elenco delle tassonomie accese per un tipo di contenuto.
+     *
+     * Legge e scrive il pivot `app_taxonomy_term`: la riga esiste se la tassonomia è accesa in
+     * almeno un elenco, e `models` dice in quali. Il `fillUsing` non può fare un `sync()` per
+     * campo — il secondo cancellerebbe quello che ha scritto il primo — quindi ognuno aggiorna
+     * solo il proprio modello dentro `models`.
+     *
+     * @param  array<int, string>  $options
+     */
+    protected function taxonomiesForModelField(string $label, string $attribute, string $model, array $options): Multiselect
+    {
+        return Multiselect::make($label, $attribute)
+            ->options($options)
+            ->help(__('Only the taxonomies enabled here appear on these contents of this app.'))
+            ->resolveUsing(fn () => $this->resource->exists
+                ? $this->resource->taxonomies()->get()
+                    ->filter(fn (TaxonomyTerm $t) => self::pivotCoversModel($t->pivot->models ?? null, $model))
+                    ->pluck('id')
+                    ->all()
+                : [])
+            ->fillUsing(function (NovaRequest $request, $appModel, $attr, $requestAttribute) use ($options, $model) {
+                $selected = $request->input($requestAttribute);
+                if (is_string($selected)) {
+                    $decoded = json_decode($selected, true);
+                    $selected = is_array($decoded) ? $decoded : [$selected];
+                }
+                $selected = collect((array) $selected)
+                    ->filter(fn ($id) => $id !== null && $id !== '' && array_key_exists((int) $id, $options))
+                    ->map(fn ($id) => (int) $id)
+                    ->unique()
+                    ->values()
+                    ->all();
+
+                // Dopo il salvataggio: un'app appena creata non ha ancora un id.
+                return function () use ($appModel, $selected, $model) {
+                    $appModel->syncTaxonomiesForModel($model, $selected);
+                };
+            });
+    }
+
+    /**
+     * Il valore `models` del pivot copre questo modello: nullo o vuoto vuol dire tutti.
+     */
+    protected static function pivotCoversModel(mixed $models, string $model): bool
+    {
+        $models = is_string($models) ? json_decode($models, true) : $models;
+
+        return ! is_array($models) || $models === [] || in_array($model, $models, true);
     }
 
     public function fieldsForCreate(NovaRequest $request): array
