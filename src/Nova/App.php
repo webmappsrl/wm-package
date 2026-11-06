@@ -360,10 +360,10 @@ class App extends Resource
                 <h2><strong>WIDGET</strong></h2>
                 HTML
             )->asHtml()->hideFromIndex(),
-            Boolean::make(__('Enable Layer Web Component'), 'properties->layer_web_component_enabled')
+            Boolean::make(__('Enable Web Component copy (layers and tracks)'), 'properties->layer_web_component_enabled')
                 ->default(false)
                 ->hideFromIndex()
-                ->help(__('Shows a button in layer details to copy the wm-layer-map web component snippet')),
+                ->help(__('Shows a button in layer and track details to copy the wm-layer-map web component snippet')),
         ];
     }
 
