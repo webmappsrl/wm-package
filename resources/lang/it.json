@@ -207,7 +207,6 @@
     "Displays start and end icons on the map": "Mostra le icone di inizio e fine sulla mappa",
     "Ref on Track Show": "Mostra riferimenti sulla traccia",
     "Displays reference labels on tracks": "Mostra le etichette di riferimento sulle tracce",
-    "Enable Layer Web Component": "Abilita copia Web Component layer",
     "Enable the Travel Mode feature on the app": "Abilita la funzione Modalità viaggio nell'app",
     "Enable the Features In Viewport on the app": "Abilita la funzione Elementi nell'area visibile nell'app",
     "Minimum zoom level for enabling Features In Viewport": "Livello di zoom minimo per abilitare Elementi nell'area visibile",
@@ -235,7 +234,6 @@
     "Shows duration in forward direction": "Mostra la durata in direzione normale",
     "Shows start elevation": "Mostra la quota di partenza",
     "Shows the distance": "Mostra la distanza",
-    "Shows a button in layer details to copy the wm-layer-map web component snippet": "Mostra un pulsante nel dettaglio layer per copiare lo snippet del web component wm-layer-map",
     "Sku": "SKU",
     "Splash image": "Immagine splash",
     "TRACK acquisition forms": "Form di acquisizione TRACCE",
@@ -626,5 +624,8 @@
     "A system taxonomy is enabled in every new app.": "Una tassonomia di sistema è accesa in ogni app nuova.",
     "EC Track taxonomies": "Tassonomie EC Track",
     "EC Poi taxonomies": "Tassonomie EC Poi",
-    "Only the taxonomies enabled here appear on these contents of this app.": "Solo le tassonomie accese qui compaiono su questi contenuti di questa app."
+    "Only the taxonomies enabled here appear on these contents of this app.": "Solo le tassonomie accese qui compaiono su questi contenuti di questa app.",
+    "Enable Web Component copy (layers and tracks)": "Abilita copia Web Component (layer e tracce)",
+    "Shows a button in layer and track details to copy the wm-layer-map web component snippet": "Mostra nel dettaglio di layer e tracce un bottone per copiare il codice del web component wm-layer-map",
+    "Layer": "Layer"
 }

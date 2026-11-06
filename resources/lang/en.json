@@ -207,7 +207,6 @@
     "Displays start and end icons on the map": "Displays start and end icons on the map",
     "Ref on Track Show": "Ref on Track Show",
     "Displays reference labels on tracks": "Displays reference labels on tracks",
-    "Enable Layer Web Component": "Enable Layer Web Component",
     "Enable the Travel Mode feature on the app": "Enable the Travel Mode feature on the app",
     "Enable the Features In Viewport on the app": "Enable the Features In Viewport on the app",
     "Minimum zoom level for enabling Features In Viewport": "Minimum zoom level for enabling Features In Viewport",
@@ -235,7 +234,6 @@
     "Shows duration in forward direction": "Shows duration in forward direction",
     "Shows start elevation": "Shows start elevation",
     "Shows the distance": "Shows the distance",
-    "Shows a button in layer details to copy the wm-layer-map web component snippet": "Shows a button in layer details to copy the wm-layer-map web component snippet",
     "Sku": "Sku",
     "Splash image": "Splash image",
     "TRACK acquisition forms": "TRACK acquisition forms",
@@ -625,5 +623,8 @@
     "A system taxonomy is enabled in every new app.": "A system taxonomy is enabled in every new app.",
     "EC Track taxonomies": "EC Track taxonomies",
     "EC Poi taxonomies": "EC Poi taxonomies",
-    "Only the taxonomies enabled here appear on these contents of this app.": "Only the taxonomies enabled here appear on these contents of this app."
+    "Only the taxonomies enabled here appear on these contents of this app.": "Only the taxonomies enabled here appear on these contents of this app.",
+    "Enable Web Component copy (layers and tracks)": "Enable Web Component copy (layers and tracks)",
+    "Shows a button in layer and track details to copy the wm-layer-map web component snippet": "Shows a button in layer and track details to copy the wm-layer-map web component snippet",
+    "Layer": "Layer"
 }

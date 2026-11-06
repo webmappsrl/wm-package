@@ -30,6 +30,7 @@ use Wm\WmPackage\Nova\Fields\PropertiesPanel;
 use Wm\WmPackage\Nova\Filters\AppFilter;
 use Wm\WmPackage\Nova\Traits\HasConfigDetailPanel;
 use Wm\WmPackage\Nova\Traits\MultiPolygonResourceTrait;
+use Wm\WmPackage\Services\LayerMapWebComponentService;
 use Wm\WmPackage\Services\PostHog\AnalyticsService;
 
 class Layer extends AbstractGeometryResource
@@ -43,18 +44,6 @@ class Layer extends AbstractGeometryResource
     }
 
     public static $with = ['ecTracks', 'ecPois', 'appOwner', 'associatedApps'];
-
-    /**
-     * URL statico del bootstrap del web component wm-layer-map, pubblicato da
-     * webmappsrl/wm-elements (branch `dist`). Unica fonte di verità per il
-     * default: `config/wm-package.php` NON duplica questa stringa — se un
-     * consumer non sovrascrive `web_components.layer_map.fallback.script_url`,
-     * questa costante viene usata automaticamente da
-     * `resolveLayerMapComponentConfig()`. Deliberatamente privata: un config
-     * non deve dipendere da una Nova Resource solo per leggere un URL (oc:8590,
-     * review).
-     */
-    private const DEFAULT_LAYER_MAP_SCRIPT_URL = 'https://cdn.jsdelivr.net/gh/webmappsrl/wm-elements@dist/wm-layer-map/wm-layer-map.js';
 
     /**
      * Build an "index" query for the given resource.
@@ -228,11 +217,15 @@ class Layer extends AbstractGeometryResource
                     ->hideWhenCreating()
                     ->withMeta(['model_class' => config('wm-package.ec_poi_model', 'Wm\WmPackage\Models\EcPoi')]),
             ]),
+            // Snippet e bottone sono condivisi con la Resource EcTrack (oc:8944).
             Text::make(__('Web Component'), function () {
                 /** @var LayerModel $layer */
                 $layer = $this->resource;
+                $webComponent = app(LayerMapWebComponentService::class);
 
-                return $this->renderLayerWebComponentCopyButton($layer);
+                return $webComponent->renderCopyButton([
+                    ['label' => $layer->getStringName(), 'snippet' => $webComponent->snippet($layer)],
+                ]);
             })
                 ->asHtml()
                 ->onlyOnDetail()
@@ -240,7 +233,7 @@ class Layer extends AbstractGeometryResource
                     /** @var LayerModel $layer */
                     $layer = $this->resource;
 
-                    return $this->shouldShowLayerWebComponentCopyButton($layer);
+                    return app(LayerMapWebComponentService::class)->isEnabledFor($layer);
                 }),
         ];
     }
@@ -323,127 +316,11 @@ class Layer extends AbstractGeometryResource
         return true;
     }
 
-    private function shouldShowLayerWebComponentCopyButton(LayerModel $layer): bool
-    {
-        $appProperties = $this->getLayerAppProperties($layer);
-
-        return (bool) ($appProperties['layer_web_component_enabled'] ?? false);
-    }
-
     /** @return array<string, mixed> */
     protected function getLayerAppProperties(LayerModel $layer): array
     {
         $app = $layer->appOwner;
 
         return $app ? ($app->properties ?? []) : [];
-    }
-
-    private function renderLayerWebComponentCopyButton(LayerModel $layer): string
-    {
-        $snippet = $this->buildLayerWebComponentSnippet($layer);
-        $snippetJson = json_encode($snippet, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT);
-        $defaultLabelJson = json_encode((string) __('Copy web component code'), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT);
-        $successLabelJson = json_encode((string) __('Code copied'), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT);
-        $errorLabelJson = json_encode((string) __('Copy error'), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT);
-
-        $onClick = <<<JS
-(async function(button) {
-  const text = {$snippetJson};
-  const defaultLabel = {$defaultLabelJson};
-  const successLabel = {$successLabelJson};
-  const errorLabel = {$errorLabelJson};
-
-  try {
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      await navigator.clipboard.writeText(text);
-    } else {
-      const textArea = document.createElement('textarea');
-      textArea.value = text;
-      textArea.setAttribute('readonly', '');
-      textArea.style.position = 'absolute';
-      textArea.style.left = '-9999px';
-      document.body.appendChild(textArea);
-      textArea.select();
-
-      const copied = document.execCommand('copy');
-
-      document.body.removeChild(textArea);
-
-      if (!copied) {
-        throw new Error('Clipboard copy failed');
-      }
-    }
-
-    button.textContent = successLabel;
-  } catch (error) {
-    button.textContent = errorLabel;
-  }
-
-  window.setTimeout(function() {
-    button.textContent = defaultLabel;
-  }, 2000);
-})(this); return false;
-JS;
-
-        $escapedOnClick = htmlspecialchars($onClick, ENT_QUOTES, 'UTF-8');
-        $buttonLabel = htmlspecialchars((string) __('Copy web component code'), ENT_QUOTES, 'UTF-8');
-        $helperHtml = $this->renderLayerWebComponentHelper();
-
-        return <<<HTML
-<div>
-  <button type="button" onclick="{$escapedOnClick}" style="border:0;border-radius:14px;background:#19b7a1;color:#ffffff;padding:14px 26px;font-size:16px;font-weight:600;cursor:pointer;">
-    {$buttonLabel}
-  </button>
-  <div style="margin-top:10px;font-size:13px;line-height:1.5;color:#6b7280;">
-    {$helperHtml}
-  </div>
-</div>
-HTML;
-    }
-
-    private function renderLayerWebComponentHelper(): string
-    {
-        $helperText = htmlspecialchars((string) __('Test the copied code by pasting it into'), ENT_QUOTES, 'UTF-8');
-        $url = 'https://html.onlineviewer.net/';
-
-        return <<<HTML
-{$helperText} <a href="{$url}" target="_blank" rel="noopener noreferrer">{$url}</a>
-HTML;
-    }
-
-    private function buildLayerWebComponentSnippet(LayerModel $layer): string
-    {
-        $shard = (string) config('wm-package.shard_name');
-        $componentConfig = $this->resolveLayerMapComponentConfig();
-        $tagName = $componentConfig['tag_name'];
-        $scriptUrl = $componentConfig['script_url'];
-        $defaultStyle = $componentConfig['default_style'];
-
-        return <<<HTML
-<{$tagName}
-  shard="{$shard}"
-  app-id="{$layer->app_id}"
-  layer-id="{$layer->id}"
-  style="{$defaultStyle}"
-></{$tagName}>
-<script
-  type="module"
-  src="{$scriptUrl}"
-></script>
-HTML;
-    }
-
-    /**
-     * @return array{tag_name: string, script_url: string, default_style: string}
-     */
-    private function resolveLayerMapComponentConfig(): array
-    {
-        $fallback = config('wm-package.web_components.layer_map.fallback', []);
-
-        return [
-            'tag_name' => (string) ($fallback['tag_name'] ?? 'wm-layer-map'),
-            'script_url' => (string) ($fallback['script_url'] ?? self::DEFAULT_LAYER_MAP_SCRIPT_URL),
-            'default_style' => (string) ($fallback['default_style'] ?? 'display:block;width:100%;height:600px'),
-        ];
     }
 }
