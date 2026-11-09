@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.6.2](https://github.com/webmappsrl/wm-package/compare/v1.6.1...v1.6.2) (2026-11-09)
+
+
+### Bug Fixes
+
+* **oc:8951:** dichiara anche i Tipi POI fra le tassonomie storiche ([1a07ab9](https://github.com/webmappsrl/wm-package/commit/1a07ab996464c93977b0b287520833e7cccaf332))
+* **oc:8951:** dichiara anche i Tipi POI fra le tassonomie storiche ([edd5c7f](https://github.com/webmappsrl/wm-package/commit/edd5c7f97414078263a0644309d6317c4aa074d8))
+
 ## [1.6.1](https://github.com/webmappsrl/wm-package/compare/v1.6.0...v1.6.1) (2026-11-05)
 
 
