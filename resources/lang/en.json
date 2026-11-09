@@ -19,6 +19,7 @@
     "EcTracks crossed outside any layer": "EC tracks crossed outside any layer",
     "Layer crossed by the track": "Layer crossed by the track",
     "Layers crossed by the track": "Layers crossed by the track",
+    "Poi Types": "POI Types",
     "SHA-256 signing certificate fingerprint(s) (format XX:XX:...), used to build the Android assetlinks.json entry for the QR code deep link feature. Separate multiple fingerprints with a comma (e.g. upload key + Play Store signing key).": "SHA-256 signing certificate fingerprint(s) (format XX:XX:...), used to build the Android assetlinks.json entry for the QR code deep link feature. Separate multiple fingerprints with a comma (e.g. upload key + Play Store signing key).",
     "Apple Team ID": "Apple Team ID",
     "Apple Developer Team ID used to build the appID in apple-app-site-association for the QR code deep link feature. Leave empty to use Webmapp's default team.": "Apple Developer Team ID used to build the appID in apple-app-site-association for the QR code deep link feature. Leave empty to use Webmapp's default team.",

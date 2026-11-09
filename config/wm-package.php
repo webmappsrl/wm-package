@@ -1,6 +1,7 @@
 <?php
 
 use Wm\WmPackage\Models\TaxonomyActivity;
+use Wm\WmPackage\Models\TaxonomyPoiType;
 use Wm\WmPackage\Services\Models\UgcTrackCleanupService;
 use Wm\WmPackage\Services\Models\UgcTrackStatsService;
 use Wm\WmPackage\TrailRegistry\Commands\TrailRegistryNormalizeCommand;
@@ -126,6 +127,18 @@ return [
             // Righe che esistono in tabella ma non si offrono in scelta: restano perché altro
             // codice le usa — i layer associano le tracce con `whereHas('taxonomyActivities')`
             // (`Layer::…`), quindi cancellarle spegnerebbe i layer che le nominano.
+            'hidden' => [],
+        ],
+        [
+            // Solo EcPoi ha questa relazione: su un modello che non ce l'ha la voce viene
+            // saltata da sé (`method_exists` in BuildsTaxonomyFields), quindi dichiararla qui
+            // non la fa comparire sulle tracce.
+            'key' => 'poi_types',
+            'relation' => 'taxonomyPoiTypes',
+            'model' => TaxonomyPoiType::class,
+            'label' => 'Poi Types',
+            'tab' => 'General',
+            'single_choice' => false,
             'hidden' => [],
         ],
     ],
