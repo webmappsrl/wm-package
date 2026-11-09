@@ -80,9 +80,10 @@ class EcTrack extends AbstractEcResource
                 ->collapsedByDefault(),
             MorphToMany::make('Layers', 'layers', Layer::class)
                 ->collapsedByDefault(),
-            MorphToMany::make('Activities', 'taxonomyActivities', TaxonomyActivity::class)
-                ->display('name')
-                ->collapsedByDefault(),
+            // Niente pannello di attach per `taxonomyActivities`: la relazione si governa dalla
+            // sezione «Tassonomie» qui sopra, e due controlli sulla stessa relazione nella
+            // stessa pagina confondono chi la usa — su uno shard la rimozione era stata fatta
+            // come override locale, quindi ogni altro consumer vedeva il doppione (oc:8951).
         ];
     }
 
