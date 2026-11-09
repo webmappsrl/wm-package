@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.6.3](https://github.com/webmappsrl/wm-package/compare/v1.6.2...v1.6.3) (2026-11-09)
+
+
+### Bug Fixes
+
+* **oc:8951:** un solo controllo per le tassonomie storiche su EcPoi e EcTrack ([28e2297](https://github.com/webmappsrl/wm-package/commit/28e22973c04afe220a45d27061991cce1cb3fffb))
+* **oc:8951:** un solo controllo per le tassonomie storiche su EcPoi e EcTrack ([6ba30d7](https://github.com/webmappsrl/wm-package/commit/6ba30d7944bcd2050214abcd86af546197bd1860))
+
 ## [1.6.2](https://github.com/webmappsrl/wm-package/compare/v1.6.1...v1.6.2) (2026-11-09)
 
 
