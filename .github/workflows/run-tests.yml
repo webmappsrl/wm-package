@@ -12,7 +12,10 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         php: [8.3, 8.4]
-        laravel: [11.*]
+        # Gli shard girano su Laravel 12: la matrice testa quella. L'11.x e' stato tolto
+        # perche' Composer rifiuta ogni sua versione per security advisories, e il job
+        # moriva all'install senza mai arrivare ai test.
+        laravel: [12.*]
         stability: [prefer-stable]
 
     name: P${{ matrix.php }} - L${{ matrix.laravel }} - ${{ matrix.stability }} - ${{ matrix.os }}
