@@ -307,6 +307,17 @@ trait BuildsTaxonomyFields
                 continue;
             }
 
+            // `method_exists` non dice a quale contenuto si applica una tassonomia storica: le
+            // relazioni stanno tutte nel trait `TaxonomyAbleModel`, quindi anche una EcTrack
+            // risponde a `taxonomyPoiTypes()` e i Tipi POI comparivano sulle tracce. I modelli
+            // ammessi si dichiarano in `models`; senza quella chiave la tassonomia vale per
+            // tutti. Su un Layer il vincolo non si applica: lì i campi sono filtri che scelgono
+            // i contenuti, e un layer può raccogliere sia tracce sia POI (oc:8932).
+            $models = (array) ($taxonomy['models'] ?? []);
+            if (! $this->taxonomyFieldsAreFilters() && $models !== [] && ! in_array(class_basename($this->resource), $models, true)) {
+                continue;
+            }
+
             $tab = is_string($taxonomy['tab'] ?? null) && $taxonomy['tab'] !== '' ? $taxonomy['tab'] : $default;
             $label = __($taxonomy['label'] ?? $relation);
             $attribute = 'legacy_taxonomy_'.($taxonomy['key'] ?? $relation);

@@ -288,6 +288,7 @@ abstract class GeometryModel extends Model implements HasMedia
                     $mediaService->getMediaConversionNameByWidthAndHeight($size['width'], $size['height'])
                 )
                 ->fit(Fit::Crop, $size['width'], $size['height'])
+                ->performOnCollections('default')
                 ->queued();
         }
     }

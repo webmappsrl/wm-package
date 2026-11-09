@@ -130,12 +130,14 @@ return [
             'hidden' => [],
         ],
         [
-            // Solo EcPoi ha questa relazione: su un modello che non ce l'ha la voce viene
-            // saltata da sé (`method_exists` in BuildsTaxonomyFields), quindi dichiararla qui
-            // non la fa comparire sulle tracce.
+            // I Tipi POI descrivono solo un punto di interesse, e `models` è ciò che lo dice:
+            // la relazione `taxonomyPoiTypes()` sta nel trait `TaxonomyAbleModel`, quindi
+            // risponde anche una EcTrack e senza questo elenco il campo compariva anche lì
+            // (oc:8932).
             'key' => 'poi_types',
             'relation' => 'taxonomyPoiTypes',
             'model' => TaxonomyPoiType::class,
+            'models' => ['EcPoi'],
             'label' => 'Poi Types',
             'tab' => 'General',
             'single_choice' => false,

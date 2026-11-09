@@ -5,6 +5,7 @@ namespace Wm\WmPackage\Nova;
 use Kongulov\NovaTabTranslatable\NovaTabTranslatable;
 use Laravel\Nova\Fields\BelongsToMany;
 use Laravel\Nova\Fields\Boolean;
+use Laravel\Nova\Fields\KeyValue;
 use Laravel\Nova\Fields\MorphToMany;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Fields\Textarea;
@@ -156,6 +157,7 @@ class EcTrack extends AbstractEcResource
             NovaTabTranslatable::make([
                 Textarea::make(__('Not Accessible Message'), 'properties->not_accessible_message'),
             ]),
+            KeyValue::make(__('Related URL'), 'properties->related_url'),
             Text::make(__('QR Code'), 'deep_link_qr_code', function () {
                 return $this->app?->renderDeepLinkQrCodeHtml('track', $this->id);
             })
