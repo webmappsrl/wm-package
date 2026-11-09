@@ -729,7 +729,13 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
 
         $ecTrackService = EcTrackService::make();
         $mediaService = MediaService::make();
-        $firstMedia = $this->getMedia('*')->first();
+        // La copertina viene dalla collection `default`, dove il package scrive le immagini dei
+        // contenuti. Con `getMedia('*')` il filtro sulla collection non si applica e `first()` può
+        // prendere un documento o un video con `order_column` più basso (oc:8932).
+        // Il controllo sul mime_type è la rete di sicurezza: in `default` non deve poter finire
+        // come copertina un file che un browser non sa mostrare.
+        $firstMedia = $this->getMedia('default')
+            ->first(fn ($media) => str_starts_with((string) $media->mime_type, 'image/'));
 
         try {
 
