@@ -58,9 +58,9 @@
         "laravel/pint": "^1.14",
         "nunomaduro/collision": "*",
         "orchestra/testbench": "*",
-        "pestphp/pest": "^2.34",
-        "pestphp/pest-plugin-arch": "^2.7",
-        "pestphp/pest-plugin-laravel": "^2.3",
+        "pestphp/pest": "^2.34 || ^3.0",
+        "pestphp/pest-plugin-arch": "^2.7 || ^3.0",
+        "pestphp/pest-plugin-laravel": "^2.3 || ^3.1",
         "phpstan/extension-installer": "*",
         "phpstan/phpstan-deprecation-rules": "^1.0 || ^2.0",
         "phpstan/phpstan-phpunit": "^1.0 || ^2.0"
