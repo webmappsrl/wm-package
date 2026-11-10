@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
+use Laravel\Nova\Fields\ActionFields;
 use Laravel\Nova\Nova;
 use Laravel\Nova\NovaCoreServiceProvider;
 use Wm\WmPackage\Models\App;
@@ -10,6 +11,7 @@ use Wm\WmPackage\Services\RolesAndPermissionsService;
 use Wm\WmPackage\TrailRegistry\Enums\TrailApplicationStatus;
 use Wm\WmPackage\TrailRegistry\Models\TrailApplication as TrailApplicationModel;
 use Wm\WmPackage\TrailRegistry\Nova\Actions\ApproveTrailApplication;
+use Wm\WmPackage\TrailRegistry\Nova\Actions\RejectTrailApplication;
 use Wm\WmPackage\TrailRegistry\Nova\TrailApplication;
 use Wm\WmPackage\TrailRegistry\Nova\TrailRegistryAnomaly;
 use Wm\WmPackage\TrailRegistry\Nova\TrailRegistryCode;
@@ -143,4 +145,47 @@ it('a dominio spento nemmeno un Administrator apre il registro dei codici', func
     $this->actingAs(utenteHttp('Administrator'))
         ->getJson('/nova-api/trail-registry-codes')
         ->assertForbidden();
+});
+
+/**
+ * Un'istanza che lo sportello non ha ancora finito di consegnare non si
+ * istruisce (oc:8960). Questi tre test non chiedono codice nuovo: le
+ * autorizzazioni sono whitelist su UnderReview, quindi under_compilation e'
+ * gia' negato per costruzione — e questi test sono cio' che lo dimostra, e che
+ * lo terra' vero quando qualcuno le riscrivera'.
+ */
+it('un Editor non puo modificare un istanza in compilazione', function () {
+    $application = istanzaHttp(TrailApplicationStatus::UnderCompilation);
+
+    $this->actingAs(utenteHttp('Editor'))
+        ->putJson("/nova-api/trail-applications/{$application->id}", [])
+        ->assertForbidden();
+});
+
+it('un Administrator apre index e detail di un istanza in compilazione', function () {
+    $application = istanzaHttp(TrailApplicationStatus::UnderCompilation);
+    $utente = utenteHttp('Administrator');
+
+    $this->actingAs($utente)
+        ->getJson('/nova-api/trail-applications')
+        ->assertOk();
+
+    $this->actingAs($utente)
+        ->getJson("/nova-api/trail-applications/{$application->id}")
+        ->assertOk();
+});
+
+it('ne approva ne respinge un istanza in compilazione', function () {
+    $application = istanzaHttp(TrailApplicationStatus::UnderCompilation);
+
+    (new ApproveTrailApplication)->handle(
+        new ActionFields(collect(), collect()),
+        collect([$application])
+    );
+    (new RejectTrailApplication)->handle(
+        new ActionFields(collect(['rejection_reason' => 'motivo']), collect()),
+        collect([$application])
+    );
+
+    expect($application->fresh()->status)->toBe(TrailApplicationStatus::UnderCompilation);
 });

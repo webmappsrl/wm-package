@@ -292,3 +292,44 @@ it('approvando copia gli allegati sul sentiero, file compreso', function () {
     // L'originale resta all'istanza: la copia non e' uno spostamento.
     expect($application->fresh()->getMedia('default'))->toHaveCount(1);
 });
+
+it('approvando non copia api_data sul sentiero', function () {
+    $application = $this->application->fresh();
+    $application->writeApiData([
+        'from' => 'Baunei',
+        'soggetto_rilevatore_email' => 'rilevatore@example.org',
+        'soggetto_manutentore_cf' => ['RSSMRA80A01H501U'],
+    ]);
+
+    (new ApproveTrailApplication)->handle(emptyActionFields(), collect([$application->fresh()]));
+
+    $track = EcTrack::latest('id')->first();
+
+    // I dati del SUS restano sull'istanza: sul sentiero finirebbero nel
+    // GeoJSON pubblico, con dentro codici fiscali, e-mail e nomi di persone
+    // (oc:8960).
+    expect($track->properties)->not->toHaveKey('api_data');
+    expect($this->application->fresh()->api_data)->toHaveKey('soggetto_rilevatore_email');
+});
+
+it('approvando non copia gli allegati dell istanza, ma continua a copiare gli altri', function () {
+    Storage::fake('public');
+
+    $application = $this->application->fresh();
+    $application->addMediaFromString('relazione')
+        ->usingFileName('relazione.pdf')
+        ->toMediaCollection(TrailApplication::REPORT_COLLECTION, 'public');
+    $application->addMediaFromString('contenuto')
+        ->usingFileName('allegato.txt')
+        ->toMediaCollection('default', 'public');
+
+    (new ApproveTrailApplication)->handle(emptyActionFields(), collect([$application->fresh()]));
+
+    $track = EcTrack::latest('id')->first();
+
+    expect($track->getMedia(TrailApplication::REPORT_COLLECTION))->toBeEmpty()
+        ->and($track->getMedia('default'))->toHaveCount(1);
+
+    // E restano all'istanza, dove l'operatore li istruisce.
+    expect($application->fresh()->getMedia(TrailApplication::REPORT_COLLECTION))->toHaveCount(1);
+});
