@@ -9,9 +9,9 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Cache;
-use Laravel\Scout\Searchable;
+use Wm\WmPackage\Jobs\TaxonomyWhere\RegenerateTaxonomyWhereOutputsJob;
+use Wm\WmPackage\Jobs\UpdateAppConfigJob;
 use Wm\WmPackage\Models\App;
-use Wm\WmPackage\Models\EcTrack;
 
 /**
  * Reindicizza i contenuti di un'app dopo un cambio che tocca cio' che finisce nell'indice.
@@ -23,6 +23,11 @@ use Wm\WmPackage\Models\EcTrack;
  * classificazione che in Nova non c'e' piu'.
  *
  * Unico per app: piu' modifiche di fila al tab «Tassonomie» non accodano un reindex per clic.
+ *
+ * Il reindex non lo fa piu' da se' (oc:8959): accoda `UpdateAppConfigJob`, perche' le etichette
+ * delle tassonomie accese stanno nel config.json, e `RegenerateTaxonomyWhereOutputsJob`, che
+ * rigenera dettaglio su AWS e indice di ogni traccia e pois.geojson. Vuol dire un job per traccia
+ * dell'app a ogni accensione o spegnimento confermato.
  *
  * Porta con se' la firma delle accensioni di prima del salvataggio e la riconfronta quando gira.
  * Serve perche' il tab ha due campi, uno per tipo di contenuto, che scrivono la stessa tabella
@@ -91,13 +96,12 @@ class ReindexAppContentsJob implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        $trackModelClass = config('wm-package.ec_track_model', EcTrack::class);
-
-        // Uno shard puo' montare un modello di traccia senza Scout: li' non c'e' niente da fare.
-        if (! in_array(Searchable::class, class_uses_recursive($trackModelClass), true)) {
-            return;
-        }
-
-        $trackModelClass::query()->where('app_id', $this->appId)->searchable();
+        // Le tassonomie accese sono anche in `TAXONOMY_LABELS` del config.json, in `taxonomies`
+        // dei POI di pois.geojson e del dettaglio di ogni traccia (oc:8959). Il config.json si
+        // riscrive qui; dettagli, reindex e pois.geojson li fa il job che già rigenera le uscite
+        // pubbliche dell'app quando cambia «Località mostrate»: unico finché non parte, così un
+        // salvataggio che cambia entrambe le cose non raddoppia i job per traccia.
+        UpdateAppConfigJob::dispatch($app->id);
+        RegenerateTaxonomyWhereOutputsJob::dispatch($app->id);
     }
 }

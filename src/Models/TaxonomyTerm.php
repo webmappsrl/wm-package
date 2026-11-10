@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use Spatie\Translatable\HasTranslations;
+use Wm\WmPackage\Jobs\UpdateAppConfigJob;
 
 /**
  * Termine di classificazione del modello unico (oc:8910). Senza parent_id è una tassonomia,
@@ -30,6 +31,18 @@ class TaxonomyTerm extends Model
      * `\z` e non `$`: in PCRE il `$` accetta anche un a capo finale.
      */
     public const TAXONOMY_IDENTIFIER_FORMAT = '/^[a-z0-9]+(?:[-:][a-z0-9]+)*\z/';
+
+    /**
+     * Identifier che una tassonomia non può avere: sono le chiavi con cui le tassonomie storiche
+     * (tabelle proprie) entrano in `properties.taxonomies` e in `TAXONOMY_LABELS`, accanto a quelle
+     * di questa tabella, indicizzate per identifier. Una tassonomia con lo stesso identifier
+     * prenderebbe il posto della storica (oc:8959). Sono le chiavi di
+     * `DetailTaxonomiesService::LEGACY_TAXONOMIES`, ripetute qui perché un'espressione costante non
+     * può chiamare `array_keys()`: un test verifica che coincidano.
+     *
+     * @var list<string>
+     */
+    public const RESERVED_TAXONOMY_IDENTIFIERS = ['activity', 'theme', 'poi-type', 'where'];
 
     public array $translatable = ['name', 'description', 'excerpt'];
 
@@ -55,6 +68,32 @@ class TaxonomyTerm extends Model
 
     protected static function booted(): void
     {
+        // Le etichette delle tassonomie stanno nel config.json delle app che le accendono
+        // (TAXONOMY_LABELS, TAXONOMY_TAB_LABELS, oc:8959): rinominare una tassonomia, cambiarne il
+        // tab o l'ordine, o cancellarla, lo deve riscrivere. Un termine non c'entra: il suo nome è
+        // nel dettaglio della traccia. Accendere o spegnere una tassonomia passa dal salvataggio
+        // dell'App, e lì il config.json lo riscrive ReindexAppContentsJob.
+        static::saved(function (self $term) {
+            if ($term->parent_id === null && $term->wasChanged(['identifier', 'name', 'properties', 'sort_order'])) {
+                self::rebuildAppConfigs($term->apps()->pluck('apps.id')->all());
+            }
+        });
+
+        // Le app si leggono prima che il pivot sparisca con la tassonomia, il job si accoda dopo:
+        // fuori da una transazione afterCommit() esegue subito, e da `deleting` il job leggerebbe
+        // la tassonomia ancora presente.
+        static::deleting(function (self $term) {
+            if ($term->parent_id === null) {
+                $term->loadMissing('apps');
+            }
+        });
+
+        static::deleted(function (self $term) {
+            if ($term->parent_id === null && $term->relationLoaded('apps')) {
+                self::rebuildAppConfigs($term->apps->modelKeys());
+            }
+        });
+
         static::saving(function (self $term) {
             if ($term->parent_id === null
                 // Senza identifier ci pensa il NOT NULL del database.
@@ -63,6 +102,14 @@ class TaxonomyTerm extends Model
                 && ! preg_match(self::TAXONOMY_IDENTIFIER_FORMAT, (string) $term->identifier)) {
                 throw new InvalidArgumentException(
                     "L'identifier di una tassonomia deve essere in kebab-case (minuscole, cifre, trattini, due punti): \"{$term->identifier}\"."
+                );
+            }
+
+            if ($term->parent_id === null
+                && ($term->isDirty('identifier') || ! $term->exists || $term->isDirty('parent_id'))
+                && in_array($term->identifier, self::RESERVED_TAXONOMY_IDENTIFIERS, true)) {
+                throw new InvalidArgumentException(
+                    "L'identifier \"{$term->identifier}\" è riservato alle tassonomie storiche nel dettaglio delle tracce (oc:8959)."
                 );
             }
 
@@ -144,6 +191,19 @@ class TaxonomyTerm extends Model
     public function isTaxonomy(): bool
     {
         return $this->parent_id === null;
+    }
+
+    /**
+     * Accoda la riscrittura del config.json delle app, dopo il commit: dentro un salvataggio Nova
+     * il job potrebbe girare prima e leggere il nome di prima.
+     *
+     * @param  array<int, int|string>  $appIds
+     */
+    private static function rebuildAppConfigs(array $appIds): void
+    {
+        foreach (array_unique(array_map('intval', $appIds)) as $appId) {
+            UpdateAppConfigJob::dispatch($appId)->afterCommit();
+        }
     }
 
     /**

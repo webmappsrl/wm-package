@@ -1,12 +1,17 @@
 <?php
 
+use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
 use Laravel\Scout\EngineManager;
 use Laravel\Scout\Engines\NullEngine;
 use Laravel\Scout\Jobs\MakeSearchable;
+use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
+use Wm\WmPackage\Jobs\UpdateUgcTrackDemStatsJob;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\Layer;
+use Wm\WmPackage\Models\TaxonomyTerm;
 
 /**
  * Engine finto che registra i modelli passati a update() (percorso sincrono, quello reale del package).
@@ -122,4 +127,99 @@ it('rispetta withoutSyncingToSearch: niente reindex mentre il sync e\' disabilit
     $track->taxonomyTerms()->attach($term->id);
 
     expect($engine->updated)->not->toBeEmpty();
+});
+
+/**
+ * Il dettaglio della traccia su AWS porta `properties.taxonomies`: un legame cambiato in Nova lo
+ * deve rigenerare, altrimenti la lista (Elastic) e il dettaglio divergono (oc:8959).
+ */
+function awsJobFor(EcTrack $track): Closure
+{
+    return fn (UpdateEcTrackAwsJob $job) => (fn () => $this->ecTrack)->call($job)->is($track);
+}
+
+it('accoda UpdateEcTrackAwsJob per la traccia quando nasce o sparisce un legame', function () {
+    config(['scout.queue' => false]);
+    [, $term, $track] = seedTaxonomyTermAndTrack();
+    fakeScoutEngine();
+    Bus::fake([UpdateEcTrackAwsJob::class, UpdateUgcTrackDemStatsJob::class]);
+
+    $track->taxonomyTerms()->attach($term->id);
+    Bus::assertDispatchedTimes(UpdateEcTrackAwsJob::class, 1);
+    Bus::assertDispatched(UpdateEcTrackAwsJob::class, awsJobFor($track));
+
+    $track->taxonomyTerms()->detach($term->id);
+    Bus::assertDispatchedTimes(UpdateEcTrackAwsJob::class, 2);
+});
+
+it('accoda UpdateEcTrackAwsJob anche se l\'indicizzazione fallisce', function () {
+    config(['scout.queue' => false]);
+    [, $term, $track] = seedTaxonomyTermAndTrack();
+    fakeScoutEngine(failing: true);
+    Bus::fake([UpdateEcTrackAwsJob::class, UpdateUgcTrackDemStatsJob::class]);
+
+    $track->taxonomyTerms()->attach($term->id);
+
+    Bus::assertDispatched(UpdateEcTrackAwsJob::class, awsJobFor($track));
+});
+
+it('non accoda UpdateEcTrackAwsJob mentre il sync a Scout è disattivato', function () {
+    config(['scout.queue' => false]);
+    [, $term, $track] = seedTaxonomyTermAndTrack();
+    fakeScoutEngine();
+    Bus::fake([UpdateEcTrackAwsJob::class, UpdateUgcTrackDemStatsJob::class]);
+
+    EcTrack::withoutSyncingToSearch(fn () => $track->taxonomyTerms()->attach($term->id));
+
+    Bus::assertNotDispatched(UpdateEcTrackAwsJob::class);
+});
+
+it('non accoda UpdateEcTrackAwsJob per un contenuto che non è una traccia', function () {
+    config(['scout.queue' => false]);
+    [, $term] = seedTaxonomyTermAndTrack();
+    $layer = Layer::factory()->createQuietly();
+    Bus::fake([UpdateEcTrackAwsJob::class, UpdateUgcTrackDemStatsJob::class]);
+
+    $layer->taxonomyTerms()->attach($term->id);
+
+    Bus::assertNotDispatched(UpdateEcTrackAwsJob::class);
+});
+
+it('accoda UpdateEcTrackAwsJob dopo il commit, una volta sola per traccia', function () {
+    config(['scout.queue' => false]);
+    [$taxonomy, $term, $track] = seedTaxonomyTermAndTrack();
+    $other = TaxonomyTerm::create(['identifier' => 'other-'.uniqid(), 'parent_id' => $taxonomy->id, 'name' => ['it' => 'x']]);
+    fakeScoutEngine();
+    Bus::fake([UpdateEcTrackAwsJob::class, UpdateUgcTrackDemStatsJob::class]);
+
+    // Come un salvataggio Nova: più legami cambiati nella stessa transazione.
+    DB::transaction(function () use ($track, $term, $other) {
+        $track->taxonomyTerms()->attach($term->id);
+        $track->taxonomyTerms()->attach($other->id);
+
+        Bus::assertNotDispatched(UpdateEcTrackAwsJob::class);
+    });
+
+    Bus::assertDispatchedTimes(UpdateEcTrackAwsJob::class, 1);
+    Bus::assertDispatched(UpdateEcTrackAwsJob::class, awsJobFor($track));
+});
+
+it('dopo un rollback la traccia si rigenera di nuovo al legame successivo', function () {
+    config(['scout.queue' => false]);
+    [, $term, $track] = seedTaxonomyTermAndTrack();
+    fakeScoutEngine();
+    Bus::fake([UpdateEcTrackAwsJob::class, UpdateUgcTrackDemStatsJob::class]);
+
+    try {
+        DB::transaction(function () use ($track, $term) {
+            $track->taxonomyTerms()->attach($term->id);
+            throw new RuntimeException('annullato');
+        });
+    } catch (RuntimeException) {
+    }
+    Bus::assertNotDispatched(UpdateEcTrackAwsJob::class);
+
+    DB::transaction(fn () => $track->taxonomyTerms()->attach($term->id));
+
+    Bus::assertDispatchedTimes(UpdateEcTrackAwsJob::class, 1);
 });
