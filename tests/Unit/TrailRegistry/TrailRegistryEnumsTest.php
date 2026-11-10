@@ -13,7 +13,13 @@ it('considera attivi solo riservato e assegnato', function () {
         ->toBe([TrailCodeStatus::Reserved, TrailCodeStatus::Assigned]);
 });
 
-it('espone i tre stati dell istruttoria', function () {
+it('espone i quattro stati dell istruttoria', function () {
     expect(array_map(fn ($c) => $c->value, TrailApplicationStatus::cases()))
-        ->toBe(['under_review', 'rejected', 'approved']);
+        ->toBe(['under_compilation', 'under_review', 'rejected', 'approved']);
+});
+
+it('traduce ogni stato per l operatore', function () {
+    foreach (TrailApplicationStatus::cases() as $status) {
+        expect($status->label())->not->toBe($status->value);
+    }
 });

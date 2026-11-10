@@ -17,6 +17,7 @@ use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Tabs\Tab;
 use Wm\WmPackage\Models\User;
 use Wm\WmPackage\Nova\AbstractGeometryResource;
+use Wm\WmPackage\Nova\Fields\PropertiesPanel;
 use Wm\WmPackage\Nova\Traits\DispatchesDemOnDetail;
 use Wm\WmPackage\TrailRegistry\Enums\TrailApplicationStatus;
 use Wm\WmPackage\TrailRegistry\Enums\TrailCodeStatus;
@@ -117,7 +118,7 @@ class TrailApplication extends AbstractGeometryResource
 
             Text::make(__('Code'), fn () => $this->activeCode?->code),
 
-            Text::make(__('Review status'), fn () => $this->status->value),
+            Text::make(__('Review status'), fn () => $this->status->label()),
 
             Text::make(__('Source'), 'source'),
         ];
@@ -179,9 +180,93 @@ class TrailApplication extends AbstractGeometryResource
 
         $fields[] = Tab::group(__('Details'), [
             Tab::make(__('DEM'), $this->getDemTabFields()),
+            Tab::make(__('SUS data'), $this->susDataFields()),
         ]);
 
         return $fields;
+    }
+
+    /**
+     * I dati che il SUS consegna, letti dalla colonna `api_data` (oc:8960).
+     *
+     * I Field li costruisce PropertiesPanel, lo stesso componente che rende
+     * `properties` sulle altre Resource: dallo schema ricava il tipo di campo,
+     * e un valore annidato finisce in un Code JSON invece di essere
+     * concatenato a mano — che su una mappa di array mandava in 500 la detail
+     * view.
+     *
+     * `onlyOnDetail()` si applica qui e non nello schema perche' il componente
+     * nasconde dall'index e dall'update, non dalla creazione: questi dati
+     * arrivano solo dal canale API e non si compilano a mano da nessuna parte.
+     *
+     * @return array<int, Field>
+     */
+    protected function susDataFields(): array
+    {
+        $fields = (new PropertiesPanel(__('SUS data')))->jsonForm(
+            $this->resource,
+            TrailApplicationModel::API_DATA_COLUMN,
+            '',
+            $this->susDataSchema(),
+            false,
+        );
+
+        foreach ($fields as $field) {
+            $field->onlyOnDetail();
+        }
+
+        return $fields;
+    }
+
+    /**
+     * Lo schema dei campi che il SUS consegna, nell'ordine del format
+     * (campi 29-65); il numero in coda a ogni riga e' il suo numero di campo.
+     *
+     * I tipi sono quelli del format. Le select dichiarate senza `values` sono
+     * quelle il cui elenco non e' ancora fissato con Engineering: il campo e'
+     * gia' una select e i valori si aggiungono quando arrivano. Un valore
+     * fuori elenco non entra comunque, perche' lo rifiuta la validazione
+     * dell'endpoint prima che l'istanza esista. `last_survey_date` resta
+     * `text`: un formato di data inatteso non deve impedire di leggere cosa
+     * e' arrivato.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    protected function susDataSchema(): array
+    {
+        return [
+            ['name' => 'from', 'type' => 'text', 'label' => __('Start point')],                 // 29
+            ['name' => 'to', 'type' => 'text', 'label' => __('End point')],                     // 30
+            ['name' => 'intermediate_stop', 'type' => 'text', 'label' => __('Intermediate stop')], // 31
+            ['name' => 'distance', 'type' => 'number', 'label' => __('Declared distance')],     // 32
+            ['name' => 'ascent', 'type' => 'number', 'label' => __('Declared ascent')],         // 33
+            ['name' => 'duration_forward', 'type' => 'number', 'label' => __('Declared duration forward')], // 34
+            ['name' => 'duration_backward', 'type' => 'number', 'label' => __('Declared duration backward')], // 35
+            ['name' => 'activities', 'type' => 'json', 'label' => __('Proposed activities')],   // 36
+            ['name' => 'difficulty', 'type' => 'json', 'label' => __('Proposed difficulty')],   // 37
+            ['name' => 'existing_signage', 'type' => 'select', 'label' => __('Existing signage'), 'values' => [
+                ['value' => 'good_condition', 'label' => ['it' => "c'e' ed e' in buono stato", 'en' => 'present and in good condition']],
+                ['value' => 'dilapidated', 'label' => ['it' => "c'e' ed e' fatiscente", 'en' => 'present but dilapidated']],
+                ['value' => 'absent', 'label' => ['it' => "non c'e'", 'en' => 'absent']],
+            ]],                                                                                 // 38
+            ['name' => 'overlapping_routes', 'type' => 'text', 'label' => __('Overlapping routes')], // 39
+            ['name' => 'proposed_managing_municipalities', 'type' => 'json', 'label' => __('Proposed managing municipalities')], // 42
+            ['name' => 'municipality_email', 'type' => 'email', 'label' => __('Municipality email')], // 43
+            ['name' => 'municipality_email_alt', 'type' => 'email', 'label' => __('Alternative municipality email')], // 44
+            ['name' => 'themes', 'type' => 'json', 'label' => __('Themes')],                    // 45
+            ['name' => 'soggetto_gestore', 'type' => 'select', 'label' => __('Manager')],       // 47
+            ['name' => 'soggetto_gestore_other', 'type' => 'text', 'label' => __('Other manager')], // 48
+            ['name' => 'soggetto_rilevatore', 'type' => 'select', 'label' => __('Surveyor')],   // 49
+            ['name' => 'soggetto_rilevatore_other', 'type' => 'text', 'label' => __('Other surveyor')], // 50
+            ['name' => 'soggetto_rilevatore_email', 'type' => 'email', 'label' => __('Surveyor email')], // 51
+            ['name' => 'soggetto_manutentore', 'type' => 'select', 'label' => __('Maintainer')], // 53
+            ['name' => 'soggetto_manutentore_other', 'type' => 'text', 'label' => __('Other maintainer')], // 54
+            ['name' => 'soggetto_manutentore_cf', 'type' => 'json', 'label' => __('Other maintainer tax code')], // 55
+            ['name' => 'soggetto_custode_presente', 'type' => 'boolean', 'label' => __('Keeper exists')], // 56
+            ['name' => 'soggetto_custode', 'type' => 'select', 'label' => __('Keeper')],        // 58
+            ['name' => 'last_survey_date', 'type' => 'text', 'label' => __('Last survey date')], // 64
+            ['name' => 'maintenance_frequency_months', 'type' => 'number', 'label' => __('Maintenance frequency (months)')], // 65
+        ];
     }
 
     /**

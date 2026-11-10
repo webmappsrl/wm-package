@@ -7,9 +7,12 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Wm\WmPackage\Models\Abstracts\MultiLineString;
 use Wm\WmPackage\Models\User;
+use Wm\WmPackage\Services\Models\UgcMediaHashService;
 use Wm\WmPackage\TrailRegistry\Database\Factories\TrailApplicationFactory;
 use Wm\WmPackage\TrailRegistry\Enums\TrailApplicationStatus;
 use Wm\WmPackage\TrailRegistry\Enums\TrailCodeStatus;
@@ -26,7 +29,16 @@ use Wm\WmPackage\TrailRegistry\TrailRegistryClasses;
  *
  * Non esistono istanze non prevalidate: se il controllo formale non passa,
  * l'API rifiuta e Nova non salva. Ogni riga qui porta quindi gia' il proprio
- * codice riservato.
+ * codice riservato, anche quando e' `under_compilation`.
+ *
+ * Esistono invece istanze **incomplete**: in `under_compilation` lo sportello
+ * ha creato la domanda e non ha ancora finito di consegnarla — i dati e la
+ * geometria ci sono, gli allegati no, perche' viaggiano in chiamate separate.
+ * I dati che arrivano dall'API vivono nella colonna `api_data`, fuori da
+ * `properties`: quella finisce intera nel GeoJSON del modello, e di li' nelle
+ * chiamate verso l'esterno. Si scrivono una volta sola alla creazione e non si
+ * correggono: l'operatore li accetta o li respinge, non li modifica
+ * (oc:8960).
  *
  * Alla creazione accoda il calcolo del DEM (oc:8571): vedi il docblock di
  * `booted()`.
@@ -36,6 +48,7 @@ use Wm\WmPackage\TrailRegistry\TrailRegistryClasses;
  * @property string $source
  * @property TrailApplicationStatus $status
  * @property string|null $name
+ * @property array<string, mixed>|null $api_data
  * @property Carbon|null $updated_at
  * @property-read User $user
  * @property-read Collection<int, TrailRegistryCode> $codes
@@ -50,6 +63,51 @@ class TrailApplication extends MultiLineString
      */
     public const ORIGINAL_GEOMETRY_COLLECTION = 'original_geometry';
 
+    /**
+     * Gli altri cinque allegati del format (campi 67, 69, 70, 71, 72), che
+     * arrivano in chiamate separate dopo la creazione (oc:8960).
+     */
+    public const REPORT_COLLECTION = 'report';
+
+    public const TRAIL_DATA_SHEET_COLLECTION = 'trail_data_sheet';
+
+    public const PHOTOS_COLLECTION = 'photos';
+
+    public const AUTHORIZATIONS_COLLECTION = 'authorizations';
+
+    public const MAINTENANCE_PLAN_COLLECTION = 'maintenance_plan';
+
+    /**
+     * Gli allegati dell'istanza non passano sul sentiero all'approvazione:
+     * sono documenti dell'istruttoria — relazione, tabella dati,
+     * autorizzazioni, piano di manutenzione, fotografie del rilievo — e sul
+     * sentiero pubblicato diventerebbero URL scaricabili. `Media::copy()`
+     * duplica il file sul disco, quindi una copia fatta per errore non si
+     * annulla scollegandola (oc:8960).
+     *
+     * La traccia originale non e' qui: continua a essere copiata, come prima
+     * di questo lavoro.
+     */
+    public const COLLECTIONS_NOT_COPIED_ON_APPROVAL = [
+        self::REPORT_COLLECTION,
+        self::TRAIL_DATA_SHEET_COLLECTION,
+        self::PHOTOS_COLLECTION,
+        self::AUTHORIZATIONS_COLLECTION,
+        self::MAINTENANCE_PLAN_COLLECTION,
+    ];
+
+    /**
+     * Le collection che tengono un documento solo: un reinvio lo sostituisce.
+     * La galleria fotografica non e' qui perche' ne contiene da una a cinque.
+     */
+    public const SINGLE_FILE_COLLECTIONS = [
+        self::ORIGINAL_GEOMETRY_COLLECTION,
+        self::REPORT_COLLECTION,
+        self::TRAIL_DATA_SHEET_COLLECTION,
+        self::AUTHORIZATIONS_COLLECTION,
+        self::MAINTENANCE_PLAN_COLLECTION,
+    ];
+
     protected $fillable = [
         'user_id',
         'source',
@@ -62,6 +120,7 @@ class TrailApplication extends MultiLineString
 
     protected $casts = [
         'properties' => 'array',
+        'api_data' => 'array',
         'status' => TrailApplicationStatus::class,
     ];
 
@@ -100,7 +159,182 @@ class TrailApplication extends MultiLineString
     {
         parent::registerMediaCollections();
 
-        $this->addMediaCollection(self::ORIGINAL_GEOMETRY_COLLECTION)->singleFile();
+        foreach (self::SINGLE_FILE_COLLECTIONS as $collection) {
+            $this->addMediaCollection($collection)->singleFile();
+        }
+
+        // La documentazione fotografica (campo 70) ne ammette da una a cinque,
+        // quindi niente singleFile(): dai reinvii si difende deduplicando sul
+        // contenuto con UgcMediaHashService, e il limite di cinque si conta
+        // dopo la deduplicazione, altrimenti conterebbe i retry di rete invece
+        // delle fotografie (oc:8960).
+        $this->addMediaCollection(self::PHOTOS_COLLECTION);
+    }
+
+    /**
+     * Aggiunge una fotografia del rilievo, se gia' non c'e'.
+     *
+     * Le fotografie arrivano in chiamate separate: se una va in timeout e il
+     * client la ripete, gli stessi byte arriverebbero due volte e diventerebbero
+     * due fotografie, mangiandosi il limite di cinque. Il confronto e' sul
+     * contenuto, con UgcMediaHashService, come fa gia' lo store UGC per i retry
+     * dell'app (oc:8718): il nome non conta, perche' chi ripete una chiamata
+     * spesso lo cambia — l'app UGC manda nomi posizionali.
+     *
+     * L'hash finisce nei custom_properties, cosi' il confronto successivo non
+     * deve riaprire il file dal disco.
+     *
+     * @param  UploadedFile|string  $file  il file caricato, o il suo percorso
+     * @return Media la fotografia gia' presente, o quella appena aggiunta
+     */
+    public function addPhoto(UploadedFile|string $file): Media
+    {
+        $hashes = UgcMediaHashService::make();
+        $hash = $hashes->hashOfFile($file instanceof UploadedFile ? $file->getRealPath() : $file);
+
+        // La relazione va riletta: senza, una fotografia aggiunta un attimo
+        // prima sulla stessa istanza non comparirebbe nel confronto, e il
+        // reinvio passerebbe.
+        $this->load('media');
+
+        $presente = $hashes->findByContent($this, $hash, self::PHOTOS_COLLECTION);
+        if ($presente !== null) {
+            return $presente;
+        }
+
+        return $this->addMedia($file)
+            ->withCustomProperties([UgcMediaHashService::HASH_PROPERTY => $hash])
+            ->toMediaCollection(self::PHOTOS_COLLECTION);
+    }
+
+    /**
+     * La colonna che tiene il payload dell'API, conservato com'e' arrivato.
+     *
+     * E' una colonna e non una chiave dentro `properties` perche'
+     * GeoJsonService::getModelAsGeojson riversa `properties` per intero nella
+     * Feature, e quella Feature viaggia verso il servizio DEM e verso il
+     * sentiero pubblicato: e-mail, nomi, codici fiscali e partite IVA
+     * uscirebbero da ogni strada che serializza l'istanza, e starebbe a chi
+     * scrive quella strada ricordarsene. Fuori da `properties` non ci sono
+     * strade da ricordare.
+     *
+     * Non e' fillable: si scrive solo con writeApiData(), una volta sola alla
+     * creazione, e nessuna interfaccia lo modifica (oc:8960).
+     */
+    public const API_DATA_COLUMN = 'api_data';
+
+    /**
+     * I campi che l'istanza deve contenere perche' la consegna si consideri
+     * conclusa, con gli identifier del format (campi 29-65).
+     *
+     * Non ci sono i sei che dipendono dal valore di un altro campo —
+     * `soggetto_gestore_other`, `soggetto_rilevatore_other`,
+     * `soggetto_rilevatore_email`, `soggetto_manutentore_other`,
+     * `soggetto_manutentore_cf` e `soggetto_custode` — perche' la loro
+     * obbligatorieta' non e' una proprieta' dell'istanza ma una regola di
+     * validazione della chiamata.
+     *
+     * Il 58 dipende dal 56, il booleano che dice se esiste un custode distinto
+     * da gestore, manutentore e rilevatore: quando non esiste il 58 non arriva,
+     * e fra gli obbligatori terrebbe quell'istanza per sempre lontana dalla
+     * conferma.
+     *
+     * Non c'e' nemmeno `difficulty` (37): il format lo valida nella forma
+     * («mappa attivita' -> livello, si valida la coppia») ma non ne chiede la
+     * presenza, a differenza dei quindici che dicono «obbligatorio».
+     * Pretenderlo rifiuterebbe una consegna che il format considera completa.
+     *
+     * @return list<string>
+     */
+    public static function requiredApiFields(): array
+    {
+        return [
+            'from',                              // 29
+            'to',                                // 30
+            'distance',                          // 32, in chilometri
+            'duration_forward',                  // 34, in minuti
+            'duration_backward',                 // 35, in minuti
+            'activities',                        // 36
+            'existing_signage',                  // 38
+            'proposed_managing_municipalities',  // 42
+            'municipality_email',                // 43
+            'soggetto_gestore',                  // 47
+            'soggetto_rilevatore',               // 49
+            'soggetto_manutentore',              // 53
+            'soggetto_custode_presente',         // 56
+            'last_survey_date',                  // 64
+            'maintenance_frequency_months',      // 65
+        ];
+    }
+
+    /**
+     * Gli allegati obbligatori. `authorizations` (campo 71) non c'e': l'esito
+     * del tavolo tecnico lo dichiara facoltativo, contro la colonna formale del
+     * foglio, e fra le due vale l'esito.
+     *
+     * @return list<string>
+     */
+    public static function requiredAttachments(): array
+    {
+        return [
+            self::REPORT_COLLECTION,             // 67
+            self::ORIGINAL_GEOMETRY_COLLECTION,  // 68
+            self::TRAIL_DATA_SHEET_COLLECTION,   // 69
+            self::PHOTOS_COLLECTION,             // 70
+            self::MAINTENANCE_PLAN_COLLECTION,   // 72
+        ];
+    }
+
+    /**
+     * Cosa manca perche' la consegna sia completa, in forma strutturata e non
+     * in prosa, cosi' che lo sportello possa mostrare l'errore accanto ai campi
+     * giusti.
+     *
+     * @return array{fields: list<string>, attachments: list<string>}
+     */
+    public function missingForConfirmation(): array
+    {
+        $apiData = (array) ($this->api_data ?? []);
+
+        $fields = array_values(array_filter(
+            static::requiredApiFields(),
+            fn (string $field) => ! isset($apiData[$field])
+                || $apiData[$field] === ''
+                || $apiData[$field] === [],
+        ));
+
+        $attachments = array_values(array_filter(
+            static::requiredAttachments(),
+            fn (string $collection) => $this->getMedia($collection)->isEmpty(),
+        ));
+
+        return ['fields' => $fields, 'attachments' => $attachments];
+    }
+
+    /**
+     * Scrive il payload nella colonna `api_data`.
+     *
+     * Passa da SQL e non da Eloquent perche' `updated_at` non va toccato: e'
+     * una consegna dell'API, non una modifica dell'operatore, e il trafficCop
+     * di Nova rifiuterebbe con 409 il salvataggio di chi ha aperto il form un
+     * attimo prima.
+     */
+    public function writeApiData(array $payload): void
+    {
+        $this->getConnection()->update(
+            sprintf(
+                'UPDATE %s SET %s = ?::jsonb WHERE id = ?',
+                $this->getTable(),
+                self::API_DATA_COLUMN,
+            ),
+            [json_encode($payload, JSON_THROW_ON_ERROR), $this->getKey()],
+        );
+
+        // Il modello in memoria resterebbe senza i dati appena scritti: chi
+        // serializza l'istanza subito dopo la consegna risponderebbe con
+        // api_data vuoto.
+        $this->setAttribute(self::API_DATA_COLUMN, $payload);
+        $this->syncOriginalAttribute(self::API_DATA_COLUMN);
     }
 
     public function dispatchDem(): void
