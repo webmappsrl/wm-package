@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Laravel\Nova\Http\Requests\NovaRequest;
+use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
 use Wm\WmPackage\Jobs\UpdateUgcTrackDemStatsJob;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcTrack;
@@ -45,14 +46,18 @@ uses()->beforeEach(function () {
     Bus::fake([
         UpdateTrailApplicationDemJob::class,
         UpdateUgcTrackDemStatsJob::class,
+        UpdateEcTrackAwsJob::class,
     ]);
 })->in('Feature/TrailRegistry');
 
 // oc:8742: ogni UgcTrack con locations accoda il calcolo DEM; nessun test deve uscire verso il
 // servizio. Chi vuole il job vero lo esegue a mano con EcTrackService finto. Attenzione: un
 // Bus::fake([...]) dentro un test sostituisce questo, e va ripetuto il job nella sua lista.
+// oc:8959: attaccare o staccare un termine da una traccia accoda la rigenerazione del suo
+// dettaglio su AWS (TaxonomyTermableObserver): con la coda sincrona dei test il job girerebbe e
+// uscirebbe verso S3. Chi lo vuole verificare lo fa con il suo Bus::fake.
 uses()->beforeEach(function () {
-    Bus::fake([UpdateUgcTrackDemStatsJob::class]);
+    Bus::fake([UpdateUgcTrackDemStatsJob::class, UpdateEcTrackAwsJob::class]);
 })->in(__DIR__);
 
 /**

@@ -17,10 +17,15 @@ class TrailApplicationStatusFilter extends Filter
         return $query->where('status', $value);
     }
 
+    /**
+     * La chiave e' cio' che l'operatore legge, il valore e' cio' su cui si
+     * filtra: la traduzione la da' l'enum, cosi' il prossimo stato la eredita
+     * senza passare di qui (oc:8960).
+     */
     public function options(NovaRequest $request): array
     {
         return collect(TrailApplicationStatus::cases())
-            ->mapWithKeys(fn (TrailApplicationStatus $status) => [$status->value => $status->value])
+            ->mapWithKeys(fn (TrailApplicationStatus $status) => [$status->label() => $status->value])
             ->all();
     }
 }

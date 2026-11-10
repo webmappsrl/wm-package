@@ -7,7 +7,6 @@ use Laravel\Nova\Actions\Action;
 use Laravel\Nova\Fields\BelongsToMany;
 use Laravel\Nova\Fields\Boolean;
 use Laravel\Nova\Fields\KeyValue;
-use Laravel\Nova\Fields\MorphToMany;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Tabs\Tab;
@@ -63,9 +62,10 @@ class EcPoi extends AbstractEcResource
             // shard, quindi la sezione la compone il package e lo shard la eredita (oc:8910).
             ...$this->taxonomySectionFields(),
             $this->configDetailPanel(),
-            MorphToMany::make(__('Taxonomy Poi Types'), 'taxonomyPoiTypes', TaxonomyPoiType::class)
-                ->display('name')
-                ->help(__('POI types associated with this point of interest')),
+            // Niente pannello di attach per `taxonomyPoiTypes`: la relazione si governa dalla
+            // sezione «Tassonomie» qui sopra, e due controlli sulla stessa relazione nella
+            // stessa pagina confondono chi la usa — su uno shard la rimozione era stata fatta
+            // come override locale, quindi ogni altro consumer vedeva il doppione (oc:8951).
             PropertiesPanel::makeWithModel(__('Converted from UGC'), 'properties->ugc', $this, false),
             PropertiesPanel::makeWithModel('Form', 'properties->form', $this, false),
             BelongsToMany::make('EcTracks', 'ecTracks', EcTrack::class),

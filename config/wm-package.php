@@ -1,6 +1,7 @@
 <?php
 
 use Wm\WmPackage\Models\TaxonomyActivity;
+use Wm\WmPackage\Models\TaxonomyPoiType;
 use Wm\WmPackage\Services\Models\UgcTrackCleanupService;
 use Wm\WmPackage\Services\Models\UgcTrackStatsService;
 use Wm\WmPackage\TrailRegistry\Commands\TrailRegistryNormalizeCommand;
@@ -11,7 +12,7 @@ use Wm\WmPackage\TrailRegistry\Models\TrailRegistryCodeEvent;
 
 // config for Wm/WmPackage
 return [
-    'version' => '1.6.0', // x-release-please-version
+    'version' => '1.6.3', // x-release-please-version
     'shard_name' => env('SHARD_NAME', env('APP_NAME')),
     'analytics_shard_name' => env('ANALYTICS_SHARD_NAME'),
     'route_filter_analytics_enabled' => env('ROUTE_FILTER_ANALYTICS_ENABLED', false),
@@ -126,6 +127,20 @@ return [
             // Righe che esistono in tabella ma non si offrono in scelta: restano perché altro
             // codice le usa — i layer associano le tracce con `whereHas('taxonomyActivities')`
             // (`Layer::…`), quindi cancellarle spegnerebbe i layer che le nominano.
+            'hidden' => [],
+        ],
+        [
+            // I Tipi POI descrivono solo un punto di interesse, e `models` è ciò che lo dice:
+            // la relazione `taxonomyPoiTypes()` sta nel trait `TaxonomyAbleModel`, quindi
+            // risponde anche una EcTrack e senza questo elenco il campo compariva anche lì
+            // (oc:8932).
+            'key' => 'poi_types',
+            'relation' => 'taxonomyPoiTypes',
+            'model' => TaxonomyPoiType::class,
+            'models' => ['EcPoi'],
+            'label' => 'Poi Types',
+            'tab' => 'General',
+            'single_choice' => false,
             'hidden' => [],
         ],
     ],

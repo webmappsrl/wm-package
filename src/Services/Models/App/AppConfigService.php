@@ -5,6 +5,7 @@ namespace Wm\WmPackage\Services\Models\App;
 use Exception;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -14,6 +15,8 @@ use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\FeatureCollection;
 use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Models\TaxonomyPoiType;
+use Wm\WmPackage\Models\TaxonomyTerm;
+use Wm\WmPackage\Services\DetailTaxonomiesService;
 use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Services\IconSvgService;
 use Wm\WmPackage\Services\Models\MediaService;
@@ -78,6 +81,7 @@ class AppConfigService extends AppBaseService
         $data = array_merge($data, $this->config_section_app());
         $data = array_merge($data, $this->config_section_webapp());
         $data = array_merge($data, $this->config_section_translations());
+        $data = array_merge($data, $this->config_section_taxonomy_labels());
         $data = array_merge($data, $this->config_section_home());
         $data = array_merge($data, $this->config_section_languages());
         $data = array_merge($data, $this->config_section_map());
@@ -232,6 +236,72 @@ class AppConfigService extends AppBaseService
         }
 
         return $data;
+    }
+
+    /**
+     * Le etichette delle tassonomie e dei loro tab, una volta sola per app (oc:8959).
+     *
+     * Il dettaglio di una traccia ha in `properties.taxonomies` i termini per identifier della
+     * tassonomia, ognuno con il suo `tab`, ma non i nomi: scritti lì si ripeterebbero su ogni
+     * termine e su ogni traccia. Qui ci sono le stesse chiavi, nell'ordine della sezione Nova —
+     * prima le storiche di `DetailTaxonomiesService::LEGACY_TAXONOMIES`, poi le tassonomie di `taxonomy_terms`
+     * accese nell'app, per tracce o per POI, per `sort_order` — e i tab che usano, `General` per
+     * primo.
+     *
+     * @return array{TAXONOMY_LABELS: array<string, array<string, string>|\stdClass>, TAXONOMY_TAB_LABELS: array<string, array<string, string>>}
+     */
+    private function config_section_taxonomy_labels(): array
+    {
+        $labels = [];
+        $tabs = [DetailTaxonomiesService::DEFAULT_TAB];
+
+        foreach (array_keys(DetailTaxonomiesService::LEGACY_TAXONOMIES) as $key) {
+            $labels[$key] = $this->labelTranslations(DetailTaxonomiesService::legacyTaxonomyLabel($key));
+            $tabs[] = DetailTaxonomiesService::legacyTaxonomyTab($key);
+        }
+
+        // Stessa guardia di DetailTaxonomiesService: uno shard senza le migration di oc:8910.
+        if (DetailTaxonomiesService::hasTaxonomyTermsTables()) {
+            // Tutte le accese nell'app, per tracce e per POI: le etichette servono a entrambi.
+            $taxonomies = TaxonomyTerm::query()->taxonomies()
+                ->forApp($this->app->id)
+                ->orderBy('sort_order')
+                ->orderBy('id')
+                ->get();
+
+            foreach ($taxonomies as $taxonomy) {
+                $name = $taxonomy->getTranslations('name');
+                // Senza traduzioni resta un oggetto: un array PHP vuoto diventerebbe `[]` in JSON.
+                $labels[$taxonomy->identifier] = $name === [] ? new \stdClass : $name;
+                $tabs[] = DetailTaxonomiesService::taxonomyTab($taxonomy);
+            }
+        }
+
+        $tabLabels = [];
+        foreach (array_unique($tabs) as $tab) {
+            $tabLabels[$tab] = $this->labelTranslations($tab);
+        }
+
+        return ['TAXONOMY_LABELS' => $labels, 'TAXONOMY_TAB_LABELS' => $tabLabels];
+    }
+
+    /**
+     * Le traduzioni di una chiave dei file di lingua, per le lingue di `wm-tab-translatable`:
+     * solo quelle tradotte, e l'inglese ripiega sulla chiave, che è già in inglese.
+     *
+     * @return array<string, string>
+     */
+    private function labelTranslations(string $key): array
+    {
+        $translations = [];
+        foreach ((array) config('wm-tab-translatable.locales', ['it', 'en']) as $locale) {
+            if (Lang::hasForLocale($key, $locale)) {
+                $translations[$locale] = (string) __($key, [], $locale);
+            }
+        }
+        $translations['en'] ??= $key;
+
+        return $translations;
     }
 
     private function config_section_home(): array

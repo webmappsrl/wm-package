@@ -15,6 +15,7 @@ use Wm\WmPackage\Models\Abstracts\MultiLineString;
 use Wm\WmPackage\Models\Interfaces\LayerRelatedModel;
 use Wm\WmPackage\Nova\Traits\HasDemClassification;
 use Wm\WmPackage\Observers\EcTrackObserver;
+use Wm\WmPackage\Services\DetailTaxonomiesService;
 use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Services\Models\EcTrackService;
 use Wm\WmPackage\Services\Models\MediaService;
@@ -729,7 +730,13 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
 
         $ecTrackService = EcTrackService::make();
         $mediaService = MediaService::make();
-        $firstMedia = $this->getMedia('*')->first();
+        // La copertina viene dalla collection `default`, dove il package scrive le immagini dei
+        // contenuti. Con `getMedia('*')` il filtro sulla collection non si applica e `first()` può
+        // prendere un documento o un video con `order_column` più basso (oc:8932).
+        // Il controllo sul mime_type è la rete di sicurezza: in `default` non deve poter finire
+        // come copertina un file che un browser non sa mostrare.
+        $firstMedia = $this->getMedia('default')
+            ->first(fn ($media) => str_starts_with((string) $media->mime_type, 'image/'));
 
         try {
 
@@ -816,6 +823,40 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
         }
 
         return $grouped;
+    }
+
+    /**
+     * Il GeoJSON del dettaglio pubblico della traccia: quello di `getGeojson()` più
+     * `properties.taxonomies` (oc:8959).
+     *
+     * È quello che leggono i frontend, e lo usano le tre uscite del dettaglio: il file su AWS
+     * (`EcTrackResource`), `/api/ec/track/{id}` quando il file manca, e `multiple`. Non sta in
+     * `getGeojson()` perché quello gira anche nei job interni (DEM, pendenze, grafico altimetrico,
+     * zone), che vogliono solo la geometria e pagherebbero le query delle tassonomie per niente.
+     * Vuota, `taxonomies` è un oggetto: un array PHP vuoto diventerebbe `[]` in JSON.
+     */
+    public function getDetailGeojson(): ?array
+    {
+        $geojson = $this->getGeojson();
+        if (! is_array($geojson) || ! isset($geojson['properties']) || ! is_array($geojson['properties'])) {
+            return $geojson;
+        }
+
+        $geojson['properties']['taxonomies'] = app(DetailTaxonomiesService::class)
+            ->buildForJson($this, 'EcTrack', $this->app_id === null ? null : (int) $this->app_id);
+
+        return $geojson;
+    }
+
+    /**
+     * Le tassonomie del dettaglio della traccia, in `properties.taxonomies` (oc:8959): la forma e
+     * le fonti sono in `DetailTaxonomiesService`, la stessa dei POI di `pois.geojson`.
+     *
+     * @return array<string, list<array<string, mixed>>>
+     */
+    public function geojsonTaxonomies(): array
+    {
+        return app(DetailTaxonomiesService::class)->build($this, 'EcTrack', $this->app_id === null ? null : (int) $this->app_id);
     }
 
     public function getSearchableString(): string

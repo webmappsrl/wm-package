@@ -2,9 +2,11 @@
 
 namespace Wm\WmPackage\Nova;
 
+use Illuminate\Support\Collection;
 use Kongulov\NovaTabTranslatable\NovaTabTranslatable;
 use Laravel\Nova\Fields\BelongsToMany;
 use Laravel\Nova\Fields\Boolean;
+use Laravel\Nova\Fields\KeyValue;
 use Laravel\Nova\Fields\MorphToMany;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Fields\Textarea;
@@ -26,6 +28,7 @@ use Wm\WmPackage\Nova\Filters\FeaturesIncludeByIds;
 use Wm\WmPackage\Nova\Traits\DispatchesDemOnDetail;
 use Wm\WmPackage\Nova\Traits\HasConfigDetailPanel;
 use Wm\WmPackage\Nova\Traits\MultiLinestringResourceTrait;
+use Wm\WmPackage\Services\LayerMapWebComponentService;
 
 /**
  * @mixin \Wm\WmPackage\Models\EcTrack
@@ -75,15 +78,66 @@ class EcTrack extends AbstractEcResource
                 Tab::make(__('Style'), $this->getStyleTabFields()),
                 Tab::make(__('DEM'), $this->getDemTabFields()),
             ]),
+            $this->webComponentField($request),
             BelongsToMany::make('EcPois', 'ecPois', EcPoi::class)
                 ->searchable()
                 ->collapsedByDefault(),
             MorphToMany::make('Layers', 'layers', Layer::class)
                 ->collapsedByDefault(),
-            MorphToMany::make('Activities', 'taxonomyActivities', TaxonomyActivity::class)
-                ->display('name')
-                ->collapsedByDefault(),
+            // Niente pannello di attach per `taxonomyActivities`: la relazione si governa dalla
+            // sezione «Tassonomie» qui sopra, e due controlli sulla stessa relazione nella
+            // stessa pagina confondono chi la usa — su uno shard la rimozione era stata fatta
+            // come override locale, quindi ogni altro consumer vedeva il doppione (oc:8951).
         ];
+    }
+
+    /**
+     * Bottone «Copia codice web component» della tappa: lo snippet del cammino con `track-id`,
+     * che apre la mappa con la tappa già selezionata (oc:8944). Con più layer proponibili compare
+     * una select per scegliere quale.
+     */
+    protected function webComponentField(NovaRequest $request): Text
+    {
+        $service = app(LayerMapWebComponentService::class);
+        $trackId = $this->resource->id;
+
+        // Calcolati una volta e solo sulla detail view: su edit e update Nova risolve e autorizza
+        // i Field prima di scartare quelli onlyOnDetail, e la query sui layer sarebbe buttata.
+        $layers = null;
+        $resolveLayers = function () use (&$layers, $request): Collection {
+            return $layers ??= $this->resource->exists ? $this->webComponentLayers($request) : collect();
+        };
+
+        return Text::make(__('Web Component'), function () use ($resolveLayers, $service, $trackId) {
+            return $service->renderCopyButton($resolveLayers()->map(fn ($layer) => [
+                'label' => $layer->getStringName().' (#'.$layer->id.')',
+                'snippet' => $service->snippet($layer, $trackId),
+            ])->all());
+        })
+            ->asHtml()
+            ->onlyOnDetail()
+            ->canSee(fn () => $request->isResourceDetailRequest() && $resolveLayers()->isNotEmpty());
+    }
+
+    /**
+     * I layer proponibili nel bottone del web component: quelli della traccia la cui App ha il
+     * flag acceso, ordinati per id così l'option preselezionata è la stessa a ogni caricamento.
+     * Un consumer lo sovrascrive per restringerli (es. ai layer dell'utente), partendo da
+     * `parent::` per non perdere il filtro sul flag.
+     *
+     * @return Collection<int, \Wm\WmPackage\Models\Layer>
+     */
+    protected function webComponentLayers(NovaRequest $request): Collection
+    {
+        $service = app(LayerMapWebComponentService::class);
+
+        return $this->resource->layers()
+            ->with('appOwner')
+            ->orderBy('layers.id')
+            ->get()
+            ->filter(fn ($layer) => $layer instanceof \Wm\WmPackage\Models\Layer && $service->isEnabledFor($layer))
+            ->values()
+            ->toBase();
     }
 
     public function filters(NovaRequest $request): array
@@ -155,6 +209,7 @@ class EcTrack extends AbstractEcResource
             NovaTabTranslatable::make([
                 Textarea::make(__('Not Accessible Message'), 'properties->not_accessible_message'),
             ]),
+            KeyValue::make(__('Related URL'), 'properties->related_url'),
             Text::make(__('QR Code'), 'deep_link_qr_code', function () {
                 return $this->app?->renderDeepLinkQrCodeHtml('track', $this->id);
             })

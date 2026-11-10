@@ -6,6 +6,7 @@
     "International walking network": "International",
     "Local walking network": "Local",
     "National walking network": "National",
+    "Poi Types": "Types de POI",
     "Regional walking network": "Régional",
     "Spring": "Printemps",
     "Summer": "Été",
@@ -63,5 +64,17 @@
     "Download the app": "Télécharger l'app",
     "Not yet available for :platform": "Pas encore disponible pour :platform",
     "The app is not currently available on the stores, please try again later.": "L'app n'est pas disponible sur les stores pour le moment, veuillez réessayer plus tard.",
-    "Open the web app": "Ouvrir l'app web"
+    "Open the web app": "Ouvrir l'app web",
+    "Under compilation": "En cours de saisie",
+    "Under review": "En instruction",
+    "Rejected": "Rejetée",
+    "Approved": "Approuvée",
+    "Enable Web Component copy (layers and tracks)": "Activer la copie du Web Component (couches et parcours)",
+    "Shows a button in layer and track details to copy the wm-layer-map web component snippet": "Affiche dans le détail des couches et des parcours un bouton pour copier le code du web component wm-layer-map",
+    "Web Component": "Web Component",
+    "Copy web component code": "Copier le code du web component",
+    "Code copied": "Code copié",
+    "Copy error": "Erreur de copie",
+    "Test the copied code by pasting it into": "Testez le code copié en le collant dans",
+    "Layer": "Couche"
 }

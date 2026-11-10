@@ -123,6 +123,10 @@ class ApproveTrailApplication extends Action
      *
      * Le `properties` dell'istanza (anagrafica del proponente, protocollo)
      * vengono riportate sul sentiero: e' l'unico posto dove quei dati vivono.
+     * I dati dell'API non sono fra queste — stanno nella colonna `api_data`,
+     * fuori da `properties`, proprio perche' da qui non devono passare: il
+     * sentiero pubblicato serve le sue properties per intero nell'API e nel
+     * GeoJSON (oc:8960).
      */
     protected function createTrack(TrailApplication $application): EcTrack
     {
@@ -206,6 +210,12 @@ class ApproveTrailApplication extends Action
         $media = $application->media;
 
         foreach ($media as $item) {
+            // Gli allegati dell'istanza sono documenti dell'istruttoria e non
+            // vanno sul sentiero pubblicato (oc:8960).
+            if (in_array($item->collection_name, TrailApplication::COLLECTIONS_NOT_COPIED_ON_APPROVAL, true)) {
+                continue;
+            }
+
             try {
                 $item->copy($track, $item->collection_name, $item->disk);
             } catch (\Throwable $e) {
