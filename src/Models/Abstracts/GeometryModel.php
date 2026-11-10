@@ -56,10 +56,8 @@ abstract class GeometryModel extends Model implements HasMedia
 
     /**
      * Calculate the gpx on a model with geometry
-     *
-     * @return mixed|null
      */
-    public function getGpx()
+    public function getGpx(): ?string
     {
         return GeometryComputationService::make()->getModelGeometryAsGpx($this);
     }
