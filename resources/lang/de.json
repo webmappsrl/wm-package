@@ -64,5 +64,13 @@
     "Download the app": "App herunterladen",
     "Not yet available for :platform": "Noch nicht verfügbar für :platform",
     "The app is not currently available on the stores, please try again later.": "Die App ist derzeit nicht in den Stores verfügbar, bitte versuche es später erneut.",
-    "Open the web app": "Web-App öffnen"
+    "Open the web app": "Web-App öffnen",
+    "Enable Web Component copy (layers and tracks)": "Web-Component-Kopie aktivieren (Layer und Tracks)",
+    "Shows a button in layer and track details to copy the wm-layer-map web component snippet": "Zeigt in den Details von Layern und Tracks eine Schaltfläche zum Kopieren des Codes der Web Component wm-layer-map",
+    "Web Component": "Web Component",
+    "Copy web component code": "Web-Component-Code kopieren",
+    "Code copied": "Code kopiert",
+    "Copy error": "Fehler beim Kopieren",
+    "Test the copied code by pasting it into": "Teste den kopierten Code durch Einfügen in",
+    "Layer": "Layer"
 }

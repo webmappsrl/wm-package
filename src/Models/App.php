@@ -813,7 +813,7 @@ class App extends Model implements HasMedia
     /**
      * Renders a "Copy link" button (clipboard JS + execCommand fallback) for the URL
      * shown under a QR code, matching the pattern already used for the Layer web component
-     * copy button (see Nova\Layer::renderLayerWebComponentCopyButton()).
+     * copy button (see Services\LayerMapWebComponentService::renderCopyButton()).
      */
     private function renderCopyLinkButton(string $url): string
     {
