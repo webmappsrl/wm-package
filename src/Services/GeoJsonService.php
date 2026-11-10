@@ -43,6 +43,8 @@ class GeoJsonService extends BaseService
                 $taxonomyWhens = $model->taxonomyWhens()->pluck('taxonomy_whens.id')->toArray();
             }
 
+            // @deprecated per le tracce: i frontend leggono `properties.taxonomies` (oc:8959).
+            // `taxonomy` resta identica per le app che la leggono già, e su altri shard è popolata.
             $taxonomy = [
                 'activity' => $taxonomyActivities,
                 'when' => $taxonomyWhens,
@@ -51,6 +53,7 @@ class GeoJsonService extends BaseService
             ];
             $properties['taxonomy'] = $taxonomy;
 
+            // @deprecated per le tracce: le zone sono in `properties.taxonomies.where` (oc:8959).
             if (method_exists($model, 'getOrderedTaxonomyWheres')) {
                 $properties['taxonomyWheres'] = $model->getOrderedTaxonomyWheres();
             }

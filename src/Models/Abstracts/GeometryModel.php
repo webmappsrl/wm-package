@@ -225,6 +225,10 @@ abstract class GeometryModel extends Model implements HasMedia
      * Applica l'opzione "Località mostrate" dell'App proprietaria alle proprietà di
      * un'uscita pubblica (json statico, pois.geojson, API, Elasticsearch — oc:8588).
      * Non va usata da job interni che rileggono o risalvano `properties`.
+     *
+     * `taxonomy_where` e `taxonomyWheres` che scrive sono deprecate per le tracce: i frontend
+     * leggono le zone in `properties.taxonomies.where`, filtrate con lo stesso servizio
+     * (oc:8959). Restano per retrocompatibilità.
      */
     public function applyTaxonomyWhereDisplay(array $properties): array
     {

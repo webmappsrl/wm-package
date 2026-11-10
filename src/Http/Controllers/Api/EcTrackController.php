@@ -29,7 +29,7 @@ class EcTrackController extends Controller
 
         UpdateEcTrackAwsJob::dispatch($ecTrack);
 
-        $geojson = $ecTrack->applyTaxonomyWhereDisplayToFeature($ecTrack->getGeojson());
+        $geojson = $ecTrack->applyTaxonomyWhereDisplayToFeature($ecTrack->getDetailGeojson());
 
         return response()->json($geojson, 200, $headers);
     }
@@ -70,7 +70,7 @@ class EcTrackController extends Controller
                 if ($id === strval(intval($id))) {
                     $track = EcTrack::find($id);
                     if (isset($track)) {
-                        $featureCollection['features'][] = $track->applyTaxonomyWhereDisplayToFeature($track->getGeojson());
+                        $featureCollection['features'][] = $track->applyTaxonomyWhereDisplayToFeature($track->getDetailGeojson());
                     }
                 }
             }

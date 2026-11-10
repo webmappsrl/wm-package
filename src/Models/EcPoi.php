@@ -10,6 +10,7 @@ use Spatie\Translatable\HasTranslations;
 use Wm\WmPackage\Models\Abstracts\Point;
 use Wm\WmPackage\Models\Interfaces\LayerRelatedModel;
 use Wm\WmPackage\Observers\EcPoiObserver;
+use Wm\WmPackage\Services\DetailTaxonomiesService;
 use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Traits\EcFeatureTrait;
 use Wm\WmPackage\Traits\TaxonomyAbleModel;
@@ -261,6 +262,20 @@ class EcPoi extends Point implements LayerRelatedModel
         return array_map(function ($elem) use ($prefix) {
             return $prefix.'_'.$elem;
         }, $array);
+    }
+
+    /**
+     * Le tassonomie del POI, in `properties.taxonomies` di `pois.geojson` (oc:8959): la stessa
+     * forma del dettaglio delle tracce (`DetailTaxonomiesService`).
+     *
+     * @param  int|null  $appId  l'app di cui valgono le tassonomie accese; senza, quella del POI
+     * @return array<string, list<array<string, mixed>>>
+     */
+    public function geojsonTaxonomies(?int $appId = null): array
+    {
+        $appId ??= $this->app_id;
+
+        return app(DetailTaxonomiesService::class)->build($this, 'EcPoi', $appId);
     }
 
     public function addTaxonomyPoiTypes()

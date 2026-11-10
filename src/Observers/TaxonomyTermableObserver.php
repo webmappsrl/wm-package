@@ -3,11 +3,15 @@
 namespace Wm\WmPackage\Observers;
 
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Laravel\Scout\ModelObserver;
 use Laravel\Scout\Searchable;
+use WeakMap;
 use Wm\WmPackage\Jobs\BuildAppPoisGeojsonJob;
+use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
 use Wm\WmPackage\Models\EcPoi;
+use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\TaxonomyTermable;
 
 /**
@@ -57,6 +61,14 @@ class TaxonomyTermableObserver
 
         $model = $class::query()->find($termable->termable_id);
 
+        // Il dettaglio della traccia su AWS porta `properties.taxonomies`: senza rigenerarlo la
+        // lista (Elasticsearch) mostra il termine nuovo e il dettaglio no (oc:8959). Sta dopo il
+        // controllo di withoutSyncingToSearch(), così un import non accoda un job per legame, e
+        // prima del reindex, così un Elasticsearch giù non lo impedisce.
+        if ($model instanceof EcTrack) {
+            $this->rebuildTrackDetail($model);
+        }
+
         try {
             $model?->searchable();
         } catch (\Throwable $e) {
@@ -70,6 +82,53 @@ class TaxonomyTermableObserver
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * Tracce con la rigenerazione del dettaglio già prenotata, per transazione. La chiave è il
+     * record della transazione di Laravel: se va in rollback il record sparisce, e con lui la
+     * prenotazione, insieme alla callback che Laravel scarta.
+     *
+     * @var WeakMap<object, array<int, true>>|null
+     */
+    private static ?WeakMap $scheduledTrackDetails = null;
+
+    /**
+     * Rigenera il file su AWS della traccia dopo il commit, una volta sola per traccia (oc:8959).
+     *
+     * Nova salva i termini dentro una transazione, con un detach/attach per riga: accodato
+     * subito, il job potrebbe girare prima del commit e scrivere il dettaglio con i termini di
+     * prima, e nessun'altra rigenerazione lo correggerebbe, perché la traccia non risulta
+     * modificata. Accodarne uno per riga farebbe poi scontrare i job sul lock di
+     * `WithoutOverlapping` dello stesso `UpdateEcTrackAwsJob`. Fuori da una transazione si accoda
+     * subito.
+     */
+    private function rebuildTrackDetail(EcTrack $track): void
+    {
+        $transaction = app('db.transactions')->callbackApplicableTransactions()->last();
+
+        if ($transaction === null) {
+            UpdateEcTrackAwsJob::dispatch($track);
+
+            return;
+        }
+
+        self::$scheduledTrackDetails ??= new WeakMap;
+        $scheduled = self::$scheduledTrackDetails[$transaction] ?? [];
+        $id = (int) $track->getKey();
+        if (isset($scheduled[$id])) {
+            return;
+        }
+        $scheduled[$id] = true;
+        self::$scheduledTrackDetails[$transaction] = $scheduled;
+
+        $class = $track::class;
+        DB::afterCommit(function () use ($id, $class) {
+            $track = $class::query()->find($id);
+            if ($track instanceof EcTrack) {
+                UpdateEcTrackAwsJob::dispatch($track);
+            }
+        });
     }
 
     /**

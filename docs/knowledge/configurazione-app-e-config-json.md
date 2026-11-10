@@ -41,7 +41,7 @@ applicato a entrambi per semplicità.
 
 **`ShouldBeUnique` su Postgres, dentro una transazione, richiede `uniqueVia()` su Redis** — non
 scontato, e riguarda ogni futuro job unico dispatchato da un salvataggio Nova. `UpdateAppConfigJob`
-implementa `ShouldBeUnique` (oc:8488) con lock di default su `CACHE_STORE=database`.
+implementa `ShouldBeUniqueUntilProcessing` (oc:8488, oc:8959) con lock di default su `CACHE_STORE=database`.
 `Illuminate\Cache\DatabaseLock::acquire()` prova un `INSERT` e, se fallisce per chiave duplicata,
 ripiega su un `UPDATE` nello **stesso** try/catch — su PostgreSQL una query fallita dentro una
 transazione blocca (`25P02`) tutte le query successive nella stessa transazione, quindi anche
@@ -88,9 +88,10 @@ regole del servizio (oc:8911):
   il segnale in cache (6 ore). L'import collega i tipi con gli eventi attivi, e la config va
   scritta solo a layer batch integro (oc:8488). Salvare l'App in Nova la rigenera comunque.
 
-Limite noto: il lock di `UpdateAppConfigJob` resta preso fino alla fine dell'esecuzione, quindi
-una modifica che arriva mentre il job sta già costruendo la config viene scartata; la config si
-riallinea alla modifica successiva. Stesso limite di `BuildAppPoisGeojsonJob` (oc:8911).
+Da oc:8959 il lock di `UpdateAppConfigJob` si libera quando il job parte, e `WithoutOverlapping`
+per app impedisce che due esecuzioni scrivano insieme: una modifica arrivata mentre il job sta già
+costruendo la config si accoda e viene applicata. Prima, con `ShouldBeUnique`, veniva scartata fino
+alla modifica successiva. Quel limite resta per `BuildAppPoisGeojsonJob` (oc:8911).
 
 Debito noto (oc:8911):
 - il ramo `poi_type` di `AppController::getFeaturesByAppAndTerm`

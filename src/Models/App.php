@@ -19,6 +19,7 @@ use Spatie\Translatable\HasTranslations;
 use Whitecube\NovaFlexibleContent\Value\FlexibleCast;
 use Wm\WmPackage\Jobs\App\ReindexAppContentsJob;
 use Wm\WmPackage\Observers\AppObserver;
+use Wm\WmPackage\Services\DetailTaxonomiesService;
 use Wm\WmPackage\Services\StorageService;
 use Wm\WmPackage\Traits\HasPackageFactory;
 use Wm\WmPackage\Traits\TaxonomyAbleModel;
@@ -387,11 +388,15 @@ class App extends Model implements HasMedia
         $query = $this->globalEcPois();
         // taxonomyPoiTypes caricati insieme: li legge getSearchableString() per ogni POI (oc:8677).
         // taxonomyTerms per i filtri del modello unico (oc:8910), con la loro tassonomia.
-        $with = ['taxonomyPoiTypes'];
+        // taxonomyActivities e taxonomyThemes per `taxonomies` (oc:8959).
+        $with = ['taxonomyPoiTypes', 'taxonomyActivities', 'taxonomyThemes'];
         if (method_exists(new EcPoi, 'taxonomyTerms')) {
             $with[] = 'taxonomyTerms';
         }
         $appPois = $query->with($with)->get();
+
+        // Un'istanza per tutto il file: le tassonomie accese per l'app si leggono una volta sola.
+        $detailTaxonomies = new DetailTaxonomiesService;
 
         if (count($appPois) > 0) {
             /** @var EcPoi $poi */
@@ -401,6 +406,13 @@ class App extends Model implements HasMedia
                     if ($poi->geometry && ! empty($poi->geometry)) {
                         $item = $poi->applyTaxonomyWhereDisplayToFeature($poi->getGeojson(false, $this->id));
 
+                        // Le tassonomie del POI, nella stessa forma del dettaglio delle tracce
+                        // (oc:8959). Valgono quelle accese per l'app di questo file: un POI globale
+                        // può essere di un'altra app.
+                        $item['properties']['taxonomies'] = $detailTaxonomies->buildForJson($poi, 'EcPoi', (int) $this->id);
+
+                        // @deprecated per i frontend: i filtri si costruiscono da `taxonomies`
+                        // (oc:8959). Resta identico per le app che lo leggono già.
                         // Aggiungo le taxonomy identifiers necessari per filtri
                         $taxonomiesidentifiers = array_merge(
                             $poi->taxonomyActivities()->pluck('identifier')->toArray(),

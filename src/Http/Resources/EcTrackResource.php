@@ -26,7 +26,8 @@ class EcTrackResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        $geojson = $this->getGeojson();
+        // Il dettaglio pubblico, con `properties.taxonomies` (oc:8959).
+        $geojson = $this->resource->getDetailGeojson();
         $geometryComputationService = GeometryComputationService::make();
 
         // force linestring
