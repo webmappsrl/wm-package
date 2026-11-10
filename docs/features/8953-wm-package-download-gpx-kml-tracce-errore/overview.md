@@ -67,10 +67,22 @@ ramo per il punto e i casi di test corrispondenti.
   e, per il POI, un `<Point><coordinates>lon,lat,ele</coordinates>`.
 - [ ] **Quota.** I punti si costruiscono dalle coordinate di `ST_AsGeoJSON(geometry)`, che conserva
   la Z, e non dalla libreria, che la scarta. **Una Z uguale a 0 vale come quota mancante**, come una Z
-  assente: `<ele>` si omette nel GPX e nel KML si scrivono solo lon e lat. Sul DB locale di forestas
-  la Z vale 0 su tutti i 926 POI e su parte dei punti di 36 tracce (la 24 ha 1713 punti a 0 su 4810,
-  la 427 li ha tutti): scriverla produrrebbe profili con salti fino al livello del mare. Un punto
-  davvero a 0 m perde la quota, caso raro e innocuo. Nel KML la stessa `<coordinates>` può quindi
+  assente: `<ele>` si omette nel GPX e nel KML si scrivono solo lon e lat. Scriverla produrrebbe
+  profili con salti fino al livello del mare. Un punto davvero a 0 m perde la quota, caso raro e
+  innocuo.
+
+  **Su forestas circa metà dei GPX uscirà senza nessun `<ele>`, ed è il comportamento atteso, non
+  un bug.** Conteggi in sola lettura del reviewer, 10/11/2026:
+
+  | | UAT forestas | cammini |
+  |---|---|---|
+  | Tracce (tutte `MultiLineString`) | 769 | 1315 |
+  | Tracce con almeno una Z = 0 | 428 | 207 |
+  | …di cui con tutte le Z = 0 (GPX senza `<ele>`) | 389 | 129 |
+  | Tracce senza nessuna Z = 0 | 341 | 1108 |
+  | POI con Z = 0 | 976 su 976 | 1043 su 1043 |
+
+  Su entrambi gli shard, quindi, nessun POI avrà `<ele>`. Nel KML la stessa `<coordinates>` può quindi
   contenere tuple a 2 e a 3 valori, cosa che lo schema consente; senza `<altitudeMode>` Google
   Earth appoggia comunque la linea al suolo, ed è voluto: con quote parziali una linea sospesa
   sarebbe peggio.
@@ -81,10 +93,18 @@ ramo per il punto e i casi di test corrispondenti.
 - [ ] **Contenuto senza geometria → 404.** Se `getModelGeometryAsGeojson()` restituisce `null`
   (geometria assente, o errore di PostGIS), le rotte GPX e KML rispondono
   `{"code": 404, "error": "Geometry not found"}` con stato 404, invece di un 200 con un corpo
-  vuoto o con `{}` (`GeometryComputationService.php:352`). Si usa lo stesso meccanismo del
-  contenuto inesistente: `Exception(…, 404)` raccolta dal `catch` già presente nelle azioni
-  (`EditorialContentController.php:39-42`, `:106-110`), e lo stesso formato JSON usato in
+  vuoto o con `{}` (`GeometryComputationService.php:352`). Il formato JSON è lo stesso di
   `AppController.php:69`.
+
+  Il 404 nasce da un **controllo esplicito sul `null`**, non da un'eccezione:
+  `getModelGeometryAsGpx()` e `getModelGeometryAsKml()` restituiscono `null` quando manca la
+  geometria, e `viewEcGpx()` / `viewEcKml()` rispondono 404 quando `getGpx()` / `getKml()`
+  restituiscono `null`. Un'eccezione non funzionerebbe: il `try` delle azioni avvolge solo
+  `_getEcModelFromType()` (`EditorialContentController.php:106-110`, `:123-127`), mentre
+  `getGpx()` (`:111`) e `getKml()` (`:129`) ne restano fuori. Il `catch` esistente non cambia: usa
+  `$e->getCode()` come stato HTTP, ma raccoglie solo le eccezioni di `_getEcModelFromType()`, che
+  hanno codice 400 o 404. Un errore inatteso della costruzione del documento resta un 500 gestito
+  da Laravel, con la sua causa nel log.
 - [ ] **Macro di risposta** `gpx` e `kml` registrate in `WmPackageServiceProvider::boot()`, con
   `Content-Type` `application/gpx+xml` e `application/vnd.google-earth.kml+xml`. Le azioni
   `download` non sovrascrivono più il tipo con `application/xml`.
@@ -94,8 +114,9 @@ ramo per il punto e i casi di test corrispondenti.
   (RFC 6266), così i nomi con accenti o lineette di forestas (139 tracce e 67 POI) arrivano
   integri. `makeDisposition()` lancia un'eccezione se il fallback contiene caratteri non ASCII o
   `%`, o se uno dei due nomi contiene `/` o `\` (`HeaderUtils.php:176-187`): il fallback va
-  traslitterato (`Str::ascii()`) e ripulito da `%`, e `/` e `\` vanno sostituiti in entrambi (su
-  forestas c'è il POI 540, `…(Via Don Giordi/Via della Musica)`). `createDownloadFileName()` serve
+  traslitterato (`Str::ascii()`) e ripulito da `%`, e `/` e `\` vanno sostituiti in entrambi. Casi
+  reali, conteggi del reviewer del 10/11/2026: su UAT forestas 7 tracce e 2 POI hanno `/` o `\` nel
+  nome (es. il POI `…(Via Don Giordi/Via della Musica)`), su cammini 96 tracce e 16 POI. `createDownloadFileName()` serve
   anche `download/{id}.geojson` (`EditorialContentController.php:94`), che oggi risponde 200: il suo
   `Content-Disposition` cambia nello stesso modo, e la rotta entra nei test come non-regressione.
 - [ ] **Test feature** nel package, sulle otto rotte (traccia e POI, GPX e KML, `download/` e
@@ -106,7 +127,8 @@ ramo per il punto e i casi di test corrispondenti.
   quello scritto; e le quote casuali possono valere 0.00. La factory non si tocca in questo ticket,
   e mai si adatta il codice di produzione ai suoi valori.
   - un caso con un punto a Z = 0 verifica che `<ele>` manchi, uno con Z ≠ 0 che ci sia;
-  - un caso senza geometria verifica il 404: la colonna `geometry` non è nullable
+  - un caso senza geometria verifica il 404 **chiamando la rotta**, non solo il service, così
+    da coprire anche il controller: la colonna `geometry` non è nullable
     (`create_ec_tracks_table.php.stub:22`), quindi il `null` si ottiene sostituendo
     `GeometryComputationService` nel container con un mock;
   - un caso con un nome come `Via Don Giordi/Via della Musica – 100%` verifica `filename` in ASCII
@@ -117,17 +139,25 @@ ramo per il punto e i casi di test corrispondenti.
   - il GPX valida contro lo schema XSD di GPX 1.1, salvato fra i fixture dei test perché il test
     non dipenda dalla rete. Il KML si controlla solo nella struttura: lo schema OGC importa altri
     schemi e non è praticabile senza rete.
-- [ ] **Prova a mano dopo il deploy su dev**: scaricare da `https://forestas.dev.maphub.it` il GPX
-  della traccia 103 e di una traccia con più linee (sul DB locale la 427, 12 linee, o la 779, 3
-  linee; gli id vanno ricontrollati su dev) e aprirli in un'app vera (OsmAnd o gpx.studio), per
-  cogliere ciò che lo schema non vede, come lat e lon invertite. Il KML della traccia 103 si apre in
-  Google Earth (va bene la versione web), perché per il KML non c'è validazione con lo schema.
+- [ ] **Prova a mano dopo il deploy, su dev di forestas e su cammini**, con
+  `curl -i <APP_URL>/api/ec/track/download/<id>.gpx` (nessun client chiama queste rotte: nei
+  frontend il componente `wm-feature-useful-urls` genera GPX e KML nel browser). Tre tracce tipo, i cui id si
+  cercano con una query al momento del test perché cambiano da un DB all'altro:
+  - una con quote reali (su UAT forestas la 2, su cammini la 1): `<ele>` presente;
+  - una con tutte le Z a 0: nessun `<ele>`;
+  - una con più linee (su UAT forestas la 218, su cammini la 756): un `<trkseg>` per linea.
+
+  I GPX si aprono in un'app vera (OsmAnd o gpx.studio), per cogliere ciò che lo schema non vede,
+  come lat e lon invertite. Il KML della traccia con quote reali si apre in Google Earth (va bene la
+  versione web), perché per il KML non c'è validazione con lo schema.
 
 ## Rischi
 
 - **Le rotte cambiano comportamento su tutti gli shard che montano il package.** Oggi rispondono
-  sempre 500, quindi nessun client può dipendere dal comportamento attuale; né forestas né
-  `wp-forestas` le chiamano. Gli altri shard non sono stati verificati.
+  sempre 500, quindi nessun client può dipendere dal comportamento attuale. Secondo la review del
+  10/11/2026 non le chiama nessun client: né forestas, né `wp-forestas`, né webmapp-app e
+  wm-webapp, dove `gpx_url` e `kml_url` compaiono solo nei tipi e nelle fixture dei test. Oltre a
+  forestas è verificato cammini: stesso difetto, tutte le tracce sono `MultiLineString`.
 - **Ordine dei merge.** Il fix va mergiato prima nel `wm-package`, poi forestas aggiorna il
   puntatore del submodule, come da regola del package.
 - **Tracce molto lunghe.** Il documento si costruisce in memoria come stringa, come fa oggi il
@@ -151,7 +181,8 @@ ramo per il punto e i casi di test corrispondenti.
 |---|---|---|
 | `src/Services/GeometryComputationService.php` | `wm-package` | `getModelGeometryAsGpx()` e `getModelGeometryAsKml()` costruiscono il documento completo dalle coordinate GeoJSON, per `MultiLineString` e `Point` |
 | `src/WmPackageServiceProvider.php` | `wm-package` | macro di risposta `gpx` e `kml` |
-| `src/Http/Controllers/Api/EditorialContentController.php` | `wm-package` | `createDownloadFileName()` e i `Content-Type` delle azioni `download` |
+| `src/Models/Abstracts/GeometryModel.php` | `wm-package` | `getGpx()` dichiara il tipo restituito `?string`, come `getKml()` |
+| `src/Http/Controllers/Api/EditorialContentController.php` | `wm-package` | 404 in `viewEcGpx()` e `viewEcKml()` quando manca la geometria, `createDownloadFileName()` e i `Content-Type` delle azioni `download` |
 | `tests/Feature/Api/…` (nuovo) | `wm-package` | test sulle otto rotte e sulla non-regressione di `download/{id}.geojson` |
 | `tests/fixtures/…/gpx.xsd` (nuovo) | `wm-package` | schema GPX 1.1 per la validazione offline (cartella in minuscolo: nel container Linux `Fixtures` non la troverebbe) |
 | puntatore del submodule `wm-package` | `forestas` | aggiornamento dopo il merge nel package |
