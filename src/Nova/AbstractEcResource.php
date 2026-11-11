@@ -18,6 +18,7 @@ use Laravel\Nova\Tabs\Tab;
 use Laravel\Nova\Tabs\Tabs;
 use Outl1ne\MultiselectField\Multiselect;
 use Wm\WmPackage\Nova\Concerns\BuildsTaxonomyFields;
+use Wm\WmPackage\Nova\Fields\ImageCredits;
 use Wm\WmPackage\Nova\Filters\FeaturesByLayerFilter;
 use Wm\WmPackage\Services\StorageService;
 
@@ -49,7 +50,8 @@ abstract class AbstractEcResource extends AbstractGeometryResource
     {
         return [
             ...parent::fields($request),
-            Images::make('Image', 'default'),
+            // Didascalia, autore e credits su ogni foto (oc:8959).
+            Images::make('Image', 'default')->customPropertiesFields(ImageCredits::fields()),
         ];
     }
 

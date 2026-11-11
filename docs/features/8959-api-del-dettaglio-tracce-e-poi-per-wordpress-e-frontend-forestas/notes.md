@@ -180,3 +180,19 @@ entrano solo POI dell'app (`globalEcPois()` parte da `ecPois()`). La chiave è `
 - Avvisare Rubens: nomi di tassonomie e tab in `TAXONOMY_LABELS` / `TAXONOMY_TAB_LABELS` del
   `config.json`.
 - Pezzi successivi di oc:8959: gli altri dati del dettaglio dall'analisi, roadbook.
+
+## Crediti delle foto (2026-11-11, scrum delle 13:54)
+
+Branch `feature/oc-8959-crediti-delle-foto`, da `origin/develop`.
+
+- Giuseppe: «image credits sparisce e viene assorbita da feature image e image gallery», da fare
+  nel package perché «non è una cosa custom». Didascalia, autore e credits si scrivono in Nova su
+  ogni foto e escono con la foto: `ImageCredits` (campi e lettura), `MediaResource`,
+  `GeoJsonService`, campo immagini di `AbstractEcResource`. Pagina:
+  `docs/knowledge/media-e-avatar.md`, «Didascalia, autore e credits delle foto».
+- Chiavi `caption`, `author`, `credits`: `caption` c'era già nel GeoJSON ed è quella di wm-core.
+- Lato forestas (PR del secondo pezzo): l'import scrive le chiavi nuove al posto di
+  `sardegnasentieri_caption/_autore/_credits`, il campo Nova di forestas usa `ImageCredits::fields()`
+  e `properties.forestas.image_credits` sparisce. Niente migration delle chiavi già salvate: su dev
+  e UAT il reset notturno riscrive le custom properties di ogni foto (decisione del dev).
+- `ImportAppJobConfigRefreshBatchesTest` fallisce anche su `origin/develop`, senza queste modifiche.
