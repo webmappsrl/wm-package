@@ -23,6 +23,8 @@ prima di procedere.
 
 ## Task 1 — Test che riproducono il difetto (rossi)
 
+> ⚠️ L'implementazione ha deviato da questo task: [notes.md](notes.md#task-1-test)
+
 **File:** `tests/Feature/Api/EcDownloadEndpointTest.php` (nuovo), `tests/fixtures/gpx/gpx.xsd` (nuovo).
 
 1. Scaricare lo schema GPX 1.1 da `https://www.topografix.com/GPX/1/1/gpx.xsd` in
@@ -68,6 +70,8 @@ Commit suggerito: `test(oc:8953): test delle rotte GPX e KML di tracce e POI`
 
 ## Task 2 — Costruzione del documento GPX e KML
 
+> ⚠️ L'implementazione ha deviato da questo task: [notes.md](notes.md#task-2-costruzione-del-documento)
+
 **File:** `src/Services/GeometryComputationService.php`.
 
 1. `getModelGeometryAsGpx(GeometryModel $model): ?string` e
@@ -107,6 +111,8 @@ Commit suggerito: `fix(oc:8953): GPX e KML completi per tracce multilinea e POI,
 Commit suggerito: insieme al task 4.
 
 ## Task 4 — Controller: 404, `Content-Type` e nome del file
+
+> ⚠️ L'implementazione ha deviato da questo task: [notes.md](notes.md#task-4-controller)
 
 **File:** `src/Http/Controllers/Api/EditorialContentController.php`.
 
