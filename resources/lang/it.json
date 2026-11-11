@@ -660,5 +660,7 @@
     "Maintenance frequency (months)": "Frequenza manutenzione (mesi)",
     "Enable Web Component copy (layers and tracks)": "Abilita copia Web Component (layer e tracce)",
     "Shows a button in layer and track details to copy the wm-layer-map web component snippet": "Mostra nel dettaglio di layer e tracce un bottone per copiare il codice del web component wm-layer-map",
-    "Layer": "Layer"
+    "Layer": "Layer",
+    "Caption": "Didascalia",
+    "Credits": "Crediti"
 }

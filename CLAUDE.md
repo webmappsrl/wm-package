@@ -98,7 +98,7 @@ questo file, perché vanno lette sempre.
 | Autorizzazione e ruoli | policy, super-admin, impersonation, throttle login | [docs/knowledge/autorizzazione-e-ruoli.md](docs/knowledge/autorizzazione-e-ruoli.md) |
 | App e `config.json` | theme, story share, preferiti, asset, filtro dei tipi di POI | [docs/knowledge/configurazione-app-e-config-json.md](docs/knowledge/configurazione-app-e-config-json.md) |
 | Link e QR code verso l'app | deep link su Track/Poi e well-known registry, link unico `/app/{id}/open` che porta allo store, all'app o alla webapp a seconda del dispositivo, perché niente Apache né universal link su iOS | [docs/knowledge/link-e-qr-code-verso-l-app.md](docs/knowledge/link-e-qr-code-verso-l-app.md) |
-| Media, upload e avatar | validazione dei campi media, conversion avatar | [docs/knowledge/media-e-avatar.md](docs/knowledge/media-e-avatar.md) |
+| Media, upload e avatar | validazione dei campi media, conversion avatar, didascalia/autore/credits delle foto (`ImageCredits`) | [docs/knowledge/media-e-avatar.md](docs/knowledge/media-e-avatar.md) |
 | Layer e associazione contenuti | modalità auto/manuale, `poi_mode`, pivot `layerables` | [docs/knowledge/layer-e-associazione-contenuti.md](docs/knowledge/layer-e-associazione-contenuti.md) |
 | Campi Nova custom e build | toolchain, Tailwind, componenti condivisi, `dist` | [docs/knowledge/campi-nova-custom-e-build.md](docs/knowledge/campi-nova-custom-e-build.md) |
 | Domini opzionali | interruttore, stub, risorse Nova, Catasto Sentieri | [docs/knowledge/domini-opzionali.md](docs/knowledge/domini-opzionali.md) |

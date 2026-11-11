@@ -3,6 +3,7 @@
 namespace Wm\WmPackage\Services;
 
 use Illuminate\Database\Eloquent\Model;
+use Wm\WmPackage\Nova\Fields\ImageCredits;
 
 class GeoJsonService extends BaseService
 {
@@ -68,9 +69,10 @@ class GeoJsonService extends BaseService
                     'id' => $firstMedia->id,
                     'name' => $firstMedia->custom_properties['name'] ?? ['it' => $firstMedia->name],
                     'url' => $firstMedia->getUrl(),
-                    'caption' => $firstMedia->custom_properties['caption'] ?? null,
                     'thumbnail' => $firstMedia->getUrl('thumbnail_400_200'),
                     'api_url' => route('default.api.media.geojson', $firstMedia->id),
+                    // Didascalia, autore e credits scritti in Nova sulla foto (oc:8959).
+                    ...ImageCredits::of($firstMedia),
                 ];
             }
 
@@ -82,9 +84,9 @@ class GeoJsonService extends BaseService
                         'id' => $media->id,
                         'name' => $media->custom_properties['name'] ?? ['it' => $media->name],
                         'url' => $media->getUrl(),
-                        'caption' => $media->custom_properties['caption'] ?? null,
                         'thumbnail' => $media->getUrl('thumbnail_400_200'),
                         'api_url' => route('default.api.media.geojson', $media->id),
+                        ...ImageCredits::of($media),
                     ];
                 }
                 $properties['image_gallery'] = $imageGallery;

@@ -659,5 +659,7 @@
     "Maintenance frequency (months)": "Maintenance frequency (months)",
     "Enable Web Component copy (layers and tracks)": "Enable Web Component copy (layers and tracks)",
     "Shows a button in layer and track details to copy the wm-layer-map web component snippet": "Shows a button in layer and track details to copy the wm-layer-map web component snippet",
-    "Layer": "Layer"
+    "Layer": "Layer",
+    "Caption": "Caption",
+    "Credits": "Credits"
 }
