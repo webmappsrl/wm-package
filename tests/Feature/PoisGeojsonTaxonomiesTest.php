@@ -64,10 +64,10 @@ it('porta le tassonomie di un POI nella stessa forma del dettaglio delle tracce'
 
     $taxonomies = (array) poiFeature($app, $poi->id)['properties']['taxonomies'];
 
-    expect($taxonomies['poi-type'])->toEqual([['identifier' => $poiType->identifier, 'name' => ['it' => 'Fontana'], 'tab' => 'General']])
+    expect($taxonomies['poi-type'])->toEqual([['identifier' => $poiType->identifier, 'name' => ['it' => 'Fontana']]])
         ->and($taxonomies['activity'][0]['identifier'])->toBe($activity->identifier)
-        ->and($taxonomies['where'])->toEqual([['identifier' => 'R40176', 'name' => ['it' => 'Atzara'], 'tab' => 'General', 'admin_level' => 8, 'source' => 'osmfeatures']])
-        ->and($taxonomies[$taxonomy->identifier])->toEqual([['identifier' => $term->identifier, 'name' => ['it' => 'Parcheggio'], 'tab' => 'Services', 'sort_order' => 0]]);
+        ->and($taxonomies['where'])->toEqual([['identifier' => 'R40176', 'name' => ['it' => 'Atzara'], 'admin_level' => 8]])
+        ->and($taxonomies[$taxonomy->identifier])->toEqual([['identifier' => $term->identifier, 'name' => ['it' => 'Parcheggio']]]);
 });
 
 it('non porta nei POI le tassonomie accese solo per le tracce', function () {

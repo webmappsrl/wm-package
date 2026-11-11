@@ -15,7 +15,7 @@ use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\TaxonomyTerm;
 
 /**
- * Accendere o spegnere una tassonomia dalla scheda App cambia `TAXONOMY_LABELS` del config.json
+ * Accendere o spegnere una tassonomia dalla scheda App cambia `LABELS` del config.json
  * e `taxonomies` nel dettaglio di ogni traccia dell'app, senza che nessun contenuto venga
  * salvato: il job che già reindicizza deve rigenerare anche quelle uscite (oc:8959).
  */

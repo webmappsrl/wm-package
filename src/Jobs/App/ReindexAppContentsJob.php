@@ -96,7 +96,7 @@ class ReindexAppContentsJob implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        // Le tassonomie accese sono anche in `TAXONOMY_LABELS` del config.json, in `taxonomies`
+        // Le tassonomie accese sono anche in `LABELS` del config.json, in `taxonomies`
         // dei POI di pois.geojson e del dettaglio di ogni traccia (oc:8959). Il config.json si
         // riscrive qui; dettagli, reindex e pois.geojson li fa il job che già rigenera le uscite
         // pubbliche dell'app quando cambia «Località mostrate»: unico finché non parte, così un

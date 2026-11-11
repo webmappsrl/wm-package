@@ -42,12 +42,13 @@ it('etichetta le storiche e le tassonomie accese per le EcTrack, nell\'ordine di
     $second = labelledTaxonomy($app, ['sort_order' => 2]);
     $first = labelledTaxonomy($app, ['sort_order' => 1]);
 
-    $labels = configOf($app)['TAXONOMY_LABELS'];
+    $taxonomies = configOf($app)['LABELS']['taxonomies'];
 
-    expect(array_keys($labels))->toBe(['activity', 'theme', 'poi-type', 'where', $first->identifier, $second->identifier])
-        ->and($labels[$first->identifier])->toEqual(['it' => 'Tipo percorso', 'en' => 'Route type'])
-        ->and($labels['activity']['it'])->toBe('Attività')
-        ->and($labels['where']['it'])->toBe('Zone');
+    expect(array_keys($taxonomies))->toBe(['activity', 'theme', 'poi-type', 'where', $first->identifier, $second->identifier])
+        ->and($taxonomies[$first->identifier])->toEqual(['labels' => ['it' => 'Tipo percorso', 'en' => 'Route type'], 'tab' => 'General'])
+        ->and($taxonomies['activity'])->toEqual(['labels' => ['it' => 'Attività', 'en' => 'Activities'], 'tab' => 'Activities'])
+        ->and($taxonomies['where']['labels']['it'])->toBe('Zone')
+        ->and($taxonomies['where']['tab'])->toBe('General');
 });
 
 it('etichetta anche le tassonomie accese solo per i POI, non quelle spente', function () {
@@ -56,21 +57,35 @@ it('etichetta anche le tassonomie accese solo per i POI, non quelle spente', fun
     $off = labelledTaxonomy($app);
     $off->apps()->detach();
 
-    expect(configOf($app)['TAXONOMY_LABELS'])->toHaveKey($poiOnly->identifier)
+    expect(configOf($app)['LABELS']['taxonomies'])->toHaveKey($poiOnly->identifier)
         ->not->toHaveKey($off->identifier);
 });
 
-it('etichetta i tab usati, con General per primo', function () {
+it('dà a ogni tassonomia la chiave del suo tab, e le etichette dei tab una volta sola', function () {
     $app = App::factory()->createQuietly();
-    labelledTaxonomy($app, ['properties' => ['tab' => 'Inclusivity']]);
+    $taxonomy = labelledTaxonomy($app, ['properties' => ['tab' => 'Inclusivity']]);
 
-    $tabs = configOf($app)['TAXONOMY_TAB_LABELS'];
+    $labels = configOf($app)['LABELS'];
 
-    expect(array_key_first($tabs))->toBe('General')
-        ->and(array_keys($tabs))->toEqualCanonicalizing(['General', 'Activities', 'Inclusivity'])
-        ->and($tabs['General']['it'])->toBe('Generale')
-        ->and($tabs['Activities']['it'])->toBe('Attività')
-        ->and($tabs['General']['en'])->toBe('General');
+    expect($labels['taxonomies'][$taxonomy->identifier]['tab'])->toBe('Inclusivity')
+        ->and(array_key_first($labels['tabs']))->toBe('General')
+        ->and(array_keys($labels['tabs']))->toEqualCanonicalizing(['General', 'Activities', 'Inclusivity'])
+        ->and($labels['tabs']['General']['labels']['it'])->toBe('Generale')
+        ->and($labels['tabs']['Activities']['labels']['it'])->toBe('Attività')
+        ->and($labels['tabs']['General']['labels']['en'])->toBe('General');
+});
+
+it('usa General per una tassonomia che non dichiara un tab', function () {
+    $app = App::factory()->createQuietly();
+    $taxonomy = labelledTaxonomy($app);
+
+    expect(configOf($app)['LABELS']['taxonomies'][$taxonomy->identifier]['tab'])->toBe('General');
+});
+
+it('non scrive più TAXONOMY_LABELS né TAXONOMY_TAB_LABELS', function () {
+    $config = configOf(App::factory()->createQuietly());
+
+    expect($config)->not->toHaveKey('TAXONOMY_LABELS')->not->toHaveKey('TAXONOMY_TAB_LABELS');
 });
 
 it('rigenera il config.json delle app accese quando cambia il nome di una tassonomia, dopo il commit', function () {
@@ -110,7 +125,7 @@ it('scrive come oggetto JSON il nome di una tassonomia senza traduzioni', functi
     $taxonomy = labelledTaxonomy($app);
     DB::table('taxonomy_terms')->where('id', $taxonomy->id)->update(['name' => '{}']);
 
-    expect(json_encode(configOf($app)['TAXONOMY_LABELS']))->toContain('"'.$taxonomy->identifier.'":{}');
+    expect(json_encode(configOf($app)['LABELS']['taxonomies'][$taxonomy->identifier]))->toContain('"labels":{}');
 });
 
 it('accoda la riscrittura del config.json anche mentre un\'altra è in corso, e non la fa girare in parallelo', function () {

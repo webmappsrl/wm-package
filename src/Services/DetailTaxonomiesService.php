@@ -11,9 +11,9 @@ use Wm\WmPackage\Models\TaxonomyTerm;
  * `properties.taxonomies` dei contenuti: l'unico punto da cui i frontend leggono le tassonomie
  * (oc:8959). La usano il dettaglio della traccia (`EcTrack::getDetailGeojson()`) e le feature di
  * `pois.geojson`, con la stessa forma: identifier della tassonomia → array di termini, ognuno con
- * `identifier`, `name` (tutte le traduzioni), `tab` (il tab in cui Nova mostra quella tassonomia) e
- * i campi utili della sua fonte quando hanno un valore. Le etichette di tassonomie e tab stanno nel
- * config.json dell'app (`AppConfigService::config_section_taxonomy_labels()`).
+ * `identifier`, `name` (tutte le traduzioni) e, se valorizzati, `icon_name` e `admin_level` (zone).
+ * Nome e tab di ogni tassonomia, e nome di ogni tab, stanno nel config.json dell'app, in `LABELS`
+ * (`AppConfigService::config_section_labels()`).
  *
  * Le fonti, nell'ordine: le tassonomie storiche in tabella propria (`activity`, `theme`,
  * `poi-type`), le zone (`where`, da `properties.taxonomy_where`) e le tassonomie di
@@ -37,7 +37,7 @@ class DetailTaxonomiesService
 
     /**
      * Le tassonomie storiche (tabella propria) che entrano in `properties.taxonomies` e in
-     * `TAXONOMY_LABELS` del config.json, con la chiave con cui ci entrano. `relation` è la
+     * `LABELS.taxonomies` del config.json, con la chiave con cui ci entrano. `relation` è la
      * relazione sul contenuto (`null` per le zone, che stanno in `properties.taxonomy_where`);
      * `label` è la chiave di traduzione del nome, la stessa di Nova (`null` = il `label` di
      * `config('wm-package.legacy_taxonomies')`). `when` e `target` non ci sono: la prima non è più
@@ -82,7 +82,6 @@ class DetailTaxonomiesService
             if ($relation === null || ! method_exists($model, $relation)) {
                 continue;
             }
-            $tab = self::legacyTaxonomyTab($key);
 
             // Le relazioni storiche non hanno un ordine: si fissa per id, così il file non cambia
             // fra una rigenerazione e l'altra senza che sia cambiato niente.
@@ -93,10 +92,8 @@ class DetailTaxonomiesService
                 if ($identifier === null || $identifier === '') {
                     continue;
                 }
-                $taxonomies[$key][] = self::entry((string) $identifier, $term->getTranslations('name'), $tab, [
-                    'description' => $term->getTranslations('description'),
-                    'excerpt' => $term->getTranslations('excerpt'),
-                    'icon' => $term->getAttribute('icon'),
+                $taxonomies[$key][] = self::entry((string) $identifier, $term->getTranslations('name'), [
+                    'icon_name' => $term->getAttribute('icon'),
                 ]);
             }
         }
@@ -185,21 +182,23 @@ class DetailTaxonomiesService
     }
 
     /**
-     * Un termine: `identifier`, `name` e `tab` sempre, gli altri campi solo se hanno un valore,
-     * così il file non si riempie di `null`. I campi tecnici hanno nomi senza `_` (`admin_level`,
-     * non `_admin_level`).
+     * Un termine: `identifier` e `name` sempre, più i soli campi che i frontend leggono, quando
+     * hanno un valore: `icon_name` e, per le zone, `admin_level` (scrum del 2026-11-11: «se il
+     * front-end non consuma quel dato, non metterlo»; un campo nuovo si aggiunge con un commit
+     * quando una feature lo chiede). `icon_name` e non `icon`, come in `getJson()`: per wm-core
+     * `icon` è l'SVG in linea, `icon_name` la chiave del dizionario delle icone. Il tab non c'è: è
+     * della tassonomia e sta in `LABELS.taxonomies.<chiave>.tab` del config.json.
      *
      * @param  array<string, string>  $name
      * @param  array<string, mixed>  $optional
      * @return array<string, mixed>
      */
-    private static function entry(string $identifier, array $name, string $tab, array $optional = []): array
+    private static function entry(string $identifier, array $name, array $optional = []): array
     {
         return [
             'identifier' => $identifier,
             // Senza traduzioni resta un oggetto: un array PHP vuoto diventerebbe `[]` in JSON.
             'name' => $name === [] ? new \stdClass : $name,
-            'tab' => $tab,
             ...array_filter($optional, fn ($value) => $value !== null && $value !== '' && $value !== []),
         ];
     }
@@ -234,7 +233,6 @@ class DetailTaxonomiesService
             return [$levelA !== null, $levelA] <=> [$levelB !== null, $levelB];
         });
 
-        $tab = self::legacyTaxonomyTab(self::WHERE_TAXONOMY);
         $out = [];
         foreach ($filtered as $identifier => $entry) {
             $name = array_filter(
@@ -242,9 +240,10 @@ class DetailTaxonomiesService
                 fn ($value, $key) => is_string($key) && ! str_starts_with($key, '_') && is_string($value) && $value !== '',
                 ARRAY_FILTER_USE_BOTH
             );
-            $out[] = self::entry((string) $identifier, $name, $tab, [
+            // `source` non esce: nessun frontend lo usa (scrum del 2026-11-11, «se il front-end non
+            // consuma quel dato, non metterlo»); si aggiunge quando una feature lo chiede.
+            $out[] = self::entry((string) $identifier, $name, [
                 'admin_level' => is_array($entry) && is_numeric($entry['_admin_level'] ?? null) ? (int) $entry['_admin_level'] : null,
-                'source' => is_array($entry) && is_string($entry['_source'] ?? null) ? $entry['_source'] : null,
             ]);
         }
 
@@ -280,14 +279,7 @@ class DetailTaxonomiesService
             $grouped[$taxonomy->identifier][] = self::entry(
                 (string) $term->identifier,
                 $term->getTranslations('name'),
-                self::taxonomyTab($taxonomy),
-                [
-                    'description' => $term->getTranslations('description'),
-                    'excerpt' => $term->getTranslations('excerpt'),
-                    'icon' => $term->icon,
-                    'sort_order' => $term->sort_order,
-                    'pivot_properties' => $term->pivot->properties ?? null,
-                ]
+                ['icon_name' => $term->icon]
             );
         }
 

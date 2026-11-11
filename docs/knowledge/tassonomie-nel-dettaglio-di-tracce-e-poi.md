@@ -5,41 +5,47 @@
 `properties.taxonomies` è l'unico punto da cui i frontend (webapp, app, WordPress degli shard)
 leggono le tassonomie di un contenuto. C'è nel dettaglio di ogni EcTrack e in ogni feature di
 `pois.geojson`, con la stessa forma: un oggetto indicizzato per chiave della tassonomia, ogni
-valore un array di termini. Ogni termine ha sempre `identifier`, `name` (tutte le traduzioni) e
-`tab`, più i campi della sua fonte che hanno un valore (niente `null`):
+valore un array di termini. Ogni termine ha sempre `identifier` e `name` (tutte le traduzioni),
+più `icon_name` e `admin_level` quando hanno un valore (niente `null`). Nome e tab della tassonomia
+non sono nel termine: stanno in `LABELS` del `config.json`.
 
-| Fonte | Campi in più |
-|---|---|
-| `where` | `admin_level` (solo zone OSM: 4 regione, 6 provincia, 8 comune), `source` (`osmfeatures`, `osm2cai`, `geohub_conf_32`…) |
-| `activity`, `theme`, `poi-type` | `description`, `excerpt` (traduzioni), `icon` |
-| `taxonomy_terms` | `description`, `excerpt`, `icon`, `sort_order`, `pivot_properties` (le `properties` del legame contenuto-termine) |
+Nei termini va solo ciò che un frontend usa: un campo nuovo si aggiunge con un commit quando una
+feature lo chiede (scrum del 2026-11-11).
 
-Restano fuori gli id delle righe, i campi di import e le date.
+| Campo | Dove | Chi lo legge |
+|---|---|---|
+| `icon_name` | storiche e `taxonomy_terms`, se il termine ha un'icona | `wm-icon` di wm-core: cerca l'SVG nel dizionario delle icone con questa chiave |
+| `admin_level` | zone OSM (4 regione, 6 provincia, 8 comune) | `taxonomy-where` di wm-core: divide le zone in Comune, Provincia, Regione |
+
+`icon_name` e non `icon`, come in `getJson()`: per wm-core `icon` è l'SVG in linea, usato solo
+come ripiego. Restano fuori gli id delle righe, i campi di import, le date, `sort_order` (l'array è già
+ordinato), `description`/`excerpt` e le `properties` del legame: nessun frontend li legge
+(verificato in webmapp-app, wm-webapp e wp-forestas il 2026-11-11).
 
 Esempio, dalla traccia 326 di forestas (DB di dev):
 
 ```json
 "taxonomies": {
   "activity": [
-    {"identifier": "mtb", "name": {"it": "Mountain Bike", "en": "Mountain Bike"}, "tab": "Activities"},
-    {"identifier": "hiking", "name": {"it": "Alte vie", "en": "High routes"}, "tab": "Activities"}
+    {"identifier": "mtb", "name": {"it": "Mountain Bike", "en": "Mountain Bike"}},
+    {"identifier": "hiking", "name": {"it": "Alte vie", "en": "High routes"}}
   ],
   "where": [
-    {"identifier": "R7361997", "name": {"en": "Sardegna"}, "tab": "General", "admin_level": 4, "source": "osmfeatures"},
-    {"identifier": "R40176", "name": {"en": "Atzara"}, "tab": "General", "admin_level": 8, "source": "osmfeatures"}
+    {"identifier": "R7361997", "name": {"en": "Sardegna"}, "admin_level": 4},
+    {"identifier": "R40176", "name": {"en": "Atzara"}, "admin_level": 8}
   ],
   "route-type": [
-    {"identifier": "route-type-trail", "name": {"it": "Sentiero"}, "tab": "General", "sort_order": 0}
+    {"identifier": "route-type-trail", "name": {"it": "Sentiero"}}
   ],
   "hiking-difficulty": [
-    {"identifier": "sardegnasentieri:tid:4066", "name": {"it": "T"}, "tab": "Activities", "sort_order": 0}
+    {"identifier": "sardegnasentieri:tid:4066", "name": {"it": "T"}}
   ]
 }
 ```
 
 **Le chiavi**, nell'ordine in cui escono (`DetailTaxonomiesService::build()`):
 
-| Chiave | Fonte | `tab` |
+| Chiave | Fonte | `tab` (in `LABELS`) |
 |---|---|---|
 | `activity` | `taxonomy_activities` | il `tab` di `config('wm-package.legacy_taxonomies')` (`Activities`) |
 | `theme` | `taxonomy_themes` | `General` |
@@ -53,7 +59,7 @@ in kebab-case, lo stesso formato degli identifier di `taxonomy_terms`, e sono ri
 storica passerà in `taxonomy_terms` prenderà la sua chiave come identifier, e la riserva cadrà
 con la voce in `LEGACY_TAXONOMIES`: per i frontend non cambierà niente.
 
-Il `tab` è quello in cui Nova mostra la tassonomia nella sezione delle classificazioni
+Il `tab` di una tassonomia è quello in cui Nova la mostra nella sezione delle classificazioni
 (`BuildsTaxonomyFields`): è una chiave (`General`, `Activities`, `Inclusivity`), non un'etichetta.
 
 **Ordine.** Termini delle storiche per id, di `taxonomy_terms` per `sort_order` e id, zone dalla più
@@ -61,29 +67,35 @@ ampia alla più piccola (`admin_level`, senza livello per prime), come `taxonomy
 tassonomia senza termini non compare. `taxonomies` vuota e `name` senza traduzioni sono oggetti
 JSON (`{}`), mai `[]`.
 
-**Le etichette stanno nel `config.json` dell'app**, una volta sola
-(`AppConfigService::config_section_taxonomy_labels()`):
+**Nomi e tab stanno nel `config.json` dell'app**, in `LABELS`, una volta sola
+(`AppConfigService::config_section_labels()`):
 
 ```json
-"TAXONOMY_LABELS": {
-  "activity": {"it": "Attività", "en": "Activities"},
-  "poi-type": {"it": "Tipologie POI", "en": "Poi Types"},
-  "where": {"it": "Zone", "en": "Zones"},
-  "route-type": {"it": "Tipo percorso"}
-},
-"TAXONOMY_TAB_LABELS": {
-  "General": {"it": "Generale", "en": "General"},
-  "Activities": {"it": "Attività", "en": "Activities"},
-  "Inclusivity": {"it": "Inclusività", "en": "Inclusivity"}
+"LABELS": {
+  "taxonomies": {
+    "activity":          {"labels": {"it": "Attività", "en": "Activities"}, "tab": "Activities"},
+    "poi-type":          {"labels": {"it": "Tipologie POI", "en": "Poi Types"}, "tab": "General"},
+    "where":             {"labels": {"it": "Zone", "en": "Zones"}, "tab": "General"},
+    "route-type":        {"labels": {"it": "Tipo percorso"}, "tab": "General"},
+    "inclusivity-difficulty": {"labels": {"it": "Difficoltà di accessibilità"}, "tab": "Inclusivity"}
+  },
+  "tabs": {
+    "General":     {"labels": {"it": "Generale", "en": "General"}},
+    "Activities":  {"labels": {"it": "Attività", "en": "Activities"}},
+    "Inclusivity": {"labels": {"it": "Inclusività", "en": "Inclusivity"}}
+  }
 }
 ```
 
-Il frontend prende il nome di una tassonomia da `TAXONOMY_LABELS[<chiave di taxonomies>]` e quello
-di un tab da `TAXONOMY_TAB_LABELS[<tab del termine>]`. `TAXONOMY_LABELS` ha le quattro storiche
-(nome = la stessa chiave di traduzione di Nova) e tutte le tassonomie di `taxonomy_terms` accese
-nell'app, per tracce o per POI, per `sort_order`; `TAXONOMY_TAB_LABELS` i tab che usano, `General`
+Il frontend parte dalla chiave che trova in `taxonomies` del contenuto: da
+`LABELS.taxonomies[chiave]` ha in un accesso il nome (`labels`) e la chiave del tab (`tab`), da
+`LABELS.tabs[tab].labels` il nome del tab. Per mostrare un tab intero (per esempio le tassonomie di
+`Inclusivity` di una traccia) filtra `LABELS.taxonomies` su `tab`. `LABELS.taxonomies` ha le quattro
+storiche (nome = la stessa chiave di traduzione di Nova) e tutte le tassonomie di `taxonomy_terms`
+accese nell'app, per tracce o per POI, per `sort_order`; `LABELS.tabs` i tab che usano, `General`
 per primo. Le traduzioni dei tab e delle storiche vengono dai file di lingua del package, solo per
-le lingue tradotte di `wm-tab-translatable`; l'inglese ripiega sulla chiave.
+le lingue tradotte di `wm-tab-translatable`; l'inglese ripiega sulla chiave. `LABELS` è pensata per
+accogliere altre etichette in futuro (per esempio dei form) accanto a `taxonomies` e `tabs`.
 
 **Dove esce.**
 - Tracce: `EcTrack::getDetailGeojson()`, usato dalle tre uscite del dettaglio — il file su AWS
@@ -101,11 +113,9 @@ le lingue tradotte di `wm-tab-translatable`; l'inglese ripiega sulla chiave.
 | Attaccare o staccare un termine di `taxonomy_terms` da una traccia | il suo file su AWS (`TaxonomyTermableObserver`, dopo il commit, una volta per traccia; non dentro `withoutSyncingToSearch()`, che un import usa) |
 | Attaccare o staccare un termine da un POI | `pois.geojson` dell'app |
 | Accendere o spegnere una tassonomia dalla scheda App | `config.json` (`UpdateAppConfigJob`) e, con `RegenerateTaxonomyWhereOutputsJob`, dettagli di tutte le tracce, indice e `pois.geojson` (`ReindexAppContentsJob`) |
-| Rinominare una tassonomia, cambiarne `identifier`, `properties` (il tab) o `sort_order`, cancellarla | solo il `config.json` delle app in cui è accesa |
-| Rinominare o cancellare un termine | niente |
-
-Negli ultimi due casi dettagli e `pois.geojson` restano indietro finché non si rigenerano: con un
-identifier cambiato il frontend non trova più l'etichetta della tassonomia nei file vecchi.
+| Rinominare una tassonomia, cambiarne `properties` (il tab) o `sort_order`, cancellarla | il `config.json` delle app in cui è accesa: basta, perché nome e tab stanno solo lì |
+| Cambiare l'`identifier` di una tassonomia | il `config.json`; dettagli e `pois.geojson` restano con la chiave vecchia finché non si rigenerano |
+| Rinominare o cancellare un termine | niente: dettagli e `pois.geojson` restano indietro finché non si rigenerano |
 
 **Chiavi deprecate.** Restano nell'output, identiche, per le app che le leggono già:
 
@@ -132,15 +142,16 @@ continua a non vederle.
 - **Una chiave nuova invece di estendere `taxonomy`** (oc:8959): le chiavi di `taxonomy` hanno
   forme diverse (`activity` array di oggetti, `poi_type` oggetto singolo, `when` array di id) e
   altri shard le popolano; ricostruirle avrebbe cambiato il tipo di ciò che le app di oggi leggono.
-- **Array di termini con `tab` su ogni termine** (oc:8959): il frontend legge una lista piatta, il
-  WordPress raggruppa per tab con una select.
-- **Tutti i campi utili di ogni fonte** (oc:8959): la forma ridotta a `identifier`/`name`/`tab`
-  perdeva dati che i frontend usano, come l'`admin_level` delle zone.
+- **Termini con i soli campi letti dai frontend** (oc:8959, scrum del 2026-11-11): `identifier`,
+  `name`, `icon_name`, `admin_level`. Il tab è un dato della tassonomia, non del termine, e un dato
+  che il frontend non consuma non si scrive.
 - **`tab` dalle stesse fonti di Nova** (oc:8959): il dettaglio ha la stessa struttura della
   detail view in Nova.
-- **Etichette nel `config.json`** (oc:8959): sono dati della tassonomia, uguali per tutte le tracce;
-  il WordPress il `config.json` lo legge già (ha la sua sezione `WORDPRESS`). Sole traduzioni,
-  perché il tab è già su ogni termine. Nomi delle sezioni scelti col dev.
+- **Nomi e tab in `LABELS` del `config.json`** (oc:8959, scrum del 2026-11-11): sono dati della
+  tassonomia, uguali per tutte le tracce; il WordPress il `config.json` lo legge già (ha la sua
+  sezione `WORDPRESS`). Un solo oggetto per le etichette, così non si sparpagliano. Indicizzato per
+  tassonomia, con il tab come chiave e le etichette dei tab a parte: dal contenuto si arriva in un
+  accesso a nome e tab, e l'etichetta di un tab è scritta una volta sola.
 - **Chiavi in kebab-case** (oc:8959): con `poi_type` la storica non avrebbe potuto passare in
   `taxonomy_terms` con la stessa chiave, perché il formato degli identifier non ammette `_`.
 - **`target` e `when` fuori** (oc:8959): `when` non è più usata; `target` è vuota su forestas, e le
@@ -172,3 +183,15 @@ continua a non vederle.
 - **Rigenerazione delle tracce dentro `ReindexAppContentsJob`** (oc:8959, superata): duplicava
   `RegenerateTaxonomyWhereOutputsJob` e, con un salvataggio che cambiava due cose, accodava due
   job per traccia.
+- **`tab` su ogni termine** (oc:8959, superata allo scrum del 2026-11-11): il tab è della tassonomia;
+  ora sta in `LABELS.taxonomies.<chiave>.tab`.
+- **`source` nelle zone** (oc:8959, tolto allo scrum del 2026-11-11): nessun frontend lo usa.
+- **`TAXONOMY_LABELS` e `TAXONOMY_TAB_LABELS`** (oc:8959, superate allo scrum del 2026-11-11): due
+  sezioni piatte legavano un nome a un uso e sparpagliavano le etichette; ora c'è `LABELS`. Scartate
+  anche la forma con le tassonomie dentro i tab (per arrivare dal contenuto al tab bisognava
+  cercare nei tab) e quella con l'etichetta del tab ripetuta su ogni tassonomia.
+- **Tutti i campi della fonte nei termini** (oc:8959, superata allo scrum del 2026-11-11): `source`,
+  `description`, `excerpt`, `sort_order`, `pivot_properties` uscivano «perché utili», ma nessun
+  frontend li legge. Restano `icon_name` e `admin_level`, che wm-core usa.
+- **Icona come `icon`** (oc:8959, superata): per wm-core `icon` è l'SVG in linea; il nome
+  dell'icona è `icon_name`.

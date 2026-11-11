@@ -2,6 +2,22 @@
 
 # Notes — `properties.taxonomies` delle tracce
 
+## Scrum del 2026-11-11 — modifiche richieste da Giuseppe (branch `feature/oc-8959-labels-nel-config`)
+
+- **`tab` fuori dai termini**: è un dato della tassonomia («nella configurazione della select puoi
+  dire in quale tab sta»). Ora sta in `LABELS.taxonomies.<chiave>.tab`.
+- **`source` fuori dalle zone**: «se il front-end non consuma quel dato, non metterlo ... il futuro
+  aggiungerlo è un commit».
+- **`TAXONOMY_LABELS`/`TAXONOMY_TAB_LABELS` → `LABELS`**: «ti conviene fare labels dentro taxonomy».
+  Forma scelta col dev (B'): `LABELS.taxonomies.<chiave> = {labels, tab}` e
+  `LABELS.tabs.<tab> = {labels}`. Scartate: tassonomie dentro i tab (dal contenuto al tab serviva
+  una ricerca) e tab con etichette dentro ogni tassonomia (ripetizione).
+- **Campi dei termini**: verificato cosa leggono webmapp-app, wm-webapp (wm-core, map-core) e
+  wp-forestas. Restano `identifier`, `name`, `icon_name` (rinominato da `icon`: per wm-core `icon` è
+  l'SVG in linea) e `admin_level` delle zone; tolti `sort_order`, `pivot_properties`,
+  `description`, `excerpt`. wp-forestas oggi non legge dati del backend (la mappa è un iframe
+  dell'app); il plugin `wp-geohub`, scaricato a runtime, non è stato analizzato.
+
 ## Divergenze dal piano, task per task
 
 ### Task 2 — dove si costruisce taxonomies
