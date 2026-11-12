@@ -6,6 +6,8 @@ use Exception;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\HeaderUtils;
 use Wm\WmPackage\Http\Controllers\Controller;
 use Wm\WmPackage\Models\Abstracts\GeometryModel;
 
@@ -109,6 +111,9 @@ class EditorialContentController extends Controller
             return response()->json(['code' => $e->getCode(), 'error' => $e->getMessage()], $e->getCode());
         }
         $content = $ec->getGpx();
+        if ($content === null) {
+            return $this->geometryNotFound();
+        }
         $headers = $this->createDownloadFileName($ec, $headers);
 
         return response()->gpx($content, 200, $headers);
@@ -127,6 +132,9 @@ class EditorialContentController extends Controller
         }
 
         $content = $ec->getKml();
+        if ($content === null) {
+            return $this->geometryNotFound();
+        }
         $headers = $this->createDownloadFileName($ec, $headers);
 
         return response()->kml($content, 200, $headers);
@@ -145,7 +153,7 @@ class EditorialContentController extends Controller
      */
     public function downloadEcGpx(int $id)
     {
-        $headers['Content-Type'] = 'application/xml';
+        // Il Content-Type lo mette la macro response()->gpx().
         $headers['Content-Disposition'] = 'attachment; filename="'.$id.'.gpx"';
 
         return $this->viewEcGpx($id, $headers);
@@ -156,7 +164,7 @@ class EditorialContentController extends Controller
      */
     public function downloadEcKml(int $id)
     {
-        $headers['Content-Type'] = 'application/xml';
+        // Il Content-Type lo mette la macro response()->kml().
         $headers['Content-Disposition'] = 'attachment; filename="'.$id.'.kml"';
 
         return $this->viewEcKml($id, $headers);
@@ -169,6 +177,11 @@ class EditorialContentController extends Controller
      */
     public function createDownloadFileName($ec, $headers)
     {
+        // Le rotte senza download/ non chiedono un allegato (oc:8953).
+        if (! isset($headers['Content-Disposition'])) {
+            return $headers;
+        }
+
         $fileName = '';
         if ($ec->ref) {
             $fileName = $ec->ref;
@@ -180,9 +193,27 @@ class EditorialContentController extends Controller
             $originalFileName = $headers['Content-Disposition'];
             $extension = trim(pathinfo($originalFileName, PATHINFO_EXTENSION), '"');
 
-            $headers['Content-Disposition'] = 'attachment; filename="'.$fileName.'.'.$extension.'"';
+            // makeDisposition() rifiuta / e \ in entrambi i nomi, e un fallback con caratteri non
+            // ASCII o con %: il nome UTF-8 va in filename*, la sua traslitterazione in filename.
+            $fileName = str_replace(['/', '\\'], '-', (string) $fileName);
+            $fallback = trim(str_replace(['%', '"'], ['', "'"], Str::ascii($fileName)));
+            // Un nome senza caratteri traslitterabili darebbe un file nascosto «.gpx».
+            if ($fallback === '') {
+                $fallback = (string) $ec->getKey();
+            }
+
+            $headers['Content-Disposition'] = HeaderUtils::makeDisposition(
+                HeaderUtils::DISPOSITION_ATTACHMENT,
+                $fileName.'.'.$extension,
+                $fallback.'.'.$extension,
+            );
         }
 
         return $headers;
+    }
+
+    private function geometryNotFound(): JsonResponse
+    {
+        return response()->json(['code' => 404, 'error' => 'Geometry not found'], 404);
     }
 }

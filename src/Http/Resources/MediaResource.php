@@ -4,6 +4,7 @@ namespace Wm\WmPackage\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Wm\WmPackage\Nova\Fields\ImageCredits;
 use Wm\WmPackage\Services\Models\MediaService;
 
 class MediaResource extends JsonResource
@@ -24,6 +25,8 @@ class MediaResource extends JsonResource
             'thumbnail' => $mediaService->getThumbnailUrl($this->resource),
             'api_url' => route('default.api.media.geojson', $this->id),
             'sizes' => $mediaService->getSizesUrls($this->resource),
+            // Didascalia, autore e credits scritti in Nova sulla foto (oc:8959).
+            ...ImageCredits::of($this->resource),
         ];
     }
 }

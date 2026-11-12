@@ -80,6 +80,31 @@ all'originale.
 Nessun backfill per gli avatar già esistenti: la feature padre (oc:8163) è su un server dev, non
 in produzione (oc:8343).
 
+### Didascalia, autore e credits delle foto
+
+Didascalia, autore e credits di una foto stanno nelle custom properties del media, con le chiavi
+`caption`, `author` e `credits` (`Wm\WmPackage\Nova\Fields\ImageCredits`, oc:8959). La tabella
+`media` non ha colonne per questi dati, e il package li scrive e li legge solo lì:
+
+- **In Nova** il campo immagini di `AbstractEcResource` (collection `default`, tracce e POI) li fa
+  scrivere su ogni foto con `customPropertiesFields(ImageCredits::fields())`. Uno shard con un suo
+  campo immagini usa gli stessi campi, con lo stesso metodo: forestas lo fa nei campi media di
+  tracce, POI ed enti.
+- **In uscita** ogni foto li porta accanto a `id`, `url` e `thumbnail`: `MediaResource`
+  (`feature_image` e `image_gallery` del file della traccia su AWS e di `EcPoiResource`) e
+  `GeoJsonService` (`feature_image` e `image_gallery` di `getGeojson()`). Un valore assente o
+  vuoto esce `null`, la chiave c'è sempre.
+- **`caption` è la chiave che wm-core mostra sotto la foto** (`image-detail`, con il pipe
+  `wmtrans`): può essere una stringa o un oggetto con le lingue. Il campo Nova scrive una stringa.
+  `author` e `credits` oggi nessuna app li legge: li chiede il WordPress di forestas, e sono dati
+  che chiedono anche altri clienti (scrum del 2026-11-11).
+
+**Perché con la foto e non a parte.** Il primo tentativo li metteva in un oggetto separato del
+dettaglio, per id del media (`properties.forestas.image_credits` di forestas): un dato che vive
+sulla foto deve uscire con la foto, così chi la mostra non deve abbinare due elenchi. In più
+`JsonResource::filter()` trasforma in lista un array con chiavi tutte numeriche, quindi nel file su
+AWS la mappa per id perdeva gli id (oc:8959).
+
 ### Altro
 
 - Spatie `getMedia()` senza argomento legge la collection `default`: aggiungere una collection

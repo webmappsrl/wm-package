@@ -9,6 +9,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Response as ResponseFacade;
 use Illuminate\Support\Facades\Route;
 use Laravel\Nova\Menu\MenuItem;
 use Laravel\Nova\Menu\MenuSection;
@@ -123,6 +124,8 @@ class WmPackageServiceProvider extends PackageServiceProvider
         // da ogni path PHP registrato, dopo la `lang/` dello shard: con `resources/lang` qui le
         // voci JSON del package vincevano su quelle dello shard (oc:8773).
         $this->loadTranslationsFrom(__DIR__.'/../resources/lang-php');
+
+        $this->registerResponseMacros();
 
         $packageDirPath = $this->package->basePath('/../');
 
@@ -487,6 +490,26 @@ class WmPackageServiceProvider extends PackageServiceProvider
             ->map(fn (array $item) => MenuItem::resource($item[0])->name($item[1]))
             ->values()
             ->all();
+    }
+
+    /**
+     * Macro response()->gpx() e response()->kml() usate da EditorialContentController: senza, le
+     * rotte GPX e KML rispondevano sempre 500 (oc:8953).
+     */
+    private function registerResponseMacros(): void
+    {
+        $types = [
+            'gpx' => 'application/gpx+xml',
+            'kml' => 'application/vnd.google-earth.kml+xml',
+        ];
+
+        foreach ($types as $macro => $contentType) {
+            ResponseFacade::macro($macro, function (string $content, int $status = 200, array $headers = []) use ($contentType) {
+                $headers['Content-Type'] ??= $contentType;
+
+                return ResponseFacade::make($content, $status, $headers);
+            });
+        }
     }
 
     public function packageBooted()

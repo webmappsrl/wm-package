@@ -63,23 +63,14 @@ function taxonomiesOf(EcTrack $track): array
     return (array) $track->fresh()->getDetailGeojson()['properties']['taxonomies'];
 }
 
-it('raggruppa i termini di taxonomy_terms per identifier della tassonomia, con il tab della tassonomia', function () {
+it('raggruppa i termini di taxonomy_terms per identifier della tassonomia, senza tab: sta nel config.json', function () {
     $track = taxonomiesTrack(App::factory()->createQuietly());
     [$taxonomy, $term] = attachTaxonomyTerm($track, ['tab' => 'Activities']);
 
     expect(taxonomiesOf($track)[$taxonomy->identifier])->toEqual([[
         'identifier' => $term->identifier,
         'name' => ['it' => 'Sentiero', 'en' => 'Trail'],
-        'tab' => 'Activities',
-        'sort_order' => 0,
     ]]);
-});
-
-it('usa General quando la tassonomia non dichiara un tab', function () {
-    $track = taxonomiesTrack(App::factory()->createQuietly());
-    [$taxonomy] = attachTaxonomyTerm($track);
-
-    expect(taxonomiesOf($track)[$taxonomy->identifier][0]['tab'])->toBe('General');
 });
 
 it('esclude le tassonomie spente nell\'app o accese solo per EcPoi', function () {
@@ -92,7 +83,7 @@ it('esclude le tassonomie spente nell\'app o accese solo per EcPoi', function ()
         ->not->toHaveKey($off->identifier);
 });
 
-it('mette activity con il tab di legacy_taxonomies, theme e poi_type con General', function () {
+it('porta le tassonomie storiche activity, theme e poi-type', function () {
     $track = taxonomiesTrack(App::factory()->createQuietly());
     $activity = TaxonomyActivity::withoutEvents(fn () => TaxonomyActivity::create(['identifier' => 'act-'.uniqid(), 'name' => ['it' => 'Escursionismo']]));
     $theme = TaxonomyTheme::withoutEvents(fn () => TaxonomyTheme::create(['identifier' => 'theme-'.uniqid(), 'name' => ['it' => 'Natura']]));
@@ -103,8 +94,8 @@ it('mette activity con il tab di legacy_taxonomies, theme e poi_type con General
 
     $taxonomies = taxonomiesOf($track);
 
-    expect($taxonomies['activity'])->toBe([['identifier' => $activity->identifier, 'name' => ['it' => 'Escursionismo'], 'tab' => 'Activities']])
-        ->and($taxonomies['theme'][0]['tab'])->toBe('General')
+    expect($taxonomies['activity'])->toBe([['identifier' => $activity->identifier, 'name' => ['it' => 'Escursionismo']]])
+        ->and($taxonomies['theme'][0]['identifier'])->toBe($theme->identifier)
         ->and($taxonomies['poi-type'][0]['identifier'])->toBe($poiType->identifier);
 });
 
@@ -127,9 +118,7 @@ it('costruisce where dalle zone mostrate dall\'app, senza le chiavi tecniche', f
     expect(taxonomiesOf($track)['where'])->toEqual([[
         'identifier' => 'R40784',
         'name' => ['it' => 'Lazio', 'en' => 'Lazio'],
-        'tab' => 'General',
         'admin_level' => 4,
-        'source' => 'osmfeatures',
     ]]);
 });
 
@@ -183,19 +172,19 @@ it('arriva nel file del dettaglio e nell\'endpoint multiple', function () {
         ->and($multiple['features'][0]['properties']['taxonomies'])->toHaveKey($taxonomy->identifier);
 });
 
-it('porta admin_level e source delle zone, quando ci sono', function () {
+it('porta admin_level delle zone quando c\'è, e non source', function () {
     $track = taxonomiesTrack(App::factory()->createQuietly(), ['taxonomy_where' => [
         'R40176' => ['en' => 'Atzara', '_source' => 'osmfeatures', '_admin_level' => 8],
         '81' => ['it' => 'Area T (Centrale)', '_source' => 'geohub_conf_32'],
     ]]);
 
     expect(collect(taxonomiesOf($track)['where'])->sortBy('identifier')->values()->all())->toEqual([
-        ['identifier' => '81', 'name' => ['it' => 'Area T (Centrale)'], 'tab' => 'General', 'source' => 'geohub_conf_32'],
-        ['identifier' => 'R40176', 'name' => ['en' => 'Atzara'], 'tab' => 'General', 'admin_level' => 8, 'source' => 'osmfeatures'],
+        ['identifier' => '81', 'name' => ['it' => 'Area T (Centrale)']],
+        ['identifier' => 'R40176', 'name' => ['en' => 'Atzara'], 'admin_level' => 8],
     ]);
 });
 
-it('porta descrizione, excerpt e icona dei termini storici, solo se valorizzati', function () {
+it('porta solo identifier, name e icon_name dei termini storici, l\'icona solo se c\'è', function () {
     $track = taxonomiesTrack(App::factory()->createQuietly());
     $full = TaxonomyActivity::withoutEvents(fn () => TaxonomyActivity::create([
         'identifier' => 'act-'.uniqid(),
@@ -210,13 +199,14 @@ it('porta descrizione, excerpt e icona dei termini storici, solo se valorizzati'
     $byIdentifier = collect(taxonomiesOf($track)['activity'])->keyBy('identifier');
 
     expect($byIdentifier[$full->identifier])->toEqual([
-        'identifier' => $full->identifier, 'name' => ['it' => 'Escursionismo'], 'tab' => 'Activities',
-        'description' => ['it' => 'A piedi'], 'excerpt' => ['it' => 'Breve'], 'icon' => 'txn-hiking',
+        // Solo i campi che i frontend leggono (scrum del 2026-11-11). L'icona si chiama icon_name,
+        // come in getJson(): per wm-core `icon` è l'SVG in linea, `icon_name` la chiave del dizionario.
+        'identifier' => $full->identifier, 'name' => ['it' => 'Escursionismo'], 'icon_name' => 'txn-hiking',
     ])
-        ->and(array_keys($byIdentifier[$bare->identifier]))->toBe(['identifier', 'name', 'tab']);
+        ->and(array_keys($byIdentifier[$bare->identifier]))->toBe(['identifier', 'name']);
 });
 
-it('porta descrizione, icona, sort_order dei termini di taxonomy_terms e le properties del legame', function () {
+it('porta solo identifier, name e icon_name dei termini di taxonomy_terms', function () {
     $track = taxonomiesTrack(App::factory()->createQuietly());
     [$taxonomy, $term] = attachTaxonomyTerm($track);
     $term->update(['description' => ['it' => 'Tracciato a piedi'], 'icon' => 'txn-trail', 'sort_order' => 3]);
@@ -225,11 +215,7 @@ it('porta descrizione, icona, sort_order dei termini di taxonomy_terms e le prop
     expect(taxonomiesOf($track)[$taxonomy->identifier][0])->toEqual([
         'identifier' => $term->identifier,
         'name' => ['it' => 'Sentiero', 'en' => 'Trail'],
-        'tab' => 'General',
-        'description' => ['it' => 'Tracciato a piedi'],
-        'icon' => 'txn-trail',
-        'sort_order' => 3,
-        'pivot_properties' => ['duration_forward' => 7200],
+        'icon_name' => 'txn-trail',
     ]);
 });
 

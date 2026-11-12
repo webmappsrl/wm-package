@@ -81,7 +81,7 @@ class AppConfigService extends AppBaseService
         $data = array_merge($data, $this->config_section_app());
         $data = array_merge($data, $this->config_section_webapp());
         $data = array_merge($data, $this->config_section_translations());
-        $data = array_merge($data, $this->config_section_taxonomy_labels());
+        $data = array_merge($data, $this->config_section_labels());
         $data = array_merge($data, $this->config_section_home());
         $data = array_merge($data, $this->config_section_languages());
         $data = array_merge($data, $this->config_section_map());
@@ -239,50 +239,63 @@ class AppConfigService extends AppBaseService
     }
 
     /**
-     * Le etichette delle tassonomie e dei loro tab, una volta sola per app (oc:8959).
+     * `LABELS`: le etichette che i frontend usano, una volta sola per app (oc:8959). Oggi quelle
+     * delle tassonomie; domani, se servono, altre (per esempio dei form) accanto, così le etichette
+     * stanno tutte in un punto (scrum del 2026-11-11).
      *
-     * Il dettaglio di una traccia ha in `properties.taxonomies` i termini per identifier della
-     * tassonomia, ognuno con il suo `tab`, ma non i nomi: scritti lì si ripeterebbero su ogni
-     * termine e su ogni traccia. Qui ci sono le stesse chiavi, nell'ordine della sezione Nova —
-     * prima le storiche di `DetailTaxonomiesService::LEGACY_TAXONOMIES`, poi le tassonomie di `taxonomy_terms`
-     * accese nell'app, per tracce o per POI, per `sort_order` — e i tab che usano, `General` per
-     * primo.
+     * - `taxonomies.<chiave>`: `labels` (il nome) e `tab` (la chiave del tab in cui Nova la mostra),
+     *   per ogni chiave che può comparire in `properties.taxonomies` di una traccia o di un POI —
+     *   prima le storiche di `DetailTaxonomiesService::LEGACY_TAXONOMIES`, poi le tassonomie di
+     *   `taxonomy_terms` accese nell'app, per tracce o POI, per `sort_order`.
+     * - `tabs.<chiave>`: `labels` di ogni tab usato, `General` per primo, scritte una volta sola
+     *   invece che su ogni tassonomia.
      *
-     * @return array{TAXONOMY_LABELS: array<string, array<string, string>|\stdClass>, TAXONOMY_TAB_LABELS: array<string, array<string, string>>}
+     * Indicizzate per chiave perché il frontend parte dalla tassonomia che trova nel contenuto e
+     * vuole in un accesso nome e tab, e in un secondo il nome del tab.
+     *
+     * @return array{LABELS: array{taxonomies: array<string, array{labels: array<string, string>|\stdClass, tab: string}>, tabs: array<string, array{labels: array<string, string>}>}}
      */
-    private function config_section_taxonomy_labels(): array
+    private function config_section_labels(): array
     {
-        $labels = [];
+        $taxonomies = [];
         $tabs = [DetailTaxonomiesService::DEFAULT_TAB];
 
         foreach (array_keys(DetailTaxonomiesService::LEGACY_TAXONOMIES) as $key) {
-            $labels[$key] = $this->labelTranslations(DetailTaxonomiesService::legacyTaxonomyLabel($key));
-            $tabs[] = DetailTaxonomiesService::legacyTaxonomyTab($key);
+            $tab = DetailTaxonomiesService::legacyTaxonomyTab($key);
+            $taxonomies[$key] = [
+                'labels' => $this->labelTranslations(DetailTaxonomiesService::legacyTaxonomyLabel($key)),
+                'tab' => $tab,
+            ];
+            $tabs[] = $tab;
         }
 
         // Stessa guardia di DetailTaxonomiesService: uno shard senza le migration di oc:8910.
         if (DetailTaxonomiesService::hasTaxonomyTermsTables()) {
             // Tutte le accese nell'app, per tracce e per POI: le etichette servono a entrambi.
-            $taxonomies = TaxonomyTerm::query()->taxonomies()
+            $records = TaxonomyTerm::query()->taxonomies()
                 ->forApp($this->app->id)
                 ->orderBy('sort_order')
                 ->orderBy('id')
                 ->get();
 
-            foreach ($taxonomies as $taxonomy) {
+            foreach ($records as $taxonomy) {
                 $name = $taxonomy->getTranslations('name');
-                // Senza traduzioni resta un oggetto: un array PHP vuoto diventerebbe `[]` in JSON.
-                $labels[$taxonomy->identifier] = $name === [] ? new \stdClass : $name;
-                $tabs[] = DetailTaxonomiesService::taxonomyTab($taxonomy);
+                $tab = DetailTaxonomiesService::taxonomyTab($taxonomy);
+                $taxonomies[$taxonomy->identifier] = [
+                    // Senza traduzioni resta un oggetto: un array PHP vuoto diventerebbe `[]` in JSON.
+                    'labels' => $name === [] ? new \stdClass : $name,
+                    'tab' => $tab,
+                ];
+                $tabs[] = $tab;
             }
         }
 
         $tabLabels = [];
         foreach (array_unique($tabs) as $tab) {
-            $tabLabels[$tab] = $this->labelTranslations($tab);
+            $tabLabels[$tab] = ['labels' => $this->labelTranslations($tab)];
         }
 
-        return ['TAXONOMY_LABELS' => $labels, 'TAXONOMY_TAB_LABELS' => $tabLabels];
+        return ['LABELS' => ['taxonomies' => $taxonomies, 'tabs' => $tabLabels]];
     }
 
     /**

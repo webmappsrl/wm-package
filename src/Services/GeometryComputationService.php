@@ -339,24 +339,50 @@ class GeometryComputationService extends BaseService
         }
     }
 
-    public function getModelGeometryAsKml(GeometryModel $model): string
+    /**
+     * Documento KML 2.2 completo della geometria del modello, o null se la geometria manca.
+     *
+     * Il documento si costruisce dalle coordinate di ST_AsGeoJSON, che conserva la quota, e non
+     * con gisconverter, che restituisce solo un frammento e scarta la Z (oc:8953).
+     */
+    public function getModelGeometryAsKml(GeometryModel $model): ?string
     {
-        $geom = $this->getModelGeometryAsGeojson($model);
-        if (isset($geom)) {
-            $formattedGeometry = Gisconverter::geojsonToKml($geom);
-
-            $name = '<name>'.($this->name ?? '').'</name>';
-
-            return $name.$formattedGeometry;
-        } else {
-            return '{}';
+        $geometry = $this->decodeModelGeometry($model);
+        if ($geometry === null) {
+            return null;
         }
-        // return $model::where('id', '=', $model->id)
-        //     ->select(
-        //         DB::raw('ST_AsKML(geometry) as geom')
-        //     )
-        //     ->first()
-        //     ->geom;
+
+        $name = $this->exportName($model);
+
+        $xml = new \XMLWriter;
+        $xml->openMemory();
+        $xml->startDocument('1.0', 'UTF-8');
+        $xml->startElementNs(null, 'kml', 'http://www.opengis.net/kml/2.2');
+        $xml->startElement('Document');
+        $xml->writeElement('name', $name);
+        $xml->startElement('Placemark');
+        $xml->writeElement('name', $name);
+
+        if ($geometry['type'] === 'Point') {
+            $xml->startElement('Point');
+            $xml->writeElement('coordinates', $this->kmlTuple($geometry['coordinates']));
+            $xml->endElement();
+        } else {
+            $xml->startElement('MultiGeometry');
+            foreach ($geometry['lines'] as $line) {
+                $xml->startElement('LineString');
+                $xml->writeElement('coordinates', implode(' ', array_map(fn (array $point) => $this->kmlTuple($point), $line)));
+                $xml->endElement();
+            }
+            $xml->endElement();
+        }
+
+        $xml->endElement(); // Placemark
+        $xml->endElement(); // Document
+        $xml->endElement(); // kml
+        $xml->endDocument();
+
+        return $xml->outputMemory();
     }
 
     public function getStartEndCoordinates(GeometryModel $m)
@@ -375,21 +401,150 @@ class GeometryComputationService extends BaseService
         return [[$start[0], $start[1]], [$end[0], $end[1]]];
     }
 
+    /**
+     * Documento GPX 1.1 completo della geometria del modello, o null se la geometria manca.
+     *
+     * Una traccia diventa un <trk> con un <trkseg> per ogni linea, un punto un <wpt>. Il documento
+     * si costruisce dalle coordinate di ST_AsGeoJSON e non con gisconverter, che non implementa
+     * toGPX() per MultiLineString e scarta la Z (oc:8953).
+     */
     public function getModelGeometryAsGpx(GeometryModel $model): ?string
     {
-        $geom = $this->getModelGeometryAsGeojson($model);
-
-        if (isset($geom)) {
-            return Gisconverter::geojsonToGpx($geom);
-        } else {
+        $geometry = $this->decodeModelGeometry($model);
+        if ($geometry === null) {
             return null;
         }
-        // return $model::where('id', '=', $model->id)
-        //     ->select(
-        //         DB::raw('ST_AsGpx(geometry) as geom')
-        //     )
-        //     ->first()
-        //     ->geom;
+
+        $name = $this->exportName($model);
+
+        $xml = new \XMLWriter;
+        $xml->openMemory();
+        $xml->startDocument('1.0', 'UTF-8');
+        $xml->startElementNs(null, 'gpx', 'http://www.topografix.com/GPX/1/1');
+        $xml->writeAttribute('version', '1.1');
+        $xml->writeAttribute('creator', 'Webmapp');
+
+        if ($geometry['type'] === 'Point') {
+            // Lo schema GPX 1.1 impone <ele> prima di <name>.
+            $this->writeGpxPoint($xml, 'wpt', $geometry['coordinates']);
+            $xml->writeElement('name', $name);
+            $xml->endElement();
+        } else {
+            $xml->startElement('trk');
+            $xml->writeElement('name', $name);
+            foreach ($geometry['lines'] as $line) {
+                $xml->startElement('trkseg');
+                foreach ($line as $point) {
+                    $this->writeGpxPoint($xml, 'trkpt', $point);
+                    $xml->endElement();
+                }
+                $xml->endElement();
+            }
+            $xml->endElement();
+        }
+
+        $xml->endElement(); // gpx
+        $xml->endDocument();
+
+        return $xml->outputMemory();
+    }
+
+    /**
+     * Geometria del modello pronta per l'export: un Point, oppure una lista di linee (una
+     * LineString è trattata come multilinea di una linea). Null se la geometria manca.
+     *
+     * @return array{type: string, coordinates?: array<int, float>, lines?: array<int, array<int, array<int, float>>>}|null
+     */
+    private function decodeModelGeometry(GeometryModel $model): ?array
+    {
+        $geojson = $this->getModelGeometryAsGeojson($model);
+        if ($geojson === null) {
+            return null;
+        }
+
+        $geometry = json_decode($geojson, true);
+
+        return match ($geometry['type'] ?? null) {
+            'Point' => ['type' => 'Point', 'coordinates' => $geometry['coordinates']],
+            'LineString' => ['type' => 'MultiLineString', 'lines' => [$geometry['coordinates']]],
+            'MultiLineString' => ['type' => 'MultiLineString', 'lines' => $geometry['coordinates']],
+            default => throw new \InvalidArgumentException('Unsupported geometry type for GPX/KML export: '.($geometry['type'] ?? 'unknown')),
+        };
+    }
+
+    /**
+     * Nome del contenuto nella lingua dello shard; stringa vuota se manca.
+     */
+    private function exportName(GeometryModel $model): string
+    {
+        // XMLWriter non scarta i caratteri di controllo che XML 1.0 non ammette: un nome
+        // importato che ne contiene uno renderebbe il documento illeggibile.
+        return (string) preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F]/', '', (string) ($model->name ?? ''));
+    }
+
+    /**
+     * Apre l'elemento GPX del punto con lat, lon ed eventuale <ele>; lo chiude il chiamante, che
+     * può aggiungere altri figli.
+     *
+     * @param  array<int, float>  $point
+     */
+    private function writeGpxPoint(\XMLWriter $xml, string $element, array $point): void
+    {
+        $xml->startElement($element);
+        $xml->writeAttribute('lat', $this->formatCoordinate($point[1], 7));
+        $xml->writeAttribute('lon', $this->formatCoordinate($point[0], 7));
+
+        $elevation = $this->elevation($point);
+        if ($elevation !== null) {
+            $xml->writeElement('ele', $this->formatCoordinate($elevation, 2));
+        }
+    }
+
+    /**
+     * Tupla KML lon,lat[,ele].
+     *
+     * @param  array<int, float>  $point
+     */
+    private function kmlTuple(array $point): string
+    {
+        $tuple = $this->formatCoordinate($point[0], 7).','.$this->formatCoordinate($point[1], 7);
+
+        $elevation = $this->elevation($point);
+        if ($elevation !== null) {
+            $tuple .= ','.$this->formatCoordinate($elevation, 2);
+        }
+
+        return $tuple;
+    }
+
+    /**
+     * Quota del punto, o null se assente o uguale a 0: negli shard una Z a 0 è quasi sempre una
+     * quota mancante, e scriverla produrrebbe profili con salti fino al livello del mare.
+     *
+     * @param  array<int, float>  $point
+     */
+    private function elevation(array $point): ?float
+    {
+        if (! isset($point[2])) {
+            return null;
+        }
+
+        // Il controllo si fa sul valore scritto (2 decimali): una quota come 0.004 uscirebbe
+        // comunque come 0.
+        $elevation = round((float) $point[2], 2);
+
+        return $elevation == 0.0 ? null : $elevation;
+    }
+
+    /**
+     * Numero in notazione decimale fissa, senza esponente (che xsd:decimal non accetta) e senza
+     * zeri finali.
+     */
+    private function formatCoordinate(float $value, int $decimals): string
+    {
+        $formatted = rtrim(rtrim(number_format($value, $decimals, '.', ''), '0'), '.');
+
+        return $formatted === '-0' ? '0' : $formatted;
     }
 
     public function getGeometryModelBbox(GeometryModel $model): array

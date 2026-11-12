@@ -34,7 +34,7 @@ class TaxonomyTerm extends Model
 
     /**
      * Identifier che una tassonomia non può avere: sono le chiavi con cui le tassonomie storiche
-     * (tabelle proprie) entrano in `properties.taxonomies` e in `TAXONOMY_LABELS`, accanto a quelle
+     * (tabelle proprie) entrano in `properties.taxonomies` e in `LABELS.taxonomies`, accanto a quelle
      * di questa tabella, indicizzate per identifier. Una tassonomia con lo stesso identifier
      * prenderebbe il posto della storica (oc:8959). Sono le chiavi di
      * `DetailTaxonomiesService::LEGACY_TAXONOMIES`, ripetute qui perché un'espressione costante non
@@ -69,7 +69,7 @@ class TaxonomyTerm extends Model
     protected static function booted(): void
     {
         // Le etichette delle tassonomie stanno nel config.json delle app che le accendono
-        // (TAXONOMY_LABELS, TAXONOMY_TAB_LABELS, oc:8959): rinominare una tassonomia, cambiarne il
+        // (`LABELS` del config.json, oc:8959): rinominare una tassonomia, cambiarne il
         // tab o l'ordine, o cancellarla, lo deve riscrivere. Un termine non c'entra: il suo nome è
         // nel dettaglio della traccia. Accendere o spegnere una tassonomia passa dal salvataggio
         // dell'App, e lì il config.json lo riscrive ReindexAppContentsJob.
