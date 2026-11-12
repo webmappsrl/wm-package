@@ -393,20 +393,14 @@ Lo stato del codice prima di questo lavoro, citato dai requisiti.
 
 ## Rischi
 
-Verificati sul codice dopo la challenge. Alla chiusura restano aperti i cinque qui sotto: sono
+Verificati sul codice dopo la challenge. Alla chiusura restano aperti i quattro qui sotto: sono
 annotati fra i [follow-up delle note](notes.md#follow-up), ciascuno con la destinazione proposta.
+Il reset notturno di UAT, che tronca `trail_applications`, non è un rischio: è il comportamento del
+collaudo, documentato nella pagina delle API (`config/scramble.php` dello shard).
 Gli altri quattro sono superati dai requisiti: il calcolo parziale da [R24](#r24), il doppio
 calcolo da [R27](#r27), lo schema che attira responsabilità da [R33](#r33) e [R40](#r40), gli
 allegati esposti da `GET api/media/{id}` da [R17](#r17).
 
-- **Su UAT il canale non è collaudabile finché esiste il reset notturno.** `--reset` tronca
-  `trail_applications`, e la regola del repo lo dice esplicitamente: «finché il reset notturno
-  esiste, un'istanza presentata su collaudo non sopravvive alla notte, e i codici `reserved` che
-  aveva prenotato non tornano disponibili». Questo canale è fatto di chiamate distanti nel tempo:
-  Engineering crea un'istanza il pomeriggio e la mattina dopo riceve 404 su un id che gli abbiamo
-  dato noi, leggendolo come un bug della nostra API. Non è codice di questo ticket: è una
-  condizione da soddisfare prima di consegnare l'ambiente, e va in mano a chi rilascia.
-  Spostato fra i follow-up delle note.
 - **Del payload rifiutato restano gli esiti, non il contenuto.** È una scelta: nel log finiscono i
   campi che hanno fallito e la regola violata, mai i valori, perché il payload porta nomi, e-mail e
   codici fiscali. Se un giorno il disaccordo con Engineering fosse proprio su *quale valore* è

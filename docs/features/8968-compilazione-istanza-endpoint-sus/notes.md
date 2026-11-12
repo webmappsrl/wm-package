@@ -260,6 +260,8 @@ la decide il dev.
   non esiste più la mattina dopo, e Engineering riceve `404` su un id che gli abbiamo dato noi.
   *Destinazione proposta:* un ticket per chi rilascia, da chiudere prima di consegnare l'ambiente a
   Engineering, collegato al tag 709.
+  *Deciso dal dev, 2026-11-12:* non è un rischio. È il comportamento del collaudo, documentato
+  nella pagina delle API; nessuna destinazione.
 - **Del payload rifiutato restano gli esiti, non i valori**: una discussione con Engineering su
   *quale valore* è stato mandato non si chiude con i nostri log. *Destinazione proposta:* la
   pagina [operazioni-del-fascicolo-e-canale-dell-ente.md](../../knowledge/operazioni-del-fascicolo-e-canale-dell-ente.md),
