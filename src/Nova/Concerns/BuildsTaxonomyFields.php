@@ -2,6 +2,8 @@
 
 namespace Wm\WmPackage\Nova\Concerns;
 
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Schema;
 use Laravel\Nova\Fields\Field;
 use Laravel\Nova\Fields\Heading;
 use Laravel\Nova\Fields\Text;
@@ -326,10 +328,7 @@ trait BuildsTaxonomyFields
             // tassonomia, su un contenuto, è a scelta singola.
             $singleChoice = ! $this->taxonomyFieldsAreFilters() && (bool) ($taxonomy['single_choice'] ?? false);
 
-            $rows = $model::query()
-                ->whereNotIn('identifier', (array) ($taxonomy['hidden'] ?? []))
-                ->orderBy('id')
-                ->get();
+            $rows = self::legacyTaxonomyRows($model, (array) ($taxonomy['hidden'] ?? []));
             $options = [];
             $icons = new IconSvgService;
             foreach ($rows as $row) {
@@ -407,6 +406,55 @@ trait BuildsTaxonomyFields
     protected function legacyTaxonomies(): array
     {
         return (array) config('wm-package.legacy_taxonomies', []);
+    }
+
+    /**
+     * Le righe di una tassonomia storica, lette una volta sola per richiesta e solo nelle colonne
+     * che servono a comporre le opzioni (oc:8974).
+     *
+     * Le costruzioni dei campi di una Resource sono tante: Nova le rifà per ogni voce di un
+     * elenco di relazione, perché da lì ricava titolo e avatar della riga. Con `select *` ogni
+     * giro rileggeva la tabella intera, geometrie comprese: su uno shard con le Zone popolate
+     * (7.930 righe, 104 MB di cui 93 di `geometry`) il menu per associare un contenuto a un layer
+     * impiegava due minuti e non si apriva.
+     *
+     * `icon` si chiede solo dove la colonna esiste: `taxonomy_wheres` non ce l'ha, e nominarla lì
+     * è un errore SQL; ometterla su Attività e Tipi POI farebbe sparire le icone.
+     *
+     * La memoria sta nel container e non in una proprietà statica: così un runtime che tiene vivo
+     * il processo fra due richieste non mostra tassonomie vecchie.
+     *
+     * @param  class-string<\Illuminate\Database\Eloquent\Model>  $model
+     * @param  array<int, string>  $hidden
+     * @return \Illuminate\Support\Collection<int, \Illuminate\Database\Eloquent\Model>
+     */
+    private static function legacyTaxonomyRows(string $model, array $hidden): Collection
+    {
+        // La chiave è una stringa e non una costante: PHP 8.1, che il package ancora supporta,
+        // non ammette costanti dentro un trait.
+        $store = 'wm-package.legacy-taxonomy-rows';
+
+        $cache = app()->bound($store)
+            ? app()->make($store)
+            : tap(new \ArrayObject, fn ($fresh) => app()->instance($store, $fresh));
+
+        $key = $model.'|'.implode(',', $hidden);
+
+        if (! isset($cache[$key])) {
+            $instance = new $model;
+            $columns = ['id', 'name', 'identifier'];
+
+            if (Schema::connection($instance->getConnectionName())->hasColumn($instance->getTable(), 'icon')) {
+                $columns[] = 'icon';
+            }
+
+            $cache[$key] = $model::query()
+                ->whereNotIn('identifier', $hidden)
+                ->orderBy('id')
+                ->get($columns);
+        }
+
+        return $cache[$key];
     }
 
     /**
