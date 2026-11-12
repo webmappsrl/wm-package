@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Http\UploadedFile;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
@@ -14,6 +15,7 @@ use Wm\WmPackage\TrailRegistry\Enums\TrailApplicationStatus;
 use Wm\WmPackage\TrailRegistry\Enums\TrailCodeStatus;
 use Wm\WmPackage\TrailRegistry\Models\TrailApplication;
 use Wm\WmPackage\TrailRegistry\Nova\Actions\ApproveTrailApplication;
+use Wm\WmPackage\TrailRegistry\Schema\ApplicationSchema;
 use Wm\WmPackage\TrailRegistry\TrailRegistryService;
 
 /**
@@ -100,7 +102,60 @@ it('legge una domanda in compilazione senza numero e senza motivo', function () 
         ->assertJsonPath('status', 'under_compilation')
         ->assertJsonPath('code', null)
         ->assertJsonPath('rejection_reason', null)
-        ->assertJsonStructure(['id', 'status', 'dem_data', 'dem_status', 'code', 'rejection_reason']);
+        ->assertJsonStructure(['id', 'submitted_data', 'attachments', 'status', 'dem_data', 'dem_status', 'code', 'rejection_reason']);
+});
+
+it('restituisce i dati dichiarati come sono stati registrati, senza la versione dello schema', function () {
+    $application = TrailApplication::factory()->create(['name' => 'Sentiero del Monte Arcosu']);
+    $application->writeApiData([
+        'from' => 'Case Marganai',
+        'distance' => '12.5',
+        'activities' => ['hiking', 'mtb'],
+        'difficulty' => ['hiking' => 'EE'],
+        'soggetto_custode_presente' => false,
+        ApplicationSchema::VERSION_KEY => '1',
+    ]);
+
+    showApplication($application)
+        ->assertOk()
+        ->assertExactJson([
+            'id' => $application->getKey(),
+            'submitted_data' => [
+                'name' => 'Sentiero del Monte Arcosu',
+                'from' => 'Case Marganai',
+                'distance' => '12.5',
+                'activities' => ['hiking', 'mtb'],
+                'difficulty' => ['hiking' => 'EE'],
+                'soggetto_custode_presente' => false,
+            ],
+            'attachments' => [
+                'report' => 0,
+                'trail_data_sheet' => 0,
+                'authorizations' => 0,
+                'maintenance_plan' => 0,
+                'photos' => 0,
+            ],
+            'status' => 'under_review',
+            'dem_data' => null,
+            'dem_status' => 'computed',
+            'code' => null,
+            'rejection_reason' => null,
+        ]);
+});
+
+it('conta gli allegati caricati per collection, con zero dove mancano', function () {
+    $application = TrailApplication::factory()->create();
+    $application->addMedia(UploadedFile::fake()->create('relazione.pdf', 10, 'application/pdf'))->toMediaCollection('report');
+    $application->addPhoto(UploadedFile::fake()->image('uno.jpg'));
+    $application->addPhoto(UploadedFile::fake()->image('due.jpg', 20, 20));
+
+    showApplication($application)
+        ->assertOk()
+        ->assertJsonPath('attachments.report', 1)
+        ->assertJsonPath('attachments.photos', 2)
+        ->assertJsonPath('attachments.trail_data_sheet', 0)
+        ->assertJsonPath('attachments.maintenance_plan', 0)
+        ->assertJsonPath('attachments.authorizations', 0);
 });
 
 it('non trasmette una domanda completa: leggere non cambia nulla', function () {
