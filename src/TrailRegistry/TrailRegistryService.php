@@ -5,8 +5,12 @@ namespace Wm\WmPackage\TrailRegistry;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcTrack;
+use Wm\WmPackage\Models\TaxonomyActivity;
 use Wm\WmPackage\Models\TaxonomyWhere;
+use Wm\WmPackage\Services\Models\EcTrackService;
 use Wm\WmPackage\TrailRegistry\Enums\TrailApplicationStatus;
 use Wm\WmPackage\TrailRegistry\Enums\TrailCodeOrigin;
 use Wm\WmPackage\TrailRegistry\Enums\TrailCodeStatus;
@@ -960,6 +964,237 @@ class TrailRegistryService
 
             return true;
         });
+    }
+
+    /**
+     * Approva una domanda in istruttoria: crea il sentiero, gli attacca il tipo,
+     * replica i media e rende definitivo il codice riservato.
+     *
+     * E' la decisione dell'istruttoria, e la usano tutti i punti da cui la si
+     * prende: l'Action di Nova e lo strumento di prova del canale dello shard.
+     * Sta qui e non nell'Action perche' e' una regola del dominio, non della
+     * sua interfaccia (oc:8567 la scriveva nell'Action, prima che ci fosse un
+     * secondo chiamante).
+     *
+     * La riga si legge sotto lock: due approvazioni concorrenti della stessa
+     * domanda creerebbero due sentieri sullo stesso codice. La seconda trova la
+     * domanda gia' `approved` e riceve l'eccezione.
+     *
+     * Il pattern segue ConvertUgcPoiToEcPoi (che esiste solo per i POI), con una
+     * divergenza deliberata: il legame verso il sentiero e' una chiave esterna
+     * vera nel registro (`trail_registry_codes.ec_track_id`), non una voce in
+     * properties.
+     *
+     * @param  int|null  $userId  chi approva: diventa l'autore del sentiero e
+     *                            dell'evento nella storia del codice
+     * @return EcTrack il sentiero creato
+     *
+     * @throws InvalidTrailApplicationTransitionException se la domanda non e' in
+     *                                                    istruttoria, o non ha un
+     *                                                    codice riservato libero
+     */
+    public function approve(TrailApplication $application, ?int $userId = null): EcTrack
+    {
+        $track = DB::transaction(function () use ($application, $userId): EcTrack {
+            /** @var TrailApplication $locked */
+            $locked = $application->newQuery()
+                ->whereKey($application->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            // Approvare due volte, o approvare un'istanza respinta,
+            // significherebbe un secondo sentiero sullo stesso codice.
+            if ($locked->status !== TrailApplicationStatus::UnderReview) {
+                throw InvalidTrailApplicationTransitionException::forAction($locked->status, 'approvare');
+            }
+
+            $code = $locked->activeCode;
+
+            if ($code === null || $code->ec_track_id !== null) {
+                throw InvalidTrailApplicationTransitionException::forAction($locked->status, 'approvare senza un codice riservato libero');
+            }
+
+            $track = $this->createTrackFromApplication($locked, $userId);
+
+            $this->copyApplicationMedia($locked, $track);
+            $this->attachTrailType($track);
+
+            $this->confirm($code, $track, $userId);
+
+            $locked->update(['status' => TrailApplicationStatus::Approved]);
+
+            return $track;
+        });
+
+        $application->setAttribute('status', TrailApplicationStatus::Approved);
+        $application->syncOriginalAttribute('status');
+
+        // Fuori dalla transazione, e non prima: la catena e' fatta di job in
+        // coda, e dentro la transazione lavorerebbero su dati non ancora
+        // committati. E' esattamente cio' che EcTrackObserver avrebbe chiamato
+        // su un `created` (src/Observers/EcTrackObserver.php), che l'INSERT
+        // diretto non fa scattare: quota, dislivelli, pendenze, tassonomie
+        // territoriali, mappe vettoriali e indice di ricerca.
+        app(EcTrackService::class)->createDataChain($track);
+
+        return $track;
+    }
+
+    /**
+     * Respinge una domanda in istruttoria e libera il numero riservato.
+     *
+     * La liberazione e' sempre conseguenza di un atto, mai un'operazione a se':
+     * per questo la causa (`application_rejected`) finisce nella storia del
+     * codice, e per questo il registro non espone una action «Libera numero».
+     *
+     * La guardia sullo stato vive qui, non solo nell'interfaccia: su
+     * un'istanza gia' approvata la respinta libererebbe un numero ASSEGNATO,
+     * che resterebbe legato al suo sentiero e tornerebbe proponibile a una
+     * seconda domanda. La guardia di release() non basta, perche' accetta
+     * legittimamente anche un codice assegnato: serve al deaccatastamento.
+     *
+     * @param  string  $reason  il motivo, visibile al richiedente: dice cosa
+     *                          correggere nella nuova domanda (oc:8567)
+     *
+     * @throws InvalidTrailApplicationTransitionException se la domanda non e' in istruttoria
+     */
+    public function reject(TrailApplication $application, string $reason, ?int $userId = null): void
+    {
+        DB::transaction(function () use ($application, $reason, $userId): void {
+            /** @var TrailApplication $locked */
+            $locked = $application->newQuery()
+                ->whereKey($application->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($locked->status !== TrailApplicationStatus::UnderReview) {
+                throw InvalidTrailApplicationTransitionException::forAction($locked->status, 'respingere');
+            }
+
+            $code = $locked->activeCode;
+
+            if ($code !== null) {
+                $this->release($code, 'application_rejected', $userId);
+            }
+
+            $locked->update([
+                'status' => TrailApplicationStatus::Rejected,
+                'rejection_reason' => $reason,
+            ]);
+        });
+
+        $application->setAttribute('status', TrailApplicationStatus::Rejected);
+        $application->setAttribute('rejection_reason', $reason);
+        $application->syncOriginalAttributes(['status', 'rejection_reason']);
+    }
+
+    /**
+     * La geometria si copia dall'istanza al sentiero SENZA passare da
+     * Eloquent: le due colonne sono dello stesso tipo (`geography`,
+     * `multiLineStringz`), quindi la copia e' diretta. Non e' un
+     * `EcTrack::create()` seguito da un UPDATE perche' `ec_tracks.geometry` e'
+     * NOT NULL senza default: la riga non puo' nascere senza geometria.
+     *
+     * Il nome si scrive poi via Eloquent (`saveQuietly()`, senza far scattare
+     * gli observer): la colonna e' tradotta, e la codifica la conosce solo il
+     * modello. La catena degli observer viene invocata da approve(), dopo il
+     * commit.
+     *
+     * Le `properties` dell'istanza (anagrafica del proponente, protocollo)
+     * vengono riportate sul sentiero: e' l'unico posto dove quei dati vivono.
+     * I dati dell'API non sono fra queste — stanno nella colonna `api_data`,
+     * fuori da `properties`, proprio perche' da qui non devono passare: il
+     * sentiero pubblicato serve le sue properties per intero nell'API e nel
+     * GeoJSON (oc:8960).
+     */
+    protected function createTrackFromApplication(TrailApplication $application, ?int $userId): EcTrack
+    {
+        $table = config('wm-package.ec_track_table', 'ec_tracks');
+        $appId = $application->properties['app_id'] ?? App::query()->min('id');
+
+        $properties = $application->properties ?? [];
+        $properties['trail_application_id'] = $application->id;
+
+        $id = DB::selectOne(
+            <<<SQL
+            INSERT INTO {$table} (name, app_id, user_id, properties, geometry, created_at, updated_at)
+            SELECT :name, :app_id, :user_id, :properties::jsonb, geometry, now(), now()
+            FROM trail_applications WHERE id = :application_id
+            RETURNING id
+            SQL,
+            [
+                'name' => (string) $application->name,
+                'app_id' => $appId,
+                'user_id' => $userId,
+                'properties' => json_encode($properties),
+                'application_id' => $application->id,
+            ],
+        )->id;
+
+        $track = EcTrack::findOrFail($id);
+        $track->name = $application->name;
+        $track->saveQuietly();
+
+        return $track;
+    }
+
+    /**
+     * Il tipo va attaccato dall'approvazione e non lasciato all'operatore.
+     *
+     * L'identificatore e' un dato dello shard, non del package: se non e'
+     * configurato o la tassonomia non esiste si registra un avviso e si
+     * prosegue — non e' un motivo per far cadere l'approvazione.
+     */
+    protected function attachTrailType(EcTrack $track): void
+    {
+        $identifier = config('wm-package.features.trail_registry.trail_type_identifier');
+
+        if (! $identifier) {
+            Log::warning('trail_registry: identificatore del tipo sentiero non configurato', [
+                'config' => 'wm-package.features.trail_registry.trail_type_identifier',
+                'ec_track_id' => $track->id,
+            ]);
+
+            return;
+        }
+
+        $activity = TaxonomyActivity::where('identifier', $identifier)->first();
+
+        if ($activity === null) {
+            Log::warning('trail_registry: tassonomia del tipo sentiero non trovata', ['identifier' => $identifier]);
+
+            return;
+        }
+
+        $track->taxonomyActivities()->syncWithoutDetaching([$activity->id]);
+    }
+
+    /**
+     * La copia e' per allegato e cattura `\Throwable`, non `\Exception`: un
+     * file che non si copia non deve far cadere l'intera approvazione.
+     * `TrailApplication::getMorphClass()` (vedi la sua classdoc) restituisce il
+     * nome di classe reale, quindi la lettura di `$application->media` non
+     * solleva errori di polimorfismo e non ha bisogno di un proprio try/catch.
+     *
+     * `Media::copy()` invece di `replicate()`: copia anche il file sul disco,
+     * mentre la replica della sola riga lascerebbe un allegato che punta al
+     * file dell'istanza.
+     */
+    protected function copyApplicationMedia(TrailApplication $application, EcTrack $track): void
+    {
+        foreach ($application->media as $item) {
+            // Gli allegati dell'istanza sono documenti dell'istruttoria e non
+            // vanno sul sentiero pubblicato (oc:8960).
+            if (in_array($item->collection_name, TrailApplication::COLLECTIONS_NOT_COPIED_ON_APPROVAL, true)) {
+                continue;
+            }
+
+            try {
+                $item->copy($track, $item->collection_name, $item->disk);
+            } catch (\Throwable $e) {
+                Log::error('trail_registry: copia media fallita -> '.$e->getMessage());
+            }
+        }
     }
 
     /**

@@ -95,6 +95,8 @@ porta un sentiero. Non duplicarne la logica nei consumer.
 | `numbersWithAvailableVariants($fullCode)` | i numeri con almeno una variante libera: l'elenco da cui si sceglie nella sostituzione manuale |
 | `reserve()` / `confirm()` / `release()` / `replaceNumber()` | il ciclo di vita di un'istanza |
 | `registerExistingCode()` | registra un codice storico già esistente |
+| `confirmCompilation()` | chiude la compilazione di una domanda arrivata dal canale API e la porta in istruttoria |
+| `approve()` / `reject($reason)` | la decisione dell'istruttoria su una domanda `under_review`: l'approvazione crea il sentiero e rende definitivo il codice, il respingimento libera il numero e salva il motivo. Le usano le Action di Nova e qualunque altro punto da cui si decide una domanda |
 
 I tre metodi di lettura rispondono a domande diverse e non sono intercambiabili:
 `availableNumbers()` esclude un numero appena il numero puro è occupato,
