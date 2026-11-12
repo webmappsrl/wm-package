@@ -5,11 +5,11 @@ namespace Wm\WmPackage;
 use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
+use Illuminate\Routing\ResponseFactory;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Response as ResponseFacade;
 use Illuminate\Support\Facades\Route;
 use Laravel\Nova\Menu\MenuItem;
 use Laravel\Nova\Menu\MenuSection;
@@ -495,6 +495,12 @@ class WmPackageServiceProvider extends PackageServiceProvider
     /**
      * Macro response()->gpx() e response()->kml() usate da EditorialContentController: senza, le
      * rotte GPX e KML rispondevano sempre 500 (oc:8953).
+     *
+     * Le macro si registrano sulla classe, che le tiene in modo statico, e non sulla facade
+     * `Response`: la facade risolverebbe la ResponseFactory durante il register, e con lei il
+     * generatore degli URL, legato alla lista di rotte di quel momento. Le rotte registrate dopo
+     * non si troverebbero più per nome, e `route('…')` lancerebbe RouteNotFoundException
+     * (oc:8968).
      */
     private function registerResponseMacros(): void
     {
@@ -504,10 +510,11 @@ class WmPackageServiceProvider extends PackageServiceProvider
         ];
 
         foreach ($types as $macro => $contentType) {
-            ResponseFacade::macro($macro, function (string $content, int $status = 200, array $headers = []) use ($contentType) {
+            ResponseFactory::macro($macro, function (string $content, int $status = 200, array $headers = []) use ($contentType) {
                 $headers['Content-Type'] ??= $contentType;
 
-                return ResponseFacade::make($content, $status, $headers);
+                /** @var ResponseFactory $this */
+                return $this->make($content, $status, $headers);
             });
         }
     }
