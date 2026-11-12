@@ -10,11 +10,14 @@ use Illuminate\Support\Facades\Log;
 use RuntimeException;
 use Throwable;
 use Wm\WmPackage\Http\Requests\TrailRegistry\ShowApplicationRequest;
+use Wm\WmPackage\Http\Requests\TrailRegistry\StoreAttachmentRequest;
 use Wm\WmPackage\TrailRegistry\Enums\TrailApplicationStatus;
 use Wm\WmPackage\TrailRegistry\Models\TrailApplication;
+use Wm\WmPackage\TrailRegistry\Schema\ApplicationSchema;
 
 /**
- * Lettura dello stato di una domanda: a che punto e' del procedimento, i dati
+ * Lettura di una domanda: i dati dichiarati cosi' come il Catasto li ha
+ * registrati, gli allegati caricati, a che punto e' del procedimento, i dati
  * tecnici calcolati dal tracciato e, a domanda approvata, il numero del
  * sentiero.
  *
@@ -32,9 +35,10 @@ class ShowApplicationController extends Controller
     use ResolvesConfiguredApplication;
 
     /**
-     * Legge lo stato della domanda
+     * Legge la domanda
      *
-     * Restituisce a che punto è la domanda, i dati tecnici calcolati dal
+     * Restituisce i dati dichiarati così come il Catasto li ha registrati, gli
+     * allegati caricati, a che punto è la domanda, i dati tecnici calcolati dal
      * tracciato e, quando la domanda è approvata, il numero del sentiero.
      * `{application}` è l'`id` restituito dalla creazione; la chiamata non ha
      * corpo e non cambia nulla, quindi si può ripetere quante volte si vuole:
@@ -45,6 +49,19 @@ class ShowApplicationController extends Controller
      *   -H "Authorization: Bearer $TOKEN" \
      *   -H "Accept: application/json"
      * ```
+     *
+     * ### I dati dichiarati e gli allegati
+     *
+     * `submitted_data` restituisce il modulo inviato con la creazione, così
+     * come il Catasto l'ha registrato: è il modo per verificare che cosa è
+     * arrivato, campo per campo. I valori sono quelli inviati: un numero
+     * mandato come testo torna come testo, i campi strutturati (`activities`,
+     * `difficulty`, gli elenchi) tornano già decodificati. I dati non cambiano
+     * dopo la creazione.
+     *
+     * `attachments` dice quanti file ci sono in ciascuna `collection` della
+     * chiamata di caricamento: `0` vuol dire che quell'allegato manca. La
+     * traccia non è fra questi, perché viaggia con la creazione.
      *
      * ### Lo stato
      *
@@ -110,6 +127,22 @@ class ShowApplicationController extends Controller
              */
             'id' => $application->getKey(),
             /**
+             * Il modulo inviato con la creazione, così come il Catasto l'ha registrato: le stesse
+             * chiavi dei parametri della creazione, `name` compreso, con i valori inviati. I campi
+             * strutturati tornano decodificati. Non cambia dopo la creazione.
+             *
+             * @var array<string, mixed>
+             */
+            'submitted_data' => $this->submittedData($application),
+            /**
+             * Quanti file ci sono in ciascuna `collection` della chiamata di caricamento degli
+             * allegati: `report`, `trail_data_sheet`, `authorizations`, `maintenance_plan`, `photos`.
+             * `0` vuol dire che l'allegato manca. Le fotografie vanno da 0 a 5, gli altri da 0 a 1.
+             *
+             * @var array<string, int>
+             */
+            'attachments' => $this->attachmentCounts($application),
+            /**
              * A che punto è la domanda. `under_compilation`: creata, non ancora confermata.
              * `under_review`: confermata e in istruttoria. `approved`: approvata, e `code` porta il
              * numero del sentiero. `rejected`: respinta, e `rejection_reason` porta il motivo.
@@ -154,6 +187,37 @@ class ShowApplicationController extends Controller
                 ? $application->rejection_reason
                 : null,
         ]);
+    }
+
+    /**
+     * Il modulo come e' stato registrato: `api_data` senza la versione dello
+     * schema, che e' un dato nostro, e con il nome, che sta in una colonna sua.
+     *
+     * @return array<string, mixed>
+     */
+    protected function submittedData(TrailApplication $application): array
+    {
+        $data = $application->api_data ?? [];
+        unset($data[ApplicationSchema::VERSION_KEY]);
+
+        return ['name' => $application->name] + $data;
+    }
+
+    /**
+     * Le collection sono quelle che la chiamata di caricamento accetta, cosi'
+     * chi legge ritrova gli stessi nomi che usa per caricare.
+     *
+     * @return array<string, int>
+     */
+    protected function attachmentCounts(TrailApplication $application): array
+    {
+        $counts = [];
+
+        foreach (StoreAttachmentRequest::collections() as $collection) {
+            $counts[$collection] = $application->getMedia($collection)->count();
+        }
+
+        return $counts;
     }
 
     /**
