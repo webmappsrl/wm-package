@@ -139,6 +139,27 @@ Le note della parte di forestas stanno nello shard:
   > format fissa per ogni file del fascicolo: oltre, la risposta è un `422` sul campo `geometry`, e
   > la documentazione del parametro lo dichiara.
 
+### 2026-11-12 — Il throttle copre quattro rotte
+- **Requisito:** [R19](overview.md#r19)
+- **Effetto:** modificato
+- **Decide:** dev
+- **Perché:** la lettura della domanda ([R58](overview.md#r58)) è la quarta rotta del canale e sta sotto lo stesso throttle.
+- **Testo nuovo:**
+  > Le quattro rotte portano un **throttle**: senza, gli endpoint più cari che avremmo — upload su
+  > S3 e chiamata sincrona al servizio DEM — nascerebbero senza limite di frequenza.
+
+### 2026-11-12 — Nova mostra i dati API e gli allegati
+- **Requisito:** [R44](overview.md#r44)
+- **Effetto:** modificato
+- **Decide:** dev
+- **Perché:** i tab «Dati API» e «Allegati» ([R37](overview.md#r37), [R57](overview.md#r57)) cambiano il codice della Resource Nova; il comportamento di Nova resta quello di prima.
+- **Testo nuovo:**
+  > **Il comportamento di Nova non cambia.** L'istanza creata d'ufficio continua a nascere in
+  > `under_review` con il numero riservato, in un gesto solo. I dati del form del SUS esistono solo
+  > se l'istanza arriva da lì, quindi un'istanza d'ufficio non ne ha e la regola di completezza non
+  > la riguarda. Il codice di Nova cambia solo nella detail view, che mostra in sola lettura i tab
+  > «Dati API» e «Allegati» ([R37](overview.md#r37), [R57](overview.md#r57)).
+
 ## Divergenze dal piano, task per task
 
 ### Task 1: Lo schema dei campi come fonte unica
@@ -231,3 +252,24 @@ accetta quattro più le fotografie e rifiuta `original_geometry`. Vedi la voce d
   forestas (UAT e dev) impone `upload_max_filesize = 32M`. Il 2M visto in locale è il predefinito
   di PHP, perché il `php.ini` dello shard, letto da `php artisan serve`, non lo imposta: riguarda
   solo il locale, e si è scelto di lasciarlo così.
+
+I rischi dell'overview rimasti aperti alla chiusura (2026-11-12). La destinazione è una proposta e
+la decide il dev.
+
+- **Il reset notturno rende il canale non collaudabile su UAT**: un'istanza creata il pomeriggio
+  non esiste più la mattina dopo, e Engineering riceve `404` su un id che gli abbiamo dato noi.
+  *Destinazione proposta:* un ticket per chi rilascia, da chiudere prima di consegnare l'ambiente a
+  Engineering, collegato al tag 709.
+- **Del payload rifiutato restano gli esiti, non i valori**: una discussione con Engineering su
+  *quale valore* è stato mandato non si chiude con i nostri log. *Destinazione proposta:* la
+  pagina [operazioni-del-fascicolo-e-canale-dell-ente.md](../../knowledge/operazioni-del-fascicolo-e-canale-dell-ente.md),
+  come limite dichiarato del canale.
+- **Il contratto si congela al primo collaudo con Engineering**: la divergenza sulle unità —
+  chilometri e minuti interi contro i metri e gli `ORE:MINUTI` del format — va segnalata prima di
+  quel collaudo. *Destinazione proposta:* il tag 709, come punto da portare a Engineering.
+- **Quanto il calcolo sincrono del DEM allunghi la creazione non è misurato.** *Destinazione
+  proposta:* un ticket di misura sul primo ambiente con il servizio DEM vero.
+- **Gli allegati di un'istanza mai trasmessa restano su S3**, e su UAT il reset notturno lascia i
+  file nel bucket senza record. *Destinazione proposta:* il tag 709, accanto alla domanda già
+  aperta su come si chiude un'istanza rimasta in compilazione, perché la cancellazione che la
+  risolverà dovrà togliere anche i file.

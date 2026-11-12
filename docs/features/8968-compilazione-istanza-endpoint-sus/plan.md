@@ -1,4 +1,5 @@
 > Ticket: oc:8968
+> Stato: seguito, con 14 divergenze annotate in notes.md
 
 # La compilazione di un'istanza — piano implementativo
 
