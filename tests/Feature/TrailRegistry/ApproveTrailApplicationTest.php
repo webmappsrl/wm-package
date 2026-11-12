@@ -305,7 +305,7 @@ it('approvando non copia api_data sul sentiero', function () {
 
     $track = EcTrack::latest('id')->first();
 
-    // I dati del SUS restano sull'istanza: sul sentiero finirebbero nel
+    // I dati del canale API restano sull'istanza: sul sentiero finirebbero nel
     // GeoJSON pubblico, con dentro codici fiscali, e-mail e nomi di persone
     // (oc:8960).
     expect($track->properties)->not->toHaveKey('api_data');

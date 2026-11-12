@@ -7,7 +7,7 @@ use Wm\WmPackage\TrailRegistry\Models\TrailApplication as TrailApplicationModel;
 use Wm\WmPackage\TrailRegistry\Nova\TrailApplication;
 
 /**
- * I dati che arrivano dal SUS si leggono nella detail view e non si modificano
+ * I dati che arrivano dal canale API si leggono nella detail view e non si modificano
  * da nessuna parte (oc:8960): stanno fuori dai form per costruzione, con
  * onlyOnDetail(), non per un attributo di sola lettura che qualcuno potrebbe
  * togliere. I Field li costruisce PropertiesPanel da uno schema.
@@ -54,7 +54,7 @@ function attributiDeiCampi(array $fields): array
         ->all();
 }
 
-it('mostra i dati del SUS nella detail view', function () {
+it('mostra i dati del canale API nella detail view', function () {
     $resource = new TrailApplication(TrailApplicationModel::factory()->create());
 
     $attributi = attributiDeiCampi($resource->fields(app(NovaRequest::class)));
@@ -64,7 +64,7 @@ it('mostra i dati del SUS nella detail view', function () {
         ->and($attributi)->toContain('api_data->maintenance_frequency_months');
 });
 
-it('non mette i dati del SUS nel form di modifica', function () {
+it('non mette i dati del canale API nel form di modifica', function () {
     $resource = new TrailApplication(TrailApplicationModel::factory()->create());
 
     $attributi = attributiDeiCampi($resource->fieldsForUpdate(app(NovaRequest::class)));
@@ -98,7 +98,7 @@ it('mostra l etichetta di una select, non il valore', function () {
 
     $campo->resolveForDisplay($fresh);
 
-    expect($campo->jsonSerialize()['displayedAs'])->toBe("c'e' ed e' fatiscente");
+    expect($campo->jsonSerialize()['displayedAs'])->toBe("c'è ed è fatiscente");
 });
 
 it('regge un valore annidato senza rompere la detail view', function () {

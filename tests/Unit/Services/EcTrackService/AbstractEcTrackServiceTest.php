@@ -198,7 +198,7 @@ class AbstractEcTrackServiceTest extends TestCase
 
 class MockDemClient extends DemClient
 {
-    public function getTechData($geojson): array
+    public function getTechData($geojson, ?int $timeout = null): array
     {
         return [
             'properties' => [

@@ -60,10 +60,18 @@ class EcTrackService extends BaseService
      *
      * Separata da updateDemData() perche' la usa anche l'istanza del Catasto
      * Sentieri, che salva il risultato in SQL e non via Eloquent.
+     *
+     * @param  int|null  $timeout  secondi; null = il limite dei job in coda
+     *                             (`clients.dem.async_timeout_seconds`), quindi il
+     *                             comportamento esistente non cambia. Una chiamata
+     *                             sincrona passa il proprio limite, piu' basso.
      */
-    public function fetchDemTechData(array $geojson): array
+    public function fetchDemTechData(array $geojson, ?int $timeout = null): array
     {
-        return $this->demClient->getTechData($geojson);
+        return $this->demClient->getTechData(
+            $geojson,
+            $timeout ?? (int) config('wm-package.clients.dem.async_timeout_seconds', 30)
+        );
     }
 
     /**

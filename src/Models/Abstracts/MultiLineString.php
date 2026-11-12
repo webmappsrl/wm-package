@@ -60,10 +60,26 @@ abstract class MultiLineString extends GeometryModel
     public function acquireDemLock(): bool
     {
         return Cache::store('redis')->add(
-            'dem-lock:'.$this->getTable().':'.$this->getKey(),
+            $this->demLockKey(),
             true,
             self::DEM_LOCK_SECONDS,
         );
+    }
+
+    /**
+     * Toglie il lock preso da acquireDemLock(). Serve quando il calcolo
+     * sincrono fallisce: il lock preso alla creazione resterebbe per
+     * un'ora e dispatchDemIfMissing() non riaccoderebbe il calcolo proprio
+     * quando serve di piu'.
+     */
+    public function releaseDemLock(): void
+    {
+        Cache::store('redis')->forget($this->demLockKey());
+    }
+
+    protected function demLockKey(): string
+    {
+        return 'dem-lock:'.$this->getTable().':'.$this->getKey();
     }
 
     public function dispatchDemIfMissing(): void

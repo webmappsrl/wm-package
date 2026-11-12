@@ -120,6 +120,7 @@ questo file, perché vanno lette sempre.
 | Bottone «Copia codice web component» | snippet `wm-layer-map` su Layer e EcTrack (con `track-id`), service condiviso, flag unico per l'App, select dei layer, punto di estensione `webComponentLayers()` per gli shard | [docs/knowledge/8944-copia-codice-web-component-sulla-detail-view-della-ectrack.md](docs/knowledge/8944-copia-codice-web-component-sulla-detail-view-della-ectrack.md) |
 | Tassonomie nel dettaglio delle tracce e nei POI | `properties.taxonomies` di tracce e `pois.geojson`: fonti, tab come in Nova, zone filtrate, chiavi deprecate, nomi e tab in `LABELS` del `config.json`, quando si rigenerano file e config, identifier riservati | [docs/knowledge/tassonomie-nel-dettaglio-di-tracce-e-poi.md](docs/knowledge/tassonomie-nel-dettaglio-di-tracce-e-poi.md) |
 | Aggiornare wm-package su osm2cai2 | cosa cambia per osm2cai2 al bump del submodule e cosa controllare prima del command dei duplicati | [docs/knowledge/aggiornare-wm-package-su-osm2cai2.md](docs/knowledge/aggiornare-wm-package-su-osm2cai2.md) |
+| Operazioni del fascicolo e canale dell'ente | il package offre aprire, allegare, chiudere e leggere una domanda e lo shard monta il canale (rotte, client, middleware); perché lo schema dei campi è ridefinibile e perché il nome dello sportello non compare mai | [docs/knowledge/operazioni-del-fascicolo-e-canale-dell-ente.md](docs/knowledge/operazioni-del-fascicolo-e-canale-dell-ente.md) |
 
 ## Procedure
 
@@ -141,9 +142,11 @@ Per attivare il Catasto Sentieri su uno shard: [docs/howto/attivare-catasto-sent
 - `docs/knowledge/` — perché funziona così e cosa è già stato provato, per argomento.
 - `docs/howto/` — le procedure operative. I tre `docs/*_SETUP.md` (Mailpit, MinIO, Kibana) sono
   procedure di setup dell'ambiente: stessa natura, nome diverso per ragioni storiche.
-- `docs/features/<slug>/` — il cantiere di ogni lavoro: `overview.md`, `plan.md`, `notes.md`. È un
-  diario, non una fotografia del risultato: **un fatto preso da un cantiere non entra altrove
-  senza essere verificato nel codice**. Non si riscrive, si annota in fondo.
+- `docs/features/<slug>/` — la cartella di ogni lavoro: `overview.md`, `plan.md`, `notes.md`. È un
+  diario, non una fotografia del risultato: **un fatto preso da lì non entra altrove senza essere
+  verificato nel codice**. Durante il lavoro l'overview non si tocca e le decisioni si annotano in
+  `notes.md`; alla chiusura `wm-plan` aggiorna l'overview copiando quelle voci. Dopo la chiusura
+  non si riscrive più niente: si annota in fondo.
 
 I ticket vivono su Orchestrator, formato `oc:<numero>`. Ogni documento in `docs/features/` inizia
 con `> Ticket: oc:<ID>`; lo scope dei commit è `feat(oc:<ID>): …` / `fix(oc:<ID>): …`.
