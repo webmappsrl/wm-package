@@ -266,12 +266,19 @@ la decide il dev.
   *quale valore* è stato mandato non si chiude con i nostri log. *Destinazione proposta:* la
   pagina [operazioni-del-fascicolo-e-canale-dell-ente.md](../../knowledge/operazioni-del-fascicolo-e-canale-dell-ente.md),
   come limite dichiarato del canale.
+  *Deciso dal dev, 2026-11-12:* non è un rischio, è la scelta del requisito sul log
+  ([R6](overview.md#r6)); nessuna destinazione.
 - **Il contratto si congela al primo collaudo con Engineering**: la divergenza sulle unità —
   chilometri e minuti interi contro i metri e gli `ORE:MINUTI` del format — va segnalata prima di
   quel collaudo. *Destinazione proposta:* il tag 709, come punto da portare a Engineering.
+  *Deciso dal dev, 2026-11-12:* annotato nel tag 709, nella sezione «Divergenze da comunicare al
+  SUS», che già elencava la divergenza sulle unità.
 - **Quanto il calcolo sincrono del DEM allunghi la creazione non è misurato.** *Destinazione
   proposta:* un ticket di misura sul primo ambiente con il servizio DEM vero.
+  *Deciso dal dev, 2026-11-12:* resta qui, fra i follow-up.
 - **Gli allegati di un'istanza mai trasmessa restano su S3**, e su UAT il reset notturno lascia i
   file nel bucket senza record. *Destinazione proposta:* il tag 709, accanto alla domanda già
   aperta su come si chiude un'istanza rimasta in compilazione, perché la cancellazione che la
   risolverà dovrà togliere anche i file.
+  *Deciso dal dev, 2026-11-12:* resta qui, fra i follow-up: la cancellazione delle istanze non
+  esiste ancora.

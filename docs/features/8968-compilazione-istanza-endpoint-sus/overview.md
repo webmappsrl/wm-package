@@ -393,23 +393,20 @@ Lo stato del codice prima di questo lavoro, citato dai requisiti.
 
 ## Rischi
 
-Verificati sul codice dopo la challenge. Alla chiusura restano aperti i quattro qui sotto: sono
-annotati fra i [follow-up delle note](notes.md#follow-up), ciascuno con la destinazione proposta.
+Verificati sul codice dopo la challenge. Alla chiusura restano aperti i tre qui sotto, ciascuno
+con la sua destinazione, annotata anche fra i [follow-up delle note](notes.md#follow-up).
 Il reset notturno di UAT, che tronca `trail_applications`, non è un rischio: è il comportamento del
-collaudo, documentato nella pagina delle API (`config/scramble.php` dello shard).
+collaudo, documentato nella pagina delle API (`config/scramble.php` dello shard). Nemmeno il log
+dei `422` senza i valori inviati: è la scelta scritta nel requisito sul log ([R6](#r6)).
 Gli altri quattro sono superati dai requisiti: il calcolo parziale da [R24](#r24), il doppio
 calcolo da [R27](#r27), lo schema che attira responsabilità da [R33](#r33) e [R40](#r40), gli
 allegati esposti da `GET api/media/{id}` da [R17](#r17).
 
-- **Del payload rifiutato restano gli esiti, non il contenuto.** È una scelta: nel log finiscono i
-  campi che hanno fallito e la regola violata, mai i valori, perché il payload porta nomi, e-mail e
-  codici fiscali. Se un giorno il disaccordo con Engineering fosse proprio su *quale valore* è
-  stato mandato, i nostri dati non lo chiuderanno. Spostato fra i follow-up delle note.
 - **Il contratto si congela al primo collaudo con Engineering, non al merge.** Da quel momento
   cambiare la forma di una risposta richiede un ciclo di coordinamento con un fornitore esterno,
   con tempi che non controlliamo. Conseguenza operativa: la divergenza sulle unità — chilometri e
   minuti interi contro i metri e gli `ORE:MINUTI` del format — va segnalata a Engineering **prima**
-  di quel collaudo, non dopo. Spostato fra i follow-up delle note.
+  di quel collaudo, non dopo. Spostato nel tag 709, sezione «Divergenze da comunicare al SUS».
 - **Il calcolo sincrono mette un servizio esterno dentro il ciclo di richiesta.** È il rischio di
   disponibilità più grosso della feature, e il suo caso peggiore esce dal perimetro: un DEM muto
   con un client che ritenta esaurisce i worker e porta giù anche Nova. Mitigato dai requisiti —
