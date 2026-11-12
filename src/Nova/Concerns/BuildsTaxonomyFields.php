@@ -2,6 +2,7 @@
 
 namespace Wm\WmPackage\Nova\Concerns;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
 use Laravel\Nova\Fields\Field;
@@ -424,9 +425,9 @@ trait BuildsTaxonomyFields
      * La memoria sta nel container e non in una proprietà statica: così un runtime che tiene vivo
      * il processo fra due richieste non mostra tassonomie vecchie.
      *
-     * @param  class-string<\Illuminate\Database\Eloquent\Model>  $model
+     * @param  class-string<Model>  $model
      * @param  array<int, string>  $hidden
-     * @return \Illuminate\Support\Collection<int, \Illuminate\Database\Eloquent\Model>
+     * @return Collection<int, Model>
      */
     private static function legacyTaxonomyRows(string $model, array $hidden): Collection
     {
@@ -731,7 +732,7 @@ trait BuildsTaxonomyFields
     /**
      * I termini di quella tassonomia già scelti su questo record.
      *
-     * @return \Illuminate\Support\Collection<int, TaxonomyTerm>
+     * @return Collection<int, TaxonomyTerm>
      */
     private function chosenTerms(mixed $resource, TaxonomyTerm $taxonomy)
     {
