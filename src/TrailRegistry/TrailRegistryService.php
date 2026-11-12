@@ -2,12 +2,16 @@
 
 namespace Wm\WmPackage\TrailRegistry;
 
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\TaxonomyWhere;
+use Wm\WmPackage\TrailRegistry\Enums\TrailApplicationStatus;
 use Wm\WmPackage\TrailRegistry\Enums\TrailCodeOrigin;
 use Wm\WmPackage\TrailRegistry\Enums\TrailCodeStatus;
+use Wm\WmPackage\TrailRegistry\Exceptions\ApplicationIncompleteException;
+use Wm\WmPackage\TrailRegistry\Exceptions\InvalidTrailApplicationTransitionException;
 use Wm\WmPackage\TrailRegistry\Exceptions\InvalidTrailCodeTransitionException;
 use Wm\WmPackage\TrailRegistry\Exceptions\NumberOccupiedException;
 use Wm\WmPackage\TrailRegistry\Exceptions\SectorExhaustedException;
@@ -855,6 +859,107 @@ class TrailRegistryService
 
             return null;
         }
+    }
+
+    /**
+     * Chiude la compilazione: l'istanza smette di essere compilabile ed entra
+     * in istruttoria (`UnderCompilation` -> `UnderReview`), se il fascicolo e'
+     * completo.
+     *
+     * La regola vive qui e non nel controller perche' descrive quando
+     * un'istanza smette di essere compilabile, cioe' dominio: un secondo
+     * canale di consegna, o un'azione dell'operatore, deve poterla riusare
+     * senza ricopiarla. Cosa manca lo dice `missingForConfirmation()` del
+     * modello, che qui non si duplica.
+     *
+     * Non riserva il numero del sentiero. Nel dominio il numero nasce insieme
+     * all'istanza — la riserva fa parte della creazione, non e' un passo
+     * successivo (vedi `TrailApplicationStatus` e la Resource di
+     * amministrazione) — quindi a questo punto esiste gia'.
+     *
+     * Su un'istanza che non e' in compilazione:
+     * - `UnderReview`: non fa niente e non solleva. La transizione voluta e'
+     *   gia' avvenuta, ed e' il caso del client che va in timeout e ritenta la
+     *   conferma: deve ricevere lo stesso esito della prima volta, non un
+     *   errore per una cosa riuscita. Il fascicolo non viene ricontrollato:
+     *   una volta in istruttoria, cio' che contiene non e' piu' affare della
+     *   conferma.
+     * - `Rejected` e `Approved`: solleva `InvalidTrailApplicationTransitionException`.
+     *   Qui la conferma non e' un ritentativo ma un tentativo di riaprire una
+     *   pratica che l'istruttoria ha gia' decisa, e riportarla in istruttoria
+     *   cancellerebbe quella decisione.
+     *
+     * Cosa e' protetto e cosa no. Dentro una transazione la riga si rilegge
+     * con `lockForUpdate()` e la decisione — sia lo stato di partenza sia la
+     * completezza (`api_data` e allegati) — e' presa su quella copia riletta
+     * sotto lock. Il modello passato dal chiamante NON entra nella
+     * valutazione: l'ha caricato prima, e in un canale fatto di piu' chiamate
+     * ravvicinate puo' essere stantio (un allegato arrivato nel frattempo,
+     * uno stato gia' cambiato). Del modello passato si usa solo la chiave, e
+     * alla fine se ne aggiorna lo stato in memoria. Il lock protegge dalle
+     * conferme concorrenti sulla stessa riga; non protegge un allegato che
+     * arriva dopo la lettura sotto lock e prima del commit, perche' la
+     * consegna degli allegati non prende lo stesso lock: quel fascicolo viene
+     * valutato com'era al momento della lettura.
+     *
+     * Lo stato si scrive da SQL e non con `save()`: il modello e' geometrico, e
+     * risalvarlo via Eloquent corrompe la geometria.
+     *
+     * Restituisce `true` se la transizione e' avvenuta in questa chiamata,
+     * `false` se l'istanza era gia' in istruttoria. La risposta e' decisa sulla
+     * riga letta sotto lock, quindi fra due conferme concorrenti una sola
+     * riceve `true`: e' cio' che permette al canale di dire «confermata ora»
+     * oppure «era gia' confermata» senza mentire a nessuna delle due.
+     *
+     * @return bool `true` se la transizione e' avvenuta in questa chiamata
+     *
+     * @throws ApplicationIncompleteException se manca un campo o un allegato
+     * @throws InvalidTrailApplicationTransitionException se l'istanza e' stata respinta o approvata
+     * @throws ModelNotFoundException se l'istanza e' stata cancellata nel frattempo
+     */
+    public function confirmCompilation(TrailApplication $application): bool
+    {
+        return DB::transaction(function () use ($application): bool {
+            /** @var TrailApplication|null $locked */
+            $locked = $application->newQuery()
+                ->whereKey($application->getKey())
+                ->lockForUpdate()
+                ->first();
+
+            if ($locked === null) {
+                // Cancellata fra la chiamata e il lock: e' un fatto del
+                // dominio, non un errore di tipo su uno stato nullo.
+                throw (new ModelNotFoundException)->setModel(TrailApplication::class, [$application->getKey()]);
+            }
+
+            $current = $locked->status;
+
+            if ($current === TrailApplicationStatus::UnderReview) {
+                $application->setAttribute('status', $current);
+                $application->syncOriginalAttribute('status');
+
+                return false;
+            }
+
+            if ($current !== TrailApplicationStatus::UnderCompilation) {
+                throw InvalidTrailApplicationTransitionException::forAction($current, 'chiudere la compilazione di');
+            }
+
+            $missing = $locked->missingForConfirmation();
+
+            if ($missing['fields'] !== [] || $missing['attachments'] !== []) {
+                throw ApplicationIncompleteException::forMissing($missing);
+            }
+
+            $locked->newQuery()
+                ->whereKey($locked->getKey())
+                ->update(['status' => TrailApplicationStatus::UnderReview->value]);
+
+            $application->setAttribute('status', TrailApplicationStatus::UnderReview);
+            $application->syncOriginalAttribute('status');
+
+            return true;
+        });
     }
 
     /**

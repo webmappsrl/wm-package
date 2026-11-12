@@ -17,6 +17,7 @@ use Wm\WmPackage\TrailRegistry\Database\Factories\TrailApplicationFactory;
 use Wm\WmPackage\TrailRegistry\Enums\TrailApplicationStatus;
 use Wm\WmPackage\TrailRegistry\Enums\TrailCodeStatus;
 use Wm\WmPackage\TrailRegistry\Jobs\UpdateTrailApplicationDemJob;
+use Wm\WmPackage\TrailRegistry\Schema\ApplicationSchema;
 use Wm\WmPackage\TrailRegistry\TrailRegistryClasses;
 
 /**
@@ -56,6 +57,14 @@ use Wm\WmPackage\TrailRegistry\TrailRegistryClasses;
  */
 class TrailApplication extends MultiLineString
 {
+    /**
+     * Dichiarata e non ricavata dal nome della classe, come negli altri modelli
+     * del Catasto: uno shard puo' sostituire questo modello con una sottoclasse
+     * (`wm-package.features.trail_registry.models.application`), ed Eloquent,
+     * senza questa riga, le farebbe cercare una tabella col nome di lei.
+     */
+    protected $table = 'trail_applications';
+
     /**
      * Il file caricato dall'utente, conservato tale e quale: la geometria in
      * colonna riceve la quota del nostro DEM, e questo resta il riferimento
@@ -227,44 +236,23 @@ class TrailApplication extends MultiLineString
      * I campi che l'istanza deve contenere perche' la consegna si consideri
      * conclusa, con gli identifier del format (campi 29-65).
      *
-     * Non ci sono i sei che dipendono dal valore di un altro campo —
-     * `soggetto_gestore_other`, `soggetto_rilevatore_other`,
+     * L'elenco non vive piu' qui: lo dichiara `ApplicationSchema`, che lo
+     * shard puo' ridefinire nel container. Ci sono solo i campi obbligatori
+     * incondizionatamente. Non ci sono quelli che dipendono dal valore di un
+     * altro campo (`soggetto_gestore_other`, `soggetto_rilevatore_other`,
      * `soggetto_rilevatore_email`, `soggetto_manutentore_other`,
-     * `soggetto_manutentore_cf` e `soggetto_custode` — perche' la loro
+     * `soggetto_manutentore_cf`, `soggetto_custode`): la loro
      * obbligatorieta' non e' una proprieta' dell'istanza ma una regola di
-     * validazione della chiamata.
-     *
-     * Il 58 dipende dal 56, il booleano che dice se esiste un custode distinto
-     * da gestore, manutentore e rilevatore: quando non esiste il 58 non arriva,
-     * e fra gli obbligatori terrebbe quell'istanza per sempre lontana dalla
-     * conferma.
-     *
-     * Non c'e' nemmeno `difficulty` (37): il format lo valida nella forma
-     * («mappa attivita' -> livello, si valida la coppia») ma non ne chiede la
-     * presenza, a differenza dei quindici che dicono «obbligatorio».
-     * Pretenderlo rifiuterebbe una consegna che il format considera completa.
+     * validazione della chiamata, e fra gli obbligatori terrebbero
+     * un'istanza per sempre lontana dalla conferma. Non c'e' nemmeno
+     * `difficulty` (37): il format ne valida la forma ma non ne chiede la
+     * presenza.
      *
      * @return list<string>
      */
     public static function requiredApiFields(): array
     {
-        return [
-            'from',                              // 29
-            'to',                                // 30
-            'distance',                          // 32, in chilometri
-            'duration_forward',                  // 34, in minuti
-            'duration_backward',                 // 35, in minuti
-            'activities',                        // 36
-            'existing_signage',                  // 38
-            'proposed_managing_municipalities',  // 42
-            'municipality_email',                // 43
-            'soggetto_gestore',                  // 47
-            'soggetto_rilevatore',               // 49
-            'soggetto_manutentore',              // 53
-            'soggetto_custode_presente',         // 56
-            'last_survey_date',                  // 64
-            'maintenance_frequency_months',      // 65
-        ];
+        return app(ApplicationSchema::class)->requiredFieldNames();
     }
 
     /**

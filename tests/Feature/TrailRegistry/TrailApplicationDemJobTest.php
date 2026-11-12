@@ -4,9 +4,9 @@ use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
-use Wm\WmPackage\Services\Models\EcTrackService;
 use Wm\WmPackage\TrailRegistry\Jobs\UpdateTrailApplicationDemJob;
 use Wm\WmPackage\TrailRegistry\Models\TrailApplication;
+use Wm\WmPackage\TrailRegistry\Services\ApplicationDemService;
 
 beforeEach(function () {
     runTrailRegistryStubs();
@@ -49,7 +49,7 @@ it('scrive dem_data e la quota del DEM senza toccare il resto di properties', fu
     );
     fakeDemResponse(['type' => 'MultiLineString', 'coordinates' => [[[1, 1, 100], [2, 2, 200]]]]);
 
-    (new UpdateTrailApplicationDemJob($this->application->id))->handle(app(EcTrackService::class));
+    (new UpdateTrailApplicationDemJob($this->application->id))->handle(app(ApplicationDemService::class));
 
     $fresh = $this->application->fresh();
     expect($fresh->properties['dem_data']['ascent'])->toBe(300)
@@ -64,7 +64,7 @@ it('scrive dem_data e la quota del DEM senza toccare il resto di properties', fu
 it('normalizza una LineString restituita dal DEM in MultiLineString', function () {
     fakeDemResponse(['type' => 'LineString', 'coordinates' => [[1, 1, 100], [2, 2, 200]]]);
 
-    (new UpdateTrailApplicationDemJob($this->application->id))->handle(app(EcTrackService::class));
+    (new UpdateTrailApplicationDemJob($this->application->id))->handle(app(ApplicationDemService::class));
 
     $type = DB::selectOne('SELECT GeometryType(geometry::geometry) AS t FROM trail_applications WHERE id = ?', [$this->application->id])->t;
     expect($type)->toBe('MULTILINESTRING');
@@ -73,7 +73,7 @@ it('normalizza una LineString restituita dal DEM in MultiLineString', function (
 it('non fa nulla se l istanza non esiste piu', function () {
     Http::fake();
 
-    (new UpdateTrailApplicationDemJob(999999))->handle(app(EcTrackService::class));
+    (new UpdateTrailApplicationDemJob(999999))->handle(app(ApplicationDemService::class));
 
     Http::assertNothingSent();
 });
@@ -85,4 +85,28 @@ it('e unico per istanza e gira sulla coda dem', function () {
         ->and($job->uniqueId())->toBe((string) $this->application->id)
         ->and($job->queue)->toBe('dem')
         ->and($job->uniqueVia())->toBeInstanceOf(Repository::class);
+});
+
+it('non chiama il servizio quando i dati tecnici ci sono gia', function () {
+    DB::statement(
+        'UPDATE trail_applications SET properties = ?::jsonb, geometry = ST_GeomFromText(?, 4326) WHERE id = ?',
+        [json_encode(['dem_data' => ['ascent' => 300]]), 'MULTILINESTRING Z ((1 1 100, 2 2 200))', $this->application->id]
+    );
+    Http::fake();
+
+    (new UpdateTrailApplicationDemJob($this->application->id))->handle(app(ApplicationDemService::class));
+
+    Http::assertNothingSent();
+    expect($this->application->fresh()->properties['dem_data']['ascent'])->toBe(300);
+});
+
+it('lascia riaccodabile il calcolo quando quello sincrono e fallito', function () {
+    // created() ha preso il lock
+    expect($this->application->acquireDemLock())->toBeFalse();
+
+    $this->application->releaseDemLock();
+
+    expect($this->application->acquireDemLock())->toBeTrue();
+
+    $this->application->releaseDemLock();
 });

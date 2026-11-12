@@ -120,6 +120,7 @@ questo file, perché vanno lette sempre.
 | Bottone «Copia codice web component» | snippet `wm-layer-map` su Layer e EcTrack (con `track-id`), service condiviso, flag unico per l'App, select dei layer, punto di estensione `webComponentLayers()` per gli shard | [docs/knowledge/8944-copia-codice-web-component-sulla-detail-view-della-ectrack.md](docs/knowledge/8944-copia-codice-web-component-sulla-detail-view-della-ectrack.md) |
 | Tassonomie nel dettaglio delle tracce e nei POI | `properties.taxonomies` di tracce e `pois.geojson`: fonti, tab come in Nova, zone filtrate, chiavi deprecate, etichette in `TAXONOMY_LABELS`/`TAXONOMY_TAB_LABELS` del `config.json`, quando si rigenerano file e config, identifier riservati | [docs/knowledge/tassonomie-nel-dettaglio-di-tracce-e-poi.md](docs/knowledge/tassonomie-nel-dettaglio-di-tracce-e-poi.md) |
 | Aggiornare wm-package su osm2cai2 | cosa cambia per osm2cai2 al bump del submodule e cosa controllare prima del command dei duplicati | [docs/knowledge/aggiornare-wm-package-su-osm2cai2.md](docs/knowledge/aggiornare-wm-package-su-osm2cai2.md) |
+| Operazioni del fascicolo e canale dell'ente | il package offre aprire, allegare, chiudere e leggere una domanda e lo shard monta il canale (rotte, client, middleware); perché lo schema dei campi è ridefinibile e perché il nome dello sportello non compare mai | [docs/knowledge/operazioni-del-fascicolo-e-canale-dell-ente.md](docs/knowledge/operazioni-del-fascicolo-e-canale-dell-ente.md) |
 
 ## Procedure
 

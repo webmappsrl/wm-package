@@ -85,6 +85,12 @@ return [
             'tech_data_api' => env('DEM_TECH_DATA_API', 'api/v1/track'),
             '3d_data_api' => env('DEM_3D_DATA_API', 'api/v1/track3d'),
             'point_matrix_api' => env('DEM_POINT_MATRIX_API', 'api/v1/feature-collection/point-matrix'),
+            // Secondi di attesa del servizio DEM per i dati tecnici, senza retry.
+            // E' il limite della chiamata sincrona (dentro una richiesta HTTP):
+            // tenerlo basso, un servizio lento non deve occupare i worker.
+            'timeout_seconds' => (int) env('DEM_TIMEOUT_SECONDS', 5),
+            // Come sopra, ma per i job in coda, dove aspettare va bene.
+            'async_timeout_seconds' => (int) env('DEM_ASYNC_TIMEOUT_SECONDS', 30),
         ],
         'cai' => [
             'basic_auth_user' => env('CAI_BASIC_AUTH_USER'),

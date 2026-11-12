@@ -33,6 +33,7 @@ use Wm\WmPackage\TrailRegistry\Nova\Fields\TrailRegistryMap;
 use Wm\WmPackage\TrailRegistry\Nova\Filters\TrailApplicationSourceFilter;
 use Wm\WmPackage\TrailRegistry\Nova\Filters\TrailApplicationStatusFilter;
 use Wm\WmPackage\TrailRegistry\Policies\TrailRegistryPolicy;
+use Wm\WmPackage\TrailRegistry\Schema\ApplicationSchema;
 use Wm\WmPackage\TrailRegistry\TrailGeometryReader;
 use Wm\WmPackage\TrailRegistry\TrailRegistryClasses;
 use Wm\WmPackage\TrailRegistry\TrailRegistryService;
@@ -180,14 +181,15 @@ class TrailApplication extends AbstractGeometryResource
 
         $fields[] = Tab::group(__('Details'), [
             Tab::make(__('DEM'), $this->getDemTabFields()),
-            Tab::make(__('SUS data'), $this->susDataFields()),
+            Tab::make(__('API data'), $this->apiDataFields()),
+            Tab::make(__('Attachments'), $this->attachmentFields()),
         ]);
 
         return $fields;
     }
 
     /**
-     * I dati che il SUS consegna, letti dalla colonna `api_data` (oc:8960).
+     * I dati che il canale API consegna, letti dalla colonna `api_data` (oc:8960).
      *
      * I Field li costruisce PropertiesPanel, lo stesso componente che rende
      * `properties` sulle altre Resource: dallo schema ricava il tipo di campo,
@@ -201,13 +203,13 @@ class TrailApplication extends AbstractGeometryResource
      *
      * @return array<int, Field>
      */
-    protected function susDataFields(): array
+    protected function apiDataFields(): array
     {
-        $fields = (new PropertiesPanel(__('SUS data')))->jsonForm(
+        $fields = (new PropertiesPanel(__('API data')))->jsonForm(
             $this->resource,
             TrailApplicationModel::API_DATA_COLUMN,
             '',
-            $this->susDataSchema(),
+            $this->apiDataSchema(),
             false,
         );
 
@@ -219,54 +221,87 @@ class TrailApplication extends AbstractGeometryResource
     }
 
     /**
-     * Lo schema dei campi che il SUS consegna, nell'ordine del format
-     * (campi 29-65); il numero in coda a ogni riga e' il suo numero di campo.
-     *
-     * I tipi sono quelli del format. Le select dichiarate senza `values` sono
-     * quelle il cui elenco non e' ancora fissato con Engineering: il campo e'
-     * gia' una select e i valori si aggiungono quando arrivano. Un valore
-     * fuori elenco non entra comunque, perche' lo rifiuta la validazione
-     * dell'endpoint prima che l'istanza esista. `last_survey_date` resta
-     * `text`: un formato di data inatteso non deve impedire di leggere cosa
-     * e' arrivato.
+     * Lo schema dei campi che lo sportello consegna, nell'ordine del format
+     * (campi 29-65). L'elenco non vive piu' qui: e' `ApplicationSchema`, che
+     * lo shard puo' ridefinire nel container, e da cui derivano anche la
+     * validazione dell'endpoint e i campi obbligatori.
      *
      * @return array<int, array<string, mixed>>
      */
-    protected function susDataSchema(): array
+    protected function apiDataSchema(): array
     {
-        return [
-            ['name' => 'from', 'type' => 'text', 'label' => __('Start point')],                 // 29
-            ['name' => 'to', 'type' => 'text', 'label' => __('End point')],                     // 30
-            ['name' => 'intermediate_stop', 'type' => 'text', 'label' => __('Intermediate stop')], // 31
-            ['name' => 'distance', 'type' => 'number', 'label' => __('Declared distance')],     // 32
-            ['name' => 'ascent', 'type' => 'number', 'label' => __('Declared ascent')],         // 33
-            ['name' => 'duration_forward', 'type' => 'number', 'label' => __('Declared duration forward')], // 34
-            ['name' => 'duration_backward', 'type' => 'number', 'label' => __('Declared duration backward')], // 35
-            ['name' => 'activities', 'type' => 'json', 'label' => __('Proposed activities')],   // 36
-            ['name' => 'difficulty', 'type' => 'json', 'label' => __('Proposed difficulty')],   // 37
-            ['name' => 'existing_signage', 'type' => 'select', 'label' => __('Existing signage'), 'values' => [
-                ['value' => 'good_condition', 'label' => ['it' => "c'e' ed e' in buono stato", 'en' => 'present and in good condition']],
-                ['value' => 'dilapidated', 'label' => ['it' => "c'e' ed e' fatiscente", 'en' => 'present but dilapidated']],
-                ['value' => 'absent', 'label' => ['it' => "non c'e'", 'en' => 'absent']],
-            ]],                                                                                 // 38
-            ['name' => 'overlapping_routes', 'type' => 'text', 'label' => __('Overlapping routes')], // 39
-            ['name' => 'proposed_managing_municipalities', 'type' => 'json', 'label' => __('Proposed managing municipalities')], // 42
-            ['name' => 'municipality_email', 'type' => 'email', 'label' => __('Municipality email')], // 43
-            ['name' => 'municipality_email_alt', 'type' => 'email', 'label' => __('Alternative municipality email')], // 44
-            ['name' => 'themes', 'type' => 'json', 'label' => __('Themes')],                    // 45
-            ['name' => 'soggetto_gestore', 'type' => 'select', 'label' => __('Manager')],       // 47
-            ['name' => 'soggetto_gestore_other', 'type' => 'text', 'label' => __('Other manager')], // 48
-            ['name' => 'soggetto_rilevatore', 'type' => 'select', 'label' => __('Surveyor')],   // 49
-            ['name' => 'soggetto_rilevatore_other', 'type' => 'text', 'label' => __('Other surveyor')], // 50
-            ['name' => 'soggetto_rilevatore_email', 'type' => 'email', 'label' => __('Surveyor email')], // 51
-            ['name' => 'soggetto_manutentore', 'type' => 'select', 'label' => __('Maintainer')], // 53
-            ['name' => 'soggetto_manutentore_other', 'type' => 'text', 'label' => __('Other maintainer')], // 54
-            ['name' => 'soggetto_manutentore_cf', 'type' => 'json', 'label' => __('Other maintainer tax code')], // 55
-            ['name' => 'soggetto_custode_presente', 'type' => 'boolean', 'label' => __('Keeper exists')], // 56
-            ['name' => 'soggetto_custode', 'type' => 'select', 'label' => __('Keeper')],        // 58
-            ['name' => 'last_survey_date', 'type' => 'text', 'label' => __('Last survey date')], // 64
-            ['name' => 'maintenance_frequency_months', 'type' => 'number', 'label' => __('Maintenance frequency (months)')], // 65
+        return app(ApplicationSchema::class)->toNovaSchema();
+    }
+
+    /**
+     * Gli allegati della domanda, uno per collection, in sola lettura.
+     *
+     * Entrano solo dal canale API, una chiamata per allegato, e qui sono
+     * l'unico modo per vederli: senza questi campi l'istruttore ha davanti
+     * una domanda di cui legge i dati ma non i documenti su cui si fonda.
+     *
+     * Sola lettura come il resto di cio' che arriva dal canale: un allegato
+     * sbagliato non si sostituisce dall'ufficio, si rifa' la domanda.
+     *
+     * @return array<int, Field>
+     */
+    protected function attachmentFields(): array
+    {
+        $collections = [
+            TrailApplicationModel::REPORT_COLLECTION => __('Report'),
+            TrailApplicationModel::TRAIL_DATA_SHEET_COLLECTION => __('Trail data sheet'),
+            TrailApplicationModel::AUTHORIZATIONS_COLLECTION => __('Authorizations'),
+            TrailApplicationModel::MAINTENANCE_PLAN_COLLECTION => __('Maintenance plan'),
+            TrailApplicationModel::PHOTOS_COLLECTION => __('Photographs'),
         ];
+
+        $fields = [];
+
+        foreach ($collections as $collection => $label) {
+            $fields[] = Text::make($label, fn () => $this->renderAttachments($collection))
+                ->asHtml()
+                ->onlyOnDetail();
+        }
+
+        return $fields;
+    }
+
+    /**
+     * I file di una collection: le immagini come anteprima, gli altri come
+     * collegamento al nome del file.
+     *
+     * Una collection vuota non si nasconde, dice «non trasmesso»: la domanda
+     * incompleta e' un'informazione per chi istruisce, e un campo che sparisce
+     * si confonde con un campo che non esiste.
+     */
+    protected function renderAttachments(string $collection): string
+    {
+        $media = $this->resource->getMedia($collection);
+
+        if ($media->isEmpty()) {
+            return sprintf('<span class="text-gray-400">%s</span>', e(__('Not provided')));
+        }
+
+        return $media
+            ->map(function ($item) {
+                $url = $item->getUrl();
+
+                if (str_starts_with((string) $item->mime_type, 'image/')) {
+                    return sprintf(
+                        '<a href="%s" target="_blank" rel="noopener"><img src="%s" alt="%s" style="height:96px;width:auto;border-radius:4px;margin:0 6px 6px 0;display:inline-block"></a>',
+                        e($url),
+                        e($url),
+                        e($item->file_name),
+                    );
+                }
+
+                return sprintf(
+                    '<a class="link-default" href="%s" target="_blank" rel="noopener">%s</a>',
+                    e($url),
+                    e($item->file_name),
+                );
+            })
+            ->implode(' ');
     }
 
     /**
