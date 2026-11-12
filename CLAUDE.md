@@ -142,9 +142,11 @@ Per attivare il Catasto Sentieri su uno shard: [docs/howto/attivare-catasto-sent
 - `docs/knowledge/` — perché funziona così e cosa è già stato provato, per argomento.
 - `docs/howto/` — le procedure operative. I tre `docs/*_SETUP.md` (Mailpit, MinIO, Kibana) sono
   procedure di setup dell'ambiente: stessa natura, nome diverso per ragioni storiche.
-- `docs/features/<slug>/` — il cantiere di ogni lavoro: `overview.md`, `plan.md`, `notes.md`. È un
-  diario, non una fotografia del risultato: **un fatto preso da un cantiere non entra altrove
-  senza essere verificato nel codice**. Non si riscrive, si annota in fondo.
+- `docs/features/<slug>/` — la cartella di ogni lavoro: `overview.md`, `plan.md`, `notes.md`. È un
+  diario, non una fotografia del risultato: **un fatto preso da lì non entra altrove senza essere
+  verificato nel codice**. Durante il lavoro l'overview non si tocca e le decisioni si annotano in
+  `notes.md`; alla chiusura `wm-plan` aggiorna l'overview copiando quelle voci. Dopo la chiusura
+  non si riscrive più niente: si annota in fondo.
 
 I ticket vivono su Orchestrator, formato `oc:<numero>`. Ogni documento in `docs/features/` inizia
 con `> Ticket: oc:<ID>`; lo scope dei commit è `feat(oc:<ID>): …` / `fix(oc:<ID>): …`.

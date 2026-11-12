@@ -50,6 +50,7 @@ use Wm\WmPackage\TrailRegistry\TrailRegistryClasses;
  * @property TrailApplicationStatus $status
  * @property string|null $name
  * @property array<string, mixed>|null $api_data
+ * @property string|null $rejection_reason
  * @property Carbon|null $updated_at
  * @property-read User $user
  * @property-read Collection<int, TrailRegistryCode> $codes

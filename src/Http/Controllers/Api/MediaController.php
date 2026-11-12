@@ -63,9 +63,9 @@ class MediaController extends Controller
      */
     private function belongsToApplication(Media $media): bool
     {
-        $type = $media->model_type;
+        $type = (string) $media->model_type;
 
-        if (! is_string($type) || $type === '') {
+        if ($type === '') {
             return false;
         }
 
