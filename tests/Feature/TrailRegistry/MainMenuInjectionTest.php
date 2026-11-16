@@ -6,7 +6,7 @@ use Laravel\Nova\Events\ServingNova;
 use Laravel\Nova\Menu\MenuSection;
 use Laravel\Nova\Nova;
 use Wm\WmPackage\TrailRegistry\Nova\TrailApplication;
-use Wm\WmPackage\TrailRegistry\Nova\TrailRegistryAnomaly;
+use Wm\WmPackage\TrailRegistry\Nova\TrailRegistryImportAnomaly;
 use Wm\WmPackage\TrailRegistry\Nova\TrailRegistryCode;
 
 /**
@@ -31,7 +31,7 @@ function buildMainMenu(): array
     // Le Resource del dominio le registra lo shard (oc:8539): qui si
     // simula quella registrazione perche' il test verifica il contenuto
     // della voce di menu, non chi la registra.
-    Nova::resources([TrailApplication::class, TrailRegistryCode::class, TrailRegistryAnomaly::class]);
+    Nova::resources([TrailApplication::class, TrailRegistryCode::class, TrailRegistryImportAnomaly::class]);
 
     // Simula il caso reale: quando Nova serve una richiesta ha gia' un suo
     // mainMenuCallback (quello di default, o quello di un altro package).
@@ -109,7 +109,7 @@ it('non rompe la sezione Tools gia iniettata dallo stesso meccanismo', function 
  */
 function buildMainMenuWithoutShardCallback(): array
 {
-    Nova::resources([TrailApplication::class, TrailRegistryCode::class, TrailRegistryAnomaly::class]);
+    Nova::resources([TrailApplication::class, TrailRegistryCode::class, TrailRegistryImportAnomaly::class]);
 
     $original = Nova::$mainMenuCallback;
     Nova::$mainMenuCallback = null;

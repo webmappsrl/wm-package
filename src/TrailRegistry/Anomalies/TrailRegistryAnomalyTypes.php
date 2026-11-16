@@ -3,6 +3,7 @@
 namespace Wm\WmPackage\TrailRegistry\Anomalies;
 
 use Wm\WmPackage\TrailRegistry\Enums\TrailRegistryAnomalyType;
+use Wm\WmPackage\TrailRegistry\Inconsistencies\TrailRegistryInconsistencyTypes;
 
 /**
  * Il registro dei tipi di anomalia dichiarati da uno shard, accanto a quelli
@@ -19,9 +20,19 @@ class TrailRegistryAnomalyTypes
         return $class !== null ? app($class) : null;
     }
 
+    /**
+     * L'etichetta di un tipo, da qualunque registro venga.
+     *
+     * Le incongruenze vivono nella stessa tabella delle anomalie, distinte dal
+     * `source`, ma i loro tipi li dichiara un altro registro: chi legge una riga
+     * non sa da quale dei due viene, e senza questo ripiego la colonna «Tipo»
+     * mostrerebbe la chiave grezza (oc:8989).
+     */
     public static function label(string $type): string
     {
-        return self::definition($type)?->label() ?? $type;
+        return self::definition($type)?->label()
+            ?? TrailRegistryInconsistencyTypes::definition($type)?->label()
+            ?? $type;
     }
 
     /** @return list<string> */

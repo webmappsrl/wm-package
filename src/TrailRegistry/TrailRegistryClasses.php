@@ -7,6 +7,7 @@ use Wm\WmPackage\TrailRegistry\Models\TrailApplication;
 use Wm\WmPackage\TrailRegistry\Models\TrailRegistryAnomaly;
 use Wm\WmPackage\TrailRegistry\Models\TrailRegistryCode;
 use Wm\WmPackage\TrailRegistry\Models\TrailRegistryCodeEvent;
+use Wm\WmPackage\TrailRegistry\Models\TrailStatusEvent;
 
 /**
  * Il punto unico da cui il dominio sa quale classe usare per ogni modello.
@@ -22,6 +23,7 @@ class TrailRegistryClasses
         'event' => TrailRegistryCodeEvent::class,
         'application' => TrailApplication::class,
         'anomaly' => TrailRegistryAnomaly::class,
+        'status_event' => TrailStatusEvent::class,
     ];
 
     /** @return class-string<TrailRegistryCode> */
@@ -38,6 +40,15 @@ class TrailRegistryClasses
     {
         /** @var class-string<TrailRegistryCodeEvent> $class */
         $class = self::resolve('event');
+
+        return $class;
+    }
+
+    /** @return class-string<TrailStatusEvent> */
+    public static function statusEvent(): string
+    {
+        /** @var class-string<TrailStatusEvent> $class */
+        $class = self::resolve('status_event');
 
         return $class;
     }

@@ -7,7 +7,7 @@ use Wm\WmPackage\TrailRegistry\Enums\TrailRegistryAnomalyType;
 use Wm\WmPackage\TrailRegistry\Models\TrailRegistryAnomaly;
 use Wm\WmPackage\TrailRegistry\Nova\AnomalyDetailRenderer;
 use Wm\WmPackage\TrailRegistry\Nova\Filters\TrailAnomalyTypeFilter;
-use Wm\WmPackage\TrailRegistry\Nova\TrailRegistryAnomaly as AnomalyResource;
+use Wm\WmPackage\TrailRegistry\Nova\TrailRegistryImportAnomaly as AnomalyResource;
 
 beforeEach(fn () => runTrailRegistryStubs());
 

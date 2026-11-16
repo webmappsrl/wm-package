@@ -15,7 +15,6 @@ use Wm\WmPackage\TrailRegistry\Anomalies\TrailRegistryAnomalyTypes;
 use Wm\WmPackage\TrailRegistry\Enums\TrailRegistryAnomalyType;
 use Wm\WmPackage\TrailRegistry\Nova\Cards\TrailRegistryNoticeCard;
 use Wm\WmPackage\TrailRegistry\Nova\Fields\TrailRegistryMap;
-use Wm\WmPackage\TrailRegistry\Nova\Filters\TrailAnomalyTypeFilter;
 use Wm\WmPackage\TrailRegistry\TrailRegistryClasses;
 
 /**
@@ -26,9 +25,21 @@ use Wm\WmPackage\TrailRegistry\TrailRegistryClasses;
  * origine, si sistema la scheda alla fonte e l'import successivo fa sparire
  * la riga da se'.
  *
+ * **Astratta.** La tabella `trail_registry_anomalies` tiene due famiglie di righe, distinte dal
+ * `source`, che si lavorano in modo opposto: un'anomalia riguarda un dato che appartiene alla
+ * piattaforma di origine e si corregge la', un'incongruenza si risolve nel backoffice inserendo
+ * il dato che manca. Le due hanno una Resource ciascuna — {@see TrailRegistryImportAnomaly} e
+ * {@see TrailRegistryInconsistency} — perche' la spiegazione in cima all'elenco dice, per l'una,
+ * il contrario di quel che vale per l'altra, e una schermata sola darebbe a meta' di chi la legge
+ * l'istruzione sbagliata (oc:8989).
+ *
+ * Qui sta tutto cio' che non cambia: il modello, le colonne, la mappa, il titolo delle righe, i
+ * divieti di creare, modificare e cancellare. Una sottoclasse dichiara la chiave, le etichette,
+ * quali righe mostra, con quale filtro e con quale spiegazione in testa.
+ *
  * @extends resource<\Wm\WmPackage\TrailRegistry\Models\TrailRegistryAnomaly>
  */
-class TrailRegistryAnomaly extends Resource
+abstract class TrailRegistryAnomaly extends Resource
 {
     use HidesWhenTrailRegistryDisabled, ResolvesCanonicalResources;
 
@@ -37,16 +48,6 @@ class TrailRegistryAnomaly extends Resource
     public static function newModel()
     {
         return static::newDomainModel(\Wm\WmPackage\TrailRegistry\Models\TrailRegistryAnomaly::class, TrailRegistryClasses::anomaly());
-    }
-
-    /**
-     * Fissa, non derivata dal nome della classe: coerente con TrailRegistryCode
-     * e TrailApplication, cosi' anche una sottoclasse dello shard resta
-     * raggiungibile con la stessa chiave.
-     */
-    public static function uriKey()
-    {
-        return 'trail-registry-anomalies';
     }
 
     /**
@@ -102,35 +103,6 @@ class TrailRegistryAnomaly extends Resource
         }
 
         return $query->whereRaw('context::text ILIKE ?', ['%'.$needle.'%']);
-    }
-
-    public static function label(): string
-    {
-        return __('Anomalies');
-    }
-
-    public static function singularLabel(): string
-    {
-        return __('Anomaly');
-    }
-
-    /**
-     * Ordinamento predefinito: prima la provenienza (uno shard puo' avere le
-     * sue accanto a quelle del catasto senza mischiarle), poi il tipo — le
-     * anomalie dello stesso genere stanno insieme, ed e' cosi' che si
-     * lavorano, una correzione per volta ripetuta su tutte le schede che ne
-     * hanno bisogno — infine la traccia, con quelle senza traccia in coda:
-     * non hanno un id su cui ordinare, e non sono comunque il caso comune.
-     */
-    public static function indexQuery(NovaRequest $request, $query)
-    {
-        if (empty($request->query('orderBy'))) {
-            $query->getQuery()->orders = [];
-
-            $query->orderBy('source')->orderBy('type')->orderByRaw('ec_track_id NULLS LAST');
-        }
-
-        return $query;
     }
 
     /**
@@ -251,41 +223,23 @@ class TrailRegistryAnomaly extends Resource
         ];
     }
 
-    protected function noticeBody(): string
+    /**
+     * Il testo della spiegazione in cima: lo scrive ogni sottoclasse, perche' e' esattamente
+     * cio' che distingue le due schermate.
+     */
+    abstract protected function noticeBody(): string;
+
+    /**
+     * Nessun filtro da qui: i due registri dei tipi sono distinti, e offrire quello sbagliato
+     * darebbe scelte che non selezionano nessuna riga. Lo dichiara ogni sottoclasse.
+     *
+     * Non e' astratto perche' `Laravel\Nova\Resource` lo implementa gia': PHP non permette di
+     * rendere astratto un metodo che la classe padre ha concreto.
+     *
+     * @return array<int, \Laravel\Nova\Filters\Filter>
+     */
+    public function filters(NovaRequest $request)
     {
-        $intro = __('These are the trails that <strong>did not get a number</strong>, and the reason why. Only codes with no doubt pending enter the code registry: everything still unresolved is here, and while it is here that trail has no number.');
-
-        // L'azione sta qui e non su ogni riga: e' la stessa per tutte, e
-        // ripeterla nella tabella toglieva spazio a cio' che invece cambia.
-        $howTo = __('Corrections <strong>are not made from this screen</strong>: the data belongs to the source platform. Each trail name carries two links — the <strong>name</strong> opens its record here, the <strong>icon</strong> next to it the one on the source platform: correct it there, and the next import removes the row on its own, assigning the number if it has meanwhile become assignable.');
-
-        $columns = __('The <strong>Trail</strong> column always shows the one left without a number; the <strong>Detail</strong> shows why, next to the other side of the problem — a trail when someone else already has that code or the track is shared, a code when the problem is in the data.');
-
-        $rows = [
-            [__('Code already assigned'), __('Another trail already has that code: one of the two must be corrected at the source.')],
-            [__('Sector mismatch'), __('The sector written in the code is not the one the track actually falls in. Next to it, the code the platform would compose from the geometry.')],
-            [__('Duplicate geometry'), __('Two or more trails with the exact same track. Until it is known which one is right, none of them gets a number.')],
-            [__('Unreadable code'), __('No valid number can be derived from the code field. Next to it, the first free number in the sector: it is a hint, not a decision — the right number is the one on the signage in the field.')],
-            [__('Outside any sector'), __('The geometry does not fall in any sector, so there is no prefix to compose the code with.')],
-        ];
-
-        $list = '';
-
-        foreach ($rows as [$label, $text]) {
-            $list .= '<li class="mb-2"><strong>'.$label.'</strong> — '.$text.'</li>';
-        }
-
-        return '<h3 class="text-lg font-bold mb-3">'.__('What these rows are').'</h3>'
-            .'<p class="mb-3">'.$intro.'</p>'
-            .'<p class="mb-3">'.$columns.'</p>'
-            .'<ul class="list-disc list-inside mb-3">'.$list.'</ul>'
-            .'<p class="text-sm">'.$howTo.'</p>';
-    }
-
-    public function filters(NovaRequest $request): array
-    {
-        return [
-            new TrailAnomalyTypeFilter,
-        ];
+        return [];
     }
 }

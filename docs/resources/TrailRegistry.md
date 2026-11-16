@@ -189,6 +189,136 @@ non è nemmeno un sentiero — è per questo che `ec_track_id` è nullable.
 quelli dichiarati da uno shard in `anomaly_types`. Un tipo sconosciuto al registro si mostra con un
 dettaglio generico invece di dare errore in index e detail.
 
+## Percorribilità
+
+Com'è il sentiero **oggi sul terreno**, con data, autore, nota e storico (oc:8989). È un asse a sé,
+indipendente da quanto è avanzata la pratica catastale: ogni combinazione fra i due è lecita, e un
+sentiero certificato può essere non percorribile perché ieri è caduta una frana.
+
+**Dove sta lo stato.** È un termine di una famiglia di tassonomia, non una colonna: così filtri,
+indicizzazione e uscita in API arrivano già fatti, e aggiungere uno stato è una riga nel comando
+dei termini dello shard invece di una migration. Quale famiglia lo dice
+`features.trail_registry.walkability_taxonomy`, con default `walkability-status`.
+
+**Da dove vengono i quattro valori.** Dall'enum `IssuesStatusEnum` di osm2cai2, la fonte da cui
+questo lavoro porta il concetto, con corrispondenza uno a uno:
+
+| osm2cai2 | qui | identifier |
+|---|---|---|
+| `Unknown` — «sconosciuto» | Sconosciuta | `<famiglia>-unknown` |
+| `Closed` — «non percorribile» | Non percorribile | `<famiglia>-not-walkable` |
+| `PartiallyClosed` — «percorribile parzialmente» | Parzialmente percorribile | `<famiglia>-partially-walkable` |
+| `Open` — «percorribile» | Percorribile | `<famiglia>-walkable` |
+
+Gli identifier seguono i **nomi dei case**, non i loro valori italiani. Due scostamenti, solo
+sull'etichetta mostrata: «Sconosciuta» al femminile, perché in Nova sta sotto «Percorribilità» e
+concorda con quella; «Parzialmente percorribile» invece di «percorribile parzialmente», che è la
+forma corrente in italiano.
+
+La scala non è stata chiesta da nessun cliente e non è fissata nel codice del package: i valori
+stanno in tabella, e uno shard che ne voglia uno in più lo aggiunge dove li crea. Dove invece
+l'enum della fonte obbligherebbe a una migration e a un deploy — ed è anche il punto in cui
+osm2cai confronta le stringhe italiane nelle metriche, con un `break` mancante che da anni conta
+i non percorribili anche fra i parzialmente percorribili.
+
+**Due dei quattro esistevano già su Drupal** per gli shard che importano da Sardegna Sentieri:
+`percorribile` e `non percorribile` stavano dentro il campo unico `stato_di_validazione`, insieme
+ai cinque stati della pratica catastale. Dividere quel campo in due famiglie è ciò che il cliente
+ha chiesto; gli altri due valori — «sconosciuta» e «parzialmente percorribile» — arrivano da
+osm2cai e non hanno un corrispondente nella sorgente, quindi l'import non li produce: il primo è
+lo stato di partenza, il secondo lo inserisce chi va sul posto.
+
+**Dove sta la storia.** Nella tabella `trail_status_events`, in sola aggiunta: `ec_track_id`,
+`taxonomy_id` (quale classificazione), `from_term_id`, `to_term_id`, `description`, `user_id`,
+`source`, `created_at`. Non è una tabella della percorribilità: è dei **cambi di stato di un
+sentiero**, e la validazione datata ci entrerà senza toccare lo schema.
+
+Le chiavi esterne verso `taxonomy_terms` sono **senza cascata**: un termine che ha storia non si
+cancella, si marca ritirato. È voluto che un comando che svuota `taxonomy_terms` fallisca, invece
+di portarsi via la cronologia in silenzio.
+
+**Una sola via di scrittura, per qualsiasi stato.** `TrailStatusService::set()` prende la famiglia
+come primo dato e vale per ogni classificazione che `trail_status_events` tiene: la percorribilità,
+la validazione, e quelle che verranno. `WalkabilityService` gli delega fissando la famiglia letta
+dalla configurazione, così chi scrive la percorribilità non deve ricordarsene il nome — delega e
+non eredita, perché le due firme sono diverse di proposito e in PHP una sottoclasse non può
+restringere così un metodo.
+
+**Cosa fa.** `WalkabilityService::set()`, che in una transazione blocca il
+sentiero, rilegge lo stato corrente, scrive l'evento e sposta il legame. Ci passano l'azione di
+Nova, l'import e la migrazione iniziale. Chi scrive può dichiarare da quale stato parte: se nel
+frattempo non è più quello, la scrittura si rifiuta con `WalkabilityConflictException` invece di
+applicarsi su una base vecchia. Il lock serve perché il pivot impedisce di legare due volte lo
+*stesso* termine, non due termini *diversi* della stessa famiglia.
+
+**La provenienza.** Ogni evento dice da dove viene — `manual`, `import`, `migration` — perché
+`user_id` è vuoto in tutti i casi tranne l'inserimento a mano, e una cronologia scritta in gran
+parte da un processo automatico sarebbe altrimenti una sequenza di righe senza nome.
+
+**In Nova: il tab «Stato».** La famiglia dichiara `properties->tab = 'Status'`, e lì dentro stanno
+tutti gli stati del sentiero più lo storico, separati da un titolo ciascuno. Il blocco della
+percorribilità lo porta il trait `HasWalkabilityTab`, montato sulla `EcTrack` del package: in edit
+un `Select` e una nota, in detail `TrailStatusRenderer`, che mostra valore, autore, data e nota
+dell'ultimo evento. Lo storico va in fondo allo stesso tab, non in una sezione a parte: chi
+registra un dato vuole vedere lì sotto cosa è stato registrato prima.
+
+**Il campo generico della famiglia si toglie** (`makeTermFieldsForTaxonomies()` nella `EcTrack` del
+package). `BuildsTaxonomyFields` costruisce da sé un `Choice` editabile per ogni famiglia accesa
+sull'app: lasciarlo vorrebbe dire due campi sulla stessa famiglia, e quello generico scrive il
+pivot e basta — nessun evento, nessuna nota, nessun autore, nessun lock. Sarebbe anche la strada
+più comoda, due clic contro un form, e la più comoda vince.
+
+**`TrailStatusRenderer` serve qualsiasi famiglia** di `trail_status_events`, non solo la
+percorribilità: uno shard che dia alla validazione un punto di scrittura lo monta com'è e ottiene
+lo stesso blocco. Dove l'evento non c'è, mostra il solo valore.
+
+**Attenzione alla chiave del tab.** Non `Validation`: su un filesystem che non distingue le
+maiuscole `__('Validation')` ricade su `lang/*/validation.php` e restituisce l'array delle regole
+di validazione invece di una stringa, e `Tab::make()` manda la scheda in 500.
+
+**Il resto in Nova.** L'azione `UpdateWalkability`, con `canRun()` sulla policy del dominio, resta
+per agire su più sentieri scelti dall'index; `WalkabilityHistoryRenderer` per la sola cronologia
+della percorribilità, utile a uno shard senza codici catastali; `TrailHistoryRenderer` per la
+storia del sentiero tutta insieme — eventi di stato più eventi dei codici — e due card per la
+dashboard.
+
+**In API.** Lo stato esce fra le classificazioni, sotto `properties.taxonomies`; data, autore e
+nota in un blocco accanto, `properties.walkability`, con le chiavi `last_update`, `user` (l'**id**,
+non il nome: è un JSON pubblico) e `description`. La cronologia completa non esce.
+
+**Accendere il dominio basta.** Le migration creano famiglia e termini, accendono la famiglia per
+le app esistenti sul modello delle tracce e la marcano `is_system` perché le app future la
+ricevano. Senza quest'ultimo passaggio il dato si inserisce, si vede in Nova e **non esce in API né
+in Elasticsearch**, senza nessun errore.
+
+## Incongruenze catastali
+
+Casi in cui due informazioni che il catasto pubblica sullo stesso sentiero non reggono insieme. I
+tipi li dichiara lo shard in `features.trail_registry.inconsistency_types`; il package non ne ha di
+propri, perché dipendono da quali informazioni quel catasto pubblica.
+
+**Non sono anomalie**, anche se vivono nella stessa tabella distinte dal `source`: un'anomalia
+riguarda il codice del sentiero e il dato lo possiede la piattaforma di origine, quindi si corregge
+alla fonte e sparisce al giro di import successivo; un'incongruenza si risolve qui dentro,
+inserendo il dato che manca. Prima di dichiarare un tipo, chiediti dove si risolve.
+
+**Due schermate, non una.** `TrailRegistryAnomaly` è una Resource **astratta**: tiene modello,
+colonne, mappa, titolo delle righe e i divieti di creare, modificare e cancellare. Da lei scendono
+`TrailRegistryImportAnomaly` (chiave `trail-registry-anomalies`, la schermata storica) e
+`TrailRegistryInconsistency` (chiave `trail-registry-inconsistencies`). Ciascuna dichiara quali
+righe mostra, con quale filtro e con quale spiegazione in testa — ed è lì che sta il motivo della
+separazione: la testata delle anomalie dice che «le correzioni non si fanno da questa schermata»,
+quella delle incongruenze dice l'opposto. Mostrarle insieme darebbe a metà di chi legge
+l'istruzione esattamente sbagliata. Nel menu stanno sotto un gruppo «Anomalie», come «Da import» e
+«Incongruenze».
+
+Uno shard che estendeva `TrailRegistryAnomaly` deve estendere `TrailRegistryImportAnomaly`: la
+chiave e il comportamento non cambiano, cambia la classe da cui eredita.
+
+La card della dashboard porta ogni riga all'elenco già filtrato su quel tipo: un numero da solo
+dice che c'è del lavoro, non quale. Le righe a zero restano testo, perché un link a una lista
+vuota è un vicolo cieco.
+
 ## Il comando
 
 ```bash

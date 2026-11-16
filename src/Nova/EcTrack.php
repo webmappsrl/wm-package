@@ -29,6 +29,8 @@ use Wm\WmPackage\Nova\Traits\DispatchesDemOnDetail;
 use Wm\WmPackage\Nova\Traits\HasConfigDetailPanel;
 use Wm\WmPackage\Nova\Traits\MultiLinestringResourceTrait;
 use Wm\WmPackage\Services\LayerMapWebComponentService;
+use Wm\WmPackage\TrailRegistry\Nova\Actions\UpdateWalkability;
+use Wm\WmPackage\TrailRegistry\Nova\Concerns\HasWalkabilityTab;
 
 /**
  * @mixin \Wm\WmPackage\Models\EcTrack
@@ -39,6 +41,7 @@ class EcTrack extends AbstractEcResource
 {
     use DispatchesDemOnDetail;
     use HasConfigDetailPanel;
+    use HasWalkabilityTab;
     use MultiLinestringResourceTrait {
         fields as protected fieldsTrait;
     }
@@ -182,7 +185,63 @@ class EcTrack extends AbstractEcResource
             new DownloadEcTrackAction,
             (new UploadTrackFile)->standalone(),
             new TranslateModelAction,
+            ...$this->trailRegistryActions(),
         ];
+    }
+
+    /**
+     * Le azioni che il dominio Catasto aggiunge alle tracce, quando e' acceso
+     * (oc:8989). A dominio spento qui non arriva niente: il contributo e'
+     * additivo, e uno shard che non lo usa trova la Resource com'era.
+     *
+     * @return array<int, \Laravel\Nova\Actions\Action>
+     */
+    protected function trailRegistryActions(): array
+    {
+        if (! config('wm-package.features.trail_registry.enabled')) {
+            return [];
+        }
+
+        $allowed = fn (NovaRequest $request) => UpdateWalkability::allowedFor($request);
+
+        // `canRun` oltre a `canSee`: un `canRun()` salta l'autorizzazione della
+        // Resource, quindi senza sarebbe eseguibile da chiunque raggiunga
+        // l'endpoint.
+        return [
+            (new UpdateWalkability)->showInline()->canSee($allowed)->canRun($allowed),
+        ];
+    }
+
+    /**
+     * Il dominio Catasto porta il tab della percorribilita' (oc:8989). Uno
+     * shard che aggiunge campi propri continua a ridefinire questo metodo:
+     * chiama `parent::` e unisce i suoi, come fa gia' per gli altri tab.
+     *
+     * @return array<string, array<int, \Laravel\Nova\Fields\Field>>
+     */
+    protected function taxonomyTabExtraFields(): array
+    {
+        return [...parent::taxonomyTabExtraFields(), ...$this->walkabilityTabFields()];
+    }
+
+    /**
+     * La percorribilita' non ha il campo generico delle classificazioni: ha il
+     * suo, che registra l'evento. Senza questo sarebbero due campi sulla stessa
+     * famiglia, e quello generico scriverebbe il pivot senza storia (oc:8989).
+     *
+     * @param  array<int, string>  $taxonomyIdentifiers
+     * @return array<int, \Laravel\Nova\Fields\Field>
+     */
+    public function makeTermFieldsForTaxonomies(array $taxonomyIdentifiers): array
+    {
+        if (config('wm-package.features.trail_registry.enabled')) {
+            $taxonomyIdentifiers = array_values(array_diff(
+                $taxonomyIdentifiers,
+                [$this->walkabilityTaxonomyIdentifier()]
+            ));
+        }
+
+        return parent::makeTermFieldsForTaxonomies($taxonomyIdentifiers);
     }
 
     public function cards(NovaRequest $request): array

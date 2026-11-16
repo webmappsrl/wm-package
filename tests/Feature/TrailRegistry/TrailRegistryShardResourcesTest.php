@@ -13,7 +13,8 @@ use Wm\WmPackage\TrailRegistry\Enums\TrailApplicationStatus;
 use Wm\WmPackage\TrailRegistry\Models\TrailApplication as TrailApplicationModel;
 use Wm\WmPackage\TrailRegistry\Models\TrailRegistryCode as TrailRegistryCodeModel;
 use Wm\WmPackage\TrailRegistry\Nova\TrailApplication;
-use Wm\WmPackage\TrailRegistry\Nova\TrailRegistryAnomaly;
+use Wm\WmPackage\TrailRegistry\Nova\TrailRegistryImportAnomaly;
+use Wm\WmPackage\TrailRegistry\Nova\TrailRegistryInconsistency;
 use Wm\WmPackage\TrailRegistry\Nova\TrailRegistryCode;
 use Wm\WmPackage\WmPackageServiceProvider;
 
@@ -21,7 +22,9 @@ class ShardCodeResource extends TrailRegistryCode {}
 
 class ShardApplicationResource extends TrailApplication {}
 
-class ShardAnomalyResource extends TrailRegistryAnomaly {}
+class ShardAnomalyResource extends TrailRegistryImportAnomaly {}
+
+class ShardInconsistencyResource extends TrailRegistryInconsistency {}
 
 class ShardHiddenCodeResource extends TrailRegistryCode
 {
@@ -156,10 +159,19 @@ it('la sottoclasse di TrailApplication resta raggiungibile con la stessa chiave'
     expect(Nova::resourceForKey('trail-applications'))->toBe(ShardApplicationResource::class);
 });
 
-it('la sottoclasse di TrailRegistryAnomaly resta raggiungibile con la stessa chiave', function () {
+it('la sottoclasse di TrailRegistryImportAnomaly resta raggiungibile con la stessa chiave', function () {
     Nova::resources([ShardAnomalyResource::class]);
 
     expect(Nova::resourceForKey('trail-registry-anomalies'))->toBe(ShardAnomalyResource::class);
+});
+
+it('la sottoclasse di TrailRegistryInconsistency ha una chiave sua, distinta dalle anomalie', function () {
+    // Le due schermate dicono il contrario l'una dell'altra — le anomalie si correggono alla
+    // fonte, le incongruenze qui dentro — e devono restare due indirizzi diversi (oc:8989).
+    Nova::resources([ShardAnomalyResource::class, ShardInconsistencyResource::class]);
+
+    expect(Nova::resourceForKey('trail-registry-inconsistencies'))->toBe(ShardInconsistencyResource::class)
+        ->and(Nova::resourceForKey('trail-registry-anomalies'))->toBe(ShardAnomalyResource::class);
 });
 
 it('con il modello sostituito da config la voce di menu resta e newModel usa quel modello', function () {

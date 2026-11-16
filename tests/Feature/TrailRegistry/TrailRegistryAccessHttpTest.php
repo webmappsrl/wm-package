@@ -13,7 +13,7 @@ use Wm\WmPackage\TrailRegistry\Models\TrailApplication as TrailApplicationModel;
 use Wm\WmPackage\TrailRegistry\Nova\Actions\ApproveTrailApplication;
 use Wm\WmPackage\TrailRegistry\Nova\Actions\RejectTrailApplication;
 use Wm\WmPackage\TrailRegistry\Nova\TrailApplication;
-use Wm\WmPackage\TrailRegistry\Nova\TrailRegistryAnomaly;
+use Wm\WmPackage\TrailRegistry\Nova\TrailRegistryImportAnomaly;
 use Wm\WmPackage\TrailRegistry\Nova\TrailRegistryCode;
 use Wm\WmPackage\TrailRegistry\TrailRegistryService;
 
@@ -29,7 +29,7 @@ beforeEach(function () {
     config(['wm-package.features.trail_registry.enabled' => true]);
     app()->register(NovaCoreServiceProvider::class);
     Nova::auth(fn () => true);
-    Nova::resources([TrailApplication::class, TrailRegistryCode::class, TrailRegistryAnomaly::class]);
+    Nova::resources([TrailApplication::class, TrailRegistryCode::class, TrailRegistryImportAnomaly::class]);
 });
 
 function utenteHttp(string $role): User
