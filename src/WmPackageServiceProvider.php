@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
+use Laravel\Nova\Menu\MenuGroup;
 use Laravel\Nova\Menu\MenuItem;
 use Laravel\Nova\Menu\MenuSection;
 use Laravel\Nova\Nova;
@@ -416,13 +417,40 @@ class WmPackageServiceProvider extends PackageServiceProvider
             }
 
             foreach ($items as $item) {
-                if (! method_exists($item, 'authorizedToSee') || $item->authorizedToSee($request)) {
+                if ($this->menuItemIsVisible($item, $request)) {
                     return true;
                 }
             }
 
             return false;
         };
+    }
+
+    /**
+     * Se una voce di menu si vede, guardando anche dentro i gruppi.
+     *
+     * Un `MenuGroup` non ha un `canSee` proprio e risponderebbe sempre di si': un gruppo le cui
+     * voci sono tutte negate terrebbe in piedi la sezione, che e' esattamente cio' che la regola
+     * «almeno una voce visibile» vuole evitare. Da quando le anomalie sono un gruppo con due voci
+     * (oc:8989) il controllo deve scendere di un livello.
+     */
+    protected function menuItemIsVisible(mixed $item, Request $request): bool
+    {
+        if (method_exists($item, 'authorizedToSee') && ! $item->authorizedToSee($request)) {
+            return false;
+        }
+
+        if ($item instanceof MenuGroup) {
+            foreach ($item->items as $child) {
+                if ($this->menuItemIsVisible($child, $request)) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        return true;
     }
 
     /**
@@ -481,15 +509,35 @@ class WmPackageServiceProvider extends PackageServiceProvider
         $items = [
             ['trail-applications', __('Applications')],
             ['trail-registry-codes', __('Code registry')],
-            ['trail-registry-anomalies', __('Anomalies')],
         ];
 
-        return collect($items)
+        $menu = collect($items)
             ->map(fn (array $item) => [Nova::resourceForKey($item[0]), $item[1]])
             ->filter(fn (array $item) => $item[0] !== null)
             ->map(fn (array $item) => MenuItem::resource($item[0])->name($item[1]))
             ->values()
             ->all();
+
+        // Le righe che segnalano qualcosa stanno tutte sotto «Anomalie», divise per
+        // come si lavorano: quelle dell'import si correggono alla fonte, le
+        // incongruenze si risolvono nel backoffice inserendo il dato che manca
+        // (oc:8989). Due voci dello stesso gruppo, non due sezioni: a chi guarda il
+        // menu interessa prima «c'e' qualcosa che non va», poi di che genere.
+        $anomalies = collect([
+            ['trail-registry-anomalies', __('From the import')],
+            ['trail-registry-inconsistencies', __('Inconsistencies')],
+        ])
+            ->map(fn (array $item) => [Nova::resourceForKey($item[0]), $item[1]])
+            ->filter(fn (array $item) => $item[0] !== null)
+            ->map(fn (array $item) => MenuItem::resource($item[0])->name($item[1]))
+            ->values()
+            ->all();
+
+        if ($anomalies !== []) {
+            $menu[] = MenuGroup::make(__('Anomalies'), $anomalies)->collapsable();
+        }
+
+        return $menu;
     }
 
     /**

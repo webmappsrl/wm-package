@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
 use Wm\WmPackage\Jobs\UpdateUgcTrackDemStatsJob;
@@ -233,6 +234,7 @@ function runTrailRegistryStubs(): void
         'zz_2026_09_09_000003_create_trail_registry_code_events_table.php.stub',
         'zz_2026_09_09_000004_add_gist_index_to_taxonomy_wheres.php.stub',
         'zz_2026_09_10_000001_create_trail_registry_anomalies_table.php.stub',
+        'zz_2026_11_17_000001_create_trail_status_events_table.php.stub',
     ];
 
     foreach ($stubs as $stub) {
@@ -298,4 +300,32 @@ function seedTaxonomyTermAndTrack(
     }
 
     return [$taxonomy, $term, $track];
+}
+
+/**
+ * Rifa' le tre tabelle delle classificazioni dagli stub (oc:8989).
+ *
+ * Gli stub `zz_2026_11_*` hanno estensione .php.stub e non sono raccolti da
+ * `migrate`, come quelli del catasto; in piu' sono avvolti in un
+ * `if (! Schema::hasTable(...))`, quindi su un database che le ha gia' con uno
+ * schema vecchio non ricostruiscono nulla. Qui si tolgono e si rifanno: siamo
+ * dentro la transazione di RefreshDatabase, e in PostgreSQL il rollback annulla
+ * anche il DDL, quindi il database resta com'era.
+ */
+function runTaxonomyStubs(): void
+{
+    Schema::dropIfExists('app_taxonomy_term');
+    Schema::dropIfExists('taxonomy_termables');
+    Schema::dropIfExists('taxonomy_terms');
+
+    $stubs = [
+        'zz_2026_11_02_000001_create_taxonomy_terms_table.php.stub',
+        'zz_2026_11_02_000002_create_taxonomy_termables_table.php.stub',
+        'zz_2026_11_03_000003_create_app_taxonomy_term_table.php.stub',
+    ];
+
+    foreach ($stubs as $stub) {
+        $migration = require __DIR__."/../database/migrations/{$stub}";
+        $migration->up();
+    }
 }

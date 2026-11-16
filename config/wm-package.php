@@ -217,6 +217,21 @@ return [
             // package non ne conosce nessuno.
             'anomaly_types' => [],
 
+            // Tipi di **incongruenza catastale** dichiarati da uno shard
+            // (oc:8989): chiave => classe che implementa
+            // InconsistencyTypeDefinition. Vuota di default, e il package non
+            // ne ha di propri. Non sono anomalie: un'anomalia riguarda il
+            // codice e si corregge alla fonte, un'incongruenza e' due dati
+            // pubblicati che insieme non stanno in piedi e si risolve qui.
+            'inconsistency_types' => [],
+
+            // Quale famiglia di tassonomia e' la percorribilita' (oc:8989).
+            // Il default funziona: chi accende il dominio e migra se la ritrova
+            // creata, accesa per le app e pronta. Uno shard che vuole un'altra
+            // scala cambia questo nome **prima** di migrare, e i termini
+            // nascono con il suo prefisso.
+            'walkability_taxonomy' => env('WM_TRAIL_WALKABILITY_TAXONOMY', 'walkability-status'),
+
             // In quale proprieta' del tracciato vive il codice storico.
             // Su forestas e' `ref`, ereditato dall'import da Sardegna
             // Sentieri; un altro catasto la chiamera' altrimenti. Il service

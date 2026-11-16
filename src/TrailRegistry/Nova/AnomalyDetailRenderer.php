@@ -5,6 +5,7 @@ namespace Wm\WmPackage\TrailRegistry\Nova;
 use Laravel\Nova\Nova;
 use Wm\WmPackage\TrailRegistry\Anomalies\TrailRegistryAnomalyTypes;
 use Wm\WmPackage\TrailRegistry\Enums\TrailRegistryAnomalyType;
+use Wm\WmPackage\TrailRegistry\Inconsistencies\TrailRegistryInconsistencyTypes;
 use Wm\WmPackage\TrailRegistry\Models\TrailRegistryAnomaly;
 
 /**
@@ -86,6 +87,14 @@ class AnomalyDetailRenderer
 
         if ($definition !== null) {
             return $definition->detailRows($anomaly);
+        }
+
+        // Le incongruenze vivono nella stessa tabella ma hanno un registro loro, e
+        // non portano un contesto: la cella resta vuota perche' tutto cio' che c'e'
+        // da dire vale per ogni riga di quel tipo, e ripeterlo riga per riga e' la
+        // stessa frase ricopiata in colonna. Si legge dal tipo (oc:8989).
+        if (TrailRegistryInconsistencyTypes::definition($type) !== null) {
+            return [];
         }
 
         return [

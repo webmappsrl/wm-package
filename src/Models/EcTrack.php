@@ -16,6 +16,7 @@ use Wm\WmPackage\Models\Interfaces\LayerRelatedModel;
 use Wm\WmPackage\Nova\Traits\HasDemClassification;
 use Wm\WmPackage\Observers\EcTrackObserver;
 use Wm\WmPackage\Services\DetailTaxonomiesService;
+use Wm\WmPackage\TrailRegistry\Services\WalkabilityDetailService;
 use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Services\Models\EcTrackService;
 use Wm\WmPackage\Services\Models\MediaService;
@@ -844,6 +845,11 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
 
         $geojson['properties']['taxonomies'] = app(DetailTaxonomiesService::class)
             ->buildForJson($this, 'EcTrack', $this->app_id === null ? null : (int) $this->app_id);
+
+        $walkability = app(WalkabilityDetailService::class)->forTrack($this);
+        if ($walkability !== null) {
+            $geojson['properties']['walkability'] = $walkability;
+        }
 
         return $geojson;
     }
