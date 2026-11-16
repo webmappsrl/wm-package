@@ -1,7 +1,9 @@
 <?php
 
 use Wm\WmPackage\Models\EcTrack;
+use Wm\WmPackage\Models\TaxonomyTerm;
 use Wm\WmPackage\Nova\EcTrack as EcTrackResource;
+use Wm\WmPackage\TrailRegistry\Models\TrailStatusEvent;
 use Wm\WmPackage\TrailRegistry\Nova\Actions\UpdateWalkability;
 
 /**
@@ -44,17 +46,17 @@ it('lascia intatte le altre azioni delle tracce', function () {
 it('non aggiunge il blocco della percorribilità al dettaglio in API', function () {
     // Il sentiero ha una registrazione: senza, il test passerebbe perché non
     // c'è niente da esporre, non perché il dominio è spento.
-    $family = \Wm\WmPackage\Models\TaxonomyTerm::create([
+    $family = TaxonomyTerm::create([
         'identifier' => 'walkability-status',
         'name' => ['it' => 'Percorribilità', 'en' => 'Walkability'],
         'single_choice' => true,
     ]);
-    $term = \Wm\WmPackage\Models\TaxonomyTerm::create([
+    $term = TaxonomyTerm::create([
         'identifier' => 'walkability-status-walkable',
         'name' => ['it' => 'Percorribile', 'en' => 'Walkable'],
         'parent_id' => $family->id,
     ]);
-    \Wm\WmPackage\TrailRegistry\Models\TrailStatusEvent::create([
+    TrailStatusEvent::create([
         'ec_track_id' => $this->track->id,
         'taxonomy_id' => $family->id,
         'to_term_id' => $term->id,

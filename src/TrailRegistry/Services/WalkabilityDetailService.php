@@ -3,6 +3,7 @@
 namespace Wm\WmPackage\TrailRegistry\Services;
 
 use Wm\WmPackage\Models\EcTrack;
+use Wm\WmPackage\Models\TaxonomyTerm;
 use Wm\WmPackage\TrailRegistry\Models\TrailStatusEvent;
 use Wm\WmPackage\TrailRegistry\TrailRegistryClasses;
 
@@ -73,7 +74,7 @@ class WalkabilityDetailService
         /** @var string $identifier */
         $identifier = config('wm-package.features.trail_registry.walkability_taxonomy', 'walkability-status');
 
-        $id = \Wm\WmPackage\Models\TaxonomyTerm::query()
+        $id = TaxonomyTerm::query()
             ->where('identifier', $identifier)
             ->whereNull('parent_id')
             ->value('id');

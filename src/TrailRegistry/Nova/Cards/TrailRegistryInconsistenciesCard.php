@@ -5,9 +5,9 @@ namespace Wm\WmPackage\TrailRegistry\Nova\Cards;
 use Illuminate\Support\Facades\DB;
 use Laravel\Nova\Card;
 use Laravel\Nova\Nova;
+use Wm\WmPackage\TrailRegistry\Inconsistencies\TrailRegistryInconsistencyTypes;
 use Wm\WmPackage\TrailRegistry\Nova\Filters\TrailInconsistencyTypeFilter;
 use Wm\WmPackage\TrailRegistry\Nova\TrailRegistryInconsistency;
-use Wm\WmPackage\TrailRegistry\Inconsistencies\TrailRegistryInconsistencyTypes;
 
 /**
  * Quante incongruenze catastali ci sono, per tipo (oc:8989).

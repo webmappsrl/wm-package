@@ -13,8 +13,8 @@ use Wm\WmPackage\TrailRegistry\Models\TrailApplication as TrailApplicationModel;
 use Wm\WmPackage\TrailRegistry\Nova\Actions\ApproveTrailApplication;
 use Wm\WmPackage\TrailRegistry\Nova\Actions\RejectTrailApplication;
 use Wm\WmPackage\TrailRegistry\Nova\TrailApplication;
-use Wm\WmPackage\TrailRegistry\Nova\TrailRegistryImportAnomaly;
 use Wm\WmPackage\TrailRegistry\Nova\TrailRegistryCode;
+use Wm\WmPackage\TrailRegistry\Nova\TrailRegistryImportAnomaly;
 use Wm\WmPackage\TrailRegistry\TrailRegistryService;
 
 /**

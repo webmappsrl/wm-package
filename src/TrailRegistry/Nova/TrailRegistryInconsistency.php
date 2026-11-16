@@ -2,6 +2,7 @@
 
 namespace Wm\WmPackage\TrailRegistry\Nova;
 
+use Laravel\Nova\Filters\Filter;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Wm\WmPackage\TrailRegistry\Nova\Cards\TrailRegistryInconsistenciesCard;
 use Wm\WmPackage\TrailRegistry\Nova\Filters\TrailInconsistencyTypeFilter;
@@ -57,7 +58,7 @@ class TrailRegistryInconsistency extends TrailRegistryAnomaly
         return $query;
     }
 
-    /** @return array<int, \Laravel\Nova\Filters\Filter> */
+    /** @return array<int, Filter> */
     public function filters(NovaRequest $request): array
     {
         return [

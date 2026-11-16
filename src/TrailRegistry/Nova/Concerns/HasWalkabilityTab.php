@@ -3,6 +3,7 @@
 namespace Wm\WmPackage\TrailRegistry\Nova\Concerns;
 
 use Illuminate\Support\Collection;
+use Laravel\Nova\Fields\Field;
 use Laravel\Nova\Fields\Heading;
 use Laravel\Nova\Fields\Select;
 use Laravel\Nova\Fields\Text;
@@ -39,7 +40,7 @@ trait HasWalkabilityTab
     /**
      * I campi del tab, da unire a `taxonomyTabExtraFields()`.
      *
-     * @return array<string, array<int, \Laravel\Nova\Fields\Field>>
+     * @return array<string, array<int, Field>>
      */
     protected function walkabilityTabFields(): array
     {

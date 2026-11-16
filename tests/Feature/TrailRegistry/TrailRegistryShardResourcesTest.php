@@ -13,9 +13,9 @@ use Wm\WmPackage\TrailRegistry\Enums\TrailApplicationStatus;
 use Wm\WmPackage\TrailRegistry\Models\TrailApplication as TrailApplicationModel;
 use Wm\WmPackage\TrailRegistry\Models\TrailRegistryCode as TrailRegistryCodeModel;
 use Wm\WmPackage\TrailRegistry\Nova\TrailApplication;
+use Wm\WmPackage\TrailRegistry\Nova\TrailRegistryCode;
 use Wm\WmPackage\TrailRegistry\Nova\TrailRegistryImportAnomaly;
 use Wm\WmPackage\TrailRegistry\Nova\TrailRegistryInconsistency;
-use Wm\WmPackage\TrailRegistry\Nova\TrailRegistryCode;
 use Wm\WmPackage\WmPackageServiceProvider;
 
 class ShardCodeResource extends TrailRegistryCode {}

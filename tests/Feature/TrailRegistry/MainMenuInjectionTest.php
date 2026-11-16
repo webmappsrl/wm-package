@@ -6,8 +6,8 @@ use Laravel\Nova\Events\ServingNova;
 use Laravel\Nova\Menu\MenuSection;
 use Laravel\Nova\Nova;
 use Wm\WmPackage\TrailRegistry\Nova\TrailApplication;
-use Wm\WmPackage\TrailRegistry\Nova\TrailRegistryImportAnomaly;
 use Wm\WmPackage\TrailRegistry\Nova\TrailRegistryCode;
+use Wm\WmPackage\TrailRegistry\Nova\TrailRegistryImportAnomaly;
 
 /**
  * Presidia l'iniezione della sezione di menu "Catasto"

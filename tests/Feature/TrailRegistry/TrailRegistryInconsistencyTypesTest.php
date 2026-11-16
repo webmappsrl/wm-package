@@ -1,5 +1,6 @@
 <?php
 
+use Wm\WmPackage\TrailRegistry\Anomalies\TrailRegistryAnomalyTypes;
 use Wm\WmPackage\TrailRegistry\Inconsistencies\InconsistencyTypeDefinition;
 use Wm\WmPackage\TrailRegistry\Inconsistencies\TrailRegistryInconsistencyTypes;
 
@@ -52,5 +53,5 @@ it('tiene i tipi separati da quelli delle anomalie', function () {
         'wm-package.features.trail_registry.anomaly_types' => [],
     ]);
 
-    expect(\Wm\WmPackage\TrailRegistry\Anomalies\TrailRegistryAnomalyTypes::isKnown('missing_walkability'))->toBeFalse();
+    expect(TrailRegistryAnomalyTypes::isKnown('missing_walkability'))->toBeFalse();
 });

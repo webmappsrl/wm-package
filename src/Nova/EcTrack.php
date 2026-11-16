@@ -4,8 +4,10 @@ namespace Wm\WmPackage\Nova;
 
 use Illuminate\Support\Collection;
 use Kongulov\NovaTabTranslatable\NovaTabTranslatable;
+use Laravel\Nova\Actions\Action;
 use Laravel\Nova\Fields\BelongsToMany;
 use Laravel\Nova\Fields\Boolean;
+use Laravel\Nova\Fields\Field;
 use Laravel\Nova\Fields\KeyValue;
 use Laravel\Nova\Fields\MorphToMany;
 use Laravel\Nova\Fields\Text;
@@ -194,7 +196,7 @@ class EcTrack extends AbstractEcResource
      * (oc:8989). A dominio spento qui non arriva niente: il contributo e'
      * additivo, e uno shard che non lo usa trova la Resource com'era.
      *
-     * @return array<int, \Laravel\Nova\Actions\Action>
+     * @return array<int, Action>
      */
     protected function trailRegistryActions(): array
     {
@@ -217,7 +219,7 @@ class EcTrack extends AbstractEcResource
      * shard che aggiunge campi propri continua a ridefinire questo metodo:
      * chiama `parent::` e unisce i suoi, come fa gia' per gli altri tab.
      *
-     * @return array<string, array<int, \Laravel\Nova\Fields\Field>>
+     * @return array<string, array<int, Field>>
      */
     protected function taxonomyTabExtraFields(): array
     {
@@ -230,7 +232,7 @@ class EcTrack extends AbstractEcResource
      * famiglia, e quello generico scriverebbe il pivot senza storia (oc:8989).
      *
      * @param  array<int, string>  $taxonomyIdentifiers
-     * @return array<int, \Laravel\Nova\Fields\Field>
+     * @return array<int, Field>
      */
     public function makeTermFieldsForTaxonomies(array $taxonomyIdentifiers): array
     {

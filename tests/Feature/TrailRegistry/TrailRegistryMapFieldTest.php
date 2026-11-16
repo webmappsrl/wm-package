@@ -9,8 +9,8 @@ use Wm\WmPackage\TrailRegistry\Models\TrailApplication;
 use Wm\WmPackage\TrailRegistry\Models\TrailRegistryAnomaly;
 use Wm\WmPackage\TrailRegistry\Nova\Fields\TrailRegistryMap;
 use Wm\WmPackage\TrailRegistry\Nova\TrailApplication as TrailApplicationResource;
-use Wm\WmPackage\TrailRegistry\Nova\TrailRegistryImportAnomaly as TrailRegistryAnomalyResource;
 use Wm\WmPackage\TrailRegistry\Nova\TrailRegistryCode as TrailRegistryCodeResource;
+use Wm\WmPackage\TrailRegistry\Nova\TrailRegistryImportAnomaly as TrailRegistryAnomalyResource;
 use Wm\WmPackage\TrailRegistry\TrailRegistryService;
 
 beforeEach(function () {

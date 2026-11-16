@@ -8,6 +8,7 @@ use Laravel\Nova\Fields\BelongsTo;
 use Laravel\Nova\Fields\DateTime;
 use Laravel\Nova\Fields\Field;
 use Laravel\Nova\Fields\Text;
+use Laravel\Nova\Filters\Filter;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Resource;
 use Wm\WmPackage\Models\EcTrack;
@@ -236,7 +237,7 @@ abstract class TrailRegistryAnomaly extends Resource
      * Non e' astratto perche' `Laravel\Nova\Resource` lo implementa gia': PHP non permette di
      * rendere astratto un metodo che la classe padre ha concreto.
      *
-     * @return array<int, \Laravel\Nova\Filters\Filter>
+     * @return array<int, Filter>
      */
     public function filters(NovaRequest $request)
     {

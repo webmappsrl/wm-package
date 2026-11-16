@@ -7,6 +7,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Collection;
 use Laravel\Nova\Actions\Action;
 use Laravel\Nova\Fields\ActionFields;
+use Laravel\Nova\Fields\Field;
 use Laravel\Nova\Fields\Select;
 use Laravel\Nova\Fields\Textarea;
 use Laravel\Nova\Http\Requests\NovaRequest;
@@ -58,7 +59,7 @@ class UpdateWalkability extends Action
         return Action::message(__('Walkability updated.'));
     }
 
-    /** @return array<int, \Laravel\Nova\Fields\Field> */
+    /** @return array<int, Field> */
     public function fields(NovaRequest $request): array
     {
         return [
