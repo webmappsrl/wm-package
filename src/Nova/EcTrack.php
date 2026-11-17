@@ -270,6 +270,10 @@ class EcTrack extends AbstractEcResource
             NovaTabTranslatable::make([
                 Textarea::make(__('Not Accessible Message'), 'properties->not_accessible_message'),
             ]),
+            // Data dell'avviso: la scrive EcTrack::refreshNotAccessibleUpdatedAt(), qui solo in lettura.
+            Text::make(__('Not Accessible Updated At'), 'properties->not_accessible_updated_at')
+                ->readonly()
+                ->onlyOnDetail(),
             KeyValue::make(__('Related URL'), 'properties->related_url'),
             Text::make(__('QR Code'), 'deep_link_qr_code', function () {
                 return $this->app?->renderDeepLinkQrCodeHtml('track', $this->id);
