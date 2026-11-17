@@ -43,3 +43,58 @@ in `composer.json` non c'è nessuna voce dedicata — come per `TrackColor`.
 Il provider è registrato in `src/WmPackageServiceProvider.php` e `Choice::$component` vale
 `choice`. Lo usa anche `IconSelect`, che estende `Choice` e non dichiara un componente suo: il
 vecchio bundle `icon-select` resta compilato ma non è più quello che disegna i campi.
+
+## Il selettore nei filtri (oc:8988)
+
+Il selettore del campo (ricerca, chip, dropdown con le icone) sta in `ChoicePicker.vue`, che usano
+sia `FormField.vue` sia `FilterField.vue`, il componente `choice-filter` dei filtri Nova costruiti
+su `Wm\WmPackage\Nova\Filters\ChoiceFilter`. Nel menu dei filtri il dropdown sta nel flusso
+invece che sovrapposto: il menu scorre ed è basso, e un dropdown sovrapposto resterebbe tagliato.
+
+I filtri per i termini di una tassonomia, uno per tassonomia, in `filters()` di una Resource:
+
+```php
+use Wm\WmPackage\Nova\Filters\TaxonomyTermFilter;
+
+public function filters(NovaRequest $request): array
+{
+    return [
+        new TaxonomyTermFilter('route-type', multiple: true),  // valori in OR
+        new TaxonomyTermFilter('validation-status'),            // scelta singola
+    ];
+}
+```
+
+Un filtro con opzioni proprie, che non vengono da `taxonomy_terms`, estende `ChoiceFilter`:
+
+```php
+use Illuminate\Contracts\Database\Eloquent\Builder;
+use Laravel\Nova\Http\Requests\NovaRequest;
+use Wm\WmPackage\Nova\Filters\ChoiceFilter;
+
+class RegionFilter extends ChoiceFilter
+{
+    public function __construct()
+    {
+        $this->multiple()->searchPlaceholder(__('Search'));
+    }
+
+    protected function choiceOptions(NovaRequest $request): array
+    {
+        // {value, label, svg?}: un value intero va bene, ChoiceFilter lo converte in stringa.
+        return Region::query()->orderBy('name')->get()
+            ->map(fn (Region $region) => ['value' => $region->id, 'label' => $region->name])
+            ->all();
+    }
+
+    protected function applyChoice(NovaRequest $request, Builder $query, string|array $value): Builder
+    {
+        // In multiple arriva un array di stringhe, mai vuoto.
+        return $query->whereIn('region_id', array_map('intval', $value));
+    }
+}
+```
+
+La chiave del filtro resta quella di Nova, il nome della classe, a meno che la sottoclasse non la
+ridefinisca: `TaxonomyTermFilter` la deriva dall'identifier, perché più istanze sulla stessa
+Resource devono restare distinte.

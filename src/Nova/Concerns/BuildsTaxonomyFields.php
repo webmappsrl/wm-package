@@ -14,6 +14,8 @@ use Laravel\Nova\Tabs\TabsGroup;
 use Wm\WmPackage\Models\TaxonomyTerm;
 use Wm\WmPackage\Nova\Fields\Choice\Choice;
 use Wm\WmPackage\Services\IconSvgService;
+use Wm\WmPackage\Support\TaxonomyTermLabel;
+use Wm\WmPackage\Support\TaxonomyTermOptions;
 
 /**
  * Costruisce i campi delle tassonomie di classificazione (oc:8910).
@@ -334,7 +336,7 @@ trait BuildsTaxonomyFields
             $icons = new IconSvgService;
             foreach ($rows as $row) {
                 $option = ['value' => (string) $row->id, 'label' => self::taxonomyLabel($row)];
-                $svg = self::iconSvg($icons, $row->icon ?? null);
+                $svg = TaxonomyTermOptions::iconSvg($icons, $row->icon ?? null);
                 if ($svg !== null) {
                     $option['svg'] = $svg;
                 }
@@ -486,31 +488,13 @@ trait BuildsTaxonomyFields
         $icons = new IconSvgService;
         $parts = [];
         foreach ($resource->{$relation} as $row) {
-            $svg = self::iconSvg($icons, $row->icon ?? null);
+            $svg = TaxonomyTermOptions::iconSvg($icons, $row->icon ?? null);
             $parts[] = '<span style="display:inline-flex;align-items:center;margin-right:.9em">'
                 .($svg === null ? '' : '<svg viewBox="0 0 1024 1024" fill="currentColor" style="width:1.1em;height:1.1em;margin-right:.35em;flex-shrink:0">'.$svg.'</svg>')
                 .e(self::taxonomyLabel($row)).'</span>';
         }
 
         return $parts === [] ? '—' : implode('', $parts);
-    }
-
-    /**
-     * I path dell'icona, o null se non c'è o se il file delle icone dello shard non è leggibile.
-     */
-    private static function iconSvg(IconSvgService $icons, ?string $icon): ?string
-    {
-        if (! is_string($icon) || $icon === '') {
-            return null;
-        }
-
-        try {
-            $svg = $icons->getSvgByName($icon, wrapSvg: false);
-        } catch (\Throwable $e) {
-            return null;
-        }
-
-        return is_string($svg) && $svg !== '' ? $svg : null;
     }
 
     public function makeTermFieldsForTaxonomies(array $taxonomyIdentifiers): array
@@ -535,9 +519,9 @@ trait BuildsTaxonomyFields
 
             // children() è già ordinata per sort_order e id.
             $options = $taxonomy->children
-                ->mapWithKeys(fn (TaxonomyTerm $term) => [$term->id => self::termLabel($term)])
+                ->mapWithKeys(fn (TaxonomyTerm $term) => [$term->id => TaxonomyTermLabel::for($term)])
                 ->all();
-            $label = self::termLabel($taxonomy);
+            $label = TaxonomyTermLabel::for($taxonomy);
             $attribute = 'taxonomy_'.str_replace([':', '-'], '_', $identifier);
 
             // Un controllo solo per tutte le classificazioni, con l'icona del termine accanto al
@@ -547,7 +531,7 @@ trait BuildsTaxonomyFields
             // In modalità filtro la scelta è sempre multipla: su un layer «sentieri o cammini»
             // deve essere possibile anche se il tipo percorso è a scelta singola.
             $field = Choice::make($label, $attribute)
-                ->options(self::termOptions($taxonomy))
+                ->options(TaxonomyTermOptions::for($taxonomy))
                 ->multiple($this->taxonomyFieldsAreFilters() || ! $taxonomy->single_choice)
                 ->searchPlaceholder(__('Search').'…');
 
@@ -672,7 +656,7 @@ trait BuildsTaxonomyFields
                     continue;
                 }
                 $sourceAttribute = $attributeOf($source->identifier);
-                $sourceLabel = self::termLabel($source);
+                $sourceLabel = TaxonomyTermLabel::for($source);
                 $wanted = TaxonomyTerm::query()
                     ->where('parent_id', $source->id)
                     ->whereIn('identifier', (array) ($rule['terms'] ?? []))
@@ -699,7 +683,7 @@ trait BuildsTaxonomyFields
                 $sourceAttribute,
                 $wanted,
                 fn () => __(':field does not apply with the current :source.', [
-                    'field' => self::termLabel($taxonomy),
+                    'field' => TaxonomyTermLabel::for($taxonomy),
                     'source' => $sourceLabel,
                 ])
             );
@@ -773,59 +757,13 @@ trait BuildsTaxonomyFields
         $parts = [];
 
         foreach ($this->chosenTerms($resource, $taxonomy) as $term) {
-            $paths = self::iconSvg($icons, $term->icon);
+            $paths = TaxonomyTermOptions::iconSvg($icons, $term->icon);
             $svg = $paths === null
                 ? ''
                 : '<svg viewBox="0 0 1024 1024" fill="currentColor" style="width:1.1em;height:1.1em;margin-right:.35em;flex-shrink:0">'.$paths.'</svg>';
-            $parts[] = '<span style="display:inline-flex;align-items:center;margin-right:.9em">'.$svg.e(self::termLabel($term)).'</span>';
+            $parts[] = '<span style="display:inline-flex;align-items:center;margin-right:.9em">'.$svg.e(TaxonomyTermLabel::for($term)).'</span>';
         }
 
         return $parts === [] ? '—' : implode('', $parts);
-    }
-
-    /**
-     * Le opzioni di una tassonomia nella forma che il campo si aspetta (oc:8910).
-     *
-     * `value` è una stringa perché la ricerca del campo la tratta come tale; `svg` sono i path
-     * dell'icona del termine, senza il tag che li avvolge, perché il componente li inserisce
-     * dentro un suo `<svg>`. Un termine senza icona non porta `svg`: il campo lascia lo spazio.
-     *
-     * @return array<int, array{value: string, label: string, svg?: string}>
-     */
-    private static function termOptions(TaxonomyTerm $taxonomy): array
-    {
-        $icons = new IconSvgService;
-        $options = [];
-
-        foreach ($taxonomy->children as $term) {
-            $option = [
-                'value' => (string) $term->id,
-                'label' => self::termLabel($term),
-            ];
-
-            // Le icone vengono da un file dello shard: se manca, il termine resta senza.
-            $svg = self::iconSvg($icons, $term->icon);
-            if ($svg !== null) {
-                $option['svg'] = $svg;
-            }
-
-            $options[] = $option;
-        }
-
-        return $options;
-    }
-
-    /**
-     * Nome del termine nella lingua corrente; se manca, la prima traduzione disponibile e, in
-     * ultimo, l'identifier: un'opzione senza etichetta non si può scegliere.
-     */
-    private static function termLabel(TaxonomyTerm $term): string
-    {
-        $name = $term->getTranslation('name', app()->getLocale(), true);
-        if ($name === '' || $name === null) {
-            $name = collect($term->getTranslations('name'))->filter()->first();
-        }
-
-        return (string) ($name ?: $term->identifier);
     }
 }
