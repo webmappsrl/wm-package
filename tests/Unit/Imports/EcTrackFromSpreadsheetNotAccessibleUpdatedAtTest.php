@@ -11,7 +11,7 @@ use Wm\WmPackage\Imports\EcTrackFromSpreadsheet;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Tests\TestCase;
 
-class EcTrackFromSpreadsheetNoticeDateTest extends TestCase
+class EcTrackFromSpreadsheetNotAccessibleUpdatedAtTest extends TestCase
 {
     private const KEY = EcTrack::NOT_ACCESSIBLE_UPDATED_AT;
 
@@ -24,7 +24,7 @@ class EcTrackFromSpreadsheetNoticeDateTest extends TestCase
             'filesystems.disks.s3.region' => 'eu-west-1',
             'filesystems.disks.wmfe.region' => 'eu-west-1',
             'wm-package.ec_track_model' => EcTrack::class,
-            // Le colonne dell'avviso non sono fra quelle di default: l'upload le legge solo se dichiarate.
+            // Le colonne di not_accessible non sono fra quelle di default: l'upload le legge solo se dichiarate.
             'wm-excel-ec-import.ecTracks.validHeaders' => ['id', 'not_accessible', 'not_accessible_message'],
         ]);
         Storage::fake('wmfe');
@@ -52,7 +52,7 @@ class EcTrackFromSpreadsheetNoticeDateTest extends TestCase
     }
 
     #[DataProvider('quietModes')]
-    public function test_writes_the_date_when_a_spreadsheet_row_switches_the_notice_on(bool $saveQuietly)
+    public function test_writes_the_date_when_a_spreadsheet_row_switches_not_accessible_on(bool $saveQuietly)
     {
         $track = EcTrack::factory()->createQuietly(['properties' => ['not_accessible' => false]]);
 

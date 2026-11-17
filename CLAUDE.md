@@ -121,7 +121,7 @@ questo file, perché vanno lette sempre.
 | Tassonomie nel dettaglio delle tracce e nei POI | `properties.taxonomies` di tracce e `pois.geojson`: fonti, tab come in Nova, zone filtrate, chiavi deprecate, nomi e tab in `LABELS` del `config.json`, quando si rigenerano file e config, identifier riservati | [docs/knowledge/tassonomie-nel-dettaglio-di-tracce-e-poi.md](docs/knowledge/tassonomie-nel-dettaglio-di-tracce-e-poi.md) |
 | Aggiornare wm-package su osm2cai2 | cosa cambia per osm2cai2 al bump del submodule e cosa controllare prima del command dei duplicati | [docs/knowledge/aggiornare-wm-package-su-osm2cai2.md](docs/knowledge/aggiornare-wm-package-su-osm2cai2.md) |
 | Operazioni del fascicolo e canale dell'ente | il package offre aprire, allegare, chiudere e leggere una domanda e lo shard monta il canale (rotte, client, middleware); perché lo schema dei campi è ridefinibile e perché il nome dello sportello non compare mai | [docs/knowledge/operazioni-del-fascicolo-e-canale-dell-ente.md](docs/knowledge/operazioni-del-fascicolo-e-canale-dell-ente.md) |
-| Data dell'avviso su EcTrack | quando `EcTrack` scrive `not_accessible_updated_at`, `static::saving` per le sottoclassi, i percorsi che non la scrivono (saveQuietly, GeoHub, upload Excel di default) | [docs/knowledge/8981-data-dell-avviso-su-ectrack.md](docs/knowledge/8981-data-dell-avviso-su-ectrack.md) |
+| Data di non accessibilità su EcTrack | quando `EcTrack` scrive `not_accessible_updated_at`, `static::saving` per le sottoclassi, i percorsi che non la scrivono (saveQuietly, GeoHub, upload Excel di default) | [docs/knowledge/8981-data-di-non-accessibilita-su-ectrack.md](docs/knowledge/8981-data-di-non-accessibilita-su-ectrack.md) |
 
 ## Procedure
 

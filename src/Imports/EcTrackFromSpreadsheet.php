@@ -43,7 +43,7 @@ class EcTrackFromSpreadsheet extends AbstractExcelSpreadsheetImporter
 
         (new EcTrackRowProcessor)->apply($model, $data);
 
-        // saveQuietly() non emette gli eventi del modello: la data dell'avviso va aggiornata a mano prima del salvataggio.
+        // saveQuietly() non emette gli eventi del modello: la data di non accessibilità va aggiornata a mano prima del salvataggio.
         if (method_exists($model, 'refreshNotAccessibleUpdatedAt')) {
             $model->refreshNotAccessibleUpdatedAt();
         }

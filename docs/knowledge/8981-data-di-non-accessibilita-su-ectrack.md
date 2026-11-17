@@ -1,4 +1,4 @@
-# Data dell'avviso su EcTrack
+# Data di non accessibilità su EcTrack
 
 Quando `EcTrack` scrive `properties->not_accessible_updated_at`, e cosa non la scrive.
 
@@ -19,12 +19,17 @@ Quando `EcTrack` scrive `properties->not_accessible_updated_at`, e cosa non la s
 - L'upload Excel con i `validHeaders` di default (`config/wm-excel-ec-import.php`), che non
   contengono `not_accessible` né `not_accessible_message`: la chiamata serve agli shard che li
   aggiungono.
-- Gli avvisi già accesi quando è nato il campo (oc:8981): restano senza data finché non si spengono e
+- Le tracce già `not_accessible` quando è nato il campo (oc:8981): restano senza data finché non si spengono e
   riaccendono, o finché non cambia il testo italiano.
 
 ## Perché così
 
 - **Data dedicata invece di `updated_at`** (oc:8981): la data di modifica cambia a ogni salvataggio
-  della traccia, e un elenco di avvisi ordinato per data ne risulterebbe falsato.
+  della traccia, e un elenco delle tracce non accessibili ordinato per data ne risulterebbe falsato.
 - **Legata al testo italiano** (oc:8981): una correzione del testo conta come aggiornamento
-  dell'avviso.
+  della non accessibilità.
+
+## Chi la usa
+
+- Forestas presenta `not_accessible` come «avviso» del sentiero e ordina per questa data l'API
+  `/api/v1/avvisi`: è un significato di quello shard, non del package (oc:8981).

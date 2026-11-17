@@ -37,7 +37,7 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
     public const DEFAULT_COLOR_HEX = '#FF0000';
 
     /**
-     * Chiave di `properties` con la data (ISO 8601, UTC) dell'ultimo avviso di non percorribilità:
+     * Chiave di `properties` con la data (ISO 8601, UTC) dell'ultimo aggiornamento della non accessibilità:
      * la scrive `refreshNotAccessibleUpdatedAt()` al salvataggio.
      */
     public const NOT_ACCESSIBLE_UPDATED_AT = 'not_accessible_updated_at';
@@ -103,7 +103,7 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
 
         EcTrack::observe(EcTrackObserver::class);
 
-        // La data dell'avviso sta nel saving del modello e non nell'observer: EcTrack::observe è
+        // La data di non accessibilità sta nel saving del modello e non nell'observer: EcTrack::observe è
         // legato alla classe del package e non scatta per le sottoclassi dei progetti.
         static::saving(fn (self $model) => $model->refreshNotAccessibleUpdatedAt());
 
@@ -156,7 +156,7 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
     }
 
     /**
-     * Testo dell'avviso nella lingua data. Una stringa piatta (caricamento da foglio) vale come
+     * Testo di `not_accessible_message` nella lingua data. Una stringa piatta (caricamento da foglio) vale come
      * italiano; un array di traduzioni dà la lingua richiesta. Il testo è trimmato, il vuoto è null.
      */
     public static function notAccessibleMessageText(mixed $message, string $locale = 'it'): ?string
@@ -177,7 +177,7 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
     }
 
     /**
-     * Scrive `properties->not_accessible_updated_at` quando l'avviso nasce o cambia: il flag
+     * Scrive `properties->not_accessible_updated_at` quando la non accessibilità nasce o cambia: il flag
      * passa da spento ad acceso, oppure cambia il testo italiano. Altrimenti non tocca nulla
      * (spegnimento, solo altre lingue, altri campi, cambio di forma stringa/array).
      *
