@@ -37,6 +37,12 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
     public const DEFAULT_COLOR_HEX = '#FF0000';
 
     /**
+     * Chiave di `properties` con la data (ISO 8601, UTC) dell'ultimo aggiornamento della non accessibilità:
+     * la scrive `refreshNotAccessibleUpdatedAt()` al salvataggio.
+     */
+    public const NOT_ACCESSIBLE_UPDATED_AT = 'not_accessible_updated_at';
+
+    /**
      * Campo dell'indice di ricerca con il nome in tutte le lingue (oc:8681): lo scrive
      * toSearchableArray(), lo dichiara config/wm-elasticsearch.php (con la stessa stringa, per non
      * far dipendere la config dal modello) e lo legge ElasticsearchController::localizeSearchResults().
@@ -97,6 +103,10 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
 
         EcTrack::observe(EcTrackObserver::class);
 
+        // La data di non accessibilità sta nel saving del modello e non nell'observer: EcTrack::observe è
+        // legato alla classe del package e non scatta per le sottoclassi dei progetti.
+        static::saving(fn (self $model) => $model->refreshNotAccessibleUpdatedAt());
+
         // Imposta un default per properties se è null
         static::creating(function ($model) {
             if (is_null($model->properties)) {
@@ -135,6 +145,65 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
                 }
             }
         });
+    }
+
+    /**
+     * Vero per true, 1, "1" e "true" (senza distinguere le maiuscole); falso per il resto.
+     */
+    public static function isNotAccessibleOn(mixed $value): bool
+    {
+        return filter_var($value, FILTER_VALIDATE_BOOLEAN);
+    }
+
+    /**
+     * Testo di `not_accessible_message` nella lingua data. Una stringa piatta (caricamento da foglio) vale come
+     * italiano; un array di traduzioni dà la lingua richiesta. Il testo è trimmato, il vuoto è null.
+     */
+    public static function notAccessibleMessageText(mixed $message, string $locale = 'it'): ?string
+    {
+        if (is_array($message)) {
+            $message = $message[$locale] ?? null;
+        } elseif ($locale !== 'it') {
+            return null;
+        }
+
+        if (! is_string($message)) {
+            return null;
+        }
+
+        $message = trim($message);
+
+        return $message === '' ? null : $message;
+    }
+
+    /**
+     * Scrive `properties->not_accessible_updated_at` quando la non accessibilità nasce o cambia: il flag
+     * passa da spento ad acceso, oppure cambia il testo italiano. Altrimenti non tocca nulla
+     * (spegnimento, solo altre lingue, altri campi, cambio di forma stringa/array).
+     *
+     * Scatta al salvataggio con save(): saveQuietly() e gli update di massa non scrivono la data.
+     */
+    public function refreshNotAccessibleUpdatedAt(): void
+    {
+        $original = $this->getOriginal('properties');
+        if (is_string($original)) {
+            $original = json_decode($original, true);
+        }
+        $original = is_array($original) ? $original : [];
+
+        $current = is_array($this->properties) ? $this->properties : [];
+
+        $switchedOn = ! self::isNotAccessibleOn($original['not_accessible'] ?? null)
+            && self::isNotAccessibleOn($current['not_accessible'] ?? null);
+        $messageChanged = self::notAccessibleMessageText($original['not_accessible_message'] ?? null)
+            !== self::notAccessibleMessageText($current['not_accessible_message'] ?? null);
+
+        if (! $switchedOn && ! $messageChanged) {
+            return;
+        }
+
+        $current[self::NOT_ACCESSIBLE_UPDATED_AT] = now('UTC')->toIso8601String();
+        $this->properties = $current;
     }
 
     public function dispatchDem(): void
