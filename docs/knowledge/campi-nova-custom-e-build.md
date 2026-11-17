@@ -55,6 +55,24 @@ del package. Le classi di `Button.vue` replicano esattamente il `<Button>` nativ
 importarli da un nuovo field il path relativo è
 `../../../../_shared/resources/js/components/...` (oc:7546).
 
+### Il selettore di `Choice` nei filtri
+
+Come è fatto il selettore condiviso fra form e filtri, e come si usano `ChoiceFilter` e
+`TaxonomyTermFilter`, sta nel README di `Choice` («Il selettore nei filtri», oc:8988). Qui i
+vincoli che dal codice non si vedono:
+
+- **il componente dei filtri vive nel bundle del campo**: un filtro costruito su `ChoiceFilter`
+  funziona solo se il provider di `Choice` è registrato e il suo `dist/` è ricompilato. Un `dist/`
+  vecchio non dà errori PHP né nei test Pest: nel menu il filtro resta senza controllo;
+- **`ChoicePicker` è condiviso con il form di tutti gli shard**: una modifica pensata per i filtri
+  passa anche dal salvataggio delle tassonomie, che stacca i termini che non trova nel valore
+  inviato (`"12,13"`). Nessun test PHP esegue il Vue: dopo ogni modifica si salva a mano una traccia
+  senza cambiare nulla e si controlla che i termini restino;
+- **i valori sono stringhe**: la ricerca fa `toLowerCase()` sul valore e le chip si ritrovano con
+  `===`. `ChoiceFilter` converte le opzioni e il valore che arriva ad `apply()`; i valori letti
+  dall'URL li converte `FilterField.vue`, perché Nova li scrive nello store nel browser senza
+  ripassare dal PHP (`Filter::jsonSerialize()` manda sempre `default()` come `currentValue`).
+
 ### Il `dist` versionato
 
 Il `dist` di ogni field è committato nel repo, quindi va sempre ricompilato dalla sorgente
@@ -142,3 +160,7 @@ già compilate del package ci fanno `externals`. Un dominio non richiede quindi 
   `config('wm-tab-translatable.locales')` (oc:7546).
 - La validazione client-side degli upload (prima del submit) è fuori scope: richiederebbe di
   estendere il componente Vue del field Ebess o un field custom (oc:8247).
+- **`<teleport to="body">` per il dropdown dei filtri** (oc:8988, scartato): era il rimedio previsto
+  per un dropdown tagliato dal menu dei filtri. Il picker chiude il dropdown sui clic fuori dal
+  proprio elemento, e con le opzioni portate su `body` si sarebbe chiuso a ogni scelta, insieme al
+  menu di Nova.
