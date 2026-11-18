@@ -23,6 +23,8 @@ docker run --rm --network camminiditalia_default -e DB_HOST=postgres-camminidita
 
 ## Task 1 — Test della conversione (prima del codice, devono fallire)
 
+> ⚠️ L'implementazione ha deviato da questo task: [notes.md](notes.md#task-1--test-della-conversione)
+
 **File:** `wm-package/tests/Feature/Nova/ConvertUgcPoiToEcPoiTest.php` (nuovo)
 
 Setup, sul modello di `tests/Unit/EcDescriptionTiptapTest.php`:
@@ -176,6 +178,8 @@ job accodato abbia `$job->afterCommit === true` — `Bus::fake()` non onora `aft
 controlla la proprietà, non lo scarto (trappola oc:8571 in `.claude/rules/test.md`).
 
 ## Task 5 — Verifica manuale in locale (camminiditalia)
+
+> ⚠️ L'implementazione ha deviato da questo task: [notes.md](notes.md#task-5--verifica-manuale-in-locale)
 
 Con gli script in scratchpad già usati per la diagnosi, sul codice nuovo:
 
