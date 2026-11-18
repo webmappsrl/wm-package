@@ -2,14 +2,20 @@
 
 namespace Wm\WmPackage\Nova\Actions;
 
-use Exception;
 use Illuminate\Bus\Queueable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Nova\Actions\Action;
+use Laravel\Nova\Actions\ActionResponse;
 use Laravel\Nova\Fields\ActionFields;
 use Laravel\Nova\Http\Requests\NovaRequest;
+use Spatie\MediaLibrary\MediaCollections\FileAdder;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
+use Throwable;
+use Wm\WmPackage\Exceptions\MediaFileMissingException;
 use Wm\WmPackage\Models\EcPoi;
 
 class ConvertUgcPoiToEcPoi extends Action
@@ -22,60 +28,144 @@ class ConvertUgcPoiToEcPoi extends Action
     }
 
     /**
-     * Perform the action on the given models.
+     * Converte ogni UgcPoi selezionato in un EcPoi, foto comprese.
      *
-     * @return mixed
+     * Nova esegue `handle()` dentro una transazione (`Transaction::run`): ogni UgcPoi
+     * viene convertito in un savepoint suo, così un errore annulla solo quell'UgcPoi.
+     * Su Postgres una query fallita invalida la transazione anche se l'eccezione viene
+     * intercettata, quindi dentro la closure del savepoint non ci deve essere nessun
+     * catch: l'eccezione deve uscire perché il savepoint venga annullato (oc:8967).
+     *
+     * @return ActionResponse
      */
     public function handle(ActionFields $fields, Collection $models)
     {
-        $already_existing_ec_pois = [];
-        foreach ($models as $model) {
-            $properties = $model->properties;
-            $alreadyExists = isset($properties['ec_poi_id']) && ! empty($properties['ec_poi_id']);
-            // $shareUgcPoi = isset($properties['share_ugcpoi']) && $properties['share_ugcpoi'] === 'yes';
+        $converted = [];
+        $alreadyConverted = [];
+        $failed = [];
 
-            if ($alreadyExists) {
-                $already_existing_ec_pois[] = $model->id;
+        foreach ($models as $model) {
+            if (! empty($model->properties['ec_poi_id'])) {
+                $alreadyConverted[] = $model->id;
 
                 continue;
             }
 
-            $ecPoi = EcPoi::create([
-                'name' => $model->name,
-                'geometry' => $model->geometry,
-                'user_id' => auth()->user()->id,
-                'app_id' => $model->app_id,
-            ]);
+            $copiedMedia = [];
+            try {
+                DB::transaction(function () use ($model, &$copiedMedia) {
+                    $ecPoi = EcPoi::create([
+                        'name' => $model->name,
+                        'geometry' => $model->geometry,
+                        'user_id' => auth()->user()->id,
+                        'app_id' => $model->app_id,
+                    ]);
 
-            if ($ecPoi) {
-
-                // Attach Medias
-                $medias = $model->media;
-                if (count($medias) > 0) {
-                    foreach ($medias as $media) {
-                        try {
-                            $duplicatedMedia = $media->replicate();
-                            $duplicatedMedia->model()->associate($ecPoi);
-                            $duplicatedMedia->save();
-                            Log::info('Media copied successfully: '.$media->id.' from UgcPoi '.$model->id.' to EcPoi '.$ecPoi->id);
-                        } catch (Exception $e) {
-                            Log::error('ConvertUgcPoiToEcPoi: media copy error -> '.$e->getMessage());
-                        }
+                    foreach ($model->media as $media) {
+                        $copiedMedia[] = $this->copyMedia($media, $ecPoi);
                     }
-                }
 
-                $properties = $model->properties;
-                $properties['ec_poi_id'] = $ecPoi->id;
-                $model->properties = $properties;
-                $model->saveQuietly();
+                    $properties = $model->properties;
+                    $properties['ec_poi_id'] = $ecPoi->id;
+                    $model->properties = $properties;
+                    $model->saveQuietly();
+                });
+                $converted[] = $model->id;
+            } catch (Throwable $e) {
+                $this->deleteCopiedFiles($copiedMedia);
+                Log::error('ConvertUgcPoiToEcPoi: UgcPoi '.$model->id.' non convertito', ['exception' => $e]);
+                $failed[$model->id] = $this->failureReason($e);
             }
         }
 
-        if (count($already_existing_ec_pois) > 0) {
-            return Action::message('Conversion completed successfully! The following UgcPois already have an associated EcPoi: '.implode(', ', $already_existing_ec_pois));
+        return $this->resultMessage($converted, $alreadyConverted, $failed);
+    }
+
+    /**
+     * Copia una foto dell'UgcPoi sull'EcPoi, file compreso.
+     *
+     * `replicate()` duplicava solo la riga di `media`: il file restava nella cartella
+     * del media originale e la foto dell'EcPoi rispondeva 404. `copy()` crea un media
+     * nuovo e ne copia il file, ma con il file mancante non dà errore (crea un file da
+     * 0 byte) e non porta la posizione della foto: le due cose si gestiscono qui.
+     */
+    private function copyMedia(Media $media, EcPoi $ecPoi): Media
+    {
+        $path = $media->getPathRelativeToRoot();
+        if (! Storage::disk($media->disk)->exists($path)) {
+            throw new MediaFileMissingException($media->id, $path);
         }
 
-        return Action::message('Conversion completed successfully');
+        // MediaObserver prende la geometria del nuovo media da custom_properties['geometry']
+        // e, senza, usa il punto dell'EcPoi. withCustomProperties() sostituisce l'array, da
+        // qui il merge con le custom_properties copiate da copy().
+        $customProperties = $media->custom_properties ?? [];
+        $geometry = DB::selectOne('select ST_AsText(geometry::geometry) as wkt from media where id = ?', [$media->id])?->wkt;
+        if ($geometry !== null) {
+            $customProperties['geometry'] = $geometry;
+        }
+
+        return $media->copy(
+            $ecPoi,
+            $media->collection_name,
+            $media->disk,
+            '',
+            fn (FileAdder $adder) => $adder->withCustomProperties($customProperties)
+        );
+    }
+
+    /**
+     * Cancella dallo storage i file dei media copiati per un UgcPoi la cui conversione è
+     * stata annullata: il savepoint annulla le righe, non i file.
+     *
+     * @param  array<int, Media>  $copiedMedia
+     */
+    private function deleteCopiedFiles(array $copiedMedia): void
+    {
+        foreach ($copiedMedia as $media) {
+            try {
+                Storage::disk($media->disk)->deleteDirectory(dirname($media->getPathRelativeToRoot()));
+            } catch (Throwable $e) {
+                Log::error('ConvertUgcPoiToEcPoi: file del media '.$media->id.' non cancellati', ['exception' => $e]);
+            }
+        }
+    }
+
+    /** Motivo leggibile per l'utente: i dettagli tecnici (SQL, percorsi) restano nel log. */
+    private function failureReason(Throwable $e): string
+    {
+        if ($e instanceof MediaFileMissingException) {
+            return __('photo :media not found on storage', ['media' => $e->mediaId]);
+        }
+
+        return __('conversion error, see the log');
+    }
+
+    /**
+     * @param  array<int, int>  $converted
+     * @param  array<int, int>  $alreadyConverted
+     * @param  array<int, string>  $failed  motivo per id dell'UgcPoi
+     */
+    private function resultMessage(array $converted, array $alreadyConverted, array $failed): ActionResponse
+    {
+        if ($alreadyConverted === [] && $failed === []) {
+            return Action::message(__('Conversion completed successfully'));
+        }
+
+        $parts = [];
+        if ($converted !== []) {
+            $parts[] = __('Converted UgcPois: :ids', ['ids' => implode(', ', $converted)]);
+        }
+        if ($alreadyConverted !== []) {
+            $parts[] = __('UgcPois already converted to EcPoi: :ids', ['ids' => implode(', ', $alreadyConverted)]);
+        }
+        foreach ($failed as $id => $reason) {
+            $parts[] = __('UgcPoi :id not converted: :reason', ['id' => $id, 'reason' => $reason]);
+        }
+
+        $text = implode(' — ', $parts);
+
+        return $failed === [] ? Action::message($text) : Action::danger($text);
     }
 
     public function fields(NovaRequest $request): array

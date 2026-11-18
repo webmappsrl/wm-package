@@ -681,5 +681,11 @@
     "Not provided": "Not provided",
     "Allowed values": "Allowed values",
     "Caption": "Caption",
-    "Credits": "Credits"
+    "Credits": "Credits",
+    "Conversion completed successfully": "Conversion completed successfully",
+    "Converted UgcPois: :ids": "Converted UgcPois: :ids",
+    "UgcPois already converted to EcPoi: :ids": "UgcPois already converted to EcPoi: :ids",
+    "UgcPoi :id not converted: :reason": "UgcPoi :id not converted: :reason",
+    "photo :media not found on storage": "photo :media not found on storage",
+    "conversion error, see the log": "conversion error, see the log"
 }

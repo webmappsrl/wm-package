@@ -100,5 +100,12 @@
     "Allowed values": "Valeurs admises",
     "Caption": "Légende",
     "Credits": "Crédits",
-    "Author": "Auteur"
+    "Author": "Auteur",
+    "Conversion completed successfully": "Conversion terminée",
+    "Converted UgcPois: :ids": "UgcPoi convertis : :ids",
+    "UgcPois already converted to EcPoi: :ids": "UgcPoi déjà convertis en EcPoi : :ids",
+    "UgcPoi :id not converted: :reason": "UgcPoi :id non converti : :reason",
+    "photo :media not found on storage": "photo :media introuvable sur le stockage",
+    "conversion error, see the log": "erreur pendant la conversion, voir le journal",
+    "Convert To EcPoi": "Convertir en EcPoi"
 }
