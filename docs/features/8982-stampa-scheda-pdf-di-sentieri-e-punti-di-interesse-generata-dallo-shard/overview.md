@@ -1,4 +1,5 @@
 > Ticket: oc:8982
+> Stato: approvata il 2026-11-18
 
 # Stampa: scheda PDF di sentieri e punti di interesse generata dallo shard
 
@@ -107,6 +108,61 @@ Il motivo che resta a favore di B è uno solo: tenere le dipendenze in un punto 
 con il codice. Il codice del package chiama il motore attraverso un'interfaccia con le due
 operazioni `map` e `pdf`, così la scelta tocca solo l'implementazione.
 
+### Risposta (18/11): A per il PDF, le mappe le fa `wm-tiles`
+
+La domanda sopra resta com'era posta. La risposta è arrivata misurando ciò che il testo dava per
+stimato, e la riassume una frase: **la scelta era difficile perché trattava il motore come un
+blocco solo**. `xelatex` e il renderer delle mappe sono oggetti diversi, e separati trovano ognuno
+il proprio posto.
+
+**Cosa hanno detto le misure** (18/11, sul container `php-forestas` e sui repo):
+
+| Quello che il testo sopra dice | Misurato |
+|---|---|
+| TeX Live «pesa diversi GB» | `texlive-xetex` con le dipendenze = **338 MB**, con `texlive-fonts-recommended` **353 MB**. I 7,4 GB sono `texlive-full`, che il requisito già escludeva. Le librerie grafiche sono altri **15 MB** |
+| «`@maplibre/maplibre-gl-native` ha binari per versioni precise di Node, e Node arriva da `apt`» | Node nell'immagine è **v20.19.2**, il modulo chiede `>=20`, e la release pubblica il prebuilt `node-v115` per `linux-x64` e `linux-arm64`. Il punto è chiuso |
+| «uno shard è rimasto indietro (maphub a `php:8.4.3-fpm`)» | **Sbagliato**: maphub è a `php:8.4.27-fpm`, anche su `origin/develop`. A divergere sono **ersaf** (`8.4.3-fpm`, cioè Debian 12 con Node 18) ed **ersaf-osm** (`8.4-fpm`, un tag mobile). Il fatto regge, l'esempio no |
+| «camminiditalia ha 2,3 GB liberi su 7,6» | Il margine è una scelta, non un dato: il container Horizon di uno shard occupa 2,85 GiB che sono **47 worker fermi** a 51 MB di PSS ciascuno, più 8 supervisor. Vengono da `--max-processes=30` su `default`, altri 30 su `aws`, 10 su `sardegnasentieri-import`. Abbassandoli si liberano circa 2 GB |
+| «il contenimento si ottiene con `prlimit`» | Vero per `xelatex`, non per il renderer: `RLIMIT_AS` limita lo spazio di indirizzamento virtuale, non la RAM fisica, e un modulo con contesto GL e più thread ne riserva molto più di quanto usi. Inoltre il limite di memoria di Horizon **non copre i processi figli**: `Illuminate\Queue\Worker::memoryExceeded` guarda `memory_get_usage(true)`, cioè la sola memoria PHP del worker |
+
+**La terza strada.** Il rendering delle mappe non deve stare in nessuno shard: va in un **servizio
+unico**, sull'host che serve già le tile, dove stanno i dati che il rendering legge e dove il
+codice esiste già — `wm-tiles` ha `@maplibre/maplibre-gl-native` fra le dipendenze,
+`pipeline/render-png.mjs` che disegna un frame, `src/raster/stile-nativo.js` che adatta lo stile
+Webmapp e `src/raster/tiles.js` con il rendering a metatile. Si riusa quel codice, non un servizio
+che gira: oggi quella pipeline si lancia a mano da un'altra macchina e il server distribuisce PNG
+precalcolati. Il servizio è il ticket **oc:9011**.
+
+**La decisione:**
+
+- **`map`** — fuori dallo shard, chiesta via HTTP al servizio di oc:9011. Lo shard non installa
+  né il modulo nativo né le librerie grafiche.
+- **`pdf`** — **soluzione A**: `xelatex` nell'immagine PHP, che il container `php` e quello
+  `horizon` condividono (stesso `build:`, stessa `image: wm-phpfpm:8.4`, cambia solo il comando).
+  Il Job compila dove i file già sono: nessun trasporto di sorgente, foto e font.
+
+**Cosa cade della domanda sopra.** Il contro della soluzione A — le dipendenze nel Dockerfile di
+ogni shard — si riduce a `texlive-xetex`, e si chiude mettendo l'installazione in uno script del
+package (`docker/render/install-deps.sh`) che il Dockerfile dello shard richiama: le dipendenze
+restano versionate nello stesso commit del codice che le usa, che era il solo motivo serio di B.
+Lo script rifiuta la build su una base Debian inadatta, altrimenti uno shard su bookworm
+installerebbe un TeX più vecchio senza errori.
+
+**Condizioni che la risposta porta con sé:**
+
+- **Build context alla root** nello shard (`context: .` più `dockerfile: docker/configs/phpfpm/Dockerfile`),
+  altrimenti la `COPY` dello script dal package non è possibile: oggi è `build: ./docker/configs/phpfpm`.
+- **Un marcatore di versione** scritto dallo script nell'immagine e controllato dal Job: il deploy
+  fa `git submodule update` e poi `docker exec` nel container esistente, **senza ricostruire
+  l'immagine**, quindi un aggiornamento del package lascerebbe le dipendenze vecchie.
+- **Il picco di `xelatex`** con le foto va misurato prima di fissare `prlimit` e il numero di
+  worker della coda dedicata; le foto vanno ridimensionate prima della compilazione.
+- **`maxProcesses` di Horizon** va abbassato, per lasciare margine.
+
+**Cosa resta non provato**, e vale per oc:9011 più che per qui: il rendering a formato pagina,
+circa 2480×3508 px a `pixelRatio` alto. L'unico caso provato è l'opposto, tessere piccole a
+`PIXEL_RATIO` 0.5.
+
 ## Requisiti
 
 ### Motore di rendering
@@ -114,103 +170,111 @@ operazioni `map` e `pdf`, così la scelta tocca solo l'implementazione.
 Valgono in entrambe le soluzioni della «Domanda aperta»; dove una voce dipende dalla scelta, lo
 dice.
 
-- [ ] Interfaccia nel package con due operazioni, usata da tutto il resto del codice:
+- <a id="r1"></a>**R1** — Interfaccia nel package con due operazioni, usata da tutto il resto del codice:
   - `map`: riceve geometrie GeoJSON, dimensioni in mm, `pixelRatio` e lo stile; restituisce un PNG
     alla risoluzione di stampa (circa 300 dpi). Lo stile di default è
     `https://tiles.maphub.it/style.json`;
   - `pdf`: riceve il sorgente `.tex` e i file allegati (mappa, foto, font); restituisce il PDF o
     l'errore di compilazione.
-- [ ] XeLaTeX (o LuaLaTeX) e `@maplibre/maplibre-gl-native`, con TeX Live **ridotto ai pacchetti
+- <a id="r2"></a>**R2** — XeLaTeX (o LuaLaTeX) e `@maplibre/maplibre-gl-native`, con TeX Live **ridotto ai pacchetti
       usati dai template**, non lo schema completo: la produzione di camminiditalia ha 11 GB liberi
       su 38.
-- [ ] Compilazione senza shell escape e con `openin_any=p` / `openout_any=p`.
-- [ ] Limite di tempo e di memoria per ogni rendering, e un errore leggibile quando scatta (soluzione
+- <a id="r3"></a>**R3** — Compilazione senza shell escape e con `openin_any=p` / `openout_any=p`.
+- <a id="r4"></a>**R4** — Limite di tempo e di memoria per ogni rendering, e un errore leggibile quando scatta (soluzione
       A: per processo; soluzione B: per richiesta e `mem_limit` sul container).
-- [ ] Soluzione B: Dockerfile e server in `docker/render/`, nessun segreto nell'ambiente del
+- <a id="r5"></a>**R5** — Soluzione B: Dockerfile e server in `docker/render/`, nessun segreto nell'ambiente del
       container, nessuna porta pubblicata.
-- [ ] Il motore si attiva dalla configurazione del package; spento, le funzioni di stampa non ci
+- <a id="r6"></a>**R6** — Il motore si attiva dalla configurazione del package; spento, le funzioni di stampa non ci
       sono e il JSON di dettaglio non espone link.
 
 ### Generazione e salvataggio
 
-- [ ] Struttura come in osm2cai2 (`GeneratesPdfTrait`, `PdfService`, `GeneratePdfJob`), portata nel
+- <a id="r7"></a>**R7** — Struttura come in osm2cai2 (`GeneratesPdfTrait`, `PdfService`, `GeneratePdfJob`), portata nel
       package con il motore LaTeX: il modello dichiara view, percorso del file e lingue.
-- [ ] Il Job raccoglie i dati, chiede la mappa al motore (`map`), scarica le foto da S3, compone il
+  - **Da fare invece (18/11): descrivere qui la struttura, senza prenderla da osm2cai2.** Quel repo
+    è molto indietro sul package e la sua stampa è custom da eliminare, non un modello: il motore è
+    **dompdf** su una view Blade HTML in A4 verticale (`dompdf/dompdf: ^2.0`), le **lingue non sono
+    gestite da nessuna parte**, e la mappa non è renderizzata ma è uno **screenshot PNG** salvato
+    dal campo Nova `FeatureCollectionMap` con `enableScreenshot()` e riletto in base64. Delle tre
+    cose che il requisito dice di prendere da lì — view, percorso del file, lingue — la terza non
+    esiste. La forma che serve è: un trait con cui il modello dichiara la view del sorgente `.tex`,
+    il percorso del file e le lingue; un servizio che compone e salva; un Job che li mette insieme.
+- <a id="r8"></a>**R8** — Il Job raccoglie i dati, chiede la mappa al motore (`map`), scarica le foto da S3, compone il
       `.tex` dalla view Blade, chiede il PDF al motore (`pdf`) e lo salva con `StorageService` su `wmfe`, un file per
       lingua.
-- [ ] I Job di stampa girano su una coda Horizon dedicata.
-- [ ] Il testo libero (descrizione, nomi) passa da HTML a LaTeX con l'escape di tutti i caratteri
+- <a id="r9"></a>**R9** — I Job di stampa girano su una coda Horizon dedicata.
+- <a id="r10"></a>**R10** — Il testo libero (descrizione, nomi) passa da HTML a LaTeX con l'escape di tutti i caratteri
       speciali: tutte le 769 descrizioni di `EcTrack` di Forestas hanno HTML, 457 hanno caratteri
       speciali per LaTeX (conteggio locale del 17/11).
-- [ ] Le immagini in formati che XeLaTeX non legge (per esempio WebP) si convertono prima della
+- <a id="r11"></a>**R11** — Le immagini in formati che XeLaTeX non legge (per esempio WebP) si convertono prima della
       compilazione.
-- [ ] Le etichette fisse del template vengono da `resources/lang/*.json` del package (chiave in
+- <a id="r12"></a>**R12** — Le etichette fisse del template vengono da `resources/lang/*.json` del package (chiave in
       inglese, voce in tutte e cinque le lingue `de`, `en`, `es`, `fr`, `it`); lo shard le può
       sovrascrivere. Per una lingua senza testo, i campi tradotti usano il fallback di
       `spatie/laravel-translatable`.
 
 ### Rotte e pagina d'attesa
 
-- [ ] Rotta web della scheda di `EcTrack` e di `EcPoi`, con la lingua nell'URL (`?lang=`). PDF
+- <a id="r13"></a>**R13** — Rotta web della scheda di `EcTrack` e di `EcPoi`, con la lingua nell'URL (`?lang=`). PDF
       presente e aggiornato: `302` al file su `wmfe`. Assente: accoda il Job e mostra la pagina
       d'attesa.
-- [ ] Rotta di stato, interrogata dalla pagina d'attesa, che dice se il file è pronto.
-- [ ] La pagina d'attesa fa il redirect da sola quando il file è pronto, e mostra un messaggio
+- <a id="r14"></a>**R14** — Rotta di stato, interrogata dalla pagina d'attesa, che dice se il file è pronto.
+- <a id="r15"></a>**R15** — La pagina d'attesa fa il redirect da sola quando il file è pronto, e mostra un messaggio
       leggibile se la generazione fallisce.
-- [ ] Un PDF già in coda non si accoda una seconda volta se arrivano più richieste insieme.
-- [ ] L'URL della scheda (della rotta, non del file) è nel JSON di dettaglio di `EcTrack` ed `EcPoi`.
+- <a id="r16"></a>**R16** — Un PDF già in coda non si accoda una seconda volta se arrivano più richieste insieme.
+- <a id="r17"></a>**R17** — L'URL della scheda (della rotta, non del file) è nel JSON di dettaglio di `EcTrack` ed `EcPoi`.
 
 ### Aggiornamento
 
-- [ ] Un Job nei `publicationJobs` di `EcTrack` (`src/Services/Models/EcTrackService.php:416`)
+- <a id="r18"></a>**R18** — Un Job nei `publicationJobs` di `EcTrack` (`src/Services/Models/EcTrackService.php:416`)
       rigenera i PDF **delle sole lingue già presenti**. Un elemento mai stampato non genera nulla.
-- [ ] Per `EcPoi` la catena di oggi (`EcPoiService::updateDataChain`) parte solo quando cambia la
+- <a id="r19"></a>**R19** — Per `EcPoi` la catena di oggi (`EcPoiService::updateDataChain`) parte solo quando cambia la
       geometria: serve un aggancio sul salvataggio che rigeneri i PDF già presenti del POI.
-- [ ] La modifica di un `EcPoi` rigenera i PDF già presenti degli `EcTrack` che lo mostrano nella
+- <a id="r20"></a>**R20** — La modifica di un `EcPoi` rigenera i PDF già presenti degli `EcTrack` che lo mostrano nella
       scheda.
-- [ ] La cancellazione dell'elemento cancella i suoi PDF (`StorageService::deleteModelFiles`
+- <a id="r21"></a>**R21** — La cancellazione dell'elemento cancella i suoi PDF (`StorageService::deleteModelFiles`
       cancella già la cartella `files/{type}/{id}`: da verificare che il percorso dei PDF ci stia
       dentro).
 
 ### Action Nova
 
-- [ ] Action su `EcTrack` ed `EcPoi` che genera le schede degli elementi selezionati, con le lingue
+- <a id="r22"></a>**R22** — Action su `EcTrack` ed `EcPoi` che genera le schede degli elementi selezionati, con le lingue
       scelte fra quelle dell'app; di default solo l'italiano.
 
 ### ZIP delle schede
 
-- [ ] Rotta che riceve gli id di più `EcTrack` e la lingua, e restituisce uno ZIP con un PDF per
+- <a id="r23"></a>**R23** — Rotta che riceve gli id di più `EcTrack` e la lingua, e restituisce uno ZIP con un PDF per
       sentiero. Riusa i PDF salvati; compila solo quelli mancanti.
-- [ ] Stesso flusso della scheda singola: link, pagina d'attesa, redirect.
-- [ ] Lo ZIP è un file temporaneo, con scadenza; non si conserva.
-- [ ] Un tetto tecnico al numero di sentieri per ZIP.
+- <a id="r24"></a>**R24** — Stesso flusso della scheda singola: link, pagina d'attesa, redirect.
+- <a id="r25"></a>**R25** — Lo ZIP è un file temporaneo, con scadenza; non si conserva.
+- <a id="r26"></a>**R26** — Un tetto tecnico al numero di sentieri per ZIP.
 
 ### Mappa d'insieme
 
-- [ ] Rotta che riceve gli id di più `EcTrack` e la lingua, e produce un PDF A4 orizzontale con una
+- <a id="r27"></a>**R27** — Rotta che riceve gli id di più `EcTrack` e la lingua, e produce un PDF A4 orizzontale con una
       mappa vettoriale che li contiene tutti, con i codici dei sentieri.
-- [ ] Scala automatica, con un **tetto**: se per contenere la selezione servirebbe una scala
+- <a id="r28"></a>**R28** — Scala automatica, con un **tetto**: se per contenere la selezione servirebbe una scala
       peggiore della soglia (indicativamente 1:50.000), il PDF non si genera e la pagina d'attesa
       spiega di ridurre la selezione.
-- [ ] Il PDF è un file temporaneo, con scadenza; non si conserva.
+- <a id="r29"></a>**R29** — Il PDF è un file temporaneo, con scadenza; non si conserva.
 
 ### Grafica di default e personalizzazione
 
-- [ ] Template di default (scheda neutra): dati principali, descrizione, mappa, foto, crediti della
+- <a id="r30"></a>**R30** — Template di default (scheda neutra): dati principali, descrizione, mappa, foto, crediti della
       mappa (© OpenStreetMap e contributori, Webmapp), colore primario da `primary_color` dell'app.
-- [ ] Generatore che legge un `tokens.json` nel formato del design system (liste
+- <a id="r31"></a>**R31** — Generatore che legge un `tokens.json` nel formato del design system (liste
       `{"name","value","usage"}` per famiglia, alias `{nome}`) e produce lo `.sty`: colori del tema
       `light`, famiglie e scala tipografica, spazi, raggi, bordi; px convertiti in pt.
-- [ ] Macro LaTeX per i componenti ricorrenti, con il nome del componente del design system
+- <a id="r32"></a>**R32** — Macro LaTeX per i componenti ricorrenti, con il nome del componente del design system
       (`BadgeStato`, `PillDifficolta`, `TitoloSezione`, `Tabella`, `FilettoOro`).
-- [ ] Lo shard sostituisce l'impaginazione con l'override delle viste
+- <a id="r33"></a>**R33** — Lo shard sostituisce l'impaginazione con l'override delle viste
       (`resources/views/vendor/wm-package/…`) e lo stile con il proprio `tokens.json`.
 
 ### Interfaccia
 
-- [ ] [UX] La pagina d'attesa mostra che il lavoro è in corso (non una pagina vuota) e annuncia lo
+- <a id="r34"></a>**R34** — [UX] La pagina d'attesa mostra che il lavoro è in corso (non una pagina vuota) e annuncia lo
       stato agli screen reader (`aria-busy` / regione `aria-live`).
-- [ ] [UX] Nel PDF, corpo del testo non sotto i 9 pt e contrasti dei token rispettati anche su
+- <a id="r35"></a>**R35** — [UX] Nel PDF, corpo del testo non sotto i 9 pt e contrasti dei token rispettati anche su
       carta (le tinte «solo grafica» del design system non diventano testo). Giudizio mio, non da
       una fonte.
 
@@ -241,12 +305,21 @@ dice.
   di questo: il pulsante «Stampa» del dettaglio nel tema figlio di `wp-forestas` (`track.php`,
   `poi.php`), e i pulsanti «Stampa la mappa di insieme» e «Scarica le schede PDF» nella barra della
   selezione multipla del plugin `wp-package`.
+  **Quel ticket deve mettere `rel="nofollow"` sul link «Stampa» e un `Disallow` in `robots.txt`**:
+  la rotta della scheda accoda un Job quando il PDF manca, e un crawler che segue il link su ogni
+  scheda accoda una compilazione per ogni sentiero (765 su Forestas) e altrettanti rendering, senza
+  che nessuno abbia chiesto un PDF.
 - La scala selezionabile e le pagine multiple ad atlante (WEBSITE-23, nelle bozze del capitolato).
 - L'uso dell'operazione `map` fuori dal PDF (per esempio la condivisione dei cammini su
   camminiditalia, o le immagini di condivisione di `UgcTrack`): il motore lo permette,
   l'integrazione è di altri ticket.
 - Il collegamento dell'app al nuovo PDF al posto della stampa ereditata da GeoHub.
 - L'installazione del motore su shard diversi da Forestas.
+- **La rimozione della stampa custom di osm2cai2**, che quando questa sarà pronta diventa codice
+  superato: `app/Traits/GeneratesPdfTrait.php`, `app/Services/PdfService.php`,
+  `app/Jobs/GeneratePdfJob.php`, gli override di `TrailSurvey`, il campo `pdf_url` e lo screenshot
+  della mappa salvato da Nova. Va fatta quando osm2cai2 verrà allineato al package, insieme alle
+  altre soluzioni custom che il package nel frattempo ha assorbito.
 
 ## Moduli toccati
 
