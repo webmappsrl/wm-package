@@ -1,0 +1,22 @@
+{
+    "geometry": {
+        "coordinates": {
+            "[]": {
+                "[]": "float"
+            }
+        },
+        "type": "string"
+    },
+    "properties": {
+        "created_at": "string",
+        "id": "int",
+        "name": {
+            "it": "string"
+        },
+        "related_pois": "[]empty",
+        "roundtrip": "bool",
+        "taxonomies": "{}empty",
+        "updated_at": "string"
+    },
+    "type": "string"
+}

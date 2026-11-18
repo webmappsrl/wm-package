@@ -15,6 +15,13 @@ return [
     'version' => '1.6.3', // x-release-please-version
     'shard_name' => env('SHARD_NAME', env('APP_NAME')),
     'analytics_shard_name' => env('ANALYTICS_SHARD_NAME'),
+    // oc:8997: versioni del JSON della traccia scritte su wmfe, in ordine, separate da virgola.
+    // Sta in una variabile d'ambiente e non nel config pubblicato dallo shard: quello congelerebbe
+    // uno snapshot dell'intero file e le chiavi che il package aggiungerà in futuro non lo
+    // raggiungerebbero più (`mergeConfigFrom` unisce solo il primo livello).
+    // Vuota o assente: resta attiva la sola `legacy`, il file senza versione che leggono le app
+    // installate. Un nome sconosciuto fa fallire la scrittura, non scrivere su un prefisso muto.
+    'wmfe_track_versions' => env('WMFE_TRACK_VERSIONS', 'legacy'),
     'route_filter_analytics_enabled' => env('ROUTE_FILTER_ANALYTICS_ENABLED', false),
     'layer_user_presence_distance_meters' => env('LAYER_USER_PRESENCE_DISTANCE_METERS', 50),
     // oc:8719: un punto GPS di una traccia UGC con accuracy oltre questa soglia (metri) è sospetto

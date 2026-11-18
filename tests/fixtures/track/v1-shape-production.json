@@ -1,0 +1,126 @@
+{
+    "geometry": {
+        "coordinates": {
+            "[]": {
+                "[]": "float"
+            }
+        },
+        "type": "string"
+    },
+    "properties": {
+        "config_detail": {
+            "[]": {
+                "box_type": "string",
+                "items": {
+                    "[]": {
+                        "content": {
+                            "en": "string",
+                            "it": "string"
+                        },
+                        "title": {
+                            "en": "string",
+                            "it": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "created_at": "string",
+        "description": {
+            "en": "string",
+            "it": "string"
+        },
+        "distance": "float",
+        "duration_backward": "int",
+        "duration_forward": "int",
+        "feature_image": {
+            "api_url": "string",
+            "author": "null",
+            "caption": "null",
+            "credits": "null",
+            "id": "int",
+            "name": {
+                "it": "string"
+            },
+            "sizes": {
+                "108x137": "string",
+                "108x139": "string",
+                "108x148": "string",
+                "118x117": "string",
+                "118x138": "string",
+                "1440x500": "string",
+                "150x150": "string",
+                "1920x1080": "string",
+                "225x100": "string",
+                "250x150": "string",
+                "335x250": "string",
+                "400x200": "string"
+            },
+            "thumbnail": "string",
+            "url": "string"
+        },
+        "from": "string",
+        "id": "int",
+        "image_gallery": {
+            "[]": {
+                "api_url": "string",
+                "author": "null",
+                "caption": "null",
+                "credits": "null",
+                "id": "int",
+                "name": {
+                    "it": "string"
+                },
+                "sizes": {
+                    "108x137": "string",
+                    "108x139": "string",
+                    "108x148": "string",
+                    "118x117": "string",
+                    "118x138": "string",
+                    "1440x500": "string",
+                    "150x150": "string",
+                    "1920x1080": "string",
+                    "225x100": "string",
+                    "250x150": "string",
+                    "335x250": "string",
+                    "400x200": "string"
+                },
+                "thumbnail": "string",
+                "url": "string"
+            }
+        },
+        "layers": {
+            "[]": "int"
+        },
+        "name": {
+            "it": "string"
+        },
+        "ref": "string",
+        "related_pois": "[]empty",
+        "roundtrip": "bool",
+        "sardegnasentieri_id": "string",
+        "taxonomies": {
+            "activity": {
+                "[]": {
+                    "identifier": "string",
+                    "name": {
+                        "it": "string"
+                    }
+                }
+            },
+            "where": {
+                "[]": {
+                    "identifier": "string",
+                    "name": {
+                        "en": "string",
+                        "it": "string"
+                    }
+                }
+            }
+        },
+        "to": "string",
+        "updated_at": "string",
+        "via": "string"
+    },
+    "type": "string"
+}

@@ -9,12 +9,16 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Wm\WmPackage\Enums\WmfeTrackVersion;
 
 class StorageService extends BaseService
 {
-    public function storeTrack(int $trackId, $contents): string|false
+    /**
+     * Scrive il JSON del dettaglio di una traccia nella versione di formato chiesta (oc:8997).
+     */
+    public function storeTrack(int $trackId, $contents, WmfeTrackVersion $version): string|false
     {
-        $path = $this->getTrackPath($trackId);
+        $path = $this->getTrackPath($trackId, $version);
 
         return $this->getRemoteWfeDisk()->put($path, $contents) ? $path : false;
     }
@@ -33,9 +37,13 @@ class StorageService extends BaseService
         return $this->getRemoteWfeDisk()->put($path, $contents) ? $path : false;
     }
 
+    /**
+     * Il JSON del dettaglio di una traccia nella versione senza numero: è quella che
+     * `GET /api/ec/track/{id}` serve, e chi chiama non ha modo di chiederne un'altra (oc:8997).
+     */
     public function getTrackGeojson(int $trackId, int $appId): ?string
     {
-        return $this->getRemoteWfeDisk()->get($this->getTrackPath($trackId));
+        return $this->getRemoteWfeDisk()->get($this->getTrackPath($trackId, WmfeTrackVersion::Legacy));
     }
 
     public function storePBF(int $appId, string $z, string $x, string $y, $pbfContent): string|false
@@ -54,15 +62,24 @@ class StorageService extends BaseService
         return $a && $b ? $path : false;
     }
 
+    /**
+     * Cancella il JSON di una traccia in **tutte** le versioni conosciute, non solo in quelle che
+     * lo shard sta scrivendo: una versione uscita dalla scrittura ha comunque i suoi file su S3, e
+     * un file che resta è il dettaglio pubblico di un contenuto che non esiste più (oc:8997).
+     */
     public function deleteTrack(int $trackId): bool
     {
-        $path = $this->getTrackPath($trackId);
+        $deleted = true;
 
-        if ($this->getRemoteWfeDisk()->exists($path)) {
-            return $this->getRemoteWfeDisk()->delete($path);
+        foreach (WmfeTrackVersion::cases() as $version) {
+            $path = $this->getTrackPath($trackId, $version);
+
+            if ($this->getRemoteWfeDisk()->exists($path)) {
+                $deleted = $this->getRemoteWfeDisk()->delete($path) && $deleted;
+            }
         }
 
-        return true;
+        return $deleted;
     }
 
     public function getAppConfigJson(int $appId): ?string
@@ -356,9 +373,9 @@ class StorageService extends BaseService
         return $this->getShardBasePath($appId).'pois.geojson';
     }
 
-    private function getTrackPath(int $trackId): string
+    private function getTrackPath(int $trackId, WmfeTrackVersion $version): string
     {
-        return $this->getShardBasePath()."tracks/{$trackId}.json";
+        return $this->getShardBasePath().'tracks/'.$version->pathPrefix()."{$trackId}.json";
     }
 
     private function getIconsPath(): string

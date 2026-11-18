@@ -12,6 +12,17 @@ use Laravel\Nova\Fields\ActionFields;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
 use Wm\WmPackage\Models\App;
 
+/**
+ * ATTENZIONE: questa classe non è registrata nell'`actions()` di nessuna Resource, quindi in Nova
+ * non compare. La voce «Update Tracks on AWS» che si vede sulla Resource EcTrack è un'altra cosa:
+ * `ExecuteEcTrackDataChainAction` istanziata con il solo `UpdateEcTrackAwsJob`
+ * (`src/Nova/EcTrack.php:174-176`). Fa la stessa cosa — accoda il job che riscrive il file su S3
+ * per ogni traccia selezionata — ed è quella che va usata.
+ *
+ * Verificato il 18/11/2026 cercando `UpdateTracksOnAws` in `src/` e nello shard forestas: nessuna
+ * occorrenza fuori da questo file. Finché resta così, qui non si mette mano: o la si registra, o
+ * la si cancella (oc:8997, in margine).
+ */
 class UpdateTracksOnAws extends Action
 {
     use InteractsWithQueue, Queueable;
