@@ -123,6 +123,8 @@ Repo `wm-package` (il codice):
 - `src/Nova/Actions/ConvertUgcPoiToEcPoi.php` — copia delle foto con `copy()` (controllo del file,
   posizione conservata), savepoint per UgcPoi, pulizia dei file in caso di errore, messaggio di esito
 - `src/Services/Models/EcPoiService.php` — catena di `updateDataChain()` con `afterCommit()`
+- `src/Exceptions/MediaFileMissingException.php` — nuovo: file di un media assente sullo storage,
+  lanciato prima di `copy()`
 - `resources/lang/{en,it,fr,es,de}.json` — messaggi dell'action
 - `tests/Feature/Nova/ConvertUgcPoiToEcPoiTest.php` — nuovo
 
