@@ -78,7 +78,8 @@ beforeEach(function () {
         $family = TaxonomyTerm::create(['identifier' => $identifier, 'name' => ['it' => $identifier]]);
         foreach ($levels as $level) {
             TaxonomyTerm::create([
-                'identifier' => 'test:'.$identifier.'-'.$level,
+                // L'identifier e' `<famiglia>-<valore dell'API>`, come in produzione.
+                'identifier' => $identifier.'-'.$level,
                 'parent_id' => $family->id,
                 'name' => ['it' => $level],
             ]);

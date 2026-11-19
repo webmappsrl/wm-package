@@ -15,15 +15,25 @@ use Wm\WmPackage\TrailRegistry\Schema\ApplicationSchema;
  * della famiglia di difficolta' di quell'attivita': `EEA` esiste come livello, ma
  * non e' valido per `mtb`.
  *
- * La famiglia di ogni attivita' e' dichiarata in `ACTIVITY_FAMILIES`; i termini
+ * La famiglia di ogni attivita' e' dichiarata in `ACTIVITY_FAMILIES`; i livelli
  * non si scrivono nel codice, si leggono da `taxonomy_terms`: il livello e' un
- * termine la cui famiglia (`parent`, come in `TaxonomyAbleModel`) ha quell'identifier,
- * e si riconosce dal nome italiano (`EE`, `BC`, `AEE`), che e' cio' che il format
- * riporta, non dal suo identifier.
+ * termine con identifier `<famiglia>-<livello>` il cui padre (`parent`, come in
+ * `TaxonomyAbleModel`) e' quella famiglia. Il suffisso dell'identifier e' il
+ * valore che l'API riceve, cosi' come arriva: `mtb-difficulty-BC` per `BC`,
+ * `horse-difficulty-easy` per `easy`. Le sigle delle scale ufficiali (CAI, MTB,
+ * accessibilita') restano maiuscole perche' sono una convenzione; dove
+ * l'etichetta era una parola italiana — ippovia, nordic walking, sentieri
+ * didattici, mobilita' dolce — il valore e' un codice inglese minuscolo, perche'
+ * «Facile» non e' una convenzione ma una label, che in Nova si puo' rinominare.
+ *
+ * Il nome del termine non entra mai nel confronto: e' cio' che si legge in Nova,
+ * e cambia senza preavviso.
  *
  * `trekking` e `hiking` condividono la scala CAI (T, E, EE, EEA): nel materiale
  * concordato con il cliente «Trekking / Hiking» e' una scala sola, quindi accettano
- * esattamente gli stessi livelli.
+ * esattamente gli stessi livelli. Condividono la scala, non il livello scelto: lo
+ * stesso sentiero puo' essere `E` per il trekking e `EEA` per l'escursionismo, e
+ * dichiararli diversi non e' un errore.
  *
  * `soft-mobility-difficulty` non compare nella mappa di proposito: la mobilita'
  * dolce non e' una delle attivita' del modulo di domanda, e i suoi livelli non sono
@@ -77,7 +87,13 @@ class DifficultyMatchesActivities implements ValidationRule
                 throw new MissingDifficultyFamilyException($family, $activity);
             }
 
-            if (! is_string($level) || $level === '' || ! $this->levelBelongsToFamily($family, $level)) {
+            if (! is_string($level) || $level === '') {
+                $fail('validation.in')->translate(['attribute' => $attribute.'.'.$activity]);
+
+                return;
+            }
+
+            if (! $this->levelBelongsToFamily($family, $level)) {
                 $fail('validation.in')->translate(['attribute' => $attribute.'.'.$activity]);
 
                 return;
@@ -90,10 +106,15 @@ class DifficultyMatchesActivities implements ValidationRule
         return TaxonomyTerm::query()->taxonomies()->where('identifier', $family)->exists();
     }
 
+    /**
+     * Il livello appartiene alla famiglia se esiste il termine
+     * `<famiglia>-<livello>` e se il suo padre e' quella famiglia: l'identifier
+     * da solo non basta, perche' lo stesso suffisso puo' esistere altrove.
+     */
     protected function levelBelongsToFamily(string $family, string $level): bool
     {
         return TaxonomyTerm::query()
-            ->where('name->it', $level)
+            ->where('identifier', $family.'-'.$level)
             ->whereHas('parent', fn ($families) => $families->where('identifier', $family))
             ->exists();
     }
