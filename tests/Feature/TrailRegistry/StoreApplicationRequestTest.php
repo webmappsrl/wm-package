@@ -171,7 +171,12 @@ it('rifiuta un livello che non appartiene alla scala dell attivita', function ()
 });
 
 it('non maschera la mancanza della scala di difficolta: l eccezione risale', function () {
-    TaxonomyTerm::query()->where('identifier', 'mtb-difficulty')->delete();
+    // Prima i livelli, poi la famiglia: `taxonomy_terms` ha una chiave esterna da figlio a padre
+    // senza cascata, quindi cancellare la famiglia da sola solleva una violazione di vincolo e il
+    // test verificava quella invece dell'eccezione del dominio.
+    $family = TaxonomyTerm::query()->where('identifier', 'mtb-difficulty')->firstOrFail();
+    TaxonomyTerm::query()->where('parent_id', $family->id)->delete();
+    $family->delete();
 
     resolveApplicationRequest(completeApplicationPayload([
         'activities' => ['mtb'],

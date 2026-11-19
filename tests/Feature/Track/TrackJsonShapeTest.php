@@ -313,6 +313,15 @@ function withoutVolatileValues(mixed $value, int $trackId): mixed
         return $value;
     }
 
+    // Il percorso dei media e' `/<shard>/<app-id>/media/<media-id>/`: quel primo numero e' l'id
+    // dell'app, non della traccia. Senza questa riga il test passava solo quando le due sequenze
+    // coincidevano, e falliva a seconda dell'ordine in cui la suite gira.
+    $value = preg_replace('#/media/#', '/media/', (string) preg_replace(
+        '#(/'.preg_quote(config('wm-package.shard_name'), '#').'/)\d+(/media/)#',
+        '$1<app-id>$2',
+        $value
+    ));
+
     // Percorsi e URL: gli id di media, POI e traccia sono segmenti di path.
     $value = preg_replace('#/media/\d+/#', '/media/<media-id>/', $value);
     $value = preg_replace('#/api/media/\d+#', '/api/media/<media-id>', $value);

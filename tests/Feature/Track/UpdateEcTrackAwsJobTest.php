@@ -111,3 +111,33 @@ it('nella versione v1 le tassonomie hanno la sola forma taxonomies, che nel file
         ->and($v1['properties'])->not->toHaveKey('taxonomy_where')
         ->and($v1['properties'])->not->toHaveKey('taxonomyWheres');
 });
+
+it('chi trova il lock occupato aspetta, invece di consumare subito un tentativo', function () {
+    // Due scritture sulla stessa traccia si escludono a vicenda, ma la seconda non deve morire:
+    // prima rientrava in coda all'istante, e tre rientri in pochi millisecondi la facevano
+    // fallire con MaxAttemptsExceeded, fermando anche i job che la seguono nella catena.
+    $middleware = (new UpdateEcTrackAwsJob(jobTrack()))->middleware();
+
+    expect($middleware)->toHaveCount(1);
+
+    $lock = $middleware[0];
+
+    expect($lock->releaseAfter)->toBeGreaterThanOrEqual(10)
+        // Il lock scade da sé: un worker ucciso mentre scrive non lo tiene per sempre,
+        // lasciando la traccia senza aggiornamenti.
+        ->and($lock->expiresAfter)->toBeGreaterThan(0);
+});
+
+it('ha tentativi sufficienti per aspettare il proprio turno, ma si ferma su errori veri', function () {
+    $job = new UpdateEcTrackAwsJob(jobTrack());
+
+    // `tries` conta i tentativi, non il tempo: un job fermo in una coda lunga non ne consuma.
+    // Devono bastare a coprire la scadenza del lock: tries * releaseAfter > expiresAfter.
+    $lock = $job->middleware()[0];
+
+    expect($job->tries)->toBeGreaterThanOrEqual(25)
+        ->and($job->tries * $lock->releaseAfter)->toBeGreaterThan($lock->expiresAfter)
+        // Ma se lo storage è davvero giù, il job si ferma dopo pochi errori veri.
+        ->and($job->maxExceptions)->toBe(3)
+        ->and($job->backoff)->toBeGreaterThan(0);
+});
