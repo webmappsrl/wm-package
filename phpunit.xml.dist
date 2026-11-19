@@ -29,6 +29,9 @@
       <env name="DB_USER_PASSWORD" value="wm_package"/>
       <env name="DB_PASSWORD" value="wm_package"/>
       <env name="DB_DATABASE" value="wm_package"/>
+      <!-- Il nome dello shard entra in ogni percorso su wmfe e non ha un valore di riserva: senza,
+           StorageService si ferma. `webmapp` e' quello che i test gia' si aspettano nei percorsi. -->
+      <env name="SHARD_NAME" value="webmapp"/>
       <env name="DB_HOST" value="db"/>
       <!-- Il default del config è `App\Models\EcTrack`, la classe dello shard: nella suite del
            package non esiste, e ogni relazione che la risolve muore con «Class not found». -->

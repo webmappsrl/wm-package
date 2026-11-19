@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Wm\WmPackage\Enums\WmfeTrackVersion;
 
+use RuntimeException;
+
 class StorageService extends BaseService
 {
     /**
@@ -489,9 +491,33 @@ class StorageService extends BaseService
         }
     }
 
+    /**
+     * Il nome dello shard, che entra in ogni percorso su wmfe.
+     *
+     * Senza, non si scrive niente. Il bucket `wmfe` e' scritto fisso nella configurazione del
+     * package (`config/wm-filesystems.php`) e nessuno shard lo sovrascrive: tutti scrivono nello
+     * stesso secchio, e l'unica cosa che tiene separati i loro file e' proprio questo prefisso.
+     * Uno shard che lo perdesse scriverebbe dentro i file di un altro cliente, con le stesse
+     * chiavi — `<app-id>/config.json`, `tracks/<id>.json` — e `deleteModelFiles()` glieli
+     * cancellerebbe. Meglio fermarsi dicendo cosa configurare.
+     *
+     * Il valore di riserva di `config()` qui non serve a niente: la chiave esiste sempre e vale
+     * `null` quando ne' `SHARD_NAME` ne' `APP_NAME` sono dichiarati.
+     *
+     * @throws RuntimeException
+     */
     private function getShardName(): string
     {
-        return config('wm-package.shard_name', 'webmapp');
+        $name = config('wm-package.shard_name');
+
+        if (! is_string($name) || trim($name) === '') {
+            throw new RuntimeException(
+                'Il nome dello shard non e\' configurato: dichiara SHARD_NAME (o APP_NAME) nel .env. '
+                .'Senza, i file finirebbero nel prefisso di un altro shard sullo stesso bucket.'
+            );
+        }
+
+        return $name;
     }
 
     public function getShardBasePath(?int $appId = null)

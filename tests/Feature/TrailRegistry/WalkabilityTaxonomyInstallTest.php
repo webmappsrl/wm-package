@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Storage;
 use Wm\WmPackage\Jobs\ReindexAppContentsJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
 use Wm\WmPackage\Jobs\UpdateUgcTrackDemStatsJob;
@@ -15,6 +16,10 @@ use Wm\WmPackage\TrailRegistry\Services\WalkabilityTaxonomyInstaller;
  * esistenti e marcata perche' le app future la ricevano.
  */
 beforeEach(function () {
+    // Il disco di wmfe e' finto: senza, un percorso che arriva a una scrittura prova a parlare
+    // con S3 vero. Nessun test deve scrivere fuori (regola in cima al CLAUDE.md del package).
+    Storage::fake('wmfe');
+
     // Accendere una tassonomia per un'app accoda il reindex dei suoi contenuti,
     // che con la coda sincrona dei test uscirebbe verso lo storage. Il Bus::fake
     // qui sostituisce quello globale della cartella: i job di quello vanno

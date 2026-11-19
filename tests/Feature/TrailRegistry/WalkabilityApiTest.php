@@ -25,6 +25,10 @@ function walkabilityApiTerm(string $identifier, string $name, ?int $parentId = n
 }
 
 beforeEach(function () {
+    // Il disco di wmfe e' finto: senza, un percorso che arriva a una scrittura prova a parlare
+    // con S3 vero. Nessun test deve scrivere fuori (regola in cima al CLAUDE.md del package).
+    Storage::fake('wmfe');
+
     runTaxonomyStubs();
     runTrailRegistryStubs();
 
