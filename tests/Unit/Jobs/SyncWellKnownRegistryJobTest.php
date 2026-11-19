@@ -5,10 +5,11 @@ namespace Tests\Unit\Jobs;
 use Wm\WmPackage\Jobs\SyncWellKnownRegistryJob;
 use Wm\WmPackage\Services\WellKnownRegistryService;
 use Wm\WmPackage\Tests\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 class SyncWellKnownRegistryJobTest extends TestCase
 {
-    /** @test */
+    #[Test]
     public function add_action_calls_add_app_entry_on_the_service()
     {
         $this->mock(WellKnownRegistryService::class, function ($mock) {
@@ -19,7 +20,7 @@ class SyncWellKnownRegistryJobTest extends TestCase
         (new SyncWellKnownRegistryJob('add', 'it.webmapp.testapp', 'AA:BB'))->handle();
     }
 
-    /** @test */
+    #[Test]
     public function add_action_passes_through_a_custom_apple_team_id()
     {
         $this->mock(WellKnownRegistryService::class, function ($mock) {
@@ -29,7 +30,7 @@ class SyncWellKnownRegistryJobTest extends TestCase
         (new SyncWellKnownRegistryJob('add', 'it.webmapp.testapp', 'AA:BB', 'CUSTOMTEAM1'))->handle();
     }
 
-    /** @test */
+    #[Test]
     public function remove_action_calls_remove_app_entry_on_the_service()
     {
         $this->mock(WellKnownRegistryService::class, function ($mock) {

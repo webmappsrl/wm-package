@@ -35,7 +35,10 @@ class UgcTrackFactory extends Factory
         ]);
 
         return [
-            'app_id' => App::first()->id,
+            // Se non c'e' nessuna app se ne crea una, invece di esplodere con «Attempt to read
+            // property "id" on null»: prima funzionava solo dove un'app esisteva gia' a
+            // database, cioe' lanciando i test da uno shard popolato.
+            'app_id' => (App::first() ?? App::factory()->create())->id,
             'user_id' => User::first()->id ?? User::factory()->create()->id,
             'properties' => [
                 'description' => $this->faker->paragraph,

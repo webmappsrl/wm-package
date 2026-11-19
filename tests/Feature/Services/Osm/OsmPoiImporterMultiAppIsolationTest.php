@@ -6,9 +6,7 @@ use Illuminate\Support\Facades\Http;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Services\Osm\OsmPoiImporter;
-use Wm\WmPackage\Tests\TestCase;
 
-uses(TestCase::class);
 
 it('does not let two different apps overwrite each other on the same osmid', function () {
     $appA = App::factory()->create();

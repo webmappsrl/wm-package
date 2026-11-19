@@ -15,6 +15,9 @@ use Laravel\Nova\Menu\MenuGroup;
 use Laravel\Nova\Menu\MenuItem;
 use Laravel\Nova\Menu\MenuSection;
 use Laravel\Nova\Nova;
+use Laravel\Nova\Resource as NovaResource;
+use ReflectionClass;
+use Symfony\Component\Finder\Finder;
 use Matchish\ScoutElasticSearch\ElasticSearch\HitsIteratorAggregate;
 use Matchish\ScoutElasticSearch\ElasticSearchServiceProvider;
 use Sentry\State\Scope;
@@ -767,7 +770,33 @@ class WmPackageServiceProvider extends PackageServiceProvider
      */
     protected function resources()
     {
-        Nova::resourcesIn($this->getPackageBaseDir().'/Nova');
+        // `Nova::resourcesIn()` registra tutto cio' che trova nella cartella, classi astratte
+        // comprese: Nova poi prova a istanziarle — per esempio risolvendo la Resource di una
+        // relazione — e muore con «Cannot instantiate abstract class». Qui si registra solo
+        // quello che si puo' istanziare davvero.
+        $resources = [];
+
+        foreach ((new Finder)->in($this->getPackageBaseDir().'/Nova')->files()->name('*.php') as $file) {
+            $class = 'Wm\\WmPackage\\Nova\\'.str_replace(
+                ['/', '.php'],
+                ['\\', ''],
+                ltrim(str_replace($this->getPackageBaseDir().'/Nova', '', $file->getRealPath()), '/')
+            );
+
+            if (! class_exists($class)) {
+                continue;
+            }
+
+            $reflection = new ReflectionClass($class);
+
+            if ($reflection->isAbstract() || ! $reflection->isSubclassOf(NovaResource::class)) {
+                continue;
+            }
+
+            $resources[] = $class;
+        }
+
+        Nova::resources($resources);
     }
 
     /**

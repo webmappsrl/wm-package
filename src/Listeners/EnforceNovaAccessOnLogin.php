@@ -19,8 +19,10 @@ class EnforceNovaAccessOnLogin
             return;
         }
 
-        // Do not interfere with automated tests that use programmatic logins.
-        if (app()->runningUnitTests()) {
+        // Nei test il controllo e' spento, per non rompere i login programmatici delle suite
+        // (anche quelle degli shard). Un test che vuole verificare proprio questo blocco accende
+        // `wm-package.enforce_nova_access_in_tests`: fuori dai test la chiave non ha effetto.
+        if (app()->runningUnitTests() && ! config('wm-package.enforce_nova_access_in_tests', false)) {
             return;
         }
 

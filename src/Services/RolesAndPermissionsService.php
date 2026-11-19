@@ -33,8 +33,13 @@ class RolesAndPermissionsService
             return false;
         }
 
+        // Il default di `config()` scatta solo se la chiave manca: qui la chiave esiste sempre
+        // (config/wm-package.php) e vale null quando l'env non elenca nessuna email, quindi il
+        // ripiego va fatto sul valore, non sull'assenza.
+        $allowed = config('wm-package.super_admin_emails');
+
         /** @var array<int, string> $allowed */
-        $allowed = config('wm-package.super_admin_emails', ['team@webmapp.it']);
+        $allowed = is_array($allowed) ? $allowed : ['team@webmapp.it'];
 
         return in_array($email, $allowed, true);
     }

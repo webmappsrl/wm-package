@@ -18,6 +18,21 @@ use Wm\WmPackage\Models\Media;
 use Wm\WmPackage\Models\UgcPoi;
 use Wm\WmPackage\Models\User;
 use Wm\WmPackage\Nova\Actions\ConvertUgcPoiToEcPoi;
+use Illuminate\Support\Facades\Http;
+
+// Creare un contenuto geolocalizzato interroga osmfeatures per le aree amministrative e il DEM
+// per i dati tecnici: qui non si verificano quei due servizi, si fingono perche' il test non
+// esca in rete.
+beforeEach(function () {
+    Http::fake([
+        '*osmfeatures*' => Http::response(['features' => []]),
+        '*dem*' => Http::response([
+            'ele' => 0,
+            'geometry' => ['type' => 'LineString', 'coordinates' => []],
+            'properties' => [],
+        ]),
+    ]);
+});
 
 /*
  * oc:8967 — conversione di un UgcPoi in EcPoi dall'action Nova.

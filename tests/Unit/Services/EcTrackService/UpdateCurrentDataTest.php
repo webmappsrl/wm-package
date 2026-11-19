@@ -3,6 +3,7 @@
 namespace Tests\Unit\Services\EcTrackService;
 
 use Exception;
+use PHPUnit\Framework\Attributes\Test;
 
 class UpdateCurrentDataTest extends AbstractEcTrackServiceTest
 {
@@ -39,7 +40,7 @@ class UpdateCurrentDataTest extends AbstractEcTrackServiceTest
         'exception_not_caught' => 'Exception was not caught.',
     ];
 
-    /** @test */
+    #[Test]
     public function update_current_data_updates_manual_data_for_non_null_dirty_fields()
     {
         // I dirty fields hanno valori non null e vanno semplicemente copiati in manual_data.
@@ -65,7 +66,7 @@ class UpdateCurrentDataTest extends AbstractEcTrackServiceTest
         $this->assertArrayNotHasKey('speed', $manualData);
     }
 
-    /** @test */
+    #[Test]
     public function update_current_data_updates_track_field_with_osm_value_when_dirty_field_is_null()
     {
         // Se il dirty field è null e osm_data contiene un valore, quello va usato.
@@ -98,7 +99,7 @@ class UpdateCurrentDataTest extends AbstractEcTrackServiceTest
         $this->assertNull($manualData[self::DESCENT_FIELD_LABEL]);
     }
 
-    /** @test */
+    #[Test]
     public function update_current_data_updates_track_field_with_dem_value_when_osm_value_missing()
     {
         // Se il dirty field è null e osm_data manca il valore, si usa quello da dem_data.
@@ -121,7 +122,7 @@ class UpdateCurrentDataTest extends AbstractEcTrackServiceTest
         $this->assertNull($manualData[self::DISTANCE_FIELD_LABEL]);
     }
 
-    /** @test */
+    #[Test]
     public function update_current_data_does_not_update_field_when_not_in_dem_data_fields()
     {
         // Se il dirty field non è elencato tra i demDataFields, il campo non viene processato.
@@ -138,7 +139,7 @@ class UpdateCurrentDataTest extends AbstractEcTrackServiceTest
         $this->assertArrayNotHasKey(self::SPEED_FIELD_LABEL, $manualData);
     }
 
-    /** @test */
+    #[Test]
     public function update_current_data_logs_error_when_exception_occurs()
     {
         // Simuliamo un'eccezione in saveQuietly per verificare che venga catturata internamente.

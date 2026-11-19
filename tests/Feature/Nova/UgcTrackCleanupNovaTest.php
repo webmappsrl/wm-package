@@ -16,11 +16,9 @@ class UgcTrackCleanupTestUserResource extends AbstractUserResource
     public static $model = User::class;
 }
 
-// AbstractUgcResource::fields() referenzia App\Nova\User, la risorsa dello shard: nel package
-// da solo non esiste e il BelongsTo non si costruisce.
-if (! class_exists('App\\Nova\\User')) {
-    class_alias(UgcTrackCleanupTestUserResource::class, 'App\\Nova\\User');
-}
+// `AbstractUgcResource` non nomina piu' la Resource utente di uno shard: la chiede a
+// `userResource()`, che qui restituisce quella del test.
+Wm\WmPackage\Nova\UgcTrack::usingUserResource(UgcTrackCleanupTestUserResource::class);
 
 beforeEach(function () {
     config()->set('wm-package.ugc_track_max_accuracy_meters', 40.0);

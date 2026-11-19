@@ -2,9 +2,11 @@
 
 namespace Tests\Unit\Services\EcTrackService;
 
+use PHPUnit\Framework\Attributes\Test;
+
 class GetRelatedPoisOrderTest extends AbstractEcTrackServiceTest
 {
-    /** @test */
+    #[Test]
     public function get_related_pois_order_returns_null_when_no_related_pois_exist()
     {
 
@@ -21,7 +23,7 @@ class GetRelatedPoisOrderTest extends AbstractEcTrackServiceTest
         $this->assertNull($result);
     }
 
-    /** @test */
+    #[Test]
     public function get_related_pois_order_returns_ordered_poi_ids_when_related_pois_exist()
     {
         $geojson = [

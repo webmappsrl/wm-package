@@ -2,21 +2,23 @@
 
 namespace Tests\Unit\Services\GeoJsonService;
 
+use PHPUnit\Framework\Attributes\Test;
+
 class TestIsGeojsonFeatureMultiPolygon extends AbstractGeoJsonTest
 {
-    /** @test */
+    #[Test]
     public function is_geojson_feature_multi_polygon_returns_true_if_geojson_feature_multi_polygon()
     {
         $this->assertTrue($this->geoJsonService->isGeojsonFeatureMultiPolygon(self::GEOJSON_MULTI_POLYGON_EXAMPLE));
     }
 
-    /** @test */
+    #[Test]
     public function is_geojson_feature_multi_polygon_returns_false_if_not_geojson_feature_multi_polygon()
     {
         $this->assertFalse($this->geoJsonService->isGeojsonFeatureMultiPolygon(self::GEOJSON_POINT_EXAMPLE));
     }
 
-    /** @test */
+    #[Test]
     public function is_geojson_feature_multi_polygon_returns_false_if_anything_else()
     {
         $this->assertFalse($this->geoJsonService->isGeojsonFeatureMultiPolygon(self::INVALID_JSON));

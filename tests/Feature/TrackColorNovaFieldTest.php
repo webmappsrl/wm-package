@@ -6,8 +6,23 @@ use Laravel\Nova\Http\Requests\NovaRequest;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Nova\Fields\TrackColor\src\TrackColor;
+use Illuminate\Support\Facades\Http;
 
-function invokeProtected(object $object, string $method, array $args = [])
+// Creare un contenuto geolocalizzato interroga osmfeatures per le aree amministrative e il DEM
+// per i dati tecnici: qui non si verificano quei due servizi, si fingono perche' il test non
+// esca in rete.
+beforeEach(function () {
+    Http::fake([
+        '*osmfeatures*' => Http::response(['features' => []]),
+        '*dem*' => Http::response([
+            'ele' => 0,
+            'geometry' => ['type' => 'LineString', 'coordinates' => []],
+            'properties' => [],
+        ]),
+    ]);
+});
+
+function invokeProtectedTrackColor(object $object, string $method, array $args = [])
 {
     $ref = new ReflectionMethod($object, $method);
     $ref->setAccessible(true);
@@ -27,8 +42,10 @@ it('writes selected json path when attribute is nested (properties->style->color
         'color' => '#00ff00',
     ]);
 
-    invokeProtected($field, 'fillAttributeFromRequest', [$request, 'color', $track, 'properties->style->color']);
+    invokeProtectedTrackColor($field, 'fillAttributeFromRequest', [$request, 'color', $track, 'properties->style->color']);
 
+    // Il field prepara il modello: il salvataggio lo fa Nova dopo il fill.
+    $track->save();
     $track->refresh();
 
     expect(data_get($track->properties, 'style.color'))->toBe('#00ff00');
@@ -48,8 +65,10 @@ it('removes json key when value is __RESET__', function () {
         'color' => '__RESET__',
     ]);
 
-    invokeProtected($field, 'fillAttributeFromRequest', [$request, 'color', $track, 'properties->color']);
+    invokeProtectedTrackColor($field, 'fillAttributeFromRequest', [$request, 'color', $track, 'properties->color']);
 
+    // Il field prepara il modello: il salvataggio lo fa Nova dopo il fill.
+    $track->save();
     $track->refresh();
 
     expect(data_get($track->properties, 'color'))->toBeNull();
@@ -77,8 +96,10 @@ it('normalizes to inherited when enabled and incoming equals inherited', functio
         'color' => '#00ff00', // stesso colore del layer, ma lower-case per verificare normalizzazione
     ]);
 
-    invokeProtected($field, 'fillAttributeFromRequest', [$request, 'color', $track, 'properties->color']);
+    invokeProtectedTrackColor($field, 'fillAttributeFromRequest', [$request, 'color', $track, 'properties->color']);
 
+    // Il field prepara il modello: il salvataggio lo fa Nova dopo il fill.
+    $track->save();
     $track->refresh();
 
     expect(data_get($track->properties, 'color'))->toBeNull();
@@ -105,8 +126,9 @@ it('resolve meta contains effective/inherited/stored and attribute_path', functi
     $field = TrackColor::make('Color', 'properties->style->color');
     $field->resolve($track);
 
-    $payload = $field->jsonSerialize();
-    $meta = $payload['meta'] ?? [];
+    // `withMeta()` scrive le chiavi nella radice della serializzazione del Field,
+    // non dentro una chiave `meta`.
+    $meta = $field->jsonSerialize();
 
     expect($meta['attribute_path'])->toBe('properties->style->color')
         ->and($meta['stored_hex'])->toBe('#FF0000')

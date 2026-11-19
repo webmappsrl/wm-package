@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Http;
 use Wm\WmPackage\Models\App;
-use Wm\WmPackage\Tests\TestCase;
 
-uses(TestCase::class);
 
 it('imports a single OSM node via CLI with auto-picked app', function () {
     App::factory()->create();
@@ -22,6 +20,11 @@ it('imports a single OSM node via CLI with auto-picked app', function () {
                 'tags' => ['name' => 'CLI Test POI', 'amenity' => 'bench'],
             ]],
         ], 200),
+        // Creare il POI interroga osmfeatures per le aree amministrative: qui non si verifica
+        // quel servizio, si finge perche' il test non esca in rete.
+        '*osmfeatures*' => Http::response(['features' => []]),
+        // Stesso motivo: il POI prende la quota dal DEM.
+        '*dem*' => Http::response(['ele' => 0]),
     ]);
 
     $this->artisan('wm-package:import-ec-pois-from-osm', ['osmids' => '123456'])

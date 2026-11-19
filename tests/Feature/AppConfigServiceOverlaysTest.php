@@ -30,7 +30,12 @@ it('includes enabled feature collections in MAP.controls.overlays ordered by con
         'label' => ['it' => 'Overlay 2'],
     ]);
 
-    $app->config_overlays = [$fc2->id, $fc1->id]; // fc2 first
+    // `config_overlays` e' il contenuto del campo Flexible: una chiave OVERLAYS con un box per
+    // riga, non un elenco di id.
+    $app->config_overlays = ['OVERLAYS' => [
+        ['box_type' => 'feature_collection', 'feature_collection' => $fc2->id],
+        ['box_type' => 'feature_collection', 'feature_collection' => $fc1->id],
+    ]]; // fc2 first
     $app->save();
 
     $service = new AppConfigService($app);
@@ -55,7 +60,9 @@ it('excludes disabled feature collections from overlays', function () {
         'label' => ['it' => 'Disabled'],
     ]);
 
-    $app->config_overlays = [$fc->id];
+    $app->config_overlays = ['OVERLAYS' => [
+        ['box_type' => 'feature_collection', 'feature_collection' => $fc->id],
+    ]];
     $app->save();
 
     $service = new AppConfigService($app);

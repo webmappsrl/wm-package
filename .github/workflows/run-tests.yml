@@ -12,7 +12,7 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         php: [8.3, 8.4]
-        laravel: [11.*]
+        laravel: [12.*]
         stability: [prefer-stable]
 
     name: P${{ matrix.php }} - L${{ matrix.laravel }} - ${{ matrix.stability }} - ${{ matrix.os }}
@@ -48,7 +48,8 @@ jobs:
       - name: Install dependencies
         run: |
           composer config "http-basic.nova.laravel.com" "${{ secrets.NOVA_USERNAME }}" "${{ secrets.NOVA_PASSWORD }}"
-          composer require "laravel/framework:${{ matrix.laravel }}" --no-interaction
+          # Nova e' fissata: la licenza e' scaduta e dalla 5.8.0 le release rispondono 402.
+          composer require "laravel/framework:${{ matrix.laravel }}" "laravel/nova:5.7.6" --no-interaction
           composer update --${{ matrix.stability }} --prefer-dist --no-interaction
 
       - name: List Installed Dependencies

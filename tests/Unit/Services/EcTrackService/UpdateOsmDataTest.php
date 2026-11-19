@@ -3,6 +3,7 @@
 namespace Tests\Unit\Services\EcTrackService;
 
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use PHPUnit\Framework\Attributes\Test;
 
 class UpdateOsmDataTest extends AbstractEcTrackServiceTest
 {
@@ -64,7 +65,7 @@ class UpdateOsmDataTest extends AbstractEcTrackServiceTest
         $this->track->properties = $properties;
     }
 
-    /** @test */
+    #[Test]
     public function update_osm_data_updates_track_with_osm_data()
     {
         $this->prepareTrackWithOsmData($this->track);
@@ -76,7 +77,7 @@ class UpdateOsmDataTest extends AbstractEcTrackServiceTest
         $this->assertFields($this->track, self::PROPERTIES_TO_CHECK, self::ERROR_MESSAGES['unmatched_properties']);
     }
 
-    /** @test */
+    #[Test]
     public function update_osm_data_fails_when_properties_are_missing()
     {
         $this->rebindOsmClient(MockOsmClientNoProperties::class);
@@ -87,7 +88,7 @@ class UpdateOsmDataTest extends AbstractEcTrackServiceTest
         $this->assertEquals(self::ERROR_MESSAGES['missing_properties'], $result['message']);
     }
 
-    /** @test */
+    #[Test]
     public function update_osm_data_fails_when_geometry_is_missing()
     {
         $this->rebindOsmClient(MockOsmClientNoGeometry::class);
@@ -98,7 +99,7 @@ class UpdateOsmDataTest extends AbstractEcTrackServiceTest
         $this->assertEquals(self::ERROR_MESSAGES['wrong_osm_id'], $result['message']);
     }
 
-    /** @test */
+    #[Test]
     public function updates_only_null_fields_are_updated()
     {
         $this->track->name = self::UNCHANGED_FIELDS['name'];

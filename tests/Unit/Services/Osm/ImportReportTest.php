@@ -3,9 +3,7 @@
 declare(strict_types=1);
 
 use Wm\WmPackage\Services\Osm\ImportReport;
-use Wm\WmPackage\Tests\TestCase;
 
-uses(TestCase::class);
 
 it('aggregates outcomes and failures', function () {
     $report = new ImportReport(false);

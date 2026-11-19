@@ -3,6 +3,7 @@
 namespace Tests\Unit\Services\EcTrackService;
 
 use Mockery;
+use PHPUnit\Framework\Attributes\Test;
 
 class UpdateDemDataTest extends AbstractEcTrackServiceTest
 {
@@ -20,7 +21,7 @@ class UpdateDemDataTest extends AbstractEcTrackServiceTest
         ],
     ];
 
-    /** @test */
+    #[Test]
     public function update_dem_data_updates_track_with_dem_data()
     {
         $track = $this->prepareTrackWithGeojson(1, ['type' => 'Feature']);

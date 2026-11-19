@@ -2,9 +2,7 @@
 
 declare(strict_types=1);
 
-use Wm\WmPackage\Tests\TestCase;
 
-uses(TestCase::class);
 
 it('exposes wm-osm-import config with defaults', function () {
     expect(config('wm-osm-import.request_delay_ms'))->toBe(350)

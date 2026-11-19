@@ -10,6 +10,7 @@ use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Nova\Fields\FeatureCollectionMap\src\Enums\GeometryType;
 use Wm\WmPackage\Nova\Fields\FeatureCollectionMap\src\FeatureCollectionMap;
 use Wm\WmPackage\Tests\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 class FeatureCollectionMapTest extends TestCase
 {
@@ -21,7 +22,7 @@ class FeatureCollectionMapTest extends TestCase
         return $field;
     }
 
-    /** @test */
+    #[Test]
     public function it_detects_point_geometry_kind_from_point_model()
     {
         $model = new class extends Point {};
@@ -37,7 +38,7 @@ class FeatureCollectionMapTest extends TestCase
         $this->assertSame(GeometryType::Point, $kinds[0]);
     }
 
-    /** @test */
+    #[Test]
     public function it_detects_multilinestring_geometry_kind_from_multilinestring_model()
     {
         $model = new class extends MultiLineString {};
@@ -53,7 +54,7 @@ class FeatureCollectionMapTest extends TestCase
         $this->assertSame(GeometryType::MultiLineString, $kinds[0]);
     }
 
-    /** @test */
+    #[Test]
     public function it_detects_multipolygon_geometry_kind_from_polygon_model()
     {
         $model = new Layer;
@@ -69,7 +70,7 @@ class FeatureCollectionMapTest extends TestCase
         $this->assertSame(GeometryType::MultiPolygon, $kinds[0]);
     }
 
-    /** @test */
+    #[Test]
     public function apply_detected_geometry_kinds_sets_meta_when_not_overridden()
     {
         $model = new class extends MultiLineString {};
@@ -88,7 +89,7 @@ class FeatureCollectionMapTest extends TestCase
         $this->assertSame([GeometryType::MultiLineString->value], $json['geometryTypes']);
     }
 
-    /** @test */
+    #[Test]
     public function for_geometry_kinds_overrides_detected_kinds_and_serialization()
     {
         $model = new class extends MultiLineString {};
@@ -111,7 +112,7 @@ class FeatureCollectionMapTest extends TestCase
         );
     }
 
-    /** @test */
+    #[Test]
     public function geojson_to_geometry_creates_point_geometry_from_feature_collection()
     {
         $featureCollection = [
@@ -149,7 +150,7 @@ class FeatureCollectionMapTest extends TestCase
         $this->assertSame('POINT(10 45)', $wkt);
     }
 
-    /** @test */
+    #[Test]
     public function geojson_to_geometry_creates_multilinestring_geometry()
     {
         $featureCollection = [
@@ -189,7 +190,7 @@ class FeatureCollectionMapTest extends TestCase
         $this->assertSame('MULTILINESTRING((0 0,1 1))', $wkt);
     }
 
-    /** @test */
+    #[Test]
     public function geojson_to_geometry_creates_multipolygon_geometry()
     {
         $featureCollection = [
@@ -221,7 +222,7 @@ class FeatureCollectionMapTest extends TestCase
         $this->assertSame('MULTIPOLYGON(((0 0,1 0,1 1,0 1,0 0)))', $wkt);
     }
 
-    /** @test */
+    #[Test]
     public function fill_model_with_data_does_not_change_geometry_when_unchanged()
     {
         $model = new class extends MultiLineString {};
@@ -279,7 +280,7 @@ class FeatureCollectionMapTest extends TestCase
         $this->assertSame($originalGeometry, $model->geometry);
     }
 
-    /** @test */
+    #[Test]
     public function fill_model_with_data_updates_geometry_when_changed()
     {
         $model = new class extends MultiLineString {};
@@ -337,7 +338,7 @@ class FeatureCollectionMapTest extends TestCase
         $this->assertSame('MULTILINESTRING((0 0,2 2))', $model->geometry);
     }
 
-    /** @test */
+    #[Test]
     public function resolve_sets_geojson_meta_using_geometry_to_geojson()
     {
         $model = new class extends MultiLineString {};
@@ -367,7 +368,7 @@ class FeatureCollectionMapTest extends TestCase
         );
     }
 
-    /** @test */
+    #[Test]
     public function normalize_geojson_input_handles_null_and_empty_values()
     {
         $field = new FeatureCollectionMap('Geometry', 'geometry');
@@ -381,7 +382,7 @@ class FeatureCollectionMapTest extends TestCase
         $this->assertNull($method->invoke($field, 'null'));
     }
 
-    /** @test */
+    #[Test]
     public function normalize_geojson_input_encodes_arrays_and_trims_strings()
     {
         $field = new FeatureCollectionMap('Geometry', 'geometry');
@@ -401,7 +402,7 @@ class FeatureCollectionMapTest extends TestCase
         $this->assertSame('{"type":"Point"}', $normalizedString);
     }
 
-    /** @test */
+    #[Test]
     public function json_serialize_includes_extra_flags_and_geometry_kinds()
     {
         $field = new FeatureCollectionMap('Geometry', 'geometry');

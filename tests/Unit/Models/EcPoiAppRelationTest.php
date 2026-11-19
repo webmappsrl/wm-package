@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Storage;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Tests\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 /**
  * Regression test: EcPoi::app() must resolve to Wm\WmPackage\Models\App, not the
@@ -32,7 +33,7 @@ class EcPoiAppRelationTest extends TestCase
         Bus::fake();
     }
 
-    /** @test */
+    #[Test]
     public function app_relation_resolves_to_the_wm_package_app_model()
     {
         $app = App::factory()->create();

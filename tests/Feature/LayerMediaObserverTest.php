@@ -55,6 +55,11 @@ it('dispatches UpdateAppConfigJob with a delay when a logo media is deleted from
     $media = $layer->addMedia(UploadedFile::fake()->image('logo.png', 512, 512))
         ->toMediaCollection('logo');
 
+    // L'aggiunta del media ha gia' dispatchato UpdateAppConfigJob, che e' ShouldBeUnique: il suo
+    // lock resta preso e farebbe saltare il dispatch della cancellazione. Su ArrayStore il lock
+    // non si libera con un flush, serve buttare via il driver (oc:8660).
+    app('cache')->forgetDriver('redis');
+
     Bus::fake();
 
     $media->delete();
@@ -80,6 +85,9 @@ it('dispatches UpdateAppConfigJob with a delay when a media is deleted from the 
 
     $media = $layer->addMedia(UploadedFile::fake()->image('cover.png', 512, 512))
         ->toMediaCollection('default');
+
+    // Vedi sopra: il lock di ShouldBeUnique preso dall'aggiunta va liberato.
+    app('cache')->forgetDriver('redis');
 
     Bus::fake();
 

@@ -6,9 +6,8 @@ use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\FeatureCollection;
 use Wm\WmPackage\Services\Models\App\AppConfigService;
-use Wm\WmPackage\Tests\TestCase;
 
-uses(TestCase::class, DatabaseTransactions::class);
+uses(DatabaseTransactions::class);
 
 it('feature_collection overlay box without its own colors falls back to the app real primary color', function () {
     $app = App::factory()->createQuietly([
