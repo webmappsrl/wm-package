@@ -7,6 +7,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Tests\TestCase;
+use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\User;
 use Wm\WmPackage\Nova\Fields\UserAvatar;
 
@@ -23,6 +24,11 @@ function resolveUserAvatarValue(User $user): string
 
 it('shows the real avatar_url when the user has an uploaded/Gravatar-fetched avatar', function () {
     Storage::fake('wmfe');
+
+    // `media.app_id` ha una foreign key verso `apps`, e un media il cui modello non porta un'app
+    // ripiega sulla prima esistente (MediaObserver): senza nessuna app l'insert viola il vincolo.
+    App::factory()->createQuietly();
+
     $user = User::factory()->create(['email' => 'nova-avatar-test@example.com']);
     $user->addMedia(UploadedFile::fake()->image('avatar.jpg', 400, 400))
         ->toMediaCollection('avatar');
