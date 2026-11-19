@@ -114,7 +114,10 @@ abstract class AbstractUgcResource extends AbstractGeometryResource
         $ugcModelClass = get_class(static::newModel());
 
         return [
-            new TopUgcCreators($ugcModelClass)
+            // Le parentesi intorno a `new` servono: chiamare un metodo su `new` senza di esse e'
+            // sintassi di PHP 8.4, e il package dichiara PHP >8.1 — su 8.3 e' un ParseError e la
+            // classe non si carica affatto.
+            (new TopUgcCreators($ugcModelClass))
                 ->width('full'),
         ];
     }
