@@ -45,6 +45,14 @@ jobs:
           echo "::add-matcher::${{ runner.tool_cache }}/php.json"
           echo "::add-matcher::${{ runner.tool_cache }}/phpunit.json"
 
+      # `composer update` lancia `npm install` (post-update-cmd), e `chartjs-node-canvas` tira
+      # dentro `canvas`, che per Node 24 non ha un binario precompilato: ripiega sulla
+      # compilazione, che senza queste librerie muore con «Package 'pixman-1' not found».
+      - name: Librerie di sistema per compilare canvas
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev libpixman-1-dev
+
       - name: Install dependencies
         run: |
           composer config "http-basic.nova.laravel.com" "${{ secrets.NOVA_USERNAME }}" "${{ secrets.NOVA_PASSWORD }}"
