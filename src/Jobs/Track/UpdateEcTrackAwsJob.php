@@ -3,6 +3,8 @@
 namespace Wm\WmPackage\Jobs\Track;
 
 use Illuminate\Queue\Middleware\WithoutOverlapping;
+use Wm\WmPackage\Enums\WmfeTrackVersion;
+use Wm\WmPackage\Http\Resources\EcTrackPropertiesBuilder;
 use Wm\WmPackage\Http\Resources\EcTrackResource;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Services\StorageService;
@@ -56,9 +58,24 @@ class UpdateEcTrackAwsJob extends BaseEcTrackJob
             throw new \Exception("EcTrack with ID {$this->ecTrack->id} not found");
         }
 
-        $resource = new EcTrackResource($ecTrack);
+        // Un builder solo per traccia: i dati si calcolano una volta e valgono per tutte le
+        // versioni. La serializzazione passa dalla Resource, perché il filtro di JsonResource fa
+        // parte della forma del file (oc:8997).
+        $builder = new EcTrackPropertiesBuilder($ecTrack);
 
-        // save on aws
-        $cloudStorageService->storeTrack($ecTrack->id, $resource->toJson());
+        foreach (WmfeTrackVersion::active() as $version) {
+            $resource = new EcTrackResource($ecTrack, $version, $builder);
+
+            if ($cloudStorageService->storeTrack($ecTrack->id, $resource->toJson(), $version) === false) {
+                // Senza questo, una `put` fallita lascerebbe il job verde e i file divergenti:
+                // uno aggiornato e uno fermo, senza nessun segnale. Horizon ritenta, e riscrivere
+                // tutte le versioni è idempotente.
+                throw new \RuntimeException(sprintf(
+                    'Scrittura del JSON della traccia %d fallita per la versione "%s".',
+                    $ecTrack->id,
+                    $version->value
+                ));
+            }
+        }
     }
 }

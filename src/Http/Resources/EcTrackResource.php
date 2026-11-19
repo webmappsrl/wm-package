@@ -4,96 +4,49 @@ namespace Wm\WmPackage\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Wm\WmPackage\Models\EcPoi;
-use Wm\WmPackage\Nova\Traits\HasDemClassification;
-use Wm\WmPackage\Services\GeoJsonService;
-use Wm\WmPackage\Services\GeometryComputationService;
+use Wm\WmPackage\Enums\WmfeTrackVersion;
 
+/**
+ * Il GeoJSON Feature del dettaglio di una traccia, in una versione di formato (oc:8997).
+ *
+ * **Qui dentro non si calcola niente**: i dati li prende `EcTrackPropertiesBuilder`, che li
+ * calcola una volta sola e restituisce le properties di ogni versione. Questa classe mette
+ * insieme l'involucro — `type`, `geometry` — e serializza.
+ *
+ * **La serializzazione del file passa sempre di qui, mai da un `json_encode()` diretto.**
+ * `JsonResource::resolve()` applica `filter()`, che reindicizza gli array annidati con chiavi
+ * tutte numeriche: `taxonomy_where` con id numerici esce come lista JSON solo per quel passaggio,
+ * e un `json_encode()` la trasformerebbe in un oggetto. Sarebbe una modifica di forma del file che
+ * le app installate leggono, invisibile fino allo store.
+ *
+ * Senza versione vale quella senza numero, così ogni chiamante che c'era prima ottiene ciò che
+ * otteneva.
+ */
 class EcTrackResource extends JsonResource
 {
-    use HasDemClassification;
+    private WmfeTrackVersion $version;
 
-    private const DEM_FIELDS = [
-        'distance', 'ascent', 'descent',
-        'ele_max', 'ele_min', 'ele_from', 'ele_to',
-        'duration_forward', 'duration_backward',
-    ];
+    private ?EcTrackPropertiesBuilder $builder;
+
+    public function __construct($resource, ?WmfeTrackVersion $version = null, ?EcTrackPropertiesBuilder $builder = null)
+    {
+        parent::__construct($resource);
+
+        $this->version = $version ?? WmfeTrackVersion::Legacy;
+        $this->builder = $builder;
+    }
 
     /**
-     * Transform the resource into an array.
-     *
      * @return array<string, mixed>
      */
     public function toArray(Request $request): array
     {
-        // Il dettaglio pubblico, con `properties.taxonomies` (oc:8959).
-        $geojson = $this->resource->getDetailGeojson();
-        $geometryComputationService = GeometryComputationService::make();
+        $builder = $this->builder ??= new EcTrackPropertiesBuilder($this->resource);
 
-        // force linestring
-        $geometryLinestring = $geometryComputationService->getModelLineMergeGeojson($this->resource);
-        $geojson['geometry'] = json_decode($geometryLinestring, true);
-
-        $properties = [
-            ...GeoJsonService::make()->removeInvalidProperties($geojson['properties']),
+        return [
+            'type' => 'Feature',
+            'geometry' => $builder->geometry(),
+            'properties' => $builder->build([$this->version])[$this->version->value],
         ];
-
-        // Applica priorità MANUAL > OSM > DEM per i 9 campi principali e rimuove le sorgenti raw
-        $properties = $this->applyDemFields($properties, $this->resource);
-
-        $properties = $this->resource->applyTaxonomyWhereDisplay($properties);
-
-        $properties['name'] = $this->getTranslations('name');
-        $properties['roundtrip'] = $properties['round_trip'] ?? $geometryComputationService->isRoundtrip($geojson['geometry']['coordinates']);
-        $properties['related_pois'] = $this->getRelatedPois();
-
-        $media = $this->getMedia();
-        if ($media->isNotEmpty()) {
-            $properties['feature_image'] = new MediaResource($media->first());
-            $properties['image_gallery'] = MediaResource::collection($media);
-        }
-
-        $geojson['properties'] = $properties;
-
-        return $geojson;
-    }
-
-    /**
-     * Applica la tabella di priorità MANUAL > OSM > DEM ai 9 campi principali.
-     * Rimuove le sorgenti raw (manual_data, dem_data, osm_data) dall'array risultante.
-     */
-    protected function applyDemFields(array $properties, object $model): array
-    {
-        foreach (self::DEM_FIELDS as $field) {
-            $classified = $this->classifyField($model, $field);
-            if ($classified['currentValue'] !== null) {
-                $properties[$field] = $classified['currentValue'];
-            } else {
-                unset($properties[$field]);
-            }
-        }
-
-        unset($properties['manual_data'], $properties['dem_data'], $properties['osm_data']);
-
-        return $properties;
-    }
-
-    /**
-     * Gestisce la relazione ecPois con fallback per modelli diversi
-     * Se la tabella pivot non esiste, ritorna array vuoto
-     */
-    private function getRelatedPois()
-    {
-        try {
-            return $this->ecPois
-                ->whereNull('osmfeatures_id') // TODO: da rimuovere, aggiunto per osm2cai, evita che i poi presi da osm vengano aggiunti ai related
-                ->map(function (EcPoi $ecPoi) {
-                    return RelatedEcPoiResource::make($ecPoi);
-                })
-                ->toArray();
-        } catch (\Exception $e) {
-            // Se la relazione fallisce (es: tabella pivot non esiste), ritorna array vuoto
-            return [];
-        }
     }
 }

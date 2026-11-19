@@ -3,18 +3,25 @@
 namespace Tests\Unit\Http\Resources;
 
 use PHPUnit\Framework\TestCase;
-use Wm\WmPackage\Http\Resources\EcTrackResource;
+use Wm\WmPackage\Http\Resources\EcTrackPropertiesBuilder;
 
 /**
  * Testa applyDemFields() in isolamento tramite una sottoclasse che espone il metodo protected.
  * Usa anonymous objects come modello (classifyField accetta object).
+ *
+ * Il metodo stava su `EcTrackResource` ed è passato a `EcTrackPropertiesBuilder` con oc:8997,
+ * insieme a tutto il calcolo dei dati: la Resource ora serializza soltanto.
  */
 class EcTrackResourceDemPriorityTest extends TestCase
 {
-    private function makeResource(): object
+    private function makeBuilder(): object
     {
-        return new class(null) extends EcTrackResource
+        // Il costruttore vero vuole una EcTrack: qui non serve, applyDemFields() lavora
+        // sull'array e sul modello che riceve.
+        return new class extends EcTrackPropertiesBuilder
         {
+            public function __construct() {}
+
             public function publicApplyDemFields(array $properties, object $model): array
             {
                 return $this->applyDemFields($properties, $model);
@@ -36,7 +43,7 @@ class EcTrackResourceDemPriorityTest extends TestCase
     public function test_usa_dem_data_quando_unica_sorgente(): void
     {
         $model = $this->makeModel(['dem_data' => ['ascent' => 500, 'distance' => 3000]]);
-        $result = $this->makeResource()->publicApplyDemFields(
+        $result = $this->makeBuilder()->publicApplyDemFields(
             ['dem_data' => ['ascent' => 500, 'distance' => 3000]],
             $model
         );
@@ -53,7 +60,7 @@ class EcTrackResourceDemPriorityTest extends TestCase
             'manual_data' => ['ascent' => '73'],
         ];
         $model = $this->makeModel($props);
-        $result = $this->makeResource()->publicApplyDemFields($props, $model);
+        $result = $this->makeBuilder()->publicApplyDemFields($props, $model);
 
         $this->assertSame('73', $result['ascent']);
         $this->assertArrayNotHasKey('manual_data', $result);
@@ -67,7 +74,7 @@ class EcTrackResourceDemPriorityTest extends TestCase
             'manual_data' => ['ascent' => ''],
         ];
         $model = $this->makeModel($props, osmid: 12345);
-        $result = $this->makeResource()->publicApplyDemFields($props, $model);
+        $result = $this->makeBuilder()->publicApplyDemFields($props, $model);
 
         $this->assertSame(200, $result['ascent']);
         $this->assertArrayNotHasKey('osm_data', $result);
@@ -81,7 +88,7 @@ class EcTrackResourceDemPriorityTest extends TestCase
             'manual_data' => ['ascent' => ''],
         ];
         $model = $this->makeModel($props, osmid: null);
-        $result = $this->makeResource()->publicApplyDemFields($props, $model);
+        $result = $this->makeBuilder()->publicApplyDemFields($props, $model);
 
         $this->assertSame(500, $result['ascent']);
     }
@@ -89,7 +96,7 @@ class EcTrackResourceDemPriorityTest extends TestCase
     public function test_campo_assente_se_tutte_sorgenti_mancano(): void
     {
         $model = $this->makeModel([]);
-        $result = $this->makeResource()->publicApplyDemFields([], $model);
+        $result = $this->makeBuilder()->publicApplyDemFields([], $model);
 
         $this->assertArrayNotHasKey('ascent', $result);
         $this->assertArrayNotHasKey('distance', $result);
@@ -98,7 +105,7 @@ class EcTrackResourceDemPriorityTest extends TestCase
     public function test_properties_null_non_causa_crash(): void
     {
         $model = $this->makeModel(null);
-        $result = $this->makeResource()->publicApplyDemFields([], $model);
+        $result = $this->makeBuilder()->publicApplyDemFields([], $model);
 
         $this->assertIsArray($result);
     }

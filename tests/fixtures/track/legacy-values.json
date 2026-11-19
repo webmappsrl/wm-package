@@ -1,0 +1,323 @@
+{
+    "type": "Feature",
+    "geometry": {
+        "type": "LineString",
+        "coordinates": [
+            [
+                13.7,
+                41.4,
+                0
+            ],
+            [
+                13.8,
+                41.5,
+                0
+            ]
+        ]
+    },
+    "properties": {
+        "to": "Campo sportivo Gonnesa (arrivo 511)",
+        "ref": "Z-SU-D-511",
+        "via": "Laveria Vecchia",
+        "from": "Vecchia Miniera di S.Giovanni",
+        "layers": [
+            2
+        ],
+        "description": {
+            "en": "<h1 dir=\"ltr\">Normann trail network</h1><p dir=\"ltr\">Entirely created by volunteers, supported by the Forestas Agency and the Cagliari branch of CAI, this small network connects several miners\u2019 villages:&nbsp;<em>Monteponi</em>,&nbsp;<em>Monte</em>&nbsp;<em>Agruxiau&nbsp;</em>and&nbsp;<em>Monte Scorra</em>, as well as&nbsp;<em>Nebida</em>,&nbsp;<em>Bindua</em>,&nbsp;<em>San Giovanni Miniera</em> and the beautiful&nbsp;<em>Asproni Miners\u2019 Village</em> as well as&nbsp;<em>Monte Onixeddu&nbsp;</em>and the Normann Village itself. The network also connects a series of&nbsp;<em><strong>mining structures&nbsp;</strong></em>rich in&nbsp;<strong>history</strong>:&nbsp;<em>Laveria Galletti</em>,&nbsp;<em>forno Sabatini</em>,&nbsp;<em>Pozzo Baccarini</em>,&nbsp;<em>Laveria vecchia</em>, the extraordinary&nbsp;<em>Santa Barbara&nbsp;</em>shaft (also known as \u2018<em>Sa macchina beccia</em>\u2019) along a route&nbsp;<strong>disseminated with evidence of the area\u2019s mining history&nbsp;</strong>(wells, tunnels, ropeway conveyors,&nbsp;<em>decauville&nbsp;</em>(animal-towed mining railway), tracks, chimneys, drinking troughs and stables for mine animals).</p><p dir=\"ltr\">More than&nbsp;<strong>40 km</strong> of cycling and hiking routes, ranging in difficulty from \u2018tourist\u2019 to \u2018experienced hiker\u2019, extending to the borders and mining remains of the territories of&nbsp;<strong>Gonnesa&nbsp;</strong>and&nbsp;<strong>Iglesias&nbsp;</strong>- extraordinary places with a wealth of geological, speleological, naturalistic but also archaeological (e.g. medieval mines) and anthropological heritage. A true \u2018<em>summary\u2019&nbsp;</em>of the attractions offered by the&nbsp;<em>Geo-mining, Historical and Environmental Park of Sardinia</em>.</p><p dir=\"ltr\">These routes will allow you to explore the places where thousands of workers lived in the 3 well-known villages:&nbsp;<em><strong>Normann&nbsp;</strong></em>was inhabited by managers and clerks (built in the early 1900s and already equipped with plumbing systems for water supply and waste water) -&nbsp;<em><strong>S.Giovanni miniera,&nbsp;</strong></em>the miners\u2019 village, built by&nbsp;<em>Gonnesa Mining Company</em> Limited, Pertusola Limited (later taken over by&nbsp;<em>Piombo Zincifera Sarda</em>) and finally&nbsp;<strong>Bindua Ceramica,&nbsp;</strong>where other miners independently built very humble huts.</p><p dir=\"ltr\">In the 1930s this whole landscape was completely barren, due to intensive mining exploitation that involved tree felling: today the&nbsp;<em><strong>holm oak wood&nbsp;</strong></em>has regained ground, strengthening the unstable slope, together with sparse&nbsp;<em>Aleppo pine&nbsp;</em>stands (from reforestation projects).</p><h2 dir=\"ltr\">The territory</h2><p dir=\"ltr\">The territory of Normann lies on the slopes of&nbsp;<em><strong>Monte San Giovanni&nbsp;</strong></em>(formerly known as&nbsp;<em><strong>Monte Barlao</strong></em>). If offers a splendid diverse landscape, a gem brimming with old stories, which have reemerged thanks to the passion of the inhabitants of this small hamlet, with the logistical and financial support of the municipalities of Iglesias and Gonnesa. The Sardinia Trail Network (RES) is the thread that links together ancient routes, on which the miners used to walk to go to church, take the train, or go to town on their few free days. Some of the tails follow the old narrow-gauge FMS railway line that connected Calasetta to Gonnesa and Iglesias (<em><strong>Monteponi scalo</strong></em>). Part of this route is also shared with that created by the&nbsp;<em>Santa Barbara Mining Trail Foundation</em>,<em>&nbsp;</em>which forms part of the larger Sardinia Trail Network.</p><h2 dir=\"ltr\">Special features</h2><p dir=\"ltr\">This hiking area is characterised by limestone formations, including&nbsp;<em>limestone pavements&nbsp;</em>(recalling on a smaller scale the formations in&nbsp;<em>Supramonte</em>). It offers expansive&nbsp;<strong>views ranging</strong> from Carloforte to the peaks of Gutturu Mannu, from the&nbsp;<em>Linas-Marganai</em> massif, to the plain of Cagliari... wonderful sights, which can only be fully appreciated in person.</p>",
+            "it": "<h1>La rete di sentieri di Normann</h1><p>Interamente realizzata grazie al lavoro dei volontari, supportati&nbsp;da Agenzia Forestas e CAI Cagliari,&nbsp;questa piccola \"rete\" collega una serie di villaggi minerari:&nbsp;<em>Monteponi</em>,&nbsp;<em>Monte Agruxiau&nbsp;</em>e&nbsp;<em>Monte Scorra</em>, oltre a&nbsp;<em>Nebida</em>,&nbsp;<em>Bindua</em>,&nbsp;<em>San Giovanni Miniera</em>&nbsp;<em>e</em>&nbsp;il bellissimo&nbsp;<em>Villaggio Minerario Asproni</em>&nbsp;oltre a&nbsp;<em>Monte Onixeddu </em>e allo stesso Villaggio Normann. Collega poi una serie di <em><strong>impianti minerari </strong></em>ricchi di <strong>storia</strong>: <em>Laveria Galletti</em>, <em>forno Sabatini</em>, <em>Pozzo Baccarini</em>, <em>Laveria vecchia</em>, lo straordinario&nbsp;<em>pozzo Santa Barbara</em>&nbsp;(meglio noto come&nbsp;\"<em>Sa macchina beccia</em>\") in un percorso <strong>disseminato di testimonianze minerarie</strong> (pozzi, gallerie, teleferiche, <em>decauville</em>, carreggi, ciminiere, abbeveratoi e scuderie per gli animali di miniera).</p><p>Oltre <strong>40 km</strong> di tracciati ciclo-escursionistici, che spaziano dalla classificazione \"turistica\" alla classificazione \"escursionista esperto\" estendendosi ai confini e tra i margini minerari dei&nbsp;territori&nbsp;di <strong>Gonnesa </strong>e <strong>Iglesias </strong>- luoghi straordinari per la coesistenza di condizioni eccezionali di tipo geologico, speleologico, naturalistico ma anche archeologico (presenti&nbsp;miniere medievali) e antropologico. Un vero \"<em>trailer</em>\" dei tematismi propri del&nbsp;<em>Parco Geominerario Storico e Ambientale della Sardegna</em>.</p><p>Questi percorsi permettono di esplorare i luoghi della vita di migliaia di operai che popolavano i 3 noti villaggi:&nbsp;<em><strong>Normann</strong></em>&nbsp;era abitato dai quadri dirigenti e impiegatizi (edificato agli inizi del '900 e gi\u00e0 accessoriato&nbsp;con impianti fognari e idrici) -&nbsp; <em><strong>S.Giovanni miniera,</strong></em>&nbsp;villaggio popolato dagli operai, e costruito da&nbsp;<em>Gonnesa Mining Company Limited</em>,&nbsp;Pertusola Limited (...poi il tutto pass\u00f2 alla&nbsp;<em>Piombo Zincifera Sarda</em>) e infine&nbsp;<strong>Bindua&nbsp;Ceramica,&nbsp;</strong>dove altri operai autonomamente costruirono baracche poverissime.</p><p>Tutto questo paesaggio negli anni Trenta era completamente spoglio e privo di vegetazione, per l'intensivo sfruttamento minerario che fagocitava anche il legname: oggi la&nbsp;<em><strong>lecceta&nbsp;</strong></em>ha riconquistato il terreno, rinsaldando il versante franoso, insieme ai residui di&nbsp;<em>Pino d'Aleppo (</em>di impianto artificiale).</p><h2>Il territorio</h2><p>Il territorio di&nbsp;Normann&nbsp;insiste sul <em><strong>monte S.Giovanni </strong></em>(anticamente noto come&nbsp;<em><strong>Monte Barlao</strong></em>) che \u00e8 un \"<em>puzzle paesaggistico</em>\" splendido, una perla che racchiude storie dimenticate nella nebbia del tempo, che riemergono grazie alla passione degli abitanti dell'attuale frazione di Iglesias, con il supporto anche finanziario dei comuni di Iglesias e Gonnesa: la&nbsp;RES&nbsp;rappresenta il filo conduttore che pu\u00f2 ricucire e raccontare itinerari antichi, usati dai minatori per andare in chiesa, per andare a prendere il treno, per tornare in citt\u00e0 nelle poche occasioni di svago...e alcuni percorsi sull'antica linea a scartamento ridotto delle&nbsp;ferrovie meridionali della Sardegna&nbsp;che collegavano Calasetta a Gonnesa e Iglesias (<em><strong>Monteponi scalo</strong></em>) dove gi\u00e0 passa - per alcuni chilometri -&nbsp;il percorso curato dalla&nbsp;<em>Fondazione Cammino Minerario di Santa Barbara&nbsp;</em>che si integra con la pi\u00f9 ampia rete di&nbsp; sentieri&nbsp;della Sardegna (la RES).</p><h2>Particolarit\u00e0</h2><p>Una delle particolarit\u00e0 di questo ambito escursionistico sono <strong>i calcari</strong>, con i&nbsp;<em>campi solcati&nbsp;</em>(quasi un piccolo <em>Supramonte </em>nascosto nel sud-ovest dell'Isola) e i <strong>panorami che spaziano</strong> da Carloforte alle cime di Gutturu Mannu, dal <em>Linas-Marganai</em> al cagliaritano...una meraviglia, appena raccontata dalle immagini.</p>"
+        },
+        "config_detail": [
+            {
+                "items": [
+                    {
+                        "title": {
+                            "en": "Stage 1",
+                            "it": "Tappa 1"
+                        },
+                        "content": {
+                            "en": "<p dir=\"ltr\">The trail starts south-west of the gravel-surfaced area where you can park you car, and follows a narrow path through the&nbsp;<strong>old gravel dumps</strong>, now colonised by a&nbsp;<strong>pine tree&nbsp;</strong>forest in the first part and an&nbsp;<strong>oak&nbsp;</strong>forest in the following stretch, walking&nbsp;<strong>west</strong>. The walk is cool and pleasant and runs parallel and above State road SS 126, which leads to Calasetta. After 610 m you will reach the&nbsp;<em>Laveria Vecchia&nbsp;</em>(old ore processing plant). Here, you can leave the main route by taking the 513/A variant (from&nbsp;<em>Laveria Vecchia&nbsp;</em>to&nbsp;<em>Funtana Coperta</em>) or Trail 514 (from minecart track 120&nbsp;<em>Laveria Vecchia</em> to&nbsp;<em>Is Guardianus</em>).<br><strong>WARNING</strong>: As there are many intersecting trails and variants, pay attention to the route markings and the trail numbers.</p>",
+                            "it": "<p>La partenza \u00e8 a sud ovest del piazzale in ghiaia utile per lasciare le auto, e si sviluppa in un sentiero stretto che attraversa le <strong>vecchie discariche di ghiaia</strong>, ormai colonizzate dal bosco di <strong>pini </strong>nella prima parte e di <strong>querce </strong>nella successiva, camminando <strong>verso ovest</strong>. La passeggiata \u00e8 fresca e piacevole e costeggia dall\u2019alto la strada statale 126, che conduce a Calasetta. Dopo 610 metri si raggiunge la <em>Laveria Vecchia</em>. Qui \u00e8 possibile staccarsi dal percorso principale deviando sulla variante 513/A (da <em>Laveria Vecchia </em>a <em>Funtana Coperta</em>) o sul sentiero 514 (da carreggio 120 Laveria Vecchia a Is Guardianus).<br><strong>ATTENZIONE</strong>:&nbsp;in questi numerosi incroci tra sentieri e varianti occorre are attenzione ai segnavia e al numero del sentiero riportato.</p>"
+                        }
+                    },
+                    {
+                        "title": {
+                            "en": "Stage 2",
+                            "it": "Tappa 2"
+                        },
+                        "content": {
+                            "en": "<p dir=\"ltr\">Continuing on Trail 511, take another minecart track<em>&nbsp;</em><strong>heading west</strong> which skirts the mountain at an average elevation of&nbsp;<strong>120 m&nbsp;</strong>asl: it is an easy but very beautiful section, because it alternates between stretches of forest and wide panoramic views, which fascinate the hiker, getting even better as you gain elevation.&nbsp;<strong>After 750 m</strong>, you will reach a small, shaded clearing, a few metres above the springs-drinking troughs where the animals towing the carts laden with ore on the decauville tracks used to rest and feed. Here, the trail intersects in both directions with&nbsp;<strong>Trail 515&nbsp;</strong>(from the old&nbsp;<em>Cantoniera</em> (railway service building) no. 49 to&nbsp;<em>Villaggio Normann</em>, with an intermediate stop point at the Normann springs), which in one direction leads to the nearby Normann village, in the other leads back to&nbsp;<em>Bindua&nbsp;</em>and the&nbsp;<em>San Giovanni Miniera village</em>.</p>",
+                            "it": "<p>Proseguendo sul sentiero 511 si imbocca in <strong>direzione ovest </strong>un nuovo <em>carreggio </em>che costeggia il monte alla quota media di <strong>120 m </strong>s.l.m: \u00e8 un tratto semplice ma molto bello, perch\u00e9 alterna tratti di bosco con ampie aperture panoramiche, che affascinano l\u2019escursionista promettendo ancor meglio man mano che si guadagna quota. <strong>Dopo 750 metri </strong>si raggiunge un piccolo spiazzo ombreggiato, che sovrasta di pochi metri le sorgenti-abbeveratoi dove si ristoravano gli animali che trainavano, sui binari delle decauville, i piccoli convogli carichi di minerale. In questo punto si interseca, nelle due direzioni, il <strong>sentiero 515 </strong>(da Cantoniera F.M.S. n\u00b049 a Villaggio Normann, con tappa intermedia alle sorgenti Normann) che permette di raggiungere in pochi minuti Normann o di&nbsp; ritornare verso <em>Bindua </em>e <em>San Giovanni Miniera</em>.</p>"
+                        }
+                    },
+                    {
+                        "title": {
+                            "en": "Stage 3",
+                            "it": "Tappa 3"
+                        },
+                        "content": {
+                            "en": "<p dir=\"ltr\">Trail 511 continues&nbsp;<strong>west</strong>, overlooking the sea. After passing the ruins of a small water purification plant, continue on a&nbsp;<strong>small track</strong> and then on a&nbsp;<strong>mining road&nbsp;</strong>that goes uphill to the&nbsp;<em>Belvedere di Normann</em>, a perfect place for taking a break and enjoying another view of the&nbsp;<em>Golfo del Leone</em>. Next, you will start the actual ascent up the limestone (and at times particularly exposed) slope of&nbsp;<em>Monte San Giovanni</em>, with difficulty level EE = Expert Hiker. The first stretch through the wood soon gives way to increasingly wide and enchanting panoramic views, with several rest points.</p>",
+                            "it": "<p>Il nostro 511 prosegue in <strong>direzione ovest</strong>, vista sul mare. Superato ci\u00f2 che resta di un piccolo depuratore si prosegue su uno <strong>stradello </strong>e poi su una <strong>strada mineraria </strong>che dovr\u00e0 essere percorsa in salita fino al <em>Belvedere di Normann</em>, dove ci si potr\u00e0 riposare un po\u2019, godendo di un\u2019altra anticipazione del panorama sul <em>Golfo del Leone</em>: terminata la pausa, comincer\u00e0 la salita vera e propria sul versante calcareo (e a tratti particolarmente esposto) del <em>Monte San Giovanni </em>che porta il livello di difficolt\u00e0 a EE. Il primo tratto immerso nel bosco lascer\u00e0 spazio a sempre pi\u00f9 ampie e suggestive vedute panoramiche con diverse piazzole di sosta.</p>"
+                        }
+                    },
+                    {
+                        "title": {
+                            "en": "Stage 4",
+                            "it": "Tappa 4"
+                        },
+                        "content": {
+                            "en": "<p dir=\"ltr\">There are 150 m of elevation gain in just 400 m of path: so expect a moderate challenge if you are not used to walking uphill. Along this stretch, you will come across the&nbsp;<strong>ruins of ropeway conveyors</strong>, mine adits and impressive&nbsp;<strong>limestone cliffs.</strong><br><strong>WARNING</strong>: In this section, we recommend you&nbsp;<strong>never leave the marked path&nbsp;</strong>or venture into the mines, to avoid the hazards found in mining areas.</p>",
+                            "it": "<p>Sono 150 metri di dislivello&nbsp;da superare in appena 400 metri di sviluppo lineare: non tantissimo ma abbastanza per impensierire chi non \u00e8 avezzo alla camminata in salita.&nbsp;Si incontrano in questo tratto i <strong>resti di teleferiche</strong>, gallerie minerarie e impressionanti&nbsp;<strong>pareti calcaree</strong>.<br><strong>ATTENZIONE</strong>:&nbsp;in questo caso tratto si raccomanda di <strong>non lasciare mai il percorso tracciato </strong>e di non avventurarsi nelle gallerie, per non incorrere nei pericoli intrinsechi alle zone minerarie.</p>"
+                        }
+                    },
+                    {
+                        "title": {
+                            "en": "Stage 5",
+                            "it": "Tappa 5"
+                        },
+                        "content": {
+                            "en": "<p dir=\"ltr\">Almost at the end of the upward path, you will reach an old decauville minecart track resting on&nbsp;<strong>an imposing</strong> drystone,<strong> retaining wall</strong>, a testimony to the miners\u2019 hard work and skill: this is&nbsp;<em>minecart track 330</em>, which can be visited by taking the&nbsp;<strong>511/A</strong> variant (which connects Trails 511 and&nbsp;<strong>512</strong> on an old decauville track). Continuing uphill, staying on Trail 511, you will enter a&nbsp;<strong>wide drainage basin&nbsp;</strong>that leads to the&nbsp;<em><strong>is Ollastus pass&nbsp;</strong></em>at an elevation of 378 m asl, where you can continue towards Gonnesa or deviate onto the&nbsp;<strong>512/B&nbsp;</strong>variant (which connects Trails 511 and&nbsp;<strong>512</strong>).&nbsp;</p>",
+                            "it": "<p>Quasi al termine della salita si raggiunge una decauville poggiata su <strong>un imponente muro di sostegno </strong>realizzato con pietre a secco, che ben testimonia la fatica e la maestria dei minatori: si tratta del <em>carreggio 330 </em>che si pu\u00f2 visitare percorrendo la variante <strong>511/A</strong> (che raccorda su una vecchia decauville i sentieri 511 e <strong>512</strong>).&nbsp; Proseguendo in salita restando sul 511 si imbocca un <strong>ampio compluvio </strong>che conduce al <em><strong>passo Is Ollastus</strong></em>, a quota 378 mslm, dove si pu\u00f2 procedere verso Gonnesa o deviare sulla&nbsp; variante <strong>512/B </strong>(che raccorda il 511&nbsp;e il <strong>512</strong>).&nbsp;</p>"
+                        }
+                    },
+                    {
+                        "title": {
+                            "en": "Stage 6",
+                            "it": "Tappa 6"
+                        },
+                        "content": {
+                            "en": "<p dir=\"ltr\">Continuing uphill in a<strong> westerly direction</strong>, you will see the imposing and fascinating&nbsp;<strong>open pits&nbsp;</strong>on&nbsp;<em>Punta la Torre</em>, at an elevation of 424 m. This spot commands a magnificent all-round view that includes the sea of the south-western coast of Sardinia and its islands. Suddenly, you will also&nbsp;<strong>see from above the small town&nbsp;</strong>of<strong>&nbsp;</strong>Gonnesa, which you will reach by walking down a mining road which is&nbsp;<strong>steep</strong> but very scenic.&nbsp;</p>",
+                            "it": "<p>Proseguendo in salita<strong> in direzione ovest</strong>, si scorgono imponenti e suggestivi <strong>scavi aperti&nbsp;</strong>su <em>Punta la Torre</em>, a quota 424 metri: da qui il <strong>panorama </strong>\u00e8 davvero unico e lo sguardo pu\u00f2 spaziare liberamente in tutte le direzioni, in particolare sul mare che bagna la zona sud occidentale della Sardegna e le sue isole. Improvvisamente si aprir\u00e0 una <strong>veduta dall\u2019alto sul paese </strong>di Gonnesa che raggiungeremo scendendo su una strada mineraria tanto <strong>impervia </strong>quanto panoramica.&nbsp;</p>"
+                        }
+                    },
+                    {
+                        "title": {
+                            "en": "Stage 7",
+                            "it": "Tappa 7"
+                        },
+                        "content": {
+                            "en": "<p dir=\"ltr\">At an elevation of 143 m you will find the telecom station. From here, you can take the&nbsp;<strong>513/B</strong> variant, which joins Trails 511 and&nbsp;<strong>513&nbsp;</strong>at&nbsp;<em>Ortu Coccu</em>, passing by the entrance to the old&nbsp;<em><strong>Howard tunnel</strong></em>, which is now blocked. Continuing on Trail 511 for a&nbsp;<strong>further 1650 m</strong>, go downhill to the village of Gonnesa. The trail end point is at the&nbsp;<strong>sports field</strong>.</p>",
+                            "it": "<p>A quota 143 troveremo la Stazione dei ripetitori. Da qui \u00e8 possibile imboccare la variante <strong>513/B</strong> che&nbsp; raccorda il 511&nbsp;e il <strong>513 </strong>all\u2019altezza di <em>Ortu Coccu</em>, passando davanti al piazzale della vecchia <em><strong>galleria Howard</strong></em>, ormai occlusa. Proseguendo sul sentiero 511 per <strong>ulteriori 1650 metri </strong>si scende fino al paese di Gonnesa con punto di arrivo al <strong>campo sportivo</strong>.</p>"
+                        }
+                    }
+                ],
+                "box_type": "info"
+            }
+        ],
+        "sardegnasentieri_id": "<volatile>",
+        "id": "<volatile>",
+        "feature_image": {
+            "id": "<volatile>",
+            "name": {
+                "it": "uno"
+            },
+            "url": "/storage//test-shard/<track-id>/media/<media-id>/uno.jpg",
+            "thumbnail": "/storage//test-shard/<track-id>/media/<media-id>/conversions/uno-thumbnail_400_200.jpg",
+            "api_url": "http://localhost/api/media/<media-id>",
+            "sizes": {
+                "108x148": "/storage//test-shard/<track-id>/media/<media-id>/conversions/uno-thumbnail_108_148.jpg",
+                "108x137": "/storage//test-shard/<track-id>/media/<media-id>/conversions/uno-thumbnail_108_137.jpg",
+                "150x150": "/storage//test-shard/<track-id>/media/<media-id>/conversions/uno-thumbnail_150_150.jpg",
+                "225x100": "/storage//test-shard/<track-id>/media/<media-id>/conversions/uno-thumbnail_225_100.jpg",
+                "118x138": "/storage//test-shard/<track-id>/media/<media-id>/conversions/uno-thumbnail_118_138.jpg",
+                "108x139": "/storage//test-shard/<track-id>/media/<media-id>/conversions/uno-thumbnail_108_139.jpg",
+                "118x117": "/storage//test-shard/<track-id>/media/<media-id>/conversions/uno-thumbnail_118_117.jpg",
+                "335x250": "/storage//test-shard/<track-id>/media/<media-id>/conversions/uno-thumbnail_335_250.jpg",
+                "400x200": "/storage//test-shard/<track-id>/media/<media-id>/conversions/uno-thumbnail_400_200.jpg",
+                "1440x500": "/storage//test-shard/<track-id>/media/<media-id>/conversions/uno-thumbnail_1440_500.jpg",
+                "1920x1080": "/storage//test-shard/<track-id>/media/<media-id>/conversions/uno-thumbnail_1920_1080.jpg",
+                "250x150": "/storage//test-shard/<track-id>/media/<media-id>/conversions/uno-thumbnail_250_150.jpg"
+            },
+            "caption": null,
+            "author": null,
+            "credits": null
+        },
+        "image_gallery": [
+            {
+                "id": "<volatile>",
+                "name": {
+                    "it": "uno"
+                },
+                "url": "/storage//test-shard/<track-id>/media/<media-id>/uno.jpg",
+                "thumbnail": "/storage//test-shard/<track-id>/media/<media-id>/conversions/uno-thumbnail_400_200.jpg",
+                "api_url": "http://localhost/api/media/<media-id>",
+                "sizes": {
+                    "108x148": "/storage//test-shard/<track-id>/media/<media-id>/conversions/uno-thumbnail_108_148.jpg",
+                    "108x137": "/storage//test-shard/<track-id>/media/<media-id>/conversions/uno-thumbnail_108_137.jpg",
+                    "150x150": "/storage//test-shard/<track-id>/media/<media-id>/conversions/uno-thumbnail_150_150.jpg",
+                    "225x100": "/storage//test-shard/<track-id>/media/<media-id>/conversions/uno-thumbnail_225_100.jpg",
+                    "118x138": "/storage//test-shard/<track-id>/media/<media-id>/conversions/uno-thumbnail_118_138.jpg",
+                    "108x139": "/storage//test-shard/<track-id>/media/<media-id>/conversions/uno-thumbnail_108_139.jpg",
+                    "118x117": "/storage//test-shard/<track-id>/media/<media-id>/conversions/uno-thumbnail_118_117.jpg",
+                    "335x250": "/storage//test-shard/<track-id>/media/<media-id>/conversions/uno-thumbnail_335_250.jpg",
+                    "400x200": "/storage//test-shard/<track-id>/media/<media-id>/conversions/uno-thumbnail_400_200.jpg",
+                    "1440x500": "/storage//test-shard/<track-id>/media/<media-id>/conversions/uno-thumbnail_1440_500.jpg",
+                    "1920x1080": "/storage//test-shard/<track-id>/media/<media-id>/conversions/uno-thumbnail_1920_1080.jpg",
+                    "250x150": "/storage//test-shard/<track-id>/media/<media-id>/conversions/uno-thumbnail_250_150.jpg"
+                },
+                "caption": null,
+                "author": null,
+                "credits": null
+            },
+            {
+                "id": "<volatile>",
+                "name": {
+                    "it": "due"
+                },
+                "url": "/storage//test-shard/<track-id>/media/<media-id>/due.jpg",
+                "thumbnail": "/storage//test-shard/<track-id>/media/<media-id>/conversions/due-thumbnail_400_200.jpg",
+                "api_url": "http://localhost/api/media/<media-id>",
+                "sizes": {
+                    "108x148": "/storage//test-shard/<track-id>/media/<media-id>/conversions/due-thumbnail_108_148.jpg",
+                    "108x137": "/storage//test-shard/<track-id>/media/<media-id>/conversions/due-thumbnail_108_137.jpg",
+                    "150x150": "/storage//test-shard/<track-id>/media/<media-id>/conversions/due-thumbnail_150_150.jpg",
+                    "225x100": "/storage//test-shard/<track-id>/media/<media-id>/conversions/due-thumbnail_225_100.jpg",
+                    "118x138": "/storage//test-shard/<track-id>/media/<media-id>/conversions/due-thumbnail_118_138.jpg",
+                    "108x139": "/storage//test-shard/<track-id>/media/<media-id>/conversions/due-thumbnail_108_139.jpg",
+                    "118x117": "/storage//test-shard/<track-id>/media/<media-id>/conversions/due-thumbnail_118_117.jpg",
+                    "335x250": "/storage//test-shard/<track-id>/media/<media-id>/conversions/due-thumbnail_335_250.jpg",
+                    "400x200": "/storage//test-shard/<track-id>/media/<media-id>/conversions/due-thumbnail_400_200.jpg",
+                    "1440x500": "/storage//test-shard/<track-id>/media/<media-id>/conversions/due-thumbnail_1440_500.jpg",
+                    "1920x1080": "/storage//test-shard/<track-id>/media/<media-id>/conversions/due-thumbnail_1920_1080.jpg",
+                    "250x150": "/storage//test-shard/<track-id>/media/<media-id>/conversions/due-thumbnail_250_150.jpg"
+                },
+                "caption": null,
+                "author": null,
+                "credits": null
+            }
+        ],
+        "created_at": "<volatile>",
+        "updated_at": "<volatile>",
+        "taxonomies": {
+            "activity": [
+                {
+                    "identifier": "hiking",
+                    "name": {
+                        "it": "hiking"
+                    }
+                },
+                {
+                    "identifier": "sardegnasentieritypesentiero",
+                    "name": {
+                        "it": "sardegnasentieri:type:sentiero"
+                    }
+                }
+            ],
+            "where": [
+                {
+                    "identifier": "5",
+                    "name": {
+                        "en": "Area D (Sud-OVEST)",
+                        "it": "Area D (Sud-OVEST)"
+                    }
+                },
+                {
+                    "identifier": "13",
+                    "name": {
+                        "it": "ZSUD5"
+                    }
+                },
+                {
+                    "identifier": "R7361997",
+                    "name": {
+                        "it": "Sardegna"
+                    },
+                    "admin_level": 4
+                },
+                {
+                    "identifier": "R19622159",
+                    "name": {
+                        "it": "Sulcis Iglesiente"
+                    },
+                    "admin_level": 6
+                },
+                {
+                    "identifier": "R39853",
+                    "name": {
+                        "it": "Iglesias"
+                    },
+                    "admin_level": 8
+                },
+                {
+                    "identifier": "R39863",
+                    "name": {
+                        "it": "Gonnesa"
+                    },
+                    "admin_level": 8
+                }
+            ]
+        },
+        "distance": 6.5,
+        "duration_forward": 190,
+        "duration_backward": 190,
+        "name": {
+            "it": "Tappa"
+        },
+        "roundtrip": false,
+        "related_pois": [],
+        "taxonomy": {
+            "activity": [
+                {
+                    "id": "<volatile>",
+                    "name": {
+                        "it": "hiking"
+                    },
+                    "description": null,
+                    "identifier": "hiking",
+                    "icon": null
+                },
+                {
+                    "id": "<volatile>",
+                    "name": {
+                        "it": "sardegnasentieri:type:sentiero"
+                    },
+                    "description": null,
+                    "identifier": "sardegnasentieritypesentiero",
+                    "icon": null
+                }
+            ],
+            "when": [],
+            "poi_type": null,
+            "poi_types": []
+        },
+        "taxonomy_where": {
+            "5": {
+                "en": "Area D (Sud-OVEST)",
+                "it": "Area D (Sud-OVEST)",
+                "_source": "geohub_conf_32"
+            },
+            "13": {
+                "it": "ZSUD5",
+                "_source": "osm2cai"
+            },
+            "R39853": {
+                "it": "Iglesias",
+                "_admin_level": 8,
+                "_source": "osmfeatures"
+            },
+            "R39863": {
+                "it": "Gonnesa",
+                "_admin_level": 8,
+                "_source": "osmfeatures"
+            },
+            "R7361997": {
+                "it": "Sardegna",
+                "_admin_level": 4,
+                "_source": "osmfeatures"
+            },
+            "R19622159": {
+                "it": "Sulcis Iglesiente",
+                "_admin_level": 6,
+                "_source": "osmfeatures"
+            }
+        },
+        "taxonomyWheres": [
+            "Area D (Sud-OVEST)",
+            "ZSUD5",
+            "Sardegna",
+            "Sulcis Iglesiente",
+            "Iglesias",
+            "Gonnesa"
+        ]
+    }
+}

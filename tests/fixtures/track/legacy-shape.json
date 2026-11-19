@@ -1,0 +1,187 @@
+{
+    "geometry": {
+        "coordinates": {
+            "[]": {
+                "[]": "float"
+            }
+        },
+        "type": "string"
+    },
+    "properties": {
+        "ascent": "int",
+        "audio": {
+            "it": "string"
+        },
+        "cai_scale": "string",
+        "color": "string",
+        "config_detail": {
+            "[]": {
+                "attributes": {
+                    "title": "string"
+                },
+                "layout": "string"
+            }
+        },
+        "created_at": "string",
+        "descent": "int",
+        "description": {
+            "it": "string"
+        },
+        "difficulty": {
+            "it": "string"
+        },
+        "distance": "float",
+        "duration_backward": "int",
+        "duration_forward": "int",
+        "ele_from": "int",
+        "ele_max": "int",
+        "ele_min": "int",
+        "ele_to": "int",
+        "excerpt": {
+            "it": "string"
+        },
+        "feature_image": {
+            "api_url": "string",
+            "author": "null",
+            "caption": "null",
+            "credits": "null",
+            "id": "int",
+            "name": {
+                "it": "string"
+            },
+            "sizes": {
+                "108x137": "string",
+                "108x139": "string",
+                "108x148": "string",
+                "118x117": "string",
+                "118x138": "string",
+                "1440x500": "string",
+                "150x150": "string",
+                "1920x1080": "string",
+                "225x100": "string",
+                "250x150": "string",
+                "335x250": "string",
+                "400x200": "string"
+            },
+            "thumbnail": "string",
+            "url": "string"
+        },
+        "from": "string",
+        "id": "int",
+        "image_gallery": {
+            "[]": {
+                "api_url": "string",
+                "author": "null",
+                "caption": "null",
+                "credits": "null",
+                "id": "int",
+                "name": {
+                    "it": "string"
+                },
+                "sizes": {
+                    "108x137": "string",
+                    "108x139": "string",
+                    "108x148": "string",
+                    "118x117": "string",
+                    "118x138": "string",
+                    "1440x500": "string",
+                    "150x150": "string",
+                    "1920x1080": "string",
+                    "225x100": "string",
+                    "250x150": "string",
+                    "335x250": "string",
+                    "400x200": "string"
+                },
+                "thumbnail": "string",
+                "url": "string"
+            }
+        },
+        "layers": {
+            "[]": "int"
+        },
+        "name": {
+            "it": "string"
+        },
+        "not_accessible": "bool",
+        "not_accessible_message": {
+            "it": "string"
+        },
+        "osm_url": "string",
+        "ref": "string",
+        "related_pois": {
+            "[]": {
+                "geometry": {
+                    "coordinates": {
+                        "[]": "float"
+                    },
+                    "type": "string"
+                },
+                "properties": {
+                    "created_at": "string",
+                    "feature_image": "null",
+                    "geojson_url": "string",
+                    "gpx_url": "string",
+                    "id": "int",
+                    "image_gallery": "[]empty",
+                    "kml_url": "string",
+                    "name": {
+                        "it": "string"
+                    },
+                    "updated_at": "string"
+                },
+                "type": "string"
+            }
+        },
+        "related_url": {
+            "Sito": "string"
+        },
+        "roundtrip": "bool",
+        "taxonomies": {
+            "activity": {
+                "[]": {
+                    "identifier": "string",
+                    "name": {
+                        "it": "string"
+                    }
+                }
+            },
+            "where": {
+                "[]": {
+                    "admin_level": "int",
+                    "identifier": "string",
+                    "name": {
+                        "it": "string"
+                    }
+                }
+            }
+        },
+        "taxonomy": {
+            "activity": {
+                "[]": {
+                    "description": "null",
+                    "icon": "null",
+                    "id": "int",
+                    "identifier": "string",
+                    "name": {
+                        "it": "string"
+                    }
+                }
+            },
+            "poi_type": "null",
+            "poi_types": "[]empty",
+            "when": "[]empty"
+        },
+        "taxonomyWheres": {
+            "[]": "string"
+        },
+        "taxonomy_where": {
+            "[]": {
+                "_admin_level": "int",
+                "it": "string"
+            }
+        },
+        "to": "string",
+        "updated_at": "string"
+    },
+    "type": "string"
+}
