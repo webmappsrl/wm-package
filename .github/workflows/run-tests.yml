@@ -46,8 +46,17 @@ jobs:
           echo "::add-matcher::${{ runner.tool_cache }}/phpunit.json"
 
       # `composer update` lancia `npm install` (post-update-cmd), e `chartjs-node-canvas` tira
-      # dentro `canvas`, che per Node 24 non ha un binario precompilato: ripiega sulla
-      # compilazione, che senza queste librerie muore con «Package 'pixman-1' not found».
+      # dentro `canvas` 2.11.2. Per il Node 24 del runner non esiste un binario precompilato, e
+      # compilarlo da sorgente non e' una via d'uscita: `nan` non sta in piedi sul V8 del 24
+      # («'v8::FunctionCallbackInfo<v8::Value>' has no member named 'Holder'»). Con Node 20 il
+      # binario c'e' e npm lo scarica e basta.
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Rete di sicurezza: se un domani il binario precompilato non ci fosse, la compilazione
+      # trova le librerie invece di morire su «Package 'pixman-1' not found».
       - name: Librerie di sistema per compilare canvas
         run: |
           sudo apt-get update
