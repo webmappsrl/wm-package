@@ -105,6 +105,27 @@ sulla foto deve uscire con la foto, così chi la mostra non deve abbinare due el
 `JsonResource::filter()` trasforma in lista un array con chiavi tutte numeriche, quindi nel file su
 AWS la mappa per id perdeva gli id (oc:8959).
 
+### Copiare un media su un altro modello
+
+Si usa `Media::copy()` di Spatie, non `replicate()`: lo fanno ad esempio la conversione UgcPoi →
+EcPoi (`ConvertUgcPoiToEcPoi::copyMedia()`, oc:8967) e l'approvazione di un'istanza del Catasto
+Sentieri (`TrailRegistryService`). Cosa fa e non fa `copy()`, e come lo compensa la conversione,
+è nel docblock di `copyMedia()`. Qui il perché:
+
+- **Il percorso del file contiene l'id del media** (`WmfePathGenerator` →
+  `DefaultPathGenerator::getBasePath()` usa `$media->getKey()`): una riga duplicata con un id nuovo
+  punta a una cartella vuota. E `replicate()` copia anche l'`uuid`, che ha un indice unico
+  (`media_uuid_unique`).
+- **Perché non basta rigenerare l'uuid.** Era la correzione più piccola e toglie l'errore 500, ma
+  lascia l'EcPoi con una foto che non si apre: provato in locale, URL della copia → HTTP 404
+  (oc:8967). La rigenerazione dell'uuid c'era fino al commit `4013dc65` (18/09/2025), che l'ha tolta
+  e ha fatto emergere il bug.
+- **Il try/catch attorno alla copia era la causa del 500**: dentro la transazione che Nova apre per
+  l'action, l'errore SQL intercettato la lasciava invalidata (il meccanismo è nella trappola su
+  Postgres in `.claude/rules/job-e-import.md`). Ogni UgcPoi ora gira in un savepoint senza catch
+  dentro la closure; i file già copiati si cancellano fuori, perché il rollback annulla le righe ma
+  non lo storage.
+
 ### Altro
 
 - Spatie `getMedia()` senza argomento legge la collection `default`: aggiungere una collection

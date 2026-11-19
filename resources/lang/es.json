@@ -100,5 +100,12 @@
     "Allowed values": "Valores admitidos",
     "Caption": "Pie de foto",
     "Credits": "Créditos",
-    "Author": "Autor"
+    "Author": "Autor",
+    "Conversion completed successfully": "Conversión completada",
+    "Converted UgcPois: :ids": "UgcPoi convertidos: :ids",
+    "UgcPois already converted to EcPoi: :ids": "UgcPoi ya convertidos en EcPoi: :ids",
+    "UgcPoi :id not converted: :reason": "UgcPoi :id no convertido: :reason",
+    "photo :media not found on storage": "foto :media no encontrada en el almacenamiento",
+    "conversion error, see the log": "error durante la conversión, ver el registro",
+    "Convert To EcPoi": "Convertir en EcPoi"
 }

@@ -100,5 +100,12 @@
     "Allowed values": "Zulässige Werte",
     "Caption": "Bildunterschrift",
     "Credits": "Bildnachweis",
-    "Author": "Autor"
+    "Author": "Autor",
+    "Conversion completed successfully": "Umwandlung abgeschlossen",
+    "Converted UgcPois: :ids": "Umgewandelte UgcPoi: :ids",
+    "UgcPois already converted to EcPoi: :ids": "Bereits in EcPoi umgewandelte UgcPoi: :ids",
+    "UgcPoi :id not converted: :reason": "UgcPoi :id nicht umgewandelt: :reason",
+    "photo :media not found on storage": "Foto :media im Speicher nicht gefunden",
+    "conversion error, see the log": "Fehler bei der Umwandlung, siehe Log",
+    "Convert To EcPoi": "In EcPoi umwandeln"
 }

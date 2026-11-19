@@ -706,5 +706,11 @@
     "They are resolved <strong>from here</strong>, not at the source: open the trail from its name and enter the data. The row disappears by itself as soon as it is there.": "Si risolvono <strong>da qui</strong>, non alla fonte: apri il sentiero dal suo nome e inserisci il dato. La riga sparisce da sé appena c’è.",
     "A high number at the start is not an alarm: it is the work list, and it gets shorter as the data is filled in.": "Un numero alto all’inizio non è un allarme: è la lista di lavoro, e si accorcia man mano che il dato viene inserito.",
     "From the import": "Da import",
-    "Inconsistencies": "Incongruenze"
+    "Inconsistencies": "Incongruenze",
+    "Conversion completed successfully": "Conversione completata",
+    "Converted UgcPois: :ids": "UgcPoi convertiti: :ids",
+    "UgcPois already converted to EcPoi: :ids": "UgcPoi già convertiti in EcPoi: :ids",
+    "UgcPoi :id not converted: :reason": "UgcPoi :id non convertito: :reason",
+    "photo :media not found on storage": "foto :media non trovata sullo storage",
+    "conversion error, see the log": "errore durante la conversione, vedi il log"
 }
