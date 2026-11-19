@@ -10,9 +10,7 @@ use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Models\TaxonomyPoiType;
 use Wm\WmPackage\Services\Osm\OsmPoiImporter;
 use Wm\WmPackage\Services\Osm\OsmTaxonomyPoiTypeResolver;
-use Wm\WmPackage\Tests\TestCase;
 
-uses(TestCase::class);
 
 afterEach(function () {
     Mockery::close();

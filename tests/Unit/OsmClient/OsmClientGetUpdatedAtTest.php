@@ -5,11 +5,12 @@ namespace Tests\Unit\Providers;
 use Exception;
 use Wm\WmPackage\Facades\OsmClient;
 use Wm\WmPackage\Tests\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 class OsmClientGetUpdatedAtTest extends TestCase
 {
     // Exceptions
-    /** @test */
+    #[Test]
     public function no_elements_throw_exception()
     {
         // $osmp = app(OsmServiceProvider::class);
@@ -18,7 +19,7 @@ class OsmClientGetUpdatedAtTest extends TestCase
         OsmClient::getUpdatedAt($json);
     }
 
-    /** @test */
+    #[Test]
     public function no_timestamp_throw_exception()
     {
         // $osmp = app(OsmServiceProvider::class);
@@ -48,7 +49,7 @@ class OsmClientGetUpdatedAtTest extends TestCase
     }
 
     // NODE
-    /** @test */
+    #[Test]
     public function with_node_it_returns_timestamp()
     {
         // $osmp = app(OsmServiceProvider::class);
@@ -64,7 +65,7 @@ class OsmClientGetUpdatedAtTest extends TestCase
     }
 
     // WAY
-    /** @test */
+    #[Test]
     public function with_way_with_older_node_it_returns_way_timestamp()
     {
         // $osmp = app(OsmServiceProvider::class);
@@ -83,7 +84,7 @@ class OsmClientGetUpdatedAtTest extends TestCase
         $this->assertEquals('2001-01-01 12:30:40', OsmClient::getUpdatedAt($json));
     }
 
-    /** @test */
+    #[Test]
     public function with_way_with_older_way_it_returns_node_timestamp()
     {
         // $osmp = app(OsmServiceProvider::class);
@@ -103,7 +104,7 @@ class OsmClientGetUpdatedAtTest extends TestCase
     }
 
     // RELATION
-    /** @test */
+    #[Test]
     public function with_relation_with_relation_more_recent_it_returns_relation_timestamp()
     {
         // $osmp = app(OsmServiceProvider::class);
@@ -126,7 +127,7 @@ class OsmClientGetUpdatedAtTest extends TestCase
         $this->assertEquals('2001-01-01 12:30:40', OsmClient::getUpdatedAt($json));
     }
 
-    /** @test */
+    #[Test]
     public function with_relation_with_way_more_recent_it_returns_way_timestamp()
     {
         // $osmp = app(OsmServiceProvider::class);
@@ -149,7 +150,7 @@ class OsmClientGetUpdatedAtTest extends TestCase
         $this->assertEquals('2001-01-01 12:30:40', OsmClient::getUpdatedAt($json));
     }
 
-    /** @test */
+    #[Test]
     public function with_relation_with_node_more_recent_it_returns_node_timestamp()
     {
         // $osmp = app(OsmServiceProvider::class);

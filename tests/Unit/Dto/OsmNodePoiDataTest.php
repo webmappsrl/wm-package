@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 use Wm\WmPackage\Dto\OsmEcPoiPropertiesData;
 use Wm\WmPackage\Dto\OsmNodePoiData;
-use Wm\WmPackage\Tests\TestCase;
 
-uses(TestCase::class);
 
 it('prefers information=guidepost over tourism=information for taxonomy key', function () {
     $dto = OsmNodePoiData::fromOsmNode(

@@ -5,6 +5,7 @@ namespace Wm\WmPackage\Tests\Feature;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Wm\WmPackage\Tests\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 class ExportDownloadControllerTest extends TestCase
 {
@@ -14,7 +15,7 @@ class ExportDownloadControllerTest extends TestCase
         Storage::fake('public');
     }
 
-    /** @test */
+    #[Test]
     public function it_downloads_existing_file()
     {
         // Create a test file
@@ -35,7 +36,7 @@ class ExportDownloadControllerTest extends TestCase
         $response->assertHeader('Content-Disposition', 'attachment; filename='.$fileName);
     }
 
-    /** @test */
+    #[Test]
     public function it_deletes_file_after_download()
     {
         // Create a test file
@@ -62,7 +63,7 @@ class ExportDownloadControllerTest extends TestCase
         $this->assertFalse(Storage::disk('public')->exists($fileName));
     }
 
-    /** @test */
+    #[Test]
     public function it_returns_correct_mime_type()
     {
         $fileName = 'test-file.xlsx';

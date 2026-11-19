@@ -8,6 +8,7 @@ use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Storage;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Tests\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 // Il toggle dei deep link resta spento: acceso, scriverebbe sul registro SFTP condiviso.
 class AppOpenQrCodeTest extends TestCase
@@ -35,7 +36,7 @@ class AppOpenQrCodeTest extends TestCase
         ], $attributes));
     }
 
-    /** @test */
+    #[Test]
     public function has_store_links_is_true_with_only_one_link()
     {
         $app = $this->appWithLinks(['ios_store_link' => null]);
@@ -43,7 +44,7 @@ class AppOpenQrCodeTest extends TestCase
         $this->assertTrue($app->hasStoreLinks());
     }
 
-    /** @test */
+    #[Test]
     public function has_store_links_is_false_without_links()
     {
         $app = $this->appWithLinks(['ios_store_link' => null, 'android_store_link' => '']);
@@ -51,7 +52,7 @@ class AppOpenQrCodeTest extends TestCase
         $this->assertFalse($app->hasStoreLinks());
     }
 
-    /** @test */
+    #[Test]
     public function open_url_points_to_named_route()
     {
         $app = $this->appWithLinks();
@@ -60,7 +61,7 @@ class AppOpenQrCodeTest extends TestCase
         $this->assertStringStartsWith('http', $app->getAppOpenUrl());
     }
 
-    /** @test */
+    #[Test]
     public function webapp_url_uses_deep_link_domain()
     {
         $this->assertSame('https://cammini.example.it', $this->appWithLinks(['website_url' => 'https://cammini.example.it/'])->getWebappUrl());
@@ -69,7 +70,7 @@ class AppOpenQrCodeTest extends TestCase
         $this->assertSame("https://{$app->id}.test_app.webmapp.it", $app->getWebappUrl());
     }
 
-    /** @test */
+    #[Test]
     public function svg_encodes_open_url()
     {
         $app = $this->appWithLinks();
@@ -83,7 +84,7 @@ class AppOpenQrCodeTest extends TestCase
         );
     }
 
-    /** @test */
+    #[Test]
     public function file_names_fall_back_to_app_id_without_sku()
     {
         $app = $this->appWithLinks();
@@ -92,7 +93,7 @@ class AppOpenQrCodeTest extends TestCase
         $this->assertStringContainsString("app-{$app->id}-qrcode.png", $app->renderAppOpenQrCodeHtml());
     }
 
-    /** @test */
+    #[Test]
     public function png_is_at_least_the_minimum_size()
     {
         $info = getimagesizefromstring($this->appWithLinks()->renderAppOpenQrCodePng());
@@ -103,7 +104,7 @@ class AppOpenQrCodeTest extends TestCase
         $this->assertGreaterThanOrEqual(App::APP_OPEN_QR_PNG_MIN_SIZE, $info[1]);
     }
 
-    /** @test */
+    #[Test]
     public function html_is_null_without_store_links()
     {
         $app = $this->appWithLinks(['ios_store_link' => null, 'android_store_link' => null]);
@@ -111,7 +112,7 @@ class AppOpenQrCodeTest extends TestCase
         $this->assertNull($app->renderAppOpenQrCodeHtml());
     }
 
-    /** @test */
+    #[Test]
     public function html_contains_url_and_both_downloads()
     {
         $app = $this->appWithLinks();

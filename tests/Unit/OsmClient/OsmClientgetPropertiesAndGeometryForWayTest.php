@@ -10,6 +10,7 @@ use Wm\WmPackage\Exceptions\OsmClientExceptionNoTags;
 use Wm\WmPackage\Exceptions\OsmClientExceptionWayHasNoNodes;
 use Wm\WmPackage\Facades\OsmClient;
 use Wm\WmPackage\Tests\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 class OsmClientgetPropertiesAndGeometryForWayTest extends TestCase
 {
@@ -55,7 +56,7 @@ class OsmClientgetPropertiesAndGeometryForWayTest extends TestCase
     }
 
     // Exceptions
-    /** @test */
+    #[Test]
     public function no_elements_throw_exception()
     {
         $osmid = 'way/1';
@@ -79,7 +80,7 @@ class OsmClientgetPropertiesAndGeometryForWayTest extends TestCase
         $this->assertTrue(false);
     }
 
-    /** @test */
+    #[Test]
     public function no_tags_throw_exception()
     {
         $osmid = 'way/1';
@@ -126,7 +127,7 @@ class OsmClientgetPropertiesAndGeometryForWayTest extends TestCase
         $this->assertTrue(false);
     }
 
-    /** @test */
+    #[Test]
     public function no_nodes_throw_exception()
     {
         $osmid = 'way/1';
@@ -170,7 +171,7 @@ class OsmClientgetPropertiesAndGeometryForWayTest extends TestCase
         $this->assertTrue(false);
     }
 
-    /** @test */
+    #[Test]
     public function no_lon_throw_exception()
     {
         $osmid = 'way/1';
@@ -220,7 +221,7 @@ class OsmClientgetPropertiesAndGeometryForWayTest extends TestCase
         $this->assertTrue(false);
     }
 
-    /** @test */
+    #[Test]
     public function no_lat_throw_exception()
     {
         $osmid = 'way/1';
@@ -273,7 +274,7 @@ class OsmClientgetPropertiesAndGeometryForWayTest extends TestCase
     }
 
     // Positive test
-    /** @test */
+    #[Test]
     public function with_proper_json_has_proper_properties_and_geometry()
     {
         $osmid = 'way/1';

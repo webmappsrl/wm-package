@@ -5,9 +5,8 @@ declare(strict_types=1);
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Wm\WmPackage\Models\User;
 use Wm\WmPackage\Services\RolesAndPermissionsService;
-use Wm\WmPackage\Tests\TestCase;
 
-uses(TestCase::class, DatabaseTransactions::class);
+uses(DatabaseTransactions::class);
 
 beforeEach(function () {
     RolesAndPermissionsService::seedDatabase();

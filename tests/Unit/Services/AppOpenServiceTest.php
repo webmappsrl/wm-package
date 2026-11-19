@@ -5,6 +5,7 @@ namespace Tests\Unit\Services;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Services\AppOpenService;
 use Wm\WmPackage\Tests\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 class AppOpenServiceTest extends TestCase
 {
@@ -29,7 +30,7 @@ class AppOpenServiceTest extends TestCase
         $this->service = new AppOpenService;
     }
 
-    /** @test */
+    #[Test]
     public function detects_ios_for_iphone_ipad_and_ipod()
     {
         $this->assertSame('ios', $this->service->detectPlatform(self::UA_IPHONE));
@@ -37,13 +38,13 @@ class AppOpenServiceTest extends TestCase
         $this->assertSame('ios', $this->service->detectPlatform(self::UA_IPOD));
     }
 
-    /** @test */
+    #[Test]
     public function detects_android()
     {
         $this->assertSame('android', $this->service->detectPlatform(self::UA_ANDROID));
     }
 
-    /** @test */
+    #[Test]
     public function falls_back_to_other_for_desktop_empty_and_null()
     {
         $this->assertSame('other', $this->service->detectPlatform(self::UA_WINDOWS));
@@ -51,7 +52,7 @@ class AppOpenServiceTest extends TestCase
         $this->assertSame('other', $this->service->detectPlatform(null));
     }
 
-    /** @test */
+    #[Test]
     public function android_package_comes_from_store_link_id()
     {
         $app = App::factory()->make([
@@ -62,7 +63,7 @@ class AppOpenServiceTest extends TestCase
         $this->assertSame('it.webmapp.cammini', $this->service->androidPackage($app));
     }
 
-    /** @test */
+    #[Test]
     public function android_package_falls_back_to_sku()
     {
         $app = App::factory()->make([
@@ -73,7 +74,7 @@ class AppOpenServiceTest extends TestCase
         $this->assertSame('it.webmapp.x', $this->service->androidPackage($app));
     }
 
-    /** @test */
+    #[Test]
     public function android_package_is_null_when_invalid()
     {
         $app = App::factory()->make([
@@ -84,7 +85,7 @@ class AppOpenServiceTest extends TestCase
         $this->assertNull($this->service->androidPackage($app));
     }
 
-    /** @test */
+    #[Test]
     public function intent_url_targets_deep_link_domain_with_encoded_fallback()
     {
         $app = App::factory()->make([
@@ -99,7 +100,7 @@ class AppOpenServiceTest extends TestCase
         );
     }
 
-    /** @test */
+    #[Test]
     public function intent_url_is_null_without_android_link()
     {
         $app = App::factory()->make(['android_store_link' => null]);

@@ -6,10 +6,11 @@ use Illuminate\Support\Facades\Http;
 use Wm\WmPackage\Exceptions\OsmClientExceptionRelationHasInvalidGeometry;
 use Wm\WmPackage\Facades\OsmClient;
 use Wm\WmPackage\Tests\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 class OsmClientgetPropertiesAndGeometryForRelationCheckGeometryTest extends TestCase
 {
-    /** @test */
+    #[Test]
     public function with_valid_json_it_works()
     {
         $input = <<<'EOF'
@@ -43,7 +44,7 @@ class OsmClientgetPropertiesAndGeometryForRelationCheckGeometryTest extends Test
         $this->assertTrue(true);
     }
 
-    /** @test */
+    #[Test]
     public function with_not_connected_ways_it_throws_proper_exception()
     {
         $input = <<<'EOF'
@@ -69,7 +70,7 @@ class OsmClientgetPropertiesAndGeometryForRelationCheckGeometryTest extends Test
         $this->checkException($input, OsmClientExceptionRelationHasInvalidGeometry::class);
     }
 
-    /** @test */
+    #[Test]
     public function with_mustache_it_throws_proper_exception()
     {
         $input = <<<'EOF'
@@ -131,7 +132,7 @@ class OsmClientgetPropertiesAndGeometryForRelationCheckGeometryTest extends Test
         $this->assertTrue(true);
     }
 
-    /** @test */
+    #[Test]
     public function with_valid_json_nodes_order_does_not_count_it_works()
     {
         $input = <<<'EOF'
@@ -165,7 +166,7 @@ class OsmClientgetPropertiesAndGeometryForRelationCheckGeometryTest extends Test
         $this->assertTrue(true);
     }
 
-    /** @test */
+    #[Test]
     public function with_valid_json_members_order_does_not_count_it_works()
     {
         $input = <<<'EOF'
@@ -199,7 +200,7 @@ class OsmClientgetPropertiesAndGeometryForRelationCheckGeometryTest extends Test
         $this->assertTrue(true);
     }
 
-    /** @test */
+    #[Test]
     public function with_valid_json_members_order_and_nodes_does_not_count_it_works()
     {
         $input = <<<'EOF'

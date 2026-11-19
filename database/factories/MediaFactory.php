@@ -74,7 +74,10 @@ class MediaFactory extends Factory
             ],
             'order_column' => $this->faker->numberBetween(1, 100),
             'geometry' => \DB::raw("ST_GeomFromGeoJSON('{$geojson}')"),
-            'app_id' => App::first()->id,
+            // Se non c'e' nessuna app se ne crea una, invece di esplodere con «Attempt to read
+            // property "id" on null»: prima funzionava solo dove un'app esisteva gia' a
+            // database, cioe' lanciando i test da uno shard popolato.
+            'app_id' => (App::first() ?? App::factory()->create())->id,
         ];
     }
 }

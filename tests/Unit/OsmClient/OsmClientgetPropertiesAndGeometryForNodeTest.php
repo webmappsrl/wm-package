@@ -7,11 +7,12 @@ use Illuminate\Support\Facades\Http;
 use Wm\WmPackage\Exceptions\OsmClientExceptionNoElements;
 use Wm\WmPackage\Facades\OsmClient;
 use Wm\WmPackage\Tests\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 class OsmClientgetPropertiesAndGeometryForNodeTest extends TestCase
 {
     // Exceptions
-    /** @test */
+    #[Test]
     public function no_elements_throw_exception()
     {
         $osmid = 'node/1234';
@@ -39,7 +40,7 @@ class OsmClientgetPropertiesAndGeometryForNodeTest extends TestCase
         $this->assertTrue(false);
     }
 
-    /** @test */
+    #[Test]
     public function no_tags_throw_exception()
     {
         $osmid = 'node/1234';
@@ -69,7 +70,7 @@ class OsmClientgetPropertiesAndGeometryForNodeTest extends TestCase
         $this->assertTrue(false);
     }
 
-    /** @test */
+    #[Test]
     public function no_lat_throw_exception()
     {
         $osmid = 'node/1234';
@@ -103,7 +104,7 @@ class OsmClientgetPropertiesAndGeometryForNodeTest extends TestCase
         $this->assertTrue(false);
     }
 
-    /** @test */
+    #[Test]
     public function no_lon_throw_exception()
     {
         $osmid = 'node/1234';
@@ -138,7 +139,7 @@ class OsmClientgetPropertiesAndGeometryForNodeTest extends TestCase
     }
 
     // Positive test
-    /** @test */
+    #[Test]
     public function with_proper_json_has_proper_properties_and_geometry()
     {
         $osmid = 'node/1234';

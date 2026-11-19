@@ -39,10 +39,23 @@ Si applica quando scrivi o modifichi un test del package.
   `vendor/bin/pest tests/Unit/Services/EcTrackService --filter=<Classe>` (oc:8543).
 - Su `ArrayStore` `flush()` non libera i lock di `ShouldBeUnique`, che vivono in `$locks` e non in
   `$storage`: per ripartire da zero in un test usa `app('cache')->forgetDriver('redis')` (oc:8660).
+- **La suite del package si lancia in due modi, e nessuno dei due la esegue tutta.** I test sono
+  divisi fra due `TestCase` incompatibili, che vivono in due `vendor` diversi:
+  - i test che dichiarano `Wm\WmPackage\Tests\TestCase` (91 file) girano **da dentro il
+    package**, `cd wm-package && vendor/bin/pest <cartella>`: usano Orchestra Testbench, che sta
+    nel vendor del package;
+  - i test che dichiarano `Tests\TestCase` (96 file) girano **dal consumer**,
+    `vendor/bin/pest wm-package/tests/<cartella>`: usano l'applicazione vera dello shard.
+
+  Lanciare il gruppo sbagliato dalla parte sbagliata da' «Class … not found» in caricamento, e
+  l'errore sembra una suite rotta invece che un comando sbagliato: e' successo, e costa tempo.
+  Unificarli vorrebbe dire installare Testbench nello shard, che oggi richiede di aggiornare
+  `laravel/framework` e `symfony/yaml` nel lock, con Nova bloccato a 5.7.6 (verificato il
+  19/11/2026 con `composer require --dev --dry-run`).
+
 - I test del package non girano in nessuna CI: le testsuite dei consumer includono solo i loro
   `tests/`, e la CI di wm-package fallisce a «Install dependencies» (al 06/10/2026 tutti gli ultimi
-  100 run, dal 23/06/2026: ricontrolla prima di contarci). Si lanciano a mano da un
-  consumer (`vendor/bin/pest wm-package/tests/...`), e lì il DB dipende dallo shard: maphub e
+  100 run, dal 23/06/2026: ricontrolla prima di contarci). Il DB dipende dallo shard: maphub e
   osm2cai2 non impostano `DB_DATABASE` in `phpunit.xml` e usano il DB del `.env`, forestas e
   camminiditalia usano `forestas_testing`/`camminiditalia_testing`. Un test che usa tassonomie senza
   crearle passa dove ci sono e fallisce dove mancano: crea nel test ciò che usa, con identifier

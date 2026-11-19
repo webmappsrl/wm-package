@@ -16,6 +16,10 @@ class EnforceNovaAccessOnLoginTest extends TestCase
     {
         parent::setUp();
         RolesAndPermissionsService::seedDatabase();
+
+        // Il listener si disattiva da se' nei test, per non rompere i login programmatici delle
+        // suite: qui si verifica proprio il blocco, quindi va riacceso.
+        config(['wm-package.enforce_nova_access_in_tests' => true]);
     }
 
     public function test_login_is_rejected_for_user_without_access_nova(): void

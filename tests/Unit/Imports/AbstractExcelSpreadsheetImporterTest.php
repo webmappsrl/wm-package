@@ -5,10 +5,11 @@ namespace Tests\Unit\Imports;
 use Maatwebsite\Excel\Row;
 use Wm\WmPackage\Imports\AbstractExcelSpreadsheetImporter;
 use Wm\WmPackage\Tests\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 class AbstractExcelSpreadsheetImporterTest extends TestCase
 {
-    /** @test */
+    #[Test]
     public function normalized_valid_headers_lowercase_and_underscores(): void
     {
         config([
@@ -20,7 +21,7 @@ class AbstractExcelSpreadsheetImporterTest extends TestCase
         $this->assertSame(['id', 'foo_bar', 'ele_from'], $out);
     }
 
-    /** @test */
+    #[Test]
     public function comma_separated_display_preserves_config_spelling(): void
     {
         config([
@@ -32,7 +33,7 @@ class AbstractExcelSpreadsheetImporterTest extends TestCase
         $this->assertSame('id, from, difficulty', $s);
     }
 
-    /** @test */
+    #[Test]
     public function normalize_keys_trims_and_snake_cases_headers(): void
     {
         $importer = new class extends AbstractExcelSpreadsheetImporter
@@ -49,7 +50,7 @@ class AbstractExcelSpreadsheetImporterTest extends TestCase
         $this->assertSame(['ele_from' => 10, 'to' => 'x'], $normalized);
     }
 
-    /** @test */
+    #[Test]
     public function normalize_cell_value_trims_empty_and_null_markers(): void
     {
         $importer = new class extends AbstractExcelSpreadsheetImporter

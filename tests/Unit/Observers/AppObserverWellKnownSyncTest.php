@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Storage;
 use Wm\WmPackage\Jobs\SyncWellKnownRegistryJob;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Tests\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 class AppObserverWellKnownSyncTest extends TestCase
 {
@@ -25,7 +26,7 @@ class AppObserverWellKnownSyncTest extends TestCase
         Bus::fake();
     }
 
-    /** @test */
+    #[Test]
     public function creating_app_with_toggle_already_true_dispatches_add_job()
     {
         // Regression: wasChanged('properties') is always false on a just-created model
@@ -37,7 +38,7 @@ class AppObserverWellKnownSyncTest extends TestCase
         Bus::assertDispatched(SyncWellKnownRegistryJob::class, fn ($job) => $job->action === 'add' && $job->sku === $app->sku);
     }
 
-    /** @test */
+    #[Test]
     public function toggling_the_flag_on_dispatches_add_job()
     {
         $app = App::factory()->create(['sku' => 'it.webmapp.testapp', 'properties' => ['native_app_deep_link_enabled' => false]]);
@@ -48,7 +49,7 @@ class AppObserverWellKnownSyncTest extends TestCase
         Bus::assertDispatched(SyncWellKnownRegistryJob::class, fn ($job) => $job->action === 'add' && $job->sku === 'it.webmapp.testapp');
     }
 
-    /** @test */
+    #[Test]
     public function toggling_the_flag_off_dispatches_remove_job()
     {
         $app = App::factory()->create(['sku' => 'it.webmapp.testapp', 'properties' => ['native_app_deep_link_enabled' => true]]);
@@ -59,7 +60,7 @@ class AppObserverWellKnownSyncTest extends TestCase
         Bus::assertDispatched(SyncWellKnownRegistryJob::class, fn ($job) => $job->action === 'remove' && $job->sku === 'it.webmapp.testapp');
     }
 
-    /** @test */
+    #[Test]
     public function changing_fingerprint_while_enabled_dispatches_add_job_again()
     {
         $app = App::factory()->create(['properties' => [
@@ -76,7 +77,7 @@ class AppObserverWellKnownSyncTest extends TestCase
         Bus::assertDispatched(SyncWellKnownRegistryJob::class, fn ($job) => $job->action === 'add' && $job->androidCertSha256 === 'CC:DD');
     }
 
-    /** @test */
+    #[Test]
     public function unrelated_property_change_does_not_dispatch_any_job()
     {
         $app = App::factory()->create(['properties' => [
@@ -100,7 +101,7 @@ class AppObserverWellKnownSyncTest extends TestCase
         Bus::assertNotDispatched(SyncWellKnownRegistryJob::class);
     }
 
-    /** @test */
+    #[Test]
     public function deleting_an_app_with_toggle_active_dispatches_remove_job()
     {
         $app = App::factory()->create(['sku' => 'it.webmapp.testapp', 'properties' => ['native_app_deep_link_enabled' => true]]);
@@ -110,7 +111,7 @@ class AppObserverWellKnownSyncTest extends TestCase
         Bus::assertDispatched(SyncWellKnownRegistryJob::class, fn ($job) => $job->action === 'remove' && $job->sku === 'it.webmapp.testapp');
     }
 
-    /** @test */
+    #[Test]
     public function deleting_an_app_with_toggle_inactive_does_not_dispatch_any_job()
     {
         $app = App::factory()->create(['properties' => ['native_app_deep_link_enabled' => false]]);
@@ -120,7 +121,7 @@ class AppObserverWellKnownSyncTest extends TestCase
         Bus::assertNotDispatched(SyncWellKnownRegistryJob::class);
     }
 
-    /** @test */
+    #[Test]
     public function a_well_known_job_dispatch_failure_does_not_prevent_the_app_from_being_saved()
     {
         $app = App::factory()->create(['properties' => ['native_app_deep_link_enabled' => false]]);
@@ -133,7 +134,7 @@ class AppObserverWellKnownSyncTest extends TestCase
         $this->assertTrue($app->fresh()->isNativeAppDeepLinkEnabled());
     }
 
-    /** @test */
+    #[Test]
     public function a_well_known_job_dispatch_failure_on_delete_does_not_prevent_the_app_from_being_deleted()
     {
         $app = App::factory()->create(['properties' => ['native_app_deep_link_enabled' => true]]);

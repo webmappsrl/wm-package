@@ -5,10 +5,11 @@ namespace Tests\Unit\Imports\Processors;
 use Illuminate\Database\Eloquent\Model;
 use Wm\WmPackage\Imports\Processors\EcTrackRowProcessor;
 use Wm\WmPackage\Tests\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 class EcTrackRowProcessorTest extends TestCase
 {
-    /** @test */
+    #[Test]
     public function apply_writes_valid_headers_into_properties_and_sets_skip_geomixer_tech(): void
     {
         $model = new class extends Model

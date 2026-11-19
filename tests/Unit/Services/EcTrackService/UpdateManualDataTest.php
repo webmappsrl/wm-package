@@ -3,6 +3,7 @@
 namespace Tests\Unit\Services\EcTrackService;
 
 use Wm\WmPackage\Models\EcTrack;
+use PHPUnit\Framework\Attributes\Test;
 
 class UpdateManualDataTest extends AbstractEcTrackServiceTest
 {
@@ -40,7 +41,7 @@ class UpdateManualDataTest extends AbstractEcTrackServiceTest
         $this->track = $this->prepareTrackWithDirtyFields([], [], '{}', $osmData, $demData);
     }
 
-    /** @test */
+    #[Test]
     public function update_manual_data_updates_field_when_track_value_differs_from_osm_and_dem()
     {
         $properties = [
@@ -61,7 +62,7 @@ class UpdateManualDataTest extends AbstractEcTrackServiceTest
         ], $this->getManualData($this->track));
     }
 
-    /** @test */
+    #[Test]
     public function update_manual_data_does_not_update_field_if_track_value_equals_osm_or_dem()
     {
         // Impostiamo i valori dei campi uguali a quelli di OSM o DEM:
@@ -73,7 +74,7 @@ class UpdateManualDataTest extends AbstractEcTrackServiceTest
         $this->assertNull($this->track->manual_data);
     }
 
-    /** @test */
+    #[Test]
     public function update_manual_data_updates_multiple_fields_correctly()
     {
         $properties = [
@@ -95,7 +96,7 @@ class UpdateManualDataTest extends AbstractEcTrackServiceTest
         ], $this->getManualData($this->track));
     }
 
-    /** @test */
+    #[Test]
     public function update_manual_data_keeps_existing_manual_values()
     {
         // Un valore scritto dal tab DEM vive solo in manual_data: il primo
@@ -110,7 +111,7 @@ class UpdateManualDataTest extends AbstractEcTrackServiceTest
         $this->assertEquals(180, $this->track->properties['manual_data']['duration_forward']);
     }
 
-    /** @test */
+    #[Test]
     public function update_manual_data_adds_top_level_value_without_dropping_existing_ones()
     {
         $this->track->properties = [

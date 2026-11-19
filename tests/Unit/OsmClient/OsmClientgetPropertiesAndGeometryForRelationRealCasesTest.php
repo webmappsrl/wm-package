@@ -5,6 +5,7 @@ namespace Tests\Unit\Providers;
 use Illuminate\Support\Facades\Http;
 use Wm\WmPackage\Facades\OsmClient;
 use Wm\WmPackage\Tests\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 /**
  * Some real (short) cases taken from OSM2CAI project with SDA=4
@@ -21,21 +22,21 @@ use Wm\WmPackage\Tests\TestCase;
  */
 class OsmClientgetPropertiesAndGeometryForRelationRealCasesTest extends TestCase
 {
-    /** @test */
+    #[Test]
     public function simple_case_it_works()
     {
         // Simple artificial case
         $this->checkInput(31);
     }
 
-    /** @test */
+    #[Test]
     public function real_case_case_with_relation_12254933_it_works()
     {
         // https://openstreetmap.org/api/0.6/relation/12254933/full.json
         $this->checkInput(12254933);
     }
 
-    /** @test */
+    #[Test]
     public function real_case_case_with_relation_14336243_it_works()
     {
         // https://openstreetmap.org/api/0.6/relation/14336243/full.json

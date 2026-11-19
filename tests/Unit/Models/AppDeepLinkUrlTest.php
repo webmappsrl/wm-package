@@ -6,6 +6,7 @@ use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Storage;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Tests\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 class AppDeepLinkUrlTest extends TestCase
 {
@@ -23,7 +24,7 @@ class AppDeepLinkUrlTest extends TestCase
         Storage::fake('conf');
     }
 
-    /** @test */
+    #[Test]
     public function default_domain_uses_app_id_and_app_name_when_website_url_is_empty()
     {
         $app = App::factory()->create(['website_url' => null]);
@@ -31,7 +32,7 @@ class AppDeepLinkUrlTest extends TestCase
         $this->assertSame($app->id.'.test_app.webmapp.it', $app->getDeepLinkDomain());
     }
 
-    /** @test */
+    #[Test]
     public function custom_website_url_overrides_default_domain()
     {
         $app = App::factory()->create(['website_url' => 'https://cammini.example.it/']);
@@ -39,7 +40,7 @@ class AppDeepLinkUrlTest extends TestCase
         $this->assertSame('cammini.example.it', $app->getDeepLinkDomain());
     }
 
-    /** @test */
+    #[Test]
     public function deep_link_url_is_built_for_track()
     {
         $app = App::factory()->create(['website_url' => null]);
@@ -50,7 +51,7 @@ class AppDeepLinkUrlTest extends TestCase
         );
     }
 
-    /** @test */
+    #[Test]
     public function deep_link_url_is_built_for_poi()
     {
         $app = App::factory()->create(['website_url' => 'https://cammini.example.it']);
@@ -61,7 +62,7 @@ class AppDeepLinkUrlTest extends TestCase
         );
     }
 
-    /** @test */
+    #[Test]
     public function invalid_type_throws_exception()
     {
         $app = App::factory()->create();
