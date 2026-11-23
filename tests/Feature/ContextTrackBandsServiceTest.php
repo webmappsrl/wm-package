@@ -24,11 +24,15 @@ function bandsTrack(int $appId, string $wkt): EcTrack
     return $track;
 }
 
-/** @return list<string> "ec:rank:n", ordinati */
+/**
+ * @return list<string> "ec:rank:n", ordinati per id della traccia come numero: con l'ordine fra stringhe
+ *                      "100:…" verrebbe prima di "99:…", e il test dipenderebbe da quante tracce hanno
+ *                      creato i test eseguiti prima (la suite gira in ordine casuale).
+ */
 function bandKeys(array $bands): array
 {
     $keys = array_map(fn ($b) => $b['ec_track_id'].':'.$b['rank'].':'.$b['n'], $bands);
-    sort($keys);
+    sort($keys, SORT_NATURAL);
 
     return array_values(array_unique($keys));
 }

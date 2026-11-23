@@ -1,0 +1,95 @@
+% wm-print.sty — stile di default delle schede PDF (oc:8982).
+% Compila con texlive-xetex + texlive-fonts-recommended: nessun font fuori da TeX Live.
+% Gli shard lo sostituiscono con un proprio .sty mantenendo i nomi delle macro.
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{wm-print}[2026/01/01 Stile di default delle schede Webmapp]
+
+\RequirePackage[a4paper,margin=18mm,top=16mm,bottom=22mm]{geometry}
+\RequirePackage{xcolor}
+\RequirePackage{fontspec}
+\RequirePackage{graphicx}
+\RequirePackage{tabularx}
+\RequirePackage{enumitem}
+\RequirePackage{url}
+\RequirePackage{fancyhdr}
+
+% Font: TeX Gyre Heros se presente (texlive-fonts-recommended), altrimenti Latin Modern.
+\IfFontExistsTF{TeX Gyre Heros}{%
+  \setmainfont{TeX Gyre Heros}%
+  \setsansfont{TeX Gyre Heros}%
+}{}
+\renewcommand{\familydefault}{\sfdefault}
+
+% Colore primario: la view lo ridefinisce dopo \usepackage con
+% \definecolor{wmprimary}{HTML}{...}. Questo e' il valore di ripiego.
+\definecolor{wmprimary}{HTML}{2E7D32}
+\definecolor{wmgold}{HTML}{C9A227}
+\definecolor{wmgray}{HTML}{666666}
+
+% Colori per ruolo (R39): le macro e le view colorano solo per ruolo, mai con wmprimary/wmgold/wmgray.
+%   wmtitle titoli | wmaccent etichette e numeri in evidenza | wmrule filetti | wmtext testo
+%   wmmuted didascalie e crediti | wmline linee (tabelle, filetto del piede di pagina)
+% Uno stile di tema, caricato dopo wm-print, li definisce con \colorlet{wmrule}{...}. \WmDefineRoles
+% la view la chiama dopo \definecolor{wmprimary}{...} (anch'essa dopo gli stili) e dà il valore di
+% ripiego solo ai ruoli ancora indefiniti, quindi un ruolo definito da uno stile sopravvive.
+% Il controllo e' su \string\color@<nome>: xcolor registra i colori con il backslash nel nome. Ripiego anche a \begin{document},
+% per le view degli shard che non la chiamano.
+\makeatletter
+\newcommand{\WmDefineRoleDefault}[2]{%
+  \@ifundefined{\string\color@#1}{\colorlet{#1}{#2}}{}%
+}
+\newcommand{\WmDefineRoles}{%
+  \WmDefineRoleDefault{wmtitle}{wmprimary}%
+  \WmDefineRoleDefault{wmaccent}{wmprimary}%
+  \WmDefineRoleDefault{wmrule}{wmgold}%
+  \WmDefineRoleDefault{wmtext}{black}%
+  \WmDefineRoleDefault{wmmuted}{wmgray}%
+  \WmDefineRoleDefault{wmline}{black}%
+}
+\makeatother
+\AtBeginDocument{\WmDefineRoles\color{wmtext}}
+
+\AtBeginDocument{\fontsize{10}{13}\selectfont}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.6em}
+\setlength{\emergencystretch}{3em}
+\setlist{nosep,leftmargin=1.2em}
+\renewcommand{\arraystretch}{1.3}
+
+% Filetto dorato sotto il titolo.
+\newcommand{\FilettoOro}{\par\vspace{2pt}{\color{wmrule}\rule{\linewidth}{1.2pt}}\par\vspace{4pt}}
+
+% Titolo della scheda.
+% Font dei titoli: vuoto di default; la view lo ridefinisce con il font di intestazione del tema dell'App.
+\newcommand{\WmHeaderFont}{}
+
+\newcommand{\TitoloScheda}[1]{{\color{wmtitle}\WmHeaderFont\bfseries\fontsize{22}{26}\selectfont #1\par}}
+
+% Titolo di sezione.
+\newcommand{\TitoloSezione}[1]{\par\vspace{0.6em}{\color{wmtitle}\WmHeaderFont\bfseries\fontsize{13}{16}\selectfont #1\par}\vspace{-0.2em}}
+
+% Badge di stato (testo bianco su fondo primario).
+\newcommand{\BadgeStato}[1]{\colorbox{wmaccent}{\textcolor{white}{\bfseries\small\strut\ #1\ }}}
+
+% Pillola di difficolta' (contorno primario).
+\newcommand{\PillDifficolta}[1]{\fcolorbox{wmaccent}{white}{\textcolor{wmaccent}{\bfseries\small\strut\ #1\ }}}
+
+% Tabella etichetta/valore: righe con \RigaTabella{etichetta}{valore}.
+\newenvironment{Tabella}{%
+  \par\tabularx{\linewidth}{@{}>{\bfseries\color{wmaccent}}l X@{}}%
+}{%
+  \endtabularx\par
+}
+\newcommand{\RigaTabella}[2]{#1 & #2\\}
+
+\let\WmFootruleBase\footrule
+% Piè di pagina: \PiePagina{testo di credito}.
+\newcommand{\PiePagina}[1]{%
+  \pagestyle{fancy}\fancyhf{}%
+  \renewcommand{\headrulewidth}{0pt}%
+  \renewcommand{\footrulewidth}{0.4pt}%
+  \renewcommand{\footrule}{{\color{wmline}\WmFootruleBase}}%
+  \fancyfoot[L]{\small\color{wmmuted}#1}%
+  \fancyfoot[R]{\small\color{wmmuted}\thepage}%
+}
+\endinput

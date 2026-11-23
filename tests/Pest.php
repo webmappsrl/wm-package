@@ -1,10 +1,10 @@
 <?php
 
 use Illuminate\Support\Facades\Bus;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackGenerateElevationChartImage;
@@ -34,6 +34,8 @@ if (! class_exists('App\\Models\\User')) {
 if (! class_exists('App\\Nova\\User')) {
     class_alias(AbstractUserResource::class, 'App\\Nova\\User');
 }
+
+require_once __DIR__.'/Support/PrintHelpers.php';
 
 uses(TestCase::class)->in(__DIR__);
 

@@ -58,6 +58,12 @@ return [
             'level' => env('WM_LOG_LEVEL', 'debug'),
             'days' => env('WM_LOG_DAILY_DAYS', 14),
         ],
+        'print' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/print.log'),
+            'level' => env('WM_LOG_LEVEL', 'debug'),
+            'days' => env('WM_LOG_DAILY_DAYS', 14),
+        ],
         'duplicated-ugc' => [
             'driver' => 'daily',
             'path' => storage_path('logs/duplicated-ugc.log'),

@@ -13,6 +13,7 @@ use Laravel\Nova\Tabs\Tab;
 use Marshmallow\Tiptap\Tiptap;
 use Wm\WmPackage\Nova\Actions\DownloadEcPoiAction;
 use Wm\WmPackage\Nova\Actions\ExecuteEcPoiDataChainAction;
+use Wm\WmPackage\Nova\Actions\GeneratePrintPdfAction;
 use Wm\WmPackage\Nova\Actions\ImportEcPoiFromOsm;
 use Wm\WmPackage\Nova\Actions\TranslateModelAction;
 use Wm\WmPackage\Nova\Actions\UploadPoiFile;
@@ -21,6 +22,7 @@ use Wm\WmPackage\Nova\Filters\EcPoiRegionFilter;
 use Wm\WmPackage\Nova\Filters\GlobalEcPoiFilter;
 use Wm\WmPackage\Nova\Traits\HasConfigDetailPanel;
 use Wm\WmPackage\Nova\Traits\PointResourceTrait;
+use Wm\WmPackage\Services\FeaturesService;
 use Wm\WmPackage\Services\RolesAndPermissionsService;
 
 class EcPoi extends AbstractEcResource
@@ -119,6 +121,7 @@ class EcPoi extends AbstractEcResource
             (new ImportEcPoiFromOsm)
                 ->canSee($superAdminOnly)
                 ->canRun($superAdminOnly),
+            ...(FeaturesService::isEnabled('print') ? [new GeneratePrintPdfAction] : []),
         ];
     }
 

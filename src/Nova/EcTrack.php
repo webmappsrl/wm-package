@@ -19,6 +19,7 @@ use Wm\WmPackage\Jobs\TaxonomyWhere\SyncModelTaxonomyWhereJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
 use Wm\WmPackage\Nova\Actions\DownloadEcTrackAction;
 use Wm\WmPackage\Nova\Actions\ExecuteEcTrackDataChainAction;
+use Wm\WmPackage\Nova\Actions\GeneratePrintPdfAction;
 use Wm\WmPackage\Nova\Actions\ReverseTrackDirectionAction;
 use Wm\WmPackage\Nova\Actions\TranslateModelAction;
 use Wm\WmPackage\Nova\Actions\UploadTrackFile;
@@ -30,6 +31,7 @@ use Wm\WmPackage\Nova\Filters\FeaturesIncludeByIds;
 use Wm\WmPackage\Nova\Traits\DispatchesDemOnDetail;
 use Wm\WmPackage\Nova\Traits\HasConfigDetailPanel;
 use Wm\WmPackage\Nova\Traits\MultiLinestringResourceTrait;
+use Wm\WmPackage\Services\FeaturesService;
 use Wm\WmPackage\Services\LayerMapWebComponentService;
 use Wm\WmPackage\TrailRegistry\Nova\Actions\UpdateWalkability;
 use Wm\WmPackage\TrailRegistry\Nova\Concerns\HasWalkabilityTab;
@@ -188,7 +190,22 @@ class EcTrack extends AbstractEcResource
             (new UploadTrackFile)->standalone(),
             new TranslateModelAction,
             ...$this->trailRegistryActions(),
+            ...$this->printActions(),
         ];
+    }
+
+    /**
+     * L'azione di generazione della scheda PDF (oc:8982), solo a dominio `print` acceso.
+     *
+     * @return array<int, Action>
+     */
+    protected function printActions(): array
+    {
+        if (! FeaturesService::isEnabled('print')) {
+            return [];
+        }
+
+        return [new GeneratePrintPdfAction];
     }
 
     /**

@@ -19,9 +19,13 @@ use Wm\WmPackage\Services\DetailTaxonomiesService;
 use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Services\Models\EcTrackService;
 use Wm\WmPackage\Services\Models\MediaService;
+use Wm\WmPackage\Services\Print\Contracts\PrintableModel;
+use Wm\WmPackage\Services\Print\PrintService;
+use Wm\WmPackage\Services\Print\TrackPrintData;
 use Wm\WmPackage\TrailRegistry\Services\WalkabilityDetailService;
 use Wm\WmPackage\Traits\EcFeatureTrait;
 use Wm\WmPackage\Traits\NormalizesHexColor;
+use Wm\WmPackage\Traits\Printable;
 use Wm\WmPackage\Traits\TaxonomyAbleModel;
 use Wm\WmPackage\Traits\TaxonomyWhereAbleModel;
 
@@ -30,9 +34,9 @@ use Wm\WmPackage\Traits\TaxonomyWhereAbleModel;
  * @property int|null $app_id null su un modello non ancora salvato
  * @property App|null $app
  */
-class EcTrack extends MultiLineString implements LayerRelatedModel
+class EcTrack extends MultiLineString implements LayerRelatedModel, PrintableModel
 {
-    use EcFeatureTrait, Favoriteable, HasDemClassification, NormalizesHexColor, Searchable, TaxonomyAbleModel, TaxonomyWhereAbleModel;
+    use EcFeatureTrait, Favoriteable, HasDemClassification, NormalizesHexColor, Printable, Searchable, TaxonomyAbleModel, TaxonomyWhereAbleModel;
 
     public const DEFAULT_COLOR_HEX = '#FF0000';
 
@@ -215,6 +219,30 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
     public function setGeometryAttribute($value)
     {
         $this->attributes['geometry'] = GeometryComputationService::make()->convertTo3DGeometry($value);
+    }
+
+    //
+    // STAMPA (oc:8982)
+    //
+
+    /**
+     * Tabella tecnica della scheda PDF (hook del trait Printable).
+     *
+     * @return list<array{label:string,value:string}>
+     */
+    public function printStats(string $locale): array
+    {
+        return TrackPrintData::stats($this, $locale);
+    }
+
+    /**
+     * POI correlati della scheda PDF (hook del trait Printable).
+     *
+     * @return list<array{name:string,typeLabel:?string}>
+     */
+    public function printRelatedPois(string $locale): ?array
+    {
+        return TrackPrintData::relatedPois($this, $locale);
     }
 
     //
@@ -918,6 +946,12 @@ class EcTrack extends MultiLineString implements LayerRelatedModel
         $walkability = app(WalkabilityDetailService::class)->forTrack($this);
         if ($walkability !== null) {
             $geojson['properties']['walkability'] = $walkability;
+        }
+
+        // URL della scheda PDF, solo a dominio `print` acceso (oc:8982).
+        $printUrl = PrintService::sheetUrl('ec-track', $this->id);
+        if ($printUrl !== null) {
+            $geojson['properties']['print_url'] = $printUrl;
         }
 
         return $geojson;
