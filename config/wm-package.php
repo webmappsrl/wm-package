@@ -1,5 +1,6 @@
 <?php
 
+use Wm\WmPackage\Commands\PrintCleanupCommand;
 use Wm\WmPackage\Models\TaxonomyActivity;
 use Wm\WmPackage\Models\TaxonomyPoiType;
 use Wm\WmPackage\Services\Models\UgcTrackCleanupService;
@@ -188,6 +189,68 @@ return [
     | Guida: docs/resources/OptionalDomains.md
     */
     'features' => [
+        'print' => [
+            'enabled' => env('WM_PRINT_ENABLED', false),
+
+            // Coda dei job di stampa.
+            'queue' => env('WM_PRINT_QUEUE', 'print'),
+
+            // Comandi artisan del dominio: registrati solo a dominio acceso.
+            'commands' => [
+                PrintCleanupCommand::class,
+            ],
+
+            // Servizio che renderizza le mappe: `fake` (test/locale) o quello reale.
+            'map_service' => [
+                'driver' => env('WM_PRINT_MAP_DRIVER', 'fake'),
+                'url' => env('WM_PRINT_MAP_SERVICE_URL'),
+                'token' => env('WM_PRINT_MAP_SERVICE_TOKEN'),
+                'timeout' => 60,
+            ],
+
+            // Limiti della compilazione del PDF.
+            'compile' => [
+                'timeout' => 120,
+                'memory_mb' => 1024,
+            ],
+
+            // Limiti delle foto scaricate per la scheda: oltre, la foto si salta (warning sul canale
+            // `print`). Un esaurimento di memoria in GD è fatale e non intercettabile.
+            'photos' => [
+                'max_bytes' => 30 * 1024 * 1024,
+                'max_pixels' => 50_000_000,
+                // Budget complessivo del download delle foto di una scheda, in secondi: esaurito, le
+                // foto restanti si saltano. Ogni foto ha una scadenza sull'intero download pari al
+                // residuo (mai oltre 30 s): superata, la foto si salta. Entra nel timeout di GeneratePrintPdfJob.
+                'total_timeout' => 60,
+            ],
+
+            // Dimensioni (mm) della mappa nella scheda di sentiero e POI: la richiesta al servizio mappe
+            // e la view le usano insieme, così uno shard che la vuole grande la chiede grande.
+            'map' => [
+                'width_mm' => 174,
+                'height_mm' => 98,
+            ],
+
+            // Massimo di tracce in uno zip.
+            'zip' => [
+                'max_tracks' => 50,
+                // Attesa massima dello ZIP per le schede da generare, in secondi.
+                'max_wait_seconds' => 1800,
+            ],
+
+            // Scala massima della mappa di insieme.
+            'overview_map' => [
+                'max_scale' => 50000,
+            ],
+
+            // Versione delle dipendenze di compilazione attesa dal marcatore:
+            // contenuto di docker/render/VERSION se il file esiste, altrimenti null.
+            'deps_version' => file_exists(__DIR__.'/../docker/render/VERSION')
+                ? trim((string) file_get_contents(__DIR__.'/../docker/render/VERSION'))
+                : null,
+        ],
+
         'trail_registry' => [
             'enabled' => env('WM_TRAIL_REGISTRY_ENABLED', false),
 

@@ -9,6 +9,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use RuntimeException;
 
 class StorageService extends BaseService
 {
@@ -213,6 +214,101 @@ class StorageService extends BaseService
 
         // Return direct S3 URL (filename is last segment: accessibility.pdf)
         return $disk->url($path);
+    }
+
+    /**
+     * Salva un contenuto generato (es. la scheda PDF) nella cartella dei file del modello su wmfe,
+     * come `storeFile`, e restituisce l'URL.
+     *
+     * Il contenuto si scrive prima su una chiave temporanea nella stessa cartella e poi si sposta
+     * sul nome finale: chi scarica il file non vede mai un 404 fra la cancellazione del vecchio e
+     * la scrittura del nuovo.
+     */
+    public function storeFileContents(Model $model, string $filename, string $ext, string $contents): string
+    {
+        $path = $this->buildFilePath($model, $filename, $ext);
+        $tmpPath = $path.'.tmp-'.Str::uuid();
+        $disk = $this->getRemoteWfeDisk();
+
+        // Il disco wmfe non ha `throw => true`: put() e move() segnalano l'errore restituendo false.
+        if ($disk->put($tmpPath, $contents, 'public') === false) {
+            throw new RuntimeException("Scrittura su wmfe non riuscita: {$tmpPath}");
+        }
+
+        try {
+            $moved = $disk->move($tmpPath, $path);
+        } catch (Exception $e) {
+            $this->deleteQuietly($disk, $tmpPath);
+            throw $e;
+        }
+        if ($moved === false) {
+            $this->deleteQuietly($disk, $tmpPath);
+            throw new RuntimeException("Spostamento su wmfe non riuscito: {$tmpPath} -> {$path}");
+        }
+
+        return $disk->url($path);
+    }
+
+    /**
+     * Cancella una chiave ignorando gli errori: si usa per ripulire un temporaneo mentre si sta
+     * già segnalando un altro errore.
+     */
+    private function deleteQuietly(Filesystem $disk, string $path): void
+    {
+        try {
+            if ($disk->exists($path)) {
+                $disk->delete($path);
+            }
+        } catch (Exception $e) {
+            Log::warning("Temporaneo non cancellato su wmfe: {$path}: ".$e->getMessage());
+        }
+    }
+
+    /**
+     * Data di ultima modifica (timestamp unix) di un file del modello su wmfe, null se manca.
+     */
+    public function getFileLastModified(Model $model, string $filename, string $ext): ?int
+    {
+        $path = $this->buildFilePath($model, $filename, $ext);
+        $disk = $this->getRemoteWfeDisk();
+
+        return $disk->exists($path) ? $disk->lastModified($path) : null;
+    }
+
+    /**
+     * Stream di lettura di un file del modello su wmfe, null se manca. Chi lo riceve lo chiude.
+     *
+     * @return resource|null
+     */
+    public function getFileStream(Model $model, string $filename, string $ext)
+    {
+        $path = $this->buildFilePath($model, $filename, $ext);
+        $disk = $this->getRemoteWfeDisk();
+
+        $stream = $disk->exists($path) ? $disk->readStream($path) : null;
+
+        return is_resource($stream) ? $stream : null;
+    }
+
+    /**
+     * URL pubblico di un file del modello su wmfe (senza controllare che esista).
+     */
+    public function getFileUrl(Model $model, string $filename, string $ext): string
+    {
+        return $this->getRemoteWfeDisk()->url($this->buildFilePath($model, $filename, $ext));
+    }
+
+    /**
+     * Nomi (basename) dei file presenti nella cartella dei file del modello su wmfe.
+     *
+     * @return list<string>
+     */
+    public function listModelFiles(Model $model): array
+    {
+        return array_values(array_map(
+            'basename',
+            $this->getRemoteWfeDisk()->files($this->buildModelFilesDirectory($model))
+        ));
     }
 
     /**

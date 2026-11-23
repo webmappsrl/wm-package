@@ -13,6 +13,7 @@ use Wm\WmPackage\Facades\OsmClient;
 use Wm\WmPackage\Http\Clients\DemClient;
 use Wm\WmPackage\Jobs\MatchEcTrackToUgcTracksJob;
 use Wm\WmPackage\Jobs\Pbf\GenerateEcTrackPBFBatch;
+use Wm\WmPackage\Jobs\Print\RegeneratePrintPdfsJob;
 use Wm\WmPackage\Jobs\TaxonomyWhere\SyncModelTaxonomyWhereJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrack3DDemJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackAppRelationsInfoJob;
@@ -29,6 +30,7 @@ use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Models\TaxonomyActivity;
 use Wm\WmPackage\Services\BaseService;
+use Wm\WmPackage\Services\FeaturesService;
 use Wm\WmPackage\Services\GeometryComputationService;
 
 class EcTrackService extends BaseService
@@ -415,11 +417,18 @@ class EcTrackService extends BaseService
      */
     public function publicationJobs(EcTrack $track): array
     {
-        return [
+        $jobs = [
             new UpdateEcTrackAwsJob($track),
             new UpdateEcTrackAppRelationsInfoJob($track),
             new UpdateEcTrackOrderRelatedPoi($track),
         ];
+
+        // Le schede PDF già generate seguono la traccia (oc:8982); a dominio spento la catena non cambia.
+        if (FeaturesService::isEnabled('print')) {
+            $jobs[] = new RegeneratePrintPdfsJob($track);
+        }
+
+        return $jobs;
     }
 
     /**

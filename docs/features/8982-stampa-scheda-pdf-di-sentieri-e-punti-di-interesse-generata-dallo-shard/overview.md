@@ -4,7 +4,7 @@
 # Stampa: scheda PDF di sentieri e punti di interesse generata dallo shard
 
 Questo overview copre la parte del `wm-package`, che porta quasi tutto il codice. La
-personalizzazione di Forestas e il servizio nel compose dello shard sono in
+personalizzazione di Forestas e l'installazione di TeX Live nello shard sono in
 `forestas/docs/features/8982-…/overview.md`. Il sito WordPress non è toccato da questo ticket.
 
 ## Cosa cambia
@@ -18,9 +18,13 @@ Il package impara a produrre tre file stampabili, per qualunque shard:
 
 I PDF si compongono in **LaTeX** e le mappe si disegnano dalle **tile vettoriali di
 `https://tiles.maphub.it/`** (stile `style.json`), non dalle tile raster PNG. Compilazione LaTeX e
-rendering delle mappe sono due operazioni di un **motore di rendering** (`map` e `pdf`). **Dove
-gira il motore** (nell'immagine PHP dello shard o in un container separato) **è una domanda
-aperta**: vedi la sezione «Domanda aperta» più sotto.
+rendering delle mappe sono due operazioni di un **motore di rendering** (`map` e `pdf`), che
+girano in posti diversi (decisione del 18/11, vedi «Risposta» più sotto):
+
+- **`pdf`**: `xelatex` nell'immagine PHP dello shard, installato da uno script del package; il Job
+  compila nel worker Horizon, dove i file già sono;
+- **`map`**: chiesta via HTTP al servizio di rendering unico sull'host delle tile (ticket
+  **oc:9011**), che restituisce il PNG.
 
 La grafica ha un **default nel package**, una scheda neutra che prende il colore primario dalla
 configurazione del tema dell'app (`primary_color`). Ogni shard può **sostituirla**: i token del suo
@@ -62,14 +66,15 @@ Le scelte e i loro motivi:
   `Accept-Language` porterebbe la lingua del browser, non quella della pagina.
 - **Mappa vettoriale** (Alessio, scrum 18/11, e indicazione scritta del 18/11: «non usare i png»):
   le tile raster da 256 px non arrivano a 300 dpi con nomi leggibili.
-- **LaTeX e mappe nello stesso posto**: in qualunque delle due soluzioni sotto, compilazione e
-  rendering delle mappe stanno insieme. Separarli non porta un vantaggio concreto: uno shard che usa
-  solo le mappe (come camminiditalia per la condivisione dei cammini) paga TeX Live solo in spazio
-  su disco, non in CPU o RAM.
+- **LaTeX nello shard, mappe in un servizio unico** (review del 18/11): il renderer delle mappe ha
+  dipendenze native e un uso di memoria che `prlimit` non contiene, e il suo codice esiste già in
+  `wm-tiles`, sull'host che legge le tile; `xelatex` invece pesa 353 MB e si contiene per processo.
+  Il dettaglio è nella «Risposta» sotto la domanda aperta.
 
-## Domanda aperta: dove gira il motore di rendering
+## Domanda aperta (chiusa il 18/11): dove gira il motore di rendering
 
-Non è deciso. Le due strade, con quello che è stato verificato il 18/11:
+La domanda resta come era posta; la risposta è nella sezione «Risposta» qui sotto. Le due strade,
+con quello che era stato verificato il 18/11:
 
 **A) Nell'immagine PHP dello shard (`wm-phpfpm:8.4`).** TeX Live, `@maplibre/maplibre-gl-native`
 e le librerie grafiche che richiede si aggiungono al Dockerfile dello shard; il Job lancia
@@ -152,6 +157,10 @@ installerebbe un TeX più vecchio senza errori.
 
 - **Build context alla root** nello shard (`context: .` più `dockerfile: docker/configs/phpfpm/Dockerfile`),
   altrimenti la `COPY` dello script dal package non è possibile: oggi è `build: ./docker/configs/phpfpm`.
+  **Precisato nella challenge (18/11):** non il contesto alla root ma un secondo contesto,
+  `additional_contexts` di Compose con `COPY --from=`, perché gli `ADD` del Dockerfile sono relativi
+  alla cartella attuale e il contesto alla root, senza `.dockerignore`, manderebbe al daemon anche
+  `storage`.
 - **Un marcatore di versione** scritto dallo script nell'immagine e controllato dal Job: il deploy
   fa `git submodule update` e poi `docker exec` nel container esistente, **senza ricostruire
   l'immagine**, quindi un aggiornamento del package lascerebbe le dipendenze vecchie.
@@ -167,23 +176,38 @@ circa 2480×3508 px a `pixelRatio` alto. L'unico caso provato è l'opposto, tess
 
 ### Motore di rendering
 
-Valgono in entrambe le soluzioni della «Domanda aperta»; dove una voce dipende dalla scelta, lo
-dice.
+Aggiornati alla risposta del 18/11: `pdf` nell'immagine PHP dello shard, `map` dal servizio di
+oc:9011. Il testo approvato prima della risposta resta barrato sotto ogni voce cambiata.
 
 - <a id="r1"></a>**R1** — Interfaccia nel package con due operazioni, usata da tutto il resto del codice:
-  - `map`: riceve geometrie GeoJSON, dimensioni in mm, `pixelRatio` e lo stile; restituisce un PNG
-    alla risoluzione di stampa (circa 300 dpi). Lo stile di default è
-    `https://tiles.maphub.it/style.json`;
-  - `pdf`: riceve il sorgente `.tex` e i file allegati (mappa, foto, font); restituisce il PDF o
-    l'errore di compilazione.
-- <a id="r2"></a>**R2** — XeLaTeX (o LuaLaTeX) e `@maplibre/maplibre-gl-native`, con TeX Live **ridotto ai pacchetti
-      usati dai template**, non lo schema completo: la produzione di camminiditalia ha 11 GB liberi
-      su 38.
+  - `map`: client HTTP del servizio di rendering di oc:9011 (indirizzo e token dalla
+    configurazione). Riceve geometrie GeoJSON, dimensioni in mm, `pixelRatio` e lo stile;
+    restituisce un PNG alla risoluzione di stampa (circa 300 dpi). Lo stile di default è
+    `https://tiles.maphub.it/style.json`. Timeout ed errore leggibile se il servizio non risponde;
+  - `pdf`: lancia `xelatex` come processo nel worker, sul sorgente `.tex` e sui file allegati
+    (mappa, foto) in una cartella di lavoro temporanea; restituisce il PDF o l'errore di
+    compilazione.
+  - **Precisato alla call delle 14:42 del 18/11:** la richiesta di `map` porta una
+    `FeatureCollection` (una feature per sentiero o punto, N per la mappa d'insieme) e lo shard,
+    perché le tile cambiano da shard a shard. Endpoint, autenticazione, dimensioni e formato di
+    ritorno arrivano con oc:9011; fino ad allora `map` è un **mock** che registra la richiesta e
+    restituisce un'immagine segnaposto.
+  - ~~`map` e `pdf` come operazioni dello stesso motore, locale (A) o servizio dello shard (B).~~
+- <a id="r2"></a>**R2** — `texlive-xetex` e `texlive-fonts-recommended` (353 MB misurati), non lo
+      schema completo, installati da `docker/render/install-deps.sh`. Lo script rifiuta la build su
+      una base Debian non adatta e scrive nell'immagine un marcatore di versione.
+  - ~~XeLaTeX (o LuaLaTeX) e `@maplibre/maplibre-gl-native`, con TeX Live ridotto ai pacchetti
+    usati dai template.~~
 - <a id="r3"></a>**R3** — Compilazione senza shell escape e con `openin_any=p` / `openout_any=p`.
-- <a id="r4"></a>**R4** — Limite di tempo e di memoria per ogni rendering, e un errore leggibile quando scatta (soluzione
-      A: per processo; soluzione B: per richiesta e `mem_limit` sul container).
-- <a id="r5"></a>**R5** — Soluzione B: Dockerfile e server in `docker/render/`, nessun segreto nell'ambiente del
-      container, nessuna porta pubblicata.
+- <a id="r4"></a>**R4** — Limite di tempo e di memoria per ogni compilazione (`timeout`, `prlimit`
+      sul processo `xelatex`, perché il limite di memoria di Horizon non conta i processi figli),
+      e un errore leggibile quando scatta. I valori si fissano dopo aver misurato il picco di
+      `xelatex` con le foto, che si ridimensionano prima della compilazione.
+  - ~~soluzione A: per processo; soluzione B: per richiesta e `mem_limit` sul container.~~
+- <a id="r5"></a>**R5** — Il Job controlla il marcatore di versione scritto da `install-deps.sh` e
+      fallisce con un errore leggibile se l'immagine non è allineata al package.
+  - ~~Soluzione B: Dockerfile e server in `docker/render/`, nessun segreto nell'ambiente del
+    container, nessuna porta pubblicata.~~
 - <a id="r6"></a>**R6** — Il motore si attiva dalla configurazione del package; spento, le funzioni di stampa non ci
       sono e il JSON di dettaglio non espone link.
 
@@ -216,14 +240,27 @@ dice.
 ### Rotte e pagina d'attesa
 
 - <a id="r13"></a>**R13** — Rotta web della scheda di `EcTrack` e di `EcPoi`, con la lingua nell'URL (`?lang=`). PDF
-      presente e aggiornato: `302` al file su `wmfe`. Assente: accoda il Job e mostra la pagina
-      d'attesa.
+      presente e aggiornato: `302` al file su `wmfe`. Assente o non aggiornato: accoda il Job e
+      mostra la pagina d'attesa.
+  - **Aggiornato** (challenge del 18/11) vuol dire generato dopo l'ultimo `updated_at`
+    dell'elemento. Il controllo sta nella rotta, non solo nella catena dei `publicationJobs`,
+    perché ci sono strade che non sollevano eventi: l'import di Forestas salva con
+    `saveQuietly()` e pubblica il JSON chiamando `UpdateEcTrackAwsJob` direttamente, e su UAT il
+    reset notturno fa `TRUNCATE ... RESTART IDENTITY`, quindi lo stesso id può diventare un altro
+    sentiero con il PDF del precedente ancora su `wmfe`. In entrambi i casi `updated_at` è più
+    recente del file, e la rotta rigenera invece di servire un PDF vecchio o di un altro elemento.
 - <a id="r14"></a>**R14** — Rotta di stato, interrogata dalla pagina d'attesa, che dice se il file è pronto.
 - <a id="r15"></a>**R15** — La pagina d'attesa fa il redirect da sola quando il file è pronto, e mostra un messaggio
       leggibile se la generazione fallisce.
 - <a id="r16"></a>**R16** — Un PDF già in coda non si accoda una seconda volta se arrivano più richieste insieme.
 - <a id="r17"></a>**R17** — L'URL della scheda (della rotta, non del file) è nel JSON di dettaglio di `EcTrack` ed `EcPoi`.
 
+- <a id="r36"></a>**R36** — Il parametro `lang` si valida contro le lingue dell'app: un valore che
+      l'app non ha risponde `404`, senza accodare nulla (challenge del 18/11: altrimenti `?lang=xx`
+      crea un PDF che R18 poi rigenera a ogni modifica).
+- <a id="r37"></a>**R37** — `throttle` sulle rotte di stampa, con un limite più basso su ZIP e mappa
+      d'insieme, le più costose; i valori nel piano. Pattern già usato in `routes/api.php:24` e
+      `:311`.
 ### Aggiornamento
 
 - <a id="r18"></a>**R18** — Un Job nei `publicationJobs` di `EcTrack` (`src/Services/Models/EcTrackService.php:416`)
@@ -265,10 +302,19 @@ dice.
 - <a id="r31"></a>**R31** — Generatore che legge un `tokens.json` nel formato del design system (liste
       `{"name","value","usage"}` per famiglia, alias `{nome}`) e produce lo `.sty`: colori del tema
       `light`, famiglie e scala tipografica, spazi, raggi, bordi; px convertiti in pt.
+  - **Precisato nella challenge (18/11):** il formato non è uniforme. Colori, spazi, raggi e
+    bordi sono liste `{name, value, usage}` (i colori con `value` per tema, `{"light": "#254877"}`);
+    la tipografia ha `families` con una font stack CSS (`'Work Sans', system-ui, sans-serif`), da
+    cui il generatore prende solo il primo nome per `fontspec`, e `groups[].styles[]` con
+    `fontSize`, `lineHeight`, `fontWeight` e `letterSpacing` in `em`. Il font stesso non arriva dai
+    token: lo installa lo shard (R8 di Forestas).
 - <a id="r32"></a>**R32** — Macro LaTeX per i componenti ricorrenti, con il nome del componente del design system
       (`BadgeStato`, `PillDifficolta`, `TitoloSezione`, `Tabella`, `FilettoOro`).
 - <a id="r33"></a>**R33** — Lo shard sostituisce l'impaginazione con l'override delle viste
       (`resources/views/vendor/wm-package/…`) e lo stile con il proprio `tokens.json`.
+  - **Precisato nella challenge (18/11):** le variabili che la view riceve sono elencate in un
+    docblock in testa alla view di default: è il contratto con gli override degli shard, che
+    altrimenti si rompono in silenzio, solo quando un Job di stampa gira.
 
 ### Interfaccia
 
@@ -278,26 +324,100 @@ dice.
       carta (le tinte «solo grafica» del design system non diventano testo). Giudizio mio, non da
       una fonte.
 
+### Ampliamento del 20/11: logo, tema di stampa per App e anteprima
+
+Chiesto dal dev il 19-20/11, dopo aver visto le schede: personalizzare la scheda deve essere
+semplice, senza scrivere LaTeX né file nel repo dello shard. Il motore resta LaTeX.
+
+- <a id="r38"></a>**R38** — La scheda di default (traccia e POI) mostra in testata il logo dell'App
+      del modello: media «Icon small» (`icon_small`), ripiego su «Icon» (`icon`), nessun logo se
+      mancano. Letto dal disco della media library, non via HTTP; un errore sul logo non fa fallire
+      la scheda. *(Già implementato il 19/11.)*
+- <a id="r39"></a>**R39** — Le view di default colorano per **ruolo**: `wmtitle` (titoli),
+      `wmaccent` (etichette, numeri in evidenza), `wmrule` (filetti), `wmtext` (testo), `wmmuted`
+      (didascalie, crediti), `wmline` (linee delle tabelle). Senza tema i ruoli valgono come oggi:
+      `wmtitle` = colore primario dell'App, `wmrule` = oro, `wmmuted` = grigio.
+- <a id="r40"></a>**R40** — Pagina «Tema di stampa» (rotta del dominio `print`, middleware `auth` e
+      `nova`, solo `Administrator`), sul modello della pagina delle icone. Lo shard la mette nel menu
+      Nova «Files» accanto a «Icons». Sulla pagina:
+  - si sceglie l'App;
+  - si carica il `tokens.json` del design system: validato (formato del design system, nomi
+    `[A-Za-z0-9_.-]`, valori esadecimali o alias esistenti, al massimo 1 MB) e mostrato con un
+    campione per ogni colore;
+  - si sceglie, per ciascuno dei sei ruoli di R39, un colore del file; la pagina propone come
+    default i token di ruolo che il file ha già;
+  - salvando, le scelte si **aggiungono alla copia salvata** come token alias `print-title`,
+    `print-accent`, `print-rule`, `print-text`, `print-muted`, `print-line` (es. `print-rule` →
+    `{sar-oro}`): il design system originale non si tocca.
+- <a id="r41"></a>**R41** — Il tema si salva su `wmfe`, in `{shard}/json/print-theme/{app_id}.json`.
+      Il Job genera lo `.sty` dal tema dell'App al momento della compilazione e lo carica **dopo**
+      `wm-print.sty` e dopo lo stile dello shard di `style_path`: ordine wm-print → shard → tema
+      dell'App. I ruoli che il tema non definisce tengono i default di R39.
+- <a id="r42"></a>**R42** — Salvare o cancellare il tema invalida le schede di quell'App: una scheda è
+      «aggiornata» se il file è più recente sia del modello sia del tema della sua App.
+- <a id="r43"></a>**R43** — Anteprima sulla pagina: compila subito, senza coda, la scheda di un
+      **sentiero d'esempio** del package (dati fissi, non nel database: nome, statistiche,
+      descrizione con formattazione, punti di interesse, foto d'esempio inclusa nel package, mappa
+      segnaposto) con il tema non ancora salvato e il logo dell'App, e la mostra come PDF nella
+      pagina. Usa la view che lo shard usa davvero (override compreso). Scadenza pari a
+      `compile.timeout`, `throttle` dedicato.
+- <a id="r44"></a>**R44** — Contratto delle view: il modello può essere un **esempio non salvato**
+      (senza id e senza relazioni); la view, override compresi, non deve andare in errore e nasconde
+      le parti senza dati. Un test lo garantisce per la view di default.
+- <a id="r45"></a>**R45** — `wm:print-style` e `style_path` restano per chi vuole lo stile versionato
+      nel repo (caso avanzato); la documentazione presenta prima la pagina.
+
+Fuori da questo ampliamento: i file dei font (restano nell'immagine dello shard), la scelta delle
+dimensioni del testo dalla pagina (vengono dal `tokens.json`), un'anteprima su un sentiero reale.
+
+### Revisione del 20/11: niente token, tema dell'App e view dello shard
+
+Decisa dal dev dopo aver visto cosa usa davvero la scheda di default (colori e font): la view
+personalizzata dello shard la genera un'IA a partire dal design system, quindi il passaggio dai
+token allo `.sty` non serve. **Superano R31, la parte «stile dal `tokens.json`» di R33 e R40-R45**,
+che restano qui sopra per memoria.
+
+- <a id="r46"></a>**R46** — La scheda di default prende i colori dal tab `theme` dell'App: `wmtitle`
+      = «Primary color», `wmaccent` = «Secondary color» (vuoto: come il titolo), `wmrule` =
+      «Tertiary color» (vuoto: l'oro di oggi); testo, testo tenue e linee restano fissi. Senza
+      colori nell'App la scheda è quella di oggi. Il logo resta quello di R38.
+- <a id="r47"></a>**R47** — Font della scheda di default: «Font Family Content» per il testo e
+      «Font Family Header» per i titoli, solo se il font è installato nell'immagine
+      (`\IfFontExistsTF`); altrimenti il font di default. Un font mancante non fa mai fallire la
+      scheda.
+- <a id="r48"></a>**R48** — La view dello shard può sovrascrivere tutto: definisce nel proprio
+      preambolo colori, font e dimensioni, o ridefinisce i ruoli di R39. Il package le passa solo le
+      variabili del contratto e `wm-print.sty` con le macro di base.
+- <a id="r49"></a>**R49** — Dimensioni della mappa della scheda configurabili
+      (`features.print.map.width_mm`, `features.print.map.height_mm`, default 174 × 98 mm): lo
+      shard che la vuole grande la chiede grande al servizio delle mappe, invece di ingrandire un
+      PNG piccolo.
+- <a id="r50"></a>**R50** — Si eliminano: `TokensStyleGenerator`, il comando `wm:print-style`, la
+      chiave `style_path` e il caricamento di uno stile dello shard, `PrintTheme` e il tema per App
+      (già scritto nel Task 18, da togliere), pagina e anteprima (mai scritte). La documentazione
+      spiega i due livelli: tema dell'App per la scheda di default, view dello shard per tutto il
+      resto.
+
 ## Rischi
 
 - **Iniezione LaTeX dal testo degli editor.** Mitigazione: escape di tutti i caratteri speciali,
-  compilazione senza shell escape e con lettura/scrittura limitate alla cartella di lavoro (più,
-  con la soluzione B, un container senza segreti). Test con descrizioni che contengono `\input`,
+  compilazione senza shell escape e con lettura/scrittura limitate alla cartella di lavoro. Test con descrizioni che contengono `\input`,
   `\write18`, `%`, `&`.
-- **Picchi di memoria del rendering.** Mitigazione: limite di memoria per rendering, coda Horizon
-  dedicata, tetto sulla scala della mappa d'insieme e sul numero di sentieri per ZIP.
-- **Dipendenza da `tiles.maphub.it`.** Se il server delle tile non risponde, la mappa non si
-  disegna. Mitigazione: timeout e errore leggibile; il PDF esistente non si sovrascrive con uno
+- **Picchi di memoria di `xelatex`** con molte foto. Mitigazione: foto ridimensionate prima,
+  `prlimit` per processo, coda Horizon dedicata con pochi worker, tetto sul numero di sentieri per
+  ZIP.
+- **Dipendenza dal servizio di oc:9011 e da `tiles.maphub.it`.** Se il servizio o le tile non
+  rispondono, la mappa non si disegna. Mitigazione: timeout e errore leggibile; il PDF esistente non si sovrascrive con uno
   peggiore. Da decidere nel piano se generare comunque la scheda senza mappa.
 - **Rigenerazioni a cascata.** La modifica di un POI molto usato rigenera i PDF di più sentieri.
   Mitigazione: si rigenerano solo le lingue già presenti, sulla coda dedicata.
-- **Peso di TeX Live.** Lo schema completo pesa diversi GB (stima mia, non misurata), che finiscono
-  nell'immagine PHP (soluzione A) o nell'immagine del servizio (soluzione B). Mitigazione: solo i
-  pacchetti necessari; da misurare nel piano.
-- **Versione di Node per il renderer** (soluzione A): va verificato che la versione di Node
-  installata da `apt` nell'immagine PHP sia supportata da `@maplibre/maplibre-gl-native`.
-- **Il renderer MapLibre con lo stile Webmapp non è ancora stato provato.** La resa a 300 dpi, i
-  font dei glyph e lo sprite vanno verificati con un prototipo prima del resto.
+- **Immagine dello shard non ricostruita.** Il deploy aggiorna il submodule senza ricostruire
+  l'immagine, quindi un cambio delle dipendenze resterebbe fuori. Mitigazione: rebuild nel deploy
+  dello shard quando cambia il puntatore del package, e marcatore di versione controllato dal Job.
+- **Il rendering a formato pagina non è ancora stato provato** (circa 2480×3508 px a `pixelRatio`
+  alto): l'unico caso provato in `wm-tiles` sono tessere piccole a `PIXEL_RATIO` 0.5. Appartiene a
+  oc:9011, e l'integrazione della mappa nel PDF dipende da quel ticket. Mitigazione: la parte LaTeX
+  si sviluppa e si prova con una mappa segnaposto, senza aspettarlo.
 
 ## Out of scope
 
@@ -310,11 +430,12 @@ dice.
   scheda accoda una compilazione per ogni sentiero (765 su Forestas) e altrettanti rendering, senza
   che nessuno abbia chiesto un PDF.
 - La scala selezionabile e le pagine multiple ad atlante (WEBSITE-23, nelle bozze del capitolato).
+- Il servizio di rendering delle mappe: è il ticket oc:9011. Qui c'è solo il client.
 - L'uso dell'operazione `map` fuori dal PDF (per esempio la condivisione dei cammini su
-  camminiditalia, o le immagini di condivisione di `UgcTrack`): il motore lo permette,
-  l'integrazione è di altri ticket.
+  camminiditalia, o le immagini di condivisione di `UgcTrack`): il servizio di oc:9011 lo
+  permette, l'integrazione è di altri ticket.
 - Il collegamento dell'app al nuovo PDF al posto della stampa ereditata da GeoHub.
-- L'installazione del motore su shard diversi da Forestas.
+- L'installazione di TeX Live su shard diversi da Forestas.
 - **La rimozione della stampa custom di osm2cai2**, che quando questa sarà pronta diventa codice
   superato: `app/Traits/GeneratesPdfTrait.php`, `app/Services/PdfService.php`,
   `app/Jobs/GeneratePdfJob.php`, gli override di `TrailSurvey`, il campo `pdf_url` e lo screenshot
@@ -325,10 +446,12 @@ dice.
 
 Tutti nel repo `wm-package`.
 
-- `docker/render/` (nuovo, solo con la soluzione B): Dockerfile, server Node, configurazione TeX.
-- `config/` : attivazione del motore (e, con B, URL del servizio), coda, tetti (scala, numero di
-  sentieri), stile delle tile.
-- `src/Services/` : interfaccia del motore di rendering e sua implementazione, servizio di stampa
+- `docker/render/install-deps.sh` (nuovo): installazione di TeX Live, controllo della base
+  Debian, marcatore di versione.
+- `config/` : attivazione della stampa, indirizzo e token del servizio di oc:9011, coda, tetti
+  (scala, numero di sentieri), stile delle tile.
+- `src/Services/` : interfaccia del motore di rendering con il client HTTP di `map` e la
+  compilazione locale di `pdf`, servizio di stampa
   (composizione, salvataggio con
   `StorageService`), generatore dello `.sty` da `tokens.json`, conversione HTML→LaTeX con escape.
 - `src/Jobs/` : Job di generazione della scheda, dello ZIP e della mappa d'insieme.

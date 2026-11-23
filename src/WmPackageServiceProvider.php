@@ -83,6 +83,14 @@ class WmPackageServiceProvider extends PackageServiceProvider
 
         $this->app->scoped(TaxonomyWhereDisplayService::class);
 
+        // Renderer delle mappe di stampa: scelto al resolve in base a `map_service.driver`
+        $this->app->bind(
+            \Wm\WmPackage\Services\Print\Contracts\MapRenderer::class,
+            fn () => config('wm-package.features.print.map_service.driver', 'fake') === 'http'
+                ? new \Wm\WmPackage\Services\Print\HttpMapRenderer
+                : new \Wm\WmPackage\Services\Print\FakeMapRenderer
+        );
+
         // Registra il GlobalFileServiceProvider
         $this->app->register(GlobalFileServiceProvider::class);
 

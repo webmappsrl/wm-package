@@ -71,7 +71,7 @@ if (! function_exists('sanitizeHexColor')) {
      */
     function sanitizeHexColor($value, string $fallback): string
     {
-        if (is_string($value) && preg_match('/^#[0-9a-fA-F]{6}$/', $value)) {
+        if (is_string($value) && preg_match('/^#[0-9a-fA-F]{6}$/D', $value)) {
             return $value;
         }
 

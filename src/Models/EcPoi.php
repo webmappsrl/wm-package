@@ -12,13 +12,15 @@ use Wm\WmPackage\Models\Interfaces\LayerRelatedModel;
 use Wm\WmPackage\Observers\EcPoiObserver;
 use Wm\WmPackage\Services\DetailTaxonomiesService;
 use Wm\WmPackage\Services\GeometryComputationService;
+use Wm\WmPackage\Services\Print\Contracts\PrintableModel;
 use Wm\WmPackage\Traits\EcFeatureTrait;
+use Wm\WmPackage\Traits\Printable;
 use Wm\WmPackage\Traits\TaxonomyAbleModel;
 use Wm\WmPackage\Traits\TaxonomyWhereAbleModel;
 
-class EcPoi extends Point implements LayerRelatedModel
+class EcPoi extends Point implements LayerRelatedModel, PrintableModel
 {
-    use EcFeatureTrait, HasTranslations, TaxonomyAbleModel, TaxonomyWhereAbleModel;
+    use EcFeatureTrait, HasTranslations, Printable, TaxonomyAbleModel, TaxonomyWhereAbleModel;
 
     protected $fillable = [
         'name',
