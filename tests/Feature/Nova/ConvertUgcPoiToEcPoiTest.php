@@ -6,6 +6,7 @@ use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Nova\Actions\ActionResponse;
@@ -18,7 +19,6 @@ use Wm\WmPackage\Models\Media;
 use Wm\WmPackage\Models\UgcPoi;
 use Wm\WmPackage\Models\User;
 use Wm\WmPackage\Nova\Actions\ConvertUgcPoiToEcPoi;
-use Illuminate\Support\Facades\Http;
 
 // Creare un contenuto geolocalizzato interroga osmfeatures per le aree amministrative e il DEM
 // per i dati tecnici: qui non si verificano quei due servizi, si fingono perche' il test non
@@ -121,14 +121,17 @@ it('copia le foto sull\'EcPoi con file e uuid nuovi, lasciando intatte quelle de
     $copies = Media::where('model_type', $ecPoi->getMorphClass())->where('model_id', $ecPoi->id)->orderBy('id')->get();
     expect($copies)->toHaveCount(2);
 
+    // Le copie si confrontano con gli originali come insieme: l'ordine in cui la conversione le crea
+    // non è garantito, e accoppiarle per posizione rende il test instabile.
     $disk = Storage::disk('wmfe');
-    foreach ($copies as $i => $copy) {
-        $original = $photos[$i]->fresh();
-        expect($copy->id)->not->toBe($original->id)
-            ->and($copy->uuid)->not->toBe($original->uuid)
-            ->and($disk->exists($copy->getPathRelativeToRoot()))->toBeTrue()
-            ->and(md5($disk->get($copy->getPathRelativeToRoot())))->toBe(md5($disk->get($original->getPathRelativeToRoot())));
+    $originals = collect($photos)->map(fn ($photo) => $photo->fresh());
+    foreach ($copies as $copy) {
+        expect($originals->pluck('id'))->not->toContain($copy->id)
+            ->and($originals->pluck('uuid'))->not->toContain($copy->uuid)
+            ->and($disk->exists($copy->getPathRelativeToRoot()))->toBeTrue();
     }
+    $hashes = fn ($media) => collect($media)->map(fn ($m) => md5($disk->get($m->getPathRelativeToRoot())))->sort()->values()->all();
+    expect($hashes($copies))->toBe($hashes($originals));
 
     // Le foto dell'UgcPoi restano dove erano.
     foreach ($photos as $photo) {
