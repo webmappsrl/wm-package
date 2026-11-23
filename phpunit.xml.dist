@@ -22,6 +22,7 @@
       <exclude>tests/Feature/AppAuthControllerMeProfileTest.php</exclude>
       <exclude>tests/Feature/AppAuthControllerSignupSurnameTest.php</exclude>
       <exclude>tests/Feature/AppAuthControllerUpdateProfileTest.php</exclude>
+      <exclude>tests/Feature/AppConfigServiceFeatureCollectionAlphaColorTest.php</exclude>
       <exclude>tests/Feature/AppConfigServiceMinAppVersionTest.php</exclude>
       <exclude>tests/Feature/AppConfigServiceOverlaysTest.php</exclude>
       <exclude>tests/Feature/AppConfigServiceTranslationsTest.php</exclude>
@@ -49,6 +50,7 @@
       <exclude>tests/Feature/LayerAssignPoisByTaxonomyTest.php</exclude>
       <exclude>tests/Feature/LayerLogoMediaTest.php</exclude>
       <exclude>tests/Feature/LayerMediaObserverTest.php</exclude>
+      <exclude>tests/Feature/LayerServiceCreateFromTaxonomyWhereTest.php</exclude>
       <exclude>tests/Feature/Nova/AbstractUserResourceImpersonateTest.php</exclude>
       <exclude>tests/Feature/Nova/AbstractUserResourceSurnameFieldTest.php</exclude>
       <exclude>tests/Feature/Nova/Actions/BulkEditActionFeatureTest.php</exclude>
@@ -120,6 +122,7 @@
       <file>tests/Feature/AppAuthControllerMeProfileTest.php</file>
       <file>tests/Feature/AppAuthControllerSignupSurnameTest.php</file>
       <file>tests/Feature/AppAuthControllerUpdateProfileTest.php</file>
+      <file>tests/Feature/AppConfigServiceFeatureCollectionAlphaColorTest.php</file>
       <file>tests/Feature/AppConfigServiceMinAppVersionTest.php</file>
       <file>tests/Feature/AppConfigServiceOverlaysTest.php</file>
       <file>tests/Feature/AppConfigServiceTranslationsTest.php</file>
@@ -147,6 +150,7 @@
       <file>tests/Feature/LayerAssignPoisByTaxonomyTest.php</file>
       <file>tests/Feature/LayerLogoMediaTest.php</file>
       <file>tests/Feature/LayerMediaObserverTest.php</file>
+      <file>tests/Feature/LayerServiceCreateFromTaxonomyWhereTest.php</file>
       <file>tests/Feature/Nova/AbstractUserResourceImpersonateTest.php</file>
       <file>tests/Feature/Nova/AbstractUserResourceSurnameFieldTest.php</file>
       <file>tests/Feature/Nova/Actions/BulkEditActionFeatureTest.php</file>
