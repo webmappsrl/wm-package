@@ -74,11 +74,27 @@ dell'app, altrimenti `404` senza accodare nulla; se manca vale `default_language
    `print.status` ogni 5 s e fa il redirect quando lo stato è `done`; se è `failed` mostra un
    messaggio generico e un link `?retry=1`. Smette di aspettare dopo il timeout del Job più 60 s.
 
+**Nome del file.** La chiave su `wmfe` è `print-{locale}.pdf` nella cartella del contenuto
+(`printFileName()`): stabile, ci si appoggiano freschezza, rigenerazione e cancellazione. Il nome con cui
+il file si scarica è un'altra cosa: lo slug del nome nella lingua della scheda (`printDownloadName()`,
+es. `oliena-monte-corrasi-b-401.pdf`), scritto nell'intestazione `Content-Disposition: inline`
+dell'oggetto da `StorageService::storeFileContents()`. Lo spostamento dal temporaneo è una copia S3
+che conserva i metadati, verificato su MinIO.
+
+**I termini contano come modifiche.** La freschezza guarda `updated_at`, ma un termine aggiunto o
+tolto (validazione e percorribilità da `TrailStatusService::set()`, termini salvati in Nova) si scrive
+solo nel pivot. Con il dominio acceso `TaxonomyTermableObserver` aggiorna `updated_at` di tracce e POI
+a ogni legame che cambia, con una UPDATE senza observer, anche dentro un import: la scheda risulta
+vecchia e la richiesta successiva la rigenera.
+
 **Unicità e sovrapposizioni della scheda.** `GeneratePrintPdfJob` è `ShouldBeUniqueUntilProcessing`:
-il lock di unicità vale mentre il Job è in coda e si libera quando l'esecuzione parte. Un salvataggio
-che arriva durante la generazione (dati letti prima, PDF scritto dopo) accoda quindi una nuova
-generazione: con il lock tenuto fino alla fine la richiesta andrebbe persa e il PDF vecchio, scritto
-dopo `updated_at`, risulterebbe fresco per sempre. Due esecuzioni per lo stesso modello e lingua non
+il lock di unicità vale mentre il Job è in coda e si libera quando l'esecuzione parte, così la
+generazione si può riaccodare mentre è in corso. Un salvataggio che arriva durante la generazione
+(dati letti prima, PDF scritto dopo) lascerebbe un PDF vecchio scritto dopo `updated_at`, cioè fresco
+finché qualcuno non salva di nuovo: alla prima generazione `RegeneratePrintPdfsJob` non trova lingue
+da rifare, e sulle sottoclassi degli shard l'observer del modello del package non scatta. Per questo
+il Job confronta `updated_at` prima e dopo la generazione e, se è cambiato, si riaccoda invece di
+segnare `done`. Due esecuzioni per lo stesso modello e lingua non
 si sovrappongono: il middleware `WithoutOverlapping` (chiave = `uniqueId()`) rimette in coda la
 seconda ogni 30 s, con lock che scade dopo il timeout del Job. Per questo `$tries = 20` (ogni attesa
 conta come tentativo) e le eccezioni sono limitate da `$maxExceptions = 2`; un timeout è terminale
@@ -163,7 +179,7 @@ La richiesta è `MapRenderRequest` con `shard` (da `wm-package.shard_name`), `fe
 (una feature per sentiero o punto, con `id`, `ref`, `name`), `width_mm`, `height_mm`. Un errore del
 servizio risale: la scheda non si genera e il PDF esistente resta.
 
-## Personalizzazione per shard
+## Personalizzazione per shard e per App
 
 **Impaginazione.** Ogni view è un sorgente LaTeX in Blade: `print/ec-track`, `print/ec-poi`,
 `print/overview-map` (più `print/waiting`, `print/error` e `print/partials/footer`). Lo shard le
@@ -172,6 +188,16 @@ sostituisce con una view omonima in `resources/views/vendor/wm-package/print/`. 
 non qui. Le stringhe già LaTeX-sicure si stampano con `{!! !!}`; in LaTeX non si scrive `{{` letterale.
 Le etichette fisse vengono da `resources/lang/{de,en,es,fr,it}.json` (chiave in inglese), che lo shard
 può sovrascrivere.
+
+**View per singola App.** Sopra la view dello shard ce n'è una per App, che la sovrascrive solo per i
+contenuti di quell'App: `resources/views/vendor/wm-package/print/apps/<app_id>/ec-track.blade.php` (e
+`ec-poi`). `Printable::printView()` sceglie il primo livello che esiste: la view dell'App, poi quella
+dello shard (`print/ec-track`), poi quella del package. La view dell'App riceve le stesse variabili e
+può includere i partial dello shard, cambiando solo una parte. La chiave è l'id dell'App, che negli
+shard con più App importate può cambiare fra un ambiente e l'altro: va verificato prima di aggiungere
+una cartella. La mappa d'insieme non ha la view per App, perché una selezione può contenere sentieri
+di App diverse. Cambiare una view non rende vecchi i PDF già generati (la freschezza guarda i dati):
+dopo il deploy si rigenerano con l'Action Nova.
 
 **Due livelli.** La scheda di default si adatta all'App con il suo **tema** (tab `theme`); per
 qualunque altra cosa lo shard scrive la **view**. Non ci sono token né stili dello shard da caricare.
@@ -258,7 +284,7 @@ Dettagli in [`docker/render/README.md`](../../docker/render/README.md). Nello sh
 - il tempo di una foto è limitato sull'**intero download**, non sulla singola lettura: la richiesta è
   in streaming e Guzzle usa lo StreamHandler (nel container c'è anche curl, ma `stream` sceglie lo
   StreamHandler), dove `timeout` vale per ogni lettura, quindi un server che manda un byte ogni 29 s
-  lo rispetterebbe all'infinito. `PrintService::preparePhoto()` riceve una scadenza (residuo del
+  lo rispetterebbe all'infinito. `PrintImages::preparePhoto()` riceve una scadenza (residuo del
   budget, mai oltre 30 s), usa il tempo che resta come `timeout` della richiesta, stacca il resource
   del corpo e prima di ogni lettura ricontrolla la scadenza e imposta `stream_set_timeout()` al tempo
   che resta. Oltre la scadenza la foto si salta con un warning, come per i limiti di byte e pixel.

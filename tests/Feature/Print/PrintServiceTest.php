@@ -53,9 +53,7 @@ beforeEach(function () {
 
 function printTrack(array $attributes = []): EcTrack
 {
-    return EcTrack::factory()->createQuietly(array_merge([
-        'app_id' => test()->printApp->id,
-        'osmid' => null,
+    return printSavedTrack(test()->printApp, array_merge([
         'name' => ['it' => 'Sentiero del Gennargentu'],
         'properties' => [
             'description' => ['it' => '<p>Descrizione <strong>italiana</strong></p>'],

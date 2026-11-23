@@ -4,6 +4,7 @@ namespace Wm\WmPackage\Services\Print;
 
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
+use Symfony\Component\Process\Exception\ProcessTimedOutException;
 use Symfony\Component\Process\Process;
 use Wm\WmPackage\Exceptions\PrintCompilationException;
 
@@ -94,7 +95,7 @@ class XelatexCompiler
 
         try {
             $process->run();
-        } catch (\Symfony\Component\Process\Exception\ProcessTimedOutException) {
+        } catch (ProcessTimedOutException) {
             throw new PrintCompilationException("Compilazione oltre il timeout di {$timeout}s: ".$this->logTail($workDir));
         }
 

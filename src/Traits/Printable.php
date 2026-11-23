@@ -2,6 +2,7 @@
 
 namespace Wm\WmPackage\Traits;
 
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\Str;
 use Wm\WmPackage\Services\Print\LatexText;
 use Wm\WmPackage\Services\Print\PrintService;
@@ -23,7 +24,14 @@ trait Printable
 {
     /**
      * View Blade del sorgente LaTeX, dal nome del modello del package (`EcTrack` -> `ec-track`)
-     * anche quando lo shard usa una sottoclasse. Gli shard la sovrascrivono con una view omonima.
+     * anche quando lo shard usa una sottoclasse. Tre livelli, il primo che esiste vince:
+     *
+     * 1. la view della singola App, `print/apps/<app_id>/ec-track` (oc:8982);
+     * 2. la view dello shard, `resources/views/vendor/wm-package/print/ec-track` (override di Laravel);
+     * 3. la view di default del package.
+     *
+     * Il livello 1 sta anch'esso nello shard, in `resources/views/vendor/wm-package/print/apps/<app_id>/`,
+     * e riceve le stesse variabili: può includere i partial dello shard e cambiarne solo una parte.
      */
     public function printView(): string
     {
@@ -34,8 +42,17 @@ trait Printable
                 break;
             }
         }
+        $name = Str::kebab(class_basename($class));
 
-        return 'wm-package::print.'.Str::kebab(class_basename($class));
+        $appId = $this->getAttribute('app_id');
+        if (is_int($appId) || (is_string($appId) && ctype_digit($appId))) {
+            $appView = 'wm-package::print.apps.'.$appId.'.'.$name;
+            if (View::exists($appView)) {
+                return $appView;
+            }
+        }
+
+        return 'wm-package::print.'.$name;
     }
 
     /**
@@ -46,6 +63,16 @@ trait Printable
         PrintService::assertValidLocale($locale);
 
         return 'print-'.$locale;
+    }
+
+    /**
+     * Il nome con cui la scheda si scarica: lo slug del nome del contenuto nella lingua della scheda
+     * (con il ripiego di `printTranslation()`), senza lingua né id, es. `oliena-monte-corrasi`. La
+     * chiave su wmfe resta `printFileName()`.
+     */
+    public function printDownloadName(string $locale): string
+    {
+        return Str::slug($this->printTranslation('name', $locale));
     }
 
     /**

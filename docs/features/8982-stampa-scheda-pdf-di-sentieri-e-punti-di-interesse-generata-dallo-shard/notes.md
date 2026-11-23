@@ -70,3 +70,30 @@ dove una decisione ne ha sostituita un'altra, c'è una riga «sostituisce».
   (console già partita): ora con `Artisan::registerCommand()`. Senza, la pulizia non girava e lasciava in
   `print-tmp` una cartella che faceva fallire `OverviewMapTest` nell'ordine casuale.
 
+## Review del 23/11: due bloccanti corretti
+
+- **Un cambio di termine non invalidava la scheda.** `isFresh()` guarda `updated_at`, ma validazione e
+  percorribilità (`TrailStatusService::set()`) e i termini salvati in Nova scrivono solo il pivot: la
+  scheda con lo stato vecchio restava servita. Ora `TaxonomyTermableObserver::touchForPrint()`, con il
+  dominio acceso, aggiorna `updated_at` del contenuto con una UPDATE senza observer. Costo: una UPDATE
+  per legame anche negli import (alcune decine di migliaia nel reset notturno di forestas).
+- **Un salvataggio durante la generazione lasciava un PDF vecchio «fresco».** La garanzia descritta nel
+  docblock del Job non reggeva: alla prima generazione `RegeneratePrintPdfsJob` non rifà niente, e sulle
+  tracce degli shard l'observer del modello del package non scatta. Ora `GeneratePrintPdfJob` confronta
+  `updated_at` prima e dopo `generate()` e si riaccoda invece di segnare `done`. Resta il caso del
+  salvataggio nello stesso secondo della lettura (timestamp al secondo): non coperto.
+- **Nome del file scaricato (dev, 23/11):** lo slug del nome tradotto, senza lingua né id, in
+  `Content-Disposition`; la chiave su wmfe resta `print-{locale}.pdf`. Nuovo metodo
+  `printDownloadName()` in `PrintableModel` e nel trait `Printable`.
+
+## Pulizia dopo la review del 23/11
+
+- Foto e logo della scheda passano in `PrintImages` (`preparePhotos()`, `prepareLogo()`), con il controllo
+  dei limiti e il ridimensionamento comuni in `resizeTo()`; `PrintService` lo riceve nel costruttore con un
+  default, ed è sceso da 688 a 447 righe. Le costanti restano su `PrintService`.
+- Le tracce dei test della stampa vengono da `tests/Support/PrintHelpers.php` (`printUnsavedTrack()`,
+  `printSavedTrack()`), caricato da `tests/Pest.php`, al posto di cinque helper con nomi diversi.
+- **View per singola App (dev, 23/11):** `printView()` cerca prima `print/apps/<app_id>/<tipo>`, poi la
+  view dello shard, poi quella del package. Chiave scelta dal dev: l'id dell'App (lo `sku` avrebbe
+  i punti, che per Laravel separano le cartelle).
+

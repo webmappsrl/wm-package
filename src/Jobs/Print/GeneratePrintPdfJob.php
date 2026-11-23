@@ -23,11 +23,16 @@ use Wm\WmPackage\Services\Print\PrintStatus;
  *
  * Unico per modello e lingua **finché è in coda** (`ShouldBeUniqueUntilProcessing`): una seconda
  * richiesta mentre il primo aspetta in coda non accoda nulla, ma il lock si libera quando
- * l'esecuzione parte. Così un salvataggio che arriva durante la generazione (dati letti prima del
- * salvataggio, PDF scritto dopo) accoda una nuova generazione invece di andare perso: senza, il PDF
- * vecchio risulterebbe fresco (`lastModified >= updated_at`) per sempre. Due esecuzioni per lo stesso
- * modello e lingua non si sovrappongono comunque: `WithoutOverlapping` sulla stessa chiave rimette
- * in coda la seconda ogni 30 s finché la prima finisce.
+ * l'esecuzione parte, così la generazione si può riaccodare mentre è in corso. Due esecuzioni per
+ * lo stesso modello e lingua non si sovrappongono comunque: `WithoutOverlapping` sulla stessa chiave
+ * rimette in coda la seconda ogni 30 s finché la prima finisce.
+ *
+ * Un salvataggio che arriva durante la generazione (dati letti prima, PDF scritto dopo) lascerebbe un
+ * PDF vecchio con una data più recente di `updated_at`, cioè «fresco» (`PrintService::isFresh()`)
+ * finché qualcuno non salva di nuovo: nessun altro lo rigenera, perché alla prima generazione
+ * `RegeneratePrintPdfsJob` non trova lingue da rifare e sulle sottoclassi degli shard l'observer del
+ * modello del package non scatta. Per questo il job confronta `updated_at` prima e dopo la
+ * generazione e, se è cambiato, si riaccoda invece di dichiarare pronta la scheda (oc:8982).
  *
  * Se il modello viene cancellato prima dell'esecuzione il job termina senza errore.
  */
@@ -128,9 +133,48 @@ class GeneratePrintPdfJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
 
     public function handle(PrintService $service): void
     {
+        $readAt = self::timestamp($this->model->getAttribute($this->model->getUpdatedAtColumn() ?? 'updated_at'));
+
         $url = $service->generate($this->model, $this->locale);
 
+        // Il modello è cambiato mentre la scheda si generava: il PDF appena scritto ha i dati di prima.
+        $storedAt = $this->storedUpdatedAt();
+        if ($storedAt !== null && $storedAt !== $readAt) {
+            Log::channel('print')->info('Modello cambiato durante la generazione della scheda PDF: si rigenera', [
+                'model' => $this->model->getMorphClass(),
+                'id' => $this->model->getKey(),
+                'locale' => $this->locale,
+            ]);
+            self::dispatchFor($this->model, $this->locale);
+
+            return;
+        }
+
         PrintStatus::markDone($this->model, $this->locale, $url);
+    }
+
+    /** `updated_at` del modello com'è ora nel database, in secondi; null se il modello non c'è o non ha timestamp. */
+    private function storedUpdatedAt(): ?int
+    {
+        $column = $this->model->getUpdatedAtColumn();
+        if (! $this->model->usesTimestamps() || $column === null) {
+            return null;
+        }
+
+        return self::timestamp($this->model->newQuery()->whereKey($this->model->getKey())->value($column));
+    }
+
+    private static function timestamp(mixed $value): ?int
+    {
+        if ($value instanceof \DateTimeInterface) {
+            return $value->getTimestamp();
+        }
+        if (! is_string($value) || $value === '') {
+            return null;
+        }
+        $time = strtotime($value);
+
+        return $time === false ? null : $time;
     }
 
     public function failed(?Throwable $exception): void

@@ -14,8 +14,10 @@ use Wm\WmPackage\Jobs\Track\UpdateEcTrackOrderRelatedPoi;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Models\EcTrack;
+use Wm\WmPackage\Models\TaxonomyTerm;
 use Wm\WmPackage\Services\Models\EcTrackService;
 use Wm\WmPackage\Services\Print\PrintService;
+use Wm\WmPackage\Services\Print\PrintStatus;
 
 uses(DatabaseTransactions::class);
 
@@ -25,11 +27,6 @@ beforeEach(function () {
     Storage::fake('wmfe', ['url' => 'https://wmfe.test']);
     $this->regenApp = App::factory()->createQuietly();
 });
-
-function regenTrack(): EcTrack
-{
-    return EcTrack::factory()->createQuietly(['app_id' => test()->regenApp->id, 'osmid' => null]);
-}
 
 function regenPoi(): EcPoi
 {
@@ -48,7 +45,7 @@ function regenJobClasses(array $jobs): array
 }
 
 it('adds RegeneratePrintPdfsJob to publicationJobs only when the print domain is enabled', function () {
-    $track = regenTrack();
+    $track = printSavedTrack(test()->regenApp);
 
     config(['wm-package.features.print.enabled' => false]);
     expect(regenJobClasses(app(EcTrackService::class)->publicationJobs($track)))->not->toContain(RegeneratePrintPdfsJob::class);
@@ -62,7 +59,7 @@ it('adds RegeneratePrintPdfsJob to publicationJobs only when the print domain is
 it('dispatches one generation per existing locale', function () {
     config(['wm-package.features.print.enabled' => true]);
     Queue::fake();
-    $track = regenTrack();
+    $track = printSavedTrack(test()->regenApp);
     regenPut($track, 'it');
     regenPut($track, 'en');
 
@@ -77,7 +74,7 @@ it('does not generate anything for an element that was never printed', function 
     config(['wm-package.features.print.enabled' => true]);
     Queue::fake();
 
-    (new RegeneratePrintPdfsJob(regenTrack()))->handle(app(PrintService::class));
+    (new RegeneratePrintPdfsJob(printSavedTrack(test()->regenApp)))->handle(app(PrintService::class));
 
     Queue::assertNothingPushed();
 });
@@ -85,7 +82,7 @@ it('does not generate anything for an element that was never printed', function 
 it('does nothing at run time when the domain is disabled and runs on the print queue', function () {
     config(['wm-package.features.print.enabled' => false, 'wm-package.features.print.queue' => 'stampa']);
     Queue::fake();
-    $track = regenTrack();
+    $track = printSavedTrack(test()->regenApp);
     regenPut($track, 'it');
 
     $job = new RegeneratePrintPdfsJob($track);
@@ -98,7 +95,7 @@ it('does nothing at run time when the domain is disabled and runs on the print q
 it('saving a poi regenerates its own pdfs and ends the chain of each linked track with the regeneration', function () {
     config(['wm-package.features.print.enabled' => true]);
     $poi = regenPoi();
-    $track = regenTrack();
+    $track = printSavedTrack(test()->regenApp);
     $track->ecPois()->attach($poi->id);
     regenPut($poi, 'it');
     regenPut($track, 'en');
@@ -133,7 +130,7 @@ it('does not queue any regeneration when saving a poi with the domain disabled',
 });
 
 it('deleting a track removes its print pdfs', function () {
-    $track = regenTrack();
+    $track = printSavedTrack(test()->regenApp);
     regenPut($track, 'it');
     regenPut($track, 'en');
     $dir = "/testshard/{$track->app_id}/files/ec-track/{$track->id}";
@@ -192,4 +189,77 @@ it('releases the unique lock when processing starts, so a save during generation
     // Il nuovo Job ha ripreso il lock: un'altra richiesta mentre aspetta in coda non accoda.
     GeneratePrintPdfJob::dispatchFor($poi, 'it');
     Queue::assertPushed(GeneratePrintPdfJob::class, 2);
+});
+
+it('marks the element as changed when a term is attached or detached, so its print pdf is no longer fresh', function () {
+    Queue::fake();
+    config(['wm-package.features.print.enabled' => true]);
+    $service = app(PrintService::class);
+    $term = TaxonomyTerm::create(['identifier' => 'term-'.uniqid(), 'name' => ['it' => 'Percorribile']]);
+
+    foreach ([printSavedTrack(test()->regenApp), regenPoi()] as $model) {
+        // Dati di un'ora fa, PDF scritto adesso: fresco.
+        $model::query()->whereKey($model->id)->toBase()->update(['updated_at' => now()->subHour()]);
+        regenPut($model, 'it');
+        expect($service->isFresh($model->fresh(), 'it'))->toBeTrue();
+
+        // Il cambio di un termine scrive solo il pivot (come TrailStatusService::set()): la scheda non è più fresca.
+        $this->travel(1)->minutes();
+        $model->taxonomyTerms()->attach($term->id);
+        expect($service->isFresh($model->fresh(), 'it'))->toBeFalse();
+
+        regenPut($model, 'it');
+        $this->travel(1)->minutes();
+        $model->taxonomyTerms()->detach($term->id);
+        expect($service->isFresh($model->fresh(), 'it'))->toBeFalse();
+        $this->travelBack();
+    }
+});
+
+it('does not touch the element on a term change when the print domain is disabled', function () {
+    Queue::fake();
+    config(['wm-package.features.print.enabled' => false]);
+    $track = printSavedTrack(test()->regenApp);
+    $track::query()->whereKey($track->id)->toBase()->update(['updated_at' => '2026-01-01 00:00:00']);
+    $term = TaxonomyTerm::create(['identifier' => 'term-'.uniqid(), 'name' => ['it' => 'Termine']]);
+
+    $track->taxonomyTerms()->attach($term->id);
+
+    expect($track->fresh()->updated_at->format('Y-m-d H:i:s'))->toBe('2026-01-01 00:00:00');
+});
+
+it('requeues instead of marking done when the element changed during the generation', function () {
+    // I lock di ShouldBeUnique non si liberano con flush() su ArrayStore (vedi .claude/rules/test.md).
+    app('cache')->forgetDriver('redis');
+    app('cache')->forgetDriver(config('cache.default'));
+    Queue::fake();
+    $track = printSavedTrack(test()->regenApp);
+    $track::query()->whereKey($track->id)->toBase()->update(['updated_at' => now()->subHour()]);
+    $job = new GeneratePrintPdfJob($track->fresh(), 'it');
+
+    // Mentre xelatex compila, un editor salva la traccia.
+    $this->mock(PrintService::class, function ($mock) use ($track) {
+        $mock->shouldReceive('generate')->once()->andReturnUsing(function () use ($track) {
+            $track::query()->whereKey($track->id)->toBase()->update(['updated_at' => now()]);
+
+            return 'https://wmfe.test/print-it.pdf';
+        });
+    });
+    $job->handle(app(PrintService::class));
+
+    Queue::assertPushed(GeneratePrintPdfJob::class, 1);
+    expect(PrintStatus::get($track, 'it'))->toBe(['status' => 'queued']);
+});
+
+it('marks done when the element did not change during the generation', function () {
+    Queue::fake();
+    $track = printSavedTrack(test()->regenApp);
+    $this->mock(PrintService::class, function ($mock) {
+        $mock->shouldReceive('generate')->once()->andReturn('https://wmfe.test/print-it.pdf');
+    });
+
+    (new GeneratePrintPdfJob($track->fresh(), 'it'))->handle(app(PrintService::class));
+
+    Queue::assertNothingPushed();
+    expect(PrintStatus::get($track, 'it'))->toBe(['status' => 'done', 'url' => 'https://wmfe.test/print-it.pdf']);
 });

@@ -15,6 +15,9 @@ interface PrintableModel
 
     public function printFileName(string $locale): string;
 
+    /** Il nome con cui la scheda si scarica, senza estensione: lo slug del nome nella lingua della scheda. */
+    public function printDownloadName(string $locale): string;
+
     /** @return list<string> */
     public function printPhotoUrls(): array;
 

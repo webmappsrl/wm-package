@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use RuntimeException;
+use Symfony\Component\HttpFoundation\HeaderUtils;
 use Wm\WmPackage\Enums\WmfeTrackVersion;
 
 class StorageService extends BaseService
@@ -241,14 +242,23 @@ class StorageService extends BaseService
      * sul nome finale: chi scarica il file non vede mai un 404 fra la cancellazione del vecchio e
      * la scrittura del nuovo.
      */
-    public function storeFileContents(Model $model, string $filename, string $ext, string $contents): string
+    public function storeFileContents(Model $model, string $filename, string $ext, string $contents, ?string $downloadName = null): string
     {
         $path = $this->buildFilePath($model, $filename, $ext);
         $tmpPath = $path.'.tmp-'.Str::uuid();
         $disk = $this->getRemoteWfeDisk();
 
+        // Il nome con cui il file si scarica sta nell'intestazione dell'oggetto, non nella chiave: la
+        // chiave resta stabile anche se il nome cambia. Lo spostamento su S3 è una copia che conserva
+        // i metadati (MetadataDirective COPY di Flysystem).
+        $options = ['visibility' => 'public'];
+        $disposition = self::contentDisposition($downloadName, $ext);
+        if ($disposition !== null) {
+            $options['ContentDisposition'] = $disposition;
+        }
+
         // Il disco wmfe non ha `throw => true`: put() e move() segnalano l'errore restituendo false.
-        if ($disk->put($tmpPath, $contents, 'public') === false) {
+        if ($disk->put($tmpPath, $contents, $options) === false) {
             throw new RuntimeException("Scrittura su wmfe non riuscita: {$tmpPath}");
         }
 
@@ -264,6 +274,20 @@ class StorageService extends BaseService
         }
 
         return $disk->url($path);
+    }
+
+    /**
+     * `Content-Disposition: inline` con il nome con cui il file si scarica (oc:8982). Il nome si riduce
+     * a ASCII senza virgolette né barre, che l'intestazione non ammette; null se resta vuoto.
+     */
+    public static function contentDisposition(?string $name, string $ext): ?string
+    {
+        $name = trim((string) preg_replace('/[^\x20-\x7E]|[%"\/\\\\]/', '', Str::ascii((string) $name)));
+        if ($name === '') {
+            return null;
+        }
+
+        return HeaderUtils::makeDisposition(HeaderUtils::DISPOSITION_INLINE, Str::limit($name, 150, '').'.'.$ext);
     }
 
     /**

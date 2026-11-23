@@ -2,6 +2,7 @@
 
 namespace Wm\WmPackage\Observers;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -38,6 +39,8 @@ class TaxonomyTermableObserver
         if (! class_exists($class)) {
             return;
         }
+
+        $this->touchForPrint($class, (int) $termable->termable_id);
 
         // `EcPoi` non è Searchable, e il suo «reindice» è un altro: l'app non interroga le API
         // per i POI, legge `pois.geojson`, dove i filtri si risolvono su
@@ -82,6 +85,32 @@ class TaxonomyTermableObserver
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * Con la stampa PDF accesa, un termine aggiunto o tolto aggiorna `updated_at` del contenuto (oc:8982).
+     *
+     * La scheda PDF è «fresca» se è più recente di `updated_at` (`PrintService::isFresh()`), ma un legame
+     * con un termine si scrive solo nel pivot: senza questo, cambiare la validazione, la percorribilità
+     * (`TrailStatusService::set()`) o un termine in Nova lascerebbe servire la scheda con lo stato di
+     * prima. Una sola UPDATE, senza caricare il modello né far partire i suoi observer; vale anche
+     * dentro un import con `withoutSyncingToSearch()`, che non deve lasciare schede vecchie.
+     *
+     * @param  class-string  $class
+     */
+    private function touchForPrint(string $class, int $id): void
+    {
+        if (! config('wm-package.features.print.enabled') || ! is_a($class, Model::class, true)) {
+            return;
+        }
+
+        $model = new $class;
+        $column = $model->getUpdatedAtColumn();
+        if (! $model->usesTimestamps() || $column === null) {
+            return;
+        }
+
+        $class::query()->whereKey($id)->toBase()->update([$column => $model->freshTimestampString()]);
     }
 
     /**
