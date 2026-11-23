@@ -79,6 +79,36 @@ if (! function_exists('sanitizeHexColor')) {
     }
 }
 
+if (! function_exists('sanitizeHexColorWithAlpha')) {
+    /**
+     * Come sanitizeHexColor(), ma accetta anche la trasparenza: `#RRGGBB` o `#RRGGBBAA`
+     * (es. "#a61c0066"), altrimenti $fallback.
+     *
+     * Serve ai colori degli overlay delle FeatureCollection in
+     * AppConfigService::config_section_map(), che passano a hexToRgba(): quella accetta 6 e 8
+     * cifre e trasforma le ultime due in opacità. Con sanitizeHexColor() un colore salvato con
+     * la trasparenza veniva scartato e sostituito dal colore principale dell'App, e con quello
+     * nullo dal nero (oc:9001).
+     *
+     * È una funzione a parte, e sanitizeHexColor() resta a 6 cifre: il colore della story share
+     * (StoryShareImageService::resolveAccentColor()) non passa da hexToRgba() ma da un parser
+     * che leggerebbe male le 8 cifre. Le 3, 4, 5 o 7 cifre restano rifiutate qui come lì:
+     * hexToRgba() lancerebbe un'eccezione e farebbe fallire tutto il config.json.
+     *
+     * @param  mixed  $value
+     */
+    function sanitizeHexColorWithAlpha($value, string $fallback): string
+    {
+        // `\z` e non `$`: in PCRE `$` accetta anche un a capo finale, e "#a61c00\n" arriverebbe a
+        // hexToRgba() con 7 caratteri, facendo fallire tutto il config.json.
+        if (is_string($value) && preg_match('/^#([0-9a-fA-F]{6}|[0-9a-fA-F]{8})\z/', $value)) {
+            return $value;
+        }
+
+        return $fallback;
+    }
+}
+
 if (! function_exists('withoutInternalConfigKeys')) {
     /**
      * Rimuove da un array le chiavi che un consumer ha dichiarato riservate a

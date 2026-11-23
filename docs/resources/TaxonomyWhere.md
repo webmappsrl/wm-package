@@ -162,7 +162,7 @@ Wm\WmPackage\Nova\TaxonomyWhere
 | Azione | Classe | Standalone | Descrizione |
 |--------|--------|------------|-------------|
 | Import TaxonomyWhere | `ImportTaxonomyWhere` | Si | Importa aree da OSMFeatures (vari admin level) o settori da OSM2CAI; dispatch job geometria in background; sincronizza track al termine |
-| Crea Layer | `CreateLayerFromTaxonomyWhere` | No | Crea un `Layer` per ogni `TaxonomyWhere` selezionata, copia `feature_image` via Spatie Media |
+| Crea Layer | `CreateLayerFromTaxonomyWhere` | No | Crea un `Layer` per ogni `TaxonomyWhere` selezionata con `LayerService::createLayerFromTaxonomyWhere()`: nome in tutte le traduzioni, `description` e `subtitle`, `feature_image` via Spatie Media |
 | Ricarica Geometry | `RetryTaxonomyWhereGeometryFetch` | No | Ri-dispatcha `FetchTaxonomyWhereGeometryJob` sui record selezionati |
 | Sincronizza Taxonomy Where su EC Features | `SyncEcTaxonomyWhereAction` | Si | Chiama `GeometryComputationService::syncTaxonomyWhere()` su tutte le `EcTrack` e gli `EcPoi` (dispatch in coda, oc:8487) |
 
@@ -207,9 +207,15 @@ Ogni import termina con `GeometryComputationService::syncTaxonomyWhere()`, che a
 
 Se la tabella `taxonomy_wheres` ha la colonna `user_id` (verificata via `Schema::hasColumn`), l'utente viene ereditato dall'`App` selezionata durante l'import.
 
-### Azione "Crea Layer"
+### Azione "Crea Layer" e `LayerService::createLayerFromTaxonomyWhere()`
 
-`CreateLayerFromTaxonomyWhere` crea il `Layer`, lo collega alla `TaxonomyWhere` e tenta di scaricare la `feature_image` (se presente in `properties`) via Spatie Media Library nella collection `default` del Layer. In caso di errore media, la creazione del Layer prosegue e l'errore viene loggato con `Log::warning`.
+La logica sta in `LayerService::createLayerFromTaxonomyWhere($taxonomyWhere, $app, $withPivotEvents = true)`, che l'action chiama per ogni record e che usa anche chi crea layer da codice (l'import delle aree di forestas, oc:9001). Il metodo:
+
+- crea il `Layer` dell'`App` (con il suo `user_id`) e gli dà il nome dell'area **in tutte le traduzioni salvate**; se il nome manca, ripiega su `title`, `name` o `layer_name` delle `properties`, poi su «Layer <id>». Un testo semplice, senza lingua, va nella lingua corrente, come fa Spatie;
+- copia nelle `properties` del Layer `description` e `subtitle` dell'area, traducibili;
+- lo collega alla `TaxonomyWhere` e tenta di scaricare la `feature_image` (se presente in `properties`) via Spatie Media Library nella collection `default` del Layer. In caso di errore media, la creazione del Layer prosegue e l'errore viene loggato con `Log::warning`.
+
+**`$withPivotEvents`** decide gli eventi del collegamento all'area. Accesi (l'action), `TaxonomyWhereablesObserver` riempie subito il layer e `LayerableObserver` accoda geometria e PBF per ogni riga del pivot. Spenti (un import, che riempie i layer dopo con un ricalcolo suo), il layer nasce vuoto. Si spengono con `TaxonomyWhereable::withoutEvents()` attorno al solo `attach()`: il dispatcher è condiviso da tutti i model, e avvolgendo l'intera chiamata il Layer nascerebbe senza il `rank` che gli dà `LayerObserver::creating()`.
 
 ---
 

@@ -98,6 +98,20 @@ aggiunti dall'import — specialmente quelli associati solo via `taxonomy_poi_ty
 - Le geometrie PostGIS passano sempre da SQL puro (`ST_GeomFromGeoJSON`/`ST_AsGeoJSON`), mai
   attraverso l'ORM (oc:8486, oc:8469).
 
+### Il layer di un'area
+
+- **`LayerService::createLayerFromTaxonomyWhere()` è il punto unico per creare il layer di una
+  `TaxonomyWhere`**: lo chiamano l'action «Crea Layer» e l'import delle aree geografiche di
+  forestas. Cosa copia dall'area (nome in tutte le traduzioni, `description`, `subtitle`,
+  `feature_image`) sta in [docs/resources/TaxonomyWhere.md](../resources/TaxonomyWhere.md),
+  «Azione "Crea Layer"» (oc:9001).
+- **Con `$withPivotEvents = false` il layer nasce vuoto**: il collegamento all'area non fa partire
+  `TaxonomyWhereablesObserver` né i job per riga di `LayerableObserver`, e chi lo chiama deve
+  riempirlo da sé con un ricalcolo (forestas: `RecalculateSardegnaSentieriLayersJob`). Gli eventi
+  si spengono solo attorno all'`attach()`: `withoutEvents()` di un model spegne il dispatcher
+  condiviso da tutti, e attorno alla creazione il Layer perderebbe il `rank` di
+  `LayerObserver::creating()` (oc:9001).
+
 ### Mappa nel pannello Nova
 
 - `addFeaturesForMap()` in `FeatureCollectionMapTrait` inietta `$this->id` (l'ID del layer) in

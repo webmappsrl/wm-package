@@ -657,8 +657,9 @@ class AppConfigService extends AppBaseService
                         $array['icon'] = $fc->icon;
                     }
 
-                    $array['fillColor'] = hexToRgba(sanitizeHexColor($fc->fill_color, $primaryColor));
-                    $array['strokeColor'] = hexToRgba(sanitizeHexColor($fc->stroke_color, $primaryColor));
+                    // Anche con la trasparenza (`#RRGGBBAA`), che hexToRgba() trasforma in opacità (oc:9001).
+                    $array['fillColor'] = hexToRgba(sanitizeHexColorWithAlpha($fc->fill_color, $primaryColor));
+                    $array['strokeColor'] = hexToRgba(sanitizeHexColorWithAlpha($fc->stroke_color, $primaryColor));
 
                     if ($fc->stroke_width) {
                         $array['strokeWidth'] = $fc->stroke_width;

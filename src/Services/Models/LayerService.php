@@ -8,12 +8,16 @@ use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Wm\WmPackage\Jobs\UpdateLayeredFeaturesJob;
 use Wm\WmPackage\Jobs\UpdateLayerGeometryJob;
 use Wm\WmPackage\Models\Abstracts\GeometryModel;
+use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\Layer;
+use Wm\WmPackage\Models\TaxonomyWhere;
+use Wm\WmPackage\Models\TaxonomyWhereable;
 use Wm\WmPackage\Services\BaseService;
 use Wm\WmPackage\Services\GeometryComputationService;
 
@@ -517,5 +521,125 @@ class LayerService extends BaseService
             'taxonomy_ids' => $layerTaxonomyIds,
             'where_ids' => $layerWhereIds,
         ]);
+    }
+
+    /**
+     * Crea il Layer di un'area (Taxonomy Where) dell'App e lo collega all'area.
+     *
+     * È la logica dell'action Nova «Crea Layer», portata qui perché la usi anche chi crea layer da
+     * codice (l'import delle aree di forestas, oc:9001). Dall'area il layer riceve il nome con
+     * tutte le traduzioni salvate (l'action leggeva `$taxonomyWhere->name`, cioè la sola lingua
+     * corrente), `description` e `subtitle` delle `properties`, che sul Layer sono traducibili, e
+     * l'immagine di `feature_image`.
+     *
+     * `$withPivotEvents` decide gli eventi del collegamento all'area: accesi (l'action Nova),
+     * `TaxonomyWhereablesObserver` riempie subito il layer e accoda i job per ogni riga del pivot;
+     * spenti (un import, che riempie i layer dopo con un ricalcolo suo), il layer nasce vuoto.
+     * `TaxonomyWhereable::withoutEvents()` spegne comunque il dispatcher di tutti i model, che è
+     * condiviso, ma solo per la durata dell'attach, dove si salva soltanto il pivot. Per questo
+     * non avvolge tutta la chiamata: il layer nascerebbe senza il rank che gli dà
+     * `LayerObserver::creating()`.
+     */
+    public function createLayerFromTaxonomyWhere(TaxonomyWhere $taxonomyWhere, App $app, bool $withPivotEvents = true): Layer
+    {
+        $areaProperties = is_array($taxonomyWhere->properties ?? null) ? $taxonomyWhere->properties : [];
+
+        $properties = [];
+        foreach (['description', 'subtitle'] as $key) {
+            $translations = $this->translationsOf($areaProperties[$key] ?? null);
+            if ($translations !== []) {
+                $properties[$key] = $translations;
+            }
+        }
+
+        $layer = Layer::create([
+            'name' => $this->layerNameOf($taxonomyWhere),
+            'app_id' => $app->id,
+            'user_id' => $app->user_id,
+            'properties' => $properties,
+        ]);
+
+        $attach = fn () => $layer->taxonomyWheres()->attach($taxonomyWhere->id);
+        $withPivotEvents ? $attach() : TaxonomyWhereable::withoutEvents($attach);
+
+        $this->syncFeatureImageFromTaxonomyWhere($taxonomyWhere, $layer);
+
+        return $layer;
+    }
+
+    /**
+     * Il nome del layer: le traduzioni del nome dell'area, o in mancanza `title`, `name` o
+     * `layer_name` delle sue properties, o «Layer <id>».
+     *
+     * @return string|array<string, string>
+     */
+    private function layerNameOf(TaxonomyWhere $taxonomyWhere): string|array
+    {
+        $name = $this->translationsOf($taxonomyWhere->getTranslations('name'));
+        if ($name !== []) {
+            return $name;
+        }
+
+        $properties = is_array($taxonomyWhere->properties ?? null) ? $taxonomyWhere->properties : [];
+        foreach (['title', 'name', 'layer_name'] as $key) {
+            $translations = $this->translationsOf($properties[$key] ?? null);
+            if ($translations !== []) {
+                return $translations;
+            }
+        }
+
+        return 'Layer '.(string) $taxonomyWhere->id;
+    }
+
+    /**
+     * Le traduzioni non vuote di un valore per lingua. Una stringa non dice la sua lingua: va in
+     * quella corrente, come fa Spatie quando riceve una stringa, così nome e descrizione finiscono
+     * nella stessa.
+     *
+     * @return array<string, string>
+     */
+    private function translationsOf(mixed $value): array
+    {
+        if (is_string($value)) {
+            return trim($value) !== '' ? [app()->getLocale() => $value] : [];
+        }
+
+        if (! is_array($value)) {
+            return [];
+        }
+
+        return array_filter(
+            $value,
+            static fn ($text, $lang) => is_string($lang) && is_string($text) && trim($text) !== '',
+            ARRAY_FILTER_USE_BOTH
+        );
+    }
+
+    private function syncFeatureImageFromTaxonomyWhere(TaxonomyWhere $taxonomyWhere, Layer $layer): void
+    {
+        $properties = is_array($taxonomyWhere->properties ?? null) ? $taxonomyWhere->properties : [];
+        $featureImage = $properties['feature_image'] ?? null;
+        if (! is_string($featureImage) || trim($featureImage) === '') {
+            return;
+        }
+
+        // Nessun controllo sui media già presenti: il layer è appena nato e non ne ha.
+        try {
+            $layer->addMediaFromUrl($featureImage)
+                ->usingName('feature_image_'.(string) $taxonomyWhere->id)
+                ->usingFileName('feature-image-'.(string) $taxonomyWhere->id.'-'.Str::random(6).'.jpg')
+                ->withCustomProperties([
+                    'source_feature_image_url' => $featureImage,
+                    'source_taxonomy_where_id' => $taxonomyWhere->id,
+                ])
+                ->toMediaCollection('default');
+        } catch (\Throwable $e) {
+            Log::warning('LayerService: immagine dell\'area non scaricata nel layer', [
+                'taxonomy_where_id' => $taxonomyWhere->id,
+                'layer_id' => $layer->id,
+                'feature_image' => $featureImage,
+                'message' => $e->getMessage(),
+            ]);
+        }
     }
 }
