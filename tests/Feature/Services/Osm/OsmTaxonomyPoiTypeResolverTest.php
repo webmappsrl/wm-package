@@ -5,9 +5,7 @@ declare(strict_types=1);
 use Wm\WmPackage\Dto\OsmNodePoiData;
 use Wm\WmPackage\Models\TaxonomyPoiType;
 use Wm\WmPackage\Services\Osm\OsmTaxonomyPoiTypeResolver;
-use Wm\WmPackage\Tests\TestCase;
 
-uses(TestCase::class);
 
 it('creates a new TaxonomyPoiType from an unknown OSM tag pair', function () {
     $dto = OsmNodePoiData::fromOsmNode(

@@ -11,10 +11,11 @@ use Wm\WmPackage\Exceptions\OsmClientExceptionRelationHasNoRelationElement;
 use Wm\WmPackage\Exceptions\OsmClientExceptionRelationHasNoWays;
 use Wm\WmPackage\Facades\OsmClient;
 use Wm\WmPackage\Tests\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 class OsmClientgetPropertiesAndGeometryForRelationCheckInputTest extends TestCase
 {
-    /** @test */
+    #[Test]
     public function with_no_elements_throws_proper_exception()
     {
         $input = <<<'EOF'
@@ -24,7 +25,7 @@ class OsmClientgetPropertiesAndGeometryForRelationCheckInputTest extends TestCas
         $this->checkException($input, OsmClientExceptionNoElements::class);
     }
 
-    /** @test */
+    #[Test]
     public function with_no_nodes_throws_proper_exception()
     {
         $input = <<<'EOF'
@@ -44,7 +45,7 @@ class OsmClientgetPropertiesAndGeometryForRelationCheckInputTest extends TestCas
         $this->checkException($input, OsmClientExceptionRelationHasNoNodes::class);
     }
 
-    /** @test */
+    #[Test]
     public function with_no_ways_throws_proper_exception()
     {
         $input = <<<'EOF'
@@ -65,7 +66,7 @@ class OsmClientgetPropertiesAndGeometryForRelationCheckInputTest extends TestCas
         $this->checkException($input, OsmClientExceptionRelationHasNoWays::class);
     }
 
-    /** @test */
+    #[Test]
     public function with_no_relation_element_throws_proper_exception()
     {
         $input = <<<'EOF'
@@ -81,7 +82,7 @@ class OsmClientgetPropertiesAndGeometryForRelationCheckInputTest extends TestCas
         $this->checkException($input, OsmClientExceptionRelationHasNoRelationElement::class);
     }
 
-    /** @test */
+    #[Test]
     public function with_no_members_throws_proper_exception()
     {
         $input = <<<'EOF'
@@ -102,7 +103,7 @@ class OsmClientgetPropertiesAndGeometryForRelationCheckInputTest extends TestCas
         $this->checkException($input, OsmClientExceptionRelationHasNoMembers::class);
     }
 
-    /** @test */
+    #[Test]
     public function with_no_tags_throws_proper_exception()
     {
         $input = <<<'EOF'

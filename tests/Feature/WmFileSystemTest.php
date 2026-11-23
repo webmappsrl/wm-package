@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use Wm\WmPackage\Tests\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 class WmFileSystemTest extends TestCase
 {
@@ -22,7 +23,7 @@ class WmFileSystemTest extends TestCase
         's3-osfmedia',
     ];
 
-    /** @test */
+    #[Test]
     public function wm_package_filesystems_are_registered()
     {
         $disks = config('filesystems.disks');

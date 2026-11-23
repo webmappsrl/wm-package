@@ -42,6 +42,8 @@ class UpdateDataChainTest extends AbstractEcTrackServiceTest
         // Pass the $track instance directly, preserving its wasChanged state
         $this->ecTrackService->updateDataChain($track);
 
+        // L'ordine e' quello di `geometryDependentJobs()` piu' `publicationJobs()`: il PBF chiude
+        // i job che dipendono dalla geometria, poi vengono i tre della pubblicazione.
         Bus::assertChained([
             UpdateEcTrackDemJob::class,
             UpdateEcTrackManualDataJob::class,
@@ -50,9 +52,10 @@ class UpdateDataChainTest extends AbstractEcTrackServiceTest
             UpdateEcTrackSlopeValues::class,
             SyncModelTaxonomyWhereJob::class,
             UpdateEcTrackGenerateElevationChartImage::class,
-            UpdateEcTrackAwsJob::class,
-            UpdateEcTrackOrderRelatedPoi::class,
             GenerateEcTrackPBFBatch::class,
+            UpdateEcTrackAwsJob::class,
+            UpdateEcTrackAppRelationsInfoJob::class,
+            UpdateEcTrackOrderRelatedPoi::class,
         ]);
     }
 

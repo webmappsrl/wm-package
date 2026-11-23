@@ -58,9 +58,12 @@ class OsmfeaturesClientTest extends TestCase
 
     public function test_get_wheres_with_no_intersections(): void
     {
+        // Due chiamate, una per livello amministrativo: comune (8) e regione (4). Con un solo
+        // argomento atteso Mockery non riconosceva la chiamata e il mock parziale lasciava
+        // passare al metodo vero, che usciva verso osmfeatures.it.
         $this->client->shouldReceive('getAdminAreasIntersected')
-            ->once()
-            ->with(self::EXAMPLE_GEOJSON_REQUEST)
+            ->twice()
+            ->with(self::EXAMPLE_GEOJSON_REQUEST, Mockery::type('int'))
             ->andReturn([
                 'features' => [],
             ]);

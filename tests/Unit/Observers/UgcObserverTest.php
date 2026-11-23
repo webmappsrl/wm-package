@@ -5,6 +5,7 @@ namespace Tests\Unit\Observers;
 use Illuminate\Database\Query\Expression;
 use Wm\WmPackage\Models\User;
 use Wm\WmPackage\Observers\UgcObserver;
+use PHPUnit\Framework\Attributes\Test;
 
 class UgcObserverTest extends AbstractUgcObserverTest
 {
@@ -37,7 +38,7 @@ class UgcObserverTest extends AbstractUgcObserverTest
         return str_contains($query, 'ST_Force3D');
     }
 
-    /** @test */
+    #[Test]
     public function it_sets_authenticated_user_as_author_when_creating_model()
     {
         $this->actingAs($this->authUser);
@@ -48,7 +49,7 @@ class UgcObserverTest extends AbstractUgcObserverTest
         $this->assertTrue($this->has3dTransformation($testModel->geometry), 'Geometry should be transformed to 3D');
     }
 
-    /** @test */
+    #[Test]
     public function it_sets_default_webmapp_user_as_author_when_no_user_authenticated()
     {
         $testModel = $this->createTestModel();

@@ -1,11 +1,221 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.5/phpunit.xsd" backupGlobals="false" bootstrap="vendor/autoload.php" colors="true" processIsolation="false" stopOnFailure="false" executionOrder="random" failOnWarning="true" failOnRisky="true" failOnEmptyTestSuite="true" beStrictAboutOutputDuringTests="true" cacheDirectory=".phpunit.cache" backupStaticProperties="false">
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.5/phpunit.xsd" backupGlobals="false" bootstrap="vendor/autoload.php" colors="true" processIsolation="false" stopOnFailure="false" defaultTestSuite="package" executionOrder="random" failOnWarning="true" failOnRisky="true" failOnEmptyTestSuite="true" beStrictAboutOutputDuringTests="true" cacheDirectory=".phpunit.cache" backupStaticProperties="false">
+  <!--
+    I test del package sono divisi fra due `TestCase` incompatibili, che vivono in due `vendor`
+    diversi: questa e' la ragione delle due suite.
+
+    `package` e' la suite che gira qui, su Orchestra Testbench, ed e' quella che lancia la CI:
+    `vendor/bin/pest` senza argomenti esegue lei, perche' e' la prima dichiarata.
+
+    `shard` raccoglie i test che dichiarano `Tests\TestCase`, cioe' il `TestCase` di un consumer:
+    hanno bisogno della sua applicazione vera e si lanciano da li',
+    `vendor/bin/pest wm-package/tests/<cartella>`. Qui non possono girare, e senza questa
+    separazione facevano morire Pest in caricamento, con un errore che sembrava una suite rotta.
+
+    L'elenco cala man mano che quei test diventano indipendenti: quando sara' vuoto, resta una
+    suite sola e queste righe si cancellano.
+  -->
   <testsuites>
-    <testsuite name="Wm Test Suite">
+    <testsuite name="package">
       <directory>tests</directory>
+      <exclude>tests/Feature/AddSurnameToUsersMigrationTest.php</exclude>
+      <exclude>tests/Feature/AppAuthControllerMeProfileTest.php</exclude>
+      <exclude>tests/Feature/AppAuthControllerSignupSurnameTest.php</exclude>
+      <exclude>tests/Feature/AppAuthControllerUpdateProfileTest.php</exclude>
+      <exclude>tests/Feature/AppConfigServiceFeatureCollectionAlphaColorTest.php</exclude>
+      <exclude>tests/Feature/AppConfigServiceMinAppVersionTest.php</exclude>
+      <exclude>tests/Feature/AppConfigServiceOverlaysTest.php</exclude>
+      <exclude>tests/Feature/AppConfigServiceTranslationsTest.php</exclude>
+      <exclude>tests/Feature/AppMyPathsMyDownloadsTest.php</exclude>
+      <exclude>tests/Feature/FeatureCollectionModelTest.php</exclude>
+      <exclude>tests/Feature/FeatureCollectionServiceTest.php</exclude>
+      <exclude>tests/Feature/FetchGravatarAvatarJobTest.php</exclude>
+      <exclude>tests/Feature/GenerateFeatureCollectionJobTest.php</exclude>
+      <exclude>tests/Feature/GeohubImportServiceAssociateLayerPoiTest.php</exclude>
+      <exclude>tests/Feature/GeohubImportServiceTaxonomyRecordsForMorphableTest.php</exclude>
+      <exclude>tests/Feature/GeohubImportServiceUsedTaxonomyGeohubIdsForAppTest.php</exclude>
+      <exclude>tests/Feature/ImpersonationHttpTest.php</exclude>
+      <exclude>tests/Feature/Import/GeohubImportNameInPropertiesTest.php</exclude>
+      <exclude>tests/Feature/Import/ImportAppJobPoisGeojsonRebuildTest.php</exclude>
+      <exclude>tests/Feature/Import/ImportUgcMediaJobTest.php</exclude>
+      <exclude>tests/Feature/Import/ImportUgcPoiJobTest.php</exclude>
+      <exclude>tests/Feature/Import/ImportUgcTrackJobTest.php</exclude>
+      <exclude>tests/Feature/ImportAppJobTaxonomyScopingTest.php</exclude>
+      <exclude>tests/Feature/ImportEcPoiJobTaxonomySyncTest.php</exclude>
+      <exclude>tests/Feature/ImportEcTrackJobThemeSyncTest.php</exclude>
+      <exclude>tests/Feature/InteractsWithWmPackageMigrationStubsTest.php</exclude>
+      <exclude>tests/Feature/Jobs/CopyTaxonomyWhereGeometryFromGeohubJobTest.php</exclude>
+      <exclude>tests/Feature/Jobs/SyncModelTaxonomyWhereJobTest.php</exclude>
+      <exclude>tests/Feature/Jobs/SyncTaxonomyWhereJobTest.php</exclude>
+      <exclude>tests/Feature/LayerAssignPoisByTaxonomyTest.php</exclude>
+      <exclude>tests/Feature/LayerLogoMediaTest.php</exclude>
+      <exclude>tests/Feature/LayerMediaObserverTest.php</exclude>
+      <exclude>tests/Feature/LayerServiceCreateFromTaxonomyWhereTest.php</exclude>
+      <exclude>tests/Feature/Nova/AbstractUserResourceImpersonateTest.php</exclude>
+      <exclude>tests/Feature/Nova/AbstractUserResourceSurnameFieldTest.php</exclude>
+      <exclude>tests/Feature/Nova/Actions/BulkEditActionFeatureTest.php</exclude>
+      <exclude>tests/Feature/Nova/Actions/GeohubWhereSelectionControllerTest.php</exclude>
+      <exclude>tests/Feature/Nova/Actions/ImportTaxonomyWhereGeohubSourceTest.php</exclude>
+      <exclude>tests/Feature/Nova/Actions/ImportTaxonomyWhereTest.php</exclude>
+      <exclude>tests/Feature/Nova/Actions/SyncEcTaxonomyWhereActionTest.php</exclude>
+      <exclude>tests/Feature/Nova/App/TranslationsBuilderSaveTest.php</exclude>
+      <exclude>tests/Feature/Nova/AppConfigHomeHorizontalScrollTest.php</exclude>
+      <exclude>tests/Feature/Nova/AppConfigOverlaysTitleLayoutTest.php</exclude>
+      <exclude>tests/Feature/Nova/AppIconSplashDimensionsValidationTest.php</exclude>
+      <exclude>tests/Feature/Nova/ConfigDetailAuthorizationInheritanceTest.php</exclude>
+      <exclude>tests/Feature/Nova/ConfigDetailResolverTest.php</exclude>
+      <exclude>tests/Feature/Nova/EcTrackEcPoiConfigDetailTest.php</exclude>
+      <exclude>tests/Feature/Nova/EcTrackRegenerateTaxonomyWhereActionTest.php</exclude>
+      <exclude>tests/Feature/Nova/FeatureCollectionUploadTest.php</exclude>
+      <exclude>tests/Feature/Nova/Fields/FlexibleTranslatableTest.php</exclude>
+      <exclude>tests/Feature/Nova/FlexibleTranslatableInFlexibleLayoutTest.php</exclude>
+      <exclude>tests/Feature/Nova/InfoBoxItemRepeatableTest.php</exclude>
+      <exclude>tests/Feature/Nova/LayerConfigDetailInfoBoxTest.php</exclude>
+      <exclude>tests/Feature/Nova/LayerConfigDetailPreviewLanguageSwitchTest.php</exclude>
+      <exclude>tests/Feature/Nova/LayerLogoFieldValidationTest.php</exclude>
+      <exclude>tests/Feature/Nova/PackageResourceSaveTest.php</exclude>
+      <exclude>tests/Feature/Nova/UserAvatarFieldTest.php</exclude>
+      <exclude>tests/Feature/Observers/AppObserverPoiSearchablesTest.php</exclude>
+      <exclude>tests/Feature/OptionalDomainRegistrationTest.php</exclude>
+      <exclude>tests/Feature/Services/EcPoiServiceUpdateDataChainTest.php</exclude>
+      <exclude>tests/Feature/Services/GeometryComputationServiceTaxonomyWhereTest.php</exclude>
+      <exclude>tests/Feature/TaxonomyWhere/EcTrackSearchableTaxonomyWheresTest.php</exclude>
+      <exclude>tests/Feature/TaxonomyWhere/EmptyNamePlaceholderRegressionTest.php</exclude>
+      <exclude>tests/Feature/TaxonomyWhere/FetchTaxonomyWhereGeometryJobNameTranslationsTest.php</exclude>
+      <exclude>tests/Feature/TaxonomyWhere/FetchTaxonomyWhereGeometryJobPlaceholderNamesTest.php</exclude>
+      <exclude>tests/Feature/TaxonomyWhere/TaxonomyWhereDisplayOptionTest.php</exclude>
+      <exclude>tests/Feature/TaxonomyWhere/TaxonomyWhereDisplayOutputTest.php</exclude>
+      <exclude>tests/Feature/TaxonomyWhere/TaxonomyWhereKeyReadersRegressionTest.php</exclude>
+      <exclude>tests/Feature/TaxonomyWhere/TaxonomyWhereResyncTest.php</exclude>
+      <exclude>tests/Feature/TaxonomyWhere/UgcTaxonomyWhereSourceTest.php</exclude>
+      <exclude>tests/Feature/TranslationsBuilderTest.php</exclude>
+      <exclude>tests/Feature/UserAvatarMediaTest.php</exclude>
+      <exclude>tests/Feature/WmBackfillGravatarAvatarsCommandTest.php</exclude>
+      <exclude>tests/Feature/WmPackagePublishMigrationCommandTest.php</exclude>
+      <exclude>tests/Feature/WmPackagePublishMissingMigrationsCommandTest.php</exclude>
+      <exclude>tests/Unit/FeaturesServiceTest.php</exclude>
+      <exclude>tests/Unit/ImpersonationAuthorizationTest.php</exclude>
+      <exclude>tests/Unit/Models/AppPoisGeojsonNameSearchableTest.php</exclude>
+      <exclude>tests/Unit/Models/EcPoiSearchableStringTest.php</exclude>
+      <exclude>tests/Unit/Models/TaxonomyWhereGeohubSourceTest.php</exclude>
+      <exclude>tests/Unit/Models/UserHasUgcEnabledTest.php</exclude>
+      <exclude>tests/Unit/Models/UserOwnedAppIdsTest.php</exclude>
+      <exclude>tests/Unit/Nova/AbstractEcResourceIndexQueryTest.php</exclude>
+      <exclude>tests/Unit/Nova/AbstractUgcResourceIndexQueryTest.php</exclude>
+      <exclude>tests/Unit/Nova/Actions/BulkEditActionTest.php</exclude>
+      <exclude>tests/Unit/Nova/LayerIndexQueryTest.php</exclude>
+      <exclude>tests/Unit/Policies/EcPoiPolicyAppScopeTest.php</exclude>
+      <exclude>tests/Unit/Policies/EcTrackPolicyAppScopeTest.php</exclude>
+      <exclude>tests/Unit/Policies/LayerPolicyAppScopeTest.php</exclude>
+      <exclude>tests/Unit/Policies/LayerPolicyDeleteTest.php</exclude>
+      <exclude>tests/Unit/Policies/MediaPolicyTest.php</exclude>
+      <exclude>tests/Unit/Policies/TaxonomyActivityPolicyTest.php</exclude>
+      <exclude>tests/Unit/Policies/TaxonomyPoiTypePolicyTest.php</exclude>
+      <exclude>tests/Unit/Policies/TaxonomyThemePolicyTest.php</exclude>
+      <exclude>tests/Unit/Policies/TaxonomyWherePolicyTest.php</exclude>
+      <exclude>tests/Unit/Policies/UgcPoiPolicyTest.php</exclude>
+      <exclude>tests/Unit/Policies/UgcTrackPolicyTest.php</exclude>
+      <exclude>tests/Unit/Services/TaxonomyWhereDisplayServiceTest.php</exclude>
     </testsuite>
-    <testsuite name="Api Test Suite">
-      <directory>tests/Api</directory>
+    <testsuite name="shard">
+      <file>tests/Feature/AddSurnameToUsersMigrationTest.php</file>
+      <file>tests/Feature/AppAuthControllerMeProfileTest.php</file>
+      <file>tests/Feature/AppAuthControllerSignupSurnameTest.php</file>
+      <file>tests/Feature/AppAuthControllerUpdateProfileTest.php</file>
+      <file>tests/Feature/AppConfigServiceFeatureCollectionAlphaColorTest.php</file>
+      <file>tests/Feature/AppConfigServiceMinAppVersionTest.php</file>
+      <file>tests/Feature/AppConfigServiceOverlaysTest.php</file>
+      <file>tests/Feature/AppConfigServiceTranslationsTest.php</file>
+      <file>tests/Feature/AppMyPathsMyDownloadsTest.php</file>
+      <file>tests/Feature/FeatureCollectionModelTest.php</file>
+      <file>tests/Feature/FeatureCollectionServiceTest.php</file>
+      <file>tests/Feature/FetchGravatarAvatarJobTest.php</file>
+      <file>tests/Feature/GenerateFeatureCollectionJobTest.php</file>
+      <file>tests/Feature/GeohubImportServiceAssociateLayerPoiTest.php</file>
+      <file>tests/Feature/GeohubImportServiceTaxonomyRecordsForMorphableTest.php</file>
+      <file>tests/Feature/GeohubImportServiceUsedTaxonomyGeohubIdsForAppTest.php</file>
+      <file>tests/Feature/ImpersonationHttpTest.php</file>
+      <file>tests/Feature/Import/GeohubImportNameInPropertiesTest.php</file>
+      <file>tests/Feature/Import/ImportAppJobPoisGeojsonRebuildTest.php</file>
+      <file>tests/Feature/Import/ImportUgcMediaJobTest.php</file>
+      <file>tests/Feature/Import/ImportUgcPoiJobTest.php</file>
+      <file>tests/Feature/Import/ImportUgcTrackJobTest.php</file>
+      <file>tests/Feature/ImportAppJobTaxonomyScopingTest.php</file>
+      <file>tests/Feature/ImportEcPoiJobTaxonomySyncTest.php</file>
+      <file>tests/Feature/ImportEcTrackJobThemeSyncTest.php</file>
+      <file>tests/Feature/InteractsWithWmPackageMigrationStubsTest.php</file>
+      <file>tests/Feature/Jobs/CopyTaxonomyWhereGeometryFromGeohubJobTest.php</file>
+      <file>tests/Feature/Jobs/SyncModelTaxonomyWhereJobTest.php</file>
+      <file>tests/Feature/Jobs/SyncTaxonomyWhereJobTest.php</file>
+      <file>tests/Feature/LayerAssignPoisByTaxonomyTest.php</file>
+      <file>tests/Feature/LayerLogoMediaTest.php</file>
+      <file>tests/Feature/LayerMediaObserverTest.php</file>
+      <file>tests/Feature/LayerServiceCreateFromTaxonomyWhereTest.php</file>
+      <file>tests/Feature/Nova/AbstractUserResourceImpersonateTest.php</file>
+      <file>tests/Feature/Nova/AbstractUserResourceSurnameFieldTest.php</file>
+      <file>tests/Feature/Nova/Actions/BulkEditActionFeatureTest.php</file>
+      <file>tests/Feature/Nova/Actions/GeohubWhereSelectionControllerTest.php</file>
+      <file>tests/Feature/Nova/Actions/ImportTaxonomyWhereGeohubSourceTest.php</file>
+      <file>tests/Feature/Nova/Actions/ImportTaxonomyWhereTest.php</file>
+      <file>tests/Feature/Nova/Actions/SyncEcTaxonomyWhereActionTest.php</file>
+      <file>tests/Feature/Nova/App/TranslationsBuilderSaveTest.php</file>
+      <file>tests/Feature/Nova/AppConfigHomeHorizontalScrollTest.php</file>
+      <file>tests/Feature/Nova/AppConfigOverlaysTitleLayoutTest.php</file>
+      <file>tests/Feature/Nova/AppIconSplashDimensionsValidationTest.php</file>
+      <file>tests/Feature/Nova/ConfigDetailAuthorizationInheritanceTest.php</file>
+      <file>tests/Feature/Nova/ConfigDetailResolverTest.php</file>
+      <file>tests/Feature/Nova/EcTrackEcPoiConfigDetailTest.php</file>
+      <file>tests/Feature/Nova/EcTrackRegenerateTaxonomyWhereActionTest.php</file>
+      <file>tests/Feature/Nova/FeatureCollectionUploadTest.php</file>
+      <file>tests/Feature/Nova/Fields/FlexibleTranslatableTest.php</file>
+      <file>tests/Feature/Nova/FlexibleTranslatableInFlexibleLayoutTest.php</file>
+      <file>tests/Feature/Nova/InfoBoxItemRepeatableTest.php</file>
+      <file>tests/Feature/Nova/LayerConfigDetailInfoBoxTest.php</file>
+      <file>tests/Feature/Nova/LayerConfigDetailPreviewLanguageSwitchTest.php</file>
+      <file>tests/Feature/Nova/LayerLogoFieldValidationTest.php</file>
+      <file>tests/Feature/Nova/PackageResourceSaveTest.php</file>
+      <file>tests/Feature/Nova/UserAvatarFieldTest.php</file>
+      <file>tests/Feature/Observers/AppObserverPoiSearchablesTest.php</file>
+      <file>tests/Feature/OptionalDomainRegistrationTest.php</file>
+      <file>tests/Feature/Services/EcPoiServiceUpdateDataChainTest.php</file>
+      <file>tests/Feature/Services/GeometryComputationServiceTaxonomyWhereTest.php</file>
+      <file>tests/Feature/TaxonomyWhere/EcTrackSearchableTaxonomyWheresTest.php</file>
+      <file>tests/Feature/TaxonomyWhere/EmptyNamePlaceholderRegressionTest.php</file>
+      <file>tests/Feature/TaxonomyWhere/FetchTaxonomyWhereGeometryJobNameTranslationsTest.php</file>
+      <file>tests/Feature/TaxonomyWhere/FetchTaxonomyWhereGeometryJobPlaceholderNamesTest.php</file>
+      <file>tests/Feature/TaxonomyWhere/TaxonomyWhereDisplayOptionTest.php</file>
+      <file>tests/Feature/TaxonomyWhere/TaxonomyWhereDisplayOutputTest.php</file>
+      <file>tests/Feature/TaxonomyWhere/TaxonomyWhereKeyReadersRegressionTest.php</file>
+      <file>tests/Feature/TaxonomyWhere/TaxonomyWhereResyncTest.php</file>
+      <file>tests/Feature/TaxonomyWhere/UgcTaxonomyWhereSourceTest.php</file>
+      <file>tests/Feature/TranslationsBuilderTest.php</file>
+      <file>tests/Feature/UserAvatarMediaTest.php</file>
+      <file>tests/Feature/WmBackfillGravatarAvatarsCommandTest.php</file>
+      <file>tests/Feature/WmPackagePublishMigrationCommandTest.php</file>
+      <file>tests/Feature/WmPackagePublishMissingMigrationsCommandTest.php</file>
+      <file>tests/Unit/FeaturesServiceTest.php</file>
+      <file>tests/Unit/ImpersonationAuthorizationTest.php</file>
+      <file>tests/Unit/Models/AppPoisGeojsonNameSearchableTest.php</file>
+      <file>tests/Unit/Models/EcPoiSearchableStringTest.php</file>
+      <file>tests/Unit/Models/TaxonomyWhereGeohubSourceTest.php</file>
+      <file>tests/Unit/Models/UserHasUgcEnabledTest.php</file>
+      <file>tests/Unit/Models/UserOwnedAppIdsTest.php</file>
+      <file>tests/Unit/Nova/AbstractEcResourceIndexQueryTest.php</file>
+      <file>tests/Unit/Nova/AbstractUgcResourceIndexQueryTest.php</file>
+      <file>tests/Unit/Nova/Actions/BulkEditActionTest.php</file>
+      <file>tests/Unit/Nova/LayerIndexQueryTest.php</file>
+      <file>tests/Unit/Policies/EcPoiPolicyAppScopeTest.php</file>
+      <file>tests/Unit/Policies/EcTrackPolicyAppScopeTest.php</file>
+      <file>tests/Unit/Policies/LayerPolicyAppScopeTest.php</file>
+      <file>tests/Unit/Policies/LayerPolicyDeleteTest.php</file>
+      <file>tests/Unit/Policies/MediaPolicyTest.php</file>
+      <file>tests/Unit/Policies/TaxonomyActivityPolicyTest.php</file>
+      <file>tests/Unit/Policies/TaxonomyPoiTypePolicyTest.php</file>
+      <file>tests/Unit/Policies/TaxonomyThemePolicyTest.php</file>
+      <file>tests/Unit/Policies/TaxonomyWherePolicyTest.php</file>
+      <file>tests/Unit/Policies/UgcPoiPolicyTest.php</file>
+      <file>tests/Unit/Policies/UgcTrackPolicyTest.php</file>
+      <file>tests/Unit/Services/TaxonomyWhereDisplayServiceTest.php</file>
     </testsuite>
   </testsuites>
   <coverage>
@@ -29,6 +239,9 @@
       <env name="DB_USER_PASSWORD" value="wm_package"/>
       <env name="DB_PASSWORD" value="wm_package"/>
       <env name="DB_DATABASE" value="wm_package"/>
+      <!-- Il nome dello shard entra in ogni percorso su wmfe e non ha un valore di riserva: senza,
+           StorageService si ferma. `webmapp` e' quello che i test gia' si aspettano nei percorsi. -->
+      <env name="SHARD_NAME" value="webmapp"/>
       <env name="DB_HOST" value="db"/>
       <!-- Il default del config è `App\Models\EcTrack`, la classe dello shard: nella suite del
            package non esiste, e ogni relazione che la risolve muore con «Class not found». -->

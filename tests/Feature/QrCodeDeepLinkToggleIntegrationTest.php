@@ -6,6 +6,7 @@ use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Storage;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Tests\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 /**
  * End-to-end test of the full chain App::save() -> AppObserver -> WellKnownRegistryService
@@ -35,7 +36,7 @@ class QrCodeDeepLinkToggleIntegrationTest extends TestCase
         Storage::fake('conf');
     }
 
-    /** @test */
+    #[Test]
     public function enabling_the_toggle_writes_both_well_known_files_with_the_apps_entry()
     {
         $app = App::factory()->create([
@@ -57,7 +58,7 @@ class QrCodeDeepLinkToggleIntegrationTest extends TestCase
         $this->assertSame([str_repeat('AB:', 31).'CD'], $android[0]['target']['sha256_cert_fingerprints']);
     }
 
-    /** @test */
+    #[Test]
     public function disabling_the_toggle_removes_the_apps_entry_from_both_files()
     {
         $app = App::factory()->create([
@@ -78,7 +79,7 @@ class QrCodeDeepLinkToggleIntegrationTest extends TestCase
         $this->assertCount(0, $android);
     }
 
-    /** @test */
+    #[Test]
     public function deleting_an_app_with_active_toggle_removes_its_entry()
     {
         $app = App::factory()->create([

@@ -122,5 +122,12 @@
     "Too many tracks selected: the maximum is :max.": "Demasiadas rutas seleccionadas: el máximo es :max.",
     "Overview map": "Mapa general",
     "Legend": "Leyenda",
-    "The selected tracks cover too large an area for a readable map (maximum scale 1::scale). Reduce the selection.": "Las rutas seleccionadas cubren un área demasiado extensa para un mapa legible (escala máxima 1::scale). Reduce la selección."
+    "The selected tracks cover too large an area for a readable map (maximum scale 1::scale). Reduce the selection.": "Las rutas seleccionadas cubren un área demasiado extensa para un mapa legible (escala máxima 1::scale). Reduce la selección.",
+    "Conversion completed successfully": "Conversión completada",
+    "Converted UgcPois: :ids": "UgcPoi convertidos: :ids",
+    "UgcPois already converted to EcPoi: :ids": "UgcPoi ya convertidos en EcPoi: :ids",
+    "UgcPoi :id not converted: :reason": "UgcPoi :id no convertido: :reason",
+    "photo :media not found on storage": "foto :media no encontrada en el almacenamiento",
+    "conversion error, see the log": "error durante la conversión, ver el registro",
+    "Convert To EcPoi": "Convertir en EcPoi"
 }

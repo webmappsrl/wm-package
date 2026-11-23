@@ -10,6 +10,23 @@ use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Nova\Fields\OrderList\src\Http\Controllers\OrderListController;
 use Wm\WmPackage\Nova\Fields\OrderList\src\OrderList;
+use Illuminate\Support\Facades\Bus;
+use Wm\WmPackage\Jobs\Pbf\DispatcherAppPbfsDebouncedJob;
+use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
+use Wm\WmPackage\Jobs\Track\UpdateEcTrackGenerateElevationChartImage;
+use Wm\WmPackage\Jobs\UpdateUgcTrackDemStatsJob;
+
+// Salvare un Layer accoda la rigenerazione dei PBF dell'app, che con la coda sincrona dei test
+// gira davvero e muore perche' l'app di prova non ha tracce. Questo `Bus::fake` sostituisce
+// quello globale di tests/Pest.php: la sua lista va ripetuta qui.
+beforeEach(function () {
+    Bus::fake([
+        DispatcherAppPbfsDebouncedJob::class,
+        UpdateUgcTrackDemStatsJob::class,
+        UpdateEcTrackAwsJob::class,
+        UpdateEcTrackGenerateElevationChartImage::class,
+    ]);
+});
 
 it('normalizza rank 1..n quando riordino i layer di una app', function () {
     /** @var App $app */
@@ -32,8 +49,13 @@ it('normalizza rank 1..n quando riordino i layer di una app', function () {
     $authModel = base64_encode(App::class);
     $authModel = rtrim(strtr($authModel, '+/', '-_'), '=');
 
-    $url = url("/nova-vendor/order-list/reorder/{$model}/app_id/{$app->id}/rank");
-    $signed = URL::signedUrl($url, [
+    // L'URL si firma come lo firma il campo (OrderList::resolve()): `URL::signedUrl()` non
+    // esiste in Laravel, la firma passa sempre da una rotta nominata.
+    $signed = URL::signedRoute('order-list.reorder', [
+        'model' => $model,
+        'scopeColumn' => 'app_id',
+        'scopeValue' => (string) $app->id,
+        'orderColumn' => 'rank',
         'authorizeAbility' => 'update',
         'authorizeModel' => $authModel,
         'authorizeId' => (string) $app->id,

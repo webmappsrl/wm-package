@@ -27,10 +27,17 @@ class EcPoiFactory extends Factory
                 'it' => $this->faker->sentence(3),
                 'en' => $this->faker->sentence(3),
             ],
-            'app_id' => App::first()->id,
+            // Come `EcTrackFactory`: se non c'e' nessuna app, se ne crea una invece di esplodere
+            // con «Attempt to read property "id" on null». Prima funzionava solo dove un'app
+            // esisteva gia' a database, cioe' lanciando i test da uno shard popolato.
+            'app_id' => (App::first() ?? App::factory()->create())->id,
             'geometry' => \DB::raw("ST_GeomFromGeoJSON('{$geojson}')"),
             'osmid' => $this->faker->optional(0.7)->numberBetween(1000000, 9999999),
-            'properties' => json_encode([
+            // Senza `json_encode`: `properties` ha il cast `array`, e una stringa gia' codificata
+            // verrebbe codificata una seconda volta — rileggendola si ottiene una stringa, non un
+            // array, e ogni accesso per chiave muore con «Cannot access offset of type string on
+            // string».
+            'properties' => ([
                 'capacity' => $this->faker->optional()->numberBetween(5, 100),
                 'addr_complete' => $this->faker->address(),
                 'contact_phone' => $this->faker->phoneNumber(),

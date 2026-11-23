@@ -3,6 +3,9 @@
 namespace Wm\WmPackage\Tests;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
+use Laravel\Nova\NovaCoreServiceProvider;
+use Laravel\Nova\NovaServiceProvider;
 use Intervention\Image\ImageServiceProvider;
 use Maatwebsite\Excel\ExcelServiceProvider;
 use Orchestra\Testbench\Attributes\WithMigration;
@@ -19,6 +22,26 @@ use function Orchestra\Testbench\artisan;
 class TestCase extends Orchestra
 {
     use RefreshDatabase;
+
+    /**
+     * I dischi remoti del package sono finti per tutta la suite: nessun test deve scrivere
+     * fuori, ed e' la regola in cima al CLAUDE.md. Lo stesso elenco sta anche nel beforeEach di
+     * `tests/Pest.php`, che pero' vale solo per i test scritti in stile Pest: i test scritti
+     * come classi PHPUnit non lo ricevono, e senza questo finivano a parlare con S3 vero
+     * («Missing required client configuration options: region»).
+     *
+     * @var list<string>
+     */
+    protected const REMOTE_DISKS = ['wmfe', 'pois', 'conf', 'mapping', 'importer', 'backups', 'wmdumps', 'well_known_registry'];
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        foreach (static::REMOTE_DISKS as $disk) {
+            Storage::fake($disk);
+        }
+    }
 
     protected function callPrivateMethod(object $object, string $method, array $args = []): mixed
     {
@@ -51,6 +74,11 @@ class TestCase extends Orchestra
             // PermissionRegistrar — le tabelle esistono già dalle migration, manca solo il
             // binding di config che il provider normalmente registra (oc:8543).
             PermissionServiceProvider::class,
+            // Nova: senza, `app('nova')` non si risolve e i test che passano dalle sue Resource o
+            // dalle sue Action falliscono con «Target class [nova] does not exist». Testbench non
+            // scopre i package come fa un'applicazione vera: va dichiarato qui (oc:8183).
+            NovaCoreServiceProvider::class,
+            NovaServiceProvider::class,
         ];
     }
 

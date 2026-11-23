@@ -167,7 +167,7 @@ it('non-super-admin cannot modify permissions via fillUsing', function () use ($
     $targetUser->assignRole('Validator');
 
     $request = NovaRequest::create('/', 'POST', [
-        'permissions' => json_encode(['validate ugc' => true]),
+        'permissions' => json_encode(['validate pois' => true]),
     ]);
     $request->setUserResolver(fn () => $nonSuperAdmin);
 
@@ -176,7 +176,7 @@ it('non-super-admin cannot modify permissions via fillUsing', function () use ($
     $field->fill($request, $targetUser);
     $targetUser->refresh();
 
-    expect($targetUser->hasDirectPermission('validate ugc'))->toBeFalse();
+    expect($targetUser->hasDirectPermission('validate pois'))->toBeFalse();
 });
 
 it('super-admin can assign permissions via fillUsing', function () use ($makePermissionField) {

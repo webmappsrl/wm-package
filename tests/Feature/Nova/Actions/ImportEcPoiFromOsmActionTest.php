@@ -11,9 +11,7 @@ use Wm\WmPackage\Models\User;
 use Wm\WmPackage\Nova\Actions\ImportEcPoiFromOsm;
 use Wm\WmPackage\Nova\EcPoi as EcPoiResource;
 use Wm\WmPackage\Services\RolesAndPermissionsService;
-use Wm\WmPackage\Tests\TestCase;
 
-uses(TestCase::class);
 
 beforeEach(function () {
     config(['wm-package.super_admin_emails' => ['team@webmapp.it']]);

@@ -5,10 +5,11 @@ namespace Tests\Unit\Providers;
 use Illuminate\Support\Facades\Http;
 use Wm\WmPackage\Facades\OsmClient;
 use Wm\WmPackage\Tests\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 class OsmClientgetPropertiesAndGeometryForRelationSimpleCasesTest extends TestCase
 {
-    /** @test */
+    #[Test]
     public function simple_case_it_works()
     {
         // Prepare data
@@ -34,7 +35,7 @@ class OsmClientgetPropertiesAndGeometryForRelationSimpleCasesTest extends TestCa
         $this->checkInput($input);
     }
 
-    /** @test */
+    #[Test]
     public function node_order1_it_works()
     {
         // Prepare data
@@ -60,7 +61,7 @@ class OsmClientgetPropertiesAndGeometryForRelationSimpleCasesTest extends TestCa
         $this->checkInput($input);
     }
 
-    /** @test */
+    #[Test]
     public function node_order2_it_works()
     {
         // Prepare data
@@ -86,7 +87,7 @@ class OsmClientgetPropertiesAndGeometryForRelationSimpleCasesTest extends TestCa
         $this->checkInput($input);
     }
 
-    /** @test */
+    #[Test]
     public function node_order3_it_works()
     {
         // Prepare data
@@ -148,7 +149,7 @@ class OsmClientgetPropertiesAndGeometryForRelationSimpleCasesTest extends TestCa
         $this->assertEquals($geometry_expected, $geometry);
     }
 
-    /** @test */
+    #[Test]
     public function simple_case_inverted_it_works()
     {
         // Prepare data

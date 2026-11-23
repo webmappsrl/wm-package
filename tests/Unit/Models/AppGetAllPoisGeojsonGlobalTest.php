@@ -12,6 +12,7 @@ use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Tests\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 class AppGetAllPoisGeojsonGlobalTest extends TestCase
 {
@@ -33,7 +34,7 @@ class AppGetAllPoisGeojsonGlobalTest extends TestCase
         $this->app->bind(DemClient::class, MockDemClient::class);
     }
 
-    /** @test */
+    #[Test]
     public function poi_with_global_true_is_included_in_get_all_pois_geojson()
     {
         // Crea un'app
@@ -55,7 +56,7 @@ class AppGetAllPoisGeojsonGlobalTest extends TestCase
         $this->assertEquals($globalPoi->id, $poisGeojson[0]['properties']['id']);
     }
 
-    /** @test */
+    #[Test]
     public function poi_with_global_false_is_not_included_in_get_all_pois_geojson()
     {
         // Crea un'app
@@ -76,7 +77,7 @@ class AppGetAllPoisGeojsonGlobalTest extends TestCase
         $this->assertCount(0, $poisGeojson);
     }
 
-    /** @test */
+    #[Test]
     public function poi_with_global_true_is_included_in_ec_track_related_pois()
     {
         // Crea un'app
@@ -117,7 +118,7 @@ class AppGetAllPoisGeojsonGlobalTest extends TestCase
         $this->assertEquals($globalPoi->id, $trackGeojson['properties']['related_pois'][0]['properties']['id']);
     }
 
-    /** @test */
+    #[Test]
     public function poi_with_global_false_is_included_in_ec_track_related_pois()
     {
         // Crea un'app
@@ -158,7 +159,7 @@ class AppGetAllPoisGeojsonGlobalTest extends TestCase
         $this->assertEquals($nonGlobalPoi->id, $trackGeojson['properties']['related_pois'][0]['properties']['id']);
     }
 
-    /** @test */
+    #[Test]
     public function mixed_global_pois_are_filtered_correctly_in_get_all_pois_geojson_but_all_in_ec_track()
     {
         // Crea un'app

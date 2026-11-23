@@ -12,7 +12,7 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         php: [8.3, 8.4]
-        laravel: [11.*]
+        laravel: [12.*]
         stability: [prefer-stable]
 
     name: P${{ matrix.php }} - L${{ matrix.laravel }} - ${{ matrix.stability }} - ${{ matrix.os }}
@@ -45,10 +45,28 @@ jobs:
           echo "::add-matcher::${{ runner.tool_cache }}/php.json"
           echo "::add-matcher::${{ runner.tool_cache }}/phpunit.json"
 
+      # `composer update` lancia `npm install` (post-update-cmd), e `chartjs-node-canvas` tira
+      # dentro `canvas` 2.11.2. Per il Node 24 del runner non esiste un binario precompilato, e
+      # compilarlo da sorgente non e' una via d'uscita: `nan` non sta in piedi sul V8 del 24
+      # («'v8::FunctionCallbackInfo<v8::Value>' has no member named 'Holder'»). Con Node 20 il
+      # binario c'e' e npm lo scarica e basta.
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Rete di sicurezza: se un domani il binario precompilato non ci fosse, la compilazione
+      # trova le librerie invece di morire su «Package 'pixman-1' not found».
+      - name: Librerie di sistema per compilare canvas
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev libpixman-1-dev
+
       - name: Install dependencies
         run: |
           composer config "http-basic.nova.laravel.com" "${{ secrets.NOVA_USERNAME }}" "${{ secrets.NOVA_PASSWORD }}"
-          composer require "laravel/framework:${{ matrix.laravel }}" --no-interaction
+          # Nova e' fissata: la licenza e' scaduta e dalla 5.8.0 le release rispondono 402.
+          composer require "laravel/framework:${{ matrix.laravel }}" "laravel/nova:5.7.6" --no-interaction
           composer update --${{ matrix.stability }} --prefer-dist --no-interaction
 
       - name: List Installed Dependencies

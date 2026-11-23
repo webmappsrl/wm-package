@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Storage;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Services\WellKnownRegistryService;
 use Wm\WmPackage\Tests\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 class WellKnownRegistryServiceTest extends TestCase
 {
@@ -38,7 +39,7 @@ class WellKnownRegistryServiceTest extends TestCase
         WellKnownRegistryService::make()->addAppEntry($app->sku, $app->properties['android_cert_sha256'] ?? null);
     }
 
-    /** @test */
+    #[Test]
     public function adding_an_app_creates_both_well_known_files_from_scratch()
     {
         $app = $this->makeApp();
@@ -50,7 +51,7 @@ class WellKnownRegistryServiceTest extends TestCase
         $this->assertSame(['*'], $apple['applinks']['details'][0]['paths']);
     }
 
-    /** @test */
+    #[Test]
     public function a_custom_per_app_team_id_overrides_the_default()
     {
         $app = $this->makeApp();
@@ -61,7 +62,7 @@ class WellKnownRegistryServiceTest extends TestCase
         $this->assertSame('CUSTOMTEAM1.it.webmapp.testapp', $apple['applinks']['details'][0]['appID']);
     }
 
-    /** @test */
+    #[Test]
     public function adding_an_app_preserves_existing_entries_of_other_apps()
     {
         Storage::disk('well_known_registry')->put('apple-app-site-association', json_encode([
@@ -85,7 +86,7 @@ class WellKnownRegistryServiceTest extends TestCase
         $this->assertCount(2, $android);
     }
 
-    /** @test */
+    #[Test]
     public function removing_an_app_only_removes_its_own_entry()
     {
         $app = $this->makeApp();
@@ -104,7 +105,7 @@ class WellKnownRegistryServiceTest extends TestCase
         $this->assertSame('it.webmapp.otherapp', $android[0]['target']['package_name']);
     }
 
-    /** @test */
+    #[Test]
     public function a_backup_is_created_before_overwriting_existing_files()
     {
         $app = $this->makeApp();
@@ -118,7 +119,7 @@ class WellKnownRegistryServiceTest extends TestCase
         $this->assertGreaterThanOrEqual(2, $backups->count());
     }
 
-    /** @test */
+    #[Test]
     public function multiple_comma_separated_fingerprints_are_all_included()
     {
         $app = $this->makeApp(['properties' => [
@@ -134,7 +135,7 @@ class WellKnownRegistryServiceTest extends TestCase
         ], $android[0]['target']['sha256_cert_fingerprints']);
     }
 
-    /** @test */
+    #[Test]
     public function android_entry_is_skipped_when_fingerprint_is_missing()
     {
         $app = $this->makeApp(['properties' => ['android_cert_sha256' => null]]);
@@ -145,7 +146,7 @@ class WellKnownRegistryServiceTest extends TestCase
         $this->assertCount(0, $android);
     }
 
-    /** @test */
+    #[Test]
     public function malformed_existing_apple_file_aborts_sync_without_overwriting()
     {
         Storage::disk('well_known_registry')->put('apple-app-site-association', '{not valid json');

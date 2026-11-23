@@ -2,8 +2,7 @@
 
 namespace Wm\WmPackage\Nova;
 
-use App\Nova\UgcPoi;
-use App\Nova\UgcTrack;
+
 use Illuminate\Validation\Rules;
 use Laravel\Nova\Fields\FormData;
 use Laravel\Nova\Fields\HasMany;
@@ -144,13 +143,38 @@ abstract class AbstractUserResource extends Resource
                         return $permissions->toArray();
                     });
                 }),
-            HasMany::make(__('UGC POIs'), 'ugc_pois', UgcPoi::class)
+            HasMany::make(__('UGC POIs'), 'ugc_pois', static::ugcPoiResource())
                 ->onlyOnDetail()
                 ->canSee(fn (NovaRequest $request) => optional($request->user())->hasRole('Administrator')),
-            HasMany::make(__('UGC Tracks'), 'ugc_tracks', UgcTrack::class)
+            HasMany::make(__('UGC Tracks'), 'ugc_tracks', static::ugcTrackResource())
                 ->onlyOnDetail()
                 ->canSee(fn (NovaRequest $request) => optional($request->user())->hasRole('Administrator')),
         ];
+    }
+
+    /**
+     * La Resource con cui si aprono i POI UGC dell'utente.
+     *
+     * Qui c'era `App\Nova\UgcPoi`, cioe' la Resource di uno shard: il package non puo'
+     * nominare una classe che nei suoi test e in un altro shard non esiste — chi non ce l'aveva
+     * vedeva la scheda utente andare in errore. Il valore di riserva e' la Resource del package;
+     * uno shard che ne ha una propria ridefinisce questo metodo e la mostra al posto suo.
+     *
+     * @return class-string
+     */
+    protected static function ugcPoiResource(): string
+    {
+        return class_exists(\App\Nova\UgcPoi::class) ? \App\Nova\UgcPoi::class : UgcPoi::class;
+    }
+
+    /**
+     * La Resource con cui si aprono le tracce UGC dell'utente. Vedi `ugcPoiResource()`.
+     *
+     * @return class-string
+     */
+    protected static function ugcTrackResource(): string
+    {
+        return class_exists(\App\Nova\UgcTrack::class) ? \App\Nova\UgcTrack::class : UgcTrack::class;
     }
 
     /**

@@ -2,7 +2,6 @@
 
 namespace Wm\WmPackage\Nova;
 
-use App\Nova\User;
 use Ebess\AdvancedNovaMediaLibrary\Fields\Images;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
@@ -25,6 +24,13 @@ use Wm\WmPackage\Nova\Metrics\TopUgcCreators;
 
 abstract class AbstractUgcResource extends AbstractGeometryResource
 {
+    /**
+     * La Resource dell'autore, quando non e' quella dedotta dallo shard.
+     *
+     * @var class-string|null
+     */
+    protected static ?string $userResource = null;
+
     /**
      * Build an "index" query for the given resource.
      *
@@ -55,7 +61,7 @@ abstract class AbstractUgcResource extends AbstractGeometryResource
         return [
             ID::make()->sortable(),
             BelongsTo::make(__('App'), 'app', App::class)->filterable(),
-            BelongsTo::make(__('Author'), 'author', User::class)->searchable()->filterable()->hideWhenUpdating()->hideWhenCreating(),
+            BelongsTo::make(__('Author'), 'author', static::userResource())->searchable()->filterable()->hideWhenUpdating()->hideWhenCreating(),
             Text::make(__('Name'), 'Name', function () {
                 return data_get($this->properties, 'name')
                     ?? data_get($this->properties, 'form.title');
@@ -108,8 +114,39 @@ abstract class AbstractUgcResource extends AbstractGeometryResource
         $ugcModelClass = get_class(static::newModel());
 
         return [
-            new TopUgcCreators($ugcModelClass)
+            // Le parentesi intorno a `new` servono: chiamare un metodo su `new` senza di esse e'
+            // sintassi di PHP 8.4, e il package dichiara PHP >8.1 — su 8.3 e' un ParseError e la
+            // classe non si carica affatto.
+            (new TopUgcCreators($ugcModelClass))
                 ->width('full'),
         ];
     }
+
+    /**
+     * La Resource con cui si apre l'autore del contenuto.
+     *
+     * Qui c'era `App\\Nova\\User`, cioe' la Resource di uno shard: il package non puo' nominare
+     * una classe che nei suoi test e in un altro shard non esiste. Il package non ha una Resource
+     * utente concreta — `AbstractUserResource` e' astratta e Nova non puo' istanziarla — quindi
+     * se lo shard non ce l'ha la relazione non si mostra, invece di far saltare la scheda.
+     *
+     * @return class-string|null
+     */
+    protected static function userResource(): ?string
+    {
+        return static::$userResource
+            ?? (class_exists(\App\Nova\User::class) ? \App\Nova\User::class : null);
+    }
+
+    /**
+     * Dichiara la Resource dell'autore senza estendere la classe: serve ai test, che altrimenti
+     * dovrebbero creare un alias di classe per una Resource di uno shard.
+     *
+     * @param  class-string|null  $resource
+     */
+    public static function usingUserResource(?string $resource): void
+    {
+        static::$userResource = $resource;
+    }
+
 }

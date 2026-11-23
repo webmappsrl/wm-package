@@ -23,8 +23,13 @@ class EcPoiService extends BaseService
 
         if ($model->wasChanged('geometry') || $elevation === null || $taxonomyWhere === null) {
 
+            // afterCommit sul primo job: è l'unico che la catena accoda subito (gli altri partono
+            // al suo termine) e PendingChain non ha un afterCommit() proprio. Senza, dentro una
+            // transazione lunga (la conversione UgcPoi → EcPoi da Nova, che copia le foto) il
+            // worker cercava l'EcPoi prima del commit e falliva con ModelNotFoundException,
+            // lasciandolo senza località e quota (oc:8967).
             $chain = [
-                new SyncModelTaxonomyWhereJob($model), // it relates where taxonomy terms to the poi based on geometry attribute
+                (new SyncModelTaxonomyWhereJob($model))->afterCommit(), // it relates where taxonomy terms to the poi based on geometry attribute
                 new UpdateEcPoiDemJob($model),
             ];
 

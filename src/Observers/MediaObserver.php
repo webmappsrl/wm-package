@@ -161,16 +161,19 @@ class MediaObserver extends AbstractAuthorableObserver
     private function setDefaultValues(Media $media)
     {
         try {
-            // Set default app_id (1 is usually the main app ID)
+            // Default app_id: la prima app esistente, non l'1 scritto fisso. `media.app_id` ha
+            // una foreign key verso `apps`, e dove l'app 1 non c'e' (uno shard con altri id, un
+            // database di test) l'insert moriva con una violazione di vincolo. L'1 resta solo
+            // come ultima risorsa, per non cambiare nulla dove l'app 1 esiste davvero.
             if (! $media->app_id) {
-                $media->app_id = 1;
+                $media->app_id = App::query()->min('id') ?? 1;
             }
 
             $this->setDefaultGeometry($media);
         } catch (\Exception $e) {
             Log::error('Error setting default values: '.$e->getMessage());
             // Last resort fallback
-            $media->app_id = 1;
+            $media->app_id = App::query()->min('id') ?? 1;
             $media->geometry = 'POINT(10.4018624 43.7159395)';
         }
     }

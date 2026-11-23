@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
 use Wm\WmPackage\Exporters\ModelExporter;
 use Wm\WmPackage\Tests\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 class ExportTest extends TestCase
 {
@@ -15,7 +16,7 @@ class ExportTest extends TestCase
         Storage::fake('public');
     }
 
-    /** @test */
+    #[Test]
     public function it_can_export_collection_to_excel()
     {
         $data = collect([

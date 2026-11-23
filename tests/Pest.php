@@ -1,10 +1,13 @@
 <?php
 
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
+use Wm\WmPackage\Jobs\Track\UpdateEcTrackGenerateElevationChartImage;
 use Wm\WmPackage\Jobs\UpdateUgcTrackDemStatsJob;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcTrack;
@@ -58,7 +61,36 @@ uses()->beforeEach(function () {
 // dettaglio su AWS (TaxonomyTermableObserver): con la coda sincrona dei test il job girerebbe e
 // uscirebbe verso S3. Chi lo vuole verificare lo fa con il suo Bus::fake.
 uses()->beforeEach(function () {
-    Bus::fake([UpdateUgcTrackDemStatsJob::class, UpdateEcTrackAwsJob::class]);
+    // `UpdateEcTrackGenerateElevationChartImage` lancia un processo Node: nessun test deve
+    // eseguire un comando esterno, e senza questo bastava creare una traccia per avviarlo.
+    Bus::fake([
+        UpdateUgcTrackDemStatsJob::class,
+        UpdateEcTrackAwsJob::class,
+        UpdateEcTrackGenerateElevationChartImage::class,
+    ]);
+
+    // Il disco di wmfe e' finto per tutti: nessun test deve scrivere fuori, ed e' la regola in
+    // cima al CLAUDE.md del package. Senza, un percorso che arriva a una scrittura prova a
+    // parlare con S3 vero e fallisce con «Missing required client configuration options: region»
+    // — o, con le credenziali presenti, scriverebbe davvero. Un test che vuole il disco vero lo
+    // dichiara da se'.
+    // Tutti i dischi remoti del package, non solo `wmfe`: `conf`, `pois` e gli altri parlano con
+    // S3 allo stesso modo, e un test che ne tocca uno fallirebbe con «Missing required client
+    // configuration options: region» — o scriverebbe davvero, dove le credenziali ci sono.
+    foreach (['wmfe', 'pois', 'conf', 'mapping', 'importer', 'backups', 'wmdumps', 'well_known_registry'] as $disco) {
+        Storage::fake($disco);
+    }
+
+    // Qui NON si finge nessun servizio: in Laravel vince il primo stub registrato, quindi un
+    // `Http::fake()` globale avrebbe la precedenza su quello che un test dichiara per se', e gli
+    // farebbe ricevere una risposta diversa da quella che ha chiesto. Chi tocca un servizio lo
+    // finge nel proprio file.
+
+    // Tutto il resto non esce: `preventStrayRequests()` fa fallire subito, dicendo quale URL era
+    // stato chiamato, ogni richiesta che il test non ha finto. Senza, un mock che non combacia
+    // piu' con la firma del metodo chiama il servizio vero: e' successo con osmfeatures, che
+    // rispondeva 422 dopo averci messo diciassette secondi.
+    Http::preventStrayRequests();
 })->in(__DIR__);
 
 /**

@@ -138,13 +138,15 @@ it('blocks a Validator from persisting a config_detail box on an EcTrack they do
     expect($track->fresh()->properties['config_detail'] ?? null)->toBeNull();
 });
 
-it('allows a Validator to persist a config_detail box on their own EcTrack, via the real Nova update endpoint', function () {
-    App::factory()->createQuietly();
-
+it('allows a Validator to persist a config_detail box on an EcTrack of their own app, via the real Nova update endpoint', function () {
     $validator = User::factory()->create();
     $validator->assignRole('Validator');
 
-    $track = EcTrack::factory()->createQuietly(['user_id' => $validator->id]);
+    // `EcTrackPolicy::update()` autorizza per proprieta' dell'app (`User::ownsApp()`, cioe'
+    // `apps.user_id`), non per autore della traccia: l'app va intestata al Validator.
+    $app = App::factory()->createQuietly(['user_id' => $validator->id]);
+
+    $track = EcTrack::factory()->createQuietly(['user_id' => $validator->id, 'app_id' => $app->id]);
 
     $groups = [[
         'layout' => 'info',
@@ -154,8 +156,13 @@ it('allows a Validator to persist a config_detail box on their own EcTrack, via 
         ]],
     ]];
 
+    // `app` e `user` sono obbligatori sulla Resource EcTrack dello shard: l'autorizzazione passa
+    // prima della validazione, quindi senza questi due campi la risposta sarebbe un 302 di
+    // validazione invece del 200 che si vuole verificare.
     $response = $this->actingAs($validator)
         ->put("/nova-api/ec-tracks/{$track->id}", [
+            'app' => $app->id,
+            'user' => $validator->id,
             'properties->config_detail' => $groups,
         ]);
 

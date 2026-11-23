@@ -5,10 +5,11 @@ namespace Tests\Unit\Imports\Processors;
 use Illuminate\Database\Eloquent\Model;
 use Wm\WmPackage\Imports\Processors\EcPoiRowProcessor;
 use Wm\WmPackage\Tests\TestCase;
+use PHPUnit\Framework\Attributes\Test;
 
 class EcPoiRowProcessorTest extends TestCase
 {
-    /** @test */
+    #[Test]
     public function validate_returns_error_when_required_fields_missing(): void
     {
         $processor = new EcPoiRowProcessor;
@@ -19,7 +20,7 @@ class EcPoiRowProcessorTest extends TestCase
         $this->assertStringContainsString('must be numeric', $processor->validate(['name_it' => 'x', 'poi_type' => 'bar', 'lat' => 'a', 'lng' => 'b']) ?? '');
     }
 
-    /** @test */
+    #[Test]
     public function apply_builds_point_geometry_from_lat_lng_and_writes_properties(): void
     {
         $model = new class extends Model
@@ -78,7 +79,7 @@ class EcPoiRowProcessorTest extends TestCase
         $this->assertArrayNotHasKey('unknown_column', $properties);
     }
 
-    /** @test */
+    #[Test]
     public function apply_writes_only_provided_translations_to_properties_name(): void
     {
         $model = new class extends Model
@@ -117,7 +118,7 @@ class EcPoiRowProcessorTest extends TestCase
         $this->assertArrayNotHasKey('en', $properties['name']);
     }
 
-    /** @test */
+    #[Test]
     public function apply_does_not_write_properties_name_when_model_has_no_get_translations(): void
     {
         $model = new class extends Model

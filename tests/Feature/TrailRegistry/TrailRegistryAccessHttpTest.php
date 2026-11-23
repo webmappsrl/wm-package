@@ -83,10 +83,7 @@ it('un Editor modifica un istanza in istruttoria', function () {
     // Nova registra ogni modifica in action_events, che non fa parte delle
     // migrazioni del package: senza, l'update risponderebbe 500 per la
     // tabella mancante e non per l'autorizzazione.
-    foreach (['2018_01_01_000000_create_action_events_table' => 'CreateActionEventsTable', '2019_05_10_000000_add_fields_to_action_events_table' => 'AddFieldsToActionEventsTable'] as $file => $class) {
-        require_once __DIR__."/../../../vendor/laravel/nova/database/migrations/{$file}.php";
-        (new $class)->up();
-    }
+    creaActionEvents();
     $application = istanzaHttp();
 
     $this->actingAs(utenteHttp('Editor'))
@@ -101,10 +98,7 @@ it('un Validator non puo eseguire l Action Approva', function () {
     // Nova registra ogni esecuzione in action_events: la tabella non fa parte
     // delle migrazioni del package.
     // Sono classi con nome, non migrazioni anonime: require_once e new.
-    foreach (['2018_01_01_000000_create_action_events_table' => 'CreateActionEventsTable', '2019_05_10_000000_add_fields_to_action_events_table' => 'AddFieldsToActionEventsTable'] as $file => $class) {
-        require_once __DIR__."/../../../vendor/laravel/nova/database/migrations/{$file}.php";
-        (new $class)->up();
-    }
+    creaActionEvents();
     Bus::fake();
     DB::statement('ALTER SEQUENCE apps_id_seq RESTART WITH 1');
     config(['wm-package.shard_name' => 'wm_package_testing']);
@@ -189,3 +183,28 @@ it('ne approva ne respinge un istanza in compilazione', function () {
 
     expect($application->fresh()->status)->toBe(TrailApplicationStatus::UnderCompilation);
 });
+
+/**
+ * Crea `action_events`, dove Nova registra ogni modifica e ogni esecuzione di Action: la tabella
+ * non fa parte delle migrazioni del package. Se c'e' gia' non si rifa': a seconda della versione
+ * di Testbench quelle migrazioni possono essere gia' state applicate, e un `up()` a vuoto
+ * fallirebbe con «relation "action_events" already exists».
+ *
+ * Sono classi con nome, non migrazioni anonime: require_once e new.
+ */
+function creaActionEvents(): void
+{
+    if (\Illuminate\Support\Facades\Schema::hasTable('action_events')) {
+        return;
+    }
+
+    $migrazioni = [
+        '2018_01_01_000000_create_action_events_table' => 'CreateActionEventsTable',
+        '2019_05_10_000000_add_fields_to_action_events_table' => 'AddFieldsToActionEventsTable',
+    ];
+
+    foreach ($migrazioni as $file => $class) {
+        require_once __DIR__."/../../../vendor/laravel/nova/database/migrations/{$file}.php";
+        (new $class)->up();
+    }
+}

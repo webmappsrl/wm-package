@@ -89,12 +89,16 @@ it('queues a fresh UpdateAppConfigJob when the ec_media batch finishes', functio
     $batches = Bus::batched(fn ($batch) => true);
     expect($batches)->toHaveCount(1);
 
+    // Due finally: `ec_media` sta sia in CONFIG_DEPENDENT_BATCHES (il refresh del config) sia in
+    // POST_IMPORT_ENTITY_KEYS (i lavori di fine import EC).
     $finallyCallbacks = $batches->first()->finallyCallbacks();
-    expect($finallyCallbacks)->toHaveCount(1);
+    expect($finallyCallbacks)->toHaveCount(2);
 
-    // Simula il completamento del batch: invoca il finally() registrato, come farebbe
+    // Simula il completamento del batch: invoca i finally() registrati, come farebbe
     // Horizon/il worker della coda quando l'ultimo job del batch termina.
-    ($finallyCallbacks[0])(Mockery::mock(Batch::class));
+    foreach ($finallyCallbacks as $callback) {
+        $callback(Mockery::mock(Batch::class));
+    }
 
     Bus::assertDispatched(UpdateAppConfigJob::class, fn (UpdateAppConfigJob $dispatched) => $dispatched->appId === $app->id);
 });

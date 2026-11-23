@@ -2,16 +2,18 @@
 
 namespace Tests\Unit\Services\GeoJsonService;
 
+use PHPUnit\Framework\Attributes\Test;
+
 class ConvertPolygonToMultiPolygonTest extends AbstractGeoJsonTest
 {
-    /** @test */
+    #[Test]
     public function convert_polygon_to_multi_polygon_returns_the_multi_polygon_if_geojson_feature_multi_polygon()
     {
         $json = self::GEOJSON_MULTI_POLYGON_EXAMPLE;
         $this->assertEquals($json, $this->geoJsonService->convertPolygonToMultiPolygon($json));
     }
 
-    /** @test */
+    #[Test]
     public function convert_polygon_to_multi_polygon_returns_the_multi_polygon_if_geojson_feature_polygon()
     {
         $json = self::GEOJSON_FEATURE_POLYGON_EXAMPLE;
@@ -19,7 +21,7 @@ class ConvertPolygonToMultiPolygonTest extends AbstractGeoJsonTest
         $this->assertEquals($expected, $this->geoJsonService->convertPolygonToMultiPolygon($json));
     }
 
-    /** @test */
+    #[Test]
     public function convert_polygon_to_multi_polygon_returns_false_if_anything_else()
     {
         $this->assertNull($this->geoJsonService->convertPolygonToMultiPolygon(self::INVALID_JSON));

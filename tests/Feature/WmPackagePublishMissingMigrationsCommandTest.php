@@ -17,9 +17,27 @@ class WmPackagePublishMissingMigrationsCommandTest extends TestCase
 
     private string $conflictingPath;
 
+    /**
+     * Le pubblicazioni di `create_users_table` gia' presenti nello shard, messe da parte per la
+     * durata del test: percorso => contenuto. Il comando non ripubblica uno stub gia' pubblicato,
+     * e il test verifica proprio la pubblicazione, quindi parte da uno shard che non ce l'ha.
+     *
+     * @var array<string, string>
+     */
+    private array $stashedUsersMigrations = [];
+
     protected function setUp(): void
     {
         parent::setUp();
+
+        foreach (glob(database_path('migrations/*_create_users_table.php')) ?: [] as $existing) {
+            if (str_ends_with($existing, '0001_01_01_000000_create_users_table.php')) {
+                continue;
+            }
+
+            $this->stashedUsersMigrations[$existing] = File::get($existing);
+            File::delete($existing);
+        }
 
         $this->fakeStubPath = base_path("wm-package/database/migrations/{$this->baseName}.php.stub");
         $this->conflictingPath = database_path('migrations/0001_01_01_000000_'.$this->baseName.'.php');
@@ -87,6 +105,10 @@ PHP);
             }
         }
 
+        foreach ($this->stashedUsersMigrations as $path => $contents) {
+            File::put($path, $contents);
+        }
+
         if (Schema::hasColumn('users', 'zz_9999_99_99_999996_missing_publish_for_test_flag')) {
             Schema::table('users', function ($table) {
                 $table->dropColumn('zz_9999_99_99_999996_missing_publish_for_test_flag');
@@ -123,7 +145,13 @@ PHP);
 
     public function test_publish_migration_publishes_create_users_table_despite_laravel_suffix_file(): void
     {
-        $this->assertFalse(Schema::hasColumn('users', 'balance'));
+        // Il comando non pubblica uno stub le cui colonne sono gia' sul database («risulta gia'
+        // applicata sul database, nessuna azione»): `users.balance` e' la colonna che lo stub
+        // aggiunge, e dove c'e' gia' non c'e' niente da verificare. Succede su uno shard che ha
+        // applicato quella migration, per esempio forestas.
+        if (Schema::hasColumn('users', 'balance')) {
+            $this->markTestSkipped('`users.balance` esiste gia\': lo stub create_users_table risulta applicato su questo shard.');
+        }
 
         $this->artisan('wm-package:publish-migration', ['stub' => 'create_users_table'])
             ->assertExitCode(0)

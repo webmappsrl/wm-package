@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 use Wm\WmPackage\Services\Osm\ImportReport;
 use Wm\WmPackage\Services\Osm\OsmImportReportPresenter;
-use Wm\WmPackage\Tests\TestCase;
 
-uses(TestCase::class);
 
 it('builds a success payload when there are no failures', function () {
     $report = new ImportReport(false);

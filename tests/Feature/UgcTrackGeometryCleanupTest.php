@@ -7,6 +7,20 @@ use Illuminate\Support\Str;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\UgcTrack;
 use Wm\WmPackage\Models\User;
+use Illuminate\Support\Facades\Http;
+
+// I contenuti UGC, salvandosi, chiedono le aree amministrative a osmfeatures e i dati tecnici al
+// DEM: qui non si verificano quei due servizi, e senza fingerli i test uscivano davvero in rete.
+beforeEach(function () {
+    Http::fake([
+        '*osmfeatures*' => Http::response(['features' => []]),
+        '*dem*' => Http::response([
+            'ele' => 0,
+            'geometry' => ['type' => 'LineString', 'coordinates' => []],
+            'properties' => [],
+        ]),
+    ]);
+});
 
 // Base TestCase (Wm\WmPackage\Tests\TestCase, con RefreshDatabase) applicato da tests/Pest.php.
 

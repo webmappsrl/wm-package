@@ -81,3 +81,5 @@ Si applica quando tocchi Resource, campi, action o card Nova del package.
   (`Nova::__()`): una stringa italiana lì è una chiave di traduzione italiana, anche senza `__()`.
   `Filter::name()` invece non traduce `$name`: per un nome traducibile si ridefinisce `name()` con
   `__()` (oc:8672).
+- `replicate()` su un media lascia la copia con una foto che risponde 404: si usa `Media::copy()`,
+  che però va affiancato da due controlli — vedi [docs/knowledge/media-e-avatar.md](../../docs/knowledge/media-e-avatar.md) (oc:8967).

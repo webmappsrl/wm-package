@@ -5,9 +5,8 @@ declare(strict_types=1);
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Services\Models\App\AppConfigService;
-use Wm\WmPackage\Tests\TestCase;
 
-uses(TestCase::class, DatabaseTransactions::class);
+uses(DatabaseTransactions::class);
 
 it('config.json THEME contains all camelCase keys mapped from properties->theme snake_case', function () {
     $app = App::factory()->createQuietly([

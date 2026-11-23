@@ -38,7 +38,8 @@ class UpdateLayeredFeaturesJob implements ShouldQueue
      */
     public function middleware(): array
     {
-        return [new WithoutOverlapping($this->uniqueId())->dontRelease()];
+        // Le parentesi intorno a `new`: senza, e' sintassi di PHP 8.4 e su 8.3 e' un ParseError.
+        return [(new WithoutOverlapping($this->uniqueId()))->dontRelease()];
     }
 
     /**

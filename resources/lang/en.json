@@ -700,5 +700,11 @@
     "No tracks selected.": "No tracks selected.",
     "Too many tracks selected: the maximum is :max.": "Too many tracks selected: the maximum is :max.",
     "Overview map": "Overview map",
-    "The selected tracks cover too large an area for a readable map (maximum scale 1::scale). Reduce the selection.": "The selected tracks cover too large an area for a readable map (maximum scale 1::scale). Reduce the selection."
+    "The selected tracks cover too large an area for a readable map (maximum scale 1::scale). Reduce the selection.": "The selected tracks cover too large an area for a readable map (maximum scale 1::scale). Reduce the selection.",
+    "Conversion completed successfully": "Conversion completed successfully",
+    "Converted UgcPois: :ids": "Converted UgcPois: :ids",
+    "UgcPois already converted to EcPoi: :ids": "UgcPois already converted to EcPoi: :ids",
+    "UgcPoi :id not converted: :reason": "UgcPoi :id not converted: :reason",
+    "photo :media not found on storage": "photo :media not found on storage",
+    "conversion error, see the log": "conversion error, see the log"
 }
