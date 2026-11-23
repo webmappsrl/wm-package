@@ -5,7 +5,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Route;
-use Tests\TestCase;
 use Wm\WmPackage\Http\Resources\EcPoiResource;
 use Wm\WmPackage\Http\Resources\EcTrackResource;
 use Wm\WmPackage\Http\Resources\RelatedEcPoiResource;
@@ -15,7 +14,7 @@ use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Services\Print\PrintService;
 use Wm\WmPackage\WmPackageServiceProvider;
 
-uses(TestCase::class, DatabaseTransactions::class);
+uses(DatabaseTransactions::class);
 
 /** Accende il dominio a runtime, rilanciando ciò che il provider fa al boot. */
 function enablePrintDomain(): void

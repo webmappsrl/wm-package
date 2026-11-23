@@ -2,11 +2,8 @@
 
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Support\Facades\Storage;
-use Tests\TestCase;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Services\StorageService;
-
-uses(TestCase::class);
 
 // Il disco wmfe non ha `throw => true`: put() e move() restituiscono false invece di lanciare.
 

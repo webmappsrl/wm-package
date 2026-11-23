@@ -1,13 +1,13 @@
 <?php
 
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\ImageManager;
-use Tests\TestCase;
 use Wm\WmPackage\Exceptions\PrintCompilationException;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcPoi;
@@ -17,7 +17,7 @@ use Wm\WmPackage\Services\Print\Contracts\MapRenderer;
 use Wm\WmPackage\Services\Print\PrintService;
 use Wm\WmPackage\Services\Print\XelatexCompiler;
 
-uses(TestCase::class, DatabaseTransactions::class);
+uses(DatabaseTransactions::class);
 
 beforeEach(function () {
     // Le view del package, non gli override dello shard in cui il package è montato
@@ -296,7 +296,7 @@ it('stops downloading photos when the total photo budget is spent, with a warnin
         $timeouts[] = $options['timeout'] ?? null;
         // La prima foto «dura» 11 s: supera la propria scadenza (si salta) e il budget di 10 s si
         // esaurisce, quindi la seconda non si chiede.
-        Illuminate\Support\Carbon::setTestNow(now()->addSeconds(11));
+        Carbon::setTestNow(now()->addSeconds(11));
 
         return Http::response($jpeg, 200, ['Content-Type' => 'image/jpeg']);
     });
@@ -308,7 +308,7 @@ it('stops downloading photos when the total photo budget is spent, with a warnin
     try {
         app(PrintService::class)->generate($track, 'it');
     } finally {
-        Illuminate\Support\Carbon::setTestNow();
+        Carbon::setTestNow();
     }
 
     // Il timeout della richiesta non supera il budget residuo; nessuna foto entra nella scheda.

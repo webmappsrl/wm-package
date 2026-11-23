@@ -1,9 +1,6 @@
 <?php
 
-use Tests\TestCase;
 use Wm\WmPackage\Services\FeaturesService;
-
-uses(TestCase::class);
 
 // Le rotte reali (`/print/{type}/{id}`) arrivano al Task 9: qui si verifica il
 // cablaggio del dominio, come fa OptionalDomainRegistrationTest per trail_registry.

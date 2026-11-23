@@ -1,9 +1,6 @@
 <?php
 
-use Tests\TestCase;
 use Wm\WmPackage\Services\Print\LatexText;
-
-uses(TestCase::class);
 
 it('escapes every LaTeX special character', function () {
     $out = LatexText::escape('50% & #1 $x_y {a} ~ ^ \\');

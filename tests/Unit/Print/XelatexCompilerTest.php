@@ -1,11 +1,8 @@
 <?php
 
 use Illuminate\Support\Str;
-use Tests\TestCase;
 use Wm\WmPackage\Exceptions\PrintCompilationException;
 use Wm\WmPackage\Services\Print\XelatexCompiler;
-
-uses(TestCase::class);
 
 it('builds a sandboxed command with limits', function () {
     config(['wm-package.features.print.compile.timeout' => 90, 'wm-package.features.print.compile.memory_mb' => 512]);
@@ -42,7 +39,7 @@ it('refuses a missing marker when deps_version is set', function () {
 
 it('compiles a minimal document', function () {
     config(['wm-package.features.print.deps_version' => null]);
-    $pdf = (new XelatexCompiler)->compile("\\documentclass{article}\\begin{document}Ciao\\end{document}");
+    $pdf = (new XelatexCompiler)->compile('\\documentclass{article}\\begin{document}Ciao\\end{document}');
 
     expect(substr($pdf, 0, 4))->toBe('%PDF');
 })->skip(! is_executable('/usr/bin/xelatex'), 'xelatex non installato');

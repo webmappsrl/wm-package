@@ -1,9 +1,6 @@
 <?php
 
 use Illuminate\Support\Facades\Process;
-use Tests\TestCase;
-
-uses(TestCase::class);
 
 function installDepsPath(string $file = 'install-deps.sh'): string
 {

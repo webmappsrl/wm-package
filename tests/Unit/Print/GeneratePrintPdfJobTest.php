@@ -4,14 +4,11 @@ use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
 use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Queue;
-use Tests\TestCase;
 use Wm\WmPackage\Exceptions\PrintCompilationException;
 use Wm\WmPackage\Jobs\Print\GeneratePrintPdfJob;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Services\Print\PrintService;
 use Wm\WmPackage\Services\Print\PrintStatus;
-
-uses(TestCase::class);
 
 function printTestTrack(int $id = 4242): EcTrack
 {

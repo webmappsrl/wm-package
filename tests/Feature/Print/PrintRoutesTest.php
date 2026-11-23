@@ -5,14 +5,15 @@ use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
-use Tests\TestCase;
 use Wm\WmPackage\Jobs\Print\GeneratePrintPdfJob;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Models\EcTrack;
+use Wm\WmPackage\Services\Print\PrintService;
 use Wm\WmPackage\Services\Print\PrintStatus;
+use Wm\WmPackage\WmPackageServiceProvider;
 
-uses(TestCase::class, DatabaseTransactions::class);
+uses(DatabaseTransactions::class);
 
 /** Sottoclasse di EcPoi come quella di uno shard (`wm-package.ec_poi_model`). */
 class PrintRoutesShardPoi extends EcPoi
@@ -44,7 +45,7 @@ beforeEach(function () {
 
 function printFile(EcTrack $track, string $locale = 'it', ?int $modifiedAt = null): string
 {
-    $url = app(Wm\WmPackage\Services\Print\PrintService::class)->url($track, $locale);
+    $url = app(PrintService::class)->url($track, $locale);
     $path = ltrim(parse_url($url, PHP_URL_PATH), '/');
     Storage::disk('wmfe')->put($path, '%PDF');
 
@@ -70,7 +71,7 @@ it('registers the named routes when the domain is enabled', function () {
 
 it('registers the routes through the provider when the domain is turned on', function () {
     config(['wm-package.features.print.enabled' => true]);
-    $provider = app()->getProvider(Wm\WmPackage\WmPackageServiceProvider::class);
+    $provider = app()->getProvider(WmPackageServiceProvider::class);
     // Il provider è già partito: si rilancia lo stesso metodo che al boot carica le rotte dei domini accesi.
     $method = new ReflectionMethod($provider, 'registerEnabledDomains');
     $method->invoke($provider);
@@ -101,7 +102,7 @@ describe('with the domain enabled', function () {
 
         $response = $this->get(route('print.show', ['type' => 'ec-track', 'id' => $this->track->id, 'lang' => 'it']));
 
-        $response->assertRedirect(app(Wm\WmPackage\Services\Print\PrintService::class)->url($this->track, 'it'));
+        $response->assertRedirect(app(PrintService::class)->url($this->track, 'it'));
         $response->assertStatus(302);
         Bus::assertNotDispatched(GeneratePrintPdfJob::class);
     });

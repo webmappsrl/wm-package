@@ -3,16 +3,14 @@
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
-use Tests\TestCase;
 use Wm\WmPackage\Models\App;
-use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Services\Print\Contracts\MapRenderer;
 use Wm\WmPackage\Services\Print\MapRenderRequest;
 use Wm\WmPackage\Services\Print\PrintService;
 use Wm\WmPackage\Services\Print\XelatexCompiler;
 
-uses(TestCase::class, DatabaseTransactions::class);
+uses(DatabaseTransactions::class);
 
 beforeEach(function () {
     app('view')->getFinder()->replaceNamespace('wm-package', [realpath(__DIR__.'/../../../resources/views')]);

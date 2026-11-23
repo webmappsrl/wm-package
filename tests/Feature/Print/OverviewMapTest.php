@@ -7,7 +7,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
-use Tests\TestCase;
 use Wm\WmPackage\Jobs\Print\BuildOverviewMapJob;
 use Wm\WmPackage\Jobs\Print\BuildPrintZipJob;
 use Wm\WmPackage\Models\App;
@@ -17,8 +16,9 @@ use Wm\WmPackage\Services\Print\MapRenderRequest;
 use Wm\WmPackage\Services\Print\PrintService;
 use Wm\WmPackage\Services\Print\PrintStatus;
 use Wm\WmPackage\Services\Print\XelatexCompiler;
+use Wm\WmPackage\Services\StorageService;
 
-uses(TestCase::class, DatabaseTransactions::class);
+uses(DatabaseTransactions::class);
 
 beforeEach(function () {
     // Le view del package, non gli override dello shard in cui il package è montato
@@ -250,7 +250,7 @@ describe('job', function () {
         });
 
         $job = new BuildOverviewMapJob([$a->id, $b->id], 'it');
-        $job->handle(app(PrintService::class), $renderer, $compiler, app(Wm\WmPackage\Services\StorageService::class));
+        $job->handle(app(PrintService::class), $renderer, $compiler, app(StorageService::class));
 
         expect($request->shard)->toBe('testshard')
             ->and($request->widthMm)->toBe(200.0)
@@ -287,7 +287,7 @@ describe('job', function () {
         $compiler->shouldNotReceive('compile');
 
         $job = new BuildOverviewMapJob([$a->id], 'it');
-        expect(fn () => $job->handle(app(PrintService::class), $renderer, $compiler, app(Wm\WmPackage\Services\StorageService::class)))
+        expect(fn () => $job->handle(app(PrintService::class), $renderer, $compiler, app(StorageService::class)))
             ->toThrow(RuntimeException::class);
         $job->failed(new RuntimeException('/secret/path xelatex'));
 

@@ -6,7 +6,6 @@ use Laravel\Nova\Actions\ActionResponse;
 use Laravel\Nova\Fields\ActionFields;
 use Laravel\Nova\Fields\MultiSelect;
 use Laravel\Nova\Http\Requests\NovaRequest;
-use Tests\TestCase;
 use Wm\WmPackage\Jobs\Print\GeneratePrintPdfJob;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcPoi;
@@ -15,7 +14,7 @@ use Wm\WmPackage\Nova\Actions\GeneratePrintPdfAction;
 use Wm\WmPackage\Nova\EcPoi as EcPoiResource;
 use Wm\WmPackage\Nova\EcTrack as EcTrackResource;
 
-uses(TestCase::class, DatabaseTransactions::class);
+uses(DatabaseTransactions::class);
 
 beforeEach(function () {
     config(['wm-package.ec_track_model' => EcTrack::class]);

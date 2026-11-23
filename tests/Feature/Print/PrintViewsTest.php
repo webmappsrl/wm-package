@@ -1,10 +1,7 @@
 <?php
 
-use Tests\TestCase;
 use Wm\WmPackage\Services\Print\LatexText;
 use Wm\WmPackage\Services\Print\XelatexCompiler;
-
-uses(TestCase::class);
 
 beforeEach(function () {
     // Le view del package, non gli override dello shard in cui il package è montato

@@ -1,19 +1,22 @@
 <?php
 
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
-use Tests\TestCase;
+use Wm\WmPackage\Commands\PrintCleanupCommand;
 use Wm\WmPackage\Jobs\Print\BuildPrintZipJob;
+use Wm\WmPackage\Jobs\Print\GeneratePrintPdfJob;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Services\Print\PrintService;
 use Wm\WmPackage\Services\Print\PrintStatus;
+use Wm\WmPackage\Services\StorageService;
 
-uses(TestCase::class, DatabaseTransactions::class);
+uses(DatabaseTransactions::class);
 
 beforeEach(function () {
     config([
@@ -184,7 +187,7 @@ describe('job', function () {
         };
     }
 
-    function zipMock(array $fresh, array $streams = []): Wm\WmPackage\Services\Print\PrintService
+    function zipMock(array $fresh, array $streams = []): PrintService
     {
         $service = Mockery::mock(PrintService::class);
         $service->shouldReceive('isFresh')->andReturnUsing(fn ($m) => in_array($m->id, $fresh, true));
@@ -202,14 +205,14 @@ describe('job', function () {
     it('dispatches only the missing sheets, releases, then assembles from streamed pdfs', function () {
         Bus::fake();
         [$fresh, $missing] = ($this->makeTracks)(2)->all();
-        $storage = app(Wm\WmPackage\Services\StorageService::class);
+        $storage = app(StorageService::class);
 
         $job = zipJob([$fresh->id, $missing->id]);
         $job->handle(zipMock([$fresh->id]), $storage);
         expect($job->released)->toBe([15]);
 
-        Bus::assertDispatchedTimes(Wm\WmPackage\Jobs\Print\GeneratePrintPdfJob::class, 1);
-        Bus::assertDispatched(Wm\WmPackage\Jobs\Print\GeneratePrintPdfJob::class, fn ($j) => $j->model->is($missing));
+        Bus::assertDispatchedTimes(GeneratePrintPdfJob::class, 1);
+        Bus::assertDispatched(GeneratePrintPdfJob::class, fn ($j) => $j->model->is($missing));
         Storage::disk('wmfe')->assertMissing(BuildPrintZipJob::path($job->uniqueId(), 'it'));
 
         // Tutte fresche: assembla.
@@ -251,17 +254,17 @@ describe('job', function () {
         PrintStatus::markQueued($queued, 'it');
 
         $job = zipJob([$stale->id, $queued->id], 2);
-        $job->handle(zipMock([]), app(Wm\WmPackage\Services\StorageService::class));
+        $job->handle(zipMock([]), app(StorageService::class));
 
         expect($job->released)->toBe([15]);
-        Bus::assertDispatchedTimes(Wm\WmPackage\Jobs\Print\GeneratePrintPdfJob::class, 1);
-        Bus::assertDispatched(Wm\WmPackage\Jobs\Print\GeneratePrintPdfJob::class, fn ($j) => $j->model->is($stale));
+        Bus::assertDispatchedTimes(GeneratePrintPdfJob::class, 1);
+        Bus::assertDispatched(GeneratePrintPdfJob::class, fn ($j) => $j->model->is($stale));
     });
 
     it('fails the whole zip when a sheet generation failed, with the generic message', function () {
         Bus::fake();
         $tracks = ($this->makeTracks)(2);
-        $storage = app(Wm\WmPackage\Services\StorageService::class);
+        $storage = app(StorageService::class);
         PrintStatus::markFailed($tracks[0], 'it', 'x');
 
         $job = zipJob($tracks->pluck('id')->all(), 2);
@@ -277,7 +280,7 @@ describe('job', function () {
 
     it('stores the zip under the shard base path with a key that includes the shard', function () {
         $path = BuildPrintZipJob::path(BuildPrintZipJob::key([1, 2], 'it'), 'it');
-        $base = ltrim(app(Wm\WmPackage\Services\StorageService::class)->getShardBasePath(), '/');
+        $base = ltrim(app(StorageService::class)->getShardBasePath(), '/');
 
         expect($base)->toBe('testshard/')
             ->and($path)->toStartWith('testshard/print-tmp/zip/')->toEndWith('-it.zip');
@@ -320,7 +323,9 @@ describe('cleanup command', function () {
             touch($disk->path($f), $old);
         }
 
-        Illuminate\Console\Application::starting(fn ($artisan) => $artisan->resolve(Wm\WmPackage\Commands\PrintCleanupCommand::class));
+        // Registrato qui: senza il dominio acceso il package non lo registra, e `Application::starting()`
+        // non scatta se la console è già partita (suite del package, Testbench).
+        Artisan::registerCommand(app(PrintCleanupCommand::class));
         $this->artisan('wm:print-cleanup')->assertSuccessful();
 
         foreach ($mine as $f) {
@@ -344,7 +349,9 @@ describe('cleanup command', function () {
             touch($dir, $old);
         }
 
-        Illuminate\Console\Application::starting(fn ($artisan) => $artisan->resolve(Wm\WmPackage\Commands\PrintCleanupCommand::class));
+        // Registrato qui: senza il dominio acceso il package non lo registra, e `Application::starting()`
+        // non scatta se la console è già partita (suite del package, Testbench).
+        Artisan::registerCommand(app(PrintCleanupCommand::class));
         $this->artisan('wm:print-cleanup')->assertSuccessful();
 
         foreach ($stale as $dir) {
@@ -355,6 +362,6 @@ describe('cleanup command', function () {
     });
 
     it('is registered and scheduled only with the domain enabled', function () {
-        expect(config('wm-package.features.print.commands'))->toContain(Wm\WmPackage\Commands\PrintCleanupCommand::class);
+        expect(config('wm-package.features.print.commands'))->toContain(PrintCleanupCommand::class);
     });
 });

@@ -58,3 +58,15 @@ dove una decisione ne ha sostituita un'altra, c'è una riga «sostituisce».
 - **Chiavi di traduzione generiche** (`Description`, `Length`…) cambiano le etichette Nova anche a dominio spento: decide il dev.
 - **Chi può lanciare l'Action Nova di generazione:** oggi chiunque acceda alla Resource, come le altre action del package.
 - **Ticket a parte non più necessario:** la pagina del tema di stampa (tokens + ruoli per App, sezione Nova «Files» accanto a Icons) è **abbandonata** con la revisione del 20/11.
+
+## Allineamento con develop (23/11)
+
+- Develop ha separato le suite: `vendor/bin/pest` in CI lancia solo «package» (Testbench); i test con
+  `Tests\TestCase` (il TestCase di uno shard) vanno nella suite «shard». I 16 file di test della stampa usavano
+  `Tests\TestCase` e avrebbero fatto morire la suite in caricamento: ora usano il TestCase del package, che
+  `tests/Pest.php` applica a tutta la cartella. Girano tutti sotto Testbench (175 su 175, otto giri con semi
+  diversi), quindi non serve aggiungerli all'elenco «shard».
+- `PrintZipTest` registrava `wm:print-cleanup` con `Application::starting()`, che sotto Testbench non scatta
+  (console già partita): ora con `Artisan::registerCommand()`. Senza, la pulizia non girava e lasciava in
+  `print-tmp` una cartella che faceva fallire `OverviewMapTest` nell'ordine casuale.
+

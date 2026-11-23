@@ -9,8 +9,6 @@ use Wm\WmPackage\Services\Print\FakeMapRenderer;
 use Wm\WmPackage\Services\Print\HttpMapRenderer;
 use Wm\WmPackage\Services\Print\MapRenderRequest;
 
-uses(Tests\TestCase::class);
-
 function printFeatureCollection(int $n): array
 {
     $features = [];

@@ -1,10 +1,11 @@
 <?php
 
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Queue\Jobs\SyncJob;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
-use Tests\TestCase;
+use Illuminate\Support\Str;
 use Wm\WmPackage\Jobs\Print\GeneratePrintPdfJob;
 use Wm\WmPackage\Jobs\Print\RegeneratePrintPdfsJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackAppRelationsInfoJob;
@@ -16,7 +17,7 @@ use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Services\Models\EcTrackService;
 use Wm\WmPackage\Services\Print\PrintService;
 
-uses(TestCase::class, DatabaseTransactions::class);
+uses(DatabaseTransactions::class);
 
 beforeEach(function () {
     config(['wm-package.shard_name' => 'testshard']);
@@ -180,11 +181,11 @@ it('releases the unique lock when processing starts, so a save during generation
     // Esecuzione del Job accodato dal vero CallQueuedHandler, con middleware e gestione del lock.
     $queued = Queue::pushed(GeneratePrintPdfJob::class)->first();
     $payload = json_encode([
-        'uuid' => (string) Illuminate\Support\Str::uuid(),
+        'uuid' => (string) Str::uuid(),
         'job' => 'Illuminate\Queue\CallQueuedHandler@call',
         'data' => ['commandName' => GeneratePrintPdfJob::class, 'command' => serialize($queued)],
     ]);
-    (new Illuminate\Queue\Jobs\SyncJob(app(), $payload, 'sync', 'print'))->fire();
+    (new SyncJob(app(), $payload, 'sync', 'print'))->fire();
 
     Queue::assertPushed(GeneratePrintPdfJob::class, 2);
 
