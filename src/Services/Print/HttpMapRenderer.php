@@ -40,8 +40,8 @@ class HttpMapRenderer implements MapRenderer
             (int) ($config['dpi'] ?? 300),
             (string) ($config['style_id'] ?? 'webmapp'),
             (bool) ($config['map_info'] ?? true),
-            isset($config['max_zoom']) ? (float) $config['max_zoom'] : null,
-            isset($config['padding_mm']) ? (float) $config['padding_mm'] : null,
+            $request->maxZoom ?? (isset($config['max_zoom']) ? (float) $config['max_zoom'] : null),
+            $request->paddingMm ?? (isset($config['padding_mm']) ? (float) $config['padding_mm'] : null),
         );
 
         try {

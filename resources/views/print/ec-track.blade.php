@@ -1,5 +1,7 @@
 {{--
   Template LaTeX di default della scheda del sentiero (oc:8982).
+  Pagina 1: la mappa a tutta pagina (A4 al vivo) con logo e titolo in un riquadro bianco in alto;
+  pagina 2: dati, descrizione, punti di interesse e foto. Senza mappa tutto parte dalla pagina 1.
   Gli shard lo sovrascrivono con una view omonima; le variabili sono un contratto pubblico.
 
   Variabili (le stringhe "escaped" sono già LaTeX-sicure, via LatexText: si stampano con {!! !!}):
@@ -27,7 +29,7 @@
                       che vuole altri colori o font li definisce nel preambolo della propria view (prima di
                       \WmDefineRoles) o ridefinisce i ruoli. Il chiamante allega i file.
   - $mapWidthMm, $mapHeightMm  dimensioni (mm) della mappa chieste al servizio mappe
-                      (print.map.width_mm/height_mm, default 174 x 98)
+                      (print.map.width_mm/height_mm, default 210 x 297: la mappa è la pagina 1)
   - $generatedOn      data di generazione per il piè di pagina, già escaped
                       («Scheda generata il 24 novembre 2026», PrintService::generatedOn())
   - $labels           array chiave inglese -> testo tradotto (già escaped), tra cui Length,
@@ -46,24 +48,26 @@
 \WmDefineRoles
 @include('wm-package::print.partials.footer', ['labels' => $labels])
 \begin{document}
+@if ($mapFile)
+{{-- Pagina 1: la mappa a tutta pagina, con logo e titolo nel riquadro bianco in alto (\WmCopertina). --}}
+\WmCopertina{{!! $mapFile !!}}{\WmLogoTitolo{{!! $logoFile ?? '' !!}}{{!! $name !!}}}
+{{-- Pagina 2: tutto il resto, con il titolo ripetuto in piccolo. --}}
+\TitoloPagina{{!! $name !!}}
+\FilettoOro
+@else
+{{-- Senza mappa la scheda parte dalla prima pagina, con logo e titolo in testa. --}}
 @if (! empty($logoFile))
 \noindent\includegraphics[height=12mm,keepaspectratio]{{!! $logoFile !!}}\par\vspace{3mm}
 @endif
 \TitoloScheda{{!! $name !!}}
 \FilettoOro
+@endif
 @if (! empty($stats))
 \begin{Tabella}
 @foreach ($stats as $stat)
 \RigaTabella{{!! $stat['label'] !!}}{{!! $stat['value'] !!}}
 @endforeach
 \end{Tabella}
-@endif
-@if ($mapFile)
-
-\TitoloSezione{{!! $labels['Map'] !!}}
-\begin{center}
-\includegraphics[width=\linewidth,height={!! (float) ($mapHeightMm ?? 98) !!}mm,keepaspectratio]{{!! $mapFile !!}}
-\end{center}
 @endif
 @if (trim((string) $descriptionLatex) !== '')
 
@@ -83,8 +87,10 @@
 @if (! empty($photos))
 
 \TitoloSezione{{!! $labels['Photos'] !!}}
+\par\noindent
 @foreach ($photos as $photo)
-\includegraphics[width=0.48\linewidth,height=6cm,keepaspectratio]{{!! $photo !!}}\hfill
+\begin{minipage}[t]{0.48\linewidth}\centering\includegraphics[width=\linewidth,height=6cm,keepaspectratio]{{!! $photo !!}}\end{minipage}@if ($loop->iteration % 2 === 1)\hfill @else\par\vspace{4mm}\noindent
+@endif
 @endforeach
 @endif
 \end{document}

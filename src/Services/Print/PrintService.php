@@ -43,10 +43,10 @@ class PrintService
     /** Budget di default del download di tutte le foto di una scheda, in secondi (`photos.total_timeout`). */
     public const PHOTOS_TOTAL_TIMEOUT = 60;
 
-    /** Dimensioni della mappa nella scheda (A4 con margini di 18 mm, circa 0,38 dell'altezza utile). */
-    public const MAP_WIDTH_MM = 174.0;
+    /** Dimensioni della mappa nella scheda: la pagina 1 intera, A4 al vivo (copertina del template di default). */
+    public const MAP_WIDTH_MM = 210.0;
 
-    public const MAP_HEIGHT_MM = 98.0;
+    public const MAP_HEIGHT_MM = 297.0;
 
     /**
      * Area della mappa d'insieme su A4 orizzontale (mm): la mappa a sinistra, la legenda in colonna a
@@ -330,6 +330,8 @@ class PrintService
 
         return $this->mapRenderer->render(
             MapRenderRequest::forShard($featureCollection, ...$mapSize)
+                ->withPadding(self::mapPaddingMm())
+                ->withMaxZoom(($geometry['type'] ?? null) === 'Point' ? self::poiMapMaxZoom() : null)
         );
     }
 
@@ -425,6 +427,29 @@ class PrintService
         $name = trim($name);
 
         return $name !== '' && mb_strlen($name) <= 60 && preg_match('/^[\p{L}\p{N} -]+$/Du', $name) ? $name : null;
+    }
+
+    /**
+     * Zoom massimo della mappa della scheda di un POI (`print.map.poi_max_zoom`): l'inquadratura di un
+     * punto arriva sempre allo zoom massimo. Null: quello di `map_service.max_zoom`.
+     */
+    public static function poiMapMaxZoom(): ?float
+    {
+        $zoom = config('wm-package.print.map.poi_max_zoom');
+
+        return is_numeric($zoom) ? (float) $zoom : null;
+    }
+
+    /**
+     * Margine attorno alla traccia nella mappa della scheda, in mm di carta (`print.map.padding_mm`):
+     * il template di default lo usa per tenere la traccia fuori dal riquadro di logo e titolo della
+     * copertina. Null: quello di `map_service.padding_mm`.
+     */
+    public static function mapPaddingMm(): ?float
+    {
+        $padding = config('wm-package.print.map.padding_mm');
+
+        return is_numeric($padding) ? (float) $padding : null;
     }
 
     /**

@@ -25,7 +25,27 @@ final readonly class MapRenderRequest
         public array $featureCollection,
         public float $widthMm,
         public float $heightMm,
+        public ?float $paddingMm = null,
+        public ?float $maxZoom = null,
     ) {}
+
+    /**
+     * La stessa richiesta con un margine proprio attorno alle geometrie, in mm di carta: vince su
+     * `map_service.padding_mm`. Null lascia quello della configurazione.
+     */
+    public function withPadding(?float $paddingMm): self
+    {
+        return new self($this->shard, $this->featureCollection, $this->widthMm, $this->heightMm, $paddingMm, $this->maxZoom);
+    }
+
+    /**
+     * La stessa richiesta con uno zoom massimo proprio: vince su `map_service.max_zoom`. Null lascia
+     * quello della configurazione.
+     */
+    public function withMaxZoom(?float $maxZoom): self
+    {
+        return new self($this->shard, $this->featureCollection, $this->widthMm, $this->heightMm, $this->paddingMm, $maxZoom);
+    }
 
     /**
      * Crea la richiesta con lo shard preso da `wm-package.shard_name`.

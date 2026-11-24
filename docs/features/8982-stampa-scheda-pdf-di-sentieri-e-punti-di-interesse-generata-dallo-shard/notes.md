@@ -168,3 +168,23 @@ dalla rotta dello shard; il servizio delle mappe con token e IP è oc:9011.
 - `TaxonomyTermableObserver` aggiorna `updated_at` di tracce e POI a ogni cambio di termine su tutti gli shard,
   non più solo dove la stampa era accesa.
 - Nel `config.json` l'opzione esce come `OPTIONS.ec_pdf_enabled` e, con lo stesso valore, come `OPTIONS.print_track_enable`, deprecata (`@deprecated` in `AppConfigService`): resta finché web app e app non leggono la nuova.
+
+## Settimo giro: copertina con la mappa nel template di default, prova su camminiditalia
+
+- Template di default di traccia e POI su due pagine: pagina 1 la mappa a tutta pagina (A4 al vivo) con logo e
+  titolo in un riquadro bianco in alto a sinistra (`\WmCopertina`, `\WmLogoTitolo` in `wm-print.sty`, con
+  `eso-pic`); pagina 2 il resto, foto comprese, con il titolo ripetuto in piccolo. Idea di Alessio, chiesta dal
+  dev il 24/11.
+- `print.map` passa di serie a 210 x 297 e ha un margine proprio, `print.map.padding_mm` = 42, passato con la
+  richiesta (`MapRenderRequest::withPadding()`): tiene la traccia fuori dal riquadro senza toccare la mappa
+  d'insieme. Il servizio accetta solo un margine uguale sui quattro lati. Forestas lo azzera (la sua pagina
+  della mappa non ha riquadro).
+- `supervisor-print` aggiunto a `config/wm-horizon.php`: senza interruttore, gli shard senza un proprio
+  `config/horizon.php` (camminiditalia) non avevano un worker per la coda.
+- Prova su camminiditalia in locale (traccia 1, «Via Vandelli - Tappa 03»): copertina con la traccia fuori
+  dal riquadro, nord e scala liberi, 20 s di generazione con il servizio vero.
+- POI: zoom massimo della mappa 18 di serie (`print.map.poi_max_zoom`, passato con la richiesta solo per le
+  geometrie `Point`). Mura poligonali di Amelia (camminiditalia, POI 617): da circa 1:21.000 a scala 200 m.
+- `\TitoloSezione` non resta solo in fondo a una pagina (`needspace`, `\nobreak`, `\@afterheading`). La scheda
+  di default non ha un limite di pagine. Tolto un `\makeatother` a metà di `wm-print.sty`, che rendeva `@` non
+  più lettera per le macro sotto.

@@ -78,7 +78,7 @@ it('chooses the smallest a5 or a4 page that holds the map area, oriented like it
         ->toBe(['format' => $format, 'orientation' => $orientation, 'dpi' => 300]);
 })->with([
     'scheda di Forestas, A4 al vivo' => [210, 297, 'a4', 'portrait'],
-    'default del package' => [174, 98, 'a5', 'landscape'],
+    'riquadro 174 x 98' => [174, 98, 'a5', 'landscape'],
     "mappa d'insieme" => [200, 170, 'a4', 'landscape'],
     'piccola verticale' => [100, 150, 'a5', 'portrait'],
     'più grande di un A4' => [400, 300, 'a4', 'landscape'],
@@ -111,6 +111,15 @@ it('adds maxZoom and the padding converted from mm to page pixels only when conf
     expect($request->toServiceBody(300, 'webmapp', true))->not->toHaveKeys(['maxZoom', 'padding'])
         ->and($request->toServiceBody(300, 'webmapp', true, 18, 8))->toMatchArray(['maxZoom' => 18.0, 'padding' => 94])
         ->and($request->toServiceBody(150, 'webmapp', true, 25, 10))->toMatchArray(['maxZoom' => 19.0, 'padding' => 59]);
+});
+
+it('http driver sends the padding and max zoom of the request over the configured ones', function () {
+    printMapServiceConfig(['padding_mm' => 5, 'max_zoom' => 16]);
+    Http::fake(['maps.test/*' => Http::response(PRINT_TEST_PNG, 200)]);
+
+    app(MapRenderer::class)->render(MapRenderRequest::forShard(printFeatureCollection(1), 210, 297)->withPadding(42)->withMaxZoom(18));
+
+    Http::assertSent(fn ($r) => $r['padding'] === 496 && $r['maxZoom'] === 18.0);
 });
 
 it('http driver sends max_zoom and padding_mm from the config', function () {

@@ -217,7 +217,8 @@ return [
             // Zoom oltre il quale la mappa non si ingrandisce, anche su una traccia corta (0-19). Null:
             // quello del servizio, 16, che su un A4 lascia un sentiero di 1 km a circa 1:21.000.
             'max_zoom' => null,
-            // Margine attorno alle geometrie, in mm di carta. Null: quello del servizio, 8 mm.
+            // Margine attorno alle geometrie, in mm di carta, per tutte le mappe. Null: quello del
+            // servizio, 8 mm. La mappa della scheda ha il suo, `map.padding_mm`.
             'padding_mm' => null,
         ],
 
@@ -241,8 +242,16 @@ return [
         // Dimensioni (mm) della mappa nella scheda di sentiero e POI: la richiesta al servizio mappe
         // e la view le usano insieme, così uno shard che la vuole grande la chiede grande.
         'map' => [
-            'width_mm' => 174,
-            'height_mm' => 98,
+            'width_mm' => 210,
+            'height_mm' => 297,
+            // Zoom massimo della mappa della scheda di un POI: l'inquadratura di un punto arriva sempre allo
+            // zoom massimo, e con il 16 del servizio il POI resta piccolo in mezzo al territorio
+            // (circa 1:21.000 su un A4). 18 è circa 1:5.400. Null: `map_service.max_zoom`.
+            'poi_max_zoom' => 18,
+            // Margine attorno alla traccia nella mappa della scheda, in mm di carta: 42 la tiene fuori
+            // dal riquadro di logo e titolo della copertina del template di default. Null: quello di
+            // `map_service.padding_mm`.
+            'padding_mm' => 42,
         ],
 
         // Massimo di tracce in uno zip.

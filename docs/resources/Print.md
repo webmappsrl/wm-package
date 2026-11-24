@@ -32,7 +32,9 @@ shard che monta il package, e la stampa vale solo per gli elementi di un'App con
 | `compile.memory_mb` | | 1024 |
 | `photos.max_bytes`, `photos.max_pixels` | | 30 MB, 50.000.000 px (oltre, la foto si salta) |
 | `photos.total_timeout` | | 60 s: budget del download di tutte le foto di una scheda (esaurito, le restanti si saltano con un warning); ogni foto ha una scadenza sull'intero download pari al residuo, mai oltre 30 s |
-| `map.width_mm`, `map.height_mm` | | 174, 98: dimensioni (mm) della mappa della scheda, chieste al servizio mappe e usate dalla view (`$mapWidthMm`, `$mapHeightMm`) |
+| `map.width_mm`, `map.height_mm` | | 210, 297: dimensioni (mm) della mappa della scheda, chieste al servizio mappe e passate alla view (`$mapWidthMm`, `$mapHeightMm`). Di serie è la pagina 1 intera |
+| `map.poi_max_zoom` | | 18: zoom massimo della mappa della scheda di un POI, che senza resterebbe a 16 (circa 1:21.000 su A4). Vince su `map_service.max_zoom`; `null` lascia quello |
+| `map.padding_mm` | | 42: margine attorno alla traccia nella sola mappa della scheda, che la tiene fuori dal riquadro del titolo della copertina. Vince su `map_service.padding_mm`; `null` lascia quello |
 | `zip.max_tracks` | | 50 |
 | `zip.max_wait_seconds` | | 1800 |
 | `overview_map.max_scale` | | 50000 (1:50.000) |
@@ -98,8 +100,10 @@ già, altrimenti la stampa si spegne.
 1. TeX Live nell'immagine PHP: nel Dockerfile dello shard `COPY --from=wmpackage install-deps.sh VERSION
    /tmp/wm-print/` e `RUN bash /tmp/wm-print/install-deps.sh`, con il contesto `wmpackage` verso
    `wm-package/docker/render` nel compose (`docker/render/README.md`). Senza, la compilazione fallisce;
-2. il supervisor della coda `print` in Horizon (`config/horizon.php` dello shard). Senza, i Job restano in
-   coda e la pagina d'attesa scade;
+2. il worker della coda `print`: il package lo dichiara in `config/wm-horizon.php` (`supervisor-print`, in
+   tutti gli ambienti), che si fonde con il `config/horizon.php` dello shard. Va alzato `retry_after` della
+   connessione Redis (`REDIS_QUEUE_RETRY_AFTER`, 660 su Forestas): con i 90 s di serie un PDF lento viene
+   riconsegnato mentre è ancora in compilazione;
 3. URL e token del servizio mappe nel `.env` (`WM_PRINT_MAP_DRIVER=http`). Senza, la mappa è il segnaposto.
 
 Il log va sul canale `print` (`storage/logs/print.log`, da `config/wm-logging.php`).
@@ -227,8 +231,8 @@ La richiesta è `MapRenderRequest`: `feature_collection` (una feature per sentie
 cui la mappa va nel PDF. `toServiceBody()` la traduce nel corpo del servizio:
 
 - **la pagina**: il servizio rende solo pagine intere A5 o A4. L'orientamento segue l'area, il formato è il più
-  piccolo che la contiene (`page()`): 210 x 297 → A4 verticale (Forestas), 174 x 98 → A5 orizzontale
-  (default), 200 x 170 → A4 orizzontale (mappa d'insieme). La view la mette nell'area con `keepaspectratio`:
+  piccolo che la contiene (`page()`): 210 x 297 → A4 verticale (scheda, di serie), 174 x 98 → A5
+  orizzontale, 200 x 170 → A4 orizzontale (mappa d'insieme). La view la mette nell'area con `keepaspectratio`:
   dove le proporzioni non coincidono resta un margine bianco;
 - **il disegno**: `stroke` e `stroke-width` nelle `properties` di ogni feature (`PrintService::mapStroke()`).
   Il colore è, in quest'ordine: `map_service.stroke_color` dello shard; il colore del layer della traccia (il
@@ -287,10 +291,25 @@ default. `PrintService::styleFiles()` restituisce solo `wm-print`; resta un elen
 nel contratto delle view, perché gli override esistenti lo scorrono con `@foreach`: nessun override si
 rompe, ma non ci sono più altri stili da includere.
 
-**Dimensioni della mappa.** `print.map.width_mm` e `height_mm` (default 174 x 98) vanno sia al
-servizio mappe sia alla view (`$mapWidthMm`, `$mapHeightMm`): uno shard che vuole la mappa grande la
-chiede grande, invece di ingrandire un PNG piccolo, e impagina con le stesse variabili. La view di default
-usa la larghezza della colonna e l'altezza configurata: l'altezza passa da `0.38\textheight` a `height=98mm` (cambio voluto, a parità di resa su A4). La mappa d'insieme ha un'area propria (200 x 170 mm).
+**Impaginazione di default.** Scheda di traccia e POI su due pagine (24/11):
+
+- **pagina 1, copertina**: la mappa a tutta pagina, A4 al vivo, come sfondo (`\WmCopertina` di
+  `wm-print.sty`, con `eso-pic`); sopra, in alto a sinistra, un riquadro bianco con logo e titolo
+  (`\WmLogoTitolo`). Il riquadro lascia libero l'angolo in alto a destra, dove il servizio disegna il nord, e
+  il fondo, dove mette scala e attribuzioni. La traccia non ci finisce sotto perché la mappa è chiesta con
+  `map.padding_mm` (42 mm) di margine, più alto del riquadro. Niente piè di pagina;
+- **pagina 2**: il titolo ripetuto in piccolo (`\TitoloPagina`), dati, descrizione, punti di interesse e foto
+  (due per riga), con il piè di pagina e la data.
+
+Senza mappa la scheda parte dalla pagina 1 con logo e titolo in testa, come prima. La scheda di default
+non ha un numero massimo di pagine: il contenuto scorre, e un titolo di sezione (`\TitoloSezione`) non resta
+mai da solo in fondo a una pagina con il contenuto nella successiva (`\needspace` prima, `\nobreak` e
+`\@afterheading` dopo, che valgono anche prima di un elenco o di una foto).
+
+**Dimensioni della mappa.** `print.map.width_mm` e `height_mm` (default 210 x 297) vanno sia al servizio
+mappe sia alla view (`$mapWidthMm`, `$mapHeightMm`): uno shard che vuole un'altra impaginazione chiede la
+mappa della misura che gli serve. La view di default non le usa, perché la copertina è sempre la pagina
+intera. La mappa d'insieme ha un'area propria (200 x 170 mm) e non usa `map.padding_mm`.
 
 **Colori per ruolo.** Le macro di `wm-print` e le view di default colorano solo per ruolo, mai con
 `wmprimary`/`wmgold`/`wmgray` (che restano definiti, per gli override degli shard):
@@ -327,8 +346,9 @@ Dettagli in [`docker/render/README.md`](../../docker/render/README.md). Nello sh
   marcatore con `deps_version` e fallisce con «immagine non allineata al package» se differiscono
   (serve quando un deploy aggiorna il submodule senza ricostruire l'immagine: lo shard dovrebbe
   ricostruirla nel deploy quando cambia il puntatore);
-- la coda `print` (o il valore di `WM_PRINT_QUEUE`) **va dichiarata nello shard** come supervisor di
-  Horizon, con pochi worker (il picco di `xelatex` con le foto è alto);
+- la coda `print` (o il valore di `WM_PRINT_QUEUE`) ha il suo supervisor in `config/wm-horizon.php` del
+  package, con pochi worker (il picco di `xelatex` con le foto è alto); se lo shard cambia il nome della
+  coda, deve dichiarare il supervisor da sé;
 - `retry_after` della connessione Redis deve essere **maggiore del timeout dei Job**
   (`GeneratePrintPdfJob::computeTimeout()`, 390 s con i default, per la scheda; 300 per ZIP e mappa
   d'insieme), altrimenti un Job in corso
@@ -358,6 +378,9 @@ Dettagli in [`docker/render/README.md`](../../docker/render/README.md). Nello sh
 
 ## Trappole
 
+- In `wm-print.sty` `@` è già una lettera: non scrivere `\makeatother`, che la toglie alle macro definite
+  dopo. Una macro con `\@afterheading` definita sotto un `\makeatother` si legge come `\@` seguito da testo,
+  e la compilazione fallisce con «You can't use `\spacefactor' in vertical mode».
 - Un test della stampa deve creare l'App con `properties.ec_pdf_enabled` acceso (`printApp()` in
   `tests/Support/PrintHelpers.php`): altrimenti
   `PrintService::enabledFor()` è falso, la rotta risponde 404 e nessun Job parte, senza errori.
