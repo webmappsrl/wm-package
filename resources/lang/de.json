@@ -129,5 +129,8 @@
     "UgcPoi :id not converted: :reason": "UgcPoi :id nicht umgewandelt: :reason",
     "photo :media not found on storage": "Foto :media im Speicher nicht gefunden",
     "conversion error, see the log": "Fehler bei der Umwandlung, siehe Log",
-    "Convert To EcPoi": "In EcPoi umwandeln"
+    "Convert To EcPoi": "In EcPoi umwandeln",
+    "Print PDF": "PDF-Druck",
+    "Enables the PDF sheets of tracks and POIs: the print button in the app and on the website, and their generation.": "Aktiviert die PDF-Datenblätter von Routen und POIs: die Drucktaste in der App und auf der Website sowie ihre Erzeugung.",
+    "Sheet generated on :date": "Blatt erstellt am :date"
 }

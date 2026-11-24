@@ -23,7 +23,7 @@ beforeEach(function () {
 
 function themeApp(array $theme): App
 {
-    return App::factory()->createQuietly(['properties' => ['theme' => $theme]]);
+    return printApp(['properties' => ['theme' => $theme]]);
 }
 
 function themeCaptureTex(): void
@@ -94,18 +94,18 @@ it('asks the renderer for the configured map size, 174x98 by default, and passes
         });
     });
     $track = printSavedTrack(themeApp([]), THEME_TRACK);
-    config(['wm-package.features.print.map.width_mm' => 174, 'wm-package.features.print.map.height_mm' => 98]);
+    config(['wm-package.print.map.width_mm' => 174, 'wm-package.print.map.height_mm' => 98]);
 
     app(PrintService::class)->generate($track, 'it');
     expect($sizes[0])->toBe([174.0, 98.0])->and($this->compiled['tex'])->toContain('height=98mm');
 
-    config(['wm-package.features.print.map.width_mm' => 180, 'wm-package.features.print.map.height_mm' => 240]);
+    config(['wm-package.print.map.width_mm' => 180, 'wm-package.print.map.height_mm' => 240]);
     app(PrintService::class)->generate($track, 'it');
     expect($sizes[1])->toBe([180.0, 240.0])->and($this->compiled['tex'])->toContain('height=240mm');
 });
 
 it('compiles a real pdf with a missing font, using the theme rule color', function () {
-    config(['wm-package.features.print.deps_version' => null, 'wm-package.features.print.map_service.driver' => 'fake']);
+    config(['wm-package.print.deps_version' => null, 'wm-package.print.map_service.driver' => 'fake']);
     $app = themeApp(['primary_color' => '#1565C0', 'tertiary_color' => '#FF0000',
         'font_family_content' => 'Font Inesistente XYZ', 'font_family_header' => 'Altro Font Mancante']);
     $track = printSavedTrack($app, THEME_TRACK);
@@ -124,7 +124,7 @@ it('compiles a real pdf with a missing font, using the theme rule color', functi
 })->skip(! is_executable('/usr/bin/xelatex'), 'xelatex non installato');
 
 it('compiles a real pdf with an installed header font', function () {
-    config(['wm-package.features.print.deps_version' => null, 'wm-package.features.print.map_service.driver' => 'fake']);
+    config(['wm-package.print.deps_version' => null, 'wm-package.print.map_service.driver' => 'fake']);
     $app = themeApp(['font_family_content' => 'Latin Modern Roman', 'font_family_header' => 'Latin Modern Roman']);
     $track = printSavedTrack($app, THEME_TRACK);
 
@@ -146,7 +146,7 @@ it('puts the header font in the section titles too and in the document', functio
 });
 
 it('compiles with the header font applied to the titles', function () {
-    config(['wm-package.features.print.deps_version' => null, 'wm-package.features.print.map_service.driver' => 'fake']);
+    config(['wm-package.print.deps_version' => null, 'wm-package.print.map_service.driver' => 'fake']);
     $track = printSavedTrack(themeApp(['font_family_header' => 'Latin Modern Roman']), THEME_TRACK);
 
     app(PrintService::class)->generate($track, 'it');
@@ -162,7 +162,7 @@ it('compiles with the header font applied to the titles', function () {
 })->skip(! is_executable('/usr/bin/xelatex'), 'xelatex non installato');
 
 it('falls back to 174x98 when the configured map size is zero or negative', function () {
-    config(['wm-package.features.print.map.width_mm' => 0, 'wm-package.features.print.map.height_mm' => -5]);
+    config(['wm-package.print.map.width_mm' => 0, 'wm-package.print.map.height_mm' => -5]);
     expect(app(PrintService::class)->mapSize())->toBe([174.0, 98.0]);
 });
 

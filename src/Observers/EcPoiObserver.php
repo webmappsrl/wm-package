@@ -4,11 +4,9 @@ namespace Wm\WmPackage\Observers;
 
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Wm\WmPackage\Jobs\Layer\SyncAutoLayerAfterPoiTaxonomyChangeJob;
-use Wm\WmPackage\Jobs\Print\RegeneratePrintPdfsJob;
 use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Models\Layer;
 use Wm\WmPackage\Services\AppPoiOutputsService;
-use Wm\WmPackage\Services\FeaturesService;
 use Wm\WmPackage\Services\Models\EcPoiService;
 use Wm\WmPackage\Services\Models\EcTrackService;
 use Wm\WmPackage\Services\StorageService;
@@ -52,13 +50,8 @@ class EcPoiObserver extends AbstractEcObserver
         parent::saved($ecPoi);
         EcPoiService::make()->updateDataChain($ecPoi);
 
-        // La scheda PDF del POI (oc:8982); quelle delle tracce collegate le rigenera la coda di
-        // `EcTrackService::publicationJobs()`, che chiude ogni updateDataChain chiamata qui sotto.
-        // Dopo il commit: un Job partito prima leggerebbe i dati vecchi e scriverebbe un PDF che
-        // risulta fresco rispetto al nuovo `updated_at`.
-        if (FeaturesService::isEnabled('print')) {
-            RegeneratePrintPdfsJob::dispatch($ecPoi)->afterCommit();
-        }
+        // Le schede PDF non si rigenerano qui (oc:8982, scrum del 24/11): il nuovo `updated_at` le
+        // rende non più fresche e si rifanno alla prossima richiesta (`PrintService::isFresh()`).
 
         // Aggiorna anche gli EcTrack collegati a questo EcPoi
         $ecTracks = $ecPoi->ecTracks;

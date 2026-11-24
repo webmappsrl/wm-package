@@ -55,10 +55,10 @@ class BuildPrintZipJob implements ShouldBeUnique, ShouldQueue
     /** @param  list<int>  $ids  id ordinati e senza duplicati */
     public function __construct(public array $ids, public string $locale)
     {
-        $wait = max(self::POLL_SECONDS, (int) config('wm-package.features.print.zip.max_wait_seconds', 1800));
+        $wait = max(self::POLL_SECONDS, (int) config('wm-package.print.zip.max_wait_seconds', 1800));
         $this->tries = intdiv($wait, self::POLL_SECONDS) + 1;
         $this->uniqueFor = $wait + $this->timeout;
-        $this->onQueue((string) config('wm-package.features.print.queue', 'print'));
+        $this->onQueue((string) config('wm-package.print.queue', 'print'));
     }
 
     public function handle(PrintService $service, StorageService $storage): void

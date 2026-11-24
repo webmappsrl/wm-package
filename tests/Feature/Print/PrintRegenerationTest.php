@@ -7,11 +7,9 @@ use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Wm\WmPackage\Jobs\Print\GeneratePrintPdfJob;
-use Wm\WmPackage\Jobs\Print\RegeneratePrintPdfsJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackAppRelationsInfoJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackOrderRelatedPoi;
-use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\TaxonomyTerm;
@@ -25,7 +23,7 @@ beforeEach(function () {
     config(['wm-package.shard_name' => 'testshard']);
     config(['cache.stores.redis.driver' => 'array']);
     Storage::fake('wmfe', ['url' => 'https://wmfe.test']);
-    $this->regenApp = App::factory()->createQuietly();
+    $this->regenApp = printApp();
 });
 
 function regenPoi(): EcPoi
@@ -44,89 +42,38 @@ function regenJobClasses(array $jobs): array
     return array_map(fn ($j) => $j::class, $jobs);
 }
 
-it('adds RegeneratePrintPdfsJob to publicationJobs only when the print domain is enabled', function () {
-    $track = printSavedTrack(test()->regenApp);
-
-    config(['wm-package.features.print.enabled' => false]);
-    expect(regenJobClasses(app(EcTrackService::class)->publicationJobs($track)))->not->toContain(RegeneratePrintPdfsJob::class);
-
-    config(['wm-package.features.print.enabled' => true]);
-    $jobs = app(EcTrackService::class)->publicationJobs($track);
-    expect(regenJobClasses($jobs))->toContain(RegeneratePrintPdfsJob::class)
-        ->and(end($jobs))->toBeInstanceOf(RegeneratePrintPdfsJob::class);
+/*
+ * Le schede si rigenerano solo a richiesta (scrum del 24/11): un salvataggio non accoda nulla, ma
+ * sposta `updated_at` e la scheda già scritta non risulta più fresca.
+ */
+it('keeps the print sheets out of the publication chain', function () {
+    expect(regenJobClasses(app(EcTrackService::class)->publicationJobs(printSavedTrack(test()->regenApp))))->toBe([
+        UpdateEcTrackAwsJob::class,
+        UpdateEcTrackAppRelationsInfoJob::class,
+        UpdateEcTrackOrderRelatedPoi::class,
+    ]);
 });
 
-it('dispatches one generation per existing locale', function () {
-    config(['wm-package.features.print.enabled' => true]);
-    Queue::fake();
-    $track = printSavedTrack(test()->regenApp);
-    regenPut($track, 'it');
-    regenPut($track, 'en');
-
-    (new RegeneratePrintPdfsJob($track))->handle(app(PrintService::class));
-
-    Queue::assertPushed(GeneratePrintPdfJob::class, 2);
-    Queue::assertPushed(GeneratePrintPdfJob::class, fn ($j) => $j->locale === 'it' && $j->model->is($track));
-    Queue::assertPushed(GeneratePrintPdfJob::class, fn ($j) => $j->locale === 'en');
-});
-
-it('does not generate anything for an element that was never printed', function () {
-    config(['wm-package.features.print.enabled' => true]);
-    Queue::fake();
-
-    (new RegeneratePrintPdfsJob(printSavedTrack(test()->regenApp)))->handle(app(PrintService::class));
-
-    Queue::assertNothingPushed();
-});
-
-it('does nothing at run time when the domain is disabled and runs on the print queue', function () {
-    config(['wm-package.features.print.enabled' => false, 'wm-package.features.print.queue' => 'stampa']);
-    Queue::fake();
-    $track = printSavedTrack(test()->regenApp);
-    regenPut($track, 'it');
-
-    $job = new RegeneratePrintPdfsJob($track);
-    $job->handle(app(PrintService::class));
-
-    Queue::assertNothingPushed();
-    expect($job->queue)->toBe('stampa');
-});
-
-it('saving a poi regenerates its own pdfs and ends the chain of each linked track with the regeneration', function () {
-    config(['wm-package.features.print.enabled' => true]);
+it('saving a poi queues no print generation, and its sheet is no longer fresh', function () {
     $poi = regenPoi();
     $track = printSavedTrack(test()->regenApp);
     $track->ecPois()->attach($poi->id);
     regenPut($poi, 'it');
-    regenPut($track, 'en');
+    regenPut($track, 'it');
 
+    $this->travel(5)->seconds();
     Bus::fake();
     $poi = EcPoi::find($poi->id);
     $poi->name = ['it' => 'Nuovo nome'];
     $poi->save();
 
-    // il POI: un solo job standalone, quello della traccia viaggia dentro la catena (non doppio)
-    Bus::assertDispatchedTimes(RegeneratePrintPdfsJob::class, 1);
-    // Dopo il commit: un Job partito prima del commit leggerebbe i dati vecchi (oc:8982, I2).
-    Bus::assertDispatched(RegeneratePrintPdfsJob::class, fn ($j) => $j->model instanceof EcPoi && $j->model->is($poi) && $j->afterCommit === true);
+    Bus::assertNotDispatched(GeneratePrintPdfJob::class);
     Bus::assertChained([
         UpdateEcTrackAwsJob::class,
         UpdateEcTrackAppRelationsInfoJob::class,
         UpdateEcTrackOrderRelatedPoi::class,
-        RegeneratePrintPdfsJob::class,
     ]);
-});
-
-it('does not queue any regeneration when saving a poi with the domain disabled', function () {
-    config(['wm-package.features.print.enabled' => false]);
-    $poi = regenPoi();
-    Bus::fake();
-
-    $poi = EcPoi::find($poi->id);
-    $poi->name = ['it' => 'Altro'];
-    $poi->save();
-
-    Bus::assertNotDispatched(RegeneratePrintPdfsJob::class);
+    expect(app(PrintService::class)->isFresh($poi->fresh(), 'it'))->toBeFalse();
 });
 
 it('deleting a track removes its print pdfs', function () {
@@ -193,7 +140,6 @@ it('releases the unique lock when processing starts, so a save during generation
 
 it('marks the element as changed when a term is attached or detached, so its print pdf is no longer fresh', function () {
     Queue::fake();
-    config(['wm-package.features.print.enabled' => true]);
     $service = app(PrintService::class);
     $term = TaxonomyTerm::create(['identifier' => 'term-'.uniqid(), 'name' => ['it' => 'Percorribile']]);
 
@@ -214,18 +160,6 @@ it('marks the element as changed when a term is attached or detached, so its pri
         expect($service->isFresh($model->fresh(), 'it'))->toBeFalse();
         $this->travelBack();
     }
-});
-
-it('does not touch the element on a term change when the print domain is disabled', function () {
-    Queue::fake();
-    config(['wm-package.features.print.enabled' => false]);
-    $track = printSavedTrack(test()->regenApp);
-    $track::query()->whereKey($track->id)->toBase()->update(['updated_at' => '2026-01-01 00:00:00']);
-    $term = TaxonomyTerm::create(['identifier' => 'term-'.uniqid(), 'name' => ['it' => 'Termine']]);
-
-    $track->taxonomyTerms()->attach($term->id);
-
-    expect($track->fresh()->updated_at->format('Y-m-d H:i:s'))->toBe('2026-01-01 00:00:00');
 });
 
 it('requeues instead of marking done when the element changed during the generation', function () {

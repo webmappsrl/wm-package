@@ -24,6 +24,12 @@ class GeneratePrintPdfAction extends Action
 {
     public const DEFAULT_LOCALE = 'it';
 
+    public function __construct()
+    {
+        // Solo sugli elementi di un'App con la stampa accesa (`properties.ec_pdf_enabled`).
+        $this->canRun(fn ($request, $model) => $model instanceof Model && PrintService::enabledFor($model));
+    }
+
     public function name()
     {
         return __('Generate print PDF');
@@ -45,7 +51,14 @@ class GeneratePrintPdfAction extends Action
 
                     return in_array(self::DEFAULT_LOCALE, $codes, true) ? [self::DEFAULT_LOCALE] : array_slice($codes, 0, 1);
                 })
-                ->rules('required', 'array', 'min:1'),
+                // Nella richiesta il MultiSelect è una stringa JSON, decodificata solo nel fill: una
+                // regola `array` sul valore grezzo fallirebbe sempre.
+                ->rules('required', 'json', function (string $attribute, mixed $value, \Closure $fail) {
+                    $decoded = is_string($value) ? json_decode($value, true) : $value;
+                    if (! is_array($decoded) || $decoded === []) {
+                        $fail(__('validation.required', ['attribute' => __('Languages')]));
+                    }
+                }),
         ];
     }
 
@@ -90,6 +103,10 @@ class GeneratePrintPdfAction extends Action
         // Nova chiama handle() una volta per chunk e il client riceve l'ultima risposta: il messaggio
         // non riporta quindi un conteggio, che sarebbe quello dell'ultimo chunk.
         foreach ($models as $model) {
+            // canRun() filtra già la selezione; il controllo resta anche in dispatchFor().
+            if (! PrintService::enabledFor($model)) {
+                continue;
+            }
             // Le opzioni del campo sono solo lato client: si ammettono le lingue consentite per l'app del modello.
             $allowed = array_keys($this->languageOptions(collect([$model])));
 

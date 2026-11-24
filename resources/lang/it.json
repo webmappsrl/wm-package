@@ -731,5 +731,8 @@
     "UgcPois already converted to EcPoi: :ids": "UgcPoi già convertiti in EcPoi: :ids",
     "UgcPoi :id not converted: :reason": "UgcPoi :id non convertito: :reason",
     "photo :media not found on storage": "foto :media non trovata sullo storage",
-    "conversion error, see the log": "errore durante la conversione, vedi il log"
+    "conversion error, see the log": "errore durante la conversione, vedi il log",
+    "Print PDF": "Stampa PDF",
+    "Enables the PDF sheets of tracks and POIs: the print button in the app and on the website, and their generation.": "Attiva le schede PDF di tracce e POI: il pulsante di stampa nell'app e sul sito, e la loro generazione.",
+    "Sheet generated on :date": "Scheda generata il :date"
 }

@@ -7,9 +7,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
+use Wm\WmPackage\Exceptions\MapServiceBusyException;
 use Wm\WmPackage\Jobs\Print\BuildOverviewMapJob;
 use Wm\WmPackage\Jobs\Print\BuildPrintZipJob;
-use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Services\Print\Contracts\MapRenderer;
 use Wm\WmPackage\Services\Print\MapRenderRequest;
@@ -27,15 +27,13 @@ beforeEach(function () {
     config([
         'wm-package.shard_name' => 'testshard',
         'wm-package.ec_track_model' => EcTrack::class,
-        'wm-package.features.print.overview_map.max_scale' => 50000,
+        'wm-package.print.overview_map.max_scale' => 50000,
         'cache.stores.redis.driver' => 'array',
     ]);
     Storage::fake('wmfe', ['url' => 'https://wmfe.test']);
     Cache::flush();
-    Route::group([], __DIR__.'/../../../routes/domains/print.php');
-    app('router')->getRoutes()->refreshNameLookups();
 
-    $this->printApp = App::factory()->createQuietly([
+    $this->printApp = printApp([
         'available_languages' => json_encode(['it', 'en']),
         'default_language' => 'it',
     ]);
@@ -256,7 +254,7 @@ describe('job', function () {
             ->and($request->widthMm)->toBe(200.0)
             ->and($request->heightMm)->toBe(170.0)
             ->and($request->featureCollection['features'])->toHaveCount(2)
-            ->and($request->featureCollection['features'][0]['properties'])->toBe(['id' => $a->id, 'ref' => 'A_1', 'name' => 'Sentiero & Uno'])
+            ->and($request->featureCollection['features'][0]['properties'])->toBe(['id' => $a->id, 'ref' => 'A_1', 'name' => 'Sentiero & Uno', 'stroke' => EcTrack::DEFAULT_COLOR_HEX, 'stroke-width' => 4.0])
             ->and($request->featureCollection['features'][1]['properties']['ref'])->toBe('')
             ->and($request->featureCollection['features'][0]['geometry']['type'])->toBe('MultiLineString');
 
@@ -277,6 +275,21 @@ describe('job', function () {
         expect(Storage::disk('wmfe')->getVisibility($path))->toBe('public')
             ->and(PrintStatus::getOverview($job->uniqueId()))->toBe(['status' => 'done', 'url' => 'https://wmfe.test/'.$path]);
         expect(glob(storage_path('app/print-tmp/overview-*')))->toBe([]);
+    });
+
+    it('goes back to the queue when the map service is busy, compiling nothing', function () {
+        $a = ($this->makeTrack)(9.0, 40.0, 0.01);
+        $renderer = Mockery::mock(MapRenderer::class);
+        $renderer->shouldReceive('render')->andThrow(new MapServiceBusyException('occupato', 30));
+        $compiler = Mockery::mock(XelatexCompiler::class);
+        $compiler->shouldNotReceive('compile');
+
+        $job = (new BuildOverviewMapJob([$a->id], 'it'))->withFakeQueueInteractions();
+        $job->handle(app(PrintService::class), $renderer, $compiler, app(StorageService::class));
+
+        $job->assertReleased(delay: 30);
+        expect($job->tries)->toBeGreaterThan(1)
+            ->and(Storage::disk('wmfe')->allFiles())->toBe([]);
     });
 
     it('fails with the generic message and no file when the renderer throws', function () {

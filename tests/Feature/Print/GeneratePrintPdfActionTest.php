@@ -2,9 +2,11 @@
 
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Validation\ValidationException;
 use Laravel\Nova\Actions\ActionResponse;
 use Laravel\Nova\Fields\ActionFields;
 use Laravel\Nova\Fields\MultiSelect;
+use Laravel\Nova\Http\Requests\ActionRequest;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Wm\WmPackage\Jobs\Print\GeneratePrintPdfJob;
 use Wm\WmPackage\Models\App;
@@ -21,7 +23,7 @@ beforeEach(function () {
 });
 
 it('offre le lingue dell\'app e di default solo l\'italiano', function () {
-    $app = App::factory()->createQuietly(['available_languages' => json_encode(['it', 'en'])]);
+    $app = printApp(['available_languages' => json_encode(['it', 'en'])]);
     $track = EcTrack::factory()->createQuietly(['app_id' => $app->id, 'osmid' => null]);
 
     $action = new GeneratePrintPdfAction;
@@ -36,8 +38,8 @@ it('offre le lingue dell\'app e di default solo l\'italiano', function () {
 });
 
 it('con più app offre l\'elenco di configurazione', function () {
-    $a = App::factory()->createQuietly(['available_languages' => json_encode(['it'])]);
-    $b = App::factory()->createQuietly(['available_languages' => json_encode(['en'])]);
+    $a = printApp(['available_languages' => json_encode(['it'])]);
+    $b = printApp(['available_languages' => json_encode(['en'])]);
     $tracks = collect([
         EcTrack::factory()->createQuietly(['app_id' => $a->id, 'osmid' => null]),
         EcTrack::factory()->createQuietly(['app_id' => $b->id, 'osmid' => null]),
@@ -50,7 +52,7 @@ it('con più app offre l\'elenco di configurazione', function () {
 
 it('su 3 elementi con it ed en accoda 6 job', function () {
     Queue::fake();
-    $app = App::factory()->createQuietly();
+    $app = printApp();
     $models = collect([
         EcTrack::factory()->createQuietly(['app_id' => $app->id, 'osmid' => null]),
         EcTrack::factory()->createQuietly(['app_id' => $app->id, 'osmid' => null]),
@@ -63,23 +65,18 @@ it('su 3 elementi con it ed en accoda 6 job', function () {
     expect($result)->toBeInstanceOf(ActionResponse::class);
 });
 
-it('l\'action è assente a dominio spento e presente a dominio acceso', function () {
+it('l\'action c\'è sempre su EcTrack ed EcPoi: chi può eseguirla lo decide canRun()', function () {
     $request = NovaRequest::create('/');
     $find = fn (string $resource, $model) => collect((new $resource($model))->actions($request))
         ->contains(fn ($a) => $a instanceof GeneratePrintPdfAction);
 
-    config(['wm-package.features.print.enabled' => false]);
-    expect($find(EcTrackResource::class, new EcTrack))->toBeFalse()
-        ->and($find(EcPoiResource::class, new EcPoi))->toBeFalse();
-
-    config(['wm-package.features.print.enabled' => true]);
     expect($find(EcTrackResource::class, new EcTrack))->toBeTrue()
         ->and($find(EcPoiResource::class, new EcPoi))->toBeTrue();
 });
 
 it('ignora le lingue non ammesse per l\'app del modello', function () {
     Queue::fake();
-    $app = App::factory()->createQuietly(['available_languages' => json_encode(['it', 'en'])]);
+    $app = printApp(['available_languages' => json_encode(['it', 'en'])]);
     $track = EcTrack::factory()->createQuietly(['app_id' => $app->id, 'osmid' => null]);
     $action = new GeneratePrintPdfAction;
 
@@ -92,7 +89,7 @@ it('ignora le lingue non ammesse per l\'app del modello', function () {
 });
 
 it('il default è la prima opzione se manca l\'italiano e l\'intersezione vuota ricade sulla config', function () {
-    $app = App::factory()->createQuietly(['available_languages' => json_encode(['en', 'fr'])]);
+    $app = printApp(['available_languages' => json_encode(['en', 'fr'])]);
     $track = EcTrack::factory()->createQuietly(['app_id' => $app->id, 'osmid' => null]);
     $action = new GeneratePrintPdfAction;
 
@@ -102,7 +99,47 @@ it('il default è la prima opzione se manca l\'italiano e l\'intersezione vuota 
     $field->resolveForAction($request);
     expect($field->value)->toBeArray()->toHaveCount(1);
 
-    $empty = App::factory()->createQuietly(['available_languages' => json_encode(['xx'])]);
+    $empty = printApp(['available_languages' => json_encode(['xx'])]);
     $t2 = EcTrack::factory()->createQuietly(['app_id' => $empty->id, 'osmid' => null]);
     expect(array_keys($action->languageOptions(collect([$t2]))))->toBe(array_keys(config('wm-app-languages.languages')));
+});
+
+/*
+ * In una action il MultiSelect arriva come stringa JSON e si decodifica solo nel fill: una regola
+ * `array` sul valore grezzo fallisce sempre («Il campo Lingue deve essere una lista»).
+ */
+it('accetta le lingue nel formato in cui le manda Nova', function () {
+    $action = new GeneratePrintPdfAction;
+    $validate = fn (array $payload) => $action->validateFields(
+        ActionRequest::create('/', 'POST', $payload)
+    );
+
+    expect($validate(['languages' => '["it","en"]']))->toHaveKey('languages');
+
+    foreach ([[], ['languages' => '[]'], ['languages' => 'non json']] as $payload) {
+        expect(fn () => $validate($payload))->toThrow(ValidationException::class);
+    }
+});
+
+/*
+ * L'action vale solo per gli elementi di un'App con la stampa accesa. canRun() va preso dall'istanza
+ * della Resource: un'action istanziata a mano risulta sempre autorizzata (regola Nova del package).
+ */
+it('runs only on elements of an app with print turned on', function () {
+    Queue::fake();
+    $on = printApp();
+    $off = App::factory()->createQuietly();
+    $printable = EcTrack::factory()->createQuietly(['app_id' => $on->id, 'osmid' => null]);
+    $hidden = EcTrack::factory()->createQuietly(['app_id' => $off->id, 'osmid' => null]);
+    $request = NovaRequest::create('/');
+    $action = collect((new EcTrackResource($printable))->actions($request))
+        ->first(fn ($a) => $a instanceof GeneratePrintPdfAction);
+
+    expect($action->authorizedToRun($request, $printable))->toBeTrue()
+        ->and($action->authorizedToRun($request, $hidden))->toBeFalse();
+
+    $action->handle(new ActionFields(collect(['languages' => ['it']]), collect()), collect([$printable, $hidden]));
+
+    Queue::assertPushed(GeneratePrintPdfJob::class, 1);
+    Queue::assertPushed(GeneratePrintPdfJob::class, fn ($job) => $job->model->is($printable));
 });

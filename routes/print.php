@@ -3,8 +3,8 @@
 use Illuminate\Support\Facades\Route;
 use Wm\WmPackage\Http\Controllers\PrintController;
 
-// Rotte del dominio opzionale `print` (stampa PDF delle schede, oc:8982).
-// Caricato da WmPackageServiceProvider::registerEnabledDomains() solo a dominio acceso.
+// Rotte della stampa PDF delle schede (oc:8982), caricate sempre da WmPackageServiceProvider. Rispondono
+// 404 per gli elementi di un'App senza `properties.ec_pdf_enabled` (PrintService::enabledFor()).
 // Il pulsante «Stampa» del sito è un semplice link a `print.show`.
 // Le tre rotte di stato hanno un throttle proprio (`print-status`, 60/min): la pagina d'attesa le
 // interroga ogni 5 s, e con il contatore senza prefisso condiviso con `show` e con le altre rotte

@@ -1,6 +1,8 @@
 <?php
 
+use Carbon\Carbon;
 use Wm\WmPackage\Services\Print\LatexText;
+use Wm\WmPackage\Services\Print\PrintService;
 use Wm\WmPackage\Services\Print\XelatexCompiler;
 
 beforeEach(function () {
@@ -65,6 +67,20 @@ it('omits map, photos and empty sections when data is missing', function (string
         ->not->toContain('Punti di interesse')
         ->not->toContain('\begin{Tabella}');
 })->with(['wm-package::print.ec-track', 'wm-package::print.ec-poi']);
+
+it('puts the generation date in the footer, in the language of the sheet, and leaves it out when missing', function () {
+    $this->travelTo(Carbon::parse('2026-11-24 10:00', config('app.timezone')));
+    $service = app(PrintService::class);
+
+    expect($service->generatedOn('it'))->toBe('Scheda generata il 24 novembre 2026')
+        ->and($service->generatedOn('en'))->toBe('Sheet generated on November 24, 2026');
+
+    foreach (['wm-package::print.ec-track', 'wm-package::print.ec-poi'] as $view) {
+        expect(view($view, printVars(['generatedOn' => $service->generatedOn('it')]))->render())
+            ->toContain('\PiePagina{© OpenStreetMap e contributori, Webmapp\quad Scheda generata il 24 novembre 2026}')
+            ->and(view($view, printVars())->render())->toContain('\PiePagina{© OpenStreetMap e contributori, Webmapp}');
+    }
+});
 
 it('uses labels of the requested language', function () {
     $it = view('wm-package::print.ec-track', printVars(['stats' => [['label' => printLabels('it')['Length'], 'value' => '1']]]))->render();

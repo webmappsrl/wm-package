@@ -31,7 +31,6 @@ use Wm\WmPackage\Nova\Filters\FeaturesIncludeByIds;
 use Wm\WmPackage\Nova\Traits\DispatchesDemOnDetail;
 use Wm\WmPackage\Nova\Traits\HasConfigDetailPanel;
 use Wm\WmPackage\Nova\Traits\MultiLinestringResourceTrait;
-use Wm\WmPackage\Services\FeaturesService;
 use Wm\WmPackage\Services\LayerMapWebComponentService;
 use Wm\WmPackage\TrailRegistry\Nova\Actions\UpdateWalkability;
 use Wm\WmPackage\TrailRegistry\Nova\Concerns\HasWalkabilityTab;
@@ -195,16 +194,13 @@ class EcTrack extends AbstractEcResource
     }
 
     /**
-     * L'azione di generazione della scheda PDF (oc:8982), solo a dominio `print` acceso.
+     * L'azione di generazione della scheda PDF (oc:8982): eseguibile solo sugli elementi di un'App con
+     * la stampa accesa (`canRun()` dell'action).
      *
      * @return array<int, Action>
      */
     protected function printActions(): array
     {
-        if (! FeaturesService::isEnabled('print')) {
-            return [];
-        }
-
         return [new GeneratePrintPdfAction];
     }
 

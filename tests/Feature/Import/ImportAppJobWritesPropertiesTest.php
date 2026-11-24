@@ -62,6 +62,15 @@ it('preserves false as false, never dropping it', function () {
         ->and($result['properties']['draw_poi_show'])->toBeFalse();
 });
 
+/*
+ * L'opzione che accende la stampa PDF dell'App (oc:8982, PrintService::enabledFor()) è
+ * `properties.ec_pdf_enabled`: l'import la porta dalla colonna Geohub `print_track_enable`.
+ */
+it('brings the Geohub print_track_enable column into properties.ec_pdf_enabled', function () {
+    expect(transformGeohubRow(geohubAppRow(['print_track_enable' => true]))['properties']['ec_pdf_enabled'])->toBeTrue()
+        ->and(transformGeohubRow(geohubAppRow(['print_track_enable' => false]))['properties']['ec_pdf_enabled'])->toBeFalse();
+});
+
 it('applies the one declared rename', function () {
     $result = transformGeohubRow(geohubAppRow());
 

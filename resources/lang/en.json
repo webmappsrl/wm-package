@@ -706,5 +706,8 @@
     "UgcPois already converted to EcPoi: :ids": "UgcPois already converted to EcPoi: :ids",
     "UgcPoi :id not converted: :reason": "UgcPoi :id not converted: :reason",
     "photo :media not found on storage": "photo :media not found on storage",
-    "conversion error, see the log": "conversion error, see the log"
+    "conversion error, see the log": "conversion error, see the log",
+    "Print PDF": "Print PDF",
+    "Enables the PDF sheets of tracks and POIs: the print button in the app and on the website, and their generation.": "Enables the PDF sheets of tracks and POIs: the print button in the app and on the website, and their generation.",
+    "Sheet generated on :date": "Sheet generated on :date"
 }

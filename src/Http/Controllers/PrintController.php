@@ -104,7 +104,7 @@ class PrintController extends Controller
             'failedMessage' => $failed['message'] ?? null,
             // Il noscript non deve superare il throttle di 5/min di `zip`; il polling resta attivo oltre l'attesa massima del job.
             'refreshSeconds' => 15,
-            'timeoutSeconds' => (int) config('wm-package.features.print.zip.max_wait_seconds', 1800) + 120,
+            'timeoutSeconds' => (int) config('wm-package.print.zip.max_wait_seconds', 1800) + 120,
         ])->header('Cache-Control', 'no-store, private');
     }
 
@@ -151,7 +151,7 @@ class PrintController extends Controller
         if ($bbox === null) {
             return $this->selectionError($request, 'No tracks selected.');
         }
-        $max = (int) config('wm-package.features.print.overview_map.max_scale', 50000);
+        $max = (int) config('wm-package.print.overview_map.max_scale', 50000);
         if (PrintService::overviewScale($bbox, PrintService::OVERVIEW_MAP_WIDTH_MM, PrintService::OVERVIEW_MAP_HEIGHT_MM) > $max) {
             return $this->selectionError(
                 $request,
@@ -229,7 +229,7 @@ class PrintController extends Controller
         if ($ids === []) {
             return $this->selectionError($request, 'No tracks selected.');
         }
-        $max = (int) config('wm-package.features.print.zip.max_tracks', 50);
+        $max = (int) config('wm-package.print.zip.max_tracks', 50);
         if (count($ids) > $max) {
             return $this->selectionError($request, 'Too many tracks selected: the maximum is :max.', ['max' => $max]);
         }
@@ -250,12 +250,12 @@ class PrintController extends Controller
     }
 
     /**
-     * Tracce esistenti fra gli id (le mancanti si ignorano, 404 se non ne resta nessuna) e lingua:
+     * Tracce esistenti e stampabili fra gli id (le altre si ignorano, 404 se non ne resta nessuna) e lingua:
      * deve essere in comune a tutte le App delle tracce. Se manca vale il default dell'App della
      * prima traccia se è fra le comuni, altrimenti la prima comune (404 se non ce ne sono).
      *
      * @param  list<int>  $ids
-     * @return array{0: list<int>, 1: string, 2: int}  id trovati, lingua, ultimo `updated_at` (timestamp)
+     * @return array{0: list<int>, 1: string, 2: int} id trovati, lingua, ultimo `updated_at` (timestamp)
      */
     private function resolveSelection(Request $request, array $ids): array
     {
@@ -265,7 +265,10 @@ class PrintController extends Controller
         }
 
         /** @var class-string<Model&PrintableModel> $class */
-        $tracks = $class::query()->with('app')->whereIn('id', $ids)->orderBy('id')->get();
+        // Le tracce di un'App con la stampa spenta si scartano, come quelle che non esistono.
+        $tracks = $class::query()->with('app')->whereIn('id', $ids)->orderBy('id')->get()
+            ->filter(fn (Model $track) => PrintService::enabledFor($track))
+            ->values();
         if ($tracks->isEmpty()) {
             abort(404);
         }
@@ -341,7 +344,8 @@ class PrintController extends Controller
 
         /** @var class-string<Model&PrintableModel> $class */
         $model = $class::find($key);
-        if (! $model instanceof Model || ! $model instanceof PrintableModel) {
+        // Con la stampa spenta per l'App la scheda non esiste: 404 come per un id inesistente.
+        if (! $model instanceof Model || ! $model instanceof PrintableModel || ! PrintService::enabledFor($model)) {
             abort(404);
         }
 

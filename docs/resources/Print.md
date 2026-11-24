@@ -1,26 +1,33 @@
-# Stampa PDF delle schede (dominio `print`)
+# Stampa PDF delle schede
 
 > Introdotta con oc:8982. Fonte di verità sulle decisioni:
 > [`docs/features/8982-stampa-scheda-pdf-di-sentieri-e-punti-di-interesse-generata-dallo-shard/overview.md`](../features/8982-stampa-scheda-pdf-di-sentieri-e-punti-di-interesse-generata-dallo-shard/overview.md).
 
-Il dominio produce tre file stampabili: la **scheda PDF** di un `EcTrack` o di un `EcPoi` in una
+La stampa produce tre file stampabili: la **scheda PDF** di un `EcTrack` o di un `EcPoi` in una
 lingua, lo **ZIP delle schede** di più `EcTrack`, la **mappa d'insieme** in PDF di più `EcTrack`. Il
 PDF si compone in LaTeX (`xelatex` nell'immagine PHP dello shard); la mappa è un PNG chiesto a un
-servizio esterno (oc:9011). È un [dominio opzionale](OptionalDomains.md): spento, nulla di tutto
-questo esiste.
+servizio di stampa di wm-tiles (oc:9011). Non è un dominio opzionale (scrum del 24/11): il codice c'è su ogni
+shard che monta il package, e la stampa vale solo per gli elementi di un'App con l'opzione accesa (vedi
+«L'opzione dell'App»). Fino al 24/11 c'era anche un interruttore per shard, `WM_PRINT_ENABLED`, tolto.
 
-## Attivazione
+## Configurazione
 
-`config/wm-package.php`, sezione `features.print`:
+`config/wm-package.php`, sezione `print`:
 
 | Chiave | Env | Default |
 |---|---|---|
-| `enabled` | `WM_PRINT_ENABLED` | `false` |
 | `queue` | `WM_PRINT_QUEUE` | `print` |
 | `map_service.driver` | `WM_PRINT_MAP_DRIVER` | `fake` (l'altro valore è `http`) |
 | `map_service.url` | `WM_PRINT_MAP_SERVICE_URL` | `null` |
 | `map_service.token` | `WM_PRINT_MAP_SERVICE_TOKEN` | `null` |
-| `map_service.timeout` | | 60 s |
+| `map_service.timeout` | | 60 s: oltre, il Job si rimette in coda |
+| `map_service.dpi` | | 300 |
+| `map_service.style_id` | | `webmapp` (l'unico stile del servizio) |
+| `map_service.map_info` | | `true`: scala, nord e attribuzioni disegnati sulla mappa |
+| `map_service.stroke_width` | | 4 (pixel css, il servizio li moltiplica per la stampa) |
+| `map_service.stroke_color` | `WM_PRINT_MAP_STROKE_COLOR` | `null`. Un `#rrggbb` vale per tutte le tracce dello shard e vince sul colore del layer |
+| `map_service.max_zoom` | | `null`: quello del servizio, 16. Ferma l'ingrandimento su una traccia corta o un POI: su un A4 un sentiero di 1 km esce a 1:21.500 con 16, a 1:5.400 con 18 |
+| `map_service.padding_mm` | | `null`: quello del servizio, 8 mm di carta (convertiti in pixel al dpi chiesto) |
 | `compile.timeout` | | 120 s |
 | `compile.memory_mb` | | 1024 |
 | `photos.max_bytes`, `photos.max_pixels` | | 30 MB, 50.000.000 px (oltre, la foto si salta) |
@@ -31,9 +38,9 @@ questo esiste.
 | `overview_map.max_scale` | | 50000 (1:50.000) |
 | `deps_version` | | contenuto di `docker/render/VERSION`, `null` se il file non c'è |
 
-Con il dominio acceso compaiono:
+Su ogni shard ci sono:
 
-- le rotte di `routes/domains/print.php` (caricate da `registerEnabledDomains()`):
+- le rotte di `routes/print.php`, caricate al boot da `WmPackageServiceProvider`:
 
   | Nome | Percorso | Throttle |
   |---|---|---|
@@ -52,10 +59,48 @@ Con il dominio acceso compaiono:
 - il comando `wm:print-cleanup`;
 - l'Action Nova `GeneratePrintPdfAction` su `EcTrack` ed `EcPoi`: genera le schede degli elementi
   selezionati nelle lingue scelte (MultiSelect fra quelle dell'app, default `it`);
-- `properties.print_url` nel dettaglio di `EcTrack` (`getDetailGeojson()`), senza `lang`: la lingua
-  la sceglie la rotta. Il package non ha un endpoint di dettaglio POI: lo shard aggiunge la chiave
-  al proprio con `PrintService::sheetUrl('ec-poi', $id)`, che dà `null` a dominio spento;
-- il Job di rigenerazione nei `publicationJobs` di `EcTrack` e nel `saved` di `EcPoiObserver`.
+- la data di generazione nel piè di pagina (`$generatedOn`, `PrintService::generatedOn()`).
+
+Nel JSON della traccia e del POI non c'è il link alla scheda (scrum del 24/11): frontend e plugin
+WordPress mostrano il pulsante se `OPTIONS.ec_pdf_enabled` del `config.json` è acceso, e
+costruiscono da sé l'URL della rotta, `<shard>/print/ec-track/{id}` o `<shard>/print/ec-poi/{id}`.
+Così accendere o spegnere l'opzione non chiede di riscrivere su `wmfe` il JSON di tutte le tracce.
+
+### L'opzione dell'App
+
+La stampa vale per un elemento solo se la sua App la accende: `properties.ec_pdf_enabled` dell'App, campo «Print PDF»
+nel tab `frontend` della Resource `App`, spenta se manca. Il controllo è uno,
+`PrintService::enabledFor($model)`, e vale per tracce e POI.
+
+Con l'opzione spenta non esiste nulla per gli elementi di quell'App:
+
+| Punto | Comportamento |
+|---|---|
+| `GeneratePrintPdfJob::dispatchFor()` | non accoda nulla (è l'unico ingresso dei Job di generazione) |
+| `print.show`, `print.status` | 404, come per un id inesistente |
+| `print.zip`, `print.overview-map` | le tracce dell'App si scartano; 404 se non ne resta nessuna |
+| Action Nova | non eseguibile su quegli elementi (`canRun()`) |
+| `config.json` | `OPTIONS.ec_pdf_enabled` (e la deprecata `print_track_enable`) è `false`: il frontend nasconde il pulsante |
+
+Su Geohub l'opzione è la colonna `apps.print_track_enable` («Print Track»). Qui è una property, come
+le opzioni recenti: la colonna `print_track_enable` esiste ancora su `apps` ma non si usa. L'import
+porta il valore di Geohub in `properties.ec_pdf_enabled` (`ImportedAppProperties`, rinomina
+dichiarata). Nel `config.json` la chiave è `OPTIONS.ec_pdf_enabled`; c'è anche
+`OPTIONS.print_track_enable`, **deprecata**, con lo stesso valore: la leggono la web app e l'app, ferme alla
+chiave di Geohub, e si toglie quando sono passate alla nuova. Il flag per singola traccia di Geohub (`allow_print_pdf`,
+link «Print PDF» in `related_url`) non è usato: la scheda vale per tutti gli elementi dell'App.
+
+Uno shard che passa a questa versione del package deve accendere l'opzione sulle App che stampavano
+già, altrimenti la stampa si spegne.
+
+**Prima di accendere l'opzione** lo shard deve essere pronto, perché nessun interruttore lo verifica:
+
+1. TeX Live nell'immagine PHP: nel Dockerfile dello shard `COPY --from=wmpackage install-deps.sh VERSION
+   /tmp/wm-print/` e `RUN bash /tmp/wm-print/install-deps.sh`, con il contesto `wmpackage` verso
+   `wm-package/docker/render` nel compose (`docker/render/README.md`). Senza, la compilazione fallisce;
+2. il supervisor della coda `print` in Horizon (`config/horizon.php` dello shard). Senza, i Job restano in
+   coda e la pagina d'attesa scade;
+3. URL e token del servizio mappe nel `.env` (`WM_PRINT_MAP_DRIVER=http`). Senza, la mappa è il segnaposto.
 
 Il log va sul canale `print` (`storage/logs/print.log`, da `config/wm-logging.php`).
 
@@ -83,7 +128,7 @@ che conserva i metadati, verificato su MinIO.
 
 **I termini contano come modifiche.** La freschezza guarda `updated_at`, ma un termine aggiunto o
 tolto (validazione e percorribilità da `TrailStatusService::set()`, termini salvati in Nova) si scrive
-solo nel pivot. Con il dominio acceso `TaxonomyTermableObserver` aggiorna `updated_at` di tracce e POI
+solo nel pivot. `TaxonomyTermableObserver` aggiorna `updated_at` di tracce e POI
 a ogni legame che cambia, con una UPDATE senza observer, anche dentro un import: la scheda risulta
 vecchia e la richiesta successiva la rigenera.
 
@@ -91,8 +136,7 @@ vecchia e la richiesta successiva la rigenera.
 il lock di unicità vale mentre il Job è in coda e si libera quando l'esecuzione parte, così la
 generazione si può riaccodare mentre è in corso. Un salvataggio che arriva durante la generazione
 (dati letti prima, PDF scritto dopo) lascerebbe un PDF vecchio scritto dopo `updated_at`, cioè fresco
-finché qualcuno non salva di nuovo: alla prima generazione `RegeneratePrintPdfsJob` non trova lingue
-da rifare, e sulle sottoclassi degli shard l'observer del modello del package non scatta. Per questo
+finché qualcuno non salva di nuovo, perché le schede si rigenerano solo a richiesta. Per questo
 il Job confronta `updated_at` prima e dopo la generazione e, se è cambiato, si riaccoda invece di
 segnare `done`. Due esecuzioni per lo stesso modello e lingua non
 si sovrappongono: il middleware `WithoutOverlapping` (chiave = `uniqueId()`) rimette in coda la
@@ -107,15 +151,17 @@ Nova li accoda dentro la transazione di Nova, e con `CACHE_STORE=database` un lo
 farebbe fallire la transazione con `25P02` (oc:8564). Il lock di `WithoutOverlapping` si prende nel
 worker, fuori da transazioni, sullo store di default.
 
-**Rigenerazione.** `RegeneratePrintPdfsJob` rigenera **solo le lingue che hanno già** un
-`print-{locale}.pdf`: un elemento mai stampato non genera nulla. Parte nei `publicationJobs` di
-`EcTrack` e a ogni salvataggio di un `EcPoi` (che già innesca anche la catena dei sentieri
-collegati). Dal `saved` di `EcPoiObserver` parte con `afterCommit()`: partito prima del commit,
-leggerebbe i dati vecchi e scriverebbe un PDF più recente del nuovo `updated_at`, quindi «fresco».
-Nei `publicationJobs` è invece l'ultimo anello di `Bus::chain()` in `updateDataChain()`, che **non** è
-accodata dopo il commit: il rischio resta se l'intera catena finisce prima del commit del salvataggio,
-cosa improbabile perché la precedono i Job AWS e delle relazioni. La cancellazione dell'elemento
-cancella i PDF con la cartella dei file del modello.
+**Rigenerazione solo a richiesta** (scrum del 24/11). Un salvataggio non rigenera nulla: sposta
+`updated_at`, la scheda già scritta non risulta più fresca (`isFresh()`) e si rifà alla prossima
+richiesta. Così una traccia modificata dieci volte di seguito non produce dieci generazioni, e una
+scheda che nessuno chiede più non costa nulla. Non si distingue fra mappa e dati: la mappa non si
+conserva a parte, e a ogni generazione si rifanno entrambe.
+
+Il limite: conta solo `updated_at` dell'elemento (più i termini, sopra). Una modifica che non lo
+sposta, per esempio un POI collegato a una traccia che cambia nome, non rende vecchia la scheda della
+traccia: resta quella di prima finché la traccia non cambia o non si rigenera con l'Action Nova.
+
+La cancellazione dell'elemento cancella i PDF con la cartella dei file del modello.
 
 **ZIP.** `print.zip` riceve fino a `zip.max_tracks` id (interi, senza duplicati; vuoto o troppi
 danno una pagina `422`). La lingua deve essere comune a tutte le App delle tracce. Stesso flusso della
@@ -141,7 +187,7 @@ d'insieme) più vecchi di 24 ore, solo dello shard corrente, e ogni cartella sot
 `storage/app/print-tmp/` più vecchia di 24 ore: le cartelle di lavoro di ZIP (`zip-*`), mappa
 d'insieme (`overview-*`), foto della scheda (`assets-*`) e del compilatore (uuid) lasciate da un Job
 morto a metà. Lo schedula il package
-(`ScheduleServiceProvider`, `daily()`), solo a dominio acceso: lo shard non deve fare nulla.
+(`ScheduleServiceProvider`, `daily()`): lo shard non deve fare nulla.
 
 ## Il logo
 
@@ -171,13 +217,34 @@ c'è un'App univoca da cui prenderlo.
 `map_service.driver`:
 
 - `fake` (default): `FakeMapRenderer` logga la richiesta e restituisce `resources/print/map-placeholder.png`.
-  Resta il default finché il servizio non esiste (oc:9011);
-- `http`: `HttpMapRenderer`, POST a `map_service.url` con token Bearer opzionale. È uno scheletro: il
-  contratto (autenticazione, formato di ritorno) si completa con oc:9011.
+  Serve allo sviluppo e ai test;
+- `http`: `HttpMapRenderer`, il servizio di stampa di wm-tiles (oc:9011). `map_service.url` è
+  `https://origine.tiles.maphub.it/v1/print/map`, il token è uno per shard e lo dà chi gestisce wm-tiles.
+  Documentazione e schema del servizio, aperti senza token: `/v1/print/docs` e `/v1/print/openapi.json` sullo
+  stesso host. Lo schema è la validazione del servizio: un campo non previsto è un `400`.
 
-La richiesta è `MapRenderRequest` con `shard` (da `wm-package.shard_name`), `feature_collection`
-(una feature per sentiero o punto, con `id`, `ref`, `name`), `width_mm`, `height_mm`. Un errore del
-servizio risale: la scheda non si genera e il PDF esistente resta.
+La richiesta è `MapRenderRequest`: `feature_collection` (una feature per sentiero o punto) e l'area in mm in
+cui la mappa va nel PDF. `toServiceBody()` la traduce nel corpo del servizio:
+
+- **la pagina**: il servizio rende solo pagine intere A5 o A4. L'orientamento segue l'area, il formato è il più
+  piccolo che la contiene (`page()`): 210 x 297 → A4 verticale (Forestas), 174 x 98 → A5 orizzontale
+  (default), 200 x 170 → A4 orizzontale (mappa d'insieme). La view la mette nell'area con `keepaspectratio`:
+  dove le proporzioni non coincidono resta un margine bianco;
+- **il disegno**: `stroke` e `stroke-width` nelle `properties` di ogni feature (`PrintService::mapStroke()`).
+  Il colore è, in quest'ordine: `map_service.stroke_color` dello shard; il colore del layer della traccia (il
+  primo per rank, `EcTrack::getInheritedTrackColorHex()`, lo stesso che usano le app); `EcTrack::DEFAULT_COLOR_HEX`
+  (`#FF0000`) se la traccia non ha un layer con un colore, e per i POI. Nome, id e `ref` restano nella richiesta per il renderer finto, ma al servizio
+  non arrivano: le tracce non pubblicate non escono dallo shard con il loro nome;
+- **le coordinate** perdono la quota e si arrotondano a 6 decimali (circa 10 cm): il servizio rifiuta un
+  corpo oltre 2 MiB e oltre 100.000 coordinate.
+
+La scala non si chiede: esce dall'inquadratura (un sentiero di 10 km su un A4 viene circa 1:35.000).
+
+**Servizio occupato.** Due rendering alla volta, 4-6 s ciascuno per un A4 a 300 dpi. `429`, `503`, `504` e un
+timeout danno `MapServiceBusyException` con il `Retry-After` del servizio (30 s se manca): `GeneratePrintPdfJob`
+e `BuildOverviewMapJob` si rimettono in coda con `release()`, senza fallire, e lo stato resta `queued`. Ogni
+altro errore (`400`, `401`, `413`, un corpo che non è un PNG) è un difetto della richiesta o della
+configurazione: la scheda non si genera e il PDF esistente resta.
 
 ## Personalizzazione per shard e per App
 
@@ -220,7 +287,7 @@ default. `PrintService::styleFiles()` restituisce solo `wm-print`; resta un elen
 nel contratto delle view, perché gli override esistenti lo scorrono con `@foreach`: nessun override si
 rompe, ma non ci sono più altri stili da includere.
 
-**Dimensioni della mappa.** `features.print.map.width_mm` e `height_mm` (default 174 x 98) vanno sia al
+**Dimensioni della mappa.** `print.map.width_mm` e `height_mm` (default 174 x 98) vanno sia al
 servizio mappe sia alla view (`$mapWidthMm`, `$mapHeightMm`): uno shard che vuole la mappa grande la
 chiede grande, invece di ingrandire un PNG piccolo, e impagina con le stesse variabili. La view di default
 usa la larghezza della colonna e l'altezza configurata: l'altezza passa da `0.38\textheight` a `height=98mm` (cambio voluto, a parità di resa su A4). La mappa d'insieme ha un'area propria (200 x 170 mm).
@@ -291,11 +358,16 @@ Dettagli in [`docker/render/README.md`](../../docker/render/README.md). Nello sh
 
 ## Trappole
 
-- Le rotte del dominio si caricano al boot: un test che cambia `features.print.enabled` deve
-  richiamare `registerEnabledDomains` del service provider con reflection (vedi `tests/Feature/Print/PrintRoutesTest.php`).
+- Un test della stampa deve creare l'App con `properties.ec_pdf_enabled` acceso (`printApp()` in
+  `tests/Support/PrintHelpers.php`): altrimenti
+  `PrintService::enabledFor()` è falso, la rotta risponde 404 e nessun Job parte, senza errori.
+- Nella richiesta di un'Action Nova il `MultiSelect` è una stringa JSON, decodificata solo nel
+  fill: una regola `array` sul campo fallisce sempre («Il campo Lingue deve essere una lista»).
+  `GeneratePrintPdfAction` valida con `json` e una closure; il test usa `validateFields()` con il
+  payload come lo manda Nova.
 - I test di compilazione (`XelatexCompilerTest` e quelli che compilano) si saltano con
   `skip(! is_executable('/usr/bin/xelatex'))`: succede solo dove `xelatex` manca (per esempio in CI).
 - La rotta della scheda accoda un Job quando il PDF manca: il sito deve mettere `rel="nofollow"` sul
   link «Stampa» e un `Disallow` per `/print/` in `robots.txt`, o un crawler accoda una compilazione per
   ogni scheda.
-- Con `map_service.driver=fake` i PDF hanno la mappa segnaposto: in produzione serve `http` e oc:9011.
+- Con `map_service.driver=fake` i PDF hanno la mappa segnaposto: in produzione serve `http`, con URL e token.

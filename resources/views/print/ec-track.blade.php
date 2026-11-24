@@ -27,7 +27,9 @@
                       che vuole altri colori o font li definisce nel preambolo della propria view (prima di
                       \WmDefineRoles) o ridefinisce i ruoli. Il chiamante allega i file.
   - $mapWidthMm, $mapHeightMm  dimensioni (mm) della mappa chieste al servizio mappe
-                      (features.print.map.width_mm/height_mm, default 174 x 98)
+                      (print.map.width_mm/height_mm, default 174 x 98)
+  - $generatedOn      data di generazione per il piè di pagina, già escaped
+                      («Scheda generata il 24 novembre 2026», PrintService::generatedOn())
   - $labels           array chiave inglese -> testo tradotto (già escaped), tra cui Length,
                        Ascent, Descent, Duration, Difficulty, Description, Map, Photos,
                        Points of interest e la riga di credito OSM
