@@ -4,7 +4,7 @@
 > [`docs/features/8982-stampa-scheda-pdf-di-sentieri-e-punti-di-interesse-generata-dallo-shard/overview.md`](../features/8982-stampa-scheda-pdf-di-sentieri-e-punti-di-interesse-generata-dallo-shard/overview.md).
 
 La stampa produce tre file stampabili: la **scheda PDF** di un `EcTrack` o di un `EcPoi` in una
-lingua, lo **ZIP delle schede** di più `EcTrack`, la **mappa d'insieme** in PDF di più `EcTrack`. Il
+lingua, lo **ZIP delle schede** di più `EcTrack` o di più `EcPoi`, la **mappa d'insieme** in PDF di più `EcTrack`. Il
 PDF si compone in LaTeX (`xelatex` nell'immagine PHP dello shard); la mappa è un PNG chiesto a un
 servizio di stampa di wm-tiles (oc:9011). Non è un dominio opzionale (scrum del 24/11): il codice c'è su ogni
 shard che monta il package, e la stampa vale solo per gli elementi di un'App con l'opzione accesa (vedi
@@ -48,7 +48,7 @@ Su ogni shard ci sono:
   |---|---|---|
   | `print.show` | `GET /print/{type}/{id}?lang=` (`type` è `ec-track` o `ec-poi`) | 30/min |
   | `print.status` | `GET /print/{type}/{id}/status` | 60/min (prefisso `print-status`) |
-  | `print.zip` | `GET /print/zip?ids[]=&lang=` | 5/min (prefisso `print-zip`) |
+  | `print.zip` | `GET /print/zip?ids[]=&lang=&type=` (`type` `ec-track` di serie, o `ec-poi`) | 5/min (prefisso `print-zip`) |
   | `print.zip.status` | `GET /print/zip/status` | 60/min (prefisso `print-status`) |
   | `print.overview-map` | `GET /print/overview-map?ids[]=&lang=` | 5/min (prefisso `print-overview`) |
   | `print.overview-map.status` | `GET /print/overview-map/status` | 60/min (prefisso `print-status`) |
@@ -59,8 +59,11 @@ Su ogni shard ci sono:
   `wm-package.ec_track_model`: lo shard che ha sottoclassi le dichiara lì.
 
 - il comando `wm:print-cleanup`;
-- l'Action Nova `GeneratePrintPdfAction` su `EcTrack` ed `EcPoi`: genera le schede degli elementi
-  selezionati nelle lingue scelte (MultiSelect fra quelle dell'app, default `it`);
+- l'Action Nova `GeneratePrintPdfAction` («Download print PDF») su `EcTrack` ed `EcPoi`: con un elemento
+  selezionato apre in una nuova scheda `print.show`, con più elementi `print.zip` (dello stesso tipo). Le
+  due pagine generano ciò che manca, mostrano l'attesa e portano al file: l'action non accoda nulla. Una
+  lingua sola (`Select` fra quelle dell'App, proposta la sua lingua di default), perché ogni esecuzione
+  apre una sola pagina. Oltre `zip.max_tracks` elementi si ferma con un messaggio;
 - la data di generazione nel piè di pagina (`$generatedOn`, `PrintService::generatedOn()`).
 
 Nel JSON della traccia e del POI non c'è il link alla scheda (scrum del 24/11): frontend e plugin
@@ -168,7 +171,11 @@ traccia: resta quella di prima finché la traccia non cambia o non si rigenera c
 La cancellazione dell'elemento cancella i PDF con la cartella dei file del modello.
 
 **ZIP.** `print.zip` riceve fino a `zip.max_tracks` id (interi, senza duplicati; vuoto o troppi
-danno una pagina `422`). La lingua deve essere comune a tutte le App delle tracce. Stesso flusso della
+danno una pagina `422`) di tracce o, con `type=ec-poi`, di POI (`PrintService::modelClass()`). La chiave
+dello ZIP delle tracce è quella di prima; quella dei POI contiene anche il tipo. La lingua deve essere
+comune a tutte le App degli elementi. Quando lo ZIP è pronto la pagina d'attesa avvia il download, dice che si può chiudere
+(con un link «Scarica di nuovo») e dopo 2 s prova a chiudersi: il browser lo permette solo alle schede aperte
+da uno script, come quella dell'action di Nova. La scheda PDF invece si apre nella stessa pagina. Stesso flusso della
 scheda, ma `BuildPrintZipJob` è un assemblatore breve: accoda i `GeneratePrintPdfJob` mancanti e si
 rilascia (`release()`, ogni 15 s) finché sono pronti, poi costruisce lo ZIP in
 `{shard}/print-tmp/zip/` su `wmfe`. Basta una scheda fallita perché lo ZIP fallisca. Fresco se ha meno di 24 ore e non è
@@ -208,8 +215,8 @@ sul canale `print`: il logo non fa mai fallire la scheda.
 
 Un cambio del logo o del `primary_color` dell'App **non rigenera** le schede già generate: la
 freschezza guarda l'`updated_at` del modello (traccia o POI), non quello dell'App. I PDF restano con il
-logo e il colore vecchi finché il sentiero o il POI non cambia, o finché non si rigenerano a mano
-(Action Nova «Generate print PDF»). `wm:print-cleanup` non li tocca: cancella solo ZIP e mappe d'insieme.
+logo e il colore vecchi finché il sentiero o il POI non cambia: l'action Nova apre la scheda esistente se
+è fresca, non la rifà. `wm:print-cleanup` non li tocca: cancella solo ZIP e mappe d'insieme.
 
 La mappa d'insieme non ha logo: le tracce selezionate possono appartenere ad App diverse, quindi non
 c'è un'App univoca da cui prenderlo.
@@ -385,9 +392,9 @@ Dettagli in [`docker/render/README.md`](../../docker/render/README.md). Nello sh
   `tests/Support/PrintHelpers.php`): altrimenti
   `PrintService::enabledFor()` è falso, la rotta risponde 404 e nessun Job parte, senza errori.
 - Nella richiesta di un'Action Nova il `MultiSelect` è una stringa JSON, decodificata solo nel
-  fill: una regola `array` sul campo fallisce sempre («Il campo Lingue deve essere una lista»).
-  `GeneratePrintPdfAction` valida con `json` e una closure; il test usa `validateFields()` con il
-  payload come lo manda Nova.
+  fill: una regola `array` sul campo fallisce sempre («Il campo Lingue deve essere una lista»). Oggi
+  `GeneratePrintPdfAction` ha un `Select` (una lingua), validato con `Rule::in`; il test usa
+  `validateFields()` con il payload come lo manda Nova.
 - I test di compilazione (`XelatexCompilerTest` e quelli che compilano) si saltano con
   `skip(! is_executable('/usr/bin/xelatex'))`: succede solo dove `xelatex` manca (per esempio in CI).
 - La rotta della scheda accoda un Job quando il PDF manca: il sito deve mettere `rel="nofollow"` sul

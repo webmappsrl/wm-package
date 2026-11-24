@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 use Wm\WmPackage\Models\Abstracts\GeometryModel;
+use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Services\Print\Contracts\MapRenderer;
@@ -427,6 +428,34 @@ class PrintService
         $name = trim($name);
 
         return $name !== '' && mb_strlen($name) <= 60 && preg_match('/^[\p{L}\p{N} -]+$/Du', $name) ? $name : null;
+    }
+
+    /**
+     * La classe del modello per il tipo della rotta (`ec-track`, `ec-poi`): quella configurata, che lo
+     * shard può sostituire con una sottoclasse. Null se il tipo non esiste o la classe non è stampabile.
+     *
+     * @return class-string<Model&PrintableModel>|null
+     */
+    public static function modelClass(string $type): ?string
+    {
+        $class = match ($type) {
+            'ec-track' => config('wm-package.ec_track_model'),
+            'ec-poi' => config('wm-package.ec_poi_model', EcPoi::class),
+            default => null,
+        };
+
+        if (! is_string($class) || ! is_subclass_of($class, Model::class) || ! is_subclass_of($class, PrintableModel::class)) {
+            return null;
+        }
+
+        /** @var class-string<Model&PrintableModel> $class */
+        return $class;
+    }
+
+    /** Il tipo della rotta per un modello: `ec-poi` per un POI, altrimenti `ec-track`. */
+    public static function typeOf(Model $model): string
+    {
+        return $model instanceof EcPoi ? 'ec-poi' : 'ec-track';
     }
 
     /**

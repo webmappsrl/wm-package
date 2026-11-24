@@ -10,7 +10,6 @@ use Wm\WmPackage\Jobs\Print\BuildOverviewMapJob;
 use Wm\WmPackage\Jobs\Print\BuildPrintZipJob;
 use Wm\WmPackage\Jobs\Print\GeneratePrintPdfJob;
 use Wm\WmPackage\Models\App;
-use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Services\Print\Contracts\PrintableModel;
 use Wm\WmPackage\Services\Print\PrintService;
 use Wm\WmPackage\Services\Print\PrintStatus;
@@ -70,8 +69,9 @@ class PrintController extends Controller
     }
 
     /**
-     * ZIP delle schede di più tracce (`?ids[]=…&lang=`): stessa logica di `show` (redirect se lo ZIP
-     * è fresco, altrimenti job e pagina d'attesa). Lo stato è su `zipStatus`.
+     * ZIP delle schede di più tracce o POI (`?ids[]=…&lang=&type=`, `type` `ec-track` di serie o
+     * `ec-poi`): stessa logica di `show` (redirect se lo ZIP è fresco, altrimenti job e pagina
+     * d'attesa). Lo stato è su `zipStatus`.
      */
     public function zip(Request $request, StorageService $storage): Response
     {
@@ -79,8 +79,9 @@ class PrintController extends Controller
         if ($ids instanceof Response) {
             return $ids;
         }
-        [$ids, $locale, $updatedAt] = $this->resolveSelection($request, $ids);
-        $key = BuildPrintZipJob::key($ids, $locale);
+        $type = $this->zipType($request);
+        [$ids, $locale, $updatedAt] = $this->resolveSelection($request, $ids, $type);
+        $key = BuildPrintZipJob::key($ids, $locale, $type);
 
         $fresh = $this->zipFreshUrl($storage, $key, $locale, $updatedAt);
         if ($fresh !== null) {
@@ -91,15 +92,17 @@ class PrintController extends Controller
         $failed = ($failed['status'] ?? null) === PrintStatus::FAILED ? $failed : null;
 
         if ($failed === null || $request->boolean('retry')) {
-            BuildPrintZipJob::dispatchFor($ids, $locale);
+            BuildPrintZipJob::dispatchFor($ids, $locale, $type);
             $failed = null;
         }
 
-        $query = ['ids' => $ids, 'lang' => $locale];
+        $query = ['ids' => $ids, 'lang' => $locale, 'type' => $type];
 
         return response()->view('wm-package::print.waiting', [
             'locale' => $locale,
             'statusUrl' => route('print.zip.status', $query),
+            // Lo ZIP si scarica, non si apre: la pagina avvia il download e prova a chiudersi.
+            'download' => true,
             'retryUrl' => route('print.zip', $query + ['retry' => 1]),
             'failedMessage' => $failed['message'] ?? null,
             // Il noscript non deve superare il throttle di 5/min di `zip`; il polling resta attivo oltre l'attesa massima del job.
@@ -114,8 +117,9 @@ class PrintController extends Controller
         if ($ids instanceof Response) {
             return response()->json(['message' => 'Invalid selection'], 422);
         }
-        [$ids, $locale, $updatedAt] = $this->resolveSelection($request, $ids);
-        $key = BuildPrintZipJob::key($ids, $locale);
+        $type = $this->zipType($request);
+        [$ids, $locale, $updatedAt] = $this->resolveSelection($request, $ids, $type);
+        $key = BuildPrintZipJob::key($ids, $locale, $type);
 
         $status = PrintStatus::getZip($key);
         if ($status === null) {
@@ -249,18 +253,29 @@ class PrintController extends Controller
         ], 422)->header('Cache-Control', 'no-store, private');
     }
 
+    /** Il tipo dello ZIP (`?type=`): `ec-track` se manca, 404 se non è un tipo stampabile. */
+    private function zipType(Request $request): string
+    {
+        $type = $request->query('type', 'ec-track');
+        if (! is_string($type) || ! in_array($type, self::TYPES, true)) {
+            abort(404);
+        }
+
+        return $type;
+    }
+
     /**
-     * Tracce esistenti e stampabili fra gli id (le altre si ignorano, 404 se non ne resta nessuna) e lingua:
-     * deve essere in comune a tutte le App delle tracce. Se manca vale il default dell'App della
-     * prima traccia se è fra le comuni, altrimenti la prima comune (404 se non ce ne sono).
+     * Elementi esistenti e stampabili fra gli id (gli altri si ignorano, 404 se non ne resta nessuno) e
+     * lingua: deve essere in comune a tutte le loro App. Se manca vale il default dell'App del primo
+     * elemento se è fra le comuni, altrimenti la prima comune (404 se non ce ne sono).
      *
      * @param  list<int>  $ids
      * @return array{0: list<int>, 1: string, 2: int} id trovati, lingua, ultimo `updated_at` (timestamp)
      */
-    private function resolveSelection(Request $request, array $ids): array
+    private function resolveSelection(Request $request, array $ids, string $type = 'ec-track'): array
     {
-        $class = config('wm-package.ec_track_model');
-        if (! is_string($class) || ! is_subclass_of($class, PrintableModel::class)) {
+        $class = PrintService::modelClass($type);
+        if ($class === null) {
             abort(404);
         }
 
@@ -331,14 +346,10 @@ class PrintController extends Controller
      */
     private function resolve(Request $request, string $type, string $id): array
     {
-        $class = match ($type) {
-            'ec-track' => config('wm-package.ec_track_model'),
-            // Lo shard può sostituire il modello del POI con una sottoclasse (come in Nova\Layer).
-            'ec-poi' => config('wm-package.ec_poi_model', EcPoi::class),
-            default => null,
-        };
+        // Lo shard può sostituire i modelli con una sottoclasse (come in Nova\Layer).
+        $class = PrintService::modelClass($type);
         $key = filter_var($id, FILTER_VALIDATE_INT);
-        if ($class === null || $key === false || ! is_subclass_of($class, PrintableModel::class)) {
+        if ($class === null || $key === false) {
             abort(404);
         }
 

@@ -719,9 +719,7 @@
     "The PDF could not be generated": "Impossibile generare il PDF",
     "Try again": "Riprova",
     "The PDF is taking longer than expected. Please try again later.": "Il PDF richiede più tempo del previsto. Riprova più tardi.",
-    "Generate print PDF": "Genera scheda PDF",
     "Languages": "Lingue",
-    "PDF generations queued": "Generazioni PDF accodate",
     "No tracks selected.": "Nessuna traccia selezionata.",
     "Too many tracks selected: the maximum is :max.": "Troppe tracce selezionate: il massimo è :max.",
     "Overview map": "Mappa d'insieme",
@@ -734,5 +732,12 @@
     "conversion error, see the log": "errore durante la conversione, vedi il log",
     "Print PDF": "Stampa PDF",
     "Enables the PDF sheets of tracks and POIs: the print button in the app and on the website, and their generation.": "Attiva le schede PDF di tracce e POI: il pulsante di stampa nell'app e sul sito, e la loro generazione.",
-    "Sheet generated on :date": "Scheda generata il :date"
+    "Sheet generated on :date": "Scheda generata il :date",
+    "Download print PDF": "Scarica la scheda PDF",
+    "Language": "Lingua",
+    "No selected element can be printed in this language.": "Nessun elemento selezionato si può stampare in questa lingua.",
+    "Too many elements selected: the maximum is :max.": "Troppi elementi selezionati: il massimo è :max.",
+    "Your download has started": "Il download è partito",
+    "You can close this page.": "Puoi chiudere questa pagina.",
+    "Download again": "Scarica di nuovo"
 }

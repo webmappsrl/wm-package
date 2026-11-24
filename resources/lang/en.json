@@ -694,9 +694,7 @@
     "The PDF could not be generated": "The PDF could not be generated",
     "Try again": "Try again",
     "The PDF is taking longer than expected. Please try again later.": "The PDF is taking longer than expected. Please try again later.",
-    "Generate print PDF": "Generate print PDF",
     "Languages": "Languages",
-    "PDF generations queued": "PDF generations queued",
     "No tracks selected.": "No tracks selected.",
     "Too many tracks selected: the maximum is :max.": "Too many tracks selected: the maximum is :max.",
     "Overview map": "Overview map",
@@ -709,5 +707,12 @@
     "conversion error, see the log": "conversion error, see the log",
     "Print PDF": "Print PDF",
     "Enables the PDF sheets of tracks and POIs: the print button in the app and on the website, and their generation.": "Enables the PDF sheets of tracks and POIs: the print button in the app and on the website, and their generation.",
-    "Sheet generated on :date": "Sheet generated on :date"
+    "Sheet generated on :date": "Sheet generated on :date",
+    "Download print PDF": "Download print PDF",
+    "Language": "Language",
+    "No selected element can be printed in this language.": "No selected element can be printed in this language.",
+    "Too many elements selected: the maximum is :max.": "Too many elements selected: the maximum is :max.",
+    "Your download has started": "Your download has started",
+    "You can close this page.": "You can close this page.",
+    "Download again": "Download again"
 }

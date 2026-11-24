@@ -188,3 +188,14 @@ dalla rotta dello shard; il servizio delle mappe con token e IP è oc:9011.
 - `\TitoloSezione` non resta solo in fondo a una pagina (`needspace`, `\nobreak`, `\@afterheading`). La scheda
   di default non ha un limite di pagine. Tolto un `\makeatother` a metà di `wm-print.sty`, che rendeva `@` non
   più lettera per le macro sotto.
+
+## Ottavo giro: l'action scarica
+
+- L'action Nova («Download print PDF») non accoda più le generazioni: con un elemento apre in una nuova scheda
+  `print.show`, con più elementi `print.zip`. Le pagine generano, aspettano e portano al file. Lingua singola
+  (`Select`, proposta la lingua di default dell'App): ogni esecuzione apre una pagina sola. Oltre
+  `zip.max_tracks` si ferma con un messaggio. Decisione del dev, 24/11.
+- Lo ZIP accetta anche i POI (`?type=ec-poi`, `BuildPrintZipJob` con il tipo, `PrintService::modelClass()`); la
+  chiave delle tracce non cambia. Prova sulla Forestas locale: ZIP dei POI 1 e 2 con le due schede.
+- Conseguenza: l'action non forza più la rigenerazione di una scheda fresca (per esempio dopo un cambio di logo).
+- La pagina d'attesa dello ZIP non restava aperta sull'attesa: ora avvia il download, dice che si può chiudere e prova a chiudersi (`$download` della view `print/waiting`).

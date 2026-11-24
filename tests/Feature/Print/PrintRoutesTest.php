@@ -89,7 +89,9 @@ describe('routes', function () {
             ->assertSee('aria-busy="true"', false)
             ->assertSee('aria-live="polite"', false)
             ->assertSee('<noscript><meta http-equiv="refresh" content="10"></noscript>', false)
-            ->assertSee('Preparing your PDF');
+            ->assertSee('Preparing your PDF')
+            // Il PDF si apre nella stessa scheda: la pagina non si chiude.
+            ->assertSee('var download = false;', false);
         Bus::assertDispatched(GeneratePrintPdfJob::class, fn ($job) => $job->locale === 'en' && $job->model->is($this->track));
     });
 
