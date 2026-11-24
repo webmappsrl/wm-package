@@ -46,5 +46,5 @@ it('la versione in config coincide con il file VERSION', function () {
     $version = trim(file_get_contents(installDepsPath('VERSION')));
 
     expect($version)->not->toBe('')
-        ->and(config('wm-package.features.print.deps_version'))->toBe($version);
+        ->and(config('wm-package.print.deps_version'))->toBe($version);
 });

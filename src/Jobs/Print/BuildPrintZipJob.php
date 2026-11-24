@@ -30,7 +30,12 @@ use ZipArchive;
  */
 class BuildPrintZipJob implements ShouldBeUnique, ShouldQueue
 {
-    use BuildsPrintSelectionFile, Dispatchable, InteractsWithQueue, Queueable;
+    use BuildsPrintSelectionFile {
+        BuildsPrintSelectionFile::key as selectionKey;
+        BuildsPrintSelectionFile::dispatchFor as selectionDispatchFor;
+        BuildsPrintSelectionFile::uniqueId as selectionUniqueId;
+    }
+    use Dispatchable, InteractsWithQueue, Queueable;
 
     /** Sottocartella di `print-tmp` su wmfe, sotto la base dello shard (vedi BuildsPrintSelectionFile). */
     public const SUBDIRECTORY = 'zip';
@@ -52,28 +57,28 @@ class BuildPrintZipJob implements ShouldBeUnique, ShouldQueue
     /** Ogni esecuzione è breve: sotto `retry_after` della coda (660 s su forestas). */
     public int $timeout = 300;
 
-    /** @param  list<int>  $ids  id ordinati e senza duplicati */
-    public function __construct(public array $ids, public string $locale)
+    /**
+     * @param  list<int>  $ids  id ordinati e senza duplicati
+     * @param  string  $type  `ec-track` o `ec-poi`: di che modello sono gli id
+     */
+    public function __construct(public array $ids, public string $locale, public string $type = 'ec-track')
     {
-        $wait = max(self::POLL_SECONDS, (int) config('wm-package.features.print.zip.max_wait_seconds', 1800));
+        $wait = max(self::POLL_SECONDS, (int) config('wm-package.print.zip.max_wait_seconds', 1800));
         $this->tries = intdiv($wait, self::POLL_SECONDS) + 1;
         $this->uniqueFor = $wait + $this->timeout;
-        $this->onQueue((string) config('wm-package.features.print.queue', 'print'));
+        $this->onQueue((string) config('wm-package.print.queue', 'print'));
     }
 
     public function handle(PrintService $service, StorageService $storage): void
     {
-        $class = config('wm-package.ec_track_model');
+        $class = PrintService::modelClass($this->type);
+        if ($class === null) {
+            throw new RuntimeException("Tipo non stampabile per lo ZIP delle schede: {$this->type}.");
+        }
         $tracks = $class::query()->whereIn('id', $this->ids)->orderBy('id')->get();
         if ($tracks->isEmpty()) {
-            throw new RuntimeException('Nessuna traccia per lo ZIP delle schede.');
+            throw new RuntimeException('Nessun elemento per lo ZIP delle schede.');
         }
-        foreach ($tracks as $track) {
-            if (! $track instanceof Model || ! $track instanceof PrintableModel) {
-                throw new RuntimeException('Il modello traccia non è stampabile.');
-            }
-        }
-
         $first = $this->attempts() <= 1;
         $pending = false;
         foreach ($tracks as $track) {
@@ -170,12 +175,40 @@ class BuildPrintZipJob implements ShouldBeUnique, ShouldQueue
         return 'Costruzione ZIP delle schede non riuscita';
     }
 
+    /**
+     * Chiave dello ZIP: quella della selezione, con il tipo per i POI. Le tracce tengono la chiave di
+     * prima, così uno ZIP già scritto resta valido; i POI con gli stessi id non lo condividono.
+     */
+    public static function key(array $ids, string $locale, string $type = 'ec-track'): string
+    {
+        return $type === 'ec-track'
+            ? self::selectionKey($ids, $locale)
+            : sha1($type.'|'.self::selectionKey($ids, $locale));
+    }
+
+    /** Segna lo stato `queued` e accoda il job (il lock di unicità evita il secondo push). */
+    public static function dispatchFor(array $ids, string $locale, string $type = 'ec-track'): void
+    {
+        if (! preg_match(PrintService::LOCALE_PATTERN, $locale)) {
+            throw new \InvalidArgumentException('Lingua non valida per il file della selezione.');
+        }
+
+        static::putSelectionStatus(static::key($ids, $locale, $type), ['status' => PrintStatus::QUEUED]);
+
+        static::dispatch($ids, $locale, $type);
+    }
+
+    public function uniqueId(): string
+    {
+        return static::key($this->ids, $this->locale, $this->type);
+    }
+
     /** Nome del file nello ZIP: slug ASCII del nome nella lingua + id. */
     public static function entryName(Model&PrintableModel $track, string $locale): string
     {
         $slug = Str::limit(Str::slug($track->printTranslation('name', $locale)), 80, '');
         $slug = trim($slug, '-');
 
-        return ($slug !== '' ? $slug : 'track').'-'.$track->getKey().'.pdf';
+        return ($slug !== '' ? $slug : (PrintService::typeOf($track) === 'ec-poi' ? 'poi' : 'track')).'-'.$track->getKey().'.pdf';
     }
 }

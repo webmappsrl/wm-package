@@ -30,7 +30,7 @@ class PrintImages
      */
     public function preparePhotos(Model&PrintableModel $model, string $workDir): array
     {
-        $budget = (int) config('wm-package.features.print.photos.total_timeout', PrintService::PHOTOS_TOTAL_TIMEOUT);
+        $budget = (int) config('wm-package.print.photos.total_timeout', PrintService::PHOTOS_TOTAL_TIMEOUT);
         $deadline = self::clock() + $budget;
         $photos = [];
         foreach (array_slice($model->printPhotoUrls(), 0, PrintService::MAX_PHOTOS) as $url) {
@@ -220,7 +220,7 @@ class PrintImages
      */
     private function resizeTo(string $source, string $target, int $maxSide, string $format, bool $orientate, callable $skip, string $unrecognized): bool
     {
-        $maxPixels = (int) config('wm-package.features.print.photos.max_pixels', PrintService::PHOTO_MAX_PIXELS);
+        $maxPixels = (int) config('wm-package.print.photos.max_pixels', PrintService::PHOTO_MAX_PIXELS);
         $size = @getimagesize($source);
         if ($size === false) {
             return $skip($unrecognized);
@@ -247,7 +247,7 @@ class PrintImages
 
     private static function maxBytes(): int
     {
-        return (int) config('wm-package.features.print.photos.max_bytes', PrintService::PHOTO_MAX_BYTES);
+        return (int) config('wm-package.print.photos.max_bytes', PrintService::PHOTO_MAX_BYTES);
     }
 
     /** Istante corrente in secondi con i microsecondi; segue `Carbon::setTestNow()` nei test. */

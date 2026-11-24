@@ -8,15 +8,19 @@ use Wm\WmPackage\Support\ImportedAppProperties;
 
 uses(DatabaseTransactions::class);
 
-it('declares exactly the 37 properties keys imported from Geohub', function () {
-    expect(ImportedAppProperties::keys())->toHaveCount(37);
+it('declares exactly the 38 properties keys imported from Geohub', function () {
+    // 37 più `ec_pdf_enabled`, l'opzione della stampa PDF (oc:8982).
+    expect(ImportedAppProperties::keys())->toHaveCount(38);
 });
 
-it('maps the one Geohub column whose local key differs', function () {
+it('maps the two Geohub columns whose local key differs', function () {
     expect(ImportedAppProperties::geohubColumns())
         ->toHaveKey('show_download_tiles_button')
         ->and(ImportedAppProperties::geohubColumns()['show_download_tiles_button'])
-        ->toBe('show_download_tiles');
+        ->toBe('show_download_tiles')
+        // La stampa PDF (oc:8982): su Geohub è la colonna `print_track_enable`.
+        ->and(ImportedAppProperties::geohubColumns()['print_track_enable'] ?? null)
+        ->toBe('ec_pdf_enabled');
 });
 
 it('resolves every Geohub column to a distinct local key', function () {

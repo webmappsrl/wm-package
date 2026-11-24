@@ -140,7 +140,8 @@ Per attivare il Catasto Sentieri su uno shard: [docs/howto/attivare-catasto-sent
 ## Convenzioni e documentazione
 
 - `docs/resources/` — documentazione d'uso delle feature: `Analytics.md`, `TaxonomyWhere.md`,
-  `TrailRegistry.md`, `OptionalDomains.md`.
+  `TrailRegistry.md`, `OptionalDomains.md`, `Print.md` (stampa PDF delle schede: opzione dell'App, servizio
+  mappe, cosa deve avere uno shard prima di accenderla).
 - `docs/knowledge/` — perché funziona così e cosa è già stato provato, per argomento.
 - `docs/howto/` — le procedure operative. I tre `docs/*_SETUP.md` (Mailpit, MinIO, Kibana) sono
   procedure di setup dell'ambiente: stessa natura, nome diverso per ragioni storiche.

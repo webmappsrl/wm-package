@@ -1,9 +1,11 @@
 <?php
 
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Wm\WmPackage\Models\App;
+use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Services\Print\Contracts\MapRenderer;
 use Wm\WmPackage\Services\Print\MapRenderRequest;
 use Wm\WmPackage\Services\Print\PrintService;
@@ -23,7 +25,7 @@ beforeEach(function () {
 
 function themeApp(array $theme): App
 {
-    return App::factory()->createQuietly(['properties' => ['theme' => $theme]]);
+    return printApp(['properties' => ['theme' => $theme]]);
 }
 
 function themeCaptureTex(): void
@@ -83,29 +85,28 @@ it('ignores font names that are not letters, digits, spaces or hyphens', functio
         ->not->toContain('IfFontExistsTF{A');
 });
 
-it('asks the renderer for the configured map size, 174x98 by default, and passes it to the view', function () {
+it('asks the renderer for the configured map size and sheet padding, a full A4 with 42 mm by default', function () {
     themeCaptureTex();
     $sizes = [];
     $this->mock(MapRenderer::class, function ($mock) use (&$sizes) {
         $mock->shouldReceive('render')->andReturnUsing(function (MapRenderRequest $r) use (&$sizes) {
-            $sizes[] = [$r->widthMm, $r->heightMm];
+            $sizes[] = [$r->widthMm, $r->heightMm, $r->paddingMm];
 
             return base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==');
         });
     });
     $track = printSavedTrack(themeApp([]), THEME_TRACK);
-    config(['wm-package.features.print.map.width_mm' => 174, 'wm-package.features.print.map.height_mm' => 98]);
-
+    // La mappa è la copertina (pagina 1, A4 al vivo) e il margine tiene la traccia fuori dal riquadro del titolo.
     app(PrintService::class)->generate($track, 'it');
-    expect($sizes[0])->toBe([174.0, 98.0])->and($this->compiled['tex'])->toContain('height=98mm');
+    expect($sizes[0])->toBe([210.0, 297.0, 42.0])->and($this->compiled['tex'])->toContain('\WmCopertina{map.png}');
 
-    config(['wm-package.features.print.map.width_mm' => 180, 'wm-package.features.print.map.height_mm' => 240]);
+    config(['wm-package.print.map.width_mm' => 180, 'wm-package.print.map.height_mm' => 240, 'wm-package.print.map.padding_mm' => null]);
     app(PrintService::class)->generate($track, 'it');
-    expect($sizes[1])->toBe([180.0, 240.0])->and($this->compiled['tex'])->toContain('height=240mm');
+    expect($sizes[1])->toBe([180.0, 240.0, null]);
 });
 
 it('compiles a real pdf with a missing font, using the theme rule color', function () {
-    config(['wm-package.features.print.deps_version' => null, 'wm-package.features.print.map_service.driver' => 'fake']);
+    config(['wm-package.print.deps_version' => null, 'wm-package.print.map_service.driver' => 'fake']);
     $app = themeApp(['primary_color' => '#1565C0', 'tertiary_color' => '#FF0000',
         'font_family_content' => 'Font Inesistente XYZ', 'font_family_header' => 'Altro Font Mancante']);
     $track = printSavedTrack($app, THEME_TRACK);
@@ -124,7 +125,7 @@ it('compiles a real pdf with a missing font, using the theme rule color', functi
 })->skip(! is_executable('/usr/bin/xelatex'), 'xelatex non installato');
 
 it('compiles a real pdf with an installed header font', function () {
-    config(['wm-package.features.print.deps_version' => null, 'wm-package.features.print.map_service.driver' => 'fake']);
+    config(['wm-package.print.deps_version' => null, 'wm-package.print.map_service.driver' => 'fake']);
     $app = themeApp(['font_family_content' => 'Latin Modern Roman', 'font_family_header' => 'Latin Modern Roman']);
     $track = printSavedTrack($app, THEME_TRACK);
 
@@ -142,11 +143,12 @@ it('puts the header font in the section titles too and in the document', functio
         ->toContain('\renewcommand{\WmHeaderFont}{\WmHeaderFontFamily}');
     $sty = file_get_contents(__DIR__.'/../../../resources/print/wm-print.sty');
     expect($sty)->toMatch('/\\\\newcommand\{\\\\TitoloScheda\}\[1\]\{\{[^\n]*\\\\WmHeaderFont/')
-        ->toMatch('/\\\\newcommand\{\\\\TitoloSezione\}\[1\]\{[^\n]*\\\\WmHeaderFont/');
+        // Il titolo di sezione è su due righe (\\needspace, poi il testo).
+        ->toMatch('/\\\\newcommand\{\\\\TitoloSezione\}\[1\]\{.*?\\\\WmHeaderFont/s');
 });
 
 it('compiles with the header font applied to the titles', function () {
-    config(['wm-package.features.print.deps_version' => null, 'wm-package.features.print.map_service.driver' => 'fake']);
+    config(['wm-package.print.deps_version' => null, 'wm-package.print.map_service.driver' => 'fake']);
     $track = printSavedTrack(themeApp(['font_family_header' => 'Latin Modern Roman']), THEME_TRACK);
 
     app(PrintService::class)->generate($track, 'it');
@@ -161,9 +163,30 @@ it('compiles with the header font applied to the titles', function () {
     expect(preg_match('/LMRoman\d+-Bold/', $names))->toBe(1);
 })->skip(! is_executable('/usr/bin/xelatex'), 'xelatex non installato');
 
-it('falls back to 174x98 when the configured map size is zero or negative', function () {
-    config(['wm-package.features.print.map.width_mm' => 0, 'wm-package.features.print.map.height_mm' => -5]);
-    expect(app(PrintService::class)->mapSize())->toBe([174.0, 98.0]);
+it('asks a higher max zoom for the map of a poi only', function () {
+    themeCaptureTex();
+    $zooms = [];
+    $this->mock(MapRenderer::class, function ($mock) use (&$zooms) {
+        $mock->shouldReceive('render')->andReturnUsing(function (MapRenderRequest $r) use (&$zooms) {
+            $zooms[] = $r->maxZoom;
+
+            return base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==');
+        });
+    });
+    $app = themeApp([]);
+    $poi = EcPoi::factory()->createQuietly(['app_id' => $app->id, 'osmid' => null]);
+    DB::statement("UPDATE ec_pois SET geometry = ST_GeomFromText('POINT Z(9.05 40.49 0)', 4326) WHERE id = ?", [$poi->id]);
+
+    app(PrintService::class)->generate(printSavedTrack($app, THEME_TRACK), 'it');
+    app(PrintService::class)->generate($poi->fresh(), 'it');
+
+    // La traccia lascia lo zoom alla configurazione del servizio; il punto chiede `map.poi_max_zoom`.
+    expect($zooms)->toBe([null, 18.0]);
+});
+
+it('falls back to a full A4 when the configured map size is zero or negative', function () {
+    config(['wm-package.print.map.width_mm' => 0, 'wm-package.print.map.height_mm' => -5]);
+    expect(app(PrintService::class)->mapSize())->toBe([210.0, 297.0]);
 });
 
 it('rejects a theme color with a trailing newline', function () {

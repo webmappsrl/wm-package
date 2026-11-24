@@ -63,8 +63,8 @@ class XelatexCompiler
      */
     public function command(string $workDir): array
     {
-        $timeout = (int) config('wm-package.features.print.compile.timeout', 120);
-        $memoryBytes = (int) config('wm-package.features.print.compile.memory_mb', 1024) * 1024 * 1024;
+        $timeout = (int) config('wm-package.print.compile.timeout', 120);
+        $memoryBytes = (int) config('wm-package.print.compile.memory_mb', 1024) * 1024 * 1024;
 
         return [
             '/usr/bin/timeout', (string) $timeout,
@@ -88,7 +88,7 @@ class XelatexCompiler
 
     private function run(string $workDir): void
     {
-        $timeout = (int) config('wm-package.features.print.compile.timeout', 120);
+        $timeout = (int) config('wm-package.print.compile.timeout', 120);
         $process = new Process($this->command($workDir), $workDir, $this->environment() + ['PATH' => '/usr/local/bin:/usr/bin:/bin']);
         // Il timeout vero è quello di /usr/bin/timeout; questo è la rete di sicurezza.
         $process->setTimeout($timeout + 10);
@@ -119,7 +119,7 @@ class XelatexCompiler
 
     private function checkMarker(): void
     {
-        $expected = config('wm-package.features.print.deps_version');
+        $expected = config('wm-package.print.deps_version');
         if ($expected === null || $expected === '') {
             return;
         }

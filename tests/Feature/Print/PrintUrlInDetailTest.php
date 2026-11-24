@@ -8,22 +8,10 @@ use Illuminate\Support\Facades\Route;
 use Wm\WmPackage\Http\Resources\EcPoiResource;
 use Wm\WmPackage\Http\Resources\EcTrackResource;
 use Wm\WmPackage\Http\Resources\RelatedEcPoiResource;
-use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Models\EcTrack;
-use Wm\WmPackage\Services\Print\PrintService;
-use Wm\WmPackage\WmPackageServiceProvider;
 
 uses(DatabaseTransactions::class);
-
-/** Accende il dominio a runtime, rilanciando ciò che il provider fa al boot. */
-function enablePrintDomain(): void
-{
-    config(['wm-package.features.print.enabled' => true]);
-    $provider = app()->getProvider(WmPackageServiceProvider::class);
-    (new ReflectionMethod($provider, 'registerEnabledDomains'))->invoke($provider);
-    app('router')->getRoutes()->refreshNameLookups();
-}
 
 beforeEach(function () {
     config([
@@ -33,53 +21,20 @@ beforeEach(function () {
     ]);
     Cache::flush();
     Bus::fake();
-    $app = App::factory()->createQuietly();
+    $app = printApp();
     $this->track = EcTrack::factory()->createQuietly(['app_id' => $app->id, 'osmid' => null]);
     $this->poi = EcPoi::factory()->createQuietly(['app_id' => $app->id, 'osmid' => null]);
 });
 
-it('omits print_url when the domain is disabled', function () {
-    expect(Route::has('print.show'))->toBeFalse()
+/*
+ * Il link alla scheda non sta nel JSON: frontend e plugin lo costruiscono dalla rotta `print.show`
+ * quando `OPTIONS.print_track_enable` del config è acceso (scrum del 24/11). Così accendere o
+ * spegnere l'opzione dell'App non chiede di riscrivere su wmfe il JSON di tutte le tracce.
+ */
+it('never puts print_url in the track or poi json, even with the domain and the app option on', function () {
+    expect(Route::has('print.show'))->toBeTrue()
         ->and($this->track->getDetailGeojson()['properties'])->not->toHaveKey('print_url')
-        ->and((new EcPoiResource($this->poi))->toArray(Request::create('/'))['properties'])->not->toHaveKey('print_url');
-});
-
-it('exposes print_url in the track detail when the domain is enabled', function () {
-    enablePrintDomain();
-
-    $expected = route('print.show', ['type' => 'ec-track', 'id' => $this->track->id]);
-    $url = $this->track->getDetailGeojson()['properties']['print_url'];
-
-    expect($url)->toBe($expected)->toStartWith('http')->not->toContain('lang');
-});
-
-it('exposes print_url in the track resource written to wmfe', function () {
-    enablePrintDomain();
-
-    $properties = (new EcTrackResource($this->track))->toArray(Request::create('/'))['properties'];
-
-    expect($properties['print_url'])->toBe(route('print.show', ['type' => 'ec-track', 'id' => $this->track->id]));
-});
-
-it('does not put print_url on related pois inside the track json', function () {
-    enablePrintDomain();
-
-    $properties = (new EcPoiResource($this->poi))->toArray(Request::create('/'))['properties'];
-    $related = (new RelatedEcPoiResource($this->poi))->toArray(Request::create('/'))['properties'];
-
-    expect($properties)->not->toHaveKey('print_url')
-        ->and($related)->not->toHaveKey('print_url');
-});
-
-it('builds the absolute poi sheet url with sheetUrl when the domain is enabled', function () {
-    enablePrintDomain();
-
-    $url = PrintService::sheetUrl('ec-poi', $this->poi->id);
-
-    expect($url)->toBe(route('print.show', ['type' => 'ec-poi', 'id' => $this->poi->id]))
-        ->toStartWith('http')->not->toContain('lang');
-});
-
-it('returns null from sheetUrl when the domain is disabled', function () {
-    expect(PrintService::sheetUrl('ec-poi', $this->poi->id))->toBeNull();
+        ->and((new EcTrackResource($this->track))->toArray(Request::create('/'))['properties'])->not->toHaveKey('print_url')
+        ->and((new EcPoiResource($this->poi))->toArray(Request::create('/'))['properties'])->not->toHaveKey('print_url')
+        ->and((new RelatedEcPoiResource($this->poi))->toArray(Request::create('/'))['properties'])->not->toHaveKey('print_url');
 });

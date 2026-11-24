@@ -11,6 +11,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use RuntimeException;
+use Wm\WmPackage\Exceptions\MapServiceBusyException;
 use Wm\WmPackage\Jobs\Print\Concerns\BuildsPrintSelectionFile;
 use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Services\Print\Contracts\MapRenderer;
@@ -46,7 +47,8 @@ class BuildOverviewMapJob implements ShouldBeUnique, ShouldQueue
 
     public const LABEL_KEYS = ['Overview map', 'Legend', '© OpenStreetMap contributors, Webmapp'];
 
-    public int $tries = 1;
+    /** I tentativi sono i rilasci per servizio mappe occupato (MapServiceBusyException). */
+    public int $tries = 10;
 
     /** Un'eccezione è terminale e va a failed(). */
     public int $maxExceptions = 1;
@@ -59,7 +61,7 @@ class BuildOverviewMapJob implements ShouldBeUnique, ShouldQueue
     /** @param  list<int>  $ids  id ordinati e senza duplicati */
     public function __construct(public array $ids, public string $locale)
     {
-        $this->onQueue((string) config('wm-package.features.print.queue', 'print'));
+        $this->onQueue((string) config('wm-package.print.queue', 'print'));
     }
 
     public function handle(PrintService $service, MapRenderer $renderer, XelatexCompiler $compiler, StorageService $storage): void
@@ -84,7 +86,7 @@ class BuildOverviewMapJob implements ShouldBeUnique, ShouldQueue
             $features[] = [
                 'type' => 'Feature',
                 'geometry' => $geometry,
-                'properties' => ['id' => $track->getKey(), 'ref' => $ref, 'name' => $name],
+                'properties' => ['id' => $track->getKey(), 'ref' => $ref, 'name' => $name, ...$service->mapStroke($track)],
             ];
             $legend[] = ['ref' => LatexText::escape($ref), 'name' => LatexText::escape($name)];
         }
@@ -92,11 +94,18 @@ class BuildOverviewMapJob implements ShouldBeUnique, ShouldQueue
             throw new RuntimeException('Nessuna traccia con geometria per la mappa d\'insieme.');
         }
 
-        $png = $renderer->render(MapRenderRequest::forShard(
-            ['type' => 'FeatureCollection', 'features' => $features],
-            self::MAP_WIDTH_MM,
-            self::MAP_HEIGHT_MM
-        ));
+        try {
+            $png = $renderer->render(MapRenderRequest::forShard(
+                ['type' => 'FeatureCollection', 'features' => $features],
+                self::MAP_WIDTH_MM,
+                self::MAP_HEIGHT_MM
+            ));
+        } catch (MapServiceBusyException $e) {
+            // Servizio mappe occupato: si riprova dopo il suo `Retry-After`, non è un fallimento.
+            $this->release($e->retryAfter);
+
+            return;
+        }
 
         $workDir = storage_path('app/print-tmp/overview-'.Str::uuid());
         File::ensureDirectoryExists($workDir);

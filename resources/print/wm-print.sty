@@ -12,6 +12,8 @@
 \RequirePackage{enumitem}
 \RequirePackage{url}
 \RequirePackage{fancyhdr}
+\RequirePackage{eso-pic}
+\RequirePackage{needspace}
 
 % Font: TeX Gyre Heros se presente (texlive-fonts-recommended), altrimenti Latin Modern.
 \IfFontExistsTF{TeX Gyre Heros}{%
@@ -33,8 +35,8 @@
 % la view la chiama dopo \definecolor{wmprimary}{...} (anch'essa dopo gli stili) e dà il valore di
 % ripiego solo ai ruoli ancora indefiniti, quindi un ruolo definito da uno stile sopravvive.
 % Il controllo e' su \string\color@<nome>: xcolor registra i colori con il backslash nel nome. Ripiego anche a \begin{document},
-% per le view degli shard che non la chiamano.
-\makeatletter
+% per le view degli shard che non la chiamano. In un .sty `@` è già una lettera: niente \makeatletter
+% e soprattutto niente \makeatother, che la toglierebbe alle macro definite più sotto.
 \newcommand{\WmDefineRoleDefault}[2]{%
   \@ifundefined{\string\color@#1}{\colorlet{#1}{#2}}{}%
 }
@@ -46,7 +48,6 @@
   \WmDefineRoleDefault{wmmuted}{wmgray}%
   \WmDefineRoleDefault{wmline}{black}%
 }
-\makeatother
 \AtBeginDocument{\WmDefineRoles\color{wmtext}}
 
 \AtBeginDocument{\fontsize{10}{13}\selectfont}
@@ -65,8 +66,12 @@
 
 \newcommand{\TitoloScheda}[1]{{\color{wmtitle}\WmHeaderFont\bfseries\fontsize{22}{26}\selectfont #1\par}}
 
-% Titolo di sezione.
-\newcommand{\TitoloSezione}[1]{\par\vspace{0.6em}{\color{wmtitle}\WmHeaderFont\bfseries\fontsize{13}{16}\selectfont #1\par}\vspace{-0.2em}}
+% Titolo di sezione. Non resta mai da solo in fondo a una pagina con il contenuto nella successiva:
+% \needspace porta il titolo a pagina nuova se sotto non c'è posto per qualche riga, e \nobreak con
+% \@afterheading (lo stesso meccanismo dei titoli di LaTeX) vieta l'interruzione subito dopo, anche
+% prima di un elenco o di una foto. La scheda di default non ha un numero massimo di pagine.
+\newcommand{\TitoloSezione}[1]{\par\vspace{0.6em}\needspace{4\baselineskip}%
+  {\color{wmtitle}\WmHeaderFont\bfseries\fontsize{13}{16}\selectfont #1\par}\nobreak\vspace{-0.2em}\nobreak\@afterheading}
 
 % Badge di stato (testo bianco su fondo primario).
 \newcommand{\BadgeStato}[1]{\colorbox{wmaccent}{\textcolor{white}{\bfseries\small\strut\ #1\ }}}
@@ -81,6 +86,39 @@
   \endtabularx\par
 }
 \newcommand{\RigaTabella}[2]{#1 & #2\\}
+
+% Copertina: pagina 1 con la mappa a tutta pagina come sfondo (A4 al vivo, centrata, senza
+% deformarla) e, sopra, il riquadro bianco con logo e titolo in alto a sinistra. Il riquadro lascia
+% libero l'angolo in alto a destra, dove il servizio mappe disegna il nord, e il fondo, dove mette
+% scala e attribuzioni. La traccia non ci finisce sotto perché la mappa è chiesta con un margine
+% (`map_service.padding_mm`, 42 mm di serie) più alto del riquadro.
+%   \WmCopertina{file della mappa}{contenuto del riquadro}
+\newlength{\WmCopertinaMargine}\setlength{\WmCopertinaMargine}{10mm}
+\newlength{\WmCopertinaSpazioNord}\setlength{\WmCopertinaSpazioNord}{24mm}
+\newcommand{\WmCopertina}[2]{%
+  \thispagestyle{empty}%
+  \AddToShipoutPictureBG*{\AtPageCenter{\makebox[0pt][c]{\raisebox{-0.5\height}{%
+    \includegraphics[width=\paperwidth,height=\paperheight,keepaspectratio]{#1}}}}}%
+  \AddToShipoutPictureFG*{\AtPageUpperLeft{\put(\LenToUnit{\WmCopertinaMargine},\LenToUnit{-\WmCopertinaMargine}){%
+    \makebox[0pt][l]{\raisebox{-\height}{\WmRiquadroTitolo{#2}}}}}}%
+  \null\clearpage}
+\newcommand{\WmRiquadroTitolo}[1]{%
+  \begingroup\setlength{\fboxsep}{5mm}%
+  \colorbox{white}{\begin{minipage}{\dimexpr\paperwidth-2\WmCopertinaMargine-\WmCopertinaSpazioNord-2\fboxsep\relax}#1\end{minipage}}%
+  \endgroup}
+% Logo e titolo affiancati nel riquadro: \WmLogoTitolo{file del logo o vuoto}{titolo}.
+\newcommand{\WmLogoTitolo}[2]{%
+  \ifx\relax#1\relax
+    \TitoloScheda{#2}%
+  \else
+    \begin{minipage}[c]{16mm}\includegraphics[width=16mm,height=16mm,keepaspectratio]{#1}\end{minipage}%
+    \hspace{4mm}%
+    \begin{minipage}[c]{\dimexpr\linewidth-20mm\relax}\TitoloScheda{#2}\end{minipage}%
+  \fi
+  \par\vspace{3pt}{\color{wmrule}\rule{\linewidth}{1.2pt}}}
+
+% Titolo ripetuto in testa alla seconda pagina, più piccolo: un foglio staccato si riconosce.
+\newcommand{\TitoloPagina}[1]{{\color{wmtitle}\WmHeaderFont\bfseries\fontsize{15}{18}\selectfont #1\par}}
 
 \let\WmFootruleBase\footrule
 % Piè di pagina: \PiePagina{testo di credito}.

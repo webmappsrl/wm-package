@@ -27,6 +27,9 @@ final class ImportedAppProperties
      */
     public const MAP = [
         // --- Gruppo A: destinazione già letta da AppConfigService, campo Nova già presente.
+        // Stampa PDF di tracce e POI (oc:8982): su Geohub è la colonna `print_track_enable`, qui una
+        // property come le opzioni recenti. Nel config è `OPTIONS.ec_pdf_enabled` (più la deprecata `print_track_enable`).
+        'ec_pdf_enabled' => ['type' => 'bool', 'nova' => false, 'geohub' => 'print_track_enable'],
         'show_travel_mode' => ['type' => 'bool', 'nova' => false],
         'show_features_in_viewport' => ['type' => 'bool', 'nova' => false],
         'min_zoom_features_in_viewport' => ['type' => 'int', 'nova' => false],

@@ -115,9 +115,7 @@
     "The PDF could not be generated": "No se pudo generar el PDF",
     "Try again": "Reintentar",
     "The PDF is taking longer than expected. Please try again later.": "El PDF tarda más de lo previsto. Inténtelo de nuevo más tarde.",
-    "Generate print PDF": "Generar ficha PDF",
     "Languages": "Idiomas",
-    "PDF generations queued": "Generaciones de PDF en cola",
     "No tracks selected.": "Ninguna ruta seleccionada.",
     "Too many tracks selected: the maximum is :max.": "Demasiadas rutas seleccionadas: el máximo es :max.",
     "Overview map": "Mapa general",
@@ -129,5 +127,15 @@
     "UgcPoi :id not converted: :reason": "UgcPoi :id no convertido: :reason",
     "photo :media not found on storage": "foto :media no encontrada en el almacenamiento",
     "conversion error, see the log": "error durante la conversión, ver el registro",
-    "Convert To EcPoi": "Convertir en EcPoi"
+    "Convert To EcPoi": "Convertir en EcPoi",
+    "Print PDF": "Impresión PDF",
+    "Enables the PDF sheets of tracks and POIs: the print button in the app and on the website, and their generation.": "Activa las fichas PDF de rutas y POI: el botón de impresión en la app y en el sitio, y su generación.",
+    "Sheet generated on :date": "Ficha generada el :date",
+    "Download print PDF": "Descargar la ficha PDF",
+    "Language": "Idioma",
+    "No selected element can be printed in this language.": "Ningún elemento seleccionado se puede imprimir en este idioma.",
+    "Too many elements selected: the maximum is :max.": "Demasiados elementos seleccionados: el máximo es :max.",
+    "Your download has started": "La descarga ha comenzado",
+    "You can close this page.": "Puede cerrar esta página.",
+    "Download again": "Descargar de nuevo"
 }

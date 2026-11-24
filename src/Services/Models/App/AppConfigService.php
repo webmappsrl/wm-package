@@ -909,7 +909,13 @@ class AppConfigService extends AppBaseService
         $this->setProp($data['OPTIONS'], 'skip_route_index_download', 'skipRouteIndexDownload');
         $data['OPTIONS']['showTrackRefLabel'] = $this->app->show_track_ref_label;
         $data['OPTIONS']['download_track_enable'] = $this->app->download_track_enable;
-        $data['OPTIONS']['print_track_enable'] = $this->app->print_track_enable;
+        // Stampa PDF delle schede di tracce e POI (oc:8982): il dato è `properties.ec_pdf_enabled`, non la
+        // colonna `print_track_enable`. Sempre presente, default false.
+        $ecPdfEnabled = (bool) $this->prop('ec_pdf_enabled', false);
+        $data['OPTIONS']['ec_pdf_enabled'] = $ecPdfEnabled;
+        // @deprecated: usare OPTIONS.ec_pdf_enabled. Stesso valore, resta per la web app e l'app che leggono
+        // già la chiave di Geohub; si toglie quando i frontend sono passati alla nuova.
+        $data['OPTIONS']['print_track_enable'] = $ecPdfEnabled;
         $data['OPTIONS']['show_searchbar'] = $this->app->show_search;
         // showFavorites NON passa da setProp() apposta: oc:8176 (precedente a questo ticket)
         // ha già un contratto diverso — sempre presente, default false — non "omesso se null"

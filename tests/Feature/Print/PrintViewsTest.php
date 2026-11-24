@@ -1,6 +1,8 @@
 <?php
 
+use Carbon\Carbon;
 use Wm\WmPackage\Services\Print\LatexText;
+use Wm\WmPackage\Services\Print\PrintService;
 use Wm\WmPackage\Services\Print\XelatexCompiler;
 
 beforeEach(function () {
@@ -49,6 +51,22 @@ it('renders the track view with style, color, escaped name and footer', function
         ->not->toMatch('/&(amp|lt|gt|quot|#\d+);/');
 });
 
+it('puts the map on page 1 as a full-page cover with logo and title in a box, and the rest on page 2', function (string $view) {
+    $tex = view($view, printVars(['logoFile' => 'logo.png']))->render();
+
+    expect($tex)->toContain('\WmCopertina{map.png}{\WmLogoTitolo{logo.png}{Sentiero 50\% \& co}}')
+        ->toContain('\TitoloPagina{Sentiero 50\% \& co}')
+        ->and(strpos($tex, '\WmCopertina'))->toBeLessThan(strpos($tex, '\begin{Tabella}'))
+        ->and(substr_count($tex, '\includegraphics'))->toBe(1);
+
+    // Senza logo il riquadro ha solo il titolo; senza mappa niente copertina, e titolo e logo in testa.
+    expect(view($view, printVars())->render())->toContain('\WmLogoTitolo{}{Sentiero 50\% \& co}');
+    expect(view($view, printVars(['mapFile' => null, 'logoFile' => 'logo.png']))->render())
+        ->not->toContain('\WmCopertina')
+        ->toContain('\includegraphics[height=12mm,keepaspectratio]{logo.png}')
+        ->toContain('\TitoloScheda{Sentiero 50\% \& co}');
+})->with(['wm-package::print.ec-track', 'wm-package::print.ec-poi']);
+
 it('renders the poi view without related pois', function () {
     $tex = view('wm-package::print.ec-poi', printVars(['relatedPois' => null]))->render();
 
@@ -65,6 +83,20 @@ it('omits map, photos and empty sections when data is missing', function (string
         ->not->toContain('Punti di interesse')
         ->not->toContain('\begin{Tabella}');
 })->with(['wm-package::print.ec-track', 'wm-package::print.ec-poi']);
+
+it('puts the generation date in the footer, in the language of the sheet, and leaves it out when missing', function () {
+    $this->travelTo(Carbon::parse('2026-11-24 10:00', config('app.timezone')));
+    $service = app(PrintService::class);
+
+    expect($service->generatedOn('it'))->toBe('Scheda generata il 24 novembre 2026')
+        ->and($service->generatedOn('en'))->toBe('Sheet generated on November 24, 2026');
+
+    foreach (['wm-package::print.ec-track', 'wm-package::print.ec-poi'] as $view) {
+        expect(view($view, printVars(['generatedOn' => $service->generatedOn('it')]))->render())
+            ->toContain('\PiePagina{© OpenStreetMap e contributori, Webmapp\quad Scheda generata il 24 novembre 2026}')
+            ->and(view($view, printVars())->render())->toContain('\PiePagina{© OpenStreetMap e contributori, Webmapp}');
+    }
+});
 
 it('uses labels of the requested language', function () {
     $it = view('wm-package::print.ec-track', printVars(['stats' => [['label' => printLabels('it')['Length'], 'value' => '1']]]))->render();
@@ -224,3 +256,11 @@ function printPdfFontNames(string $pdf): string
 
     return implode(' ', array_unique($names[1]));
 }
+
+it('keeps a section title with the start of its content, so a title never ends a page alone', function () {
+    $sty = (string) file_get_contents(__DIR__.'/../../../resources/print/wm-print.sty');
+    preg_match('/\\\\newcommand\{\\\\TitoloSezione\}.*?\\\\@afterheading\}/s', $sty, $match);
+
+    expect($sty)->toContain('\RequirePackage{needspace}')
+        ->and($match[0] ?? '')->toContain('\needspace{')->toContain('\nobreak');
+});

@@ -100,7 +100,7 @@ class TaxonomyTermableObserver
      */
     private function touchForPrint(string $class, int $id): void
     {
-        if (! config('wm-package.features.print.enabled') || ! is_a($class, Model::class, true)) {
+        if (! is_a($class, Model::class, true)) {
             return;
         }
 

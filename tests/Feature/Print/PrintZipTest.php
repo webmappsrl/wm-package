@@ -11,6 +11,7 @@ use Wm\WmPackage\Commands\PrintCleanupCommand;
 use Wm\WmPackage\Jobs\Print\BuildPrintZipJob;
 use Wm\WmPackage\Jobs\Print\GeneratePrintPdfJob;
 use Wm\WmPackage\Models\App;
+use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Services\Print\PrintService;
 use Wm\WmPackage\Services\Print\PrintStatus;
@@ -26,10 +27,8 @@ beforeEach(function () {
     ]);
     Storage::fake('wmfe', ['url' => 'https://wmfe.test']);
     Cache::flush();
-    Route::group([], __DIR__.'/../../../routes/domains/print.php');
-    app('router')->getRoutes()->refreshNameLookups();
 
-    $this->printApp = App::factory()->createQuietly([
+    $this->printApp = printApp([
         'available_languages' => json_encode(['it', 'en']),
         'default_language' => 'it',
     ]);
@@ -49,7 +48,7 @@ describe('route', function () {
     });
 
     it('answers 422 with a readable page above max_tracks', function () {
-        config(['wm-package.features.print.zip.max_tracks' => 3]);
+        config(['wm-package.print.zip.max_tracks' => 3]);
         $tracks = ($this->makeTracks)(4);
 
         $this->get(route('print.zip', ['ids' => $tracks->pluck('id')->all(), 'lang' => 'it']))
@@ -59,7 +58,7 @@ describe('route', function () {
     });
 
     it('accepts exactly max_tracks ids and counts duplicates once', function () {
-        config(['wm-package.features.print.zip.max_tracks' => 2]);
+        config(['wm-package.print.zip.max_tracks' => 2]);
         $tracks = ($this->makeTracks)(2);
         $ids = [$tracks[0]->id, $tracks[0]->id, $tracks[1]->id];
 
@@ -75,7 +74,7 @@ describe('route', function () {
         $this->get(route('print.zip', ['ids' => [999999999]]))->assertNotFound();
 
         $tracks = ($this->makeTracks)(1);
-        $other = App::factory()->createQuietly(['available_languages' => json_encode(['it']), 'default_language' => 'it']);
+        $other = printApp(['available_languages' => json_encode(['it']), 'default_language' => 'it']);
         $tracks->push(EcTrack::factory()->createQuietly(['app_id' => $other->id, 'osmid' => null]));
 
         $this->get(route('print.zip', ['ids' => $tracks->pluck('id')->all(), 'lang' => 'en']))->assertNotFound();
@@ -84,16 +83,27 @@ describe('route', function () {
         Bus::assertDispatchedTimes(BuildPrintZipJob::class, 1);
     });
 
+    it('leaves out the tracks of an app with print turned off', function () {
+        $tracks = ($this->makeTracks)(1);
+        $off = App::factory()->createQuietly(['available_languages' => json_encode(['it']), 'default_language' => 'it']);
+        $hidden = EcTrack::factory()->createQuietly(['app_id' => $off->id, 'osmid' => null]);
+
+        $this->get(route('print.zip', ['ids' => [$hidden->id]]))->assertNotFound();
+
+        $this->get(route('print.zip', ['ids' => [$tracks->first()->id, $hidden->id], 'lang' => 'it']))->assertOk();
+        Bus::assertDispatched(BuildPrintZipJob::class, fn ($job) => $job->ids === [(int) $tracks->first()->id]);
+    });
+
     it('uses a shared language as default when the first app default is not shared', function () {
         $tracks = ($this->makeTracks)(1);
-        $other = App::factory()->createQuietly(['available_languages' => json_encode(['en']), 'default_language' => 'en']);
+        $other = printApp(['available_languages' => json_encode(['en']), 'default_language' => 'en']);
         $tracks->push(EcTrack::factory()->createQuietly(['app_id' => $other->id, 'osmid' => null]));
         $this->printApp->update(['available_languages' => json_encode(['it', 'en']), 'default_language' => 'it']);
 
         $this->get(route('print.zip', ['ids' => $tracks->pluck('id')->all()]))->assertOk();
         Bus::assertDispatched(BuildPrintZipJob::class, fn ($job) => $job->locale === 'en');
 
-        $none = App::factory()->createQuietly(['available_languages' => json_encode(['de']), 'default_language' => 'de']);
+        $none = printApp(['available_languages' => json_encode(['de']), 'default_language' => 'de']);
         $tracks->push(EcTrack::factory()->createQuietly(['app_id' => $none->id, 'osmid' => null]));
         $this->get(route('print.zip', ['ids' => $tracks->pluck('id')->all()]))->assertNotFound();
     });
@@ -115,6 +125,9 @@ describe('route', function () {
             ->assertSee('aria-busy="true"', false)
             ->assertSee('<noscript><meta http-equiv="refresh" content="15"></noscript>', false)
             ->assertSee('Preparing your PDF')
+            // Lo ZIP si scarica: la pagina avvia il download, dice che si può chiudere e prova a chiudersi.
+            ->assertSee('var download = true;', false)
+            ->assertSee('Download again')
             ->assertSee('print\\/zip\\/status', false)
             ->assertSee('> 1920 * 1000', false);
         Bus::assertDispatched(BuildPrintZipJob::class, fn ($job) => $job->locale === 'en' && $job->ids === $ids);
@@ -122,6 +135,32 @@ describe('route', function () {
         expect(BuildPrintZipJob::key(array_reverse($ids), 'en'))->toBe(BuildPrintZipJob::key($ids, 'en'))
             ->and(BuildPrintZipJob::key($ids, 'it'))->not->toBe(BuildPrintZipJob::key($ids, 'en'));
         expect((new BuildPrintZipJob($ids, 'en'))->uniqueId())->toBe((new BuildPrintZipJob(array_reverse($ids), 'en'))->uniqueId());
+    });
+
+    it('builds the zip of pois with type=ec-poi, with a key of its own', function () {
+        config(['wm-package.ec_poi_model' => EcPoi::class]);
+        $pois = collect(range(1, 2))->map(fn () => EcPoi::factory()->createQuietly(['app_id' => $this->printApp->id, 'osmid' => null, 'properties' => []]));
+        $ids = $pois->pluck('id')->sort()->values()->all();
+
+        $this->get(route('print.zip', ['ids' => $ids, 'lang' => 'it', 'type' => 'ec-poi']))
+            ->assertOk()
+            ->assertSee('type=ec-poi', false);
+        Bus::assertDispatched(BuildPrintZipJob::class, fn ($job) => $job->type === 'ec-poi' && $job->ids === $ids);
+
+        // Le tracce tengono la chiave di prima; i POI con gli stessi id hanno la loro.
+        expect(BuildPrintZipJob::key($ids, 'it', 'ec-track'))->toBe(BuildPrintZipJob::key($ids, 'it'))
+            ->and(BuildPrintZipJob::key($ids, 'it', 'ec-poi'))->not->toBe(BuildPrintZipJob::key($ids, 'it'))
+            ->and((new BuildPrintZipJob($ids, 'it', 'ec-poi'))->uniqueId())->toBe(BuildPrintZipJob::key($ids, 'it', 'ec-poi'));
+
+        // Gli id di POI chiesti come tracce non esistono come tracce: 404, niente job.
+        $this->get(route('print.zip', ['ids' => [999999999], 'lang' => 'it', 'type' => 'ec-poi']))->assertNotFound();
+    });
+
+    it('answers 404 for an unknown type', function () {
+        $tracks = ($this->makeTracks)(1);
+
+        $this->get(route('print.zip', ['ids' => $tracks->pluck('id')->all(), 'lang' => 'it', 'type' => 'layer']))->assertNotFound();
+        Bus::assertNotDispatched(BuildPrintZipJob::class);
     });
 
     it('does not redispatch after a failure unless retry is requested', function () {
@@ -238,7 +277,7 @@ describe('job', function () {
     });
 
     it('has short runs and a unique lock covering the whole wait', function () {
-        config(['wm-package.features.print.zip.max_wait_seconds' => 1800]);
+        config(['wm-package.print.zip.max_wait_seconds' => 1800]);
         $job = new BuildPrintZipJob([1], 'it');
 
         expect($job->timeout)->toBeLessThan(660)
@@ -361,7 +400,7 @@ describe('cleanup command', function () {
         File::deleteDirectory($recent);
     });
 
-    it('is registered and scheduled only with the domain enabled', function () {
-        expect(config('wm-package.features.print.commands'))->toContain(PrintCleanupCommand::class);
+    it('is registered on every shard', function () {
+        expect(Artisan::all()['wm:print-cleanup'] ?? null)->toBeInstanceOf(PrintCleanupCommand::class);
     });
 });

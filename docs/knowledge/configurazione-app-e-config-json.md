@@ -238,3 +238,15 @@ sulle cause: `docs/features/8488-config-app-allineamento-geohub-post-import/`.
 
 `map_bbox` nella resource Nova `App`, tab «map», è un campo testo editabile con `copyable()` e un
 help text che rimanda a boundingbox.klokantech.com per generarlo.
+
+## Stampa PDF delle schede (oc:8982)
+
+`OPTIONS.ec_pdf_enabled` c'è sempre (default `false`) e dice al frontend e al sito se mostrare il pulsante
+di stampa, che costruisce da sé il link a `/print/{ec-track|ec-poi}/{id}` dello shard. Il dato è
+`properties.ec_pdf_enabled` dell'App (campo «Print PDF», tab «frontend»), non la colonna
+`print_track_enable` che arriva da Geohub.
+
+**Chiave deprecata.** `OPTIONS.print_track_enable` ha lo stesso valore e resta per la web app e l'app, che
+leggono già la chiave di Geohub. I nuovi frontend leggono `ec_pdf_enabled`; la vecchia si toglie quando
+nessuno la legge più (il commento `@deprecated` sta in `AppConfigService`).
+Dettagli in `docs/resources/Print.md`.

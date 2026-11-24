@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
 use Throwable;
+use Wm\WmPackage\Exceptions\MapServiceBusyException;
 use Wm\WmPackage\Services\Print\PrintService;
 use Wm\WmPackage\Services\Print\PrintStatus;
 
@@ -29,9 +30,8 @@ use Wm\WmPackage\Services\Print\PrintStatus;
  *
  * Un salvataggio che arriva durante la generazione (dati letti prima, PDF scritto dopo) lascerebbe un
  * PDF vecchio con una data più recente di `updated_at`, cioè «fresco» (`PrintService::isFresh()`)
- * finché qualcuno non salva di nuovo: nessun altro lo rigenera, perché alla prima generazione
- * `RegeneratePrintPdfsJob` non trova lingue da rifare e sulle sottoclassi degli shard l'observer del
- * modello del package non scatta. Per questo il job confronta `updated_at` prima e dopo la
+ * finché qualcuno non salva di nuovo: le schede si rigenerano solo a richiesta, quando non sono più
+ * fresche, e nessun altro se ne accorgerebbe. Per questo il job confronta `updated_at` prima e dopo la
  * generazione e, se è cambiato, si riaccoda invece di dichiarare pronta la scheda (oc:8982).
  *
  * Se il modello viene cancellato prima dell'esecuzione il job termina senza errore.
@@ -69,7 +69,7 @@ class GeneratePrintPdfJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
     public function __construct(public Model $model, public string $locale)
     {
         $this->timeout = self::computeTimeout();
-        $this->onQueue((string) config('wm-package.features.print.queue', 'print'));
+        $this->onQueue((string) config('wm-package.print.queue', 'print'));
     }
 
     /**
@@ -79,9 +79,9 @@ class GeneratePrintPdfJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
      */
     public static function computeTimeout(): int
     {
-        return 2 * (int) config('wm-package.features.print.compile.timeout', 120)
-            + (int) config('wm-package.features.print.map_service.timeout', 60)
-            + (int) config('wm-package.features.print.photos.total_timeout', PrintService::PHOTOS_TOTAL_TIMEOUT)
+        return 2 * (int) config('wm-package.print.compile.timeout', 120)
+            + (int) config('wm-package.print.map_service.timeout', 60)
+            + (int) config('wm-package.print.photos.total_timeout', PrintService::PHOTOS_TOTAL_TIMEOUT)
             + self::TIMEOUT_MARGIN_SECONDS;
     }
 
@@ -93,6 +93,10 @@ class GeneratePrintPdfJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
     {
         if (! preg_match(PrintService::LOCALE_PATTERN, $locale)) {
             throw new InvalidArgumentException('Lingua non valida per la scheda PDF.');
+        }
+        // Unico ingresso dei Job di generazione: con la stampa spenta per l'App non parte nulla.
+        if (! PrintService::enabledFor($model)) {
+            return;
         }
 
         PrintStatus::markQueued($model, $locale);
@@ -135,7 +139,21 @@ class GeneratePrintPdfJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
     {
         $readAt = self::timestamp($this->model->getAttribute($this->model->getUpdatedAtColumn() ?? 'updated_at'));
 
-        $url = $service->generate($this->model, $this->locale);
+        try {
+            $url = $service->generate($this->model, $this->locale);
+        } catch (MapServiceBusyException $e) {
+            // Servizio mappe occupato (oc:9011): si rimette in coda dopo il suo `Retry-After`. Conta come
+            // tentativo (`$tries`), non come eccezione (`$maxExceptions`); lo stato resta `queued`.
+            Log::channel('print')->info('Servizio mappe occupato: la scheda si rimette in coda', [
+                'model' => $this->model->getMorphClass(),
+                'id' => $this->model->getKey(),
+                'locale' => $this->locale,
+                'retry_after' => $e->retryAfter,
+            ]);
+            $this->release($e->retryAfter);
+
+            return;
+        }
 
         // Il modello è cambiato mentre la scheda si generava: il PDF appena scritto ha i dati di prima.
         $storedAt = $this->storedUpdatedAt();
