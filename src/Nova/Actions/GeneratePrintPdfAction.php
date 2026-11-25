@@ -26,10 +26,34 @@ class GeneratePrintPdfAction extends Action
 {
     public const DEFAULT_LOCALE = 'it';
 
-    public function __construct()
+    /**
+     * @param  class-string<Model>|null  $modelClass  Il modello della Resource che registra l'action,
+     *                                                per riconoscere l'elemento aperto nel dettaglio.
+     */
+    public function __construct(protected ?string $modelClass = null)
     {
-        // Solo sugli elementi di un'App con la stampa accesa (`properties.ec_pdf_enabled`).
+        // Si vede solo dove la stampa è accesa (oc:8982); gira solo sugli elementi di un'App con la
+        // stampa accesa (`properties.ec_pdf_enabled`).
+        $this->canSee(fn (NovaRequest $request) => $this->visibleFor($request));
         $this->canRun(fn ($request, $model) => $model instanceof Model && PrintService::enabledFor($model));
+    }
+
+    /**
+     * Nel dettaglio di un elemento: solo se la sua App ha la stampa accesa. Nell'index e
+     * all'esecuzione, dove non c'è un elemento solo: se almeno un'App ha la stampa accesa; il filtro
+     * per elemento lo fa canRun().
+     */
+    protected function visibleFor(NovaRequest $request): bool
+    {
+        $resourceId = $request->resourceId ?? $request->query('resourceId');
+
+        if ($resourceId !== null && $this->modelClass !== null) {
+            $model = $this->modelClass::query()->find($resourceId);
+
+            return $model instanceof Model && PrintService::enabledFor($model);
+        }
+
+        return App::query()->where('properties->ec_pdf_enabled', true)->exists();
     }
 
     public function name()

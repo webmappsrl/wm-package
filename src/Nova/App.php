@@ -521,6 +521,21 @@ class App extends Resource
         ];
     }
 
+    /**
+     * L'opzione di stampa delle schede PDF di tracce e POI. La colonna è la stessa di Geohub (arriva
+     * con l'import): vedi PrintService::enabledFor(). La vede e la modifica solo il superAdmin
+     * (`wm-package.super_admin_emails`): un campo non visibile non viene neanche salvato da Nova
+     * (oc:8982).
+     */
+    protected function printPdfField(): Boolean
+    {
+        return Boolean::make(__('Print PDF'), 'properties->ec_pdf_enabled')
+            ->default(false)
+            ->hideFromIndex()
+            ->canSee(fn (NovaRequest $request) => RolesAndPermissionsService::allows($request))
+            ->help(__('Enables the PDF sheets of tracks and POIs: the print button in the app and on the website, and their generation.'));
+    }
+
     protected function app_tab(): array
     {
         return [
@@ -528,12 +543,7 @@ class App extends Resource
                 ->default(false)
                 ->hideFromIndex()
                 ->help(__('Shows download track in GPX, KML, GEOJSON')),
-            // La colonna è la stessa di Geohub (arriva con l'import) e vale per le schede PDF di tracce
-            // e POI (oc:8982): vedi PrintService::enabledFor().
-            Boolean::make(__('Print PDF'), 'properties->ec_pdf_enabled')
-                ->default(false)
-                ->hideFromIndex()
-                ->help(__('Enables the PDF sheets of tracks and POIs: the print button in the app and on the website, and their generation.')),
+            $this->printPdfField(),
             Boolean::make(__('Show Travel Mode'), 'properties->show_travel_mode')
                 ->default(false)
                 ->hideFromIndex()
