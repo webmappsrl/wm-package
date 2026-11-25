@@ -185,9 +185,11 @@ class StoreApplicationRequest extends FormRequest
 
     /**
      * Il payload da conservare per intero: tutto cio' che e' arrivato nel
-     * corpo della richiesta, chiavi non previste dallo schema comprese e con
-     * i campi strutturati gia' decodificati da `prepareForValidation()`,
-     * tranne `name` e `geometry`, che hanno la loro destinazione.
+     * corpo della richiesta, con i campi strutturati gia' decodificati da
+     * `prepareForValidation()`, tranne `name` e `geometry`, che hanno la loro
+     * destinazione. Qui non arrivano piu' chiavi non dichiarate dallo schema:
+     * da oc:9039 le rifiuta `rejectUndeclaredKeys()` prima che la richiesta
+     * passi.
      *
      * Parte dal solo corpo (`getInputSource()`) e non da `all()`: quello
      * include la query string e i file caricati. La query string non e' cio'

@@ -66,9 +66,12 @@ Tre cose da sapere se si ridefinisce:
   descrivono i campi dello schema di default, con il numero di campo del format a cui rinviano. Uno
   schema ridefinito cambia la validazione ma non quelle descrizioni: chi lo ridefinisce deve
   estendere il controller e riscrivere le annotazioni, o la documentazione dirà il falso.
-- **Una chiave che lo schema non dichiara non viene rifiutata.** Si conserva com'è in `api_data`,
-  senza validarla: se l'ente aggiunge un campo al proprio modulo prima di noi, il dato arriva comunque
-  e non si perde in silenzio.
+- **Una chiave che lo schema non dichiara fa fallire la chiamata** (oc:9039). Non viene né ignorata
+  né conservata: la risposta è `422` e l'errore nomina la chiave. Vale al primo livello del payload,
+  dove il controllo sta in `StoreApplicationRequest::rejectUndeclaredKeys()`, e dentro i campi
+  strutturati, dove lo fa la Rule `OnlyAllowedKeys` (`src/Rules/`), che riceve le chiavi ammesse e
+  aggiunge un errore per ogni chiave di troppo, con il percorso che la nomina. I **valori** restano
+  invece alle regole dichiarate accanto: il perché è nel docblock della Rule.
 
 ### Cosa fa il package, e va tenuto presente dallo shard
 
@@ -117,6 +120,19 @@ Tre cose da sapere se si ridefinisce:
   legge. La conferma trasmette la domanda, e la transizione non si annulla: una chiamata che serve
   solo a sapere a che punto è una domanda non deve poterla trasmettere.
 
+- **Meglio un errore adesso che un campo sparito nel verbale** (oc:9039): finché il canale
+  conservava le chiavi che non conosceva, un nome di campo scritto male finiva in `api_data` senza
+  che nessuno se ne accorgesse, e il campo vero risultava mancante alla conferma. La tolleranza —
+  il principio di Postel, «accetta tutto ciò che riesci a interpretare» — serve a chi riceve da
+  molti mittenti che non controlla; qui il mittente è uno, il contratto è scritto e il dato ha
+  valore amministrativo, e vale il criterio opposto, quello che l'RFC 9413 raccomanda: segnalare
+  presto, perché la tolleranza consolida gli errori di chi implementa. Il momento per irrigidire è
+  mentre l'altra parte integra: dopo, ogni stretta rompe chi è già in esercizio.
+- **Una Rule per le chiavi, e non anche per i valori** (oc:9039): tenerle insieme sembrava più
+  ordinato, ma avrebbe reso l'elenco dei valori invisibile al generatore della documentazione, che
+  lo ricava da `in:`. Si sarebbe dovuto riscriverlo a mano nella descrizione: due posti per lo
+  stesso elenco, destinati a divergere.
+
 ## Come ci siamo arrivati
 
 - **Lettura e conferma in una sola chiamata** (oc:8968, scartata): la conferma avrebbe
@@ -130,3 +146,8 @@ Tre cose da sapere se si ridefinisce:
 - **La traccia caricabile anche come allegato** (oc:8968, scartata): `original_geometry` era fra le
   collection dell'upload. Scartata perché dalla traccia si ricavano i dati tecnici, e ricaricarla a
   parte avrebbe lasciato quelli della vecchia.
+- **Conservare le chiavi che non conosciamo** (oc:8968, superata da oc:9039): il canale depositava
+  in `api_data` qualunque chiave, anche non dichiarata, per non perdere un campo che il modulo
+  avesse aggiunto prima che lo schema lo prevedesse. Si è rovesciata quando è emerso che lo stesso
+  meccanismo accettava in silenzio un dato personale tolto apposta dal contratto: un codice fiscale
+  infilato in un oggetto sarebbe stato salvato senza che nessuno lo vedesse.
