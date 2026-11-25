@@ -120,7 +120,7 @@ class EcPoi extends AbstractEcResource
             (new ImportEcPoiFromOsm)
                 ->canSee($superAdminOnly)
                 ->canRun($superAdminOnly),
-            new GeneratePrintPdfAction,
+            new GeneratePrintPdfAction(static::$model),
         ];
     }
 

@@ -201,7 +201,7 @@ class EcTrack extends AbstractEcResource
      */
     protected function printActions(): array
     {
-        return [new GeneratePrintPdfAction];
+        return [new GeneratePrintPdfAction(static::$model)];
     }
 
     /**

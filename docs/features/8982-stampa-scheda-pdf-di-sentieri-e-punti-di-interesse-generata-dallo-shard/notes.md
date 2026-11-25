@@ -199,3 +199,19 @@ dalla rotta dello shard; il servizio delle mappe con token e IP è oc:9011.
   chiave delle tracce non cambia. Prova sulla Forestas locale: ZIP dei POI 1 e 2 con le due schede.
 - Conseguenza: l'action non forza più la rigenerazione di una scheda fresca (per esempio dopo un cambio di logo).
 - La pagina d'attesa dello ZIP non restava aperta sull'attesa: ora avvia il download, dice che si può chiudere e prova a chiudersi (`$download` della view `print/waiting`).
+
+## Nono giro: opzione solo al superAdmin, action solo dove la stampa è accesa (25/11)
+
+Richiesta del dev dopo il merge di #347, fatta sullo stesso ticket (terzo merge di oc:8982, scelta del
+dev).
+
+- L'opzione «Print PDF» della Resource App (`properties->ec_pdf_enabled`) la vede e la modifica solo
+  il superAdmin (`RolesAndPermissionsService::allows()`, email in `wm-package.super_admin_emails`): il
+  campo è in `App::printPdfField()` con `canSee`, e Nova non salva un campo non visibile.
+- L'action «Download print PDF» si vede nel dettaglio solo se l'App dell'elemento ha la stampa accesa,
+  nell'index solo se almeno un'App ce l'ha; `canRun` per elemento resta. Per riconoscere l'elemento
+  aperto l'action riceve il modello della Resource: `new GeneratePrintPdfAction(static::$model)` in
+  `EcTrack` ed `EcPoi`.
+- Test: `tests/Feature/Print/PrintVisibilityTest.php` (3). Il campo sta in un metodo suo anche perché
+  `app_tab()` costruisce un `Multiselect` che nel `vendor` del package non c'è, e il test non potrebbe
+  leggerlo.
