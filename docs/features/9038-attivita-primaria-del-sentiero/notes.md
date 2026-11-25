@@ -66,6 +66,19 @@ mancante, e il canale di prova dello shard non passa sempre scelte complete — 
 deve poterla prendere per distrazione. Verifica: `ApproveTrailApplicationFieldsTest.php` ›
 `esige la primaria: senza, l approvazione non parte`.
 
+### Sette test di forestas contavano le famiglie di tassonomia a mano
+La famiglia nuova fa tredici dove `ConfigureTaxonomyTermsCommandTest`, `TaxonomiesPerAppTest` e
+`ImportResetGuardsTest` ne contavano dodici, e otto righe in piu' dove ne contavano
+cinquantacinque. Non e' un difetto del lavoro: quei test misurano cosa fa il comando delle
+tassonomie dello shard, e la nostra famiglia la installa la migration del dominio, come gia'
+`walkability-status` — che infatti era gia' esclusa dai conteggi. Aggiunta `primary-activity`
+accanto a lei nelle esclusioni, e portato a 14 il solo conteggio che le famiglie dei domini le
+include apposta.
+
+**Li ha trovati la CI, non io**: avevo lanciato solo `tests/Feature/Sus`, cioe' i test del ticket,
+e non la suite dello shard. Un dato come «quante famiglie esistono» non e' del dominio che lo
+cambia: va cercato in tutto il repo prima di committare.
+
 ### Il payload del pulsante «Prova una domanda completa» non aveva il campo nuovo
 `forestas/resources/views/vendor/scramble/docs.blade.php` contiene il payload che la pagina delle API
 invia quando si prova una creazione. Non includeva `primary_activity`: con il campo diventato
