@@ -97,3 +97,105 @@ dove una decisione ne ha sostituita un'altra, c'è una riga «sostituisce».
   view dello shard, poi quella del package. Chiave scelta dal dev: l'id dell'App (lo `sku` avrebbe
   i punti, che per Laravel separano le cartelle).
 
+
+## Terzo giro (scrum del 24/11)
+
+- **L'action Nova falliva sempre con «Il campo Lingue deve essere una lista».** Nella richiesta di
+  un'action il `MultiSelect` è una stringa JSON, decodificata da Nova solo nel fill
+  (`MultiSelect::fillAttributeFromRequest()`): la regola `array` sul valore grezzo non passava mai.
+  Il test chiamava `handle()` direttamente e saltava la validazione. Ora le regole sono `json` e una
+  closure (lista non vuota), con un test su `validateFields()` e il payload di Nova. Trovato da
+  Giuseppe provando il rilascio su dev.
+- **La stampa è un'opzione della singola App (dev e Giuseppe, 24/11).** Si riusa la colonna
+  `apps.print_track_enable` di Geohub (campo «Print PDF» nel tab `frontend`), che vale per tracce e
+  POI: un solo controllo, `PrintService::enabledFor()`, usato da `dispatchFor()`, dalla
+  rigenerazione, dalle rotte, da `sheetUrl()` (ora riceve il modello) e dal `canRun()` dell'action.
+  Il frontend nasconde già il pulsante con `OPTIONS.print_track_enable`. Il flag per traccia di
+  Geohub (`allow_print_pdf`) non si usa. L'import da Geohub porta già la colonna (copia per schema
+  in `ImportAppJob::transformData()`), con un test che lo verifica.
+- Il link del frontend Webmapp punta ancora a `geohub.webmapp.it/track/pdf/{id}`: deve leggere
+  `properties.print_url`. È una modifica di `wm-core`, fuori da questo ticket.
+
+## Quarto giro (scrum del 24/11, 12:48)
+
+Decisioni della call, applicate:
+
+- **`print_url` esce dal JSON** di traccia e POI, e `PrintService::sheetUrl()` è tolto. Frontend e plugin
+  WordPress mostrano il pulsante se `OPTIONS.print_track_enable` è acceso e costruiscono l'URL dalla rotta
+  `print.show`: accendere o spegnere l'opzione non chiede più di riscrivere su wmfe il JSON di tutte le tracce.
+- **L'opzione dell'App va in `properties.ec_pdf_enabled`**, non nella colonna `print_track_enable` («le ultime
+  sono tutte property»). Vale per tracce e POI; il flag per traccia di Geohub (`allow_print_pdf`) si ignora e
+  Geohub non si tocca. Nel `config.json` la chiave resta `OPTIONS.print_track_enable`, che la web app legge
+  già. L'import porta la colonna Geohub nella property con una rinomina in `ImportedAppProperties`.
+- **Rigenerazione solo a richiesta**: tolto `RegeneratePrintPdfsJob` da `publicationJobs()` e da
+  `EcPoiObserver::saved()`, e il job stesso. La freschezza resta `isFresh()` su `updated_at`. Limite
+  documentato in `Print.md`: una modifica che non sposta `updated_at` dell'elemento (un POI collegato) non
+  rende vecchia la scheda della traccia.
+- **Data di generazione nel piè di pagina** (`PrintService::generatedOn()`, `$generatedOn`), data estesa nella
+  lingua della scheda.
+
+Verifica su Geohub di produzione, app 33: `OPTIONS.print_track_enable` è `false`; delle 504 tracce dei suoi
+layer, 388 hanno `allow_print_pdf` acceso (tutte quelle create prima del 2/6/2023 e 29 dopo) e 116 spento.
+Dopo che la web app leggerà solo l'opzione dell'App, su Geohub va accesa quella generica dell'app 33.
+
+Fuori da questo ticket: in `wm-core` la web app deve leggere solo l'opzione dell'App e costruire il link
+dalla rotta dello shard; il servizio delle mappe con token e IP è oc:9011.
+
+## Quinto giro: la mappa dal servizio di oc:9011
+
+- `HttpMapRenderer` parla con `POST https://origine.tiles.maphub.it/v1/print/map` (schema `PrintMapRequest`,
+  che rifiuta i campi non previsti): corpo da `MapRenderRequest::toServiceBody()`, token Bearer obbligatorio,
+  risposta PNG controllata dalla firma.
+- Il servizio rende solo pagine intere A5/A4: l'area in mm della mappa si traduce nella pagina più piccola che
+  la contiene, con l'orientamento dell'area (`page()`). Forestas (210 x 297) chiede un A4 verticale, esatto.
+- Il colore della traccia è il primario dell'App (`mapStroke()`); nome, id e ref non arrivano al servizio.
+- `429`/`503`/`504`/timeout → `MapServiceBusyException`, e i due Job si rimettono in coda con il `Retry-After`.
+  `BuildOverviewMapJob` passa da `$tries = 1` a 10 per poterlo fare.
+- Prova del 24/11 con il servizio vero, traccia 119 di Forestas: A4 verticale 300 dpi in 5,9 s (8,4 MB), A5
+  orizzontale in 3,3 s.
+- `map_service.max_zoom` e `padding_mm` configurabili (`maxZoom` e `padding` del servizio, il padding da mm a pixel al dpi chiesto). Forestas usa `max_zoom` 18: traccia 119 da 1:21.510 (16) a 1:5.378 (18); 17 dà 1:10.755, 19 dà 1:2.936. Il padding non cambia nulla finché è lo zoom massimo a fermare l'inquadratura.
+- Colore della traccia sulla mappa: `map_service.stroke_color` dello shard (`WM_PRINT_MAP_STROKE_COLOR`) vince su tutto, poi il colore del layer (`getInheritedTrackColorHex()`, primo layer per rank), poi `EcTrack::DEFAULT_COLOR_HEX`. Prima era il primario dell'App.
+
+## Sesto giro: niente interruttore per shard
+
+- Tolto `WM_PRINT_ENABLED` (decisione del dev, 24/11): la stampa non è più un dominio opzionale. La configurazione
+  passa da `wm-package.features.print.*` a `wm-package.print.*`; rotte (`routes/print.php`, prima
+  `routes/domains/print.php`), comando `wm:print-cleanup`, pulizia notturna, action Nova e `touchForPrint()` dei
+  termini ci sono su ogni shard. Il gate è solo l'opzione dell'App (`PrintService::enabledFor()`).
+- Conseguenza: lo shard che accende l'opzione deve avere TeX Live nell'immagine, il supervisor `print` e il token
+  del servizio mappe; nessun controllo lo verifica (elenco in `Print.md`, «L'opzione dell'App»). A oggi solo
+  Forestas installa TeX Live: nei repo locali di maphub, camminiditalia e osm2cai2 lo script non c'è.
+- `TaxonomyTermableObserver` aggiorna `updated_at` di tracce e POI a ogni cambio di termine su tutti gli shard,
+  non più solo dove la stampa era accesa.
+- Nel `config.json` l'opzione esce come `OPTIONS.ec_pdf_enabled` e, con lo stesso valore, come `OPTIONS.print_track_enable`, deprecata (`@deprecated` in `AppConfigService`): resta finché web app e app non leggono la nuova.
+
+## Settimo giro: copertina con la mappa nel template di default, prova su camminiditalia
+
+- Template di default di traccia e POI su due pagine: pagina 1 la mappa a tutta pagina (A4 al vivo) con logo e
+  titolo in un riquadro bianco in alto a sinistra (`\WmCopertina`, `\WmLogoTitolo` in `wm-print.sty`, con
+  `eso-pic`); pagina 2 il resto, foto comprese, con il titolo ripetuto in piccolo. Idea di Alessio, chiesta dal
+  dev il 24/11.
+- `print.map` passa di serie a 210 x 297 e ha un margine proprio, `print.map.padding_mm` = 42, passato con la
+  richiesta (`MapRenderRequest::withPadding()`): tiene la traccia fuori dal riquadro senza toccare la mappa
+  d'insieme. Il servizio accetta solo un margine uguale sui quattro lati. Forestas lo azzera (la sua pagina
+  della mappa non ha riquadro).
+- `supervisor-print` aggiunto a `config/wm-horizon.php`: senza interruttore, gli shard senza un proprio
+  `config/horizon.php` (camminiditalia) non avevano un worker per la coda.
+- Prova su camminiditalia in locale (traccia 1, «Via Vandelli - Tappa 03»): copertina con la traccia fuori
+  dal riquadro, nord e scala liberi, 20 s di generazione con il servizio vero.
+- POI: zoom massimo della mappa 18 di serie (`print.map.poi_max_zoom`, passato con la richiesta solo per le
+  geometrie `Point`). Mura poligonali di Amelia (camminiditalia, POI 617): da circa 1:21.000 a scala 200 m.
+- `\TitoloSezione` non resta solo in fondo a una pagina (`needspace`, `\nobreak`, `\@afterheading`). La scheda
+  di default non ha un limite di pagine. Tolto un `\makeatother` a metà di `wm-print.sty`, che rendeva `@` non
+  più lettera per le macro sotto.
+
+## Ottavo giro: l'action scarica
+
+- L'action Nova («Download print PDF») non accoda più le generazioni: con un elemento apre in una nuova scheda
+  `print.show`, con più elementi `print.zip`. Le pagine generano, aspettano e portano al file. Lingua singola
+  (`Select`, proposta la lingua di default dell'App): ogni esecuzione apre una pagina sola. Oltre
+  `zip.max_tracks` si ferma con un messaggio. Decisione del dev, 24/11.
+- Lo ZIP accetta anche i POI (`?type=ec-poi`, `BuildPrintZipJob` con il tipo, `PrintService::modelClass()`); la
+  chiave delle tracce non cambia. Prova sulla Forestas locale: ZIP dei POI 1 e 2 con le due schede.
+- Conseguenza: l'action non forza più la rigenerazione di una scheda fresca (per esempio dopo un cambio di logo).
+- La pagina d'attesa dello ZIP non restava aperta sull'attesa: ora avvia il download, dice che si può chiudere e prova a chiudersi (`$download` della view `print/waiting`).

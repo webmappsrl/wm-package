@@ -11,7 +11,6 @@ use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Services\Print\PrintService;
 use Wm\WmPackage\Services\Print\PrintStatus;
-use Wm\WmPackage\WmPackageServiceProvider;
 
 uses(DatabaseTransactions::class);
 
@@ -22,11 +21,6 @@ class PrintRoutesShardPoi extends EcPoi
 }
 
 /** Le rotte del dominio si caricano al boot: qui si carica il file a mano, come farebbe il provider. */
-function loadPrintRoutes(): void
-{
-    Route::group([], __DIR__.'/../../../routes/domains/print.php');
-}
-
 beforeEach(function () {
     config([
         'wm-package.shard_name' => 'testshard',
@@ -36,7 +30,7 @@ beforeEach(function () {
     Storage::fake('wmfe', ['url' => 'https://wmfe.test']);
     Cache::flush();
     Bus::fake();
-    $this->printApp = App::factory()->createQuietly([
+    $this->printApp = printApp([
         'available_languages' => json_encode(['it', 'en']),
         'default_language' => 'it',
     ]);
@@ -52,15 +46,7 @@ function printFile(EcTrack $track, string $locale = 'it', ?int $modifiedAt = nul
     return $path;
 }
 
-it('answers 404 when the print domain is disabled', function () {
-    $this->get('/print/ec-track/'.$this->track->id)->assertNotFound();
-    expect(Route::has('print.show'))->toBeFalse();
-});
-
-it('registers the named routes when the domain is enabled', function () {
-    loadPrintRoutes();
-    app('router')->getRoutes()->refreshNameLookups();
-
+it('registers the named routes at boot, with no switch on the shard', function () {
     expect(Route::has('print.show'))->toBeTrue()
         ->and(Route::has('print.status'))->toBeTrue()
         ->and(Route::getRoutes()->getByName('print.show')->gatherMiddleware())->toContain('throttle:30,1')
@@ -69,21 +55,7 @@ it('registers the named routes when the domain is enabled', function () {
         ->not->toContain('throttle:30,1');
 });
 
-it('registers the routes through the provider when the domain is turned on', function () {
-    config(['wm-package.features.print.enabled' => true]);
-    $provider = app()->getProvider(WmPackageServiceProvider::class);
-    // Il provider è già partito: si rilancia lo stesso metodo che al boot carica le rotte dei domini accesi.
-    $method = new ReflectionMethod($provider, 'registerEnabledDomains');
-    $method->invoke($provider);
-    app('router')->getRoutes()->refreshNameLookups();
-
-    expect(Route::has('print.show'))->toBeTrue();
-    $this->get('/print/ec-track/'.$this->track->id.'?lang=it')->assertOk();
-});
-
 it('answers 404 when the app locale fallback is not a valid language code', function () {
-    loadPrintRoutes();
-    app('router')->getRoutes()->refreshNameLookups();
     $this->printApp->update(['default_language' => '']);
     config(['app.locale' => 'it_IT']);
 
@@ -91,10 +63,13 @@ it('answers 404 when the app locale fallback is not a valid language code', func
     Bus::assertNotDispatched(GeneratePrintPdfJob::class);
 });
 
-describe('with the domain enabled', function () {
-    beforeEach(function () {
-        loadPrintRoutes();
-        app('router')->getRoutes()->refreshNameLookups();
+describe('routes', function () {
+    it('answers 404 and queues nothing when the app has print turned off', function () {
+        $this->printApp->update(['properties' => ['ec_pdf_enabled' => false]]);
+
+        $this->get('/print/ec-track/'.$this->track->id.'?lang=it')->assertNotFound();
+        $this->getJson('/print/ec-track/'.$this->track->id.'/status?lang=it')->assertNotFound();
+        Bus::assertNotDispatched(GeneratePrintPdfJob::class);
     });
 
     it('redirects to the wmfe url when the pdf is fresh', function () {
@@ -114,7 +89,9 @@ describe('with the domain enabled', function () {
             ->assertSee('aria-busy="true"', false)
             ->assertSee('aria-live="polite"', false)
             ->assertSee('<noscript><meta http-equiv="refresh" content="10"></noscript>', false)
-            ->assertSee('Preparing your PDF');
+            ->assertSee('Preparing your PDF')
+            // Il PDF si apre nella stessa scheda: la pagina non si chiude.
+            ->assertSee('var download = false;', false);
         Bus::assertDispatched(GeneratePrintPdfJob::class, fn ($job) => $job->locale === 'en' && $job->model->is($this->track));
     });
 
@@ -148,9 +125,9 @@ describe('with the domain enabled', function () {
 
     it('polls every 5 seconds and waits as long as the job can run plus a minute', function () {
         config([
-            'wm-package.features.print.compile.timeout' => 100,
-            'wm-package.features.print.map_service.timeout' => 40,
-            'wm-package.features.print.photos.total_timeout' => 50,
+            'wm-package.print.compile.timeout' => 100,
+            'wm-package.print.map_service.timeout' => 40,
+            'wm-package.print.photos.total_timeout' => 50,
         ]);
         // 2x100 + 40 + 50 + 30 = 320 s di Job, più 60 s.
         expect(GeneratePrintPdfJob::computeTimeout())->toBe(320);

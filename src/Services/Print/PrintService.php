@@ -5,11 +5,11 @@ namespace Wm\WmPackage\Services\Print;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 use Wm\WmPackage\Models\Abstracts\GeometryModel;
-use Wm\WmPackage\Services\FeaturesService;
+use Wm\WmPackage\Models\EcPoi;
+use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Services\Print\Contracts\MapRenderer;
 use Wm\WmPackage\Services\Print\Contracts\PrintableModel;
@@ -30,7 +30,7 @@ class PrintService
     /** Lato lungo massimo delle foto passate a xelatex, in px. */
     public const PHOTO_MAX_SIDE = 2000;
 
-    /** Limiti di default delle foto (sovrascrivibili in `features.print.photos`). */
+    /** Limiti di default delle foto (sovrascrivibili in `print.photos`). */
     public const PHOTO_MAX_BYTES = 31457280;
 
     public const PHOTO_MAX_PIXELS = 50000000;
@@ -44,10 +44,10 @@ class PrintService
     /** Budget di default del download di tutte le foto di una scheda, in secondi (`photos.total_timeout`). */
     public const PHOTOS_TOTAL_TIMEOUT = 60;
 
-    /** Dimensioni della mappa nella scheda (A4 con margini di 18 mm, circa 0,38 dell'altezza utile). */
-    public const MAP_WIDTH_MM = 174.0;
+    /** Dimensioni della mappa nella scheda: la pagina 1 intera, A4 al vivo (copertina del template di default). */
+    public const MAP_WIDTH_MM = 210.0;
 
-    public const MAP_HEIGHT_MM = 98.0;
+    public const MAP_HEIGHT_MM = 297.0;
 
     /**
      * Area della mappa d'insieme su A4 orizzontale (mm): la mappa a sinistra, la legenda in colonna a
@@ -133,6 +133,7 @@ class PrintService
                 'mapWidthMm' => $mapSize[0],
                 'mapHeightMm' => $mapSize[1],
                 'styleFiles' => array_keys($styles),
+                'generatedOn' => $this->generatedOn($locale),
             ]);
 
             $tex = view($model->printView(), $data)->render();
@@ -183,20 +184,28 @@ class PrintService
     }
 
     /**
-     * URL assoluto della rotta `print.show` per `properties.print_url` del dettaglio (senza `lang`:
-     * la lingua la sceglie la rotta). Null a dominio spento, quando la rotta non esiste.
-     *
-     * Il package inserisce la chiave solo nel dettaglio della traccia (`EcTrack::getDetailGeojson()`):
-     * non ha un endpoint di dettaglio POI proprio, quindi lo shard che ne ha uno deve aggiungere
-     * `properties.print_url` con `sheetUrl('ec-poi', $id)`.
+     * La stampa vale per il modello se la sua App ha `properties.ec_pdf_enabled` acceso: vale per
+     * tracce e POI (l'import la porta dalla colonna Geohub `print_track_enable`, che qui non si usa).
+     * Non c'è un interruttore per shard: chi accende l'opzione deve avere TeX Live, la coda `print` e
+     * il servizio mappe (docs/resources/Print.md).
+     * A opzione spenta non parte nulla: niente Job, rotte in 404, niente action Nova. Il frontend
+     * mostra il pulsante leggendo `OPTIONS.ec_pdf_enabled` del config e costruisce da sé l'URL
+     * della rotta `print.show`: nel JSON della traccia non c'è (decisione dello scrum del 24/11).
      */
-    public static function sheetUrl(string $type, int|string $id): ?string
+    public static function enabledFor(Model $model): bool
     {
-        if (! FeaturesService::isEnabled('print') || ! Route::has('print.show')) {
-            return null;
+        if (! $model->getAttribute('app_id')) {
+            return false;
         }
 
-        return route('print.show', ['type' => $type, 'id' => $id], true);
+        $app = $model->getRelationValue('app');
+
+        if (! $app instanceof Model) {
+            return false;
+        }
+        $properties = $app->getAttribute('properties');
+
+        return is_array($properties) && (bool) ($properties['ec_pdf_enabled'] ?? false);
     }
 
     /**
@@ -315,12 +324,15 @@ class PrintService
                     'id' => $model->getKey(),
                     'ref' => (string) ($properties['ref'] ?? ''),
                     'name' => $model->printTranslation('name', $locale),
+                    ...$this->mapStroke($model),
                 ],
             ]],
         ];
 
         return $this->mapRenderer->render(
             MapRenderRequest::forShard($featureCollection, ...$mapSize)
+                ->withPadding(self::mapPaddingMm())
+                ->withMaxZoom(($geometry['type'] ?? null) === 'Point' ? self::poiMapMaxZoom() : null)
         );
     }
 
@@ -336,6 +348,47 @@ class PrintService
         }
 
         return $labels;
+    }
+
+    /**
+     * La data di generazione per il piè di pagina, già escaped: il PDF è un'istantanea, e chi lo
+     * stampa deve sapere a che giorno risalgono i dati (scrum del 24/11). Data estesa nella lingua
+     * della scheda («24 novembre 2026»), nel fuso dell'applicazione.
+     */
+    public function generatedOn(string $locale): string
+    {
+        $date = now()->timezone((string) config('app.timezone'))->locale($locale)->isoFormat('LL');
+
+        return LatexText::escape((string) __('Sheet generated on :date', ['date' => $date], $locale));
+    }
+
+    /**
+     * Il disegno della traccia sulla mappa di stampa (simplestyle-spec, letto dal servizio di oc:9011).
+     *
+     * Il colore, in quest'ordine: `map_service.stroke_color` dello shard, che vince su tutto; il colore
+     * del layer della traccia (il primo per rank, `EcTrack::getInheritedTrackColorHex()`, come nelle
+     * app); se la traccia non ha layer colorati, o non è una traccia, `EcTrack::DEFAULT_COLOR_HEX`. Lo
+     * spessore è `map_service.stroke_width`.
+     *
+     * @return array{stroke: string, stroke-width: float}
+     */
+    public function mapStroke(Model $model): array
+    {
+        $width = (float) config('wm-package.print.map_service.stroke_width', 4);
+
+        return ['stroke' => $this->mapStrokeColor($model), 'stroke-width' => $width > 0 ? $width : 4.0];
+    }
+
+    private function mapStrokeColor(Model $model): string
+    {
+        $override = config('wm-package.print.map_service.stroke_color');
+        if (is_string($override) && preg_match('/^#[0-9a-fA-F]{6}$/D', $override)) {
+            return $override;
+        }
+
+        $inherited = $model instanceof EcTrack ? $model->getInheritedTrackColorHex() : null;
+
+        return sanitizeHexColor($inherited, EcTrack::DEFAULT_COLOR_HEX);
     }
 
     /**
@@ -378,15 +431,66 @@ class PrintService
     }
 
     /**
-     * Dimensioni della mappa della scheda in mm [larghezza, altezza]: `features.print.map.width_mm` e
+     * La classe del modello per il tipo della rotta (`ec-track`, `ec-poi`): quella configurata, che lo
+     * shard può sostituire con una sottoclasse. Null se il tipo non esiste o la classe non è stampabile.
+     *
+     * @return class-string<Model&PrintableModel>|null
+     */
+    public static function modelClass(string $type): ?string
+    {
+        $class = match ($type) {
+            'ec-track' => config('wm-package.ec_track_model'),
+            'ec-poi' => config('wm-package.ec_poi_model', EcPoi::class),
+            default => null,
+        };
+
+        if (! is_string($class) || ! is_subclass_of($class, Model::class) || ! is_subclass_of($class, PrintableModel::class)) {
+            return null;
+        }
+
+        /** @var class-string<Model&PrintableModel> $class */
+        return $class;
+    }
+
+    /** Il tipo della rotta per un modello: `ec-poi` per un POI, altrimenti `ec-track`. */
+    public static function typeOf(Model $model): string
+    {
+        return $model instanceof EcPoi ? 'ec-poi' : 'ec-track';
+    }
+
+    /**
+     * Zoom massimo della mappa della scheda di un POI (`print.map.poi_max_zoom`): l'inquadratura di un
+     * punto arriva sempre allo zoom massimo. Null: quello di `map_service.max_zoom`.
+     */
+    public static function poiMapMaxZoom(): ?float
+    {
+        $zoom = config('wm-package.print.map.poi_max_zoom');
+
+        return is_numeric($zoom) ? (float) $zoom : null;
+    }
+
+    /**
+     * Margine attorno alla traccia nella mappa della scheda, in mm di carta (`print.map.padding_mm`):
+     * il template di default lo usa per tenere la traccia fuori dal riquadro di logo e titolo della
+     * copertina. Null: quello di `map_service.padding_mm`.
+     */
+    public static function mapPaddingMm(): ?float
+    {
+        $padding = config('wm-package.print.map.padding_mm');
+
+        return is_numeric($padding) ? (float) $padding : null;
+    }
+
+    /**
+     * Dimensioni della mappa della scheda in mm [larghezza, altezza]: `print.map.width_mm` e
      * `height_mm`, ripiego sulle costanti MAP_WIDTH_MM e MAP_HEIGHT_MM se mancano o non sono positive.
      *
      * @return array{0: float, 1: float}
      */
     public function mapSize(): array
     {
-        $width = (float) config('wm-package.features.print.map.width_mm', self::MAP_WIDTH_MM);
-        $height = (float) config('wm-package.features.print.map.height_mm', self::MAP_HEIGHT_MM);
+        $width = (float) config('wm-package.print.map.width_mm', self::MAP_WIDTH_MM);
+        $height = (float) config('wm-package.print.map.height_mm', self::MAP_HEIGHT_MM);
 
         return [$width > 0 ? $width : self::MAP_WIDTH_MM, $height > 0 ? $height : self::MAP_HEIGHT_MM];
     }

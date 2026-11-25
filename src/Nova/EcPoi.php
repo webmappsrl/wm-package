@@ -22,7 +22,6 @@ use Wm\WmPackage\Nova\Filters\EcPoiRegionFilter;
 use Wm\WmPackage\Nova\Filters\GlobalEcPoiFilter;
 use Wm\WmPackage\Nova\Traits\HasConfigDetailPanel;
 use Wm\WmPackage\Nova\Traits\PointResourceTrait;
-use Wm\WmPackage\Services\FeaturesService;
 use Wm\WmPackage\Services\RolesAndPermissionsService;
 
 class EcPoi extends AbstractEcResource
@@ -121,7 +120,7 @@ class EcPoi extends AbstractEcResource
             (new ImportEcPoiFromOsm)
                 ->canSee($superAdminOnly)
                 ->canRun($superAdminOnly),
-            ...(FeaturesService::isEnabled('print') ? [new GeneratePrintPdfAction] : []),
+            new GeneratePrintPdfAction,
         ];
     }
 

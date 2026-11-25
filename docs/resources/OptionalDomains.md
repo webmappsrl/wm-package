@@ -20,7 +20,6 @@ Domini oggi dichiarati:
 | Dominio | Cosa contiene |
 |---|---|
 | `trail_registry` | Catasto Sentieri: codice REI (oc:8489), prevalidazione (oc:8490), validazione istanze (oc:8491). Documentazione del dominio: [`TrailRegistry.md`](TrailRegistry.md) |
-| `print` | Stampa PDF delle schede di sentieri e POI (oc:8982). Chiavi: `enabled` (`WM_PRINT_ENABLED`, default `false`), `queue` (`WM_PRINT_QUEUE`, `print`), `map_service.driver/url/token/timeout` (`WM_PRINT_MAP_DRIVER` default `fake`, `WM_PRINT_MAP_SERVICE_URL`, `WM_PRINT_MAP_SERVICE_TOKEN`, 60 s), `compile.timeout` (120 s) e `compile.memory_mb` (1024), `zip.max_tracks` (50), `overview_map.max_scale` (50000), `deps_version` (letta da `docker/render/VERSION` se il file esiste, altrimenti `null`). Le rotte stanno in `routes/domains/print.php`, caricato solo a dominio acceso |
 
 Ogni dominio ha una sezione in `config/wm-package.php`:
 

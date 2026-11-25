@@ -119,9 +119,7 @@
     "The PDF could not be generated": "Le PDF n'a pas pu être généré",
     "Try again": "Réessayer",
     "The PDF is taking longer than expected. Please try again later.": "Le PDF prend plus de temps que prévu. Veuillez réessayer plus tard.",
-    "Generate print PDF": "Générer la fiche PDF",
     "Languages": "Langues",
-    "PDF generations queued": "Générations PDF mises en file",
     "No tracks selected.": "Aucun parcours sélectionné.",
     "Too many tracks selected: the maximum is :max.": "Trop de parcours sélectionnés : le maximum est :max.",
     "Overview map": "Carte d'ensemble",
@@ -134,5 +132,15 @@
     "photo :media not found on storage": "photo :media introuvable sur le stockage",
     "conversion error, see the log": "erreur pendant la conversion, voir le journal",
     "Convert To EcPoi": "Convertir en EcPoi",
-    "The proposal contains different levels for this scale: choose one.": "La proposition contient des niveaux différents pour cette échelle : en choisir un."
+    "The proposal contains different levels for this scale: choose one.": "La proposition contient des niveaux différents pour cette échelle : en choisir un.",
+    "Print PDF": "Impression PDF",
+    "Enables the PDF sheets of tracks and POIs: the print button in the app and on the website, and their generation.": "Active les fiches PDF des parcours et des POI : le bouton d'impression dans l'app et sur le site, et leur génération.",
+    "Sheet generated on :date": "Fiche générée le :date",
+    "Download print PDF": "Télécharger la fiche PDF",
+    "Language": "Langue",
+    "No selected element can be printed in this language.": "Aucun élément sélectionné ne peut être imprimé dans cette langue.",
+    "Too many elements selected: the maximum is :max.": "Trop d'éléments sélectionnés : le maximum est :max.",
+    "Your download has started": "Le téléchargement a commencé",
+    "You can close this page.": "Vous pouvez fermer cette page.",
+    "Download again": "Télécharger à nouveau"
 }

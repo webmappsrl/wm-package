@@ -9,7 +9,6 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\ImageManager;
 use Wm\WmPackage\Exceptions\PrintCompilationException;
-use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcPoi;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\Media;
@@ -45,7 +44,7 @@ beforeEach(function () {
         });
     });
 
-    $this->printApp = App::factory()->createQuietly([
+    $this->printApp = printApp([
         'overlays_label' => 'Layers',
         'properties' => ['theme' => ['primary_color' => '#1A2B3C']],
     ]);
@@ -211,7 +210,7 @@ it('accepts plain and regional language codes', function () {
 });
 
 it('skips a photo whose declared size or body exceeds the byte cap', function () {
-    config(['wm-package.features.print.photos.max_bytes' => 1000]);
+    config(['wm-package.print.photos.max_bytes' => 1000]);
     $track = printTrack();
     $jpeg = (string) (new ImageManager(['driver' => 'gd']))->canvas(800, 600, '#00ff00')->encode('jpg', 90);
     expect(strlen($jpeg))->toBeGreaterThan(1000);
@@ -235,7 +234,7 @@ it('skips a photo whose declared size or body exceeds the byte cap', function ()
 });
 
 it('skips a photo over the pixel cap without decoding it', function () {
-    config(['wm-package.features.print.photos.max_pixels' => 100 * 100]);
+    config(['wm-package.print.photos.max_pixels' => 100 * 100]);
     $track = printTrack();
     $big = (string) (new ImageManager(['driver' => 'gd']))->canvas(200, 200, '#00ff00')->encode('jpg', 80);
     $small = (string) (new ImageManager(['driver' => 'gd']))->canvas(50, 50, '#0000ff')->encode('jpg', 80);
@@ -283,7 +282,7 @@ function printJpegWithOrientation(int $width, int $height, int $orientation): st
 }
 
 it('stops downloading photos when the total photo budget is spent, with a warning', function () {
-    config(['wm-package.features.print.photos.total_timeout' => 10]);
+    config(['wm-package.print.photos.total_timeout' => 10]);
     $track = printTrack();
     $jpeg = (string) (new ImageManager(['driver' => 'gd']))->canvas(80, 60, '#00ff00')->encode('jpg', 80);
     printPhoto($track, 'slow.jpg', 'image/jpeg', 1);

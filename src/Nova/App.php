@@ -528,6 +528,12 @@ class App extends Resource
                 ->default(false)
                 ->hideFromIndex()
                 ->help(__('Shows download track in GPX, KML, GEOJSON')),
+            // La colonna è la stessa di Geohub (arriva con l'import) e vale per le schede PDF di tracce
+            // e POI (oc:8982): vedi PrintService::enabledFor().
+            Boolean::make(__('Print PDF'), 'properties->ec_pdf_enabled')
+                ->default(false)
+                ->hideFromIndex()
+                ->help(__('Enables the PDF sheets of tracks and POIs: the print button in the app and on the website, and their generation.')),
             Boolean::make(__('Show Travel Mode'), 'properties->show_travel_mode')
                 ->default(false)
                 ->hideFromIndex()

@@ -16,15 +16,16 @@ use Laravel\Nova\Menu\MenuItem;
 use Laravel\Nova\Menu\MenuSection;
 use Laravel\Nova\Nova;
 use Laravel\Nova\Resource as NovaResource;
-use ReflectionClass;
-use Symfony\Component\Finder\Finder;
 use Matchish\ScoutElasticSearch\ElasticSearch\HitsIteratorAggregate;
 use Matchish\ScoutElasticSearch\ElasticSearchServiceProvider;
+use ReflectionClass;
 use Sentry\State\Scope;
 use Spatie\Backup\Config\Config as BackupConfig;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
+use Symfony\Component\Finder\Finder;
 use Tymon\JWTAuth\Providers\LaravelServiceProvider;
+use Wm\WmPackage\Commands\PrintCleanupCommand;
 use Wm\WmPackage\Commands\WmBackfillGravatarAvatarsCommand;
 use Wm\WmPackage\Commands\WmBackupCommand;
 use Wm\WmPackage\Commands\WmBuildAppPoisGeojsonCommand;
@@ -59,6 +60,9 @@ use Wm\WmPackage\Services\FeaturesService;
 use Wm\WmPackage\Services\Import\EcMediaImportService;
 use Wm\WmPackage\Services\Import\GeohubImportService;
 use Wm\WmPackage\Services\Import\UgcMediaImportService;
+use Wm\WmPackage\Services\Print\Contracts\MapRenderer;
+use Wm\WmPackage\Services\Print\FakeMapRenderer;
+use Wm\WmPackage\Services\Print\HttpMapRenderer;
 use Wm\WmPackage\Services\TaxonomyWhereDisplayService;
 use Wm\WmPackage\Tests\Feature\OptionalDomainRegistrationTest;
 use Wm\WmPackage\TrailRegistry\Models\TrailApplication as TrailApplicationModel;
@@ -88,10 +92,10 @@ class WmPackageServiceProvider extends PackageServiceProvider
 
         // Renderer delle mappe di stampa: scelto al resolve in base a `map_service.driver`
         $this->app->bind(
-            \Wm\WmPackage\Services\Print\Contracts\MapRenderer::class,
-            fn () => config('wm-package.features.print.map_service.driver', 'fake') === 'http'
-                ? new \Wm\WmPackage\Services\Print\HttpMapRenderer
-                : new \Wm\WmPackage\Services\Print\FakeMapRenderer
+            MapRenderer::class,
+            fn () => config('wm-package.print.map_service.driver', 'fake') === 'http'
+                ? new HttpMapRenderer
+                : new FakeMapRenderer
         );
 
         // Registra il GlobalFileServiceProvider
@@ -166,6 +170,9 @@ class WmPackageServiceProvider extends PackageServiceProvider
 
             Route::middleware('web')
                 ->group($packageDirPath.'routes/web.php');
+
+            // Stampa PDF delle schede (oc:8982): il file dichiara da sé middleware e throttle.
+            Route::group([], $packageDirPath.'routes/print.php');
 
             Route::middleware(['nova'])
                 ->prefix('nova-vendor/layer-analytics')
@@ -264,6 +271,7 @@ class WmPackageServiceProvider extends PackageServiceProvider
             ->discoversMigrations()
             ->hasCommands([
                 WmPackageCommand::class,
+                PrintCleanupCommand::class,
                 // WmBackupCommand::class,//See in the boot() method
                 WmImportFromGeohubCommand::class,
                 WmGeneratePBFCommand::class,

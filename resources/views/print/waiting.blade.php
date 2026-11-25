@@ -35,11 +35,18 @@
         @endif
     </div>
     <a class="retry" id="print-retry" href="{{ $retryUrl }}" @if ($failedMessage === null) hidden @endif>{{ $t('Try again') }}</a>
+    <a class="retry" id="print-download" href="#" hidden>{{ $t('Download again') }}</a>
 </main>
 @if ($failedMessage === null)
 <script>
 (function () {
     var statusUrl = @json($statusUrl);
+    // Un file da scaricare (lo ZIP) non sostituisce la pagina: il browser lo scarica e la scheda
+    // resterebbe aperta sull'attesa. Si avvia il download, si dice che è partito e si chiude la scheda,
+    // che il browser lascia chiudere solo se l'ha aperta uno script (l'action di Nova).
+    var download = @json((bool) ($download ?? false));
+    var startedTitle = @json($t('Your download has started'));
+    var closeMessage = @json($t('You can close this page.'));
     var timeoutMessage = @json($t('The PDF is taking longer than expected. Please try again later.'));
     var failedTitle = @json($t('The PDF could not be generated'));
     var started = Date.now();
@@ -57,13 +64,27 @@
         document.getElementById('print-retry').hidden = false;
     }
 
+    function finish(url) {
+        if (!download) { window.location.href = url; return; }
+        main.setAttribute('aria-busy', 'false');
+        document.getElementById('print-title').textContent = startedTitle;
+        var spinner = document.getElementById('print-spinner');
+        if (spinner) { spinner.hidden = true; }
+        box.textContent = closeMessage;
+        var again = document.getElementById('print-download');
+        again.href = url;
+        again.hidden = false;
+        window.location.href = url;
+        setTimeout(function () { window.close(); }, 2000);
+    }
+
     function poll() {
         if (Date.now() - started > {{ (int) ($timeoutSeconds ?? 300) }} * 1000) { stop(failedTitle, timeoutMessage); return; }
         fetch(statusUrl, { headers: { 'Accept': 'application/json' }, cache: 'no-store' })
             .then(function (r) { return r.ok ? r.json() : null; })
             .then(function (data) {
                 if (!data) { return; }
-                if (data.status === 'done' && data.url) { clearInterval(timer); window.location.href = data.url; }
+                if (data.status === 'done' && data.url) { clearInterval(timer); finish(data.url); }
                 else if (data.status === 'failed') { stop(failedTitle, data.message || ''); }
             })
             .catch(function () {});

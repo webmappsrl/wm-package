@@ -1,6 +1,5 @@
 <?php
 
-use Wm\WmPackage\Commands\PrintCleanupCommand;
 use Wm\WmPackage\Models\TaxonomyActivity;
 use Wm\WmPackage\Models\TaxonomyPoiType;
 use Wm\WmPackage\Services\Models\UgcTrackCleanupService;
@@ -189,6 +188,92 @@ return [
     'internal_attribute_keys' => [],
 
     /*
+    | Stampa PDF delle schede di tracce e POI (oc:8982). Non è un dominio opzionale: il codice c'è su
+    | ogni shard, e la stampa vale per gli elementi di un'App con `properties.ec_pdf_enabled` acceso
+    | (PrintService::enabledFor()). Lo shard che la usa deve avere TeX Live nell'immagine PHP, la coda
+    | `print` in Horizon e il token del servizio mappe: docs/resources/Print.md.
+    */
+    'print' => [
+        // Coda dei job di stampa.
+        'queue' => env('WM_PRINT_QUEUE', 'print'),
+
+        // Servizio delle mappe di stampa su wm-tiles (oc:9011): `fake` per lo sviluppo, `http` per il
+        // servizio vero, `url` = `https://origine.tiles.maphub.it/v1/print/map`, token per shard.
+        'map_service' => [
+            'driver' => env('WM_PRINT_MAP_DRIVER', 'fake'),
+            'url' => env('WM_PRINT_MAP_SERVICE_URL'),
+            'token' => env('WM_PRINT_MAP_SERVICE_TOKEN'),
+            // Una pagina A4 a 300 dpi costa 4-5 s; oltre, il Job si rimette in coda.
+            'timeout' => 60,
+            'dpi' => 300,
+            'style_id' => 'webmapp',
+            // Scala, nord e attribuzioni disegnati dal servizio sulla mappa.
+            'map_info' => true,
+            // Spessore della traccia in pixel css (il servizio lo moltiplica per la stampa).
+            'stroke_width' => 4,
+            // Colore della traccia per tutto lo shard (`#rrggbb`), che vince sul colore del layer.
+            // Null: quello del layer della traccia, altrimenti EcTrack::DEFAULT_COLOR_HEX.
+            'stroke_color' => env('WM_PRINT_MAP_STROKE_COLOR'),
+            // Zoom oltre il quale la mappa non si ingrandisce, anche su una traccia corta (0-19). Null:
+            // quello del servizio, 16, che su un A4 lascia un sentiero di 1 km a circa 1:21.000.
+            'max_zoom' => null,
+            // Margine attorno alle geometrie, in mm di carta, per tutte le mappe. Null: quello del
+            // servizio, 8 mm. La mappa della scheda ha il suo, `map.padding_mm`.
+            'padding_mm' => null,
+        ],
+
+        // Limiti della compilazione del PDF.
+        'compile' => [
+            'timeout' => 120,
+            'memory_mb' => 1024,
+        ],
+
+        // Limiti delle foto scaricate per la scheda: oltre, la foto si salta (warning sul canale
+        // `print`). Un esaurimento di memoria in GD è fatale e non intercettabile.
+        'photos' => [
+            'max_bytes' => 30 * 1024 * 1024,
+            'max_pixels' => 50_000_000,
+            // Budget complessivo del download delle foto di una scheda, in secondi: esaurito, le
+            // foto restanti si saltano. Ogni foto ha una scadenza sull'intero download pari al
+            // residuo (mai oltre 30 s): superata, la foto si salta. Entra nel timeout di GeneratePrintPdfJob.
+            'total_timeout' => 60,
+        ],
+
+        // Dimensioni (mm) della mappa nella scheda di sentiero e POI: la richiesta al servizio mappe
+        // e la view le usano insieme, così uno shard che la vuole grande la chiede grande.
+        'map' => [
+            'width_mm' => 210,
+            'height_mm' => 297,
+            // Zoom massimo della mappa della scheda di un POI: l'inquadratura di un punto arriva sempre allo
+            // zoom massimo, e con il 16 del servizio il POI resta piccolo in mezzo al territorio
+            // (circa 1:21.000 su un A4). 18 è circa 1:5.400. Null: `map_service.max_zoom`.
+            'poi_max_zoom' => 18,
+            // Margine attorno alla traccia nella mappa della scheda, in mm di carta: 42 la tiene fuori
+            // dal riquadro di logo e titolo della copertina del template di default. Null: quello di
+            // `map_service.padding_mm`.
+            'padding_mm' => 42,
+        ],
+
+        // Massimo di tracce in uno zip.
+        'zip' => [
+            'max_tracks' => 50,
+            // Attesa massima dello ZIP per le schede da generare, in secondi.
+            'max_wait_seconds' => 1800,
+        ],
+
+        // Scala massima della mappa di insieme.
+        'overview_map' => [
+            'max_scale' => 50000,
+        ],
+
+        // Versione delle dipendenze di compilazione attesa dal marcatore:
+        // contenuto di docker/render/VERSION se il file esiste, altrimenti null.
+        'deps_version' => file_exists(__DIR__.'/../docker/render/VERSION')
+            ? trim((string) file_get_contents(__DIR__.'/../docker/render/VERSION'))
+            : null,
+    ],
+
+    /*
     | Domini opzionali del package {@see \Wm\WmPackage\Services\FeaturesService}.
     | A dominio spento il package si comporta come se il dominio non esistesse:
     | i suoi stub di migration non sono considerati dai comandi, i suoi comandi
@@ -196,68 +281,6 @@ return [
     | Guida: docs/resources/OptionalDomains.md
     */
     'features' => [
-        'print' => [
-            'enabled' => env('WM_PRINT_ENABLED', false),
-
-            // Coda dei job di stampa.
-            'queue' => env('WM_PRINT_QUEUE', 'print'),
-
-            // Comandi artisan del dominio: registrati solo a dominio acceso.
-            'commands' => [
-                PrintCleanupCommand::class,
-            ],
-
-            // Servizio che renderizza le mappe: `fake` (test/locale) o quello reale.
-            'map_service' => [
-                'driver' => env('WM_PRINT_MAP_DRIVER', 'fake'),
-                'url' => env('WM_PRINT_MAP_SERVICE_URL'),
-                'token' => env('WM_PRINT_MAP_SERVICE_TOKEN'),
-                'timeout' => 60,
-            ],
-
-            // Limiti della compilazione del PDF.
-            'compile' => [
-                'timeout' => 120,
-                'memory_mb' => 1024,
-            ],
-
-            // Limiti delle foto scaricate per la scheda: oltre, la foto si salta (warning sul canale
-            // `print`). Un esaurimento di memoria in GD è fatale e non intercettabile.
-            'photos' => [
-                'max_bytes' => 30 * 1024 * 1024,
-                'max_pixels' => 50_000_000,
-                // Budget complessivo del download delle foto di una scheda, in secondi: esaurito, le
-                // foto restanti si saltano. Ogni foto ha una scadenza sull'intero download pari al
-                // residuo (mai oltre 30 s): superata, la foto si salta. Entra nel timeout di GeneratePrintPdfJob.
-                'total_timeout' => 60,
-            ],
-
-            // Dimensioni (mm) della mappa nella scheda di sentiero e POI: la richiesta al servizio mappe
-            // e la view le usano insieme, così uno shard che la vuole grande la chiede grande.
-            'map' => [
-                'width_mm' => 174,
-                'height_mm' => 98,
-            ],
-
-            // Massimo di tracce in uno zip.
-            'zip' => [
-                'max_tracks' => 50,
-                // Attesa massima dello ZIP per le schede da generare, in secondi.
-                'max_wait_seconds' => 1800,
-            ],
-
-            // Scala massima della mappa di insieme.
-            'overview_map' => [
-                'max_scale' => 50000,
-            ],
-
-            // Versione delle dipendenze di compilazione attesa dal marcatore:
-            // contenuto di docker/render/VERSION se il file esiste, altrimenti null.
-            'deps_version' => file_exists(__DIR__.'/../docker/render/VERSION')
-                ? trim((string) file_get_contents(__DIR__.'/../docker/render/VERSION'))
-                : null,
-        ],
-
         'trail_registry' => [
             'enabled' => env('WM_TRAIL_REGISTRY_ENABLED', false),
 

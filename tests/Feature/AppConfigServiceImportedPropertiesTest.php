@@ -179,3 +179,12 @@ it('only reads properties keys that ImportedAppProperties declares', function ()
 
     expect(array_values(array_diff($keys, ImportedAppProperties::keys())))->toBe([]);
 });
+
+it('publishes properties.ec_pdf_enabled as OPTIONS.ec_pdf_enabled and the deprecated print_track_enable, ignoring the old column (oc:8982)', function () {
+    // Le due chiavi hanno lo stesso valore: print_track_enable è deprecata e resta per i frontend che la leggono.
+    $on = App::factory()->createQuietly(['api' => 'webmapp', 'print_track_enable' => false, 'properties' => ['ec_pdf_enabled' => true]]);
+    $off = App::factory()->createQuietly(['api' => 'webmapp', 'print_track_enable' => true, 'properties' => []]);
+
+    expect((new AppConfigService($on))->config()['OPTIONS'])->toMatchArray(['ec_pdf_enabled' => true, 'print_track_enable' => true])
+        ->and((new AppConfigService($off))->config()['OPTIONS'])->toMatchArray(['ec_pdf_enabled' => false, 'print_track_enable' => false]);
+});

@@ -26,7 +26,7 @@ Lo script legge `VERSION` dalla propria cartella.
 ## Marcatore e VERSION
 
 `VERSION` contiene una sola riga (un intero). `XelatexCompiler` confronta il marcatore con
-`config('wm-package.features.print.deps_version')`, che legge lo stesso file: incrementa `VERSION`
+`config('wm-package.print.deps_version')`, che legge lo stesso file: incrementa `VERSION`
 quando cambiano le dipendenze, così le immagini vecchie vengono riconosciute.
 
 ## Font

@@ -28,3 +28,16 @@ function printSavedTrack(App $app, array $attributes = []): EcTrack
 {
     return EcTrack::factory()->createQuietly(array_merge(['app_id' => $app->id, 'osmid' => null], $attributes));
 }
+
+/**
+ * App salvata senza eventi, con la stampa accesa (`properties.ec_pdf_enabled`): la scheda vale solo per
+ * gli elementi di un'App che l'ha accesa (PrintService::enabledFor()).
+ *
+ * @param  array<string,mixed>  $attributes
+ */
+function printApp(array $attributes = []): App
+{
+    $attributes['properties'] = array_merge(['ec_pdf_enabled' => true], (array) ($attributes['properties'] ?? []));
+
+    return App::factory()->createQuietly($attributes);
+}

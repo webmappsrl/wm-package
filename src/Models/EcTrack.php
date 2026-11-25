@@ -20,7 +20,6 @@ use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Services\Models\EcTrackService;
 use Wm\WmPackage\Services\Models\MediaService;
 use Wm\WmPackage\Services\Print\Contracts\PrintableModel;
-use Wm\WmPackage\Services\Print\PrintService;
 use Wm\WmPackage\Services\Print\TrackPrintData;
 use Wm\WmPackage\TrailRegistry\Services\WalkabilityDetailService;
 use Wm\WmPackage\Traits\EcFeatureTrait;
@@ -946,12 +945,6 @@ class EcTrack extends MultiLineString implements LayerRelatedModel, PrintableMod
         $walkability = app(WalkabilityDetailService::class)->forTrack($this);
         if ($walkability !== null) {
             $geojson['properties']['walkability'] = $walkability;
-        }
-
-        // URL della scheda PDF, solo a dominio `print` acceso (oc:8982).
-        $printUrl = PrintService::sheetUrl('ec-track', $this->id);
-        if ($printUrl !== null) {
-            $geojson['properties']['print_url'] = $printUrl;
         }
 
         return $geojson;

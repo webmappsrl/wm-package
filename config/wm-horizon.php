@@ -251,6 +251,22 @@ return [
             'timeout' => 85,
             'nice' => 0,
         ],
+        // Stampa PDF delle schede (oc:8982): la coda c'è su ogni shard, perché la stampa non ha più un
+        // interruttore. `timeout` sopra quello del Job (GeneratePrintPdfJob::computeTimeout(), 390 s
+        // con i default) e sotto il `retry_after` della connessione redis, che va alzato (660 s su
+        // Forestas, REDIS_QUEUE_RETRY_AFTER): con i 90 s di serie un PDF lento verrebbe riconsegnato
+        // mentre è ancora in compilazione. `tries` lo dichiara il Job.
+        'supervisor-print' => [
+            'connection' => 'redis',
+            'queue' => ['print'],
+            'balance' => 'simple',
+            'maxProcesses' => 2,
+            'maxTime' => 3600,
+            'maxJobs' => 100,
+            'memory' => 256,
+            'timeout' => 420,
+            'nice' => 0,
+        ],
     ],
 
     'environments' => [
@@ -290,6 +306,7 @@ return [
             // oc:8773: Horizon avvia solo i supervisor elencati per l'ambiente, non basta la
             // definizione in defaults. Senza questa voce la coda ugc-track-matching non gira.
             'supervisor-ugc-track-matching' => [],
+            'supervisor-print' => [],
         ],
         'local' => [
             'supervisor-default' => [
@@ -311,6 +328,7 @@ return [
             // oc:8773: Horizon avvia solo i supervisor elencati per l'ambiente, non basta la
             // definizione in defaults. Senza questa voce la coda ugc-track-matching non gira.
             'supervisor-ugc-track-matching' => [],
+            'supervisor-print' => [],
         ],
         'staging' => [
             'supervisor-default' => [
@@ -344,6 +362,7 @@ return [
             // oc:8773: Horizon avvia solo i supervisor elencati per l'ambiente, non basta la
             // definizione in defaults. Senza questa voce la coda ugc-track-matching non gira.
             'supervisor-ugc-track-matching' => [],
+            'supervisor-print' => [],
         ],
     ],
 ];
