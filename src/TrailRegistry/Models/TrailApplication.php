@@ -224,7 +224,7 @@ class TrailApplication extends MultiLineString
      * E' una colonna e non una chiave dentro `properties` perche'
      * GeoJsonService::getModelAsGeojson riversa `properties` per intero nella
      * Feature, e quella Feature viaggia verso il servizio DEM e verso il
-     * sentiero pubblicato: e-mail, nomi, codici fiscali e partite IVA
+     * sentiero pubblicato: e-mail e nomi delle persone indicate come soggetti
      * uscirebbero da ogni strada che serializza l'istanza, e starebbe a chi
      * scrive quella strada ricordarsene. Fuori da `properties` non ci sono
      * strade da ricordare.
@@ -240,15 +240,14 @@ class TrailApplication extends MultiLineString
      *
      * L'elenco non vive piu' qui: lo dichiara `ApplicationSchema`, che lo
      * shard puo' ridefinire nel container. Ci sono solo i campi obbligatori
-     * incondizionatamente. Non ci sono quelli che dipendono dal valore di un
-     * altro campo (`soggetto_gestore_other`, `soggetto_rilevatore_other`,
-     * `soggetto_rilevatore_email`, `soggetto_manutentore_other`,
-     * `soggetto_manutentore_cf`, `soggetto_custode`): la loro
-     * obbligatorieta' non e' una proprieta' dell'istanza ma una regola di
-     * validazione della chiamata, e fra gli obbligatori terrebbero
-     * un'istanza per sempre lontana dalla conferma. Non c'e' nemmeno
-     * `difficulty` (37): il format ne valida la forma ma non ne chiede la
-     * presenza.
+     * incondizionatamente. Non c'e' `keeping_subjects` (58), perche' il
+     * custode e' facoltativo, ne' `difficulty` (37), di cui il format valida
+     * la forma senza chiederne la presenza.
+     *
+     * Attenzione: questo elenco dice quali campi devono *esserci*, non che
+     * forma abbiano. Una lista di soggetti non vuota ma con dentro oggetti
+     * malformati supera il controllo: la forma la governano le regole dello
+     * schema, applicate quando la chiamata arriva.
      *
      * @return list<string>
      */

@@ -1,6 +1,10 @@
 <?php
 
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
+use Wm\WmPackage\Models\App;
 use Wm\WmPackage\TrailRegistry\Models\TrailApplication;
 
 /**
@@ -29,7 +33,7 @@ it('tiene i dati api fuori dal geojson che viaggia verso il DEM', function () {
     // `properties`: GeoJsonService::getModelAsGeojson riversa `properties` per
     // intero nella Feature, e quella Feature parte in POST verso il servizio
     // DEM (UpdateTrailApplicationDemJob -> DemClient::getTechData). Qui dentro
-    // ci sono e-mail, nomi e codici fiscali del richiedente (oc:8960).
+    // ci sono e-mail e nomi delle persone indicate come soggetti (oc:8960).
     $application = TrailApplication::factory()->create();
     // La geometria passa da SQL puro, come ovunque nel package: senza,
     // getGeojson() torna null e il test non proverebbe niente.
@@ -38,8 +42,7 @@ it('tiene i dati api fuori dal geojson che viaggia verso il DEM', function () {
         ['MULTILINESTRING Z ((1 1 0, 2 2 0))', $application->id]
     );
     $application->writeApiData([
-        'soggetto_rilevatore_email' => 'rilevatore@example.org',
-        'soggetto_manutentore_cf' => ['RSSMRA80A01H501U'],
+        'surveying_subjects' => [['name' => 'Mario Rossi', 'email' => 'rilevatore@example.org', 'subject' => 'person']],
     ]);
 
     $geojson = $application->fresh()->getGeojson();
@@ -67,14 +70,14 @@ it('elenca i campi e gli allegati che mancano per la conferma', function () {
 
     $mancanti = $application->fresh()->missingForConfirmation();
 
-    expect($mancanti['fields'])->toContain('to', 'distance', 'soggetto_gestore')
+    expect($mancanti['fields'])->toContain('to', 'distance', 'managing_subjects')
         ->and($mancanti['fields'])->not->toContain('from')
         ->and($mancanti['attachments'])->toContain('report', 'maintenance_plan')
         ->and($mancanti['attachments'])->not->toContain('authorizations');
 });
 
 it('non considera obbligatori i campi facoltativi', function () {
-    $facoltativi = ['intermediate_stop', 'ascent', 'overlapping_routes', 'municipality_email_alt', 'themes'];
+    $facoltativi = ['intermediate_stop', 'ascent', 'overlapping_routes', 'keeping_subjects', 'themes'];
 
     // Uno per uno, non `not->toContain(...$facoltativi)`: quella forma nega
     // «li contiene tutti», quindi passerebbe anche se uno solo mancasse.
@@ -84,27 +87,73 @@ it('non considera obbligatori i campi facoltativi', function () {
 it('non pretende la difficolta proposta per la conferma', function () {
     // Il campo 37 il format lo valida nella forma — «mappa attivita' ->
     // livello, si valida la coppia» — ma non ne chiede la presenza, a
-    // differenza dei quindici che dicono «obbligatorio». Pretenderlo
+    // differenza di quelli che dicono «obbligatorio». Pretenderlo
     // rifiuterebbe un'istanza che il format considera completa, e il cittadino
     // non chiuderebbe la pratica; la difficolta' che finisce sul sentiero
     // pubblicato la assegna comunque il Catasto in istruttoria (oc:8960).
     expect(TrailApplication::requiredApiFields())->not->toContain('difficulty');
 });
 
-it('non considera obbligatori i campi che dipendono da un altro campo', function () {
-    // L'obbligatorieta' di questi sei dipende dal valore di un altro campo: la
-    // governa la validazione dell'endpoint, non l'elenco dell'istanza. Se
-    // `soggetto_custode` (58) stesse fra gli obbligatori, un'istanza il cui
-    // campo 56 dice che un custode non c'e' non si potrebbe confermare mai: il
-    // 58 resterebbe per sempre fra i campi mancanti (oc:8960).
-    $condizionati = [
-        'soggetto_gestore_other',
-        'soggetto_rilevatore_other',
-        'soggetto_rilevatore_email',
-        'soggetto_manutentore_other',
-        'soggetto_manutentore_cf',
-        'soggetto_custode',
-    ];
+it('non considera obbligatoria la e-mail di un soggetto, che dipende dalla sua natura', function () {
+    // Dopo oc:9039 l'unica obbligatorieta' condizionata e' quella della
+    // e-mail dentro una lista di soggetti: la governa la validazione della
+    // chiamata, non l'elenco dei campi dell'istanza. Un'istanza con un solo
+    // custode persona fisica, senza e-mail, deve potersi confermare.
+    expect(TrailApplication::requiredApiFields())
+        ->not->toContain('keeping_subjects');
 
-    expect(array_intersect($condizionati, TrailApplication::requiredApiFields()))->toBe([]);
+    $application = TrailApplication::factory()->create();
+    $application->writeApiData([
+        'managing_subjects' => [['name' => 'Mario Rossi', 'subject' => 'person']],
+        'surveying_subjects' => [['name' => 'Mario Rossi', 'subject' => 'person']],
+        'maintaining_subjects' => [['name' => 'Mario Rossi', 'subject' => 'person']],
+    ]);
+
+    // Gli altri campi obbligatori restano mancanti: qui conta che nessuno dei
+    // tre ruoli lo sia, pur senza una sola e-mail nelle tre liste.
+    expect($application->missingForConfirmation()['fields'])
+        ->not->toContain('managing_subjects')
+        ->not->toContain('surveying_subjects')
+        ->not->toContain('maintaining_subjects');
+});
+
+it('considera incompleta un istanza a cui manca un ruolo obbligatorio', function () {
+    $application = TrailApplication::factory()->create();
+    $application->writeApiData([
+        'managing_subjects' => [],
+        'surveying_subjects' => [['name' => 'Mario Rossi', 'email' => null, 'subject' => 'person']],
+    ]);
+
+    expect($application->missingForConfirmation()['fields'])
+        ->toContain('managing_subjects', 'maintaining_subjects')
+        ->not->toContain('surveying_subjects')
+        ->not->toContain('keeping_subjects');
+});
+
+it('la factory completa produce liste di soggetti che lo schema accetta', function () {
+    // `complete()` crea anche gli allegati: servono l'app di riferimento dei
+    // media e il disco finto, come fanno i test sugli allegati.
+    Bus::fake();
+    config(['wm-package.shard_name' => 'wm_package_testing']);
+    App::factory()->createQuietly();
+    Storage::fake(config('media-library.disk_name', 'wmfe'));
+    Storage::fake('wmfe');
+
+    $application = TrailApplication::factory()->complete()->create();
+
+    $validator = Validator::make(
+        (array) $application->api_data,
+        app(\Wm\WmPackage\TrailRegistry\Schema\ApplicationSchema::class)->rules()
+    );
+
+    // Gli altri campi restano segnaposto (`'valore'`): quello che questo test
+    // garantisce e' che nessuna delle quattro liste di soggetti sia malformata,
+    // perche' una lista non vuota con dentro oggetti sbagliati supererebbe
+    // `missingForConfirmation()` senza che nessuno se ne accorga.
+    $erroriSuiSoggetti = array_values(array_filter(
+        $validator->errors()->keys(),
+        fn (string $key) => str_contains($key, '_subjects'),
+    ));
+
+    expect($erroriSuiSoggetti)->toBe([]);
 });

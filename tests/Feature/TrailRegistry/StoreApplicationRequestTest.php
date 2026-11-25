@@ -7,6 +7,8 @@ use Wm\WmPackage\Http\Requests\TrailRegistry\StoreAttachmentRequest;
 use Wm\WmPackage\Models\TaxonomyTerm;
 use Wm\WmPackage\TrailRegistry\Exceptions\MissingDifficultyFamilyException;
 use Wm\WmPackage\TrailRegistry\Models\TrailApplication;
+use Wm\WmPackage\TrailRegistry\Schema\ApplicationField;
+use Wm\WmPackage\TrailRegistry\Schema\ApplicationSchema;
 
 // Le Form Request si esercitano direttamente, senza chiamata HTTP: le rotte
 // vivono nello shard. I test sull'endpoint arrivano con il Task 7.
@@ -31,12 +33,10 @@ function completeApplicationPayload(array $overrides = []): array
         'primary_activity' => 'hiking',
         'difficulty' => ['hiking' => 'EE'],
         'existing_signage' => 'good_condition',
-        'proposed_managing_municipalities' => ['Cagliari'],
-        'municipality_email' => 'comune@example.com',
-        'soggetto_gestore' => 'forestas',
-        'soggetto_rilevatore' => 'applicant',
-        'soggetto_manutentore' => 'forestas',
-        'soggetto_custode_presente' => false,
+        'managing_subjects' => [['name' => 'Comune di Cagliari', 'email' => 'comune@example.com', 'subject' => 'organization']],
+        'surveying_subjects' => [['name' => 'Mario Rossi', 'email' => null, 'subject' => 'person']],
+        'maintaining_subjects' => [['name' => 'Forestas', 'email' => 'protocollo@forestas.example.it', 'subject' => 'organization']],
+        'keeping_subjects' => [],
         'last_survey_date' => '2026-01-15',
         'maintenance_frequency_months' => 12,
     ], $overrides);
@@ -98,10 +98,12 @@ it('accetta una consegna completa', function () {
 });
 
 it('dice campo per campo quale regola ha fallito', function () {
-    $errors = applicationErrors(completeApplicationPayload(['municipality_email' => 'non-una-email']));
+    $errors = applicationErrors(completeApplicationPayload([
+        'managing_subjects' => [['name' => 'Comune di Cagliari', 'email' => 'non-una-email', 'subject' => 'organization']],
+    ]));
 
-    expect($errors)->toHaveKey('municipality_email');
-    expect($errors['municipality_email'][0])->toContain('email');
+    expect($errors)->toHaveKey('managing_subjects.0.email');
+    expect($errors['managing_subjects.0.email'][0])->toContain('email');
     expect($errors)->toHaveCount(1);
 });
 
@@ -118,16 +120,18 @@ it('pretende i campi obbligatori dello schema', function () {
     expect(applicationErrors($payload))->toHaveKeys(['from', 'last_survey_date']);
 });
 
-it('pretende il soggetto gestore terzo solo quando la select lo prevede', function () {
-    expect(applicationErrors(completeApplicationPayload([
-        'soggetto_gestore' => 'third_party',
-        'soggetto_gestore_other' => null,
-    ])))->toHaveKey('soggetto_gestore_other');
+it('chiede la e-mail a un ente e non a una persona', function () {
+    // Il wildcard risolve l'indice fratello: ogni soggetto si valida con il
+    // proprio `subject`, non con quello di un altro della stessa lista.
+    $errors = applicationErrors(completeApplicationPayload([
+        'managing_subjects' => [
+            ['name' => 'Mario Rossi', 'email' => null, 'subject' => 'person'],
+            ['name' => 'Comune di Oliena', 'email' => null, 'subject' => 'organization'],
+        ],
+    ]));
 
-    expect(applicationErrors(completeApplicationPayload([
-        'soggetto_gestore' => 'forestas',
-        'soggetto_gestore_other' => null,
-    ])))->toBe([]);
+    expect($errors)->toHaveKey('managing_subjects.1.email')
+        ->and($errors)->not->toHaveKey('managing_subjects.0.email');
 });
 
 it('rifiuta una lunghezza implausibile, non solo un valore non numerico', function () {
@@ -136,16 +140,13 @@ it('rifiuta una lunghezza implausibile, non solo un valore non numerico', functi
     expect(applicationErrors(completeApplicationPayload(['duration_forward' => 999999])))->toHaveKey('duration_forward');
 });
 
-it('accetta e conserva una chiave che il format non prevede', function () {
-    $payload = completeApplicationPayload(['campo_nuovo_del_format' => 'x']);
-
-    expect(applicationErrors($payload))->toBe([]);
-
-    $apiData = resolveApplicationRequest($payload)->apiData();
-
-    expect($apiData)->toHaveKey('campo_nuovo_del_format', 'x');
-    expect($apiData)->toHaveKey('from');
-    expect($apiData)->not->toHaveKeys(['name', 'geometry']);
+it('rifiuta una chiave che il format non prevede, invece di conservarla', function () {
+    // Fino a oc:9039 il canale conservava in `api_data` qualunque chiave, per
+    // non perdere un campo che il format avesse aggiunto prima di noi. La
+    // scelta si e' rovesciata: con un mittente solo e un contratto scritto, un
+    // campo non concordato e' quasi sempre un refuso, e va detto a chi integra.
+    expect(applicationErrors(completeApplicationPayload(['campo_nuovo_del_format' => 'x'])))
+        ->toHaveKey('campo_nuovo_del_format');
 });
 
 it('rifiuta una difficolta dichiarata per un attivita non indicata, dicendo quale', function () {
@@ -219,12 +220,11 @@ it('esclude original_geometry dalle collection dell upload', function () {
     expect($validator->errors()->keys())->toBe(['collection']);
 });
 
-it('decodifica i campi strutturati e i booleani che arrivano come stringhe in multipart', function () {
+it('decodifica i campi strutturati che arrivano come stringhe in multipart', function () {
     $payload = completeApplicationPayload([
         'activities' => '["hiking","mtb"]',
         'difficulty' => '{"hiking":"EE"}',
-        'proposed_managing_municipalities' => '["Cagliari"]',
-        'soggetto_custode_presente' => 'false',
+        'managing_subjects' => '[{"name":"Comune di Cagliari","email":"comune@example.com","subject":"organization"}]',
     ]);
 
     expect(applicationErrors($payload))->toBe([]);
@@ -233,30 +233,34 @@ it('decodifica i campi strutturati e i booleani che arrivano come stringhe in mu
 
     expect($apiData['activities'])->toBe(['hiking', 'mtb']);
     expect($apiData['difficulty'])->toBe(['hiking' => 'EE']);
-    expect($apiData['soggetto_custode_presente'])->toBeFalse();
+    expect($apiData['managing_subjects'][0]['name'])->toBe('Comune di Cagliari');
 });
 
-it('applica la regola condizionale al booleano decodificato da stringa', function () {
-    $missing = completeApplicationPayload(['soggetto_custode_presente' => 'true', 'soggetto_custode' => null]);
-    expect(applicationErrors($missing))->toHaveKey('soggetto_custode');
+it('converte i booleani che arrivano come stringhe in multipart', function () {
+    // Dopo oc:9039 lo schema di questo package non ha piu' campi `boolean`,
+    // ma la conversione resta nel codice e uno shard puo' dichiararne uno:
+    // lo schema si ridefinisce nel container, come fa uno shard vero.
+    app()->bind(ApplicationSchema::class, fn () => new class extends ApplicationSchema
+    {
+        public function fields(): array
+        {
+            return [new ApplicationField('flag', 'boolean', 'Flag', null, true, ['required', 'boolean'], null)];
+        }
+    });
 
-    $given = completeApplicationPayload(['soggetto_custode_presente' => 'true', 'soggetto_custode' => 'Mario']);
-    expect(resolveApplicationRequest($given)->apiData()['soggetto_custode_presente'])->toBeTrue();
+    expect(resolveApplicationRequest(['name' => 'x', 'flag' => 'false'])->apiData()['flag'])->toBeFalse();
+    expect(resolveApplicationRequest(['name' => 'x', 'flag' => '1'])->apiData()['flag'])->toBeTrue();
+    expect(resolveApplicationRequest(['name' => 'x', 'flag' => '0'])->apiData()['flag'])->toBeFalse();
+
+    // La stringa vuota e' un campo non compilato, non un `false`.
+    expect(applicationErrors(['name' => 'x', 'flag' => '']))->toHaveKey('flag');
 });
 
-it('non legge come false una stringa vuota sul booleano', function () {
-    expect(applicationErrors(completeApplicationPayload(['soggetto_custode_presente' => ''])))
-        ->toHaveKey('soggetto_custode_presente');
-});
+it('accetta la forma nativa dei form per le liste', function () {
+    $apiData = resolveApplicationRequest(completeApplicationPayload(['activities' => ['hiking']]))->apiData();
 
-it('accetta la forma nativa dei form: activities[] e booleani 1 e 0', function () {
-    $payload = completeApplicationPayload(['activities' => ['hiking'], 'soggetto_custode_presente' => '1', 'soggetto_custode' => 'Mario']);
-    $apiData = resolveApplicationRequest($payload)->apiData();
-    expect($apiData['soggetto_custode_presente'])->toBeTrue();
-    expect($apiData['activities'])->toBe(['hiking']);
-
-    $zero = resolveApplicationRequest(completeApplicationPayload(['soggetto_custode_presente' => '0']))->apiData();
-    expect($zero['soggetto_custode_presente'])->toBeFalse();
+    expect($apiData['activities'])->toBe(['hiking'])
+        ->and($apiData['managing_subjects'][0]['subject'])->toBe('organization');
 });
 
 it('con difficulty presente chiede activities se manca o e vuoto, senza crash', function () {
@@ -268,15 +272,19 @@ it('con difficulty presente chiede activities se manca o e vuoto, senza crash', 
         ->toHaveKey('activities');
 });
 
-it('non conserva in api_data ne i file extra ne la query string, ma le chiavi ignote del corpo si', function () {
+it('non conserva in api_data ne i file extra ne la query string', function () {
+    // Le chiavi ignote del corpo non arrivano piu' fin qui: dopo oc:9039 la
+    // validazione le rifiuta. Query string e file sotto chiavi non previste
+    // non fanno fallire la chiamata — non sono il contratto dei campi — ma
+    // restano fuori dal verbale.
     $apiData = resolveApplicationRequest(
-        completeApplicationPayload(['campo_nuovo_del_format' => 'x']),
+        completeApplicationPayload(),
         query: ['_token' => 'abc', 'altro' => '1'],
         extraFiles: ['allegato_strano' => UploadedFile::fake()->create('x.pdf', 1)],
     )->apiData();
 
-    expect($apiData)->toHaveKey('campo_nuovo_del_format', 'x');
-    expect($apiData)->not->toHaveKeys(['_token', 'altro', 'allegato_strano', 'geometry', 'name']);
+    expect($apiData)->toHaveKey('from')
+        ->and($apiData)->not->toHaveKeys(['_token', 'altro', 'allegato_strano', 'geometry', 'name']);
 });
 
 it('trasforma un JSON malformato in un errore di validazione, non in un crash', function () {
@@ -289,15 +297,16 @@ it('trasforma un JSON malformato in un errore di validazione, non in un crash', 
     expect($errors['activities'][0])->toContain('array');
 });
 
-it('decodifica il campo 54 arrivato come JSON in stringa', function () {
+it('decodifica una lista di soggetti arrivata come JSON in stringa', function () {
     $payload = completeApplicationPayload([
-        'soggetto_manutentore' => 'other_legal_entity',
-        'soggetto_manutentore_other' => '["Ente A"]',
-        'soggetto_manutentore_cf' => '["12345678901"]',
+        'maintaining_subjects' => '[{"name":"Ente A","email":"a@example.it","subject":"organization"},{"name":"Luigi Bianchi","email":null,"subject":"person"}]',
     ]);
 
     expect(applicationErrors($payload))->toBe([]);
-    expect(resolveApplicationRequest($payload)->apiData()['soggetto_manutentore_other'])->toBe(['Ente A']);
+    expect(resolveApplicationRequest($payload)->apiData()['maintaining_subjects'])->toBe([
+        ['name' => 'Ente A', 'email' => 'a@example.it', 'subject' => 'organization'],
+        ['name' => 'Luigi Bianchi', 'email' => null, 'subject' => 'person'],
+    ]);
 });
 
 it('rifiuta una primaria che non e fra le attivita dichiarate', function () {
@@ -341,4 +350,103 @@ it('esige la primaria', function () {
     unset($payload['primary_activity']);
 
     expect(applicationErrors($payload))->toHaveKey('primary_activity');
+});
+
+it('rifiuta una lista di stringhe al posto di oggetti', function () {
+    // E' la forma che aveva il campo 54 (`soggetto_manutentore_other`): la
+    // migrazione sbagliata piu' probabile da parte di chi integra.
+    expect(applicationErrors(completeApplicationPayload(['managing_subjects' => ['Comune di Oliena']])))
+        ->toHaveKey('managing_subjects.0');
+});
+
+it('rifiuta un oggetto singolo al posto della lista', function () {
+    // Le chiavi d'errore sono illeggibili (`managing_subjects.name.name`), ma
+    // il rifiuto c'e': la regola `array` sull'elemento vede le tre chiavi
+    // dell'oggetto come tre elementi scalari.
+    expect(applicationErrors(completeApplicationPayload([
+        'managing_subjects' => ['name' => 'X', 'email' => 'x@y.it', 'subject' => 'organization'],
+    ])))->toHaveKey('managing_subjects.name');
+});
+
+it('accetta un soggetto persona fisica senza la chiave email', function () {
+    // E' la forma che la pagina delle API pubblica nell'esempio `curl` e nel
+    // modulo del bottone di prova: `{"name":"Mario Rossi","subject":"person"}`,
+    // senza `email` del tutto. Finche' nessun test la fissa, un `required`
+    // aggiunto per distrazione renderebbe sbagliato l'esempio pubblicato.
+    expect(applicationErrors(completeApplicationPayload([
+        'surveying_subjects' => [['name' => 'Mario Rossi', 'subject' => 'person']],
+    ])))->toBe([]);
+
+    // Un ente senza la chiave, invece, viene rifiutato come se fosse `null`.
+    expect(applicationErrors(completeApplicationPayload([
+        'managing_subjects' => [['name' => 'Comune di Oliena', 'subject' => 'organization']],
+    ])))->toHaveKey('managing_subjects.0.email');
+});
+
+it('accetta un istanza senza alcun custode', function () {
+    $senza = completeApplicationPayload();
+    unset($senza['keeping_subjects']);
+    expect(applicationErrors($senza))->toBe([]);
+
+    expect(applicationErrors(completeApplicationPayload(['keeping_subjects' => []])))->toBe([]);
+});
+
+it('rifiuta un ruolo obbligatorio con la lista vuota', function () {
+    expect(applicationErrors(completeApplicationPayload(['managing_subjects' => []])))
+        ->toHaveKey('managing_subjects');
+});
+
+it('dice nell errore quale ruolo e quale posizione, contando da zero', function () {
+    // Il comportamento viene dall'espansione del wildcard, non da
+    // `attributes()`: il test guarda il TESTO, perche' una voce in
+    // `validation.attributes` lo romperebbe senza cambiare la chiave.
+    $errors = applicationErrors(completeApplicationPayload([
+        'surveying_subjects' => [
+            ['name' => 'A', 'email' => 'a@b.it', 'subject' => 'organization'],
+            ['name' => 'B', 'email' => 'non-una-email', 'subject' => 'organization'],
+        ],
+    ]));
+
+    expect($errors['surveying_subjects.1.email'][0])->toContain('surveying_subjects.1.email');
+});
+
+it('rifiuta una chiave del payload che lo schema non dichiara, nominandola', function () {
+    // Il SUS e' un mittente solo, con un contratto scritto: una chiave che non
+    // abbiamo concordato e' quasi sempre un refuso, e ignorarla la farebbe
+    // sparire in silenzio dentro `api_data`. Meglio dirglielo adesso, mentre
+    // integra, che lasciarglielo scoprire fra sei mesi (oc:9039).
+    $errori = applicationErrors(completeApplicationPayload(['campo_inventato' => 'x']));
+
+    expect($errori)->toHaveKey('campo_inventato')
+        ->and($errori['campo_inventato'][0])->toContain('campo_inventato');
+});
+
+it('rifiuta i tredici campi della forma vecchia, uno per uno', function () {
+    // Engineering ha integrato la forma precedente: se continuasse a mandarla
+    // deve leggere quale campo non esiste piu', non ricevere un 201 muto.
+    $errori = applicationErrors(completeApplicationPayload([
+        'soggetto_gestore' => 'forestas',
+        'municipality_email' => 'comune@example.com',
+    ]));
+
+    expect($errori)->toHaveKeys(['soggetto_gestore', 'municipality_email']);
+});
+
+it('rifiuta una chiave non concordata dentro un soggetto, nominandola', function () {
+    $errori = applicationErrors(completeApplicationPayload([
+        'managing_subjects' => [['name' => 'X', 'email' => 'a@b.it', 'subject' => 'organization', 'cf' => 'RSSMRA80A01H501U']],
+    ]));
+
+    expect($errori)->toHaveKey('managing_subjects.0.cf')
+        ->and($errori['managing_subjects.0.cf'][0])->toContain('cf');
+});
+
+it('dice quali sono i valori concordati quando ne arriva un altro', function () {
+    $errori = applicationErrors(completeApplicationPayload([
+        'managing_subjects' => [['name' => 'X', 'email' => 'a@b.it', 'subject' => 'ente']],
+    ]));
+
+    expect($errori['managing_subjects.0.subject'][0])
+        ->toContain('organization')
+        ->toContain('person');
 });

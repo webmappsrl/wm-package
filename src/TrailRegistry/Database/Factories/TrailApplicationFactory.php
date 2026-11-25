@@ -7,6 +7,7 @@ use Illuminate\Http\UploadedFile;
 use Wm\WmPackage\Models\User;
 use Wm\WmPackage\TrailRegistry\Enums\TrailApplicationStatus;
 use Wm\WmPackage\TrailRegistry\Models\TrailApplication;
+use Wm\WmPackage\TrailRegistry\Schema\ApplicationSchema;
 
 class TrailApplicationFactory extends Factory
 {
@@ -38,10 +39,7 @@ class TrailApplicationFactory extends Factory
         return $this
             ->state(['status' => TrailApplicationStatus::UnderCompilation])
             ->afterCreating(function (TrailApplication $application) {
-                $application->writeApiData(array_fill_keys(
-                    TrailApplication::requiredApiFields(),
-                    'valore'
-                ));
+                $application->writeApiData(static::completeApiData());
 
                 foreach (TrailApplication::requiredAttachments() as $collection) {
                     $application
@@ -50,5 +48,36 @@ class TrailApplicationFactory extends Factory
                         ->toMediaCollection($collection);
                 }
             });
+    }
+
+    /**
+     * Un payload che lo schema accetta, per ogni campo obbligatorio.
+     *
+     * Non basta riempire ogni campo con una stringa: dopo oc:9039 i campi dei
+     * soggetti sono liste di oggetti, e una stringa supererebbe
+     * `missingForConfirmation()` lasciando i test a lavorare su un payload che
+     * l'API avrebbe rifiutato. Il valore si deduce dalle regole dello schema,
+     * non da un elenco di nomi scritto qui: un campo nuovo non obbliga a
+     * tornare in questa factory.
+     *
+     * @return array<string, mixed>
+     */
+    protected static function completeApiData(): array
+    {
+        $schema = app(ApplicationSchema::class);
+        $rules = $schema->rules();
+        $payload = [];
+
+        foreach ($schema->fields() as $field) {
+            if (! in_array($field->name, TrailApplication::requiredApiFields(), true)) {
+                continue;
+            }
+
+            $payload[$field->name] = isset($rules[$field->name.'.*.name'])
+                ? [['name' => 'Ente di prova', 'email' => 'ente@example.it', 'subject' => 'organization']]
+                : (in_array('array', $field->rules, true) ? ['valore'] : 'valore');
+        }
+
+        return $payload;
     }
 }

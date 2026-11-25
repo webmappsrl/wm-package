@@ -142,5 +142,8 @@
     "Too many elements selected: the maximum is :max.": "Zu viele Elemente ausgewählt: höchstens :max.",
     "Your download has started": "Der Download hat begonnen",
     "You can close this page.": "Sie können diese Seite schließen.",
-    "Download again": "Erneut herunterladen"
+    "Download again": "Erneut herunterladen",
+    "The key :key is not expected here. The agreed keys are: :allowed.": "Der Schlüssel :key ist hier nicht vorgesehen. Die vereinbarten Schlüssel sind: :allowed.",
+    "The field :key is not expected by this API.": "Das Feld :key ist von dieser API nicht vorgesehen.",
+    "The value of :attribute is not among the agreed ones: :values.": "Der Wert von :attribute gehört nicht zu den vereinbarten: :values."
 }

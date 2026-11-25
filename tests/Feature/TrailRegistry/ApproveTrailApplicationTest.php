@@ -302,8 +302,7 @@ it('approvando non copia api_data sul sentiero', function () {
     $application = $this->application->fresh();
     $application->writeApiData([
         'from' => 'Baunei',
-        'soggetto_rilevatore_email' => 'rilevatore@example.org',
-        'soggetto_manutentore_cf' => ['RSSMRA80A01H501U'],
+        'surveying_subjects' => [['name' => 'Mario Rossi', 'email' => 'rilevatore@example.org', 'subject' => 'person']],
     ]);
 
     (new ApproveTrailApplication)->handle(emptyActionFields(), collect([$application->fresh()]));
@@ -311,10 +310,10 @@ it('approvando non copia api_data sul sentiero', function () {
     $track = EcTrack::latest('id')->first();
 
     // I dati del canale API restano sull'istanza: sul sentiero finirebbero nel
-    // GeoJSON pubblico, con dentro codici fiscali, e-mail e nomi di persone
+    // GeoJSON pubblico, con dentro e-mail e nomi di persone fisiche
     // (oc:8960).
     expect($track->properties)->not->toHaveKey('api_data');
-    expect($this->application->fresh()->api_data)->toHaveKey('soggetto_rilevatore_email');
+    expect($this->application->fresh()->api_data)->toHaveKey('surveying_subjects');
 });
 
 it('approvando non copia gli allegati dell istanza, ma continua a copiare gli altri', function () {
