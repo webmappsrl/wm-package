@@ -1,16 +1,21 @@
 <?php
 
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Laravel\Nova\Fields\ActionFields;
 use Laravel\Nova\Http\Requests\NovaRequest;
+use Laravel\Scout\EngineManager;
+use Laravel\Scout\Engines\Engine;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackDemJob;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\TaxonomyActivity;
+use Wm\WmPackage\Models\TaxonomyTerm;
 use Wm\WmPackage\Services\Models\EcTrackService;
 use Wm\WmPackage\TrailRegistry\Enums\TrailApplicationStatus;
 use Wm\WmPackage\TrailRegistry\Enums\TrailCodeStatus;
+use Wm\WmPackage\TrailRegistry\Exceptions\InvalidTrailChoicesException;
 use Wm\WmPackage\TrailRegistry\Models\TrailApplication;
 use Wm\WmPackage\TrailRegistry\Nova\Actions\ApproveTrailApplication;
 use Wm\WmPackage\TrailRegistry\Nova\Actions\RejectTrailApplication;
@@ -332,4 +337,232 @@ it('approvando non copia gli allegati dell istanza, ma continua a copiare gli al
 
     // E restano all'istanza, dove l'operatore li istruisce.
     expect($application->fresh()->getMedia(TrailApplication::REPORT_COLLECTION))->toHaveCount(1);
+});
+
+// --- Le scelte dell'operatore sul sentiero (oc:9038) ---
+
+/**
+ * Semina quanto serve alle scelte: le attivita' `hiking` e `mtb`, la famiglia
+ * dell'attivita' primaria con i suoi termini e le due scale di difficolta'.
+ * Insert diretti: TaxonomyObserver scriverebbe su storage.
+ */
+function seedChoicesTaxonomy(): void
+{
+    Storage::fake('wmfe');
+
+    foreach (['hiking', 'mtb'] as $identifier) {
+        DB::table('taxonomy_activities')->insert([
+            'name' => json_encode(['it' => $identifier]),
+            'identifier' => $identifier,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    }
+
+    $families = [
+        'primary-activity' => ['hiking', 'mtb'],
+        'hiking-difficulty' => ['E', 'EE'],
+        'mtb-difficulty' => ['BC', 'OC'],
+    ];
+
+    foreach ($families as $family => $suffixes) {
+        $parentId = DB::table('taxonomy_terms')->insertGetId([
+            'identifier' => $family,
+            'name' => json_encode(['it' => $family]),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        foreach ($suffixes as $position => $suffix) {
+            DB::table('taxonomy_terms')->insert([
+                'identifier' => "{$family}-{$suffix}",
+                'name' => json_encode(['it' => $suffix]),
+                'parent_id' => $parentId,
+                'sort_order' => $position,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+    }
+}
+
+/** @param array<string, mixed> $choices */
+function approveWith(array $choices): EcTrack
+{
+    return app(TrailRegistryService::class)->approve(TrailApplication::query()->firstOrFail(), null, $choices);
+}
+
+it('porta sul sentiero le attivita confermate e la primaria', function () {
+    seedChoicesTaxonomy();
+
+    $track = approveWith(['activities' => ['hiking', 'mtb'], 'primary_activity' => 'hiking']);
+
+    expect($track->taxonomyActivities->pluck('identifier')->all())->toContain('hiking', 'mtb')
+        ->and($track->term('primary-activity')->identifier)->toBe('primary-activity-hiking');
+});
+
+it('porta sul sentiero le difficolta delle sole famiglie confermate', function () {
+    seedChoicesTaxonomy();
+
+    $track = approveWith([
+        'activities' => ['hiking'],
+        'difficulty' => ['hiking-difficulty' => 'EE', 'mtb-difficulty' => 'BC'],
+    ]);
+
+    // Il livello della famiglia `mtb` e' di un'attivita' non confermata: il
+    // prefill di una famiglia nascosta non deve finire sul sentiero.
+    expect($track->term('hiking-difficulty')->identifier)->toBe('hiking-difficulty-EE')
+        ->and($track->terms('mtb-difficulty'))->toBeEmpty();
+});
+
+it('lascia una sola primaria anche se la si riscrive', function () {
+    seedChoicesTaxonomy();
+
+    $track = approveWith(['activities' => ['hiking'], 'primary_activity' => 'hiking']);
+
+    expect($track->terms('primary-activity'))->toHaveCount(1);
+});
+
+it('ferma l\'approvazione se il termine della primaria non esiste', function () {
+    seedChoicesTaxonomy();
+    TaxonomyTerm::where('identifier', 'primary-activity-hiking')->delete();
+    $before = EcTrack::count();
+
+    expect(fn () => approveWith(['activities' => ['hiking'], 'primary_activity' => 'hiking']))
+        ->toThrow(InvalidArgumentException::class);
+
+    // La transazione e' tornata indietro: niente sentiero, istanza ancora in
+    // istruttoria, numero ancora riservato.
+    expect(EcTrack::count())->toBe($before)
+        ->and(TrailApplication::first()->status)->toBe(TrailApplicationStatus::UnderReview)
+        ->and($this->code->fresh()->status)->toBe(TrailCodeStatus::Reserved);
+});
+
+it('ferma l\'approvazione se il termine di una difficolta non esiste', function () {
+    seedChoicesTaxonomy();
+    TaxonomyTerm::where('identifier', 'hiking-difficulty-EE')->delete();
+
+    expect(fn () => approveWith(['activities' => ['hiking'], 'difficulty' => ['hiking-difficulty' => 'EE']]))
+        ->toThrow(InvalidArgumentException::class);
+
+    expect(TrailApplication::first()->status)->toBe(TrailApplicationStatus::UnderReview);
+});
+
+it('rifiuta una primaria che non e fra le attivita confermate', function () {
+    seedChoicesTaxonomy();
+
+    expect(fn () => approveWith(['activities' => ['mtb'], 'primary_activity' => 'hiking']))
+        ->toThrow(InvalidTrailChoicesException::class);
+
+    expect(fn () => approveWith(['activities' => [], 'primary_activity' => 'hiking']))
+        ->toThrow(InvalidTrailChoicesException::class);
+
+    expect(TrailApplication::first()->status)->toBe(TrailApplicationStatus::UnderReview);
+});
+
+it('approva anche senza scelte, come un\'istanza d\'ufficio', function () {
+    $track = approveWith([]);
+
+    expect($track)->toBeInstanceOf(EcTrack::class)
+        ->and($track->taxonomyTerms)->toBeEmpty();
+
+    // Le quattro chiavi si scrivono anche senza scelte: `approved_at` dice che
+    // l'approvazione e' passata da qui, il resto che la decisione era vuota.
+    $properties = $this->application->fresh()->properties;
+
+    expect($properties['approved_activities'])->toBe([])
+        ->and($properties['approved_difficulty'])->toBeEmpty()
+        ->and($properties['approved_primary_activity'])->toBeNull()
+        ->and($properties['approved_at'])->not->toBeNull();
+});
+
+it('l\'Action raccoglie i campi e li passa al service', function () {
+    seedChoicesTaxonomy();
+
+    $result = (new ApproveTrailApplication)->handle(
+        new ActionFields(collect([
+            'activities' => ['hiking', 'mtb'],
+            'primary_activity' => 'mtb',
+            'difficulty__hiking-difficulty' => 'E',
+            'difficulty__mtb-difficulty' => 'OC',
+        ]), collect()),
+        collect([$this->application->fresh()]),
+    );
+
+    $track = EcTrack::latest('id')->first();
+
+    expect($track->term('primary-activity')->identifier)->toBe('primary-activity-mtb')
+        ->and($track->term('hiking-difficulty')->identifier)->toBe('hiking-difficulty-E')
+        ->and($track->term('mtb-difficulty')->identifier)->toBe('mtb-difficulty-OC')
+        ->and($this->application->fresh()->status)->toBe(TrailApplicationStatus::Approved);
+});
+
+it('l\'Action risponde con un messaggio, non con un 500, se le scelte non si scrivono', function () {
+    seedChoicesTaxonomy();
+    TaxonomyTerm::where('identifier', 'primary-activity-hiking')->delete();
+
+    $result = (new ApproveTrailApplication)->handle(
+        new ActionFields(collect(['activities' => ['hiking'], 'primary_activity' => 'hiking']), collect()),
+        collect([$this->application->fresh()]),
+    );
+
+    // ActionResponse espone la chiave con ArrayAccess, non con un array vero.
+    expect((string) ($result['danger'] ?? ''))->toContain('primary-activity-hiking')
+        ->and($this->application->fresh()->status)->toBe(TrailApplicationStatus::UnderReview);
+});
+
+it('non indicizza la traccia mentre la transazione e aperta', function () {
+    seedChoicesTaxonomy();
+
+    // In locale `scout.queue` e' false: senza `withoutSyncingToSearch()` l'attach
+    // di tassonomia indicizzerebbe in modo sincrono una traccia non committata.
+    config(['scout.driver' => 'spy', 'scout.queue' => false]);
+    $engine = Mockery::spy(Engine::class);
+    // Senza singleton app(EngineManager::class) e' un'istanza nuova a ogni risoluzione.
+    app()->singleton(EngineManager::class, fn ($app) => new EngineManager($app));
+    app(EngineManager::class)->extend('spy', fn () => $engine);
+
+    approveWith(['activities' => ['hiking'], 'primary_activity' => 'hiking']);
+
+    $engine->shouldNotHaveReceived('update');
+});
+
+it('fissa nella domanda la decisione e il momento in cui e stata presa', function () {
+    seedChoicesTaxonomy();
+    $this->application->update(['properties' => ['app_id' => 1, 'dem_data' => ['ele' => 5], 'manual_data' => ['ascent' => 10]]]);
+
+    approveWith(['activities' => ['hiking', 'mtb'], 'primary_activity' => 'mtb']);
+
+    $properties = $this->application->fresh()->properties;
+
+    expect($properties['approved_primary_activity'])->toBe('mtb')
+        ->and($properties['approved_activities'])->toBe(['hiking', 'mtb'])
+        ->and($properties['approved_at'])->not->toBeNull()
+        ->and(Carbon::parse($properties['approved_at'])->isToday())->toBeTrue()
+        // le chiavi gia' presenti restano: e' un merge, non un rimpiazzo
+        ->and($properties['app_id'])->toBe(1)
+        ->and($properties['dem_data'])->toBe(['ele' => 5])
+        ->and($properties['manual_data'])->toBe(['ascent' => 10]);
+});
+
+it('non tocca la proposta ricevuta', function () {
+    seedChoicesTaxonomy();
+    $this->application->forceFill(['api_data' => ['activities' => ['hiking'], 'primary_activity' => 'hiking']])->save();
+
+    approveWith(['activities' => ['mtb'], 'primary_activity' => 'mtb']);
+
+    expect($this->application->fresh()->api_data['primary_activity'])->toBe('hiking');
+});
+
+it('la decisione resta sulla domanda e non finisce nelle properties del sentiero', function () {
+    seedChoicesTaxonomy();
+
+    $track = approveWith(['activities' => ['hiking'], 'primary_activity' => 'hiking']);
+
+    $properties = $track->fresh()->properties;
+
+    // Una a una: `not->toHaveKeys()` passerebbe anche con tre chiavi su quattro.
+    foreach (['approved_activities', 'approved_difficulty', 'approved_primary_activity', 'approved_at'] as $key) {
+        expect($properties)->not->toHaveKey($key);
+    }
 });

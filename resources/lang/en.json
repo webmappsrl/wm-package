@@ -486,6 +486,7 @@
     "Approve": "Approve",
     "Reject": "Reject",
     "Applications approved.": "Applications approved.",
+    "Approval stopped: :reason": "Approval stopped: :reason",
     "Applications rejected.": "Applications rejected.",
     "Applications approved: :approved. Skipped because not under review: :refused.": "Applications approved: :approved. Skipped because not under review: :refused.",
     "Applications rejected: :rejected. Skipped because not under review: :refused.": "Applications rejected: :rejected. Skipped because not under review: :refused.",
@@ -662,6 +663,8 @@
     "Shows a button in layer and track details to copy the wm-layer-map web component snippet": "Shows a button in layer and track details to copy the wm-layer-map web component snippet",
     "Layer": "Layer",
     "The difficulty is declared for :activity, which is not among the proposed activities": "The difficulty is declared for :activity, which is not among the proposed activities",
+    "Primary activity": "Primary activity",
+    "The primary activity :activity is not among the proposed activities": "The primary activity :activity is not among the proposed activities",
     "The track does not fall in any sector of the registry": "The track does not fall in any sector of the registry",
     "The sector the track falls in has no free numbers left": "The sector the track falls in has no free numbers left",
     "The file is neither a GPX nor a GeoJSON: upload the track in one of the two formats": "The file is neither a GPX nor a GeoJSON: upload the track in one of the two formats",
@@ -706,5 +709,6 @@
     "UgcPois already converted to EcPoi: :ids": "UgcPois already converted to EcPoi: :ids",
     "UgcPoi :id not converted: :reason": "UgcPoi :id not converted: :reason",
     "photo :media not found on storage": "photo :media not found on storage",
-    "conversion error, see the log": "conversion error, see the log"
+    "conversion error, see the log": "conversion error, see the log",
+    "The proposal contains different levels for this scale: choose one.": "The proposal contains different levels for this scale: choose one."
 }

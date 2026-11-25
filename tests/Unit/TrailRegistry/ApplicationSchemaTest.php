@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Support\Facades\Validator;
 use Wm\WmPackage\TrailRegistry\Schema\ApplicationField;
 use Wm\WmPackage\TrailRegistry\Schema\ApplicationSchema;
 
@@ -8,10 +9,10 @@ function applicationSchema(): ApplicationSchema
     return app(ApplicationSchema::class);
 }
 
-it('espone i 27 campi del format nell ordine della numerazione', function () {
-    expect(applicationSchema()->fields())->toHaveCount(27);
+it('espone i 28 campi del format nell ordine della numerazione', function () {
+    expect(applicationSchema()->fields())->toHaveCount(28);
     expect(applicationSchema()->fields()[0]->name)->toBe('from');
-    expect(applicationSchema()->fields()[26]->name)->toBe('maintenance_frequency_months');
+    expect(applicationSchema()->fields()[27]->name)->toBe('maintenance_frequency_months');
 });
 
 it('non mette fra gli obbligatori i campi la cui obbligatorieta dipende da un altro campo', function () {
@@ -25,9 +26,24 @@ it('non mette fra gli obbligatori i campi la cui obbligatorieta dipende da un al
         ->not->toContain('difficulty');
 });
 
-it('ha come obbligatori i quindici campi che il format dichiara tali', function () {
-    expect(applicationSchema()->requiredFieldNames())->toHaveCount(15)
+it('ha come obbligatori i sedici campi che il format dichiara tali', function () {
+    expect(applicationSchema()->requiredFieldNames())->toHaveCount(16)
         ->toContain('from', 'to', 'distance', 'soggetto_custode_presente', 'maintenance_frequency_months');
+});
+
+it('esige la attivita primaria', function () {
+    expect(applicationSchema()->requiredFieldNames())->toContain('primary_activity');
+});
+
+it('alza la versione dello schema', function () {
+    expect(applicationSchema()->version())->toBe('2');
+});
+
+it('ammette solo le sette attivita come primaria', function () {
+    $rules = applicationSchema()->rules()['primary_activity'];
+
+    expect(Validator::make(['primary_activity' => 'trail'], ['primary_activity' => $rules])->passes())->toBeFalse();
+    expect(Validator::make(['primary_activity' => 'hiking'], ['primary_activity' => $rules])->passes())->toBeTrue();
 });
 
 it('esprime le dipendenze fra campi come regole Laravel native', function () {
@@ -117,6 +133,15 @@ it('ha un etichetta per ogni valore che la regola ammette, e nessuna in piu', fu
         $regola = collect($field->rules)->first(fn ($r) => is_string($r) && str_starts_with($r, 'in:'));
 
         if ($regola === null) {
+            continue;
+        }
+
+        // `primary_activity` ammette le sette attivita' di `ACTIVITIES`, che
+        // la documentazione descrive a parte: scriverne l'elenco anche qui
+        // andrebbe tenuto allineato a mano.
+        if ($field->name === 'primary_activity') {
+            expect($field->values)->toBeNull();
+
             continue;
         }
 

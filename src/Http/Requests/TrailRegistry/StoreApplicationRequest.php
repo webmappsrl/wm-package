@@ -145,12 +145,26 @@ class StoreApplicationRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator) {
+            $activities = $this->input('activities');
+
+            if (! $validator->errors()->hasAny(['activities', 'activities.*', 'primary_activity'])) {
+                $primary = $this->input('primary_activity');
+
+                // L'attivita' primaria e' una delle proposte: il confronto si fa
+                // solo se entrambi i campi sono validi.
+                if (is_string($primary) && is_array($activities) && ! in_array($primary, $activities, true)) {
+                    $validator->errors()->add(
+                        'primary_activity',
+                        __('The primary activity :activity is not among the proposed activities', ['activity' => $primary])
+                    );
+                }
+            }
+
             if ($validator->errors()->hasAny(['activities', 'activities.*', 'difficulty'])) {
                 return;
             }
 
             $difficulty = $this->input('difficulty');
-            $activities = $this->input('activities');
 
             if (! is_array($difficulty) || ! is_array($activities)) {
                 return;

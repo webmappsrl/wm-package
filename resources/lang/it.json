@@ -487,6 +487,7 @@
     "Approve": "Approva",
     "Reject": "Respingi",
     "Applications approved.": "Istanze approvate.",
+    "Approval stopped: :reason": "Approvazione fermata: :reason",
     "Applications rejected.": "Istanze respinte.",
     "Applications approved: :approved. Skipped because not under review: :refused.": "Istanze approvate: :approved. Saltate perché non in istruttoria: :refused.",
     "Applications rejected: :rejected. Skipped because not under review: :refused.": "Istanze respinte: :rejected. Saltate perché non in istruttoria: :refused.",
@@ -663,6 +664,8 @@
     "Shows a button in layer and track details to copy the wm-layer-map web component snippet": "Mostra nel dettaglio di layer e tracce un bottone per copiare il codice del web component wm-layer-map",
     "Layer": "Layer",
     "The difficulty is declared for :activity, which is not among the proposed activities": "La difficoltà è dichiarata per :activity, che non è fra le attività proposte",
+    "Primary activity": "Attività primaria",
+    "The primary activity :activity is not among the proposed activities": "L'attività primaria :activity non è fra le attività proposte",
     "The track does not fall in any sector of the registry": "La traccia non ricade in nessun settore del catasto",
     "The sector the track falls in has no free numbers left": "Il settore in cui ricade la traccia non ha più numeri liberi",
     "The file is neither a GPX nor a GeoJSON: upload the track in one of the two formats": "Il file non è né un GPX né un GeoJSON: carica il tracciato in uno dei due formati",
@@ -731,5 +734,6 @@
     "UgcPois already converted to EcPoi: :ids": "UgcPoi già convertiti in EcPoi: :ids",
     "UgcPoi :id not converted: :reason": "UgcPoi :id non convertito: :reason",
     "photo :media not found on storage": "foto :media non trovata sullo storage",
-    "conversion error, see the log": "errore durante la conversione, vedi il log"
+    "conversion error, see the log": "errore durante la conversione, vedi il log",
+    "The proposal contains different levels for this scale: choose one.": "La proposta contiene livelli diversi per questa scala: sceglierne uno."
 }

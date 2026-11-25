@@ -96,7 +96,7 @@ porta un sentiero. Non duplicarne la logica nei consumer.
 | `reserve()` / `confirm()` / `release()` / `replaceNumber()` | il ciclo di vita di un'istanza |
 | `registerExistingCode()` | registra un codice storico già esistente |
 | `confirmCompilation()` | chiude la compilazione di una domanda arrivata dal canale API e la porta in istruttoria |
-| `approve()` / `reject($reason)` | la decisione dell'istruttoria su una domanda `under_review`: l'approvazione crea il sentiero e rende definitivo il codice, il respingimento libera il numero e salva il motivo. Le usano le Action di Nova e qualunque altro punto da cui si decide una domanda |
+| `approve($application, $userId = null, $choices = [])` / `reject($reason)` | la decisione dell'istruttoria su una domanda `under_review`: l'approvazione crea il sentiero, rende definitivo il codice e scrive le scelte dell'operatore (vedi «Attività primaria»); il respingimento libera il numero e salva il motivo. Le usano le Action di Nova e qualunque altro punto da cui si decide una domanda |
 
 I tre metodi di lettura rispondono a domande diverse e non sono intercambiabili:
 `availableNumbers()` esclude un numero appena il numero puro è occupato,
@@ -291,6 +291,47 @@ le app esistenti sul modello delle tracce e la marcano `is_system` perché le ap
 ricevano. Senza quest'ultimo passaggio il dato si inserisce, si vede in Nova e **non esce in API né
 in Elasticsearch**, senza nessun errore.
 
+## Attività primaria
+
+L'attività principale di un sentiero, fra quelle che il SUS propone e l'istruttore conferma in
+approvazione (oc:9038). Come lo stato di percorribilità, è un termine di una famiglia di
+tassonomia, non una colonna: filtri, indicizzazione e uscita in API arrivano già fatti.
+
+**La famiglia.** `primary-activity` (nome in `features.trail_registry.primary_activity_taxonomy`,
+variabile `WM_TRAIL_PRIMARY_ACTIVITY_TAXONOMY`), **a scelta singola**. Ha sette termini,
+`primary-activity-<attività>` con `<attività>` l'identifier di una `TaxonomyActivity`
+(`hiking`, `mtb`, …). I nomi dei termini sono **copiati** dalle `TaxonomyActivity` dello shard
+all'installazione: un'attività aggiunta o rinominata dopo non si riflette da sola sul termine.
+Come per la percorribilità, le migration creano famiglia e termini, la accendono per le app
+esistenti e la marcano `is_system`.
+
+**Le scelte in approvazione.** `approve(TrailApplication $application, ?int $userId = null, array $choices = [])`
+riceve in `$choices`:
+
+- `activities`: gli identifier delle attività confermate;
+- `primary_activity`: l'identifier dell'attività primaria, che deve essere fra quelle confermate;
+- `difficulty`: il livello **per famiglia di difficoltà** (`['hiking-difficulty' => 'E']`; chiave =
+  identifier della famiglia, valore = suffisso del termine). Non è la mappa per attività di
+  `api_data.difficulty`: la traduzione attività → famiglia è `DifficultyMatchesActivities::activityFamilies()`.
+  I livelli di famiglie senza attività confermata si ignorano.
+
+Un array vuoto (istanza d'ufficio, o chi non raccoglie scelte) conserva il comportamento di prima:
+il sentiero nasce senza attività, difficoltà e primaria. Se le scelte non si possono scrivere
+(primaria non confermata, attività o termine mancanti, per esempio perché la famiglia non è ancora
+installata) il service lancia `InvalidTrailChoicesException`: la transazione torna indietro e la
+domanda resta in istruttoria. Chi chiama la cattura.
+
+**Cosa resta sulla domanda.** La decisione così com'è stata scritta, dopo la normalizzazione,
+nelle `properties` dell'istanza: `approved_activities`, `approved_difficulty`,
+`approved_primary_activity`, `approved_at`.
+
+**Nella lettura del canale.** A domanda approvata la risposta ha `approved_data`, accanto a
+`submitted_data` (il modulo come è stato registrato). Contiene quattro chiavi: `activities`,
+`difficulty` (oggetto, mai `[]`), `primary_activity` e `approved_at`. In ogni altro stato è `null`,
+e lo è anche per le istanze approvate prima di oc:9038, che non hanno `approved_at`: non c'è una
+decisione registrata. Una decisione senza scelte (liste vuote, primaria `null`) invece c'è e
+viene restituita.
+
 ## Incongruenze catastali
 
 Casi in cui due informazioni che il catasto pubblica sullo stesso sentiero non reggono insieme. I
@@ -350,6 +391,8 @@ Tutto sotto `config('wm-package.features.trail_registry')`:
 | `name_code_pattern` | parentesi finali | come si riconosce un codice scritto nel nome; vuota = non si cerca |
 | `code_format` | 2 cifre, varianti a lettera | forma del codice |
 | `trail_type_identifier` | `null` | la tassonomia che marca un tracciato come sentiero |
+| `walkability_taxonomy` | `walkability-status` | la famiglia dello stato di percorribilità (`WM_TRAIL_WALKABILITY_TAXONOMY`) |
+| `primary_activity_taxonomy` | `primary-activity` | la famiglia dell'attività primaria (`WM_TRAIL_PRIMARY_ACTIVITY_TAXONOMY`); come per la percorribilità, uno shard che vuole un altro nome lo imposta **prima** di migrare |
 
 ### Cosa cambia da uno shard all'altro
 

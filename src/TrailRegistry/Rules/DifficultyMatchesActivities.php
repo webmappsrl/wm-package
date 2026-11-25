@@ -62,6 +62,19 @@ class DifficultyMatchesActivities implements ValidationRule
         'educational-trails' => 'educational-trails-difficulty',
     ];
 
+    /**
+     * La famiglia di difficolta' di ogni attivita': e' la mappa della Rule,
+     * esposta perche' chi mostra le scale (l'Action di approvazione) non la
+     * duplichi. Non si deriva dal nome: `accessible-trails` punta a
+     * `inclusivity-difficulty`.
+     *
+     * @return array<string, string>
+     */
+    public static function activityFamilies(): array
+    {
+        return static::ACTIVITY_FAMILIES;
+    }
+
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
         if (! is_array($value)) {

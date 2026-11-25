@@ -111,6 +111,7 @@ function storeApplicationPayload(array $overrides = []): array
         'duration_forward' => 240,
         'duration_backward' => 200,
         'activities' => json_encode(['hiking', 'mtb']),
+        'primary_activity' => 'hiking',
         'difficulty' => json_encode(['hiking' => 'EE']),
         'existing_signage' => 'good_condition',
         'proposed_managing_municipalities' => json_encode(['Cagliari']),

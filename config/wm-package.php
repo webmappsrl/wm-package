@@ -302,6 +302,12 @@ return [
             // nascono con il suo prefisso.
             'walkability_taxonomy' => env('WM_TRAIL_WALKABILITY_TAXONOMY', 'walkability-status'),
 
+            // Quale famiglia di tassonomia marca l'attivita' primaria di un
+            // sentiero (oc:9038). Stesso criterio della percorribilita': il
+            // default funziona, e uno shard che vuole un altro nome lo imposta
+            // **prima** di migrare.
+            'primary_activity_taxonomy' => env('WM_TRAIL_PRIMARY_ACTIVITY_TAXONOMY', 'primary-activity'),
+
             // In quale proprieta' del tracciato vive il codice storico.
             // Su forestas e' `ref`, ereditato dall'import da Sardegna
             // Sentieri; un altro catasto la chiamera' altrimenti. Il service
