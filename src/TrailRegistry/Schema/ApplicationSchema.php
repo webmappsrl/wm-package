@@ -49,7 +49,7 @@ class ApplicationSchema
      */
     public function version(): string
     {
-        return '1';
+        return '2';
     }
 
     /**
@@ -64,10 +64,12 @@ class ApplicationSchema
     }
 
     /**
-     * I 27 campi nell'ordine del format; il numero in coda a ogni riga e' il
-     * suo numero di campo. Le select dichiarate senza `values` sono quelle il
-     * cui elenco non e' fissato per la Resource Nova: il campo e' gia' una
-     * select e i valori si aggiungono quando arrivano. `last_survey_date` si
+     * I 28 campi: i 27 del format nel loro ordine, piu' `primary_activity`,
+     * che il format non numera; il numero in coda a ogni riga e' il suo numero
+     * di campo. Le select dichiarate senza `values` sono quelle il cui elenco
+     * non e' fissato per la Resource Nova: il campo e' gia' una select e i
+     * valori si aggiungono quando arrivano. Fa eccezione `primary_activity`,
+     * il cui elenco e' fissato da `ACTIVITIES`. `last_survey_date` si
      * valida come data ma si mostra come `text`: un formato di data
      * inatteso non deve impedire di leggere cosa e' arrivato.
      *
@@ -85,6 +87,7 @@ class ApplicationSchema
             new ApplicationField('duration_backward', 'number', __('Declared duration backward'), null, true, ['required', 'integer'], null), // 35
             new ApplicationField('activities', 'json', __('Proposed activities'), null, true, ['required', 'array', 'min:1'], null), // 36
             new ApplicationField('difficulty', 'json', __('Proposed difficulty'), null, false, ['nullable', 'array', new DifficultyMatchesActivities], null), // 37
+            new ApplicationField('primary_activity', 'select', __('Primary activity'), null, true, ['required', 'string', 'in:'.implode(',', static::ACTIVITIES)], null), // senza numero nel format
             new ApplicationField('existing_signage', 'select', __('Existing signage'), [
                 ['value' => 'good_condition', 'label' => ['it' => "c'è ed è in buono stato", 'en' => 'present and in good condition']],
                 ['value' => 'dilapidated', 'label' => ['it' => "c'è ed è fatiscente", 'en' => 'present but dilapidated']],

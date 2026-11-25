@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Log;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\TaxonomyActivity;
+use Wm\WmPackage\Models\TaxonomyTerm;
 use Wm\WmPackage\Models\TaxonomyWhere;
 use Wm\WmPackage\Services\Models\EcTrackService;
 use Wm\WmPackage\TrailRegistry\Enums\TrailApplicationStatus;
@@ -16,12 +17,14 @@ use Wm\WmPackage\TrailRegistry\Enums\TrailCodeOrigin;
 use Wm\WmPackage\TrailRegistry\Enums\TrailCodeStatus;
 use Wm\WmPackage\TrailRegistry\Exceptions\ApplicationIncompleteException;
 use Wm\WmPackage\TrailRegistry\Exceptions\InvalidTrailApplicationTransitionException;
+use Wm\WmPackage\TrailRegistry\Exceptions\InvalidTrailChoicesException;
 use Wm\WmPackage\TrailRegistry\Exceptions\InvalidTrailCodeTransitionException;
 use Wm\WmPackage\TrailRegistry\Exceptions\NumberOccupiedException;
 use Wm\WmPackage\TrailRegistry\Exceptions\SectorExhaustedException;
 use Wm\WmPackage\TrailRegistry\Exceptions\SectorNotFoundException;
 use Wm\WmPackage\TrailRegistry\Models\TrailApplication;
 use Wm\WmPackage\TrailRegistry\Models\TrailRegistryCode;
+use Wm\WmPackage\TrailRegistry\Rules\DifficultyMatchesActivities;
 
 /**
  * Unico service di dominio del catasto.
@@ -987,15 +990,24 @@ class TrailRegistryService
      *
      * @param  int|null  $userId  chi approva: diventa l'autore del sentiero e
      *                            dell'evento nella storia del codice
+     * @param  array{activities?: list<mixed>, difficulty?: array<string, string|null>, primary_activity?: string|null}  $choices
+     *                                                                                                                             le scelte dell'operatore (oc:9038): gli identifier delle attivita'
+     *                                                                                                                             confermate, il livello per famiglia di difficolta' (chiave: identifier
+     *                                                                                                                             della famiglia, valore: suffisso del termine) e l'attivita' primaria.
+     *                                                                                                                             Vuoto per un'istanza d'ufficio o per chi non le raccoglie: il sentiero
+     *                                                                                                                             nasce come prima, senza questi dati
      * @return EcTrack il sentiero creato
      *
      * @throws InvalidTrailApplicationTransitionException se la domanda non e' in
      *                                                    istruttoria, o non ha un
      *                                                    codice riservato libero
+     * @throws InvalidTrailChoicesException se le scelte non si possono scrivere: la
+     *                                      transazione torna indietro e la domanda
+     *                                      resta in istruttoria
      */
-    public function approve(TrailApplication $application, ?int $userId = null): EcTrack
+    public function approve(TrailApplication $application, ?int $userId = null, array $choices = []): EcTrack
     {
-        $track = DB::transaction(function () use ($application, $userId): EcTrack {
+        $track = DB::transaction(function () use ($application, $userId, $choices): EcTrack {
             /** @var TrailApplication $locked */
             $locked = $application->newQuery()
                 ->whereKey($application->getKey())
@@ -1018,10 +1030,14 @@ class TrailRegistryService
 
             $this->copyApplicationMedia($locked, $track);
             $this->attachTrailType($track);
+            $decision = $this->attachChoices($track, $choices);
 
             $this->confirm($code, $track, $userId);
 
-            $locked->update(['status' => TrailApplicationStatus::Approved]);
+            $locked->update([
+                'status' => TrailApplicationStatus::Approved,
+                'properties' => $this->withApprovalDecision($locked->properties ?? [], $decision),
+            ]);
 
             return $track;
         });
@@ -1136,6 +1152,150 @@ class TrailRegistryService
         $track->saveQuietly();
 
         return $track;
+    }
+
+    /**
+     * Scrive sul sentiero le attivita', le difficolta' e l'attivita' primaria che
+     * l'operatore ha confermato (oc:9038). Gira dentro la transazione di
+     * approve().
+     *
+     * Divergenza voluta da attachTrailType(): li' un termine mancante si
+     * registra e si prosegue, e in locale nascono sentieri senza tipo che
+     * nessuno nota. Qui l'operatore ha confermato un dato preciso: se non si
+     * puo' scrivere l'approvazione si ferma con un'eccezione, cosi' la
+     * transazione torna indietro e l'istanza resta in istruttoria.
+     *
+     * Tutto sta dentro `withoutSyncingToSearch()`: senza, il
+     * TaxonomyTermableObserver indicizzerebbe in modo sincrono (in locale
+     * `scout.queue` e' false) un sentiero non ancora committato, e un rollback
+     * lascerebbe su Elasticsearch un documento fantasma. L'indicizzazione
+     * parte da createDataChain(), dopo il commit. Si silenziano la classe del
+     * package e quella reale del sentiero, che in uno shard puo' essere una
+     * sottoclasse.
+     *
+     * Regole su cosa si scrive:
+     * - la primaria deve essere fra le attivita' confermate: l'operatore puo'
+     *   cambiare le attivita' dopo aver scelto la primaria, e il campo non si
+     *   ripulisce da solo;
+     * - i livelli delle famiglie senza nessuna attivita' confermata si
+     *   ignorano: il prefill di una famiglia nascosta puo' arrivare valorizzato.
+     *
+     * @param  array{activities?: list<mixed>, difficulty?: array<string, string|null>, primary_activity?: string|null}  $choices
+     * @return array{activities: list<string>, difficulty: array<string, string>, primary_activity: string|null}
+     *                                                                                                           la decisione cosi' com'e' stata scritta, dopo la normalizzazione:
+     *                                                                                                           e' quella che approve() conserva sull'istanza
+     */
+    protected function attachChoices(EcTrack $track, array $choices): array
+    {
+        $activities = array_values(array_unique(array_filter(
+            // Il filtro serve: i valori arrivano dalla request (Nova, SUS) e il tipo
+            // degli elementi non e' garantito, possono essere interi o null.
+            (array) ($choices['activities'] ?? []),
+            fn ($value) => is_string($value) && $value !== '',
+        )));
+        $primary = $choices['primary_activity'] ?? null;
+        $primary = is_string($primary) && $primary !== '' ? $primary : null;
+
+        if ($primary !== null && ! in_array($primary, $activities, true)) {
+            throw InvalidTrailChoicesException::primaryNotConfirmed($primary);
+        }
+
+        $confirmedFamilies = array_values(array_unique(array_filter(array_map(
+            fn (string $activity) => DifficultyMatchesActivities::activityFamilies()[$activity] ?? null,
+            $activities,
+        ))));
+
+        $termIdentifiers = [];
+        $difficulty = [];
+
+        foreach ((array) ($choices['difficulty'] ?? []) as $family => $level) {
+            if (! is_string($level) || $level === '' || ! in_array($family, $confirmedFamilies, true)) {
+                continue;
+            }
+
+            $termIdentifiers[] = "{$family}-{$level}";
+            $difficulty[$family] = $level;
+        }
+
+        $decision = [
+            'activities' => $activities,
+            'difficulty' => $difficulty,
+            'primary_activity' => $primary,
+        ];
+
+        if ($primary !== null) {
+            $taxonomy = config('wm-package.features.trail_registry.primary_activity_taxonomy', 'primary-activity');
+            $termIdentifiers[] = "{$taxonomy}-{$primary}";
+        }
+
+        $activityRows = TaxonomyActivity::query()->whereIn('identifier', $activities)->get()->keyBy('identifier');
+
+        foreach ($activities as $identifier) {
+            if (! $activityRows->has($identifier)) {
+                throw InvalidTrailChoicesException::missingActivity($identifier);
+            }
+        }
+
+        $terms = TaxonomyTerm::query()->whereIn('identifier', $termIdentifiers)->get()->keyBy('identifier');
+
+        foreach ($termIdentifiers as $identifier) {
+            if (! $terms->has($identifier)) {
+                throw InvalidTrailChoicesException::missingTerm($identifier);
+            }
+        }
+
+        if ($activities === [] && $termIdentifiers === []) {
+            return $decision;
+        }
+
+        // Il sentiero e' appena nato: non ha una primaria da sostituire, e
+        // attach non puo' produrne una seconda. La famiglia e' a scelta singola.
+        $write = function () use ($track, $activityRows, $terms): void {
+            if ($activityRows->isNotEmpty()) {
+                $track->taxonomyActivities()->syncWithoutDetaching($activityRows->pluck('id')->all());
+            }
+
+            if ($terms->isNotEmpty()) {
+                $track->taxonomyTerms()->syncWithoutDetaching($terms->pluck('id')->all());
+            }
+        };
+
+        EcTrack::withoutSyncingToSearch(fn () => $track::withoutSyncingToSearch($write));
+
+        return $decision;
+    }
+
+    /**
+     * Fonde nelle `properties` dell'istanza la decisione presa in approvazione
+     * e il momento in cui e' stata presa (oc:9038).
+     *
+     * Si fonde e non si rimpiazza: in `properties` vivono gia' `dem_data`,
+     * `manual_data` e `app_id`, e un array costruito da zero le cancellerebbe.
+     *
+     * Questa scrittura sta DOPO createTrackFromApplication(), e deve restarci:
+     * quel metodo copia le `properties` dell'istanza sul sentiero, quindi la
+     * decisione resta sulla domanda e non finisce nelle properties del sentiero
+     * appena creato. E' voluto: sul sentiero il dato vive come relazione
+     * (attachChoices()), non come chiave. Spostarla prima della copia
+     * porterebbe un secondo dato, che diverge dal primo alla prima modifica.
+     *
+     * `approved_at` e' ISO 8601 con offset (es. 2026-11-24T10:15:00+00:00),
+     * perche' lo legge il SUS via JSON. Le quattro chiavi si scrivono sempre,
+     * anche per un'istanza d'ufficio senza scelte: lista vuota e `null` dicono
+     * «nessuna scelta», e chi legge non deve distinguere chiave assente da vuota.
+     *
+     * @param  array<string, mixed>  $properties
+     * @param  array{activities: list<string>, difficulty: array<string, string>, primary_activity: string|null}  $decision
+     * @return array<string, mixed>
+     */
+    protected function withApprovalDecision(array $properties, array $decision): array
+    {
+        return array_merge($properties, [
+            'approved_activities' => $decision['activities'],
+            'approved_difficulty' => $decision['difficulty'],
+            'approved_primary_activity' => $decision['primary_activity'],
+            'approved_at' => now()->toIso8601String(),
+        ]);
     }
 
     /**

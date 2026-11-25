@@ -28,6 +28,7 @@ function completeApplicationPayload(array $overrides = []): array
         'duration_forward' => 240,
         'duration_backward' => 200,
         'activities' => ['hiking', 'mtb'],
+        'primary_activity' => 'hiking',
         'difficulty' => ['hiking' => 'EE'],
         'existing_signage' => 'good_condition',
         'proposed_managing_municipalities' => ['Cagliari'],
@@ -297,4 +298,47 @@ it('decodifica il campo 54 arrivato come JSON in stringa', function () {
 
     expect(applicationErrors($payload))->toBe([]);
     expect(resolveApplicationRequest($payload)->apiData()['soggetto_manutentore_other'])->toBe(['Ente A']);
+});
+
+it('rifiuta una primaria che non e fra le attivita dichiarate', function () {
+    $errors = applicationErrors(completeApplicationPayload([
+        'activities' => ['hiking', 'mtb'],
+        'difficulty' => null,
+        'primary_activity' => 'horse',
+    ]));
+
+    expect($errors)->toHaveKey('primary_activity');
+});
+
+it('accetta una primaria che e fra le attivita dichiarate', function () {
+    $errors = applicationErrors(completeApplicationPayload([
+        'activities' => ['hiking', 'mtb'],
+        'primary_activity' => 'hiking',
+    ]));
+
+    expect($errors)->not->toHaveKey('primary_activity');
+});
+
+it('non aggiunge l errore incrociato quando le attivita sono gia invalide', function () {
+    $errors = applicationErrors(completeApplicationPayload([
+        'activities' => 'non un array',
+        'primary_activity' => 'hiking',
+    ]));
+
+    expect($errors)->toHaveKey('activities');
+    expect($errors)->not->toHaveKey('primary_activity');
+});
+
+it('non aggiunge l errore incrociato quando la primaria e gia invalida', function () {
+    $errors = applicationErrors(completeApplicationPayload(['primary_activity' => 'trail']));
+
+    expect($errors['primary_activity'])->toHaveCount(1);
+    expect($errors['primary_activity'][0])->not->toContain('not among the proposed');
+});
+
+it('esige la primaria', function () {
+    $payload = completeApplicationPayload();
+    unset($payload['primary_activity']);
+
+    expect(applicationErrors($payload))->toHaveKey('primary_activity');
 });

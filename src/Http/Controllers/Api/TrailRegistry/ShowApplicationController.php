@@ -177,6 +177,25 @@ class ShowApplicationController extends Controller
              */
             'code' => $this->approvedCode($application),
             /**
+             * La decisione presa da Forestas in approvazione, distinta da `submitted_data`, che
+             * resta la proposta inviata con la creazione: le due possono differire, per esempio
+             * nell'attività primaria. **È `null` in ogni stato diverso da `approved`, e non è un
+             * errore**: finché la domanda non è approvata nessuna decisione è definitiva. È `null`
+             * anche per una domanda approvata prima che la decisione venisse registrata: in quel
+             * caso il dato non esiste, e `submitted_data` resta l'unico riferimento. Con `status`
+             * `approved` e la decisione registrata è sempre un oggetto con quattro chiavi:
+             * `activities`, l'elenco degli identifier delle attività confermate; `difficulty`, la
+             * mappa dall'identifier della famiglia di difficoltà (per esempio `hiking-difficulty`)
+             * al livello scelto (per esempio `E`); `primary_activity`, l'identifier dell'attività
+             * primaria; `approved_at`, il momento dell'approvazione in ISO 8601 con offset (per
+             * esempio `2026-11-24T10:15:00+00:00`). Una domanda approvata senza scelte ha
+             * `activities` vuoto, `difficulty` vuoto (`{}`) e `primary_activity` a `null`: è una
+             * decisione presa, non un dato mancante.
+             *
+             * @var array{activities: list<string>, difficulty: array<string, string>, primary_activity: string|null, approved_at: string}|null
+             */
+            'approved_data' => $this->approvedData($application),
+            /**
              * Il motivo del respingimento, scritto dall'operatore che ha istruito la domanda. **È
              * `null` in ogni stato diverso da `rejected`, e non è un errore**: una domanda non
              * respinta non ha un motivo. Con `status` `rejected` è sempre valorizzato.
@@ -235,6 +254,41 @@ class ShowApplicationController extends Controller
         }
 
         return $application->activeCode?->code;
+    }
+
+    /**
+     * La decisione presa in approvazione, solo a domanda approvata.
+     *
+     * Si legge da un modello riletto: `approve()` aggiorna le `properties`
+     * nel database ma non sull'istanza che il chiamante ha in mano. Le
+     * istanze approvate prima di oc:9038 non hanno le chiavi: senza
+     * `approved_at` non c'e' una decisione registrata e si risponde `null`.
+     * Una decisione senza scelte (liste vuote, primaria `null`) invece c'e'
+     * ed e' restituita. `difficulty` vuoto esce come oggetto, non come `[]`.
+     *
+     * @return array{activities: list<string>, difficulty: array<string, string>|object, primary_activity: string|null, approved_at: string}|null
+     */
+    protected function approvedData(TrailApplication $application): ?array
+    {
+        if ($application->status !== TrailApplicationStatus::Approved) {
+            return null;
+        }
+
+        $properties = $application->fresh()->properties ?? [];
+        $approvedAt = $properties['approved_at'] ?? null;
+
+        if ($approvedAt === null) {
+            return null;
+        }
+
+        $difficulty = (array) ($properties['approved_difficulty'] ?? []);
+
+        return [
+            'activities' => array_values((array) ($properties['approved_activities'] ?? [])),
+            'difficulty' => $difficulty === [] ? (object) [] : $difficulty,
+            'primary_activity' => $properties['approved_primary_activity'] ?? null,
+            'approved_at' => $approvedAt,
+        ];
     }
 
     /**

@@ -1,5 +1,6 @@
 <?php
 
+use Carbon\Carbon;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Support\Facades\Bus;
@@ -102,7 +103,7 @@ it('legge una domanda in compilazione senza numero e senza motivo', function () 
         ->assertJsonPath('status', 'under_compilation')
         ->assertJsonPath('code', null)
         ->assertJsonPath('rejection_reason', null)
-        ->assertJsonStructure(['id', 'submitted_data', 'attachments', 'status', 'dem_data', 'dem_status', 'code', 'rejection_reason']);
+        ->assertJsonStructure(['id', 'submitted_data', 'attachments', 'status', 'dem_data', 'dem_status', 'code', 'approved_data', 'rejection_reason']);
 });
 
 it('restituisce i dati dichiarati come sono stati registrati, senza la versione dello schema', function () {
@@ -139,6 +140,7 @@ it('restituisce i dati dichiarati come sono stati registrati, senza la versione 
             'dem_data' => null,
             'dem_status' => 'computed',
             'code' => null,
+            'approved_data' => null,
             'rejection_reason' => null,
         ]);
 });
@@ -305,3 +307,171 @@ it('legge la domanda anche con la classe che lo shard ha configurato', function 
         ->assertJsonPath('id', $application->getKey())
         ->assertJsonPath('status', 'under_compilation');
 });
+
+/**
+ * Una domanda approvata con l'action vera, poi con la decisione riscritta da
+ * SQL: sostituisce le scelte dell'operatore senza seminare le tassonomie.
+ * `approve()` non sincronizza le properties sull'istanza passata: si ricarica.
+ *
+ * @param  array<string, mixed>  $decision
+ */
+function approvedApplication(array $decision = []): TrailApplication
+{
+    $application = applicationWithCode(TrailApplicationStatus::UnderReview, TrailCodeStatus::Reserved);
+    (new ApproveTrailApplication)->handle(new ActionFields(collect(), collect()), collect([$application]));
+
+    if ($decision !== []) {
+        DB::update(
+            'UPDATE trail_applications SET properties = properties || ?::jsonb WHERE id = ?',
+            [json_encode($decision), $application->getKey()]
+        );
+    }
+
+    return $application->fresh();
+}
+
+it('restituisce la decisione accanto alla proposta', function () {
+    $application = approvedApplication([
+        'approved_activities' => ['hiking', 'mtb'],
+        'approved_difficulty' => ['hiking-difficulty' => 'E'],
+        'approved_primary_activity' => 'mtb',
+        'approved_at' => '2026-11-24T10:15:00+00:00',
+    ]);
+    $application->writeApiData([
+        'activities' => ['hiking'],
+        'primary_activity' => 'hiking',
+        ApplicationSchema::VERSION_KEY => '1',
+    ]);
+
+    showApplication($application)
+        ->assertOk()
+        ->assertJsonPath('submitted_data.primary_activity', 'hiking')
+        ->assertJsonPath('approved_data.primary_activity', 'mtb')
+        ->assertJsonPath('approved_data.activities', ['hiking', 'mtb'])
+        ->assertJsonPath('approved_data.difficulty', ['hiking-difficulty' => 'E'])
+        ->assertJsonPath('approved_data.approved_at', '2026-11-24T10:15:00+00:00');
+});
+
+it('non restituisce una decisione su una domanda non ancora approvata', function () {
+    $application = applicationWithCode(TrailApplicationStatus::UnderReview, TrailCodeStatus::Reserved);
+
+    showApplication($application)->assertOk()->assertJsonPath('approved_data', null);
+});
+
+it('non restituisce una decisione su una domanda respinta', function () {
+    $application = applicationWithCode(TrailApplicationStatus::Rejected, TrailCodeStatus::Released, 'Motivo');
+
+    showApplication($application)->assertOk()->assertJsonPath('approved_data', null);
+});
+
+it('restituisce una decisione senza scelte come decisione presa, con la difficolta come oggetto', function () {
+    $application = approvedApplication();
+
+    $response = showApplication($application)->assertOk();
+
+    $response->assertJsonPath('approved_data.activities', [])
+        ->assertJsonPath('approved_data.primary_activity', null);
+    expect($response->json('approved_data.approved_at'))->not->toBeNull()
+        ->and($response->getContent())->toContain('"difficulty":{}');
+});
+
+it('tollera una domanda approvata prima che la decisione venisse registrata', function () {
+    $application = approvedApplication();
+    DB::update(
+        "UPDATE trail_applications SET properties = properties - 'approved_activities' - 'approved_difficulty' - 'approved_primary_activity' - 'approved_at' WHERE id = ?",
+        [$application->getKey()]
+    );
+
+    showApplication($application)
+        ->assertOk()
+        ->assertJsonPath('status', 'approved')
+        ->assertJsonPath('approved_data', null);
+});
+
+/**
+ * Semina quanto serve alle scelte reali: le attivita' `hiking` e `mtb`, la
+ * famiglia della primaria e le due scale di difficolta'. Copia di
+ * `seedChoicesTaxonomy()` di ApproveTrailApplicationTest, con altro nome: le
+ * funzioni dei test sono globali e due definizioni uguali andrebbero in
+ * conflitto nella suite intera.
+ */
+function seedStatusChoicesTaxonomy(): void
+{
+    foreach (['hiking', 'mtb'] as $identifier) {
+        DB::table('taxonomy_activities')->insert([
+            'name' => json_encode(['it' => $identifier]),
+            'identifier' => $identifier,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    }
+
+    $families = [
+        'primary-activity' => ['hiking', 'mtb'],
+        'hiking-difficulty' => ['E', 'EE'],
+        'mtb-difficulty' => ['BC', 'OC'],
+    ];
+
+    foreach ($families as $family => $suffixes) {
+        $parentId = DB::table('taxonomy_terms')->insertGetId([
+            'identifier' => $family,
+            'name' => json_encode(['it' => $family]),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        foreach ($suffixes as $position => $suffix) {
+            DB::table('taxonomy_terms')->insert([
+                'identifier' => "{$family}-{$suffix}",
+                'name' => json_encode(['it' => $suffix]),
+                'parent_id' => $parentId,
+                'sort_order' => $position,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+    }
+}
+
+it('legge dall endpoint la decisione scritta dall approvazione vera, con le sue chiavi', function () {
+    // Lega i nomi delle chiavi fra chi le scrive (TrailRegistryService) e chi
+    // le legge (l'endpoint): una rinomina da una parte sola rompe questo test.
+    Storage::fake('wmfe');
+    seedStatusChoicesTaxonomy();
+    $application = applicationWithCode(TrailApplicationStatus::UnderReview, TrailCodeStatus::Reserved);
+    $application->writeApiData(['activities' => ['hiking'], 'primary_activity' => 'hiking', ApplicationSchema::VERSION_KEY => '1']);
+
+    app(TrailRegistryService::class)->approve($application->fresh(), null, [
+        'activities' => ['hiking', 'mtb'],
+        'difficulty' => ['hiking-difficulty' => 'EE'],
+        'primary_activity' => 'mtb',
+    ]);
+
+    $response = showApplication($application)->assertOk();
+
+    $response->assertJsonPath('status', 'approved')
+        ->assertJsonPath('submitted_data.primary_activity', 'hiking')
+        ->assertJsonPath('approved_data.activities', ['hiking', 'mtb'])
+        ->assertJsonPath('approved_data.difficulty', ['hiking-difficulty' => 'EE'])
+        ->assertJsonPath('approved_data.primary_activity', 'mtb');
+    expect(Carbon::parse($response->json('approved_data.approved_at'))->isToday())->toBeTrue()
+        ->and($response->json('approved_data.approved_at'))->toMatch('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$/');
+});
+
+it('non restituisce la decisione se lo stato non e approvato, anche con le chiavi nelle properties', function (TrailApplicationStatus $status) {
+    $application = applicationWithCode($status, $status === TrailApplicationStatus::Rejected ? TrailCodeStatus::Released : TrailCodeStatus::Reserved);
+    DB::update(
+        'UPDATE trail_applications SET properties = properties || ?::jsonb WHERE id = ?',
+        [json_encode([
+            'approved_activities' => ['hiking'],
+            'approved_difficulty' => [],
+            'approved_primary_activity' => 'hiking',
+            'approved_at' => '2026-11-24T10:15:00+00:00',
+        ]), $application->getKey()]
+    );
+
+    showApplication($application)->assertOk()->assertJsonPath('approved_data', null);
+})->with([
+    'under_review' => TrailApplicationStatus::UnderReview,
+    'rejected' => TrailApplicationStatus::Rejected,
+]);

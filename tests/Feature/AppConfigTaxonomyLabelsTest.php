@@ -46,7 +46,10 @@ it('etichetta le storiche e le tassonomie accese per le EcTrack, nell\'ordine di
 
     expect(array_keys($taxonomies))->toBe(['activity', 'theme', 'poi-type', 'where', $first->identifier, $second->identifier])
         ->and($taxonomies[$first->identifier])->toEqual(['labels' => ['it' => 'Tipo percorso', 'en' => 'Route type'], 'tab' => 'General'])
-        ->and($taxonomies['activity'])->toEqual(['labels' => ['it' => 'Attività', 'en' => 'Activities'], 'tab' => 'Activities'])
+        // Le etichette storiche vengono dalle traduzioni del package, che crescono
+        // con le lingue: si verificano italiano e inglese, non l'elenco completo.
+        ->and($taxonomies['activity']['labels'])->toMatchArray(['it' => 'Attività', 'en' => 'Activities'])
+        ->and($taxonomies['activity']['tab'])->toBe('Activities')
         ->and($taxonomies['where']['labels']['it'])->toBe('Zone')
         ->and($taxonomies['where']['tab'])->toBe('General');
 });
