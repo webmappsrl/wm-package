@@ -154,6 +154,16 @@ alle tracce, prese dalle stesse query `userMoved` (`AnalyticsService::getRecentU
 - **Limiti accettati**: l'endpoint non ha autorizzazione per singolo layer (chi supera il gate Nova
   vede le posizioni di ogni layer, con i nomi se il flag è acceso); `user_id` è quello dichiarato
   dall'app nell'evento, non verificato dal backend.
+  ⚠️ (oc:9040) La premessa «chi supera il gate Nova» non regge: la route è registrata con il solo
+  middleware `nova` (`src/Nova/Fields/FeatureCollectionMap/src/FieldServiceProvider.php:34`), che
+  non contiene `Authenticate` né `Authorize` (stanno in `nova.api_middleware`): la route risponde
+  anche senza login. Gravità da valutare.
+- **La stessa mappa in una card** (oc:9040): `LayerMapCard`
+  (`src/Nova/Fields/FeatureCollectionMap/src/LayerMapCard.php`, componente `layer-map-card` nel
+  bundle del Field) mostra la mappa di un layer dove un Field non si può mettere, per esempio in
+  una Dashboard. Usa lo stesso GeoJSON, ma **non si aggiorna da sola**: niente polling, le
+  posizioni sono quelle del momento in cui si apre la pagina. La legenda è tradotta
+  (`User position (last 30 minutes)`).
 - **Perché una variabile d'ambiente**: allo scrum del 23/09/2026 non c'erano casi d'uso per un
   interruttore in Nova. È un'**eccezione voluta** alla regola "override versionato, mai `.env`"
   scritta sopra per `route_filter_analytics_enabled`: il flag è pensato per essere acceso dagli shard
