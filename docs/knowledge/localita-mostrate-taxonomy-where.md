@@ -7,6 +7,7 @@ Perché il package salva e mostra le località di tracce, POI e UGC (`properties
 - Un solo formato salvato, `{id: {<lingue>, _admin_level, _source}}`; il filtro per categoria si applica **solo** alle uscite pubbliche, mai al dato né a `GeoJsonService::getModelAsGeojson()`.
 - Il riallineamento dei dati esistenti è conservativo: scrive solo risultati non vuoti e salva il valore precedente in `_taxonomy_where_backup`.
 - I nomi delle where importate da osmfeatures sono nelle 5 lingue della piattaforma, presi da `osm_tags` del dettaglio.
+- In Nova il nome di una where si modifica per lingua (`NovaTabTranslatable`), solo dall'Administrator. Un reimport (`ImportTaxonomyWhere`, `RetryTaxonomyWhereGeometryFetch`) riscrive i nomi corretti a mano per le where con source osmfeatures (le regioni lo sono); quelle con un'altra sorgente, es. GeoHub, non vengono toccate (`FetchTaxonomyWhereGeometryJob::syncNameFromDetail()`).
 
 ## Perché così
 
@@ -15,6 +16,7 @@ Perché il package salva e mostra le località di tracce, POI e UGC (`properties
 - **Riallineamento conservativo** (oc:8588): il job per singolo record di oc:8487 azzera il campo prima di chiedere a osmfeatures; con un errore di rete le 1040 tappe senza regione di camminiditalia sarebbero rimaste vuote.
 - **Rigenerazione in due fasi** (oc:8588): il json statico di una traccia incorpora i POI collegati, che vanno riallineati prima di rigenerarlo.
 - **Nomi delle where in 5 lingue** (oc:8588): con `app.locale = en` e il nome solo in `it`, Nova e ogni `$where->name` mostravano un nome vuoto.
+- **Nome per lingua in Nova** (oc:8958): un `Text` semplice su un campo tradotto modificava solo la lingua di `app.locale` (`en` in camminiditalia), quindi l'italiano non si poteva correggere.
 
 ## Come ci siamo arrivati
 

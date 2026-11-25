@@ -2,6 +2,7 @@
 
 namespace Wm\WmPackage\Nova;
 
+use Kongulov\NovaTabTranslatable\NovaTabTranslatable;
 use Laravel\Nova\Fields\Boolean;
 use Laravel\Nova\Fields\ID;
 use Laravel\Nova\Fields\Text;
@@ -41,7 +42,11 @@ class TaxonomyWhere extends AbstractTaxonomyResource
     {
         return [
             ID::make()->sortable(),
-            Text::make('name'),
+            // Il nome è tradotto (Spatie): un Text semplice modificherebbe solo la lingua di
+            // app.locale. Un tab per lingua, come in AbstractTaxonomyResource (oc:8958).
+            NovaTabTranslatable::make([
+                Text::make('Name', 'name'),
+            ]),
             Text::make('source', fn () => $this->resource->getSource())->readonly()->onlyOnIndex(),
             FeatureCollectionMap::make('Geometry', 'geometry')->onlyOnDetail(),
             Boolean::make('Geometry', function () {
