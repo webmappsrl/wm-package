@@ -5,12 +5,20 @@
 
 ## Modifiche ai requisiti
 
-### [R3](overview.md#r3) — la primaria è obbligatoria nel modale di approvazione
-L'overview approvata chiedeva che l'operatore scegliesse la primaria con le select prefillate, ma non
-diceva che senza di essa l'approvazione dovesse fermarsi; il requisito dell'obbligatorietà,
-[R1](overview.md#r1), riguardava il payload del canale SUS. La prova a mano ha mostrato che senza una
-regola sul campo il sentiero nasce senza primaria con tre clic naturali: vedi «L'approvazione passava
-con la primaria vuota» fra i bug. Aggiunta `->rules('required')` sul campo e la riga `Verifica` a R3.
+### 2026-11-25 — la primaria è obbligatoria anche nel modale di approvazione
+- **Requisito:** [R3](overview.md#r3)
+- **Effetto:** modificato
+- **Decide:** dev, dopo la prova a mano
+- **Perché:** l'overview approvata chiedeva che l'operatore scegliesse la primaria con le select
+  prefillate, ma non diceva che senza di essa l'approvazione dovesse fermarsi: l'obbligatorietà,
+  [R1](overview.md#r1), riguardava il payload del canale SUS. Provando su Nova il sentiero è nato
+  senza primaria con tre clic naturali — vedi «L'approvazione passava con la primaria vuota» fra i
+  bug.
+- **Testo nuovo:**
+  > Approvando un'istanza, l'operatore Forestas sceglie le attività del sentiero e quale di esse è
+  > la primaria. Le scelte si presentano già compilate con quanto proposto dal SUS, quando c'è, e
+  > quello che l'operatore conferma prevale sulla proposta. La primaria è obbligatoria: senza,
+  > l'approvazione non parte.
 
 ## Divergenze dal piano, task per task
 
