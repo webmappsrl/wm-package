@@ -9,34 +9,27 @@ function applicationSchema(): ApplicationSchema
     return app(ApplicationSchema::class);
 }
 
-it('espone i 28 campi del format nell ordine della numerazione', function () {
-    expect(applicationSchema()->fields())->toHaveCount(28);
+it('espone i 19 campi del format nell ordine della numerazione', function () {
+    expect(applicationSchema()->fields())->toHaveCount(19);
     expect(applicationSchema()->fields()[0]->name)->toBe('from');
-    expect(applicationSchema()->fields()[27]->name)->toBe('maintenance_frequency_months');
+    expect(applicationSchema()->fields()[18]->name)->toBe('maintenance_frequency_months');
 });
 
-it('non mette fra gli obbligatori i campi la cui obbligatorieta dipende da un altro campo', function () {
+it('non mette fra gli obbligatori cio che il format non chiede sempre', function () {
+    // `difficulty`: il format ne valida la forma ma non ne chiede la presenza.
+    // `keeping_subjects`: il custode e' facoltativo.
     expect(applicationSchema()->requiredFieldNames())
-        ->not->toContain('soggetto_gestore_other')
-        ->not->toContain('soggetto_rilevatore_other')
-        ->not->toContain('soggetto_rilevatore_email')
-        ->not->toContain('soggetto_manutentore_other')
-        ->not->toContain('soggetto_manutentore_cf')
-        ->not->toContain('soggetto_custode')
+        ->not->toContain('keeping_subjects')
         ->not->toContain('difficulty');
 });
 
-it('ha come obbligatori i sedici campi che il format dichiara tali', function () {
-    expect(applicationSchema()->requiredFieldNames())->toHaveCount(16)
-        ->toContain('from', 'to', 'distance', 'soggetto_custode_presente', 'maintenance_frequency_months');
+it('ha come obbligatori i tredici campi che il format dichiara tali', function () {
+    expect(applicationSchema()->requiredFieldNames())->toHaveCount(13)
+        ->toContain('from', 'to', 'distance', 'managing_subjects', 'maintenance_frequency_months');
 });
 
 it('esige la attivita primaria', function () {
     expect(applicationSchema()->requiredFieldNames())->toContain('primary_activity');
-});
-
-it('alza la versione dello schema', function () {
-    expect(applicationSchema()->version())->toBe('2');
 });
 
 it('ammette solo le sette attivita come primaria', function () {
@@ -47,10 +40,12 @@ it('ammette solo le sette attivita come primaria', function () {
 });
 
 it('esprime le dipendenze fra campi come regole Laravel native', function () {
-    expect(applicationSchema()->rules()['soggetto_gestore_other'])
-        ->toContain('required_if:soggetto_gestore,third_party');
-    expect(applicationSchema()->rules()['soggetto_custode'])
-        ->toContain('required_if:soggetto_custode_presente,true');
+    // Dopo oc:9039 l'unica dipendenza fra campi vive dentro le liste di
+    // soggetti: la e-mail e' obbligatoria solo per un ente. Il wildcard
+    // risolve l'indice fratello, quindi ogni soggetto si valida con il
+    // proprio `subject` e non con quello di un altro.
+    expect(applicationSchema()->rules()['keeping_subjects.*.email'])
+        ->toContain('required_if:keeping_subjects.*.subject,organization');
 });
 
 it('valida le attivita elemento per elemento sui sette identificatori', function () {
@@ -100,21 +95,11 @@ it('dichiara di tipo json ogni campo la cui regola e array', function () {
     }
 });
 
-it('mostra come text il campo 54, che si valida come array di stringhe', function () {
-    $field = collect(applicationSchema()->fields())->firstWhere('name', 'soggetto_manutentore_other');
-
-    expect($field->type)->toBe('json');
-    expect($field->toArray()['type'])->toBe('text');
-});
-
 it('da un etichetta a ogni valore dei campi a scelta, con la dicitura del format', function () {
     // L'etichetta serve a chi integra per ritrovare il valore fra le voci del
     // format, e all'operatore in Nova per non leggere un codice grezzo.
     $attese = [
         'existing_signage' => ['good_condition' => "c'è ed è in buono stato", 'dilapidated' => "c'è ed è fatiscente", 'absent' => "non c'è"],
-        'soggetto_gestore' => ['applicant' => 'Il richiedente', 'municipalities' => 'Comuni territorialmente competenti selezionati', 'third_party' => 'Altro soggetto terzo', 'forestas' => 'Forestas'],
-        'soggetto_rilevatore' => ['applicant' => 'Il richiedente', 'other_surveyor' => 'Altro soggetto rilevatore'],
-        'soggetto_manutentore' => ['applicant' => 'Il richiedente (se soggetto giuridico)', 'municipalities' => 'Comuni territorialmente competenti selezionati', 'other_legal_entity' => 'Altro soggetto giuridico', 'forestas' => 'Forestas'],
     ];
 
     foreach ($attese as $nome => $etichette) {
@@ -155,20 +140,81 @@ it('ha un etichetta per ogni valore che la regola ammette, e nessuna in piu', fu
 it('scrive per la documentazione ogni valore accanto alla sua etichetta', function () {
     app()->setLocale('it');
 
-    expect(applicationSchema()->valuesDescription('soggetto_rilevatore'))
-        ->toBe('Valori ammessi: `applicant` — *Il richiedente*; `other_surveyor` — *Altro soggetto rilevatore*.');
+    expect(applicationSchema()->valuesDescription('existing_signage'))
+        ->toBe("Valori ammessi: `good_condition` — *c'è ed è in buono stato*; `dilapidated` — *c'è ed è fatiscente*; `absent` — *non c'è*.");
 });
 
 it('usa l etichetta della lingua corrente e ripiega sull italiano', function () {
     app()->setLocale('en');
-    expect(applicationSchema()->valuesDescription('soggetto_rilevatore'))->toContain('*The applicant*');
+    expect(applicationSchema()->valuesDescription('existing_signage'))->toContain('*present and in good condition*');
 
     // Il tedesco non ha etichette proprie: vale quella del format.
     app()->setLocale('de');
-    expect(applicationSchema()->valuesDescription('soggetto_rilevatore'))->toContain('*Il richiedente*');
+    expect(applicationSchema()->valuesDescription('existing_signage'))->toContain("*c'è ed è in buono stato*");
 });
 
 it('non scrive nulla per un campo senza elenco di valori', function () {
     expect(applicationSchema()->valuesDescription('from'))->toBeNull()
         ->and(applicationSchema()->valuesDescription('campo_inesistente'))->toBeNull();
+});
+
+it('dichiara le quattro liste di soggetti e non piu le select di categoria', function () {
+    $names = array_column(applicationSchema()->fields(), 'name');
+
+    expect($names)->toContain('managing_subjects', 'surveying_subjects', 'maintaining_subjects', 'keeping_subjects')
+        ->and($names)->not->toContain(
+            'proposed_managing_municipalities', 'municipality_email', 'municipality_email_alt',
+            'soggetto_gestore', 'soggetto_gestore_other',
+            'soggetto_rilevatore', 'soggetto_rilevatore_other', 'soggetto_rilevatore_email',
+            'soggetto_manutentore', 'soggetto_manutentore_other', 'soggetto_manutentore_cf',
+            'soggetto_custode_presente', 'soggetto_custode',
+        );
+});
+
+it('chiede almeno un soggetto per i tre ruoli obbligatori e nessuno per il custode', function () {
+    $required = applicationSchema()->requiredFieldNames();
+
+    expect($required)->toContain('managing_subjects', 'surveying_subjects', 'maintaining_subjects')
+        ->and($required)->not->toContain('keeping_subjects');
+});
+
+it('condiziona la e-mail del soggetto alla sua natura', function () {
+    $rules = applicationSchema()->rules();
+
+    expect($rules['managing_subjects.*.email'])
+        ->toContain('nullable', 'email', 'required_if:managing_subjects.*.subject,organization')
+        ->and($rules['managing_subjects.*.subject'])->toContain('required', 'in:organization,person')
+        ->and($rules['managing_subjects.*.name'])->toContain('required', 'string')
+        ->and($rules['managing_subjects.*'])->toContain('array');
+});
+
+it('alza la versione dello schema a 3', function () {
+    expect(applicationSchema()->version())->toBe('3');
+});
+
+it('ammette solo i dieci tematismi validati', function () {
+    $regola = applicationSchema()->rules()['themes.*'][1];
+
+    expect($regola)->toContain(
+        'history-archaeology', 'mining-geology', 'transhumance', 'spirituality', 'woods-forests',
+        'flora-fauna', 'waters', 'sea-coast', 'villages', 'rural-landscape',
+    );
+
+    expect(Validator::make(['themes' => ['spiritualita']], ['themes.*' => applicationSchema()->rules()['themes.*']])->passes())->toBeFalse();
+    expect(Validator::make(['themes' => ['spirituality', 'waters']], ['themes.*' => applicationSchema()->rules()['themes.*']])->passes())->toBeTrue();
+});
+
+it('mette un tetto alla lunghezza di ogni campo di testo', function () {
+    // Senza un tetto il canale accetta una stringa da megabyte e la deposita
+    // nel verbale. Il format non dichiara limiti per questi campi: 255 è lo
+    // stesso che il nome del sentiero ha già, 600 l'unico limite che il format
+    // nomina (campo 45, prima che diventasse una lista di identifier).
+    $rules = applicationSchema()->rules();
+
+    foreach (['from', 'to', 'intermediate_stop'] as $campo) {
+        expect($rules[$campo])->toContain('max:255');
+    }
+
+    expect($rules['overlapping_routes'])->toContain('max:600')
+        ->and($rules['managing_subjects.*.name'])->toContain('max:255');
 });

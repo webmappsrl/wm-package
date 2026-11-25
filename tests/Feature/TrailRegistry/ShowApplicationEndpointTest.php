@@ -113,7 +113,7 @@ it('restituisce i dati dichiarati come sono stati registrati, senza la versione 
         'distance' => '12.5',
         'activities' => ['hiking', 'mtb'],
         'difficulty' => ['hiking' => 'EE'],
-        'soggetto_custode_presente' => false,
+        'keeping_subjects' => [],
         ApplicationSchema::VERSION_KEY => '1',
     ]);
 
@@ -127,7 +127,7 @@ it('restituisce i dati dichiarati come sono stati registrati, senza la versione 
                 'distance' => '12.5',
                 'activities' => ['hiking', 'mtb'],
                 'difficulty' => ['hiking' => 'EE'],
-                'soggetto_custode_presente' => false,
+                'keeping_subjects' => [],
             ],
             'attachments' => [
                 'report' => 0,

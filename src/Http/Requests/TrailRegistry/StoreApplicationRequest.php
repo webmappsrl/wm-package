@@ -145,6 +145,8 @@ class StoreApplicationRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator) {
+            $this->rejectUndeclaredKeys($validator);
+
             $activities = $this->input('activities');
 
             if (! $validator->errors()->hasAny(['activities', 'activities.*', 'primary_activity'])) {
@@ -210,6 +212,55 @@ class StoreApplicationRequest extends FormRequest
      *
      * @return array<string, string>
      */
+    /**
+     * Ogni chiave che lo schema non dichiara fa fallire la chiamata, e il
+     * messaggio la nomina.
+     *
+     * Il canale ha un mittente solo e un contratto scritto: una chiave
+     * inattesa e' quasi sempre un refuso o un campo della forma precedente, e
+     * tacere la farebbe sparire dentro `api_data` mentre chi integra crede di
+     * averla consegnata. Laravel non lo fa da se': il validator percorre le
+     * regole, mai i dati, quindi una chiave senza regola non la vede nessuno.
+     *
+     * Il controllo gira in `after()`, cioe' dopo `prepareForValidation()`: i
+     * campi strutturati arrivano qui gia' decodificati.
+     */
+    protected function rejectUndeclaredKeys(Validator $validator): void
+    {
+        $dichiarate = [];
+
+        foreach (array_keys($this->rules()) as $regola) {
+            $dichiarate[strtok($regola, '.')] = true;
+        }
+
+        // Solo il corpo: la query string e i file sotto chiavi non previste
+        // li scarta gia' `apiData()`, e non sono cio' di cui parla il
+        // contratto dei campi.
+        foreach (array_keys($this->getInputSource()->all()) as $chiave) {
+            if (! isset($dichiarate[$chiave])) {
+                $validator->errors()->add(
+                    (string) $chiave,
+                    __('The field :key is not expected by this API.', ['key' => $chiave])
+                );
+            }
+        }
+    }
+
+    /**
+     * I messaggi che elencano i valori concordati.
+     *
+     * Il messaggio di `in:` tradotto da Laravel dice «Il valore selezionato
+     * per X non e' valido», che non aiuta chi integra a capire cosa mandare.
+     * L'elenco resta dichiarato una volta sola nelle regole: `:values` lo
+     * ripete, e da li' la documentazione OpenAPI ricava il proprio `enum`.
+     *
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return ['in' => __('The value of :attribute is not among the agreed ones: :values.')];
+    }
+
     public function attributes(): array
     {
         $names = array_map(

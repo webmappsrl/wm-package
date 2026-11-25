@@ -114,12 +114,9 @@ function storeApplicationPayload(array $overrides = []): array
         'primary_activity' => 'hiking',
         'difficulty' => json_encode(['hiking' => 'EE']),
         'existing_signage' => 'good_condition',
-        'proposed_managing_municipalities' => json_encode(['Cagliari']),
-        'municipality_email' => 'comune@example.com',
-        'soggetto_gestore' => 'forestas',
-        'soggetto_rilevatore' => 'applicant',
-        'soggetto_manutentore' => 'forestas',
-        'soggetto_custode_presente' => 'false',
+        'managing_subjects' => json_encode([['name' => 'Comune di Cagliari', 'email' => 'comune@example.com', 'subject' => 'organization']]),
+        'surveying_subjects' => json_encode([['name' => 'Mario Rossi', 'email' => null, 'subject' => 'person']]),
+        'maintaining_subjects' => json_encode([['name' => 'Forestas', 'email' => 'protocollo@forestas.example.it', 'subject' => 'organization']]),
         'last_survey_date' => '2026-01-15',
         'maintenance_frequency_months' => 12,
     ], $overrides);
@@ -209,25 +206,40 @@ it('non restituisce il numero del sentiero, benche sia gia riservato', function 
     expect($response->getContent())->not->toContain('ZNUB5');
 });
 
-it('conserva il payload intero piu la versione dello schema', function () {
+it('conserva i campi concordati piu la versione dello schema', function () {
     fakeDemResponding();
 
-    $id = storeApplication(['campo_nuovo_del_format' => 'x'])->assertCreated()->json('id');
+    $id = storeApplication()->assertCreated()->json('id');
 
     $apiData = TrailApplication::find($id)->api_data;
     expect($apiData)->toHaveKey(ApplicationSchema::VERSION_KEY, app(ApplicationSchema::class)->version());
-    expect($apiData)->toHaveKey('campo_nuovo_del_format', 'x');
     expect($apiData)->toHaveKey('from', 'Punto A');
     expect($apiData['activities'])->toBe(['hiking', 'mtb']);
     expect($apiData)->not->toHaveKeys(['name', 'geometry']);
 });
 
+it('rifiuta un campo che non abbiamo concordato, invece di conservarlo', function () {
+    // Fino a oc:9039 una chiave ignota finiva in `api_data` e chi integra non
+    // sapeva di aver sbagliato. Ora la chiamata fallisce dicendo quale campo.
+    fakeDemResponding();
+
+    storeApplication(['campo_nuovo_del_format' => 'x'])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['campo_nuovo_del_format']);
+});
+
 it('la versione dello schema la stabilisce chi accetta, non chi consegna', function () {
     fakeDemResponding();
 
-    $id = storeApplication(['_schema_version' => '999'])->assertCreated()->json('id');
+    // Dichiararla non e' previsto: chi ci prova riceve un errore sul campo.
+    storeApplication(['_schema_version' => '999'])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['_schema_version']);
 
-    expect(TrailApplication::find($id)->api_data['_schema_version'])->toBe(app(ApplicationSchema::class)->version());
+    // E chi non ci prova se la vede scrivere da noi.
+    $id = storeApplication()->assertCreated()->json('id');
+    expect(TrailApplication::find($id)->api_data['_schema_version'])
+        ->toBe(app(ApplicationSchema::class)->version());
 });
 
 it('dichiara il calcolo in elaborazione quando il servizio non risponde, senza fallire', function () {
@@ -347,9 +359,9 @@ it('usa un messaggio diverso per ciascuno dei quattro motivi', function () {
 });
 
 it('rifiuta un modulo non valido dicendo il campo, senza lasciare righe', function () {
-    storeApplication(['municipality_email' => 'non-una-email'])
+    storeApplication(['managing_subjects' => json_encode([['name' => 'X', 'email' => 'non-una-email', 'subject' => 'organization']])])
         ->assertStatus(422)
-        ->assertJsonValidationErrors(['municipality_email']);
+        ->assertJsonValidationErrors(['managing_subjects.0.email']);
 
     expect(TrailApplication::count())->toBe(0);
 });

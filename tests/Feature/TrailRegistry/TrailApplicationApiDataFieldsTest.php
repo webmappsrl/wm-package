@@ -60,7 +60,7 @@ it('mostra i dati del canale API nella detail view', function () {
     $attributi = attributiDeiCampi($resource->fields(app(NovaRequest::class)));
 
     expect($attributi)->toContain('api_data->from')
-        ->and($attributi)->toContain('api_data->soggetto_gestore')
+        ->and($attributi)->toContain('api_data->managing_subjects')
         ->and($attributi)->toContain('api_data->maintenance_frequency_months');
 });
 
@@ -102,14 +102,14 @@ it('mostra l etichetta di una select, non il valore', function () {
 });
 
 it('regge un valore annidato senza rompere la detail view', function () {
-    // Engineering puo' mandare la coppia denominazione+codice fiscale come
-    // lista di oggetti, o la difficolta' come mappa di liste. Concatenando i
+    // Engineering manda i soggetti come lista di oggetti, e puo' mandare la
+    // difficolta' come mappa di liste. Concatenando i
     // valori a mano il primo caso mandava la detail view in 500 («Array to
     // string conversion») e il secondo rendeva una stringa vuota; PropertiesPanel
     // li rende come JSON (oc:8960).
     $application = TrailApplicationModel::factory()->create();
     $application->writeApiData([
-        'soggetto_manutentore_cf' => [['denominazione' => 'Comune di Baunei', 'cf' => 'RSSMRA80A01H501U']],
+        'maintaining_subjects' => [['name' => 'Comune di Baunei', 'email' => 'protocollo@baunei.example.it', 'subject' => 'organization']],
         'difficulty' => ['hiking' => ['E', 'EE']],
         'from' => ['annidato' => ['A', 'B']],
     ]);

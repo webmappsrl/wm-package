@@ -2,6 +2,7 @@
 
 namespace Wm\WmPackage\TrailRegistry\Schema;
 
+use Wm\WmPackage\Rules\OnlyAllowedKeys;
 use Wm\WmPackage\TrailRegistry\Rules\DifficultyMatchesActivities;
 
 /**
@@ -35,6 +36,25 @@ class ApplicationSchema
     ];
 
     /**
+     * I dieci tematismi del campo 45, validati da Forestas il 23/11/2026.
+     * Il canale riceve gli identifier, mai le etichette: quelle le mostra il
+     * sistema di origine a chi compila, e la pagina delle API le riporta solo
+     * per far capire cosa significhi ciascun identifier.
+     */
+    protected const THEMES = [
+        'history-archaeology',
+        'mining-geology',
+        'transhumance',
+        'spirituality',
+        'woods-forests',
+        'flora-fauna',
+        'waters',
+        'sea-coast',
+        'villages',
+        'rural-landscape',
+    ];
+
+    /**
      * Chiave, dentro `api_data`, che porta la versione dello schema con cui il
      * payload e' stato accettato. Il prefisso `_` la distingue da un campo del
      * modulo. Chi legge un payload per sapere con quali regole e' stato
@@ -43,13 +63,20 @@ class ApplicationSchema
     public const VERSION_KEY = '_schema_version';
 
     /**
+     * Le chiavi concordate di un soggetto. Scritte qui una volta: le regole
+     * annidate le usano per rifiutare tutto il resto, e la documentazione le
+     * nomina nella sezione dei soggetti.
+     */
+    public const SUBJECT_KEYS = ['name', 'email', 'subject'];
+
+    /**
      * La versione dello schema. Si alza a mano quando cambia cio' che la
      * consegna deve contenere o come si valida: il payload accettato porta
      * con se' la versione che lo ha accettato.
      */
     public function version(): string
     {
-        return '2';
+        return '3';
     }
 
     /**
@@ -64,7 +91,7 @@ class ApplicationSchema
     }
 
     /**
-     * I 28 campi: i 27 del format nel loro ordine, piu' `primary_activity`,
+     * I 19 campi: quelli del format nel loro ordine, piu' `primary_activity`,
      * che il format non numera; il numero in coda a ogni riga e' il suo numero
      * di campo. Le select dichiarate senza `values` sono quelle il cui elenco
      * non e' fissato per la Resource Nova: il campo e' gia' una select e i
@@ -78,9 +105,9 @@ class ApplicationSchema
     public function fields(): array
     {
         return [
-            new ApplicationField('from', 'text', __('Start point'), null, true, ['required', 'string'], null), // 29
-            new ApplicationField('to', 'text', __('End point'), null, true, ['required', 'string'], null), // 30
-            new ApplicationField('intermediate_stop', 'text', __('Intermediate stop'), null, false, ['nullable', 'string'], null), // 31
+            new ApplicationField('from', 'text', __('Start point'), null, true, ['required', 'string', 'max:255'], null), // 29
+            new ApplicationField('to', 'text', __('End point'), null, true, ['required', 'string', 'max:255'], null), // 30
+            new ApplicationField('intermediate_stop', 'text', __('Intermediate stop'), null, false, ['nullable', 'string', 'max:255'], null), // 31
             new ApplicationField('distance', 'number', __('Declared distance'), null, true, ['required', 'numeric'], null), // 32
             new ApplicationField('ascent', 'number', __('Declared ascent'), null, false, ['nullable', 'numeric'], null), // 33
             new ApplicationField('duration_forward', 'number', __('Declared duration forward'), null, true, ['required', 'integer'], null), // 34
@@ -93,34 +120,12 @@ class ApplicationSchema
                 ['value' => 'dilapidated', 'label' => ['it' => "c'è ed è fatiscente", 'en' => 'present but dilapidated']],
                 ['value' => 'absent', 'label' => ['it' => "non c'è", 'en' => 'absent']],
             ], true, ['required', 'in:good_condition,dilapidated,absent'], null), // 38
-            new ApplicationField('overlapping_routes', 'text', __('Overlapping routes'), null, false, ['nullable', 'string'], null), // 39
-            new ApplicationField('proposed_managing_municipalities', 'json', __('Proposed managing municipalities'), null, true, ['required', 'array', 'min:1'], null), // 42
-            new ApplicationField('municipality_email', 'email', __('Municipality email'), null, true, ['required', 'email'], null), // 43
-            new ApplicationField('municipality_email_alt', 'email', __('Alternative municipality email'), null, false, ['nullable', 'email'], null), // 44
+            new ApplicationField('overlapping_routes', 'text', __('Overlapping routes'), null, false, ['nullable', 'string', 'max:600'], null), // 39
             new ApplicationField('themes', 'json', __('Themes'), null, false, ['nullable', 'array'], null), // 45
-            new ApplicationField('soggetto_gestore', 'select', __('Manager'), [
-                ['value' => 'applicant', 'label' => ['it' => 'Il richiedente', 'en' => 'The applicant']],
-                ['value' => 'municipalities', 'label' => ['it' => 'Comuni territorialmente competenti selezionati', 'en' => 'Selected territorially competent municipalities']],
-                ['value' => 'third_party', 'label' => ['it' => 'Altro soggetto terzo', 'en' => 'Other third party']],
-                ['value' => 'forestas', 'label' => ['it' => 'Forestas', 'en' => 'Forestas']],
-            ], true, ['required', 'in:applicant,municipalities,third_party,forestas'], null), // 47
-            new ApplicationField('soggetto_gestore_other', 'text', __('Other manager'), null, false, ['required_if:soggetto_gestore,third_party', 'nullable', 'string'], null), // 48
-            new ApplicationField('soggetto_rilevatore', 'select', __('Surveyor'), [
-                ['value' => 'applicant', 'label' => ['it' => 'Il richiedente', 'en' => 'The applicant']],
-                ['value' => 'other_surveyor', 'label' => ['it' => 'Altro soggetto rilevatore', 'en' => 'Other surveyor']],
-            ], true, ['required', 'in:applicant,other_surveyor'], null), // 49
-            new ApplicationField('soggetto_rilevatore_other', 'text', __('Other surveyor'), null, false, ['required_if:soggetto_rilevatore,other_surveyor', 'nullable', 'string'], null), // 50
-            new ApplicationField('soggetto_rilevatore_email', 'email', __('Surveyor email'), null, false, ['required_if:soggetto_rilevatore,other_surveyor', 'nullable', 'email'], null), // 51
-            new ApplicationField('soggetto_manutentore', 'select', __('Maintainer'), [
-                ['value' => 'applicant', 'label' => ['it' => 'Il richiedente (se soggetto giuridico)', 'en' => 'The applicant (if a legal entity)']],
-                ['value' => 'municipalities', 'label' => ['it' => 'Comuni territorialmente competenti selezionati', 'en' => 'Selected territorially competent municipalities']],
-                ['value' => 'other_legal_entity', 'label' => ['it' => 'Altro soggetto giuridico', 'en' => 'Other legal entity']],
-                ['value' => 'forestas', 'label' => ['it' => 'Forestas', 'en' => 'Forestas']],
-            ], true, ['required', 'in:applicant,municipalities,other_legal_entity,forestas'], null), // 53
-            new ApplicationField('soggetto_manutentore_other', 'json', __('Other maintainer'), null, false, ['required_if:soggetto_manutentore,other_legal_entity', 'nullable', 'array'], 'text'), // 54
-            new ApplicationField('soggetto_manutentore_cf', 'json', __('Other maintainer tax code'), null, false, ['required_if:soggetto_manutentore,other_legal_entity', 'nullable', 'array'], null), // 55
-            new ApplicationField('soggetto_custode_presente', 'boolean', __('Keeper exists'), null, true, ['required', 'boolean'], null), // 56
-            new ApplicationField('soggetto_custode', 'text', __('Keeper'), null, false, ['required_if:soggetto_custode_presente,true', 'nullable', 'string'], null), // 58
+            new ApplicationField('managing_subjects', 'json', __('Managing subjects'), null, true, ['required', 'array', 'min:1'], null), // 47
+            new ApplicationField('surveying_subjects', 'json', __('Surveying subjects'), null, true, ['required', 'array', 'min:1'], null), // 49
+            new ApplicationField('maintaining_subjects', 'json', __('Maintaining subjects'), null, true, ['required', 'array', 'min:1'], null), // 53
+            new ApplicationField('keeping_subjects', 'json', __('Keeping subjects'), null, false, ['nullable', 'array'], null), // 58
             new ApplicationField('last_survey_date', 'date', __('Last survey date'), null, true, ['required', 'date', 'before_or_equal:today'], 'text'), // 64
             new ApplicationField('maintenance_frequency_months', 'number', __('Maintenance frequency (months)'), null, true, ['required', 'integer', 'min:1'], null), // 65
         ];
@@ -136,9 +141,23 @@ class ApplicationSchema
     {
         return [
             'activities.*' => ['string', 'in:'.implode(',', static::ACTIVITIES)],
-            'proposed_managing_municipalities.*' => ['string'],
-            'soggetto_manutentore_other.*' => ['string'],
-            'soggetto_manutentore_cf.*' => ['string'],
+            'themes.*' => ['string', 'in:'.implode(',', static::THEMES)],
+            'managing_subjects.*' => ['array', new OnlyAllowedKeys(static::SUBJECT_KEYS)],
+            'managing_subjects.*.name' => ['required', 'string', 'max:255'],
+            'managing_subjects.*.email' => ['nullable', 'required_if:managing_subjects.*.subject,organization', 'email'],
+            'managing_subjects.*.subject' => ['required', 'in:organization,person'],
+            'surveying_subjects.*' => ['array', new OnlyAllowedKeys(static::SUBJECT_KEYS)],
+            'surveying_subjects.*.name' => ['required', 'string', 'max:255'],
+            'surveying_subjects.*.email' => ['nullable', 'required_if:surveying_subjects.*.subject,organization', 'email'],
+            'surveying_subjects.*.subject' => ['required', 'in:organization,person'],
+            'maintaining_subjects.*' => ['array', new OnlyAllowedKeys(static::SUBJECT_KEYS)],
+            'maintaining_subjects.*.name' => ['required', 'string', 'max:255'],
+            'maintaining_subjects.*.email' => ['nullable', 'required_if:maintaining_subjects.*.subject,organization', 'email'],
+            'maintaining_subjects.*.subject' => ['required', 'in:organization,person'],
+            'keeping_subjects.*' => ['array', new OnlyAllowedKeys(static::SUBJECT_KEYS)],
+            'keeping_subjects.*.name' => ['required', 'string', 'max:255'],
+            'keeping_subjects.*.email' => ['nullable', 'required_if:keeping_subjects.*.subject,organization', 'email'],
+            'keeping_subjects.*.subject' => ['required', 'in:organization,person'],
         ];
     }
 
