@@ -1,5 +1,5 @@
 > Ticket: oc:9061
-> Stato: approvato il 2026-11-26
+> Stato: seguito, con 2 divergenze annotate in notes.md
 
 # Soggetti privati: il canale rifiuta i dati personali — piano (package)
 

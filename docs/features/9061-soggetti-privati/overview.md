@@ -1,5 +1,5 @@
 > Ticket: oc:9061
-> Stato: approvata il 2026-11-26
+> Stato: chiusa il 2026-11-26 · approvata il 2026-11-26
 
 # Soggetti privati: il canale rifiuta i dati personali delle persone fisiche
 
@@ -123,7 +123,7 @@ del tutto, sia quando valgono `null`, su tutti e quattro i ruoli.
 
 *Fonte:* documento dei 34 quesiti, riga 24, risposta «Confermato» — «conservare nome ed e-mail
 della persona fisica solo sul SUS».
-**Verifica:** _da compilare alla chiusura._
+**Verifica:** [ApplicationSchemaTest.php](../../../tests/Unit/TrailRegistry/ApplicationSchemaTest.php) › `vieta i dati personali del soggetto privato e li pretende dall ente` e [PatchApplicationRequestTest.php](../../../tests/Feature/TrailRegistry/PatchApplicationRequestTest.php) › `accetta un privato senza nome ne e-mail su tutti e quattro i ruoli`, `accetta un privato con nome null o stringa vuota`
 
 ### <a id="r2"></a>**R2** — Un privato con nome o e-mail valorizzati è rifiutato
 
@@ -136,14 +136,14 @@ conferma su un `api_data` già salvato.
 *Fonte:* decisione del dev del 26/11/2026, presa sapendo che la sola facoltà di omettere il dato
 non impedirebbe al SUS di mandarlo. La richiesta opposta di Alessio Piccioli in call il
 23/11/2026 — «però il placeholder ce lo dovete mettere» — non è stata accolta.
-**Verifica:** _da compilare alla chiusura._
+**Verifica:** [PatchApplicationRequestTest.php](../../../tests/Feature/TrailRegistry/PatchApplicationRequestTest.php) › `rifiuta il nome di un privato, segnaposto compreso`, `rifiuta la e-mail di un privato` e, per la conferma, [ConfirmCompilationTest.php](../../../tests/Feature/TrailRegistry/ConfirmCompilationTest.php) › `spiega perche il dato di un privato non e ammesso anche alla conferma`
 
 ### <a id="r3"></a>**R3** — Un ente continua a richiedere nome ed e-mail
 
 Un soggetto con `subject: organization` senza nome, o senza e-mail, o con un'e-mail non valida,
 è rifiutato con `422` che nomina ruolo e posizione.
 
-**Verifica:** _da compilare alla chiusura._
+**Verifica:** [PatchApplicationRequestTest.php](../../../tests/Feature/TrailRegistry/PatchApplicationRequestTest.php) › `pretende nome ed e-mail dall ente`, `segnala solo subject quando il soggetto non dichiara la propria natura`
 
 ### <a id="r4"></a>**R4** — Il rifiuto spiega perché, e dove si recupera il dato
 
@@ -153,7 +153,7 @@ pratica.
 
 *Fonte:* decisione del dev del 26/11/2026 — chi legge quel messaggio è Engineering, che in call
 aveva chiesto l'opposto.
-**Verifica:** _da compilare alla chiusura._
+**Verifica:** [PatchApplicationRequestTest.php](../../../tests/Feature/TrailRegistry/PatchApplicationRequestTest.php) › `spiega perche il dato di un privato non e ammesso` e [ConfirmCompilationTest.php](../../../tests/Feature/TrailRegistry/ConfirmCompilationTest.php) › `spiega perche il dato di un privato non e ammesso anche alla conferma`
 
 ### <a id="r5"></a>**R5** — La documentazione del canale descrive la regola
 
@@ -162,7 +162,7 @@ si mandano e che se arrivano la risposta è `422`, con la stessa precisione con 
 descrivono la regola dell'e-mail. Gli esempi dei ruoli che mostrano un privato non portano più
 il nome.
 
-**Verifica:** _da compilare alla chiusura._
+**Verifica:** [PatchApplicationController.php](../../../src/Http/Controllers/Api/TrailRegistry/PatchApplicationController.php) › i quattro `#[BodyParameter]` dei ruoli di soggetti; che la pagina generata ne rispecchi la forma lo verifica forestas tests/Feature/Sus/SusApiDocumentationTest.php › `pubblica la forma vera degli elementi di una lista di soggetti`
 
 ### <a id="r6"></a>**R6** — La versione dello schema smette di seguire i ticket
 
@@ -172,7 +172,7 @@ altro, non a ogni cambiamento delle regole.
 
 *Fonte:* decisione del dev del 26/11/2026 — un contratto che nessuno usa non si versiona, e i due
 bump precedenti (oc:9038, oc:9039) contavano ticket.
-**Verifica:** _da compilare alla chiusura._
+**Verifica:** [ApplicationSchemaTest.php](../../../tests/Unit/TrailRegistry/ApplicationSchemaTest.php) › `tiene ferma la versione dello schema finche il canale e in costruzione`
 
 ## Rischi
 
@@ -198,17 +198,21 @@ dell'istanza.
 
 ## Moduli toccati
 
-Previsti:
+Toccati davvero, da `git diff --name-only`:
 
 - `src/TrailRegistry/Schema/ApplicationSchema.php` — le otto regole `*.name` e `*.email` di
-  `itemRules()`, quattro ruoli per due campi, e `version()` con il suo docblock
-- `src/Http/Requests/TrailRegistry/PatchApplicationRequest.php` — il messaggio del rifiuto in
-  `messages()`
+  `itemRules()`, il nuovo `validationMessages()`, e `version()` con il suo docblock
+- `src/Http/Requests/TrailRegistry/PatchApplicationRequest.php` — `messages()` delega allo schema
+- `src/TrailRegistry/TrailRegistryService.php` — `invalidValues()` passa i messaggi dello schema
+  al proprio Validator
 - `src/Http/Controllers/Api/TrailRegistry/PatchApplicationController.php` — i quattro
   `#[BodyParameter]` dei ruoli
-- `tests/Unit/TrailRegistry/ApplicationSchemaTest.php` e i test della patch — il privato senza
-  nome accettato, il privato con il nome rifiutato, l'ente senza nome rifiutato, su tutti e
-  quattro i ruoli
+- `resources/lang/{it,en,de,es,fr}.json` — la voce del messaggio del rifiuto, nelle cinque lingue
+- `tests/Unit/TrailRegistry/ApplicationSchemaTest.php`,
+  `tests/Feature/TrailRegistry/PatchApplicationRequestTest.php`,
+  `tests/Feature/TrailRegistry/ConfirmCompilationTest.php` — i test nuovi
+- `tests/Feature/TrailRegistry/{PatchApplicationTest,ApproveTrailApplicationTest,TrailApplicationApiDataTest}.php`
+  — i payload di prova portati alla forma nuova
 
 La parte di documentazione rivolta a chi integra — la pagina delle API e il modulo di prova —
 sta nello shard: `forestas/docs/features/9061-soggetti-privati/overview.md`.
