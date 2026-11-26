@@ -152,3 +152,50 @@ Seconda parte:
 - `src/Nova/Fields/FeatureCollectionMap/dist/` — ricompilato
 - `resources/lang/{it,en,fr,es,de}.json`
 - `docs/knowledge/analytics-posthog.md` — posizioni globali e endpoint protetti
+
+---
+
+# Terza parte — colori configurabili per gli shard (Alessandro, 26/11)
+
+## Cosa cambia
+
+- **`LayerAnalyticsCard.vue`**: ogni colore oggi scritto nel componente diventa una variabile CSS
+  `--wm-analytics-*`, con default identico al colore di oggi. Le variabili coprono:
+  - i numeri;
+  - le tre serie delle piattaforme;
+  - i grigi di testo e bordi;
+  - i fondi dei box dei KPI, della select e dei pulsanti.
+  Le serie del grafico Chart.js, disegnato su canvas, leggono le variabili con
+  `getComputedStyle`. Senza variabili impostate dallo shard la card resta identica a oggi.
+- **Colore di default delle tracce sulle mappe**: nuova config `wm-package.map_default_track_color`
+  (`MAP_DEFAULT_TRACK_COLOR`, default `rgba(255, 0, 0, 1)`, il rosso di oggi). La usano
+  `Layer::getFeatureCollectionMap()` e `AllLayersRoutesGeojson`, al posto di
+  `Layer::DEFAULT_TRACK_STROKE_COLOR`. `properties.color` del layer resta più forte, come oggi.
+  La chiave di cache dei percorsi di tutti i cammini contiene il colore, così un cambio di config
+  si vede subito.
+
+## Perché
+
+camminiditalia porta l'interfaccia di Nova sui colori del suo design system (overview dello shard, terza
+parte). Il package non deve imporre quei colori agli altri progetti: li rende configurabili e
+lascia i default di oggi.
+
+## Requisiti
+
+- Senza override: card e mappe identiche a oggi (stessi colori, stesso GeoJSON).
+- Con le variabili impostate: card con i colori dello shard, export PNG compreso.
+- Con la config impostata: tracce dei layer senza `properties.color` nel colore configurato, su
+  detail view, `LayerMapCard` e mappa di tutti i cammini.
+
+## Rischi
+
+- Un colore della card dimenticato resta fisso: il controllo è un `grep` dei colori nel
+  componente dopo la modifica.
+
+## Moduli toccati
+
+- `src/Nova/Cards/LayerAnalytics/resources/js/components/LayerAnalyticsCard.vue` e `dist/`
+- `config/wm-package.php`
+- `src/Models/Layer.php`
+- `src/Services/Models/AllLayersRoutesGeojson.php`
+- `docs/knowledge/analytics-posthog.md`

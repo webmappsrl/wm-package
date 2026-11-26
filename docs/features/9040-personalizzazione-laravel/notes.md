@@ -177,3 +177,17 @@ Lasciati come ipotetici:
 - il polling continua con la tab in background;
 - un clic su un pallino sopra una tappa prende il pallino.
 
+
+## Terza parte — colori configurabili (26/11)
+
+- **Variabili della card**: rispetto al piano non c'è `badge-text`, perché il testo del badge
+  usa `text`. Ci sono in più:
+  - `bar-bg`, il fondo delle barre delle classifiche;
+  - `tooltip-bg` e `tooltip-text`;
+  - `divider` e `divider-soft`, le righe delle tabelle;
+  - `chart-text` e `chart-grid`, testi e griglia del grafico, con default i valori di Chart.js 4:
+    `#666` e `rgba(0,0,0,0.1)`.
+- **`Layer::DEFAULT_TRACK_STROKE_COLOR` sostituita da `Layer::defaultTrackColor()`**, che legge
+  `wm-package.map_default_track_color`.
+- **Il grafico legge le variabili quando viene disegnato** (`resolvedColor()`): cambiando tema
+  senza ricaricare la pagina le barre restano col tema precedente fino al disegno successivo.

@@ -283,3 +283,54 @@ prop facoltativa con l'URL delle posizioni e le ridisegna in un `VectorLayer` a 
 
 3. `feat(oc:9040): mappa di tutti i cammini e posizioni live aggiornate nella LayerMapCard`
 4. `docs(oc:9040): documentazione della mappa globale`
+
+---
+
+# Terza parte — colori configurabili per gli shard (Alessandro, 26/11)
+
+**Goal:** card delle statistiche e colore di default delle tracce modificabili dagli shard, con i
+default di oggi.
+
+**Spec:** `overview.md`, sezione «Terza parte». I test stanno in camminiditalia
+(`tests/Feature/`), come nelle parti precedenti.
+
+## Global Constraints
+
+- Senza override il risultato è identico a oggi: stessi colori nella card e `rgba(255, 0, 0, 1)`
+  sulle tracce.
+- Variabili CSS con prefisso `--wm-analytics-`; config `map_default_track_color`, env
+  `MAP_DEFAULT_TRACK_COLOR`.
+- Il `dist` della card si ricompila con `npm run prod` nella cartella della card.
+
+## Review Focus
+
+- Layer con `properties.color`: resta il suo colore, non quello della config.
+- Mappa di tutti i cammini già in cache con il rosso: cambiando la config deve cambiare subito
+  (colore nella chiave di cache).
+- Grafico su canvas: deve leggere le variabili dopo il mount, non al caricamento del modulo.
+- Export PNG: fondo e colori uguali a quelli a schermo.
+
+### Task P8: colore di default delle tracce in config
+
+**Files:** `config/wm-package.php`, `src/Models/Layer.php`,
+`src/Services/Models/AllLayersRoutesGeojson.php`.
+
+- [ ] Test in camminiditalia (Task C7), prima: falliscono.
+- [ ] `config/wm-package.php`: `'map_default_track_color' => env('MAP_DEFAULT_TRACK_COLOR', 'rgba(255, 0, 0, 1)')`.
+- [ ] `Layer::getFeatureCollectionMap()` e `AllLayersRoutesGeojson::build()` leggono la config.
+      Si toglie `Layer::DEFAULT_TRACK_STROKE_COLOR`.
+- [ ] `AllLayersRoutesGeojson::get()`: chiave `layer-map:all-routes:{tolerance}:{md5(colore)}`.
+
+### Task P9: variabili CSS in `LayerAnalyticsCard.vue`
+
+**Files:** `src/Nova/Cards/LayerAnalytics/resources/js/components/LayerAnalyticsCard.vue`, `dist/`.
+
+- [ ] Ogni colore fisso diventa `var(--wm-analytics-<nome>, <colore di oggi>)`. Nomi:
+      `accent` (numeri), `accent-presence` (utenti sul cammino), `android`, `ios`, `webapp`,
+      `text`, `text-muted`, `text-disabled`, `border`, `surface`, `control-bg`, `badge-bg`,
+      `badge-text`, `export-bg`.
+- [ ] Le serie di `PLATFORMS` e il fondo dell'export PNG si leggono con
+      `getComputedStyle(this.$el)` al momento del disegno, con il colore di oggi come fallback.
+- [ ] `npm run prod` nella cartella della card.
+- [ ] Controllo: `grep -nE "#[0-9a-fA-F]{3,6}"` sul componente trova colori solo come fallback
+      dentro `var(...)` o in `PLATFORMS`.
