@@ -24,6 +24,9 @@ return [
     'wmfe_track_versions' => env('WMFE_TRACK_VERSIONS', 'legacy'),
     'route_filter_analytics_enabled' => env('ROUTE_FILTER_ANALYTICS_ENABLED', false),
     'layer_user_presence_distance_meters' => env('LAYER_USER_PRESENCE_DISTANCE_METERS', 50),
+    // oc:9040: tolleranza (gradi) di ST_Simplify per i percorsi della mappa di tutti i cammini nella
+    // dashboard Nova. 0.0005° ≈ 50 m: con circa 1.300 tracce sono 1,4 MB (445 kB con gzip).
+    'all_routes_map_simplify_degrees' => env('ALL_ROUTES_MAP_SIMPLIFY_DEGREES', 0.0005),
     // oc:8719: un punto GPS di una traccia UGC con accuracy oltre questa soglia (metri) è sospetto
     // quando la geometria viene ricostruita da properties.locations. Vuota o <= 0: vale il default.
     'ugc_track_max_accuracy_meters' => (float) env('UGC_TRACK_MAX_ACCURACY_METERS', UgcTrackCleanupService::DEFAULT_MAX_ACCURACY_METERS),

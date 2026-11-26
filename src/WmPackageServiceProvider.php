@@ -178,6 +178,12 @@ class WmPackageServiceProvider extends PackageServiceProvider
                 ->prefix('nova-vendor/layer-analytics')
                 ->group(function () {
                     Route::get('/global', [AnalyticsController::class, 'global']);
+                    // oc:9040: mappa della dashboard. Le due route globali prima di /{layer},
+                    // che altrimenti le prenderebbe come id di un layer.
+                    Route::get('/live-positions', [AnalyticsController::class, 'livePositions']);
+                    Route::get('/all-routes', [AnalyticsController::class, 'allRoutes']);
+                    Route::get('/{layer}/live-positions', [AnalyticsController::class, 'layerLivePositions']);
+                    Route::get('/{layer}/routes', [AnalyticsController::class, 'layerRoutes']);
                     Route::get('/{layer}', [AnalyticsController::class, 'layer']);
                 });
 

@@ -10,16 +10,17 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Wm\WmPackage\Exceptions\AnalyticsQueryException;
 use Wm\WmPackage\Models\Layer;
+use Wm\WmPackage\Services\Models\AllLayersRoutesGeojson;
+use Wm\WmPackage\Services\Models\LivePositionsFeatures;
 use Wm\WmPackage\Services\PostHog\AnalyticsService;
 
 class AnalyticsController extends Controller
 {
     public function layer(Request $request, Layer $layer): JsonResponse
     {
-        abort_unless(
-            $request->user()?->hasRole('Administrator') || $layer->user_id === $request->user()?->id,
-            403
-        );
+        if (! $this->canReadLayer($request, $layer)) {
+            return $this->forbidden();
+        }
 
         $service = app(AnalyticsService::class);
         $range = $this->resolveRange($request);
@@ -40,6 +41,62 @@ class AnalyticsController extends Controller
             'track_downloads' => $trackDownloads,
             'user_presence' => $userPresence,
         ]));
+    }
+
+    /**
+     * Posizioni recenti delle persone su tutti i cammini, per la mappa della dashboard (oc:9040).
+     * Solo Administrator, come la card globale. Senza PostHog: FeatureCollection vuota.
+     */
+    public function livePositions(Request $request): JsonResponse
+    {
+        if (! $request->user()?->hasRole('Administrator')) {
+            return $this->forbidden();
+        }
+
+        $positions = app(AnalyticsService::class)->getRecentUserPositionsOnAllLayers();
+
+        return $this->featureCollection(app(LivePositionsFeatures::class)->fromPositions($positions));
+    }
+
+    /**
+     * Posizioni recenti delle persone su un layer, per la mappa della dashboard che si aggiorna
+     * da sola (oc:9040).
+     */
+    public function layerLivePositions(Request $request, Layer $layer): JsonResponse
+    {
+        if (! $this->canReadLayer($request, $layer)) {
+            return $this->forbidden();
+        }
+
+        $positions = app(AnalyticsService::class)->getRecentUserPositions($layer);
+
+        return $this->featureCollection(app(LivePositionsFeatures::class)->fromPositions($positions, $layer->id));
+    }
+
+    /**
+     * Il GeoJSON del layer senza le posizioni, base della mappa del layer nella dashboard
+     * (oc:9040): le posizioni arrivano da layerLivePositions() e si aggiornano da sole.
+     */
+    public function layerRoutes(Request $request, Layer $layer): JsonResponse
+    {
+        if (! $this->canReadLayer($request, $layer)) {
+            return $this->forbidden();
+        }
+
+        return response()->json($layer->getFeatureCollectionMap(withLivePositions: false));
+    }
+
+    /**
+     * Percorsi semplificati di tutti i cammini, base della mappa globale della dashboard
+     * (oc:9040). Solo Administrator.
+     */
+    public function allRoutes(Request $request): JsonResponse
+    {
+        if (! $request->user()?->hasRole('Administrator')) {
+            return $this->forbidden();
+        }
+
+        return response()->json(app(AllLayersRoutesGeojson::class)->get());
     }
 
     public function global(Request $request): JsonResponse
@@ -92,5 +149,36 @@ class AnalyticsController extends Controller
         }
 
         return 'last_30_days';
+    }
+
+    /**
+     * Administrator, o proprietario del layer. L'utente va richiesto esplicitamente: senza login e
+     * su un layer senza proprietario `$layer->user_id === $request->user()?->id` sarebbe
+     * null === null, cioè vero.
+     */
+    private function canReadLayer(Request $request, Layer $layer): bool
+    {
+        $user = $request->user();
+
+        return $user !== null && ($user->hasRole('Administrator') || $layer->user_id === $user->id);
+    }
+
+    /**
+     * 403 restituito direttamente e non con abort(): sulle route Nova un'eccezione HTTP passa da
+     * NovaExceptionHandler, che disegna una pagina Inertia con il menu di Nova, e il menu di uno
+     * shard può andare in errore senza utente (500 al posto del 403). Gli endpoint del singolo
+     * layer e della mappa (oc:9040) rispondono sempre 403 in JSON.
+     */
+    private function forbidden(): JsonResponse
+    {
+        return response()->json(['message' => 'Forbidden'], 403);
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $features
+     */
+    private function featureCollection(array $features): JsonResponse
+    {
+        return response()->json(['type' => 'FeatureCollection', 'features' => $features]);
     }
 }

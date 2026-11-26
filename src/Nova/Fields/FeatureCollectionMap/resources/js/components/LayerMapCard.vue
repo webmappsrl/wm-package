@@ -2,11 +2,14 @@
     <card class="p-6">
         <h3 style="font-size:1rem; font-weight:600; margin-bottom:12px;">{{ card.title }}</h3>
 
-        <!-- Nessun polling: a differenza di DetailField la card mostra le posizioni del momento
-             in cui si apre la pagina (oc:9040). Profilo altimetrico spento come nella detail
+        <!-- I percorsi si scaricano una volta, le posizioni da live_positions_url ogni
+             live_positions_refresh_seconds (la durata della loro cache sul server) senza
+             cambiare zoom e centro (oc:9040). Profilo altimetrico spento come nella detail
              view del Layer, dove DetailField lo accende solo con field.enableSlopeChart. -->
         <FeatureCollectionMap :geojson-url="card.geojson_url" :height="500"
             :enable-slope-chart="false"
+            :live-positions-url="card.live_positions_url"
+            :live-positions-refresh-seconds="card.live_positions_refresh_seconds"
             :resource-name="card.resource_name" :resource-id="card.resource_id" />
 
         <!-- Stessa legenda di DetailField.vue: si mostra solo se PostHog è configurato, altrimenti

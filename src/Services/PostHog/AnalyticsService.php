@@ -37,6 +37,12 @@ class AnalyticsService
     /** Cap sulle persone distinte mostrate come marker live su un singolo layer (rete di sicurezza, coerente con gli altri cap di questa classe — con Log::warning se raggiunto). */
     private const MAX_RECENT_POSITIONS = 500;
 
+    /**
+     * Durata della cache delle posizioni recenti. La LayerMapCard riscarica le posizioni con lo
+     * stesso intervallo (oc:9040): più spesso leggerebbe la stessa cache.
+     */
+    public const LIVE_POSITIONS_CACHE_SECONDS = 90;
+
     /** Timeout dedicato più aggressivo del default 10s: query bulk più pesante, non deve bloccare l'intera risposta della card se PostHog è lento. */
     private const USER_PRESENCE_TIMEOUT_SECONDS = 5;
 
@@ -432,19 +438,19 @@ SQL;
      * persona ADESSO", non uno storico) — `argMax(..., timestamp)` è un fix GPS realmente
      * accaduto, non una media che su un tornante potrebbe cadere fuori dal sentiero anche se ogni
      * punto reale era sul sentiero. Pre-filtrata solo per bounding box: la prossimità reale alle
-     * EcTrack è responsabilità del chiamante (filterPointsNearLayerTracks()), non di questo metodo.
+     * EcTrack è responsabilità del chiamante (filterPointsNearTracks()), non di questo metodo.
      *
      * @return list<array{person_id: string, lat: float, lng: float, user_id: ?int}>
      */
-    private function queryRecentUserMovedPoints(Layer $layer, array $bbox, int $minutesWindow): array
+    private function queryRecentUserMovedPoints(?Layer $layer, array $bbox, int $minutesWindow): array
     {
         $limit = self::MAX_RECENT_POSITIONS;
         $temporalClause = "timestamp >= now() - INTERVAL {$minutesWindow} MINUTE";
         $rows = $this->fetchUserMovedPointsRows($bbox, $temporalClause, $limit, aggregatePerPerson: true, includeUserId: true);
 
         if (count($rows) >= $limit) {
-            Log::warning('getRecentUserPositions() hit the safety cap — some live positions may be missing from the map', [
-                'layer_id' => $layer->id,
+            Log::warning('queryRecentUserMovedPoints() hit the safety cap — some live positions may be missing from the map', [
+                'scope' => $layer?->id ?? 'all_layers',
                 'limit' => $limit,
             ]);
         }
@@ -459,7 +465,7 @@ SQL;
      * accaduto — non una media, che su un tornante potrebbe cadere fuori dal sentiero anche se
      * ogni punto reale era sul sentiero). Pre-filtrata per bounding box del layer (stesso motivo
      * di queryUserMovedPointsNearLayer()) e poi per prossimità reale alle EcTrack via
-     * filterPointsNearLayerTracks() — senza quest'ultimo passo i punti sarebbero solo "vicini
+     * filterPointsNearTracks() — senza quest'ultimo passo i punti sarebbero solo "vicini
      * all'area del layer", non "vicini al sentiero" (bbox è un rettangolo, non la traccia).
      * `user_id` (nullable) è l'id applicativo dello user, non l'id anonimo PostHog `person_id`
      * (quest'ultimo è solo una chiave di join interna, scartata prima del return) — il chiamante
@@ -471,26 +477,49 @@ SQL;
      */
     public function getRecentUserPositions(Layer $layer, int $minutesWindow = 30): array
     {
-        // $minutesWindow nella cache key: senza, una futura chiamata con finestra non-default per
-        // lo stesso layer dentro i 90s di TTL leggerebbe/scriverebbe la stessa entry di una chiamata
-        // a 30 minuti, restituendo posizioni calcolate per la finestra sbagliata (bug latente,
-        // oggi inerte perché l'unico chiamante usa sempre il default).
+        return $this->recentUserPositions($layer, $minutesWindow);
+    }
+
+    /**
+     * Come getRecentUserPositions(), ma su tutti i cammini insieme, per la mappa di tutti i
+     * cammini nella dashboard (oc:9040): l'ultima posizione di ogni persona nella finestra, tenuta
+     * solo se a meno di `layer_user_presence_distance_meters` da una EcTrack associata ad almeno
+     * un layer — lo stesso criterio della mappa del singolo layer, così l'Administrator non vede
+     * pallini che il Validator sullo stesso cammino non vedrebbe. Il filtro è un'unica query
+     * PostGIS su tutte le tracce dei layer, non una per layer.
+     *
+     * @return list<array{lat: float, lng: float, user_id: ?int}>
+     */
+    public function getRecentUserPositionsOnAllLayers(int $minutesWindow = 30): array
+    {
+        return $this->recentUserPositions(null, $minutesWindow);
+    }
+
+    /**
+     * @param  Layer|null  $layer  null = tutti i cammini
+     * @return list<array{lat: float, lng: float, user_id: ?int}>
+     */
+    private function recentUserPositions(?Layer $layer, int $minutesWindow): array
+    {
         if (! $this->isConfigured()) {
             return [];
         }
 
-        $cacheKey = "posthog:userMoved:{$layer->id}:recent_positions:{$minutesWindow}";
+        // $minutesWindow nella cache key: senza, una chiamata con finestra non di default dentro i
+        // 90 s di TTL leggerebbe le posizioni calcolate per un'altra finestra.
+        $scope = $layer?->id ?? 'all';
+        $cacheKey = "posthog:userMoved:{$scope}:recent_positions:{$minutesWindow}";
 
         try {
-            return Cache::remember($cacheKey, now()->addSeconds(90), function () use ($layer, $minutesWindow) {
-                $bbox = $this->layerTracksBoundingBox($layer);
+            return Cache::remember($cacheKey, now()->addSeconds(self::LIVE_POSITIONS_CACHE_SECONDS), function () use ($layer, $minutesWindow) {
+                $bbox = $layer !== null ? $this->layerTracksBoundingBox($layer) : $this->allTracksBoundingBox();
 
                 if ($bbox === null) {
                     return [];
                 }
 
                 $points = $this->queryRecentUserMovedPoints($layer, $bbox, $minutesWindow);
-                $matched = $this->filterPointsNearLayerTracks($layer, $points);
+                $matched = $this->filterPointsNearTracks($points, $layer);
 
                 $userIdByPersonId = array_column($points, 'user_id', 'person_id');
 
@@ -502,11 +531,12 @@ SQL;
             });
         } catch (\Throwable $e) {
             // \Throwable, non solo AnalyticsQueryException: le query bulk PostGIS invocate qui
-            // (layerTracksBoundingBox(), filterPointsNearLayerTracks()) possono lanciare
+            // (bounding box, filterPointsNearTracks()) possono lanciare
             // \Illuminate\Database\QueryException su un errore Postgres transitorio — senza questo
             // catch ampio, un errore DB qui farebbe fallire l'intero getFeatureCollectionMap() del
-            // layer (tracce, POI e taxonomy_wheres compresi), non solo i marker live.
-            Log::error('getRecentUserPositions() failed', ['layer_id' => $layer->id, 'error' => $e->getMessage()]);
+            // layer (tracce, POI e taxonomy_wheres compresi), o la mappa della dashboard, non solo
+            // i marker live.
+            Log::error('recentUserPositions() failed', ['scope' => $scope, 'error' => $e->getMessage()]);
 
             return [];
         }
@@ -1188,7 +1218,7 @@ SQL;
     /**
      * Blocco `VALUES (...)` + bindings per il set di punti GPS person_id/lat/lng — condiviso dalle
      * 3 query bulk PostGIS sottostanti (countPersonsNearLayerTracks(), countPersonsPerLayerNearTracks(),
-     * filterPointsNearLayerTracks()), identico nelle tre salvo il numero di punti.
+     * filterPointsNearTracks()), identico nelle tre salvo il numero di punti.
      *
      * @param  list<array{person_id: string, lat: float, lng: float}>  $points
      * @return array{0: string, 1: list<mixed>}
@@ -1306,47 +1336,56 @@ SQL;
 
     /**
      * Come countPersonsNearLayerTracks(), ma ritorna i punti che superano il match invece del
-     * solo conteggio — usato da getRecentUserPositions() per mostrare sulla mappa solo posizioni
-     * realmente vicine alle EcTrack del layer, non a livello di shard.
+     * solo conteggio — usato da recentUserPositions() per mostrare sulla mappa solo posizioni
+     * realmente vicine alle tracce, non a livello di shard. Con un layer: le sue EcTrack. Senza
+     * (mappa di tutti i cammini, oc:9040): le EcTrack associate ad almeno un layer — le tracce
+     * senza layer non sono un cammino.
      *
      * @param  list<array{person_id: string, lat: float, lng: float}>  $points
      * @return list<array{person_id: string, lat: float, lng: float}>
      */
-    private function filterPointsNearLayerTracks(Layer $layer, array $points): array
+    private function filterPointsNearTracks(array $points, ?Layer $layer): array
     {
         if (empty($points)) {
             return [];
         }
 
         $trackTable = config('wm-package.ec_track_table', 'ec_tracks');
-        $trackIds = $layer->ecTracks()->pluck("{$trackTable}.id")->toArray();
 
-        if (empty($trackIds)) {
-            return [];
+        if ($layer !== null) {
+            $trackIds = $layer->ecTracks()->pluck("{$trackTable}.id")->toArray();
+
+            if (empty($trackIds)) {
+                return [];
+            }
+
+            $trackFilter = 't.id IN ('.implode(', ', array_fill(0, count($trackIds), '?')).')';
+            $trackBindings = $trackIds;
+        } else {
+            $trackModelClass = config('wm-package.ec_track_model', EcTrack::class);
+            $trackFilter = 'EXISTS (SELECT 1 FROM layerables l WHERE l.layerable_id = t.id AND l.layerable_type = ?)';
+            $trackBindings = [(new $trackModelClass)->getMorphClass()];
         }
 
         [$valuesSql, $bindings] = $this->pointsValuesClause($points);
-        $trackPlaceholders = implode(', ', array_fill(0, count($trackIds), '?'));
         $distanceMeters = (int) config('wm-package.layer_user_presence_distance_meters', 50);
 
         $sql = <<<SQL
 SELECT DISTINCT v.person_id, v.lat, v.lng
 FROM (VALUES {$valuesSql}) AS v(person_id, lat, lng)
 WHERE EXISTS (
-    SELECT 1 FROM {$trackTable}
-    WHERE id IN ({$trackPlaceholders})
-      AND geometry IS NOT NULL
+    SELECT 1 FROM {$trackTable} t
+    WHERE {$trackFilter}
+      AND t.geometry IS NOT NULL
       AND ST_DWithin(
-          geometry::geography,
+          t.geometry::geography,
           ST_SetSRID(ST_MakePoint(v.lng, v.lat), 4326)::geography,
           ?
       )
 )
 SQL;
 
-        $bindings = array_merge($bindings, $trackIds, [$distanceMeters]);
-
-        $rows = DB::select($sql, $bindings);
+        $rows = DB::select($sql, array_merge($bindings, $trackBindings, [$distanceMeters]));
 
         return array_map(fn ($row) => [
             'person_id' => (string) $row->person_id,
