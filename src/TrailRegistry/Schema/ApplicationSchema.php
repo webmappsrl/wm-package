@@ -91,13 +91,18 @@ class ApplicationSchema
     public const SUBJECT_KEYS = ['name', 'email', 'subject'];
 
     /**
-     * La versione dello schema. Si alza a mano quando cambia cio' che la
-     * consegna deve contenere o come si valida: il payload accettato porta
-     * con se' la versione che lo ha accettato.
+     * La versione dello schema, che il payload accettato porta con se'.
+     *
+     * Si alza quando il contratto e' in uso e serve distinguere un payload
+     * accettato con regole diverse da uno nuovo — non a ogni cambiamento delle
+     * regole. Finche' il canale si costruisce resta ferma: era salita a `2` con
+     * oc:9038 e a `3` con oc:9039, due bump in due ticket della stessa
+     * famiglia, su un canale che nessuno usava ancora, e li' contava i ticket
+     * invece di distinguere qualcosa (oc:9061).
      */
     public function version(): string
     {
-        return '3';
+        return '1';
     }
 
     /**
@@ -153,6 +158,30 @@ class ApplicationSchema
     }
 
     /**
+     * I messaggi che accompagnano le regole dello schema.
+     *
+     * Stanno qui e non nella Form Request perche' le regole si applicano per
+     * due strade: il canale, che passa da `PatchApplicationRequest`, e la
+     * conferma, dove `TrailRegistryService::invalidValues()` costruisce il
+     * proprio Validator sull'`api_data` gia' salvato. Scritti in un posto solo,
+     * i due percorsi non possono divergere (oc:9061).
+     *
+     * `in:` tradotto da Laravel dice «Il valore selezionato per X non e'
+     * valido», che non aiuta chi integra a capire cosa mandare; `prohibited_if`
+     * direbbe solo che il campo non e' ammesso quando `subject` e' `person`,
+     * senza dire perche' ne' dove recuperare il dato vero.
+     *
+     * @return array<string, string>
+     */
+    public function validationMessages(): array
+    {
+        return [
+            'in' => __('The value of :attribute is not among the agreed ones: :values.'),
+            'prohibited_if' => __('The name and e-mail address of a person subject are not transmitted to the Catasto: omit the field and retrieve the data from the SUS using the application reference.'),
+        ];
+    }
+
+    /**
      * Le regole degli elementi dei campi array, con la chiave `campo.*` che
      * Laravel si aspetta.
      *
@@ -163,21 +192,35 @@ class ApplicationSchema
         return [
             'activities.*' => ['string', 'in:'.implode(',', static::ACTIVITIES)],
             'themes.*' => ['string', 'in:'.implode(',', static::THEMES)],
+            // Nome ed e-mail dipendono dalla natura del soggetto, e allo stesso
+            // modo: un ente li deve entrambi, una persona fisica non puo'
+            // mandarli. Il divieto non e' la stessa cosa della facolta' di
+            // ometterli: i dati identificativi di un privato non devono entrare
+            // nel Catasto, e un vincolo che si limitasse a permettere di non
+            // mandarli resterebbe affidato a cosa decide di mandare il SUS. Per
+            // la stessa ragione cade anche il segnaposto convenzionale, che e'
+            // un valore come un altro. Chi deve sapere chi sia quel privato
+            // apre la pratica sul SUS con il `reference` della domanda
+            // (oc:9061).
+            //
+            // `nullable` tiene fuori `null` dalle altre regole: senza, `string`
+            // verrebbe applicata anche a un nome nullo e lo rifiuterebbe con un
+            // messaggio che non c'entra.
             'managing_subjects.*' => ['array', new OnlyAllowedKeys(static::SUBJECT_KEYS)],
-            'managing_subjects.*.name' => ['required', 'string', 'max:255'],
-            'managing_subjects.*.email' => ['nullable', 'required_if:managing_subjects.*.subject,organization', 'email'],
+            'managing_subjects.*.name' => ['nullable', 'required_if:managing_subjects.*.subject,organization', 'prohibited_if:managing_subjects.*.subject,person', 'string', 'max:255'],
+            'managing_subjects.*.email' => ['nullable', 'required_if:managing_subjects.*.subject,organization', 'prohibited_if:managing_subjects.*.subject,person', 'email'],
             'managing_subjects.*.subject' => ['required', 'in:organization,person'],
             'surveying_subjects.*' => ['array', new OnlyAllowedKeys(static::SUBJECT_KEYS)],
-            'surveying_subjects.*.name' => ['required', 'string', 'max:255'],
-            'surveying_subjects.*.email' => ['nullable', 'required_if:surveying_subjects.*.subject,organization', 'email'],
+            'surveying_subjects.*.name' => ['nullable', 'required_if:surveying_subjects.*.subject,organization', 'prohibited_if:surveying_subjects.*.subject,person', 'string', 'max:255'],
+            'surveying_subjects.*.email' => ['nullable', 'required_if:surveying_subjects.*.subject,organization', 'prohibited_if:surveying_subjects.*.subject,person', 'email'],
             'surveying_subjects.*.subject' => ['required', 'in:organization,person'],
             'maintaining_subjects.*' => ['array', new OnlyAllowedKeys(static::SUBJECT_KEYS)],
-            'maintaining_subjects.*.name' => ['required', 'string', 'max:255'],
-            'maintaining_subjects.*.email' => ['nullable', 'required_if:maintaining_subjects.*.subject,organization', 'email'],
+            'maintaining_subjects.*.name' => ['nullable', 'required_if:maintaining_subjects.*.subject,organization', 'prohibited_if:maintaining_subjects.*.subject,person', 'string', 'max:255'],
+            'maintaining_subjects.*.email' => ['nullable', 'required_if:maintaining_subjects.*.subject,organization', 'prohibited_if:maintaining_subjects.*.subject,person', 'email'],
             'maintaining_subjects.*.subject' => ['required', 'in:organization,person'],
             'keeping_subjects.*' => ['array', new OnlyAllowedKeys(static::SUBJECT_KEYS)],
-            'keeping_subjects.*.name' => ['required', 'string', 'max:255'],
-            'keeping_subjects.*.email' => ['nullable', 'required_if:keeping_subjects.*.subject,organization', 'email'],
+            'keeping_subjects.*.name' => ['nullable', 'required_if:keeping_subjects.*.subject,organization', 'prohibited_if:keeping_subjects.*.subject,person', 'string', 'max:255'],
+            'keeping_subjects.*.email' => ['nullable', 'required_if:keeping_subjects.*.subject,organization', 'prohibited_if:keeping_subjects.*.subject,person', 'email'],
             'keeping_subjects.*.subject' => ['required', 'in:organization,person'],
         ];
     }

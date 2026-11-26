@@ -720,5 +720,6 @@
     "A required field cannot be emptied: correct it by sending a new value": "A required field cannot be emptied: correct it by sending a new value",
     "The application has already been submitted and no longer accepts changes": "The application has already been submitted and no longer accepts changes",
     "The application cannot be submitted: see the missing fields and attachments and the invalid values": "The application cannot be submitted: see the missing fields and attachments and the invalid values",
-    "External reference": "External reference"
+    "External reference": "External reference",
+    "The name and e-mail address of a person subject are not transmitted to the Catasto: omit the field and retrieve the data from the SUS using the application reference.": "The name and e-mail address of a `person` subject are not transmitted to the Catasto: omit the field and retrieve the data from the SUS using the application reference."
 }

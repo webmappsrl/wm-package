@@ -153,5 +153,6 @@
     "A required field cannot be emptied: correct it by sending a new value": "Ein Pflichtfeld kann nicht geleert werden: Zum Korrigieren senden Sie einen neuen Wert",
     "The application has already been submitted and no longer accepts changes": "Der Antrag wurde bereits übermittelt und nimmt keine Änderungen mehr an",
     "The application cannot be submitted: see the missing fields and attachments and the invalid values": "Der Antrag kann nicht übermittelt werden: siehe die fehlenden Felder und Anlagen sowie die unzulässigen Werte",
-    "External reference": "Externes Aktenzeichen"
+    "External reference": "Externes Aktenzeichen",
+    "The name and e-mail address of a person subject are not transmitted to the Catasto: omit the field and retrieve the data from the SUS using the application reference.": "Name und E-Mail-Adresse eines Subjekts vom Typ `person` werden nicht an das Catasto übermittelt: Lassen Sie das Feld weg und rufen Sie die Daten mit der Vorgangsreferenz aus dem SUS ab."
 }

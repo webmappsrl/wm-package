@@ -1435,7 +1435,7 @@ class TrailRegistryService
             }
         }
 
-        $validator = Validator::make($apiData, $rules);
+        $validator = Validator::make($apiData, $rules, $schema->validationMessages());
         $errors = $validator->errors()->messages();
 
         // I vincoli fra campi: la primaria dentro le attivita' proposte, le
