@@ -2,9 +2,8 @@
 
 namespace Wm\WmPackage\Http\Requests\TrailRegistry;
 
-use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Http\FormRequest;
-use Wm\WmPackage\TrailRegistry\Models\TrailApplication;
+use Wm\WmPackage\Http\Requests\TrailRegistry\Concerns\AuthorizesApiChannelApplication;
 
 /**
  * Una chiamata su una domanda esistente, senza payload: porta solo il
@@ -15,27 +14,7 @@ use Wm\WmPackage\TrailRegistry\Models\TrailApplication;
  */
 abstract class ApiChannelApplicationRequest extends FormRequest
 {
-    /**
-     * Una domanda che non e' di questo canale, per chi chiama, non esiste.
-     *
-     * Stessa regola e stessa ragione di `StoreAttachmentRequest::authorize()`:
-     * si solleva la stessa eccezione del route model binding, cosi' una
-     * domanda d'ufficio e un identificatore sconosciuto escono dallo stesso
-     * punto dell'handler con la stessa risposta, e non si possono distinguere
-     * scorrendo gli identificatori.
-     *
-     * @throws ModelNotFoundException se la domanda non e' nata dal canale API
-     */
-    public function authorize(): bool
-    {
-        $application = $this->route('application');
-
-        if ($application instanceof TrailApplication && $application->source !== 'api') {
-            throw (new ModelNotFoundException)->setModel(TrailApplication::class, [$application->getKey()]);
-        }
-
-        return true;
-    }
+    use AuthorizesApiChannelApplication;
 
     // Niente `rules()`, nemmeno vuoto: Laravel senza il metodo valida con un
     // elenco vuoto, mentre Scramble, se lo trova, dichiara nella

@@ -2,9 +2,9 @@
 
 namespace Wm\WmPackage\Http\Requests\TrailRegistry;
 
-use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Wm\WmPackage\Http\Requests\TrailRegistry\Concerns\AuthorizesApiChannelApplication;
 use Wm\WmPackage\TrailRegistry\Models\TrailApplication;
 
 /**
@@ -15,30 +15,7 @@ use Wm\WmPackage\TrailRegistry\Models\TrailApplication;
  */
 class StoreAttachmentRequest extends FormRequest
 {
-    /**
-     * Una domanda che non e' di questo canale, per chi chiama, non esiste.
-     *
-     * Il controllo sta qui e non nel controller perche' `authorize()` gira
-     * prima delle regole: nel controller ci si arriverebbe solo con un
-     * payload valido, e con uno non valido una domanda d'ufficio darebbe 422
-     * mentre un identificatore sconosciuto darebbe 404, due risposte che
-     * permetterebbero di scorrere gli identificatori e capire quali esistono.
-     *
-     * Si solleva la stessa eccezione del route model binding, cosi' le due
-     * risposte escono dallo stesso punto dell'handler e sono identiche.
-     *
-     * @throws ModelNotFoundException se la domanda non e' nata dal canale API
-     */
-    public function authorize(): bool
-    {
-        $application = $this->route('application');
-
-        if ($application instanceof TrailApplication && $application->source !== 'api') {
-            throw (new ModelNotFoundException)->setModel(TrailApplication::class, [$application->getKey()]);
-        }
-
-        return true;
-    }
+    use AuthorizesApiChannelApplication;
 
     /**
      * Le collection che l'upload accetta: le registrate da

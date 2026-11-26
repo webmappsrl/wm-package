@@ -51,14 +51,17 @@ class TrailApplicationFactory extends Factory
     }
 
     /**
-     * Un payload che lo schema accetta, per ogni campo obbligatorio.
+     * Un payload che lo schema accetta davvero, per ogni campo obbligatorio.
      *
-     * Non basta riempire ogni campo con una stringa: dopo oc:9039 i campi dei
-     * soggetti sono liste di oggetti, e una stringa supererebbe
-     * `missingForConfirmation()` lasciando i test a lavorare su un payload che
-     * l'API avrebbe rifiutato. Il valore si deduce dalle regole dello schema,
-     * non da un elenco di nomi scritto qui: un campo nuovo non obbliga a
-     * tornare in questa factory.
+     * Non basta riempire ogni campo con una stringa. Da quando la conferma
+     * valida anche i valori, e non solo la loro presenza, un fascicolo
+     * «completo» fatto di segnaposto non e' confermabile: un'attivita'
+     * inventata, una data mancante o un numero fuori scala lo fanno
+     * respingere, e i test lavorerebbero su una domanda che l'API non
+     * accetterebbe mai.
+     *
+     * Il valore si deduce dalle regole dello schema, non da un elenco scritto
+     * qui: un campo nuovo non obbliga a tornare in questa factory.
      *
      * @return array<string, mixed>
      */
@@ -73,11 +76,51 @@ class TrailApplicationFactory extends Factory
                 continue;
             }
 
-            $payload[$field->name] = isset($rules[$field->name.'.*.name'])
-                ? [['name' => 'Ente di prova', 'email' => 'ente@example.it', 'subject' => 'organization']]
-                : (in_array('array', $field->rules, true) ? ['valore'] : 'valore');
+            // I soggetti sono liste di oggetti, non di stringhe (oc:9039).
+            if (isset($rules[$field->name.'.*.name'])) {
+                $payload[$field->name] = [[
+                    'name' => 'Ente di prova',
+                    'email' => 'ente@example.it',
+                    'subject' => 'organization',
+                ]];
+
+                continue;
+            }
+
+            $payload[$field->name] = match ($field->type) {
+                // Un valore dentro l'intervallo di plausibilita' del campo,
+                // quando ne ha uno.
+                'number' => static::plausibleNumber($field->name),
+                'date' => now()->subMonth()->toDateString(),
+                // `select` e liste chiuse: il primo valore ammesso dalla
+                // regola `in:`, cosi' campi legati fra loro — l'attivita'
+                // primaria e le attivita' proposte — cadono sullo stesso.
+                'json' => [static::firstAllowedValue($rules[$field->name.'.*'] ?? []) ?? 'valore'],
+                default => static::firstAllowedValue($rules[$field->name] ?? [])
+                    ?? ($field->values !== null ? ($field->values[0]['value'] ?? 'valore') : 'valore'),
+            };
         }
 
         return $payload;
+    }
+
+    /** Il primo valore che una regola `in:a,b,c` ammette, se c'e'. */
+    protected static function firstAllowedValue(array $rules): ?string
+    {
+        foreach ($rules as $rule) {
+            if (is_string($rule) && str_starts_with($rule, 'in:')) {
+                return explode(',', substr($rule, 3))[0];
+            }
+        }
+
+        return null;
+    }
+
+    /** Un numero dentro l'intervallo di plausibilita' del campo. */
+    protected static function plausibleNumber(string $field): int
+    {
+        [$min, $max] = ApplicationSchema::PLAUSIBLE_RANGES[$field] ?? [1, 100];
+
+        return (int) max($min, min($max, 12));
     }
 }

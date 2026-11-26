@@ -41,6 +41,27 @@ class ApplicationSchema
      * sistema di origine a chi compila, e la pagina delle API le riporta solo
      * per far capire cosa significhi ciascun identifier.
      */
+    /**
+     * Intervalli di plausibilita' dei campi numerici, `[min, max]`. Servono a
+     * scartare valori palesemente errati (un'unita' di misura sbagliata, un
+     * refuso) e non a fissare un'unita': quelle non sono ancora concordate,
+     * quindi i limiti sono larghi di proposito.
+     *
+     * Stanno qui e non nella richiesta perche' sono una proprieta' dei campi,
+     * e perche' li usano sia la consegna sia la conferma. Non sono dentro il
+     * trait che costruisce le regole: le costanti nei trait esistono solo da
+     * PHP 8.2, e il package dichiara `>8.1`.
+     *
+     * @var array<string, array{0: int, 1: int}>
+     */
+    public const PLAUSIBLE_RANGES = [
+        'distance' => [0, 1000],
+        'ascent' => [0, 20000],
+        'duration_forward' => [0, 10000],
+        'duration_backward' => [0, 10000],
+        'maintenance_frequency_months' => [1, 120],
+    ];
+
     protected const THEMES = [
         'history-archaeology',
         'mining-geology',
@@ -178,9 +199,14 @@ class ApplicationSchema
     }
 
     /**
-     * I campi che la consegna deve contenere sempre. Non ci sono quelli la cui
-     * obbligatorieta' dipende dal valore di un altro campo: la dichiara la
-     * loro regola `required_if`.
+     * I campi che la domanda deve contenere **per essere confermata**. Non ci
+     * sono quelli la cui obbligatorieta' dipende dal valore di un altro
+     * campo: la dichiara la loro regola `required_if`.
+     *
+     * Non e' l'elenco di cio' che una singola consegna deve portare: da
+     * quando la domanda si compila in piu' riprese, creazione e modifiche
+     * accettano anche un campo per volta, e questo elenco e' il metro della
+     * conferma.
      *
      * @return list<string>
      */

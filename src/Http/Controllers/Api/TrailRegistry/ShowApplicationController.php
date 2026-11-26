@@ -127,9 +127,10 @@ class ShowApplicationController extends Controller
              */
             'id' => $application->getKey(),
             /**
-             * Il modulo inviato con la creazione, così come il Catasto l'ha registrato: le stesse
-             * chiavi dei parametri della creazione, `name` compreso, con i valori inviati. I campi
-             * strutturati tornano decodificati. Non cambia dopo la creazione.
+             * Il modulo dichiarato, così come il Catasto l'ha registrato: le stesse chiavi dei
+             * parametri della creazione, `name` compreso, con i valori inviati. I campi
+             * strutturati tornano decodificati. Cambia a ogni modifica finché la domanda è in
+             * compilazione; dalla trasmissione in poi non cambia più.
              *
              * @var array<string, mixed>
              */
@@ -151,12 +152,39 @@ class ShowApplicationController extends Controller
              */
             'status' => $application->status->value,
             /**
-             * I dati tecnici calcolati dal tracciato: `distance` in chilometri, dislivelli e quote in
-             * metri, `duration_forward` e `duration_backward` in minuti interi. È `null` finché il
-             * calcolo non c'è: con `dem_status` `processing` arriverà, con `computed` non arriverà
-             * (tracciato assente o non valido).
+             * I dati tecnici calcolati dal tracciato, campo per campo. Le lunghezze sono in
+             * **chilometri** (`distance`), le quote e i dislivelli in **metri** (`ascent`,
+             * `descent`, `ele_min`, `ele_max`, `ele_from`, `ele_to`) e le durate in **minuti
+             * interi**.
              *
-             * @var array<string, mixed>|null
+             * `duration_forward` e `duration_backward` sono le durate a piedi, ripetute anche
+             * sotto `duration_forward_hiking` e `duration_backward_hiking`; le due `_bike` sono
+             * le stesse tratte in bicicletta. `round_trip` dice se il tracciato torna al punto
+             * di partenza.
+             *
+             * **Ogni campo può essere `null` da solo**: il servizio di calcolo restituisce ciò
+             * che riesce a determinare, e un campo mancante non è un errore.
+             *
+             * L'oggetto intero è `null` finché il calcolo non c'è: con `dem_status`
+             * `processing` arriverà, con `computed` non arriverà (tracciato assente o non
+             * valido). Con un tracciato sostituito i dati ripartono da capo.
+             *
+             * @var array{
+             *     distance: float|null,
+             *     ascent: int|null,
+             *     descent: int|null,
+             *     ele_min: int|null,
+             *     ele_max: int|null,
+             *     ele_from: int|null,
+             *     ele_to: int|null,
+             *     duration_forward: int|null,
+             *     duration_backward: int|null,
+             *     duration_forward_hiking: int|null,
+             *     duration_backward_hiking: int|null,
+             *     duration_forward_bike: int|null,
+             *     duration_backward_bike: int|null,
+             *     round_trip: bool|null
+             * }|null
              */
             'dem_data' => $demData,
             /**

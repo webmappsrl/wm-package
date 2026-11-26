@@ -153,6 +153,15 @@ class TrailApplication extends AbstractGeometryResource
     {
         $fields = $this->summaryFields($request);
 
+        // Il riferimento con cui lo sportello che ha consegnato la domanda la
+        // chiama a casa propria: e' l'aggancio dell'operatore alla pratica di
+        // la'. In sola lettura, perche' lo scrive chi consegna e cambiarlo
+        // qui spezzerebbe il legame fra i due fascicoli; e solo nel
+        // dettaglio, perche' le colonne dell'elenco sono sei e sono state
+        // scelte una per una (oc:8571).
+        $fields[] = Text::make(__('External reference'), 'reference')
+            ->onlyOnDetail();
+
         // Solo sulle respinte, e in sola lettura: la scrive l'azione «Respingi»
         // e un'istanza respinta non si modifica (oc:8567). Non in
         // summaryFields(), che alimenta anche l'index.

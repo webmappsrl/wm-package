@@ -156,3 +156,14 @@ it('risponde allo stesso modo su una domanda d ufficio e su un identificatore in
     // Una domanda d'ufficio non si trasmette dal canale.
     expect($office->refresh()->status)->toBe(TrailApplicationStatus::UnderCompilation);
 });
+
+it('elenca i valori non ammessi accanto a cio che manca', function () {
+    $application = TrailApplication::factory()->complete()->create();
+    $application->mergeApiData(['distance' => -5]);
+
+    $response = confirmApplication($application)->assertUnprocessable();
+
+    expect($response->json('invalid'))->toHaveKey('distance')
+        ->and($response->json('missing.fields'))->toBe([])
+        ->and($response->json('missing.attachments'))->toBe([]);
+});

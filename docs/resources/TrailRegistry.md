@@ -95,7 +95,7 @@ porta un sentiero. Non duplicarne la logica nei consumer.
 | `numbersWithAvailableVariants($fullCode)` | i numeri con almeno una variante libera: l'elenco da cui si sceglie nella sostituzione manuale |
 | `reserve()` / `confirm()` / `release()` / `replaceNumber()` | il ciclo di vita di un'istanza |
 | `registerExistingCode()` | registra un codice storico già esistente |
-| `confirmCompilation()` | chiude la compilazione di una domanda arrivata dal canale API e la porta in istruttoria |
+| `confirmCompilation()` | chiude la compilazione di una domanda arrivata dal canale API e la porta in istruttoria. È l'unico punto in cui il fascicolo viene verificato tutto insieme: ci sono i campi obbligatori e gli allegati, i valori sono ammessi, i vincoli fra campi rispettati. Solleva `ApplicationIncompleteException`, che porta `missing` (cosa manca) e `invalid` (cosa c'è ma non va bene) |
 | `approve($application, $userId = null, $choices = [])` / `reject($reason)` | la decisione dell'istruttoria su una domanda `under_review`: l'approvazione crea il sentiero, rende definitivo il codice e scrive le scelte dell'operatore (vedi «Attività primaria»); il respingimento libera il numero e salva il motivo. Le usano le Action di Nova e qualunque altro punto da cui si decide una domanda |
 
 I tre metodi di lettura rispondono a domande diverse e non sono intercambiabili:

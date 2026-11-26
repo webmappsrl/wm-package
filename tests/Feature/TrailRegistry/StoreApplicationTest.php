@@ -102,23 +102,11 @@ function storeApplicationGpx(float $lon = 1, float $lat = 1): UploadedFile
 function storeApplicationPayload(array $overrides = []): array
 {
     return array_merge([
+        // Univoco per costruzione: due aperture con lo stesso riferimento non
+        // fanno due domande, ed e' proprio cio' che alcuni test provano.
+        'reference' => 'FORES_02/2026/'.uniqid(),
         'name' => 'Sentiero di prova',
         'geometry' => storeApplicationGpx(),
-        'from' => 'Punto A',
-        'to' => 'Punto B',
-        'distance' => 12.5,
-        'ascent' => 300,
-        'duration_forward' => 240,
-        'duration_backward' => 200,
-        'activities' => json_encode(['hiking', 'mtb']),
-        'primary_activity' => 'hiking',
-        'difficulty' => json_encode(['hiking' => 'EE']),
-        'existing_signage' => 'good_condition',
-        'managing_subjects' => json_encode([['name' => 'Comune di Cagliari', 'email' => 'comune@example.com', 'subject' => 'organization']]),
-        'surveying_subjects' => json_encode([['name' => 'Mario Rossi', 'email' => null, 'subject' => 'person']]),
-        'maintaining_subjects' => json_encode([['name' => 'Forestas', 'email' => 'protocollo@forestas.example.it', 'subject' => 'organization']]),
-        'last_survey_date' => '2026-01-15',
-        'maintenance_frequency_months' => 12,
     ], $overrides);
 }
 
@@ -206,16 +194,26 @@ it('non restituisce il numero del sentiero, benche sia gia riservato', function 
     expect($response->getContent())->not->toContain('ZNUB5');
 });
 
-it('conserva i campi concordati piu la versione dello schema', function () {
+it('conserva la sola versione dello schema: il modulo arriva dopo', function () {
     fakeDemResponding();
 
     $id = storeApplication()->assertCreated()->json('id');
 
+    // `api_data` nasce vuoto. I campi del modulo non passano di qui, e il
+    // riferimento sta in colonna perche' e' l'identita' della riga, non un
+    // dato dichiarato.
     $apiData = TrailApplication::find($id)->api_data;
-    expect($apiData)->toHaveKey(ApplicationSchema::VERSION_KEY, app(ApplicationSchema::class)->version());
-    expect($apiData)->toHaveKey('from', 'Punto A');
-    expect($apiData['activities'])->toBe(['hiking', 'mtb']);
-    expect($apiData)->not->toHaveKeys(['name', 'geometry']);
+    expect($apiData)->toBe([ApplicationSchema::VERSION_KEY => app(ApplicationSchema::class)->version()]);
+});
+
+it('rifiuta i campi del modulo: si consegnano con una modifica', function () {
+    fakeDemResponding();
+
+    storeApplication(['from' => 'Punto A', 'activities' => json_encode(['hiking'])])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['from', 'activities']);
+
+    expect(TrailApplication::count())->toBe(0);
 });
 
 it('rifiuta un campo che non abbiamo concordato, invece di conservarlo', function () {
@@ -280,20 +278,6 @@ it('lascia il lock del ricalcolo quando il calcolo immediato e riuscito', functi
     expect(demLockHeld($id))->toBeTrue();
 });
 
-it('non scrive i valori dichiarati fra i valori manuali', function () {
-    fakeDemResponding();
-
-    $id = storeApplication([
-        'distance' => 12.4,
-        'duration_forward' => 180,
-    ])->assertCreated()->json('id');
-
-    // `classifyField()` restituisce MANUAL appena `manual_data` non e' vuoto:
-    // il dichiarato vincerebbe sul calcolato e finirebbe pubblicato.
-    expect(TrailApplication::find($id)->properties['manual_data'] ?? [])->toBeEmpty();
-    expect(TrailApplication::find($id)->api_data)->toHaveKey('distance');
-});
-
 // Un tracciato fuori da ogni settore deve fallire subito e non lasciare niente.
 it('rifiuta un tracciato fuori da ogni settore senza lasciare righe', function () {
     fakeDemResponding();
@@ -356,14 +340,6 @@ it('usa un messaggio diverso per ciascuno dei quattro motivi', function () {
         ->map(fn ($content) => storeApplication(['geometry' => UploadedFile::fake()->createWithContent('x.gpx', $content)])->json('error'));
 
     expect($errors->unique())->toHaveCount(4);
-});
-
-it('rifiuta un modulo non valido dicendo il campo, senza lasciare righe', function () {
-    storeApplication(['managing_subjects' => json_encode([['name' => 'X', 'email' => 'non-una-email', 'subject' => 'organization']])])
-        ->assertStatus(422)
-        ->assertJsonValidationErrors(['managing_subjects.0.email']);
-
-    expect(TrailApplication::count())->toBe(0);
 });
 
 it('non lascia righe se un passo della creazione fallisce a meta', function () {
@@ -516,4 +492,156 @@ it('accetta una traccia di esattamente 5 MB', function () {
     ]);
 
     expect(json_encode($response->json('errors.geometry') ?? []))->not->toContain('5120');
+});
+
+/*
+|--------------------------------------------------------------------------
+| La domanda si apre con poco (oc:9056)
+|--------------------------------------------------------------------------
+|
+| La creazione chiede tre cose: il riferimento con cui chi consegna chiama la
+| pratica a casa propria, il nome e il tracciato. Tutto il resto del modulo
+| arriva dopo, una patch per volta, e si pretende alla conferma.
+*/
+
+it('apre la domanda con il riferimento, il nome e il tracciato soltanto', function () {
+    fakeDemResponding();
+    config(['wm-package.features.trail_registry.api.require_reference' => true]);
+
+    $id = storeApplication(['reference' => 'FORES_02/2026/000123'])->assertCreated()->json('id');
+
+    $application = TrailApplication::find($id);
+
+    expect($application->status)->toBe(TrailApplicationStatus::UnderCompilation)
+        ->and($application->reference)->toBe('FORES_02/2026/000123')
+        ->and($application->name)->toBe('Sentiero di prova')
+        // Il numero del catasto si prenota dalla geometria, che c'e' gia'.
+        ->and($application->codes()->count())->toBe(1);
+});
+
+it('non pretende i campi del modulo alla creazione', function () {
+    fakeDemResponding();
+    config(['wm-package.features.trail_registry.api.require_reference' => true]);
+
+    $id = storeApplication()->assertCreated()->json('id');
+
+    // Nessun campo del format: li mandera' con le modifiche successive, e li
+    // pretendera' la conferma.
+    expect(TrailApplication::find($id)->missingForConfirmation()['fields'])->not->toBeEmpty();
+});
+
+it('il riferimento sta in colonna e non nel payload consegnato', function () {
+    fakeDemResponding();
+    config(['wm-package.features.trail_registry.api.require_reference' => true]);
+
+    $id = storeApplication()->assertCreated()->json('id');
+
+    // `api_data` e' cio' che il richiedente ha dichiarato; il riferimento e'
+    // l'identita' della riga e non si lascia riscrivere da una consegna.
+    expect(TrailApplication::find($id)->api_data)->not->toHaveKey('reference');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Una create per riferimento, e una sola
+|--------------------------------------------------------------------------
+|
+| La regola e' secca: se arriva un riferimento gia' usato, la domanda non si
+| apre e si risponde con un errore che dice qual e' quella che esiste.
+*/
+
+it('la seconda create con lo stesso riferimento da errore', function () {
+    fakeDemResponding();
+    config(['wm-package.features.trail_registry.api.require_reference' => true]);
+
+    $reference = 'FORES_02/2026/000123';
+    $first = storeApplication(['reference' => $reference])->assertCreated()->json('id');
+
+    $response = storeApplication(['reference' => $reference])->assertUnprocessable();
+
+    expect($response->json('id'))->toBe($first)
+        ->and(TrailApplication::count())->toBe(1)
+        // E' il danno che la regola esiste per evitare: un secondo numero del
+        // catasto prenotato per una domanda doppia che nessuno puo' chiudere.
+        ->and(TrailApplication::find($first)->codes()->count())->toBe(1);
+});
+
+it('la seconda create da errore anche con un tracciato diverso', function () {
+    fakeDemResponding();
+    config(['wm-package.features.trail_registry.api.require_reference' => true]);
+
+    $reference = 'FORES_02/2026/000123';
+    $first = storeApplication(['reference' => $reference])->assertCreated()->json('id');
+
+    $response = storeApplication(['reference' => $reference, 'geometry' => storeApplicationGpx(5, 5)])
+        ->assertUnprocessable();
+
+    expect($response->json('id'))->toBe($first)
+        ->and(TrailApplication::count())->toBe(1);
+});
+
+it('la seconda create non tocca la domanda che esiste', function () {
+    fakeDemResponding();
+    config(['wm-package.features.trail_registry.api.require_reference' => true]);
+
+    $reference = 'FORES_02/2026/000123';
+    $first = storeApplication(['reference' => $reference])->assertCreated()->json('id');
+    $before = TrailApplication::find($first);
+
+    storeApplication(['reference' => $reference, 'name' => 'Un altro nome'])->assertUnprocessable();
+
+    // Il rifiuto e' un rifiuto: niente della seconda chiamata entra nella
+    // domanda gia' aperta. A cambiarla serve una modifica, non una create.
+    expect(TrailApplication::find($first)->name)->toBe($before->name);
+});
+
+/*
+|--------------------------------------------------------------------------
+| Il riferimento e' obbligatorio solo dove serve
+|--------------------------------------------------------------------------
+*/
+
+it('senza riferimento non apre niente, dove il riferimento e richiesto', function () {
+    fakeDemResponding();
+    config(['wm-package.features.trail_registry.api.require_reference' => true]);
+
+    $payload = storeApplicationPayload();
+    unset($payload['reference']);
+
+    test()->post(route('trail-registry-test.applications.store'), $payload, ['Accept' => 'application/json'])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['reference']);
+
+    expect(TrailApplication::count())->toBe(0);
+});
+
+it('dove il riferimento non e richiesto la domanda nasce lo stesso', function () {
+    fakeDemResponding();
+    // La chiave e' spenta di default: uno shard che accende il Catasto senza
+    // un canale esterno davanti non deve subire una regola che non lo
+    // riguarda.
+    config(['wm-package.features.trail_registry.api.require_reference' => false]);
+
+    $payload = storeApplicationPayload();
+    unset($payload['reference']);
+
+    $id = test()->post(route('trail-registry-test.applications.store'), $payload, ['Accept' => 'application/json'])
+        ->assertCreated()
+        ->json('id');
+
+    expect(TrailApplication::find($id)->reference)->toBeNull();
+});
+
+it('piu domande senza riferimento convivono', function () {
+    fakeDemResponding();
+    config(['wm-package.features.trail_registry.api.require_reference' => true]);
+
+    storeApplication()->assertCreated();
+
+    // L'indice unico non confronta fra loro i NULL: le domande d'ufficio, che
+    // un riferimento esterno non ce l'hanno, non si pestano i piedi.
+    TrailApplication::factory()->createQuietly(['source' => 'office', 'reference' => null]);
+    TrailApplication::factory()->createQuietly(['source' => 'office', 'reference' => null]);
+
+    expect(TrailApplication::count())->toBe(3);
 });

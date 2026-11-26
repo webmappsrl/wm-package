@@ -5,6 +5,7 @@ namespace Wm\WmPackage\Http\Controllers\Api\TrailRegistry;
 use Dedoc\Scramble\Attributes\BodyParameter;
 use Dedoc\Scramble\Attributes\Group;
 use Dedoc\Scramble\Attributes\Response;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
@@ -43,91 +44,65 @@ class StoreApplicationController extends Controller
     /**
      * Crea la domanda
      *
-     * Apre una domanda di accatastamento in compilazione, dal modulo e dal
-     * file del tracciato inviati insieme. La risposta porta l'`id` con cui si
-     * caricano gli allegati e si conferma la domanda.
+     * Apre una domanda di accatastamento in compilazione. La risposta porta
+     * l'`id` con cui si completano i dati, si caricano gli allegati e si
+     * conferma la domanda.
      *
      * «Campo N del format» rinvia alla colonna «N. campo» del foglio
      * «Format istanza accatastamento V» (il collegamento è nell'introduzione
      * di questa documentazione); accanto al numero c'è la denominazione che il
      * campo ha nel foglio.
      *
-     * ### Questa chiamata non si corregge, si rifà
+     * ### La domanda si apre con poco e si completa dopo
      *
-     * Non esiste un endpoint che modifichi i dati o il tracciato di una
-     * domanda già creata, ed è una scelta. Se si scopre un errore prima della
-     * conferma, si crea una nuova domanda con i dati giusti e si prosegue su
-     * quella: la domanda sbagliata non va integrata né confermata.
+     * Questa chiamata chiede tre cose: `reference`, `name` e il file del
+     * tracciato. **Nessun campo del modulo è obbligatorio qui**: si possono
+     * mandare subito, se si hanno, oppure consegnare più tardi con
+     * `PATCH /trail-applications/{id}`, una o più volte. A pretendere il
+     * modulo completo è la conferma.
      *
-     * Per lo stesso motivo la chiamata non è idempotente: due chiamate
-     * identiche creano due domande, ciascuna con il proprio `id`. Non c'è un
-     * endpoint che elenchi o cerchi le domande, quindi se una chiamata non ha
-     * risposta (timeout di rete) non si può sapere dal canale se la domanda
-     * sia nata.
+     * Un campo mandato, però, deve valere qualcosa di ammesso: «facoltativo»
+     * significa che si può non mandarlo, non che si può mandarlo sbagliato.
+     *
+     * ### Una domanda per `reference`
+     *
+     * `reference` è il riferimento con cui la pratica è identificata presso
+     * chi la consegna, e due domande non possono averne uno uguale.
+     *
+     * Una creazione con un `reference` già usato **non apre una seconda
+     * domanda**: risponde `422` e nella risposta mette l'`id` di quella che
+     * esiste già. È il modo per riprendere dopo un timeout di rete: se non si
+     * sa se la prima chiamata sia arrivata, si richiama con lo stesso
+     * `reference` e si ottiene l'identificatore della domanda nata, da cui si
+     * prosegue con le modifiche.
+     *
+     * Il comportamento è quello che la bozza IETF `Idempotency-Key` descrive
+     * per una risorsa che non confronta il contenuto delle richieste:
+     * <https://datatracker.ietf.org/doc/draft-ietf-httpapi-idempotency-key-header/>.
+     * Qui la chiave non è un identificatore della chiamata ma della pratica,
+     * e per questo viaggia come campo del modulo e non come header.
      *
      * ### Corpo della richiesta
      *
      * È `multipart/form-data`, perché porta il file del tracciato (`geometry`,
-     * GPX o GeoJSON) insieme ai dati. In questa forma ogni valore viaggia come
-     * stringa, e i campi strutturati si possono mandare in due modi
-     * equivalenti:
+     * GPX o GeoJSON) insieme agli altri due campi.
      *
-     * - **liste e mappe** come stringa JSON (`activities` =
-     *   `["hiking","mtb"]`, `difficulty` = `{"hiking":"EE"}`), oppure nella
-     *   forma nativa dei form (`activities[]=hiking`, `activities[]=mtb`,
-     *   `difficulty[hiking]=EE`);
-     * - **booleani** come `true` o `false`, oppure `1` o `0`. Una stringa vuota
-     *   non è un `false`: è un campo non compilato.
-     *
-     * Un JSON malformato non è un errore a sé: il campo resta una stringa e la
-     * validazione risponde `422` indicando il campo. Una chiave che il format
-     * non prevede non viene rifiutata: si conserva così com'è, senza
-     * validarla.
-     *
-     * ### Unità: qui non sono quelle del format
-     *
-     * Il format chiede la lunghezza in metri e i tempi di percorrenza nel
-     * formato `ORE:MINUTI`. **In questa chiamata viaggiano diversamente**:
-     *
-     * - `distance`: in **chilometri**, con un decimale (`12.5`, non `12500`);
-     * - `duration_forward` e `duration_backward`: in **minuti interi**
-     *   (`240`, non `4:00`);
-     * - `ascent`: in metri, come nel format.
-     *
-     * Un valore palesemente fuori scala, per esempio una lunghezza in metri
-     * (`distance` accetta da 0 a 1000), è rifiutato con `422`.
+     * **I campi del modulo non si mandano qui**: se ne arriva uno, la risposta
+     * è `422` e lo nomina. Si consegnano con
+     * `PATCH /trail-applications/{id}`, dove sono documentati uno per uno,
+     * insieme alle unità di misura e ai valori ammessi.
      *
      * ### Esempio
      *
-     * `$BASE_URL` è l'URL di base del canale, indicato nell'introduzione. Le
-     * due forme dei campi strutturati sono equivalenti: la seconda riga di
-     * `-F` mostra la forma nativa, da usare al posto della prima.
+     * `$BASE_URL` è l'URL di base del canale, indicato nell'introduzione.
      *
      * ```
      * curl -X POST "$BASE_URL/trail-applications" \
      *   -H "Authorization: Bearer $TOKEN" \
      *   -H "Accept: application/json" \
+     *   -F "reference=FORES_02/2026/000123" \
      *   -F "name=Sentiero del Monte Arcosu" \
-     *   -F "geometry=@traccia.gpx" \
-     *   -F "from=Case Marganai" \
-     *   -F "to=Punta Perda Liana" \
-     *   -F "distance=12.5" \
-     *   -F "ascent=640" \
-     *   -F "duration_forward=240" \
-     *   -F "duration_backward=200" \
-     *   -F 'activities=["hiking","mtb"]' \
-     *   -F 'difficulty={"hiking":"EE"}' \
-     *   -F "primary_activity=hiking" \
-     *   -F "existing_signage=good_condition" \
-     *   -F 'managing_subjects=[{"name":"Comune di Domusnovas","email":"protocollo@comune.example.it","subject":"organization"}]' \
-     *   -F 'surveying_subjects=[{"name":"Mario Rossi","subject":"person"}]' \
-     *   -F 'maintaining_subjects=[{"name":"Forestas","email":"protocollo@forestas.example.it","subject":"organization"}]' \
-     *   -F "last_survey_date=2026-10-20" \
-     *   -F "maintenance_frequency_months=12"
-     *
-     * # forma nativa dei campi strutturati, al posto delle righe
-     * # activities e difficulty qui sopra:
-     * #   -F "activities[]=hiking" -F "activities[]=mtb" -F "difficulty[hiking]=EE"
+     *   -F "geometry=@traccia.gpx"
      * ```
      *
      * ### Dopo la creazione
@@ -143,30 +118,21 @@ class StoreApplicationController extends Controller
      * chilometri, dislivelli e quote in metri, `duration_forward` e
      * `duration_backward` in minuti interi.
      */
+    #[BodyParameter('reference', description: 'Il riferimento con cui la pratica è identificata presso chi la consegna. **Obbligatorio** e **univoco**: una creazione con un riferimento già usato non apre una seconda domanda e risponde `422` con l\'`id` di quella esistente. Non è uno dei campi 29-65 del format.', example: 'FORES_02/2026/000123')]
     #[BodyParameter('name', description: 'Nome con cui la domanda è identificata. Non è uno dei campi 29-65 del format.', example: 'Sentiero del Monte Arcosu')]
     #[BodyParameter('geometry', description: 'Il tracciato: un file GPX (traccia o rotta) o GeoJSON con almeno una linea di due punti, **al massimo 5 MB**. Campo 68 del format — *Traccia GPS/cartografia digitale*. Viaggia in questa chiamata e non si ricarica con quella degli allegati.')]
-    #[BodyParameter('from', description: 'Campo 29 del format — *Origine (da)*. Toponimo o luogo di riferimento del punto di inizio.', example: 'Case Marganai')]
-    #[BodyParameter('to', description: 'Campo 30 del format — *Destinazione (a)*. Toponimo o luogo di riferimento del punto di fine.', example: 'Punta Perda Liana')]
-    #[BodyParameter('intermediate_stop', description: 'Campo 31 del format — *Eventuale Meta intermedia*.')]
-    #[BodyParameter('distance', description: 'Campo 32 del format — *Lunghezza (m)*. **In chilometri, con un decimale** (il format chiede metri). Da 0 a 1000.', example: 12.5)]
-    #[BodyParameter('ascent', description: 'Campo 33 del format — *Dislivello (m)*. In metri, come nel format. Da 0 a 20000.', example: 640)]
-    #[BodyParameter('duration_forward', description: 'Campo 34 del format — *T. percorrenza (A)*. **In minuti interi** (il format chiede `ORE:MINUTI`): 4 ore sono `240`. Da 0 a 10000.', example: 240)]
-    #[BodyParameter('duration_backward', description: 'Campo 35 del format — *T. percorrenza (R)*. **In minuti interi** (il format chiede `ORE:MINUTI`). Da 0 a 10000.', example: 200)]
-    #[BodyParameter('activities', description: 'Campo 36 del format — *Percorribilità e livello/i di difficoltà proposti*. Lista di attività, almeno una: `trekking`, `hiking`, `mtb`, `horse`, `accessible-trails`, `nordic-walking`, `educational-trails`. Le tre voci che il format elenca si scrivono qui così: «trek» è `trekking`, «MTB» è `mtb`, «Ippo» è `horse`. Le altre sono attività che il Catasto gestisce e il format non prevede: sono accettate. Stringa JSON o forma nativa dei form.', example: ['hiking', 'mtb'])]
-    #[BodyParameter('difficulty', description: 'Campo 37 del format — *Classificazione livello/i difficoltà proposti*. Facoltativo. Oggetto `attività → livello`, non una lista, per le sole attività indicate in `activities`: `{"hiking":"EE","horse":"easy"}`. I livelli ammessi dipendono dall\'attività: `trekking` e `hiking` → `T`, `E`, `EE`, `EEA` (la scala regionale mutuata dal Club Alpino Italiano, che il format prescrive); `mtb` → `TC`, `MC`, `BC`, `OC`, `EC`; `accessible-trails` → `AT`, `AE`, `AEE`; `horse`, `nordic-walking`, `educational-trails` → `easy`, `medium`, `hard`. Un livello di un\'altra scala è rifiutato con `422`. `trekking` e `hiking` hanno la stessa scala, ma non per questo lo stesso livello: dichiarandoli entrambi si può indicare un livello diverso per ciascuno. Stringa JSON o forma nativa dei form (`difficulty[hiking]=EE`).', type: 'object', example: ['hiking' => 'EE', 'horse' => 'easy'])]
-    #[BodyParameter('primary_activity', description: 'L\'attività primaria del sentiero: quella per cui il sentiero è soprattutto percorso. **Obbligatorio.** Non ha un numero nel format. Uno fra: `trekking`, `hiking`, `mtb`, `horse`, `accessible-trails`, `nordic-walking`, `educational-trails`, **e deve essere una delle attività dichiarate in `activities`**: con `activities=["hiking","mtb"]` vale `hiking` o `mtb`, non `horse`. Se manca, se non è uno dei sette valori o se non è fra le attività dichiarate la creazione risponde `422` indicando `primary_activity`. Forestas può confermarla o cambiarla in istruttoria: la rilettura riporta sia la proposta sia la decisione (`submitted_data` e `approved_data`).', example: 'hiking')]
-    #[BodyParameter('existing_signage', description: 'Campo 38 del format — *Stato segnaletica pre-esistente*. Uno fra: `good_condition` (c\'è ed è in buono stato), `dilapidated` (c\'è ed è fatiscente), `absent` (non c\'è). Un altro valore è rifiutato con `422`.', example: 'good_condition')]
-    #[BodyParameter('overlapping_routes', description: 'Campo 39 del format — *Itinerari sovrapposti (anche solo in parte)*.')]
-    #[BodyParameter('themes', description: 'Campo 45 del format — *Tematismo*. Lista di identifier, **facoltativa**: zero, uno o più. Si manda l\'identifier, mai l\'etichetta. Uno fra: `history-archaeology`, `mining-geology`, `transhumance`, `spirituality`, `woods-forests`, `flora-fauna`, `waters`, `sea-coast`, `villages`, `rural-landscape`; un altro valore è rifiutato con `422`. Stringa JSON o forma nativa dei form.', example: ['spirituality', 'waters'])]
-    #[BodyParameter('managing_subjects', description: 'Campo 47 del format — *Soggetto gestore*, nella forma nuova: non più una categoria ma i **soggetti gestori** veri, **almeno uno**. Ogni soggetto è un oggetto con `name` (la denominazione), `email` e `subject`, che vale `organization` per un ente o `person` per una persona fisica. La `email` è obbligatoria e deve essere un indirizzo valido quando `subject` è `organization`; quando è `person` può mancare o valere `null`. Se un soggetto è rifiutato, l\'errore indica il ruolo e la posizione nella lista, **contata da zero** (`managing_subjects.0.email`). Stringa JSON o forma nativa dei form.', example: [['name' => 'Comune di Domusnovas', 'email' => 'protocollo@comune.example.it', 'subject' => 'organization']])]
-    #[BodyParameter('surveying_subjects', description: 'Campo 49 del format — *Soggetto rilevatore*, nella forma nuova: i **soggetti rilevatori** veri, **almeno uno**. Ogni soggetto è un oggetto con `name` (la denominazione), `email` e `subject`, che vale `organization` per un ente o `person` per una persona fisica. La `email` è obbligatoria e deve essere un indirizzo valido quando `subject` è `organization`; quando è `person` può mancare o valere `null`. Se un soggetto è rifiutato, l\'errore indica il ruolo e la posizione nella lista, **contata da zero** (`surveying_subjects.0.email`). Stringa JSON o forma nativa dei form.', example: [['name' => 'Mario Rossi', 'subject' => 'person']])]
-    #[BodyParameter('maintaining_subjects', description: 'Campo 53 del format — *Soggetto manutentore*, nella forma nuova: i **soggetti manutentori** veri, **almeno uno**. Il codice fiscale del manutentore non viene più richiesto. Ogni soggetto è un oggetto con `name` (la denominazione), `email` e `subject`, che vale `organization` per un ente o `person` per una persona fisica. La `email` è obbligatoria e deve essere un indirizzo valido quando `subject` è `organization`; quando è `person` può mancare o valere `null`. Se un soggetto è rifiutato, l\'errore indica il ruolo e la posizione nella lista, **contata da zero** (`maintaining_subjects.0.email`). Stringa JSON o forma nativa dei form.', example: [['name' => 'Comune di Domusnovas', 'email' => 'protocollo@comune.example.it', 'subject' => 'organization']])]
-    #[BodyParameter('keeping_subjects', description: 'Campo 58 del format — *Soggetto custode*, nella forma nuova: i **soggetti custodi** veri. **Facoltativo**: può essere una lista vuota o non essere passato affatto. Ogni soggetto è un oggetto con `name` (la denominazione), `email` e `subject`, che vale `organization` per un ente o `person` per una persona fisica. La `email` è obbligatoria e deve essere un indirizzo valido quando `subject` è `organization`; quando è `person` può mancare o valere `null`. Se un soggetto è rifiutato, l\'errore indica il ruolo e la posizione nella lista, **contata da zero** (`keeping_subjects.0.email`). Stringa JSON o forma nativa dei form.', example: [])]
-    #[BodyParameter('last_survey_date', description: 'Campo 64 del format — *Data ultima verifica tracciato*. Data nel formato `AAAA-MM-GG`, non futura.', example: '2026-10-20')]
-    #[BodyParameter('maintenance_frequency_months', description: 'Campo 65 del format — *Frequenza manutenzione (Numero di mesi)*. Intero da 1 a 120.', example: 12)]
-    #[Response(status: 422, description: 'Modulo non valido (errori per campo), tracciato illeggibile o fuori da ogni settore del catasto, oppure settore senza numeri liberi.', type: 'array{error: string}|array{message: string, errors: array<string, string[]>}')]
+    #[Response(status: 422, description: 'Modulo non valido (errori per campo), riferimento già usato (la risposta porta l\'`id` della domanda esistente), tracciato illeggibile o fuori da ogni settore del catasto, oppure settore senza numeri liberi.', type: 'array{error: string, id?: int}|array{message: string, errors: array<string, string[]>}')]
     public function __invoke(StoreApplicationRequest $request): JsonResponse
     {
+        $reference = $request->input('reference');
+
+        // Prima di toccare il file: un riferimento gia' usato e' una domanda
+        // che esiste, non un modulo sbagliato. Si risponde subito, prima di
+        // leggere il tracciato e di prenotare un numero del catasto.
+        if (is_string($reference) && ($existing = $this->applicationByReference($reference)) !== null) {
+            return $this->referenceAlreadyUsed($existing);
+        }
+
         $file = $request->file('geometry');
 
         try {
@@ -204,6 +170,7 @@ class StoreApplicationController extends Controller
                     'source' => 'api',
                     'status' => TrailApplicationStatus::UnderCompilation,
                     'name' => $request->input('name'),
+                    'reference' => $request->input('reference'),
                     'properties' => [],
                 ]);
 
@@ -247,6 +214,22 @@ class StoreApplicationController extends Controller
                 // non lascia abortita questa transazione.
                 return [$application, $this->demService->computeAndStore($application)];
             });
+        } catch (QueryException $e) {
+            $this->discardStoredFile($stored);
+
+            // La ricerca di poco fa non basta: chi ritenta dopo un timeout
+            // chiama mentre la prima richiesta e' ancora dentro la sua
+            // transazione, quindi non vede niente e arriva fin qui. Il
+            // conflitto emerge sull'indice unico, al commit dell'altra.
+            //
+            // 23505 = unique_violation in PostgreSQL.
+            if (($e->errorInfo[0] ?? null) === '23505'
+                && is_string($reference)
+                && ($existing = $this->applicationByReference($reference)) !== null) {
+                return $this->referenceAlreadyUsed($existing);
+            }
+
+            throw $e;
         } catch (SectorNotFoundException) {
             return $this->unprocessable(__('The track does not fall in any sector of the registry'));
         } catch (SectorExhaustedException) {
@@ -295,12 +278,40 @@ class StoreApplicationController extends Controller
              */
             'id' => $application->getKey(),
             /**
-             * I dati tecnici calcolati dal tracciato: `distance` in chilometri, dislivelli e quote in
-             * metri, `duration_forward` e `duration_backward` in minuti interi. **È `null` quando il
-             * calcolo non è finito in tempo, e non è un errore**: la domanda è creata lo stesso, e i
-             * dati si rileggono con la chiamata di lettura dello stato. Non va ripetuta la creazione.
+             * I dati tecnici calcolati dal tracciato, campo per campo. Le lunghezze sono in
+             * **chilometri** (`distance`), le quote e i dislivelli in **metri** (`ascent`,
+             * `descent`, `ele_min`, `ele_max`, `ele_from`, `ele_to`) e le durate in **minuti
+             * interi**.
              *
-             * @var array<string, mixed>|null
+             * `duration_forward` e `duration_backward` sono le durate a piedi, ripetute anche
+             * sotto `duration_forward_hiking` e `duration_backward_hiking`; le due `_bike` sono
+             * le stesse tratte in bicicletta. `round_trip` dice se il tracciato torna al punto
+             * di partenza.
+             *
+             * **Ogni campo può essere `null` da solo**: il servizio di calcolo restituisce ciò
+             * che riesce a determinare, e un campo mancante non è un errore.
+             *
+             * **L'oggetto intero è `null` quando il calcolo non è finito in tempo, e non è un
+             * errore**: la domanda è creata lo stesso, e i dati si rileggono con la chiamata di
+             * lettura dello stato. **Non va ripetuta la creazione**: con lo stesso `reference`
+             * risponderebbe `422`, e con uno diverso aprirebbe una seconda domanda.
+             *
+             * @var array{
+             *     distance: float|null,
+             *     ascent: int|null,
+             *     descent: int|null,
+             *     ele_min: int|null,
+             *     ele_max: int|null,
+             *     ele_from: int|null,
+             *     ele_to: int|null,
+             *     duration_forward: int|null,
+             *     duration_backward: int|null,
+             *     duration_forward_hiking: int|null,
+             *     duration_backward_hiking: int|null,
+             *     duration_forward_bike: int|null,
+             *     duration_backward_bike: int|null,
+             *     round_trip: bool|null
+             * }|null
              */
             'dem_data' => $demData,
             /**
@@ -383,5 +394,37 @@ class StoreApplicationController extends Controller
     protected function unprocessable(string $message): JsonResponse
     {
         return response()->json(['error' => $message], 422);
+    }
+
+    /**
+     * La domanda che porta gia' quel riferimento, se c'e'. Cerca fra quelle
+     * del canale: una domanda d'ufficio non ha un riferimento esterno, e il
+     * confronto con `null` non la troverebbe comunque.
+     */
+    protected function applicationByReference(string $reference): ?TrailApplication
+    {
+        return TrailRegistryClasses::application()::query()
+            ->where('reference', $reference)
+            ->first();
+    }
+
+    /**
+     * La risposta a un riferimento gia' usato. Porta l'`id` della domanda che
+     * esiste, e quello e' il punto: chi e' andato in timeout non sa se la sua
+     * chiamata era arrivata, e da questa risposta impara tutte e due le cose
+     * — che la domanda e' nata, e come si chiama — quindi riprende da li' con
+     * le modifiche, senza dover cercare per un identificatore nostro che non
+     * ha mai ricevuto.
+     *
+     * Vale qualunque tracciato porti la chiamata e in qualunque stato sia la
+     * domanda trovata: in ogni caso la cosa giusta da fare e' non aprirne una
+     * seconda.
+     */
+    protected function referenceAlreadyUsed(TrailApplication $existing): JsonResponse
+    {
+        return response()->json([
+            'error' => __('An application with this reference already exists'),
+            'id' => $existing->getKey(),
+        ], 422);
     }
 }

@@ -11,12 +11,19 @@ parti e il perché, che vale per chiunque monti il package.
 
 **Il package offre le operazioni del fascicolo. Lo shard ci monta sopra il canale del proprio ente.**
 
-Le operazioni sono quattro, e non hanno nulla di specifico di un ente: aprire una domanda
-(`StoreApplicationController`), aggiungerle un allegato (`StoreAttachmentController`), chiuderla
-quando è completa (`ConfirmApplicationController`) e leggerne lo stato (`ShowApplicationController`).
-Insieme a loro il package tiene lo schema dei campi, le Form Request che ne derivano, il calcolo dei
-dati tecnici alla creazione e le annotazioni Scramble dei quattro endpoint
-(`src/Http/Controllers/Api/TrailRegistry/`).
+Le operazioni sono cinque, e non hanno nulla di specifico di un ente: aprire una domanda
+(`StoreApplicationController`), modificarla finché è in compilazione (`PatchApplicationController`),
+aggiungerle un allegato (`StoreAttachmentController`), chiuderla quando è completa
+(`ConfirmApplicationController`) e leggerne lo stato (`ShowApplicationController`). Insieme a loro il
+package tiene lo schema dei campi, le Form Request che ne derivano, il calcolo dei dati tecnici e le
+annotazioni Scramble dei cinque endpoint (`src/Http/Controllers/Api/TrailRegistry/`).
+
+**Aprire e compilare sono due operazioni distinte, non una comoda e una alternativa.** L'apertura
+prende tre cose — il riferimento con cui chi consegna chiama la pratica a casa propria, il nome e il
+file del tracciato — e **rifiuta i campi del modulo**; il modulo si consegna con una o più
+modifiche. Così ogni chiamata ha un compito solo, e chi integra non sceglie fra due strade che
+farebbero la stessa cosa. L'obbligatorietà dichiarata dallo schema diventa il metro della chiusura:
+è lì che il fascicolo viene guardato tutto insieme.
 
 Il package **non registra nessuna rotta**. Lo shard decide, nelle proprie:
 
