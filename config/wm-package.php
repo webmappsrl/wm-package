@@ -284,6 +284,21 @@ return [
         'trail_registry' => [
             'enabled' => env('WM_TRAIL_REGISTRY_ENABLED', false),
 
+            // Il canale API del dominio. Spento di default: chi accende il
+            // Catasto per lavorarci solo da Nova non deve subire le regole di
+            // un canale che non usa.
+            'api' => [
+                // Il riferimento della pratica presso il sistema esterno
+                // (colonna `reference`) e' obbligatorio alla creazione, e due
+                // creazioni con lo stesso riferimento non fanno due domande:
+                // la seconda ritrova la prima, se porta lo stesso tracciato.
+                //
+                // Si accende dove un sistema esterno c'e' davvero. Senza un
+                // riferimento quel comportamento non avrebbe appiglio, quindi
+                // le due cose vanno insieme e non si configurano separate.
+                'require_reference' => env('WM_TRAIL_REGISTRY_REQUIRE_REFERENCE', false),
+            ],
+
             // Comandi artisan del dominio: registrati solo a dominio acceso.
             // Le risorse Nova del Catasto le registra lo shard (come EcTrack):
             // il package non ha piu' una chiave `nova_resources` qui. Le tre

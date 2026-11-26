@@ -124,6 +124,7 @@ class TrailApplication extends MultiLineString
         'source',
         'status',
         'name',
+        'reference',
         'geometry',
         'properties',
         'rejection_reason',
@@ -229,8 +230,9 @@ class TrailApplication extends MultiLineString
      * scrive quella strada ricordarsene. Fuori da `properties` non ci sono
      * strade da ricordare.
      *
-     * Non e' fillable: si scrive solo con writeApiData(), una volta sola alla
-     * creazione, e nessuna interfaccia lo modifica (oc:8960).
+     * Non e' fillable: si scrive solo con writeApiData() e mergeApiData(),
+     * dal canale e finche' la domanda e' in compilazione. Nessuna interfaccia
+     * dell'ufficio lo modifica (oc:8960).
      */
     public const API_DATA_COLUMN = 'api_data';
 
@@ -247,7 +249,12 @@ class TrailApplication extends MultiLineString
      * Attenzione: questo elenco dice quali campi devono *esserci*, non che
      * forma abbiano. Una lista di soggetti non vuota ma con dentro oggetti
      * malformati supera il controllo: la forma la governano le regole dello
-     * schema, applicate quando la chiamata arriva.
+     * schema, applicate su ogni consegna.
+     *
+     * Dalla compilazione in piu' riprese questa obbligatorieta' **vale alla
+     * conferma**, non alla creazione: la domanda nasce con il minimo, e
+     * creazione e modifiche controllano la forma di cio' che hanno davanti,
+     * non la presenza di cio' che manca ancora.
      *
      * @return list<string>
      */
@@ -324,6 +331,33 @@ class TrailApplication extends MultiLineString
         // api_data vuoto.
         $this->setAttribute(self::API_DATA_COLUMN, $payload);
         $this->syncOriginalAttribute(self::API_DATA_COLUMN);
+    }
+
+    /**
+     * Fonde un payload parziale su quello gia' salvato.
+     *
+     * E' cio' che serve alla compilazione in piu' riprese: i campi che
+     * arrivano sostituiscono, quelli che non arrivano restano, quelli che la
+     * chiamata cancella spariscono. Gli elenchi si sostituiscono per intero,
+     * e cosi' anche `difficulty`, che e' un oggetto: la lettera di RFC 7396
+     * lo fonderebbe chiave per chiave, ma una difficolta' si dichiara tutta
+     * insieme, come le attivita' a cui si riferisce.
+     *
+     * La scrittura passa dallo stesso `writeApiData()`, quindi vale anche
+     * qui la ragione per cui non si tocca `updated_at`.
+     *
+     * @param  array<string, mixed>  $payload  i campi che arrivano
+     * @param  list<string>  $deleted  i campi da togliere
+     */
+    public function mergeApiData(array $payload, array $deleted = []): void
+    {
+        $merged = array_merge((array) ($this->api_data ?? []), $payload);
+
+        foreach ($deleted as $field) {
+            unset($merged[$field]);
+        }
+
+        $this->writeApiData($merged);
     }
 
     public function dispatchDem(): void

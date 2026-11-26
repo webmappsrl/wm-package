@@ -159,3 +159,60 @@ it('solleva un errore di dominio se l istanza e stata cancellata', function () {
     expect(fn () => app(TrailRegistryService::class)->confirmCompilation($stantio))
         ->toThrow(ModelNotFoundException::class);
 });
+
+/*
+|--------------------------------------------------------------------------
+| La conferma guarda anche cosa c'e' dentro
+|--------------------------------------------------------------------------
+|
+| Finche' l'unica porta era la consegna intera, un valore impossibile non
+| poteva entrare: la validazione girava li'. Da quando la domanda si compila
+| in piu' riprese, la conferma e' l'ultimo punto in cui si guarda il fascicolo
+| tutto insieme.
+*/
+
+it('non porta in istruttoria un fascicolo con un valore che il modulo non ammette', function () {
+    $application = TrailApplication::factory()->complete()->create();
+
+    $application->mergeApiData(['existing_signage' => 'un valore inventato']);
+
+    expect(fn () => app(TrailRegistryService::class)->confirmCompilation($application))
+        ->toThrow(ApplicationIncompleteException::class);
+
+    expect($application->refresh()->status)->toBe(TrailApplicationStatus::UnderCompilation);
+});
+
+it('dice quale valore non va, distinguendolo da cio che manca', function () {
+    $application = TrailApplication::factory()->complete()->create();
+    $application->mergeApiData(['distance' => -5]);
+
+    try {
+        app(TrailRegistryService::class)->confirmCompilation($application);
+        $error = null;
+    } catch (ApplicationIncompleteException $e) {
+        $error = $e;
+    }
+
+    expect($error)->not->toBeNull()
+        ->and($error->invalid())->toHaveKey('distance')
+        // Il campo c'e': non e' fra quelli che mancano.
+        ->and($error->missing()['fields'])->not->toContain('distance');
+});
+
+it('vede anche un vincolo fra campi consegnati in momenti diversi', function () {
+    $application = TrailApplication::factory()->complete()->create();
+
+    // Le attivita' arrivano con una modifica, la primaria ne resta fuori:
+    // nessuna delle due chiamate, da sola, poteva accorgersene.
+    $application->mergeApiData(['activities' => ['mtb']]);
+
+    try {
+        app(TrailRegistryService::class)->confirmCompilation($application);
+        $error = null;
+    } catch (ApplicationIncompleteException $e) {
+        $error = $e;
+    }
+
+    expect($error)->not->toBeNull()
+        ->and($error->invalid())->toHaveKey('primary_activity');
+});

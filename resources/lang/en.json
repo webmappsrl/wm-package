@@ -712,5 +712,13 @@
     "Download again": "Download again",
     "The key :key is not expected here. The agreed keys are: :allowed.": "The key :key is not expected here. The agreed keys are: :allowed.",
     "The field :key is not expected by this API.": "The field :key is not expected by this API.",
-    "The value of :attribute is not among the agreed ones: :values.": "The value of :attribute is not among the agreed ones: :values."
+    "The value of :attribute is not among the agreed ones: :values.": "The value of :attribute is not among the agreed ones: :values.",
+    "An application with this reference already exists": "An application with this reference already exists",
+    "The proposed activities are required when the primary activity is declared": "The proposed activities are required when the primary activity is declared",
+    "The primary activity is required when the proposed activities are declared": "The primary activity is required when the proposed activities are declared",
+    "The proposed activities are required when a difficulty is declared": "The proposed activities are required when a difficulty is declared",
+    "A required field cannot be emptied: correct it by sending a new value": "A required field cannot be emptied: correct it by sending a new value",
+    "The application has already been submitted and no longer accepts changes": "The application has already been submitted and no longer accepts changes",
+    "The application cannot be submitted: see the missing fields and attachments and the invalid values": "The application cannot be submitted: see the missing fields and attachments and the invalid values",
+    "External reference": "External reference"
 }

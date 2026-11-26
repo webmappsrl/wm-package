@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 use Wm\WmPackage\Models\App;
 use Wm\WmPackage\Models\EcTrack;
 use Wm\WmPackage\Models\TaxonomyActivity;
@@ -25,6 +26,7 @@ use Wm\WmPackage\TrailRegistry\Exceptions\SectorNotFoundException;
 use Wm\WmPackage\TrailRegistry\Models\TrailApplication;
 use Wm\WmPackage\TrailRegistry\Models\TrailRegistryCode;
 use Wm\WmPackage\TrailRegistry\Rules\DifficultyMatchesActivities;
+use Wm\WmPackage\TrailRegistry\Schema\ApplicationSchema;
 
 /**
  * Unico service di dominio del catasto.
@@ -953,9 +955,10 @@ class TrailRegistryService
             }
 
             $missing = $locked->missingForConfirmation();
+            $invalid = $this->invalidValues($locked);
 
-            if ($missing['fields'] !== [] || $missing['attachments'] !== []) {
-                throw ApplicationIncompleteException::forMissing($missing);
+            if ($missing['fields'] !== [] || $missing['attachments'] !== [] || $invalid !== []) {
+                throw ApplicationIncompleteException::forMissing($missing, $invalid);
             }
 
             $locked->newQuery()
@@ -1402,6 +1405,50 @@ class TrailRegistryService
         );
 
         return $row->wkt;
+    }
+
+    /**
+     * I campi che ci sono ma portano un valore che il modulo non ammette.
+     *
+     * E' il controllo che la compilazione in piu' riprese rende necessario.
+     * Finche' l'unica porta era la consegna intera, la validazione girava li'
+     * e qui bastava contare cosa mancava; ora che la domanda si riempie un
+     * pezzo per volta, la conferma e' l'ultimo punto in cui si puo' guardare
+     * il fascicolo tutto insieme — ed e' anche l'unico che vede i vincoli fra
+     * campi consegnati in momenti diversi.
+     *
+     * Le regole sono quelle dello schema, prese cosi' come sono: qui
+     * l'obbligatorieta' vale davvero, ed e' il metro della conferma.
+     *
+     * @return array<string, list<string>> errori per campo
+     */
+    protected function invalidValues(TrailApplication $application): array
+    {
+        $apiData = (array) ($application->api_data ?? []);
+        $schema = app(ApplicationSchema::class);
+
+        $rules = $schema->rules();
+
+        foreach (ApplicationSchema::PLAUSIBLE_RANGES as $field => [$min, $max]) {
+            if (isset($rules[$field])) {
+                $rules[$field][] = "between:{$min},{$max}";
+            }
+        }
+
+        $validator = Validator::make($apiData, $rules);
+        $errors = $validator->errors()->messages();
+
+        // I vincoli fra campi: la primaria dentro le attivita' proposte, le
+        // difficolta' sulle attivita' dichiarate. Qui non c'e' nessuna
+        // chiamata HTTP dietro, ed e' il motivo per cui quelle regole vivono
+        // in una classe a parte.
+        $skip = array_keys($errors);
+
+        foreach (app(ApplicationConsistency::class)->valueErrors($apiData, $skip) as $field => $messages) {
+            $errors[$field] = array_merge($errors[$field] ?? [], $messages);
+        }
+
+        return $errors;
     }
 
     protected function isUniqueViolation(QueryException $e): bool

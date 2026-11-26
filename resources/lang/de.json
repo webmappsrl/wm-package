@@ -145,5 +145,13 @@
     "Download again": "Erneut herunterladen",
     "The key :key is not expected here. The agreed keys are: :allowed.": "Der Schlüssel :key ist hier nicht vorgesehen. Die vereinbarten Schlüssel sind: :allowed.",
     "The field :key is not expected by this API.": "Das Feld :key ist von dieser API nicht vorgesehen.",
-    "The value of :attribute is not among the agreed ones: :values.": "Der Wert von :attribute gehört nicht zu den vereinbarten: :values."
+    "The value of :attribute is not among the agreed ones: :values.": "Der Wert von :attribute gehört nicht zu den vereinbarten: :values.",
+    "An application with this reference already exists": "Es existiert bereits ein Antrag mit diesem Aktenzeichen",
+    "The proposed activities are required when the primary activity is declared": "Die vorgeschlagenen Aktivitäten sind erforderlich, wenn die Hauptaktivität angegeben wird",
+    "The primary activity is required when the proposed activities are declared": "Die Hauptaktivität ist erforderlich, wenn die vorgeschlagenen Aktivitäten angegeben werden",
+    "The proposed activities are required when a difficulty is declared": "Die vorgeschlagenen Aktivitäten sind erforderlich, wenn ein Schwierigkeitsgrad angegeben wird",
+    "A required field cannot be emptied: correct it by sending a new value": "Ein Pflichtfeld kann nicht geleert werden: Zum Korrigieren senden Sie einen neuen Wert",
+    "The application has already been submitted and no longer accepts changes": "Der Antrag wurde bereits übermittelt und nimmt keine Änderungen mehr an",
+    "The application cannot be submitted: see the missing fields and attachments and the invalid values": "Der Antrag kann nicht übermittelt werden: siehe die fehlenden Felder und Anlagen sowie die unzulässigen Werte",
+    "External reference": "Externes Aktenzeichen"
 }
