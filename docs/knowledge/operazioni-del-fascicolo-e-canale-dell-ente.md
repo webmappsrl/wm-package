@@ -68,7 +68,9 @@ Tre cose da sapere se si ridefinisce:
 - **`version()` si alza a mano.** Restituisce una stringa fissa (`'1'`) e la creazione la scrive in
   `api_data` accanto al payload (`ApplicationSchema::VERSION_KEY`): è l'unico modo per sapere, mesi
   dopo, con quali regole una riga è stata accettata. Se cambia ciò che la consegna deve contenere o
-  come si valida e `version()` resta uguale, il dato perde il suo significato.
+  come si valida e `version()` resta uguale, il dato perde il suo significato. Vale però da quando
+  il contratto è in uso: finché il canale si costruisce non c'è niente da distinguere, e alzarla a
+  ogni ticket conta i ticket invece dei contratti (oc:9061).
 - **Le descrizioni degli endpoint non seguono lo schema.** I `#[BodyParameter]` dei controller
   descrivono i campi dello schema di default, con il numero di campo del format a cui rinviano. Uno
   schema ridefinito cambia la validazione ma non quelle descrizioni: chi lo ridefinisce deve
@@ -79,6 +81,10 @@ Tre cose da sapere se si ridefinisce:
   strutturati, dove lo fa la Rule `OnlyAllowedKeys` (`src/Rules/`), che riceve le chiavi ammesse e
   aggiunge un errore per ogni chiave di troppo, con il percorso che la nomina. I **valori** restano
   invece alle regole dichiarate accanto: il perché è nel docblock della Rule.
+- **Il `name` e la `email` di un soggetto dichiarato `person` fanno fallire la chiamata**
+  (oc:9061). Non sono facoltativi: sono rifiutati con `422`, e con loro qualunque valore messo al
+  loro posto. Il rifiuto vale anche alla conferma, perché `invalidValues()` rilegge l'`api_data`
+  salvato con le stesse regole.
 
 ### Cosa fa il package, e va tenuto presente dallo shard
 
@@ -140,6 +146,12 @@ Tre cose da sapere se si ridefinisce:
   lo ricava da `in:`. Si sarebbe dovuto riscriverlo a mano nella descrizione: due posti per lo
   stesso elenco, destinati a divergere.
 
+- **I dati personali di un soggetto privato non entrano nel canale** (oc:9061): per un soggetto
+  con `subject: person` il canale rifiuta `name` ed `email`. L'informazione che serve davvero —
+  che quel ruolo è coperto da un privato — la porta già `subject`, e chi deve risalire alla
+  persona lo fa dal portale di chi consegna, con il riferimento della domanda. Il vincolo non è
+  nostro: viene dal contratto dell'ente, che esclude la trasmissione di dati di persone fisiche.
+
 ## Come ci siamo arrivati
 
 - **Lettura e conferma in una sola chiamata** (oc:8968, scartata): la conferma avrebbe
@@ -158,3 +170,14 @@ Tre cose da sapere se si ridefinisce:
   avesse aggiunto prima che lo schema lo prevedesse. Si è rovesciata quando è emerso che lo stesso
   meccanismo accettava in silenzio un dato personale tolto apposta dal contratto: un codice fiscale
   infilato in un oggetto sarebbe stato salvato senza che nessuno lo vedesse.
+- **Il segnaposto testuale al posto dei dati del privato** (oc:9061, scartata): era stato proposto
+  da chi riceve le domande di mandare una stringa convenzionale nei campi del privato, del tipo
+  «campo oscurato per motivi di privacy». Scartata perché una stringa magica va riconosciuta nel
+  codice, documentata e tenuta allineata fra le due parti per sempre, e porta esattamente
+  l'informazione che `subject` porta già da sé. Per il canale resta un valore come un altro, e
+  riceve lo stesso `422`.
+- **Nome ed e-mail soltanto facoltativi per i privati** (oc:9061, scartata): era la prima forma del
+  lavoro, simmetrica a come l'e-mail era già condizionata al tipo di soggetto. Scartata perché un
+  canale che *permette* di non mandare un dato personale non *impedisce* che arrivi: il vincolo
+  sarebbe rimasto affidato a cosa decide di mandare chi consegna, e un vincolo di quel tipo non è
+  un vincolo.
