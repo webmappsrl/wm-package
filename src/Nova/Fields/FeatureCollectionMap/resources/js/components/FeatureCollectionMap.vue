@@ -105,6 +105,9 @@ import { defaults as defaultInteractions } from 'ol/interaction';
 // html2canvas import
 import html2canvas from 'html2canvas';
 
+// Minimo dell'intervallo di aggiornamento delle posizioni live (oc:9040).
+const MIN_LIVE_POSITIONS_REFRESH_SECONDS = 10;
+
 export default {
     name: 'FeatureCollectionMap',
     components: {
@@ -200,6 +203,18 @@ export default {
         preserveViewOnReload: {
             type: Boolean,
             default: false
+        },
+        // Posizioni live da un URL a sé, riscaricate ogni livePositionsRefreshSeconds senza
+        // riscaricare il GeoJSON principale e senza cambiare zoom e centro (oc:9040). Senza
+        // l'URL il componente si comporta come prima. L'intervallo non scende sotto
+        // MIN_LIVE_POSITIONS_REFRESH_SECONDS, perché un valore sbagliato non tempesti il server.
+        livePositionsUrl: {
+            type: String,
+            default: null
+        },
+        livePositionsRefreshSeconds: {
+            type: Number,
+            default: 90
         }
     },
 
@@ -248,6 +263,44 @@ export default {
         const labelSource = ref(null);
         let labelLayer = null;
         const isHitLayer = (layer) => layer !== labelLayer;
+
+        // Posizioni live (oc:9040): layer e intervallo propri, creati solo con livePositionsUrl.
+        const livePositionsSource = ref(null);
+        let livePositionsTimer = null;
+        let livePositionsWarned = false;
+
+        const loadLivePositions = async () => {
+            if (!props.livePositionsUrl || !livePositionsSource.value) {
+                return;
+            }
+            try {
+                const response = await fetch(props.livePositionsUrl, { headers: { Accept: 'application/json' } });
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                const data = await response.json();
+                if (!livePositionsSource.value) {
+                    return; // smontato durante la richiesta
+                }
+                const features = new GeoJSON().readFeatures(data, { featureProjection: 'EPSG:3857' });
+                livePositionsSource.value.clear();
+                livePositionsSource.value.addFeatures(features);
+                livePositionsWarned = false;
+            } catch (error) {
+                // Si tengono i punti precedenti; un solo avviso finché non torna una risposta buona.
+                if (!livePositionsWarned) {
+                    console.warn('Live positions fetch failed, keeping the previous ones:', error);
+                    livePositionsWarned = true;
+                }
+            }
+        };
+
+        const stopLivePositions = () => {
+            if (livePositionsTimer !== null) {
+                clearInterval(livePositionsTimer);
+                livePositionsTimer = null;
+            }
+        };
         const hoverMarkerFeature = ref(null);
 
         const setDefaultTrackForChartFromGeojson = (data) => {
@@ -871,10 +924,26 @@ export default {
             map.value.on('pointermove', handlePointerMove);
 
             loadGeoJSON();
+
+            if (props.livePositionsUrl) {
+                livePositionsSource.value = new VectorSource();
+                map.value.addLayer(new VectorLayer({
+                    source: livePositionsSource.value,
+                    style: getFeatureStyle,
+                    zIndex: 15
+                }));
+                loadLivePositions();
+                livePositionsTimer = setInterval(
+                    loadLivePositions,
+                    Math.max(MIN_LIVE_POSITIONS_REFRESH_SECONDS, props.livePositionsRefreshSeconds) * 1000
+                );
+            }
         });
 
         // Cleanup
         onUnmounted(() => {
+            stopLivePositions();
+            livePositionsSource.value = null;
             if (map.value) {
                 // Importante: setTarget(null) NON rimuove i listener globali dei drag interaction.
                 // dispose() esegue il teardown completo (pointermove/pointerup su document inclusi).

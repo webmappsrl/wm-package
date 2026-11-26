@@ -10,7 +10,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Laravel\Nova\Nova;
 use Spatie\Translatable\HasTranslations;
 use Wm\WmPackage\Jobs\FeatureCollection\GenerateFeatureCollectionJob;
 use Wm\WmPackage\Models\Abstracts\Polygon;
@@ -18,6 +17,8 @@ use Wm\WmPackage\Nova\Fields\FeatureCollectionMap\src\FeatureCollectionMapTrait;
 use Wm\WmPackage\Observers\LayerObserver;
 use Wm\WmPackage\Services\GeometryComputationService;
 use Wm\WmPackage\Services\Models\LayerService;
+use Wm\WmPackage\Services\Models\LivePositionsFeatures;
+use Wm\WmPackage\Services\Models\MapFeatureName;
 use Wm\WmPackage\Services\PostHog\AnalyticsService;
 use Wm\WmPackage\Traits\HasPackageFactory;
 use Wm\WmPackage\Traits\NormalizesHexColor;
@@ -346,7 +347,21 @@ class Layer extends Polygon
         return $this->attributes['query_string'] = $query_string;
     }
 
-    public function getFeatureCollectionMap(): array
+    /**
+     * Colore delle tracce sulle mappe Nova quando il layer non ne ha uno (`properties.color`):
+     * config `wm-package.map_default_track_color` (oc:9040).
+     */
+    public static function defaultTrackColor(): string
+    {
+        return (string) config('wm-package.map_default_track_color', 'rgba(255, 0, 0, 1)');
+    }
+
+    /**
+     * @param  bool  $withLivePositions  false per la LayerMapCard della dashboard, che prende le
+     *                                   posizioni da un endpoint a sé e le aggiorna ogni 90 s
+     *                                   (oc:9040): qui comparirebbero due volte
+     */
+    public function getFeatureCollectionMap(bool $withLivePositions = true): array
     {
         $this->clearAdditionalFeaturesForMap();
         $layerProperties = is_array($this->properties) ? $this->properties : [];
@@ -361,7 +376,7 @@ class Layer extends Polygon
             : 0.3;
         $strokeColor = ! empty($layerProperties['color'])
             ? hexToRgba($layerProperties['color'], $strokeOpacity)
-            : 'rgba(255, 0, 0, 1)';
+            : self::defaultTrackColor();
         $fillColor = ! empty($layerProperties['fill_color'])
             ? hexToRgba($layerProperties['fill_color'], $fillOpacity)
             : 'rgba(255, 0, 0, 0.3)';
@@ -393,8 +408,7 @@ class Layer extends Polygon
 
             foreach ($rows as $ecTrack) {
                 $geometry = json_decode($ecTrack->geometry, true);
-                $nameData = json_decode($ecTrack->name, true);
-                $ecTrackName = $nameData['it'] ?? (is_array($nameData) && ! empty($nameData) ? reset($nameData) : 'Nome non disponibile');
+                $ecTrackName = MapFeatureName::fromJson($ecTrack->name);
 
                 if ($geometry) {
                     $this->addFeaturesForMap([[
@@ -422,8 +436,7 @@ class Layer extends Polygon
 
             foreach ($rows as $ecPoi) {
                 $geometry = json_decode($ecPoi->geometry, true);
-                $nameData = json_decode($ecPoi->name, true);
-                $ecPoiName = $nameData['it'] ?? (is_array($nameData) && ! empty($nameData) ? reset($nameData) : 'Nome non disponibile');
+                $ecPoiName = MapFeatureName::fromJson($ecPoi->name);
 
                 if ($geometry) {
                     $this->addFeaturesForMap([[
@@ -446,8 +459,7 @@ class Layer extends Polygon
 
             foreach ($rows as $taxonomyWhere) {
                 $geometry = json_decode($taxonomyWhere->geometry, true);
-                $nameData = json_decode($taxonomyWhere->name, true);
-                $whereName = $nameData['it'] ?? (is_array($nameData) && ! empty($nameData) ? reset($nameData) : 'Taxonomy Where');
+                $whereName = MapFeatureName::fromJson($taxonomyWhere->name, 'Taxonomy Where');
 
                 if ($geometry) {
                     $this->addFeaturesForMap([[
@@ -465,67 +477,11 @@ class Layer extends Polygon
             }
         }
 
-        $recentPositions = app(AnalyticsService::class)->getRecentUserPositions($this);
-
-        // oc:8637: nominativo e link sul marker live dipendono da una config per shard
-        // (wm-package.analytics_show_live_user_identity ← ANALYTICS_SHOW_LIVE_USER_IDENTITY, default false). Supera la
-        // scelta di oc:8586, che li aveva fissati a false nel codice: allo scrum del 23/09/2026 si è
-        // deciso di renderli opzionali per shard, senza interruttore in Nova.
-        // Limite noto: l'identità mostrata è quella dichiarata dall'app nell'evento PostHog
-        // `userMoved` (properties.user_id), non verificata dal backend.
-        // FILTER_VALIDATE_BOOLEAN e non (bool): su un flag di privacy un valore ambiguo nel .env
-        // ("off", "no") deve lasciare il marker anonimo, mentre (bool) "off" varrebbe true.
-        $showLiveUserIdentity = filter_var(config('wm-package.analytics_show_live_user_identity'), FILTER_VALIDATE_BOOLEAN);
-
-        if ($showLiveUserIdentity) {
-            try {
-                $userIds = array_values(array_unique(array_filter(array_column($recentPositions, 'user_id'))));
-                $usersById = $userIds === []
-                    ? collect()
-                    : \Wm\WmPackage\Models\User::whereIn('id', $userIds)->get(['id', 'name', 'surname'])->keyBy('id');
-            } catch (\Throwable $e) {
-                Log::error('getFeatureCollectionMap(): user_id lookup failed', ['layer_id' => $this->id, 'error' => $e->getMessage()]);
-                $usersById = collect();
-            }
-        } else {
-            $usersById = collect();
-        }
-
-        foreach ($recentPositions as $position) {
-            $user = $showLiveUserIdentity && isset($position['user_id']) ? $usersById->get($position['user_id']) : null;
-            $nominativo = $user ? trim("{$user->name} {$user->surname}") : '';
-
-            $properties = [
-                'tooltip' => $nominativo !== '' ? $nominativo : 'Posizione utente (ultimi 30 minuti)',
-                'pointFillColor' => 'rgba(34, 197, 94, 0.9)',
-                'pointStrokeColor' => 'rgba(255, 255, 255, 1)',
-                'pointStrokeWidth' => 3,
-                'pointRadius' => 8,
-                // Anelli concentrici (bullseye), non solo colore diverso: gli EcPoi sono un
-                // cerchio pieno senza questa property — un utente daltonico o una stampa in
-                // scala di grigi distingue comunque i due marker dal profilo (anelli vs pieno),
-                // non solo dalla tinta. Nessuna modifica al componente Vue: checkpointRouteColors
-                // è già supportato da FeatureCollectionMap.vue::getFeatureStyle() per un altro
-                // caso d'uso (percorsi multi-tratta).
-                'checkpointRouteColors' => ['rgba(255, 255, 255, 1)', 'rgba(34, 197, 94, 0.9)'],
-            ];
-
-            // Gated su $showLiveUserIdentity oltre che su $user: con il flag spento $user è sempre
-            // null (vedi sopra), la doppia condizione è una difesa in più. Con il flag acceso il
-            // link dipende solo da $user risolto, non dal nominativo: un utente senza nome e
-            // cognome ha tooltip generico ma link alla scheda (oc:8637, come prima di oc:8586).
-            if ($showLiveUserIdentity && $user) {
-                $properties['link'] = url(trim(Nova::path(), '/').'/resources/users/'.$user->id);
-            }
-
-            $this->addFeaturesForMap([[
-                'type' => 'Feature',
-                'geometry' => [
-                    'type' => 'Point',
-                    'coordinates' => [$position['lng'], $position['lat']],
-                ],
-                'properties' => $properties,
-            ]]);
+        if ($withLivePositions) {
+            $this->addFeaturesForMap(app(LivePositionsFeatures::class)->fromPositions(
+                app(AnalyticsService::class)->getRecentUserPositions($this),
+                $this->id,
+            ));
         }
 
         return [

@@ -23,6 +23,10 @@ class LayerFeatureCollectionMapUserPresenceTest extends TestCase
     {
         parent::setUp();
 
+        // Il tooltip anonimo è tradotto (`User position (last 30 minutes)`): i test lo confrontano
+        // con il testo italiano, la lingua del pannello negli shard.
+        app()->setLocale('it');
+
         config([
             'services.posthog.host' => 'https://posthog.example.com',
             'services.posthog.project_id' => '1',

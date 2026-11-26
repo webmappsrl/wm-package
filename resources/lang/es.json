@@ -137,5 +137,7 @@
     "Too many elements selected: the maximum is :max.": "Demasiados elementos seleccionados: el máximo es :max.",
     "Your download has started": "La descarga ha comenzado",
     "You can close this page.": "Puede cerrar esta página.",
-    "Download again": "Descargar de nuevo"
+    "Download again": "Descargar de nuevo",
+    "User position (last 30 minutes)": "Posición del usuario (últimos 30 minutos)",
+    "All routes": "Todas las rutas"
 }

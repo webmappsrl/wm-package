@@ -154,6 +154,53 @@ alle tracce, prese dalle stesse query `userMoved` (`AnalyticsService::getRecentU
 - **Limiti accettati**: l'endpoint non ha autorizzazione per singolo layer (chi supera il gate Nova
   vede le posizioni di ogni layer, con i nomi se il flag è acceso); `user_id` è quello dichiarato
   dall'app nell'evento, non verificato dal backend.
+  ⚠️ (oc:9040) La premessa «chi supera il gate Nova» non regge: la route è registrata con il solo
+  middleware `nova` (`src/Nova/Fields/FeatureCollectionMap/src/FieldServiceProvider.php:34`), che
+  non contiene `Authenticate` né `Authorize` (stanno in `nova.api_middleware`): la route risponde
+  anche senza login. Gravità da valutare. Gli endpoint delle mappe della dashboard (voce sotto) non hanno
+  questo problema.
+- **La stessa mappa in una card** (oc:9040): `LayerMapCard`
+  (`src/Nova/Fields/FeatureCollectionMap/src/LayerMapCard.php`, componente `layer-map-card` nel
+  bundle del Field) mostra la mappa dove un Field non si può mettere, per esempio in una Dashboard.
+  - **I percorsi si scaricano una volta, le posizioni ogni `AnalyticsService::LIVE_POSITIONS_CACHE_SECONDS`**
+    (90 s, la durata della loro cache), da un endpoint a sé. Zoom e centro non cambiano. Il
+    componente ferma il polling quando la card viene smontata, e senza PostHog configurato
+    (`live_positions_url` null) non lo fa partire.
+  - **`new LayerMapCard($layer)`**: percorso da `/nova-vendor/layer-analytics/{layer}/routes`, cioè
+    `Layer::getFeatureCollectionMap(withLivePositions: false)`, e posizioni da
+    `…/{layer}/live-positions`. Li leggono l'Administrator e il proprietario del layer.
+  - **`LayerMapCard::global()`**: percorsi di tutti i layer da `…/all-routes` e posizioni da
+    `…/live-positions`, solo per l'Administrator. I percorsi sono le EcTrack associate ad almeno un
+    layer, senza quota e semplificate (`all_routes_map_simplify_degrees`, default 0.0005° ≈ 50 m),
+    in cache un'ora senza invalidazione (`AllLayersRoutesGeojson`). Le posizioni sono quelle entro
+    `layer_user_presence_distance_meters` da una di quelle tracce
+    (`getRecentUserPositionsOnAllLayers()`), una sola query PostGIS.
+  - **Gli endpoint delle mappe e quello delle statistiche del singolo layer rispondono 403 in
+    JSON**: senza login è sempre 403, anche su un layer senza proprietario
+    (`AnalyticsController::canReadLayer()`). Non usano `abort()`, perché `NovaExceptionHandler`
+    disegnerebbe il menu dello shard, che può andare in errore senza utente. `global()`, le
+    statistiche aggregate, usa ancora `abort_unless()`: senza login su uno shard con quel menu
+    risponde 500 invece di 403.
+  - **Limite noto**: il tetto di 500 persone di `queryRecentUserMovedPoints()` si applica prima
+    del filtro di prossimità. Sulla mappa globale l'area è grande quasi quanto l'Italia, quindi
+    oltre 500 persone attive in 30 minuti alcuni pallini mancherebbero (resta un `Log::warning`).
+  - La legenda e il tooltip anonimo sono tradotti (`User position (last 30 minutes)`).
+    `All routes` è tradotto in modo neutro: uno shard può sovrascriverlo nei suoi lang.
+- **Colori configurabili dagli shard** (oc:9040). Il package non cambia i colori, li rende
+  sovrascrivibili:
+  - **`LayerAnalyticsCard`**: ogni colore è `var(--wm-analytics-<nome>, <colore di sempre>)`.
+    Nomi: `accent` (numeri), `accent-presence` (utenti sul cammino), `android`, `ios`, `webapp`,
+    `text`, `text-muted`, `text-disabled`, `border`, `surface`, `control-bg`, `badge-bg`,
+    `bar-bg`, `tooltip-bg`, `tooltip-text`, `divider`, `divider-soft`, `chart-text`,
+    `chart-grid`, `export-bg`. Lo shard le imposta in un foglio registrato con `Nova::style()`,
+    in `:root` e in `.dark`. Il grafico (canvas) e l'export PNG non risolvono `var()`: le leggono
+    con `getComputedStyle` quando disegnano (`resolvedColor()`), quindi dopo un cambio di tema il
+    grafico resta col tema di prima fino al disegno successivo.
+  - **Tracce**: `map_default_track_color` (`MAP_DEFAULT_TRACK_COLOR`, default
+    `rgba(255, 0, 0, 1)`), letto da `Layer::defaultTrackColor()`. Vale per la detail view del
+    Layer, la `LayerMapCard` e la mappa di tutti i cammini; `properties.color` del layer resta più
+    forte. Il colore è nella chiave di cache dei percorsi di tutti i cammini, quindi un cambio si
+    vede subito.
 - **Perché una variabile d'ambiente**: allo scrum del 23/09/2026 non c'erano casi d'uso per un
   interruttore in Nova. È un'**eccezione voluta** alla regola "override versionato, mai `.env`"
   scritta sopra per `route_filter_analytics_enabled`: il flag è pensato per essere acceso dagli shard
