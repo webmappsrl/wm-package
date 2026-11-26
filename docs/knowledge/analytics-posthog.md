@@ -186,6 +186,21 @@ alle tracce, prese dalle stesse query `userMoved` (`AnalyticsService::getRecentU
     oltre 500 persone attive in 30 minuti alcuni pallini mancherebbero (resta un `Log::warning`).
   - La legenda e il tooltip anonimo sono tradotti (`User position (last 30 minutes)`).
     `All routes` è tradotto in modo neutro: uno shard può sovrascriverlo nei suoi lang.
+- **Colori configurabili dagli shard** (oc:9040). Il package non cambia i colori, li rende
+  sovrascrivibili:
+  - **`LayerAnalyticsCard`**: ogni colore è `var(--wm-analytics-<nome>, <colore di sempre>)`.
+    Nomi: `accent` (numeri), `accent-presence` (utenti sul cammino), `android`, `ios`, `webapp`,
+    `text`, `text-muted`, `text-disabled`, `border`, `surface`, `control-bg`, `badge-bg`,
+    `bar-bg`, `tooltip-bg`, `tooltip-text`, `divider`, `divider-soft`, `chart-text`,
+    `chart-grid`, `export-bg`. Lo shard le imposta in un foglio registrato con `Nova::style()`,
+    in `:root` e in `.dark`. Il grafico (canvas) e l'export PNG non risolvono `var()`: le leggono
+    con `getComputedStyle` quando disegnano (`resolvedColor()`), quindi dopo un cambio di tema il
+    grafico resta col tema di prima fino al disegno successivo.
+  - **Tracce**: `map_default_track_color` (`MAP_DEFAULT_TRACK_COLOR`, default
+    `rgba(255, 0, 0, 1)`), letto da `Layer::defaultTrackColor()`. Vale per la detail view del
+    Layer, la `LayerMapCard` e la mappa di tutti i cammini; `properties.color` del layer resta più
+    forte. Il colore è nella chiave di cache dei percorsi di tutti i cammini, quindi un cambio si
+    vede subito.
 - **Perché una variabile d'ambiente**: allo scrum del 23/09/2026 non c'erano casi d'uso per un
   interruttore in Nova. È un'**eccezione voluta** alla regola "override versionato, mai `.env`"
   scritta sopra per `route_filter_analytics_enabled`: il flag è pensato per essere acceso dagli shard
