@@ -251,18 +251,18 @@ class PatchApplicationRequest extends FormRequest
     }
 
     /**
-     * I messaggi che elencano i valori concordati.
+     * I messaggi dello schema, che valgono anche alla conferma.
      *
-     * Il messaggio di `in:` tradotto da Laravel dice «Il valore selezionato
-     * per X non e' valido», che non aiuta chi integra a capire cosa mandare.
-     * L'elenco resta dichiarato una volta sola nelle regole: `:values` lo
-     * ripete, e da li' la documentazione OpenAPI ricava il proprio `enum`.
+     * Vivono in `ApplicationSchema::validationMessages()` perche' le stesse
+     * regole si applicano anche fuori di qui, quando la conferma rilegge
+     * l'`api_data` salvato: scritti qui, i due percorsi direbbero cose diverse
+     * sullo stesso rifiuto (oc:9061).
      *
      * @return array<string, string>
      */
     public function messages(): array
     {
-        return ['in' => __('The value of :attribute is not among the agreed ones: :values.')];
+        return app(ApplicationSchema::class)->validationMessages();
     }
 
     public function attributes(): array

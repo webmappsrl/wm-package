@@ -36,7 +36,7 @@ function completeApplicationPayload(array $overrides = []): array
         'difficulty' => ['hiking' => 'EE'],
         'existing_signage' => 'good_condition',
         'managing_subjects' => [['name' => 'Comune di Cagliari', 'email' => 'comune@example.com', 'subject' => 'organization']],
-        'surveying_subjects' => [['name' => 'Mario Rossi', 'email' => null, 'subject' => 'person']],
+        'surveying_subjects' => [['subject' => 'person']],
         'maintaining_subjects' => [['name' => 'Forestas', 'email' => 'protocollo@forestas.example.it', 'subject' => 'organization']],
         'keeping_subjects' => [],
         'last_survey_date' => '2026-01-15',
@@ -142,7 +142,7 @@ it('chiede la e-mail a un ente e non a una persona', function () {
     // proprio `subject`, non con quello di un altro della stessa lista.
     $errors = applicationErrors(completeApplicationPayload([
         'managing_subjects' => [
-            ['name' => 'Mario Rossi', 'email' => null, 'subject' => 'person'],
+            ['subject' => 'person'],
             ['name' => 'Comune di Oliena', 'email' => null, 'subject' => 'organization'],
         ],
     ]));
@@ -316,13 +316,13 @@ it('trasforma un JSON malformato in un errore di validazione, non in un crash', 
 
 it('decodifica una lista di soggetti arrivata come JSON in stringa', function () {
     $payload = completeApplicationPayload([
-        'maintaining_subjects' => '[{"name":"Ente A","email":"a@example.it","subject":"organization"},{"name":"Luigi Bianchi","email":null,"subject":"person"}]',
+        'maintaining_subjects' => '[{"name":"Ente A","email":"a@example.it","subject":"organization"},{"subject":"person"}]',
     ]);
 
     expect(applicationErrors($payload))->toBe([]);
     expect(resolveApplicationRequest($payload)->bodyFields()['maintaining_subjects'])->toBe([
         ['name' => 'Ente A', 'email' => 'a@example.it', 'subject' => 'organization'],
-        ['name' => 'Luigi Bianchi', 'email' => null, 'subject' => 'person'],
+        ['subject' => 'person'],
     ]);
 });
 
@@ -397,19 +397,92 @@ it('rifiuta un oggetto singolo al posto della lista', function () {
     ])))->toHaveKey('managing_subjects.name');
 });
 
-it('accetta un soggetto persona fisica senza la chiave email', function () {
+it('accetta un soggetto persona fisica senza nome ne email', function () {
     // E' la forma che la pagina delle API pubblica nell'esempio `curl` e nel
-    // modulo del bottone di prova: `{"name":"Mario Rossi","subject":"person"}`,
-    // senza `email` del tutto. Finche' nessun test la fissa, un `required`
-    // aggiunto per distrazione renderebbe sbagliato l'esempio pubblicato.
+    // modulo del bottone di prova: `{"subject":"person"}` e basta. Finche'
+    // nessun test la fissa, un `required` aggiunto per distrazione renderebbe
+    // sbagliato l'esempio pubblicato.
     expect(applicationErrors(completeApplicationPayload([
-        'surveying_subjects' => [['name' => 'Mario Rossi', 'subject' => 'person']],
+        'surveying_subjects' => [['subject' => 'person']],
     ])))->toBe([]);
 
     // Un ente senza la chiave, invece, viene rifiutato come se fosse `null`.
     expect(applicationErrors(completeApplicationPayload([
         'managing_subjects' => [['name' => 'Comune di Oliena', 'subject' => 'organization']],
     ])))->toHaveKey('managing_subjects.0.email');
+});
+
+// I quattro ruoli hanno regole identiche, e proprio per questo il ciclo serve:
+// finche' il nome era obbligatorio ovunque, una regola dimenticata su un ruolo
+// non faceva fallire nessun test (oc:9061).
+it('accetta un privato senza nome ne e-mail su tutti e quattro i ruoli', function () {
+    foreach (['managing_subjects', 'surveying_subjects', 'maintaining_subjects', 'keeping_subjects'] as $role) {
+        expect(applicationErrors(completeApplicationPayload([$role => [['subject' => 'person']]])))
+            ->toBe([], "il ruolo {$role} ha rifiutato un privato senza dati personali");
+    }
+});
+
+// `null` e la stringa vuota non sono un dato personale: valgono come l'assenza
+// del campo, ed e' la scorciatoia naturale di un form che ha quel campo
+// obbligatorio dalla propria parte.
+it('accetta un privato con nome null o stringa vuota', function () {
+    expect(applicationErrors(completeApplicationPayload([
+        'surveying_subjects' => [['name' => null, 'email' => null, 'subject' => 'person']],
+    ])))->toBe([])
+        ->and(applicationErrors(completeApplicationPayload([
+            'surveying_subjects' => [['name' => '', 'email' => '', 'subject' => 'person']],
+        ])))->toBe([]);
+});
+
+it('rifiuta il nome di un privato, segnaposto compreso', function () {
+    expect(applicationErrors(completeApplicationPayload([
+        'surveying_subjects' => [['name' => 'Mario Rossi', 'subject' => 'person']],
+    ])))->toHaveKey('surveying_subjects.0.name');
+
+    // In call era stato proposto un valore convenzionale al posto del dato
+    // vero: per il canale e' un valore come un altro.
+    expect(applicationErrors(completeApplicationPayload([
+        'surveying_subjects' => [['name' => 'campo oscurato per motivi di privacy', 'subject' => 'person']],
+    ])))->toHaveKey('surveying_subjects.0.name');
+});
+
+// Chi legge questo errore e' chi integra, e in call aveva chiesto l'opposto:
+// un segnaposto al posto del dato. Il messaggio di default direbbe solo che il
+// campo non e' ammesso quando `subject` e' `person`, senza dire perche' ne'
+// dove recuperare il dato vero (oc:9061).
+it('spiega perche il dato di un privato non e ammesso', function () {
+    $errori = applicationErrors(completeApplicationPayload([
+        'surveying_subjects' => [['name' => 'Mario Rossi', 'subject' => 'person']],
+    ]));
+
+    // Confrontato con la voce tradotta e non con il testo italiano: la suite
+    // gira in inglese, e il punto e' che esca il messaggio dello schema invece
+    // di quello di default di `prohibited_if`.
+    expect($errori['surveying_subjects.0.name'][0])
+        ->toBe(__('The name and e-mail address of a person subject are not transmitted to the Catasto: omit the field and retrieve the data from the SUS using the application reference.'));
+});
+
+it('rifiuta la e-mail di un privato', function () {
+    expect(applicationErrors(completeApplicationPayload([
+        'surveying_subjects' => [['email' => 'mario.rossi@example.it', 'subject' => 'person']],
+    ])))->toHaveKey('surveying_subjects.0.email');
+});
+
+it('pretende nome ed e-mail dall ente', function () {
+    expect(applicationErrors(completeApplicationPayload([
+        'managing_subjects' => [['subject' => 'organization']],
+    ])))->toHaveKeys(['managing_subjects.0.name', 'managing_subjects.0.email']);
+});
+
+// Senza `subject` non si sa di che natura sia il soggetto, quindi ne' l'obbligo
+// ne' il divieto scattano: l'unico errore e' quello che spiega cosa manca
+// davvero.
+it('segnala solo subject quando il soggetto non dichiara la propria natura', function () {
+    $errori = applicationErrors(completeApplicationPayload([
+        'surveying_subjects' => [['name' => 'Mario Rossi']],
+    ]));
+
+    expect(array_keys($errori))->toBe(['surveying_subjects.0.subject']);
 });
 
 it('accetta un istanza senza alcun custode', function () {

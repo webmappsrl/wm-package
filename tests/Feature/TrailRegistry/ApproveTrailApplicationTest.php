@@ -302,7 +302,7 @@ it('approvando non copia api_data sul sentiero', function () {
     $application = $this->application->fresh();
     $application->writeApiData([
         'from' => 'Baunei',
-        'surveying_subjects' => [['name' => 'Mario Rossi', 'email' => 'rilevatore@example.org', 'subject' => 'person']],
+        'surveying_subjects' => [['subject' => 'person']],
     ]);
 
     (new ApproveTrailApplication)->handle(emptyActionFields(), collect([$application->fresh()]));

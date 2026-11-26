@@ -199,6 +199,28 @@ it('dice quale valore non va, distinguendolo da cio che manca', function () {
         ->and($error->missing()['fields'])->not->toContain('distance');
 });
 
+// La conferma valida con le stesse regole del canale, ma per un'altra strada:
+// `invalidValues()` costruisce il proprio Validator e non passa dalla Form
+// Request. Senza i messaggi dello schema uscirebbe qui la traduzione di
+// default di `prohibited_if`, che non dice ne' perche' ne' dove recuperare il
+// dato (oc:9061).
+it('spiega perche il dato di un privato non e ammesso anche alla conferma', function () {
+    $application = TrailApplication::factory()->complete()->create();
+    $application->mergeApiData(['surveying_subjects' => [['name' => 'Mario Rossi', 'subject' => 'person']]]);
+
+    try {
+        app(TrailRegistryService::class)->confirmCompilation($application);
+        $error = null;
+    } catch (ApplicationIncompleteException $e) {
+        $error = $e;
+    }
+
+    expect($error)->not->toBeNull()
+        ->and($error->invalid())->toHaveKey('surveying_subjects.0.name')
+        ->and($error->invalid()['surveying_subjects.0.name'][0])
+        ->toBe(__('The name and e-mail address of a person subject are not transmitted to the Catasto: omit the field and retrieve the data from the SUS using the application reference.'));
+});
+
 it('vede anche un vincolo fra campi consegnati in momenti diversi', function () {
     $application = TrailApplication::factory()->complete()->create();
 

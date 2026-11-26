@@ -153,5 +153,6 @@
     "A required field cannot be emptied: correct it by sending a new value": "Un campo obligatorio no se puede vaciar: para corregirlo envía un valor nuevo",
     "The application has already been submitted and no longer accepts changes": "La solicitud ya ha sido transmitida y no acepta más modificaciones",
     "The application cannot be submitted: see the missing fields and attachments and the invalid values": "La solicitud no se puede transmitir: consulta los campos y adjuntos que faltan y los valores no admitidos",
-    "External reference": "Referencia externa"
+    "External reference": "Referencia externa",
+    "The name and e-mail address of a person subject are not transmitted to the Catasto: omit the field and retrieve the data from the SUS using the application reference.": "El nombre y la dirección de correo electrónico de un sujeto `person` no se transmiten al Catasto: omite el campo y recupera el dato del SUS mediante la referencia del expediente."
 }

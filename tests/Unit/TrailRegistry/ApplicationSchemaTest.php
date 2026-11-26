@@ -178,18 +178,35 @@ it('chiede almeno un soggetto per i tre ruoli obbligatori e nessuno per il custo
         ->and($required)->not->toContain('keeping_subjects');
 });
 
-it('condiziona la e-mail del soggetto alla sua natura', function () {
+// Nome ed e-mail sono simmetrici e valgono allo stesso modo sui quattro ruoli:
+// l'ente li deve, il privato non li puo' mandare. Il ciclo sui ruoli non e' un
+// vezzo — finche' il nome era `required` ovunque, dimenticarne uno non faceva
+// fallire niente (oc:9061).
+it('vieta i dati personali del soggetto privato e li pretende dall ente', function () {
     $rules = applicationSchema()->rules();
 
-    expect($rules['managing_subjects.*.email'])
-        ->toContain('nullable', 'email', 'required_if:managing_subjects.*.subject,organization')
-        ->and($rules['managing_subjects.*.subject'])->toContain('required', 'in:organization,person')
-        ->and($rules['managing_subjects.*.name'])->toContain('required', 'string')
-        ->and($rules['managing_subjects.*'])->toContain('array');
+    foreach (['managing_subjects', 'surveying_subjects', 'maintaining_subjects', 'keeping_subjects'] as $role) {
+        expect($rules["{$role}.*.name"])->toContain(
+            'nullable', 'string', 'max:255',
+            "required_if:{$role}.*.subject,organization",
+            "prohibited_if:{$role}.*.subject,person",
+        )
+            ->and($rules["{$role}.*.email"])->toContain(
+                'nullable', 'email',
+                "required_if:{$role}.*.subject,organization",
+                "prohibited_if:{$role}.*.subject,person",
+            )
+            ->and($rules["{$role}.*.subject"])->toContain('required', 'in:organization,person')
+            ->and($rules["{$role}.*"])->toContain('array');
+    }
 });
 
-it('alza la versione dello schema a 3', function () {
-    expect(applicationSchema()->version())->toBe('3');
+// La versione si alza quando il contratto e' in uso e un payload accettato con
+// regole diverse va distinto da uno nuovo. Finche' il canale si costruisce non
+// distingue niente: era salita a 2 con oc:9038 e a 3 con oc:9039, contando i
+// ticket (oc:9061).
+it('tiene ferma la versione dello schema finche il canale e in costruzione', function () {
+    expect(applicationSchema()->version())->toBe('1');
 });
 
 it('ammette solo i dieci tematismi validati', function () {

@@ -42,7 +42,7 @@ it('tiene i dati api fuori dal geojson che viaggia verso il DEM', function () {
         ['MULTILINESTRING Z ((1 1 0, 2 2 0))', $application->id]
     );
     $application->writeApiData([
-        'surveying_subjects' => [['name' => 'Mario Rossi', 'email' => 'rilevatore@example.org', 'subject' => 'person']],
+        'surveying_subjects' => [['subject' => 'person']],
     ]);
 
     $geojson = $application->fresh()->getGeojson();
@@ -104,9 +104,9 @@ it('non considera obbligatoria la e-mail di un soggetto, che dipende dalla sua n
 
     $application = TrailApplication::factory()->create();
     $application->writeApiData([
-        'managing_subjects' => [['name' => 'Mario Rossi', 'subject' => 'person']],
-        'surveying_subjects' => [['name' => 'Mario Rossi', 'subject' => 'person']],
-        'maintaining_subjects' => [['name' => 'Mario Rossi', 'subject' => 'person']],
+        'managing_subjects' => [['subject' => 'person']],
+        'surveying_subjects' => [['subject' => 'person']],
+        'maintaining_subjects' => [['subject' => 'person']],
     ]);
 
     // Gli altri campi obbligatori restano mancanti: qui conta che nessuno dei
@@ -121,7 +121,7 @@ it('considera incompleta un istanza a cui manca un ruolo obbligatorio', function
     $application = TrailApplication::factory()->create();
     $application->writeApiData([
         'managing_subjects' => [],
-        'surveying_subjects' => [['name' => 'Mario Rossi', 'email' => null, 'subject' => 'person']],
+        'surveying_subjects' => [['subject' => 'person']],
     ]);
 
     expect($application->missingForConfirmation()['fields'])

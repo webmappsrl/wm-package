@@ -147,7 +147,7 @@ it('sostituisce un elenco per intero, non elemento per elemento', function () {
     patchApplication($application, [
         'managing_subjects' => json_encode([
             ['name' => 'Comune di Oliena', 'email' => 'oliena@example.com', 'subject' => 'organization'],
-            ['name' => 'Mario Rossi', 'subject' => 'person'],
+            ['subject' => 'person'],
         ]),
     ])->assertOk();
 
