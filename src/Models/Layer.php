@@ -29,9 +29,6 @@ class Layer extends Polygon
 {
     use Favoriteable, FeatureCollectionMapTrait, HasPackageFactory, HasTranslations, NormalizesHexColor, TaxonomyAbleModel, TaxonomyWhereAbleModel;
 
-    /** Colore delle tracce sulle mappe Nova quando il layer non ne ha uno (`properties.color`). */
-    public const DEFAULT_TRACK_STROKE_COLOR = 'rgba(255, 0, 0, 1)';
-
     public $timestamps = false;
 
     protected static function boot()
@@ -351,6 +348,15 @@ class Layer extends Polygon
     }
 
     /**
+     * Colore delle tracce sulle mappe Nova quando il layer non ne ha uno (`properties.color`):
+     * config `wm-package.map_default_track_color` (oc:9040).
+     */
+    public static function defaultTrackColor(): string
+    {
+        return (string) config('wm-package.map_default_track_color', 'rgba(255, 0, 0, 1)');
+    }
+
+    /**
      * @param  bool  $withLivePositions  false per la LayerMapCard della dashboard, che prende le
      *                                   posizioni da un endpoint a sé e le aggiorna ogni 90 s
      *                                   (oc:9040): qui comparirebbero due volte
@@ -370,7 +376,7 @@ class Layer extends Polygon
             : 0.3;
         $strokeColor = ! empty($layerProperties['color'])
             ? hexToRgba($layerProperties['color'], $strokeOpacity)
-            : self::DEFAULT_TRACK_STROKE_COLOR;
+            : self::defaultTrackColor();
         $fillColor = ! empty($layerProperties['fill_color'])
             ? hexToRgba($layerProperties['fill_color'], $fillOpacity)
             : 'rgba(255, 0, 0, 0.3)';

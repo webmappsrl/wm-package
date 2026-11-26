@@ -29,18 +29,21 @@ class AllLayersRoutesGeojson
     public function get(): array
     {
         $tolerance = (float) config('wm-package.all_routes_map_simplify_degrees', 0.0005);
+        $color = Layer::defaultTrackColor();
 
+        // Il colore nella chiave: cambiando la config la mappa cambia subito, senza aspettare la
+        // scadenza della cache.
         return Cache::remember(
-            "layer-map:all-routes:{$tolerance}",
+            "layer-map:all-routes:{$tolerance}:".md5($color),
             now()->addSeconds(self::CACHE_SECONDS),
-            fn () => $this->build($tolerance),
+            fn () => $this->build($tolerance, $color),
         );
     }
 
     /**
      * @return array{type: string, features: list<array<string, mixed>>}
      */
-    private function build(float $tolerance): array
+    private function build(float $tolerance, string $color): array
     {
         $trackTable = config('wm-package.ec_track_table', 'ec_tracks');
         $trackModelClass = config('wm-package.ec_track_model', 'Wm\WmPackage\Models\EcTrack');
@@ -74,7 +77,7 @@ SQL, [$tolerance, $trackMorphType]);
                     'id' => (int) $row->id,
                     // Stesso nome e stesso colore di default delle tracce in Layer::getFeatureCollectionMap().
                     'tooltip' => MapFeatureName::fromJson($row->name),
-                    'strokeColor' => Layer::DEFAULT_TRACK_STROKE_COLOR,
+                    'strokeColor' => $color,
                     'strokeWidth' => 2,
                 ],
             ];

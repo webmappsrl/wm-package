@@ -27,6 +27,10 @@ return [
     // oc:9040: tolleranza (gradi) di ST_Simplify per i percorsi della mappa di tutti i cammini nella
     // dashboard Nova. 0.0005° ≈ 50 m: con circa 1.300 tracce sono 1,4 MB (445 kB con gzip).
     'all_routes_map_simplify_degrees' => env('ALL_ROUTES_MAP_SIMPLIFY_DEGREES', 0.0005),
+    // oc:9040: colore delle tracce sulle mappe Nova (detail view del Layer, LayerMapCard, mappa di
+    // tutti i cammini) quando il layer non ha `properties.color`. Uno shard lo cambia per avere i
+    // colori del suo brand; il default è il rosso di sempre.
+    'map_default_track_color' => env('MAP_DEFAULT_TRACK_COLOR', 'rgba(255, 0, 0, 1)'),
     // oc:8719: un punto GPS di una traccia UGC con accuracy oltre questa soglia (metri) è sospetto
     // quando la geometria viene ricostruita da properties.locations. Vuota o <= 0: vale il default.
     'ugc_track_max_accuracy_meters' => (float) env('UGC_TRACK_MAX_ACCURACY_METERS', UgcTrackCleanupService::DEFAULT_MAX_ACCURACY_METERS),
