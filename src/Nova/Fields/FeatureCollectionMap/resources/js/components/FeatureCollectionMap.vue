@@ -218,7 +218,8 @@ export default {
         }
     },
 
-    emits: ['feature-click', 'map-ready', 'popup-open', 'popup-close', 'map-click', 'slope-hover'],
+    // live-positions-loaded: numero di posizioni ricevute a ogni caricamento riuscito (oc:9040).
+    emits: ['feature-click', 'map-ready', 'popup-open', 'popup-close', 'map-click', 'slope-hover', 'live-positions-loaded'],
 
     setup(props, { emit }) {
         const keydownRoot = ref(null);
@@ -286,6 +287,7 @@ export default {
                 livePositionsSource.value.clear();
                 livePositionsSource.value.addFeatures(features);
                 livePositionsWarned = false;
+                emit('live-positions-loaded', features.length);
             } catch (error) {
                 // Si tengono i punti precedenti; un solo avviso finché non torna una risposta buona.
                 if (!livePositionsWarned) {
