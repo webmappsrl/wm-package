@@ -131,8 +131,26 @@ class ExecuteEcTrackDataChainAction extends Action
             }
         }
 
-        if (! empty($chain)) {
-            Bus::chain($chain)->dispatch();
+        if (empty($chain)) {
+            return;
         }
+
+        // Ripiego come nelle catene del service (oc:9050): se un job fallisce, i job di
+        // pubblicazione della catena partono lo stesso. Niente ripiego se la catena non pubblica,
+        // o se è fatta solo di pubblicazione: rifarebbe gli stessi job appena falliti.
+        $ecTrackService = app(EcTrackService::class);
+        $publicationClasses = array_map(fn ($job) => $job::class, $ecTrackService->publicationJobs($ecTrack));
+        $fallbackJobClasses = array_values(array_filter(
+            array_map(fn ($job) => $job::class, $chain),
+            fn (string $class) => in_array($class, $publicationClasses, true)
+        ));
+
+        if ($fallbackJobClasses === [] || count($fallbackJobClasses) === count($chain)) {
+            Bus::chain($chain)->dispatch();
+
+            return;
+        }
+
+        $ecTrackService->dispatchChainWithFallback($ecTrack, $chain, $fallbackJobClasses);
     }
 }

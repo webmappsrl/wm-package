@@ -20,7 +20,6 @@ use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackCurrentDataJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackDemJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackFromOsmJob;
-use Wm\WmPackage\Jobs\Track\UpdateEcTrackGenerateElevationChartImage;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackManualDataJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackOrderRelatedPoi;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackSlopeValues;
@@ -363,11 +362,14 @@ class EcTrackService extends BaseService
         $chain[] = new UpdateEcTrack3DDemJob($track);
         $chain[] = new UpdateEcTrackSlopeValues($track);
         $chain[] = new SyncModelTaxonomyWhereJob($track);
-        $chain[] = new UpdateEcTrackGenerateElevationChartImage($track);
+        // Niente immagine dell'elevation chart: vedi geometryDependentJobs() (oc:9050).
         $chain[] = new UpdateEcTrackAwsJob($track);
         $chain[] = new UpdateEcTrackOrderRelatedPoi($track);
 
-        Bus::chain($chain)->dispatch();
+        $this->dispatchChainWithFallback($track, $chain, [
+            UpdateEcTrackAwsJob::class,
+            UpdateEcTrackOrderRelatedPoi::class,
+        ]);
         $this->dispatchUgcTrackMatching($track);
     }
 
@@ -398,7 +400,9 @@ class EcTrackService extends BaseService
             new UpdateEcTrack3DDemJob($track),
             new UpdateEcTrackSlopeValues($track),
             new SyncModelTaxonomyWhereJob($track),
-            new UpdateEcTrackGenerateElevationChartImage($track),
+            // `UpdateEcTrackGenerateElevationChartImage` è fuori dal flusso (oc:9050): il modulo
+            // `canvas` del suo script Node non si carica con Node 20, il job falliva sempre e
+            // fermava la catena prima del PBF e della pubblicazione. La classe resta nel package.
             new GenerateEcTrackPBFBatch($track),
         ];
 
@@ -425,6 +429,67 @@ class EcTrackService extends BaseService
     }
 
     /**
+     * Le classi da accodare se la catena fallisce (oc:9050): il PBF della traccia, quando la catena
+     * ha i job della geometria, poi i job di pubblicazione.
+     *
+     * @return array<int, class-string>
+     */
+    public function fallbackJobClasses(EcTrack $track, bool $withPbf): array
+    {
+        return [
+            ...($withPbf ? [GenerateEcTrackPBFBatch::class] : []),
+            ...array_map(fn ($job) => $job::class, $this->publicationJobs($track)),
+        ];
+    }
+
+    /**
+     * Accoda una catena di EcTrack con la pubblicazione di ripiego (oc:9050).
+     *
+     * `Bus::chain()` si ferma al primo job che fallisce: un calcolo secondario rotto (l'immagine
+     * dell'elevation chart, un timeout del DEM) lasciava l'app con il JSON vecchio. Il `catch()`
+     * accoda allora `$fallbackJobClasses`; il job fallito resta comunque in `failed_jobs`.
+     *
+     * La closure è `static` e cattura solo l'id e i nomi delle classi: viene serializzata nel
+     * payload della catena, e `$this` porterebbe con sé le dipendenze del service.
+     *
+     * @param  array<int, object>  $chain
+     * @param  array<int, class-string>  $fallbackJobClasses
+     */
+    public function dispatchChainWithFallback(EcTrack $track, array $chain, array $fallbackJobClasses): void
+    {
+        $trackId = $track->id;
+
+        Bus::chain($chain)
+            ->catch(static function (Throwable $e) use ($trackId, $fallbackJobClasses): void {
+                EcTrackService::make()->dispatchFallbackJobs($trackId, $fallbackJobClasses);
+            })
+            ->dispatch();
+    }
+
+    /**
+     * La catena di ripiego: rilegge la traccia e accoda le classi date, senza un altro `catch()`,
+     * così un ripiego che fallisce non ne genera un altro. Se la traccia non c'è più non fa nulla.
+     *
+     * ATTENZIONE: nome e firma di questo metodo sono scritti nella closure del `catch()`, che viene
+     * serializzata nel payload di ogni catena in coda. Rinominarlo o cambiarne la firma fa fallire
+     * il ripiego delle catene già accodate prima del deploy, senza nessun segnale.
+     *
+     * @internal
+     *
+     * @param  array<int, class-string>  $jobClasses  ogni classe si costruisce con la sola traccia
+     */
+    public function dispatchFallbackJobs(int $trackId, array $jobClasses): void
+    {
+        $ecTrackModelClass = config('wm-package.ec_track_model');
+        $track = $ecTrackModelClass::find($trackId);
+        if (! $track) {
+            return;
+        }
+
+        Bus::chain(array_map(fn (string $class) => new $class($track), $jobClasses))->dispatch();
+    }
+
+    /**
      * La catena del DEM mancante, accodata all'apertura del dettaglio
      * (oc:8660): i job che dipendono dalla geometria, poi la pubblicazione.
      * Fuori solo la taxonomy where, che dipende dalla forma della traccia e
@@ -433,10 +498,10 @@ class EcTrackService extends BaseService
      */
     public function dispatchDemChain(EcTrack $track): void
     {
-        Bus::chain([
+        $this->dispatchChainWithFallback($track, [
             ...$this->geometryDependentJobs($track, [SyncModelTaxonomyWhereJob::class]),
             ...$this->publicationJobs($track),
-        ])->dispatch();
+        ], $this->fallbackJobClasses($track, true));
     }
 
     /**
@@ -544,6 +609,9 @@ class EcTrackService extends BaseService
             // Solo scambi: bastano le tile (duration_forward da manual_data) e il JSON su AWS
             // (EcTrackResource passa da classifyField()); verificato il 24/09.
             : [new GenerateEcTrackPBFBatch($track), new UpdateEcTrackAwsJob($track)];
+        $fallbackJobClasses = $geometry
+            ? $this->fallbackJobClasses($track, true)
+            : [GenerateEcTrackPBFBatch::class, UpdateEcTrackAwsJob::class];
 
         if ($geometry) {
             // Stesso motivo di updateDataChain(): la catena include i job dipendenti dalla
@@ -554,8 +622,8 @@ class EcTrackService extends BaseService
 
         // Prima la catena, poi l'indice: un errore di Elasticsearch non deve impedire il
         // ricalcolo né arrivare a Nova come errore su un'inversione già scritta.
-        DB::afterCommit(function () use ($track, $jobs, $geometry) {
-            Bus::chain($jobs)->dispatch();
+        DB::afterCommit(function () use ($track, $jobs, $geometry, $fallbackJobClasses) {
+            $this->dispatchChainWithFallback($track, $jobs, $fallbackJobClasses);
             if ($geometry) {
                 $this->dispatchUgcTrackMatching($track);
             }
@@ -666,7 +734,7 @@ class EcTrackService extends BaseService
 
         array_push($chain, ...$this->publicationJobs($track));
 
-        Bus::chain($chain)->dispatch();
+        $this->dispatchChainWithFallback($track, $chain, $this->fallbackJobClasses($track, $geometryChanged));
 
         if ($geometryChanged) {
             $this->dispatchUgcTrackMatching($track);

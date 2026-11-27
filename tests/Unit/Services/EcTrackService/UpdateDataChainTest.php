@@ -12,7 +12,6 @@ use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackCurrentDataJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackDemJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackFromOsmJob;
-use Wm\WmPackage\Jobs\Track\UpdateEcTrackGenerateElevationChartImage;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackManualDataJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackOrderRelatedPoi;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackSlopeValues;
@@ -51,7 +50,6 @@ class UpdateDataChainTest extends AbstractEcTrackServiceTest
             UpdateEcTrack3DDemJob::class,
             UpdateEcTrackSlopeValues::class,
             SyncModelTaxonomyWhereJob::class,
-            UpdateEcTrackGenerateElevationChartImage::class,
             GenerateEcTrackPBFBatch::class,
             UpdateEcTrackAwsJob::class,
             UpdateEcTrackAppRelationsInfoJob::class,
@@ -98,7 +96,6 @@ class UpdateDataChainTest extends AbstractEcTrackServiceTest
             UpdateEcTrack3DDemJob::class,
             UpdateEcTrackSlopeValues::class,
             SyncModelTaxonomyWhereJob::class,
-            UpdateEcTrackGenerateElevationChartImage::class,
             GenerateEcTrackPBFBatch::class,
             UpdateEcTrackAwsJob::class,
             UpdateEcTrackAppRelationsInfoJob::class,
@@ -120,8 +117,27 @@ class UpdateDataChainTest extends AbstractEcTrackServiceTest
             UpdateEcTrack3DDemJob::class,
             UpdateEcTrackSlopeValues::class,
             SyncModelTaxonomyWhereJob::class,
-            UpdateEcTrackGenerateElevationChartImage::class,
             GenerateEcTrackPBFBatch::class,
         ], array_map(fn ($job) => $job::class, $jobs));
+    }
+
+    public function test_create_data_chain_does_not_include_elevation_chart()
+    {
+        // L'immagine dell'elevation chart è fuori dal flusso (oc:9050): `canvas` non si carica con
+        // Node 20, il job falliva sempre e fermava la catena prima della pubblicazione.
+        $track = EcTrack::factory()->createQuietly();
+
+        $this->ecTrackService->createDataChain($track);
+
+        Bus::assertChained([
+            UpdateEcTrackDemJob::class,
+            UpdateEcTrackManualDataJob::class,
+            UpdateEcTrackCurrentDataJob::class,
+            UpdateEcTrack3DDemJob::class,
+            UpdateEcTrackSlopeValues::class,
+            SyncModelTaxonomyWhereJob::class,
+            UpdateEcTrackAwsJob::class,
+            UpdateEcTrackOrderRelatedPoi::class,
+        ]);
     }
 }

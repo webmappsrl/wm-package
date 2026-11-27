@@ -10,7 +10,6 @@ use Wm\WmPackage\Jobs\Track\UpdateEcTrackAppRelationsInfoJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackAwsJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackCurrentDataJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackDemJob;
-use Wm\WmPackage\Jobs\Track\UpdateEcTrackGenerateElevationChartImage;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackManualDataJob;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackOrderRelatedPoi;
 use Wm\WmPackage\Jobs\Track\UpdateEcTrackSlopeValues;
@@ -211,7 +210,6 @@ describe('EcTrack', function () {
             UpdateEcTrackCurrentDataJob::class,
             UpdateEcTrack3DDemJob::class,
             UpdateEcTrackSlopeValues::class,
-            UpdateEcTrackGenerateElevationChartImage::class,
             GenerateEcTrackPBFBatch::class,
             UpdateEcTrackAwsJob::class,
             UpdateEcTrackAppRelationsInfoJob::class,
