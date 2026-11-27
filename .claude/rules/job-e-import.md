@@ -43,6 +43,10 @@ Si applica quando tocchi job, comandi artisan, import o servizi del package.
   (oc:8660).
 - `Bus::chain()` si ferma al primo job che fallisce, e i successivi non partono: se uno deve
   partire comunque serve un `->catch()` che lo lanci (oc:8677, `ImportAppJob::dispatchAfterEcImportBatch()`).
+  Le catene di EcTrack che pubblicano passano da `EcTrackService::dispatchChainWithFallback()`, che
+  al fallimento accoda le classi di ripiego che il chiamante gli passa (PBF e pubblicazione): una
+  catena nuova di EcTrack che pubblica va accodata da lì, non con `Bus::chain()` diretto (oc:9050).
+  Non rinominare `EcTrackService::dispatchFallbackJobs()`: il nome è serializzato nei payload in coda.
 - `ST_Length(geom::geography)` su una geometria 3D conta anche i dislivelli: per una lunghezza in
   pianta usa `ST_Length(ST_Force2D(geom::geometry)::geography)` (oc:8719).
 - Per confrontare una geometria UGC salvata con una ricostruita non usare `ST_Equals`, che è

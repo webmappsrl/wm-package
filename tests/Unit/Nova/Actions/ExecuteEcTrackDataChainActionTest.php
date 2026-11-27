@@ -253,6 +253,55 @@ class ExecuteEcTrackDataChainActionTest extends TestCase
         ]);
     }
 
+    public function test_custom_chain_falls_back_to_its_publication_jobs()
+    {
+        // oc:9050: «Regenerate Taxonomy Where» accoda [SyncModelTaxonomyWhereJob, UpdateEcTrackAwsJob]:
+        // se il primo fallisce, il JSON su AWS va riscritto lo stesso.
+        $track = EcTrack::factory()->createQuietly(['osmid' => null]);
+        $action = new ExecuteEcTrackDataChainAction([
+            fn ($track) => new UpdateEcTrackDemJob($track),
+            fn ($track) => new UpdateEcTrackAwsJob($track),
+        ]);
+
+        $action->handle(new ActionFields(collect(), collect()), collect([$track]));
+
+        $job = Bus::dispatched(UpdateEcTrackDemJob::class)->first();
+        $this->assertCount(1, $job->chainCatchCallbacks);
+
+        Bus::fake();
+        $job->invokeChainCatchCallbacks(new \RuntimeException('boom'));
+        Bus::assertDispatched(UpdateEcTrackAwsJob::class);
+    }
+
+    public function test_custom_chain_without_publication_jobs_has_no_fallback()
+    {
+        $track = EcTrack::factory()->createQuietly(['osmid' => null]);
+        $action = new ExecuteEcTrackDataChainAction([
+            fn ($track) => new UpdateEcTrackDemJob($track),
+        ]);
+
+        $action->handle(new ActionFields(collect(), collect()), collect([$track]));
+
+        $job = Bus::dispatched(UpdateEcTrackDemJob::class)->first();
+        $this->assertEmpty($job->chainCatchCallbacks ?? []);
+    }
+
+    public function test_custom_chain_made_only_of_publication_jobs_has_no_fallback()
+    {
+        // «Update Tracks on AWS» = [UpdateEcTrackAwsJob]: il ripiego rifarebbe lo stesso job appena
+        // fallito, raddoppiando i tentativi con lo storage irraggiungibile (oc:9050).
+        $track = EcTrack::factory()->createQuietly(['osmid' => null]);
+        $action = new ExecuteEcTrackDataChainAction([
+            fn ($track) => new UpdateEcTrackAwsJob($track),
+        ]);
+
+        $action->handle(new ActionFields(collect(), collect()), collect([$track]));
+
+        $job = Bus::dispatched(UpdateEcTrackAwsJob::class)->first();
+        $this->assertNotNull($job);
+        $this->assertEmpty($job->chainCatchCallbacks ?? []);
+    }
+
     protected function tearDown(): void
     {
         Mockery::close();
