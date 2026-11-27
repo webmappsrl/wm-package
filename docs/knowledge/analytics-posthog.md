@@ -184,8 +184,18 @@ alle tracce, prese dalle stesse query `userMoved` (`AnalyticsService::getRecentU
   - **Limite noto**: il tetto di 500 persone di `queryRecentUserMovedPoints()` si applica prima
     del filtro di prossimità. Sulla mappa globale l'area è grande quasi quanto l'Italia, quindi
     oltre 500 persone attive in 30 minuti alcuni pallini mancherebbero (resta un `Log::warning`).
-  - La legenda e il tooltip anonimo sono tradotti (`User position (last 30 minutes)`).
-    `All routes` è tradotto in modo neutro: uno shard può sovrascriverlo nei suoi lang.
+  - Il tooltip anonimo è tradotto (`User position (last 30 minutes)`). `All routes` è tradotto in
+    modo neutro: uno shard può sovrascriverlo nei suoi lang.
+  - **Box delle persone sotto la mappa, spento di default**: lo accende `withLiveLegend()`, e
+    `show_live_legend` è vero solo se è acceso e PostHog è configurato. Mostra il pallino (lo
+    stesso della mappa, quindi fa da legenda), quante persone ci sono e l'ora dell'ultimo
+    aggiornamento. Il numero lo conta `LayerMapCard.vue` sull'evento `live-positions-loaded`
+    che `FeatureCollectionMap.vue` emette a ogni caricamento delle posizioni (numero di feature),
+    quindi coincide con i pallini. Testi neutri, senza riferimenti a uno shard (`user on the map`,
+    `users on the map`, `in the last 30 minutes`, `Updated at :time`): uno shard li cambia con le
+    sue traduzioni. Colori da variabili CSS: `--wm-live-count-color` (numero, default il colore
+    primario di Nova), `--wm-live-count-bg` e `--wm-live-count-bg-dark` (fondo), `--wm-live-count-dot`
+    (pallino, default il verde dei pallini della mappa).
 - **Colori configurabili dagli shard** (oc:9040). Il package non cambia i colori, li rende
   sovrascrivibili:
   - **`LayerAnalyticsCard`**: ogni colore è `var(--wm-analytics-<nome>, <colore di sempre>)`.
