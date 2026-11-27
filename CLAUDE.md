@@ -123,6 +123,7 @@ questo file, perché vanno lette sempre.
 | Versioni del JSON della traccia su wmfe | i due path e cosa contengono, `WMFE_TRACK_VERSIONS` e cosa succede se manca, come si aggiunge una versione nuova, perché la serializzazione passa dalla Resource | [docs/knowledge/8997-versioni-del-json-della-traccia-su-wmfe.md](docs/knowledge/8997-versioni-del-json-della-traccia-su-wmfe.md) |
 | Operazioni del fascicolo e canale dell'ente | il package offre aprire, allegare, chiudere e leggere una domanda e lo shard monta il canale (rotte, client, middleware); perché lo schema dei campi è ridefinibile e perché il nome dello sportello non compare mai | [docs/knowledge/operazioni-del-fascicolo-e-canale-dell-ente.md](docs/knowledge/operazioni-del-fascicolo-e-canale-dell-ente.md) |
 | Data di non accessibilità su EcTrack | quando `EcTrack` scrive `not_accessible_updated_at`, `static::saving` per le sottoclassi, i percorsi che non la scrivono (saveQuietly, GeoHub, upload Excel di default) | [docs/knowledge/8981-data-di-non-accessibilita-su-ectrack.md](docs/knowledge/8981-data-di-non-accessibilita-su-ectrack.md) |
+| Catene di job delle EcTrack | cosa accodano le catene di creazione, aggiornamento, DEM e inversione, la pubblicazione di ripiego quando un job fallisce, perché l'elevation chart è fuori dal flusso | [docs/knowledge/9050-modifiche-alle-tappe-salvate-in-nova-non-visibili-in-app.md](docs/knowledge/9050-modifiche-alle-tappe-salvate-in-nova-non-visibili-in-app.md) |
 
 ## Procedure
 

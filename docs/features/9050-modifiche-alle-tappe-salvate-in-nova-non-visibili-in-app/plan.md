@@ -1,4 +1,5 @@
 > Ticket: oc:9050
+> Stato: seguito, con 2 divergenze annotate in notes.md
 
 # Catene di EcTrack senza elevation chart e con pubblicazione di ripiego — piano
 
